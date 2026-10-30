@@ -1,6 +1,11 @@
 #include "editor_control.h"
 #include "platform/core_headers.h"
 #include <wx/dcclient.h>
+#ifdef __WXMSW__
+#include <wx/caret.h>
+#include <imm.h>
+#include <cwchar>
+#endif
 
 using Scintilla::Message;
 namespace core = Scintilla::Internal;
@@ -32,15 +37,49 @@ public:
         paintingAllText = true;
         Paint(surface.get(), rcPaint);
         paintState = PaintState::notPainting;
+        UpdateSystemCaret();
     }
     void Resize() { ChangeSize(); }
     void Character(std::string_view text) { InsertCharacter(text, Scintilla::CharacterSource::DirectInput); }
     void TickCaret() { TickFor(TickReason::caret); }
+    void SyncSystemCaret() { UpdateSystemCaret(); }
 
 private:
     EditorControl& window_;
     void NotifyCaretMove() const noexcept override {}
-    void UpdateSystemCaret() override {}
+    void UpdateSystemCaret() override {
+#ifdef __WXMSW__
+        if (!window_.HasFocus() || !window_.GetCaret()) return;
+        const auto point = PointMainCaret();
+        const int height = std::max(1, vs.lineHeight);
+        window_.GetCaret()->SetSize(1, height);
+        window_.GetCaret()->Move(static_cast<int>(point.x), static_cast<int>(point.y));
+        const auto window = static_cast<HWND>(window_.GetHandle());
+        if (const auto context = ImmGetContext(window)) {
+            // Microsoft Pinyin needs explicit IMM forms in addition to the
+            // system caret. All positions are in the editor's client coordinates.
+            COMPOSITIONFORM composition{};
+            composition.dwStyle = CFS_POINT;
+            composition.ptCurrentPos = {static_cast<LONG>(point.x), static_cast<LONG>(point.y)};
+            ::GetClientRect(window, &composition.rcArea);
+            ImmSetCompositionWindow(context, &composition);
+            CANDIDATEFORM candidate{};
+            candidate.dwStyle = CFS_EXCLUDE;
+            candidate.ptCurrentPos = {static_cast<LONG>(point.x), static_cast<LONG>(point.y) + height};
+            candidate.rcArea = {static_cast<LONG>(point.x), static_cast<LONG>(point.y),
+                static_cast<LONG>(point.x) + 1, static_cast<LONG>(point.y) + height};
+            ImmSetCandidateWindow(context, &candidate);
+            LOGFONTW font{};
+            font.lfHeight = -height;
+            font.lfWeight = FW_NORMAL;
+            font.lfCharSet = DEFAULT_CHARSET;
+            const auto name = wxString::FromUTF8(core::Platform::DefaultFont()).ToStdWstring();
+            std::wcsncpy(font.lfFaceName, name.c_str(), LF_FACESIZE - 1);
+            ImmSetCompositionFontW(context, &font);
+            ImmReleaseContext(window, context);
+        }
+#endif
+    }
     void SetHorizontalScrollPos() override {}
     bool ModifyScrollBars(Sci::Line, Sci::Line) override { return false; }
     void SetVerticalScrollPos() override {}
@@ -90,8 +129,21 @@ EditorControl::EditorControl(wxWindow* parent)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_SIMPLE | wxWANTS_CHARS),
       caretTimer_(this) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
+#ifdef __WXMSW__
+    SetCaret(new wxCaret(this, 1, 1));
+    GetCaret()->Show();
+#endif
     core_ = std::make_unique<Core>(*this);
-    Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& event) { Send(Message::SetFocus, 1); Refresh(false); event.Skip(); });
+#ifdef __WXMSW__
+    // Use one native caret for display and for input methods on Windows.
+    Send(Message::SetCaretStyle, 0);
+#endif
+    Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& event) {
+        Send(Message::SetFocus, 1);
+        core_->SyncSystemCaret();
+        Refresh(false);
+        event.Skip();
+    });
     Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) { Send(Message::SetFocus, 0); Refresh(false); event.Skip(); });
     Bind(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickCaret(); }, caretTimer_.GetId());
     Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {
@@ -143,3 +195,13 @@ void EditorControl::OnSize(wxSizeEvent& event) {
     Refresh(false);
     event.Skip();
 }
+
+#ifdef __WXMSW__
+WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam) {
+    if (core_ && (message == WM_IME_STARTCOMPOSITION || message == WM_IME_COMPOSITION ||
+        message == WM_IME_SETCONTEXT || message == WM_INPUTLANGCHANGE)) {
+        core_->SyncSystemCaret();
+    }
+    return wxControl::MSWWindowProc(message, wParam, lParam);
+}
+#endif

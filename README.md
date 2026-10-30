@@ -9,9 +9,15 @@ Tab; use Backspace and Delete to remove text. Edit → Undo/Redo and Ctrl+Z/Ctrl
 follow the core's history. A `*` in the title marks changes from the save point;
 undoing to that point removes it. Ctrl+Shift+Z also redoes.
 
-This covers [#9](https://github.com/1298345095/wxnotepad/issues/9) and
-[#10](https://github.com/1298345095/wxnotepad/issues/10). Selection/navigation,
-clipboard, file operations and dedicated input-method handling follow in later tickets.
+On Windows the native caret, composition window and candidate window follow the
+core's caret, including after scrolling and regaining focus. Chinese character
+events retain their UTF-8 conversion storage through insertion.
+
+This covers [#9](https://github.com/1298345095/wxnotepad/issues/9),
+[#10](https://github.com/1298345095/wxnotepad/issues/10), and the automated portion
+of [#13](https://github.com/1298345095/wxnotepad/issues/13). Microsoft Pinyin human
+validation is pending; see the [IME validation record](docs/evidence/issue-13/README.md).
+Selection/navigation, clipboard and file operations follow in later tickets.
 
 ## Build and run
 
@@ -58,9 +64,12 @@ against the pinned `patches/source.sha256` before extraction. Use `--prepare-onl
 to create the archive without compiling. See [patch provenance](patches/README.md)
 and [dependency licenses](licenses/README.md).
 
-`--test` runs two separate real GUI processes: UTF-8 character events, basic
+`--test` runs separate real GUI processes: UTF-8 character events, basic
 editing, Undo/Redo, menu availability and save-point/title state; and native
 focus transfers plus show/resize/uncover/hide-show paint handling. These checks
 need a desktop and fail on a GUI process error or timeout. See the
 [input validation record](docs/evidence/issue-10/README.md) and the earlier
 [read-only display assessment](docs/evidence/issue-09/README.md).
+Windows also checks the real IMM composition/candidate positions and font on two
+lines, after scrolling and refocus, and at native composition start. Linux IME
+remains deferred.
