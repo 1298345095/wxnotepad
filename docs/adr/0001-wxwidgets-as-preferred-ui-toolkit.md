@@ -12,7 +12,7 @@ status: proposed
 
 先用 wxStyledTextCtrl 制作最小原型，以现有 Notepad4 为行为对照，检查编码处理、正则搜索替换、中文输入、语法高亮及性能。发现行为差异后，评估迁移必要定制的成本；如果关键行为难以补齐，再评估接入原版定制 Scintilla 内核。
 
-用户接受为编辑行为兼容维护必要的内核补丁及其长期维护成本，但尚未决定整体移植原版内核。验证路线已确认，最终框架与内核选型仍待原型结果，因此本 ADR 保持 proposed 状态。
+用户接受为编辑行为兼容维护必要的内核补丁及其长期维护成本，但尚未决定整体移植原版内核。最终框架与内核选型仍需结合接入成本、未验证行为和性能预算，因此本 ADR 保持 proposed 状态。
 
 ## 原型边界与留存
 
@@ -24,6 +24,12 @@ status: proposed
 
 ## 当前验证结果与决定
 
-2026-10-30，Windows 11 与 Ubuntu 24.04.4 WSLg 完成最小文件编辑及编码实验：Windows、Wayland、X11 各 20 组 UTF-8、UTF-16LE、GBK 样本的实际文件字节符合预期；微软拼音的提交、取消和单次撤销人工验证通过。Linux 已使用本机 vcpkg 的同版本 wxWidgets 3.3.3 验证 Wayland/X11。结果支持继续以 wxStyledTextCtrl 验证搜索替换及语言功能，最终框架和内核选型仍保持待决。
+2026-10-30，Windows 11 与 Ubuntu 24.04.4 WSLg 完成最小文件编辑及编码实验：Windows、Wayland、X11 各 20 组 UTF-8、UTF-16LE、GBK 样本的实际文件字节符合预期；微软拼音的提交、取消和单次撤销人工验证通过。Linux 已使用本机 vcpkg 的同版本 wxWidgets 3.3.3 验证 Wayland/X11。
 
 Linux 输入法按用户决定暂缓验证；新空文档的默认换行需在后续配置设计中明确，产品性能预算待综合实验确定。实验代码和观测保存在 codex/prototype-wxstc：最小文件实验提交 d1dbf8e，编码与输入实验提交 59dee6e，证据分别见 [#2](https://github.com/1298345095/wxnotepad/issues/2) 和 [#3](https://github.com/1298345095/wxnotepad/issues/3)。
+
+搜索实验确认现成 wxStyledTextCtrl 与原版定制内核存在编辑行为差异：美元捕获引用替换、后顾、跨行匹配，以及 Linux 上中文词类匹配需要处理。C++、JSON 两个代表样本的基础高亮、折叠和修改后更新可用，额外语义样式及不完整代码着色有差异；不能据此推定全部语言兼容。证据见 [#4](https://github.com/1298345095/wxnotepad/issues/4)（7229361）和 [#5](https://github.com/1298345095/wxnotepad/issues/5)（a2ebb6d）。
+
+资源实验在同机 Windows 上观察到：100 MiB 纯文本原生 API 打开中位数约为 wxSTC 1.53 秒、原版内核 0.15 秒，全部替换约为 0.46 秒和 0.06 秒，打开后的私有内存约为 216 MiB 和 109 MiB。两者均在隐藏控件中计时，默认纯文本存储策略及宿主不同，不代表完整应用性能，也不能将差距全部归因于界面框架。小文件启动另行对照了原版完整应用；Linux 数据单列。1 GiB 与超长单行原生操作探查完成，但未测量其渲染和交互流畅度。
+
+结合搜索兼容缺口与现有构建的资源成本，下一阶段优先做“原版定制内核接入 wxWidgets”的最小技术实验，验证 Windows/Linux 平台桥接、既有行为和资源开销，再比较与维护 wxSTC 定制补丁的成本。继续将 wxWidgets 作为界面首选；暂不锁定现成 wxStyledTextCtrl，也不直接决定全面移植原版内核。Linux 输入法、完整语言覆盖、生产构建和性能预算仍待验证或明确。汇总结论与复现数据见 [#6](https://github.com/1298345095/wxnotepad/issues/6)，原型提交 [18c8ae4](https://github.com/1298345095/wxnotepad/commit/18c8ae4)；main 仅保留结论，不合入原型代码。
