@@ -1,0 +1,31 @@
+.codegraph/
+
+# Out-of-source CMake builds and generated packages
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+/dist/
+
+# In-source CMake artifacts and local presets
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/CTestTestfile.cmake
+/Testing/
+/install_manifest.txt
+/compile_commands.json
+/build.ninja
+/.ninja_deps
+/.ninja_log
+CMakeUserPresets.json
+
+# Local IDE state
+.vs/
+*.suo
+*.user
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
