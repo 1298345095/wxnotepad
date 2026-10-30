@@ -22,8 +22,8 @@ status: proposed
 
 代码、样本和测量脚本保存在 main 之外的 codex/prototype-* 分支中；每张实验票记录实际分支、提交和结论，后续实现票引用这些证据。main 保留确认后的决策，后续正式实现依据结论另行编写。已证实的不兼容也是有效实验结果；环境缺失或证据不足须记为待验证，不能据此判定路线通过。
 
-## 最小 UTF-8 文件实验后的决定
+## 当前验证结果与决定
 
-2026-10-30，Windows 11 与 Ubuntu 24.04.4 WSLg 的 Wayland/X11 实验均完成 9 组 UTF-8 样本的打开、修改、保存和重开，保留了既有文件的 BOM、换行及预期字节。此结果支持继续以 wxStyledTextCtrl 开展中文输入与编码、搜索替换及语言功能实验；最终框架和内核选型仍保持待决。新空文档的默认换行在两平台存在差异，需在后续配置设计中明确。
+2026-10-30，Windows 11 与 Ubuntu 24.04.4 WSLg 完成最小文件编辑及编码实验：Windows、Wayland、X11 各 20 组 UTF-8、UTF-16LE、GBK 样本的实际文件字节符合预期；微软拼音的提交、取消和单次撤销人工验证通过。Linux 已使用本机 vcpkg 的同版本 wxWidgets 3.3.3 验证 Wayland/X11。结果支持继续以 wxStyledTextCtrl 验证搜索替换及语言功能，最终框架和内核选型仍保持待决。
 
-代码与原始观测保存在实验分支 codex/prototype-wxstc 的提交 d1dbf8e，运行条件和结论见 [实验票 #2](https://github.com/1298345095/wxnotepad/issues/2)。本轮只验证最小编辑路径，未据此设定完整产品的性能预算；Windows 10、独立 Linux 主机及物理键盘/输入法交互仍未验证。
+Linux 输入法按用户决定暂缓验证；新空文档的默认换行需在后续配置设计中明确，产品性能预算待综合实验确定。实验代码和观测保存在 codex/prototype-wxstc：最小文件实验提交 d1dbf8e，编码与输入实验提交 59dee6e，证据分别见 [#2](https://github.com/1298345095/wxnotepad/issues/2) 和 [#3](https://github.com/1298345095/wxnotepad/issues/3)。
