@@ -13,11 +13,20 @@ On Windows the native caret, composition window and candidate window follow the
 core's caret, including after scrolling and regaining focus. Chinese character
 events retain their UTF-8 conversion storage through insertion.
 
+File → Save / Ctrl+S opens the native save dialog for an unnamed document.
+The first save writes UTF-8 without a BOM, confirms overwriting an existing
+target, and updates the title/save point only after safe replacement succeeds.
+Newline insertion defaults to CRLF on every platform, matching unconfigured
+Notepad4; saving preserves CRLF, LF and CR characters already in the text.
+Cancel or failure retains the document. Saving named documents follows in #17;
+the Save command is disabled after the first successful save for this stage.
+
 This covers [#9](https://github.com/1298345095/wxnotepad/issues/9),
-[#10](https://github.com/1298345095/wxnotepad/issues/10), and the automated portion
+[#10](https://github.com/1298345095/wxnotepad/issues/10),
+[#14](https://github.com/1298345095/wxnotepad/issues/14), and the automated portion
 of [#13](https://github.com/1298345095/wxnotepad/issues/13). Microsoft Pinyin human
 validation is pending; see the [IME validation record](docs/evidence/issue-13/README.md).
-Selection/navigation, clipboard and file operations follow in later tickets.
+Selection/navigation, clipboard and other file operations follow in later tickets.
 
 ## Build and run
 
@@ -73,3 +82,5 @@ need a desktop and fail on a GUI process error or timeout. See the
 Windows also checks the real IMM composition/candidate positions and font on two
 lines, after scrolling and refocus, and at native composition start. Linux IME
 remains deferred.
+The [first-save record](docs/evidence/issue-14/README.md) covers file bytes,
+cancellation/failure, save-point history and native dialogs.
