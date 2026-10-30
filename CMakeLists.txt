@@ -1,0 +1,68 @@
+cmake_minimum_required(VERSION 3.25)
+project(wxnotepad VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+find_package(wxWidgets 3.3.3 EXACT CONFIG REQUIRED)
+
+set(NOTEPAD4_SOURCE "" CACHE PATH "Pinned, patched source produced by tools/build.py")
+if(NOT EXISTS "${NOTEPAD4_SOURCE}/wxnotepad-source.json")
+    message(FATAL_ERROR "Use python tools/build.py to prepare the pinned original core first")
+endif()
+file(READ "${NOTEPAD4_SOURCE}/wxnotepad-source.json" source_record)
+string(JSON core_revision GET "${source_record}" revision)
+if(NOT core_revision STREQUAL "89b8b36e0ee2c23f73be922315f17261ccfbbe1a")
+    message(FATAL_ERROR "Unexpected Notepad4 core revision: ${core_revision}")
+endif()
+
+file(GLOB core_sources CONFIGURE_DEPENDS "${NOTEPAD4_SOURCE}/scintilla/src/*.cxx")
+file(GLOB lexlib_sources CONFIGURE_DEPENDS "${NOTEPAD4_SOURCE}/scintilla/lexlib/*.cxx")
+add_library(notepad4_core STATIC ${core_sources} ${lexlib_sources}
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx")
+target_include_directories(notepad4_core PUBLIC
+    "${NOTEPAD4_SOURCE}/scintilla/include"
+    PRIVATE src/platform "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+target_compile_definitions(notepad4_core PUBLIC __WX__ BOOST_REGEX_STANDALONE NO_CXX11_REGEX NOMINMAX WIN32_LEAN_AND_MEAN)
+target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
+
+add_library(editor_control STATIC src/editor_control.cpp src/platform/wx_platform.cpp)
+target_include_directories(editor_control PUBLIC src PRIVATE src/platform
+    "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+target_link_libraries(editor_control PUBLIC notepad4_core)
+
+# The pinned core predates C++20 char8_t and is compiled without RTTI on Windows.
+foreach(target notepad4_core editor_control)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /utf-8 /GR- /Zc:char8_t-)
+    else()
+        target_compile_options(${target} PRIVATE -fno-char8_t)
+    endif()
+endforeach()
+if(UNIX AND NOT APPLE)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
+    pkg_check_modules(WAYLAND REQUIRED IMPORTED_TARGET wayland-egl wayland-cursor)
+    target_link_libraries(editor_control PUBLIC PkgConfig::GTK PkgConfig::WAYLAND)
+endif()
+
+add_executable(wxnotepad WIN32 src/main.cpp)
+target_link_libraries(wxnotepad PRIVATE editor_control)
+if(MSVC)
+    target_compile_options(wxnotepad PRIVATE /utf-8)
+endif()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(editor_smoke WIN32 tests/editor_smoke.cpp)
+    target_link_libraries(editor_smoke PRIVATE editor_control)
+    if(MSVC)
+        target_compile_options(editor_smoke PRIVATE /utf-8)
+    endif()
+    add_test(NAME editor_readonly COMMAND editor_smoke)
+    set_tests_properties(editor_readonly PROPERTIES TIMEOUT 30)
+    add_executable(display_smoke WIN32 tests/display_smoke.cpp)
+    target_link_libraries(display_smoke PRIVATE editor_control)
+    add_test(NAME display_repaint COMMAND display_smoke)
+    set_tests_properties(display_repaint PROPERTIES TIMEOUT 30)
+endif()

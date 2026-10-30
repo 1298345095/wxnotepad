@@ -1,0 +1,7 @@
+# Preparation files must have identical bytes on Windows and Linux.
+*.py text eol=lf
+*.patch text eol=lf -whitespace
+*.sha256 text eol=lf
+
+# Preserve upstream notice formatting, including its final blank lines.
+licenses/*.txt text eol=lf -whitespace
