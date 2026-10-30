@@ -12,6 +12,8 @@ public:
         wMain = static_cast<wxWindow*>(&window_);
         Initialise();
         WndProc(Message::SetCodePage, 65001, 0);
+        // Match unconfigured Notepad4 on every host; saving preserves actual EOLs.
+        WndProc(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf), 0);
         WndProc(Message::StyleSetFont, 32, reinterpret_cast<intptr_t>(core::Platform::DefaultFont()));
         WndProc(Message::StyleSetSize, 32, 12);
         WndProc(Message::StyleClearAll, 0, 0);
