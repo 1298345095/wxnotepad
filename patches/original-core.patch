@@ -1,0 +1,445 @@
+--- /dev/null
++++ b/scintilla/include/boost/regex/v5/wx_cpp_regex_traits.hpp
+@@ -0,0 +1,269 @@
++#include <locale>
++#include <utility>
++#ifndef BOOST_WIN_REGEX_TRAITS_HPP_INCLUDED
++#define BOOST_WIN_REGEX_TRAITS_HPP_INCLUDED
++
++#include <boost/regex/pattern_except.hpp>
++#include <boost/regex/v5/regex_traits_defaults.hpp>
++#include <boost/regex/v5/primary_transform.hpp>
++#include <memory>
++#include <map>
++#include "VectorISA.h"
++
++namespace boost{
++
++//
++// forward declaration is needed by some compilers:
++//
++template <class charT>
++class cpp_regex_traits;
++
++template <>
++class cpp_regex_traits<wchar_t>
++{
++public:
++   typedef wchar_t                       charT;
++   typedef charT                         char_type;
++   typedef std::size_t                   size_type;
++   typedef std::basic_string<char_type>  string_type;
++   typedef std::locale                          locale_type;
++   typedef std::uint32_t                 char_class_type;
++
++   struct boost_extensions_tag{};
++
++   cpp_regex_traits() {
++      m_collate_type = BOOST_REGEX_DETAIL_NS::find_sort_syntax(this, &m_collate_delim);
++      // we need to start by initialising our syntax map so we know which
++      // character is used for which purpose:
++      for(regex_constants::syntax_type i = 1; i < regex_constants::syntax_max; ++i)
++      {
++         if (const char* ptr = BOOST_REGEX_DETAIL_NS::get_default_syntax(i))
++         {
++            while(*ptr)
++            {
++               const unsigned char c = *ptr++;
++               this->m_char_map[c] = i;
++            }
++         }
++      }
++   }
++   static size_type length(const char_type* p) noexcept
++   {
++      return std::char_traits<charT>::length(p);
++   }
++   regex_constants::syntax_type syntax_type(charT c) const
++   {
++      const auto i = m_char_map.find(c);
++      return ((i == m_char_map.end()) ? 0 : i->second);
++   }
++   regex_constants::escape_syntax_type escape_syntax_type(charT c) const
++   {
++      const auto i = m_char_map.find(c);
++      if(i == m_char_map.end())
++      {
++         if(Classify(c) & 0x0002u) return regex_constants::escape_type_class;
++         if(Classify(c) & 0x0001u) return regex_constants::escape_type_not_class;
++         return 0;
++      }
++      return i->second;
++   }
++   charT translate(charT c) const
++   {
++      return c;
++   }
++   charT translate_nocase(charT c) const
++   {
++      return this->tolower(c);
++   }
++   charT translate(charT c, bool icase) const
++   {
++      return icase ? this->tolower(c) : c;
++   }
++   charT tolower(charT c) const
++   {
++      return std::use_facet<std::ctype<wchar_t>>(m_locale).tolower(c);
++   }
++   charT toupper(charT c) const
++   {
++      return c; // toupper() is unused
++   }
++   string_type transform(const charT* p1, const charT* p2) const
++   {
++      return w32_transform(p1, p2);
++   }
++   string_type transform_primary(const charT* p1, const charT* p2) const
++   {
++      string_type result;
++      //
++      // What we do here depends upon the format of the sort key returned by
++      // sort key returned by this->transform:
++      //
++      switch(m_collate_type)
++      {
++      case BOOST_REGEX_DETAIL_NS::sort_C:
++      case BOOST_REGEX_DETAIL_NS::sort_unknown:
++         // the best we can do is translate to lower case, then get a regular sort key:
++         {
++            result.assign(p1, p2);
++            for(charT &c : result)
++               c = this->tolower(c);
++            result = this->transform(&*result.begin(), &*result.begin() + result.size());
++            break;
++         }
++      case BOOST_REGEX_DETAIL_NS::sort_fixed:
++         {
++            // get a regular sort key, and then truncate it:
++            result.assign(this->transform(p1, p2));
++            result.erase(this->m_collate_delim);
++            break;
++         }
++      case BOOST_REGEX_DETAIL_NS::sort_delim:
++            // get a regular sort key, and then truncate everything after the delim:
++            result.assign(this->transform(p1, p2));
++            std::size_t i;
++            for(i = 0; i < result.size(); ++i)
++            {
++               if(result[i] == m_collate_delim)
++                  break;
++            }
++            result.erase(i);
++            break;
++      }
++      if(result.empty())
++         result = string_type(1, charT(0));
++      return result;
++   }
++   char_class_type lookup_classname(const charT* p1, const charT* p2) const
++   {
++      char_class_type result = lookup_classname_imp(p1, p2);
++      if(result == 0)
++      {
++         string_type temp(p1, p2);
++         for(charT &c : temp)
++            c = this->tolower(c);
++         result = lookup_classname_imp(&*temp.begin(), &*temp.begin() + temp.size());
++      }
++      return result;
++   }
++   string_type lookup_collatename(const charT* p1, const charT* p2) const
++   {
++      //std::string name(p1, p2);
++      std::string name(p2 - p1, '\0');
++      const charT* t1 = p1;
++      for (char &c : name) {
++         c = static_cast<char>(*t1++);
++      }
++      name = BOOST_REGEX_DETAIL_NS::lookup_default_collate_name(name);
++      if(!name.empty())
++         return string_type(name.begin(), name.end());
++      if(p2 - p1 == 1)
++         return string_type(1, *p1);
++      return string_type();
++   }
++   bool isctype(charT c, char_class_type f) const
++   {
++      if((f & mask_base)
++         && (Classify(c) & (f & mask_base)))
++         return true;
++      else if((f & mask_unicode) && BOOST_REGEX_DETAIL_NS::is_extended(c))
++         return true;
++      else if((f & mask_word) && (c == '_'))
++         return true;
++      else if((f & mask_vertical)
++         && (::boost::BOOST_REGEX_DETAIL_NS::is_separator(c) || (c == '\v')))
++         return true;
++      else if((f & mask_horizontal)
++         && (Classify(c) & 0x0008u) && !(::boost::BOOST_REGEX_DETAIL_NS::is_separator(c) || (c == '\v')))
++         return true;
++      return false;
++   }
++   std::intmax_t toi(const charT*& p1, const charT* p2, int radix) const
++   {
++      return ::boost::BOOST_REGEX_DETAIL_NS::global_toi(p1, p2, radix, *this);
++   }
++   int value(charT c, int radix) const
++   {
++      int result = ::boost::BOOST_REGEX_DETAIL_NS::global_value(c);
++      return result < radix ? result : -1;
++   }
++   locale_type imbue([[maybe_unused]] locale_type l) const
++   {
++      const locale_type result(getloc());
++      return result;
++   }
++   locale_type getloc() const
++   {
++      return m_locale;
++   }
++   std::string error_string(regex_constants::error_type n) const
++   {
++      return BOOST_REGEX_DETAIL_NS::get_default_error_string(n);
++   }
++
++private:
++   unsigned                       m_collate_type;    // the form of the collation string
++   charT                          m_collate_delim;   // the collation group delimiter
++   std::locale m_locale{""};
++   // TODO: use a hash table when available!
++   std::map<charT, regex_constants::syntax_type> m_char_map;
++
++   static constexpr int characterCount = 0xffff + 1;
++   static constexpr char_class_type mask_word = 0x0400; // must be C1_DEFINED << 1
++   static constexpr char_class_type mask_unicode = 0x0800; // must be C1_DEFINED << 2
++   static constexpr char_class_type mask_horizontal = 0x1000; // must be C1_DEFINED << 3
++   static constexpr char_class_type mask_vertical = 0x2000; // must be C1_DEFINED << 4
++   static constexpr char_class_type mask_base = 0x3ff;  // all the masks used by the CT_CTYPE1 group
++
++   static char_class_type lookup_classname_imp(const charT* p1, const charT* p2)
++   {
++      static const char_class_type masks[22] =
++      {
++         0,
++         0x0104u, // C1_ALPHA | C1_DIGIT
++         0x0100u, // C1_ALPHA
++         0x0040u, // C1_BLANK
++         0x0020u, // C1_CNTRL
++         0x0004u, // C1_DIGIT
++         0x0004u, // C1_DIGIT
++         (~(0x0020u|0x0008u|0x0040) & 0x01ffu) | 0x0400u, // not C1_CNTRL or 0x0008u or C1_BLANK
++         mask_horizontal,
++         0x0002u, // 0x0002u
++         0x0002u, // 0x0002u
++         (~0x0020u & 0x01ffu) | 0x0400, // not C1_CNTRL
++         0x0010u, // C1_PUNCT
++         0x0008u, // 0x0008u
++         0x0008u, // 0x0008u
++         0x0001u, // 0x0001u
++         mask_unicode,
++         0x0001u, // 0x0001u
++         mask_vertical,
++         0x0104u | mask_word,
++         0x0104u | mask_word,
++         0x0080u, // C1_XDIGIT
++      };
++      std::size_t state_id = 1u + (std::size_t)BOOST_REGEX_DETAIL_NS::get_default_class_id(p1, p2);
++      if(state_id < sizeof(masks) / sizeof(masks[0]))
++         return masks[state_id];
++      return masks[0];
++   }
++
++   char_class_type Classify(wchar_t c) const {
++      const auto& facet=std::use_facet<std::ctype<wchar_t>>(m_locale);
++      char_class_type value=0;
++      for(const auto& entry : {std::pair{std::ctype_base::upper,0x0001u},
++          {std::ctype_base::lower,0x0002u},{std::ctype_base::digit,0x0004u},
++          {std::ctype_base::space,0x0008u},{std::ctype_base::punct,0x0010u},
++          {std::ctype_base::cntrl,0x0020u},{std::ctype_base::blank,0x0040u},
++          {std::ctype_base::xdigit,0x0080u},{std::ctype_base::alpha,0x0100u}})
++          if(facet.is(entry.first,c)) value|=entry.second;
++      return value;
++   }
++   static std::wstring w32_transform(const wchar_t* first,const wchar_t* last) {
++      return std::use_facet<std::collate<wchar_t>>(std::locale("")).transform(first,last);
++   }
++
++};
++
++} // boost
++
++#endif
+--- a/scintilla/include/boost/regex/v5/regex_traits.hpp
++++ b/scintilla/include/boost/regex/v5/regex_traits.hpp
+@@ -24,7 +24,9 @@
+ #include <boost/regex/v5/syntax_type.hpp>
+ #include <boost/regex/v5/error_type.hpp>
+ #include <boost/regex/v5/regex_traits_defaults.hpp>
+-//#include <boost/regex/v5/cpp_regex_traits.hpp>
++#ifndef _WIN32
++#include <boost/regex/v5/wx_cpp_regex_traits.hpp>
++#endif
+ //#include <boost/regex/v5/c_regex_traits.hpp>
+ #if defined(_WIN32) && !defined(BOOST_REGEX_NO_W32)
+ //#     include <boost/regex/v5/w32_regex_traits.hpp>
+--- a/scintilla/include/VectorISA.h
++++ b/scintilla/include/VectorISA.h
+@@ -16,7 +16,12 @@
+ // https://software.intel.com/sites/landingpage/IntrinsicsGuide/
+ // https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+ // https://clang.llvm.org/docs/LanguageExtensions.html
++#ifdef _MSC_VER
+ #include <intrin.h>
++#else
++#include <immintrin.h>
++#include "intrinsics_port.h"
++#endif
+ 
+ #if defined(__aarch64__) || defined(_M_ARM64)
+ 	#define NP2_TARGET_ARM		1
+--- a/scintilla/lexlib/LexerModule.cxx
++++ b/scintilla/lexlib/LexerModule.cxx
+@@ -111,89 +111,7 @@
+ 
+ namespace {
+ 
+-const LexerModule * const lexerCatalogue[] = {
+-//++Autogenerated -- run scripts/LexGen.py to regenerate
+-//**\(\t&\*,\n\)
+-	&lmAPDL,
+-	&lmAsm,
+-	&lmAsymptote,
+-	&lmAutoHotkey,
+-	&lmAutoIt3,
+-	&lmAviSynth,
+-	&lmAwk,
+-	&lmBash,
+-	&lmBatch,
+-	&lmCangjie,
+-	&lmCIL,
+-	&lmCMake,
+-	&lmCoffeeScript,
+-	&lmConfig,
+-	&lmCPP,
+-	&lmCSharp,
+-	&lmCSS,
+-	&lmCSV,
+-	&lmDart,
+-	&lmDiff,
+-	&lmDLang,
+-	&lmErlang,
+-	&lmFortran,
+-	&lmFSharp,
+-	&lmGN,
+-	&lmGo,
+-	&lmGraphViz,
+-	&lmGroovy,
+-	&lmHaskell,
+-	&lmHaxe,
+-	&lmHTML,
+-	&lmInnoSetup,
+-	&lmJamfile,
+-	&lmJava,
+-	&lmJavaScript,
+-	&lmJSON,
+-	&lmJulia,
+-	&lmKotlin,
+-	&lmLatex,
+-	&lmLisp,
+-	&lmLLVM,
+-	&lmLua,
+-	&lmMakefile,
+-	&lmMarkdown,
+-	&lmMathematica,
+-	&lmMatlab,
+-	&lmNim,
+-	&lmNsis,
+-	&lmNull,
+-	&lmOCaml,
+-	&lmPascal,
+-	&lmPerl,
+-	&lmPHPScript,
+-	&lmPowerBuilder,
+-	&lmPowerShell,
+-	&lmProps,
+-	&lmPython,
+-	&lmRebol,
+-	&lmRLang,
+-	&lmRuby,
+-	&lmRust,
+-	&lmSAS,
+-	&lmScala,
+-	&lmSmali,
+-	&lmSQL,
+-	&lmSwift,
+-	&lmTCL,
+-	&lmTexinfo,
+-	&lmTOML,
+-	&lmTypst,
+-	&lmVerilog,
+-	&lmVHDL,
+-	&lmVim,
+-	&lmVisualBasic,
+-	&lmWASM,
+-	&lmWinHex,
+-	&lmYAML,
+-	&lmZig,
+-
+-//--Autogenerated -- end of automatically generated section
++const LexerModule * const lexerCatalogue[] = { &lmNull
+ };
+ 
+ }
+--- a/scintilla/src/Document.cxx
++++ b/scintilla/src/Document.cxx
+@@ -28,7 +28,11 @@
+ #include <iterator>
+ #include <memory>
+ 
++#ifdef _WIN32
+ #include <windows.h>
++#else
++#include "conversion_port.h"
++#endif
+ #if defined(BOOST_REGEX_STANDALONE)
+ #include <boost/regex.hpp>
+ #elif !defined(NO_CXX11_REGEX)
+@@ -2216,7 +2220,12 @@
+ 			charBytes[b] = cb.UCharAt(position + b);
+ 		}
+ 		const CharacterExtracted charExtracted = CharacterExtracted(charBytes.data(), widthCharBytes);
++		#ifdef _WIN32
+ 		const unsigned len = UTF16FromUTF32Character(charExtracted.character, charInfo.buffer);
++#else
++		charInfo.buffer[0] = charExtracted.character;
++		const unsigned len = 1;
++#endif
+ 		charInfo.lenCharacters = len;
+ 		charInfo.lenBytes = charExtracted.widthBytes;
+ 	} else {
+--- a/scintilla/src/ParallelSupport.h
++++ b/scintilla/src/ParallelSupport.h
+@@ -1,3 +1,4 @@
++#ifdef _WIN32
+ // This file is part of Notepad4.
+ // See License.txt for details about distribution and modification.
+ #pragma once
+@@ -104,3 +105,7 @@
+ #endif
+ 
+ }
++
++#else
++#include "parallel_port.h"
++#endif
+--- a/scintilla/src/UniqueString.h
++++ b/scintilla/src/UniqueString.h
+@@ -8,6 +8,7 @@
+ // Copyright 2017 by Neil Hodgson <neilh@scintilla.org>
+ // The License.txt file describes the conditions under which this software may be distributed.
+ #pragma once
++#include <cstring>
+ 
+ namespace Scintilla::Internal {
+ 
