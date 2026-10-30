@@ -2,8 +2,11 @@
 
 #include <ScintillaMessages.h>
 #include <wx/control.h>
+#include <wx/timer.h>
 #include <cstdint>
 #include <memory>
+
+wxDECLARE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
@@ -15,6 +18,7 @@ public:
 
 private:
     class Core;
+    wxTimer caretTimer_;
     std::unique_ptr<Core> core_;
     void OnPaint(wxPaintEvent& event);
     void OnSize(wxSizeEvent& event);

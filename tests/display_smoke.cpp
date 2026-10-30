@@ -1,4 +1,5 @@
 #include "editor_control.h"
+#include "editor_frame.h"
 #include <wx/wx.h>
 #include <wx/timer.h>
 #include <cstdio>
@@ -8,10 +9,13 @@
 class DisplayApp final : public wxApp {
 public:
     bool OnInit() override {
-        frame_ = new wxFrame(nullptr, wxID_ANY, "wxnotepad display check", wxDefaultPosition, wxSize(800, 500));
-        editor_ = new EditorControl(frame_);
+        frame_ = new EditorFrame;
+        editor_ = frame_->Editor();
         editor_->Bind(wxEVT_PAINT, [this](wxPaintEvent& event) { ++paints_; event.Skip(); });
         frame_->Show();
+        editor_->SetFocus();
+        editor_->Send(Scintilla::Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("ASCII input\r\n中文输入\tcaret"));
+        caret_ = editor_->Send(Scintilla::Message::GetCurrentPos);
         timer_.SetOwner(this);
         Bind(wxEVT_TIMER, &DisplayApp::Step, this);
         timer_.Start(500, wxTIMER_ONE_SHOT);
@@ -20,14 +24,24 @@ public:
     int OnRun() override { wxApp::OnRun(); return result_; }
 
 private:
-    wxFrame* frame_ = nullptr;
+    EditorFrame* frame_ = nullptr;
     EditorControl* editor_ = nullptr;
     wxFrame* cover_ = nullptr;
+    wxButton* alternateFocus_ = nullptr;
     wxTimer timer_;
     int stage_ = 0;
     int paints_ = 0;
     int before_ = 0;
     int result_ = 1;
+    intptr_t caret_ = 0;
+
+    bool Focused(bool expected) {
+        if ((editor_->Send(Scintilla::Message::GetFocus) != 0) == expected) return true;
+        std::fputs("FAIL: native focus was not reflected by the core\n", stderr);
+        frame_->Destroy();
+        ExitMainLoop();
+        return false;
+    }
 
     bool Painted(const char* operation) {
         if (paints_ <= before_) {
@@ -45,35 +59,50 @@ private:
         switch (stage_++) {
         case 0:
             if (!Painted("show")) return;
-            frame_->SetClientSize(640, 320);
+            if (!Focused(true)) return;
+            alternateFocus_ = new wxButton(frame_, wxID_ANY, "temporary focus target", wxPoint(400, 50));
+            alternateFocus_->SetFocus();
             break;
         case 1:
+            if (!Focused(false)) return;
+            alternateFocus_->Destroy();
+            alternateFocus_ = nullptr;
+            editor_->SetFocus();
+            break;
+        case 2:
+            if (!Focused(true)) return;
+            frame_->SetClientSize(640, 320);
+            break;
+        case 3:
             if (!Painted("resize")) return;
             cover_ = new wxFrame(frame_, wxID_ANY, "wxnotepad temporary cover", frame_->GetPosition(), frame_->GetSize());
             cover_->Show();
             cover_->Raise();
             break;
-        case 2:
+        case 4:
             cover_->Destroy();
             cover_ = nullptr;
+            frame_->Raise();
+            editor_->SetFocus();
             // Composited backends may restore cached pixels without an expose.
             // An explicit native refresh also verifies our paint path on those backends.
             editor_->Refresh(false);
             break;
-        case 3:
+        case 5:
             if (!Painted("uncover and refresh")) return;
             frame_->Hide();
             break;
-        case 4:
+        case 6:
             frame_->Show();
             break;
-        case 5:
+        case 7:
             if (!Painted("hide/show")) return;
-            if (editor_->Send(Scintilla::Message::GetReadOnly) != 1 ||
-                editor_->Send(Scintilla::Message::GetLineCount) != 4) {
+            if (editor_->Send(Scintilla::Message::GetLineCount) != 2 ||
+                editor_->Send(Scintilla::Message::GetCurrentPos) != caret_ ||
+                editor_->Send(Scintilla::Message::GetModify) != 1) {
                 std::fputs("FAIL: repaint changed original document state\n", stderr);
             } else {
-                std::puts("PASS: repaint preserved the original read-only document");
+                std::puts("PASS: native focus, caret and modified document survive repaint");
                 result_ = 0;
             }
             frame_->Destroy();

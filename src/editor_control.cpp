@@ -4,6 +4,7 @@
 
 using Scintilla::Message;
 namespace core = Scintilla::Internal;
+wxDEFINE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 
 class EditorControl::Core final : public core::ScintillaBase {
 public:
@@ -14,13 +15,10 @@ public:
         WndProc(Message::StyleSetFont, 32, reinterpret_cast<intptr_t>(core::Platform::DefaultFont()));
         WndProc(Message::StyleSetSize, 32, 12);
         WndProc(Message::StyleClearAll, 0, 0);
-        WndProc(Message::SetCaretStyle, 0, 0);
+        WndProc(Message::SetCaretStyle, 1, 0);
         WndProc(Message::SetMarginWidthN, 1, 0);
-        static constexpr char sample[] = "Original Notepad4 core + wxWidgets\nASCII: read-only document\n中文：原版内核中的只读文本\n";
-        WndProc(Message::SetText, 0, reinterpret_cast<intptr_t>(sample));
         WndProc(Message::EmptyUndoBuffer, 0, 0);
         WndProc(Message::SetSavePoint, 0, 0);
-        WndProc(Message::SetReadOnly, 1, 0);
     }
     ~Core() override { Finalise(); }
 
@@ -36,6 +34,8 @@ public:
         paintState = PaintState::notPainting;
     }
     void Resize() { ChangeSize(); }
+    void Character(std::string_view text) { InsertCharacter(text, Scintilla::CharacterSource::DirectInput); }
+    void TickCaret() { TickFor(TickReason::caret); }
 
 private:
     EditorControl& window_;
@@ -48,7 +48,14 @@ private:
     void CopyToClipboard(const core::SelectionText&) const override {}
     void Paste(bool) override {}
     void NotifyChange() const noexcept override {}
-    void NotifyParent(Scintilla::NotificationData&) const noexcept override {}
+    void NotifyParent(Scintilla::NotificationData& notification) const noexcept override {
+        if (notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
+            notification.nmhdr.code == Scintilla::Notification::SavePointLeft) {
+            auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());
+            event->SetEventObject(&window_);
+            wxQueueEvent(&window_, event);
+        }
+    }
     std::string CaseMapString(const std::string& value, CaseMapping mapping) const override {
         wxString text = wxString::FromUTF8(value);
         if (mapping == CaseMapping::upper) text.MakeUpper();
@@ -56,9 +63,15 @@ private:
         return text.ToStdString(wxConvUTF8);
     }
     void StartDrag() override {}
-    bool FineTickerRunning(TickReason) const noexcept override { return false; }
-    void FineTickerStart(TickReason, int, int) noexcept override {}
-    void FineTickerCancel(TickReason) noexcept override {}
+    bool FineTickerRunning(TickReason reason) const noexcept override {
+        return reason == TickReason::caret && window_.caretTimer_.IsRunning();
+    }
+    void FineTickerStart(TickReason reason, int millis, int) noexcept override {
+        if (reason == TickReason::caret) window_.caretTimer_.Start(millis);
+    }
+    void FineTickerCancel(TickReason reason) noexcept override {
+        if (reason == TickReason::caret) window_.caretTimer_.Stop();
+    }
     bool SetIdle(bool) noexcept override { return false; }
     void SetMouseCapture(bool on) noexcept override {
         if (on && !window_.HasCapture()) window_.CaptureMouse();
@@ -74,9 +87,42 @@ private:
 };
 
 EditorControl::EditorControl(wxWindow* parent)
-    : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_SIMPLE) {
+    : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_SIMPLE | wxWANTS_CHARS),
+      caretTimer_(this) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     core_ = std::make_unique<Core>(*this);
+    Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& event) { Send(Message::SetFocus, 1); Refresh(false); event.Skip(); });
+    Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) { Send(Message::SetFocus, 0); Refresh(false); event.Skip(); });
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickCaret(); }, caretTimer_.GetId());
+    Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {
+        Message command{};
+        if (event.ControlDown() && !event.AltDown()) {
+            if (event.GetKeyCode() == 'Z') command = event.ShiftDown() ? Message::Redo : Message::Undo;
+            else if (event.GetKeyCode() == 'Y') command = Message::Redo;
+        } else if (!event.AltDown() && !event.ShiftDown()) {
+            switch (event.GetKeyCode()) {
+            case WXK_RETURN: case WXK_NUMPAD_ENTER: command = Message::NewLine; break;
+            case WXK_TAB: command = Message::Tab; break;
+            case WXK_BACK: command = Message::DeleteBack; break;
+            case WXK_DELETE: command = Message::Clear; break;
+            default: break;
+            }
+        }
+        if (command != Message{}) Send(command);
+        else event.Skip();
+    });
+    Bind(wxEVT_CHAR, [this](wxKeyEvent& event) {
+        const int character = event.GetUnicodeKey();
+        if (character >= 32 && character != WXK_DELETE && !event.ControlDown() && !event.AltDown()) {
+            // Keep the conversion owner alive: ToUTF8().data() on a temporary
+            // would leave InsertCharacter holding a dangling view.
+            const wxString text(wxUniChar(static_cast<unsigned int>(character)));
+            const auto utf8 = text.ToUTF8();
+            core_->Character(std::string_view(utf8.data(), utf8.length()));
+        } else {
+            event.Skip();
+        }
+    });
     Bind(wxEVT_PAINT, &EditorControl::OnPaint, this);
     Bind(wxEVT_SIZE, &EditorControl::OnSize, this);
 }
