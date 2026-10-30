@@ -52,14 +52,30 @@ public:
         frame->Show();
         editor->SetFocus();
         if (argc == 2 && wxString(argv[1]) == "--manual") {
-            // A human-only fixture, kept out of the application: Ctrl+End can
-            // scroll to a blank line without typing filler into the undo history.
+            // A human-only fixture, kept out of the application. Positioning
+            // uses the real control's public API without navigation-key mappings.
             std::string blankLines;
             for (int line = 1; line < 100; ++line) blankLines += "\r\n";
             editor->Send(Scintilla::Message::SetText, 0, reinterpret_cast<intptr_t>(blankLines.c_str()));
             editor->Send(Scintilla::Message::EmptyUndoBuffer);
             editor->Send(Scintilla::Message::SetSavePoint);
             editor->Send(Scintilla::Message::GotoPos, 0);
+            auto* positions = new wxBoxSizer(wxHORIZONTAL);
+            const auto addPosition = [frame, editor, positions](const char* label, int line) {
+                auto* button = new wxButton(frame, wxID_ANY, label);
+                positions->Add(button, 0);
+                button->Bind(wxEVT_BUTTON, [editor, line](wxCommandEvent&) {
+                    const auto position = editor->Send(Scintilla::Message::PositionFromLine, line);
+                    editor->Send(Scintilla::Message::GotoPos, position);
+                    editor->Send(Scintilla::Message::ScrollCaret);
+                    editor->SetFocus();
+                });
+            };
+            addPosition("First line", 0);
+            addPosition("Second line", 1);
+            addPosition("Scrolled last line", 99);
+            layout->Insert(1, positions, 0, wxEXPAND);
+            frame->Layout();
             frame->SetTitle("Microsoft Pinyin manual check - 100 blank lines");
             result_ = 0;
             return true;

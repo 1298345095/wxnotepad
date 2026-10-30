@@ -37,8 +37,7 @@ those runs provide regression evidence only.
 
 ## Microsoft Pinyin human validation: pending
 
-Use the integrated navigation/scroll build after #11 is merged. Start a fresh
-manual fixture and select Microsoft Pinyin Chinese mode:
+Start a fresh manual fixture and select Microsoft Pinyin Chinese mode:
 
 ```powershell
 ./build/cmake/Release/ime_smoke.exe --manual
@@ -46,17 +45,19 @@ manual fixture and select Microsoft Pinyin Chinese mode:
 
 This test-only mode starts with 100 blank lines, a clean undo history and the
 caret on the first line. The normal application does not contain this fixture.
+Its three positioning buttons use the real control's public commands and return
+focus to the editor; they do not depend on #11 keyboard or mouse navigation.
 
-1. On the empty first line, type `nihao` and commit `你好` with Space. Type
+1. Click First line. Type `nihao` and commit `你好` with Space. Observe composition
+   and candidates beside the first-line caret. Type
    `ceshi`; when candidates appear press Esc. Confirm `你好` remains with no
    preedit text, then press Ctrl+Z once and confirm the first line becomes blank.
-2. Type `nihao` on the first line and observe composition/candidates beside the
-   caret. Cancel with Esc, press Down, type `nihao` on the second line and check
-   that composition/candidates move to that caret. Cancel again.
-3. Press Ctrl+End to scroll to the last blank line. Type `nihao`; confirm
+2. Click Second line and type `nihao`. Check that composition/candidates move to
+   the second-line caret. Cancel with Esc.
+3. Click Scrolled last line. Type `nihao`; confirm
    composition/candidates follow the visible caret after scrolling. Cancel with Esc.
-4. Click the fixture's Focus target button, then click a different visible line
-   in the editor. Type `nihao` and confirm composition/candidates follow the new
+4. Click Focus target, then First line. Type `nihao` and confirm
+   composition/candidates follow the new
    caret after refocus. Cancel with Esc and close the fixture.
 
 Record the human result separately. Automated geometry does not complete this
