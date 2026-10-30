@@ -9,9 +9,18 @@ Tab; use Backspace and Delete to remove text. Edit → Undo/Redo and Ctrl+Z/Ctrl
 follow the core's history. A `*` in the title marks changes from the save point;
 undoing to that point removes it. Ctrl+Shift+Z also redoes.
 
+File → Save / Ctrl+S opens the native save dialog for an unnamed document.
+The first save writes UTF-8 without a BOM, confirms overwriting an existing
+target, and updates the title/save point only after safe replacement succeeds.
+Newline insertion defaults to CRLF on every platform, matching unconfigured
+Notepad4; saving preserves CRLF, LF and CR characters already in the text.
+Cancel or failure retains the document. Saving named documents follows in #17;
+the Save command is disabled after the first successful save for this stage.
+
 This covers [#9](https://github.com/1298345095/wxnotepad/issues/9) and
-[#10](https://github.com/1298345095/wxnotepad/issues/10). Selection/navigation,
-clipboard, file operations and dedicated input-method handling follow in later tickets.
+[#10](https://github.com/1298345095/wxnotepad/issues/10), and
+[#14](https://github.com/1298345095/wxnotepad/issues/14). Selection/navigation,
+clipboard, other file operations and dedicated input-method handling follow in later tickets.
 
 ## Build and run
 
@@ -58,9 +67,11 @@ against the pinned `patches/source.sha256` before extraction. Use `--prepare-onl
 to create the archive without compiling. See [patch provenance](patches/README.md)
 and [dependency licenses](licenses/README.md).
 
-`--test` runs two separate real GUI processes: UTF-8 character events, basic
+`--test` runs separate real GUI processes: UTF-8 character events, basic
 editing, Undo/Redo, menu availability and save-point/title state; and native
 focus transfers plus show/resize/uncover/hide-show paint handling. These checks
 need a desktop and fail on a GUI process error or timeout. See the
 [input validation record](docs/evidence/issue-10/README.md) and the earlier
 [read-only display assessment](docs/evidence/issue-09/README.md).
+The [first-save record](docs/evidence/issue-14/README.md) covers file bytes,
+cancellation/failure, save-point history and native dialogs.
