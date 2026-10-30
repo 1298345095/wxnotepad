@@ -26,10 +26,16 @@ status: proposed
 
 2026-10-30，Windows 11 与 Ubuntu 24.04.4 WSLg 完成最小文件编辑及编码实验：Windows、Wayland、X11 各 20 组 UTF-8、UTF-16LE、GBK 样本的实际文件字节符合预期；微软拼音的提交、取消和单次撤销人工验证通过。Linux 已使用本机 vcpkg 的同版本 wxWidgets 3.3.3 验证 Wayland/X11。
 
-Linux 输入法按用户决定暂缓验证；新空文档的默认换行需在后续配置设计中明确，产品性能预算待综合实验确定。实验代码和观测保存在 codex/prototype-wxstc：最小文件实验提交 d1dbf8e，编码与输入实验提交 59dee6e，证据分别见 [#2](https://github.com/1298345095/wxnotepad/issues/2) 和 [#3](https://github.com/1298345095/wxnotepad/issues/3)。
+Linux 输入法按用户决定暂缓验证；新空文档的默认换行需在后续配置设计中明确，产品性能预算尚未设定。实验代码和观测保存在 codex/prototype-wxstc：最小文件实验提交 d1dbf8e，编码与输入实验提交 59dee6e，证据分别见 [#2](https://github.com/1298345095/wxnotepad/issues/2) 和 [#3](https://github.com/1298345095/wxnotepad/issues/3)。
 
 搜索实验确认现成 wxStyledTextCtrl 与原版定制内核存在编辑行为差异：美元捕获引用替换、后顾、跨行匹配，以及 Linux 上中文词类匹配需要处理。C++、JSON 两个代表样本的基础高亮、折叠和修改后更新可用，额外语义样式及不完整代码着色有差异；不能据此推定全部语言兼容。证据见 [#4](https://github.com/1298345095/wxnotepad/issues/4)（7229361）和 [#5](https://github.com/1298345095/wxnotepad/issues/5)（a2ebb6d）。
 
 资源实验在同机 Windows 上观察到：100 MiB 纯文本原生 API 打开中位数约为 wxSTC 1.53 秒、原版内核 0.15 秒，全部替换约为 0.46 秒和 0.06 秒，打开后的私有内存约为 216 MiB 和 109 MiB。两者均在隐藏控件中计时，默认纯文本存储策略及宿主不同，不代表完整应用性能，也不能将差距全部归因于界面框架。小文件启动另行对照了原版完整应用；Linux 数据单列。1 GiB 与超长单行原生操作探查完成，但未测量其渲染和交互流畅度。
 
 结合搜索兼容缺口与现有构建的资源成本，下一阶段优先做“原版定制内核接入 wxWidgets”的最小技术实验，验证 Windows/Linux 平台桥接、既有行为和资源开销，再比较与维护 wxSTC 定制补丁的成本。继续将 wxWidgets 作为界面首选；暂不锁定现成 wxStyledTextCtrl，也不直接决定全面移植原版内核。Linux 输入法、完整语言覆盖、生产构建和性能预算仍待验证或明确。汇总结论与复现数据见 [#6](https://github.com/1298345095/wxnotepad/issues/6)，原型提交 [18c8ae4](https://github.com/1298345095/wxnotepad/commit/18c8ae4)；main 仅保留结论，不合入原型代码。
+
+原版内核接入实验 [#7](https://github.com/1298345095/wxnotepad/issues/7) 已跑通 Windows、Wayland 和 X11 的最小 wx 编辑窗口。原版文档、编辑、撤销、Boost 搜索替换和三个代表性 lexer 直接编译在 wx 平台桥接后，每个后端的 104 项搜索观测、12 份 lexer 快照均与原版基线一致；20 组编码样本通过独立字节对照。新桥接的微软拼音候选定位、中文提交和保存经用户复核正常；字符事件回放覆盖 UTF-8 所有权、撤销、重做和保存重开。Linux 输入法继续暂缓。
+
+同轮 Windows 100 MiB 原生 API 测量：wx 桥接打开约 0.163 秒、全部替换约 0.059 秒、打开后私有内存约 112 MiB；原版原生控件对照约为 0.145 秒、0.059 秒和 108 MiB。Linux Wayland/X11 桥接打开约 0.139/0.141 秒，RSS 约 150/144 MiB。沿用隐藏控件 API 计量，构建配置和宿主不同，不代表完整应用或渲染延迟。原型代码和数据见独立分支 codex/prototype-original-core、提交 [2f44bb9](https://github.com/1298345095/wxnotepad/commit/2f44bb9)。
+
+这些结果支持“原版内核 + wxWidgets 平台桥接”作为后续实现候选，资源优势在本轮样本中得到保留。下一实现边界应先建立可维护的编辑器/文件接口及平台输入、绘制实现，再扩展语言数据和配置。原型平台层尚未覆盖复杂文字、辅助功能、拖放、补全/提示、DPI 和完整输入法行为；不能直接作为正式控件。最终选型与性能预算仍待这些成本明确，本 ADR 保持 proposed。
