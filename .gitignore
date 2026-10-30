@@ -25,6 +25,10 @@ CMakeUserPresets.json
 *.suo
 *.user
 
+# Python experiment launcher cache
+__pycache__/
+*.pyc
+
 # OS-generated files
 .DS_Store
 Thumbs.db
