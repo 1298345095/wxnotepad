@@ -19,6 +19,8 @@ public:
 private:
     class Core;
     wxTimer caretTimer_;
+    wxTimer scrollTimer_;
+    wxTimer widenTimer_;
     std::unique_ptr<Core> core_;
     void OnPaint(wxPaintEvent& event);
     void OnSize(wxSizeEvent& event);
