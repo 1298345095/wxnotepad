@@ -38,21 +38,26 @@ those runs provide regression evidence only.
 ## Microsoft Pinyin human validation: pending
 
 Use the integrated navigation/scroll build after #11 is merged. Start a fresh
-`build/cmake/Release/wxnotepad.exe` and select Microsoft Pinyin Chinese mode.
+manual fixture and select Microsoft Pinyin Chinese mode:
+
+```powershell
+./build/cmake/Release/ime_smoke.exe --manual
+```
+
+This test-only mode starts with 100 blank lines, a clean undo history and the
+caret on the first line. The normal application does not contain this fixture.
 
 1. On the empty first line, type `nihao` and commit `你好` with Space. Type
    `ceshi`; when candidates appear press Esc. Confirm `你好` remains with no
-   preedit text, then press Ctrl+Z once and confirm the document becomes empty.
+   preedit text, then press Ctrl+Z once and confirm the first line becomes blank.
 2. Type `nihao` on the first line and observe composition/candidates beside the
-   caret. Cancel with Esc, press Enter, type `nihao` on the second line and check
+   caret. Cancel with Esc, press Down, type `nihao` on the second line and check
    that composition/candidates move to that caret. Cancel again.
-3. In English mode type repeated short lines with Enter until the editor scrolls
-   (or resize the window shorter first). Switch back to Chinese mode and type
-   `nihao`; confirm composition/candidates follow the visible caret after scrolling.
-   Cancel with Esc.
-4. Move focus away to another application and return to the editor. Place the
-   caret on a different visible line, type `nihao`, and confirm the composition
-   and candidates follow the new caret. Cancel with Esc.
+3. Press Ctrl+End to scroll to the last blank line. Type `nihao`; confirm
+   composition/candidates follow the visible caret after scrolling. Cancel with Esc.
+4. Click the fixture's Focus target button, then click a different visible line
+   in the editor. Type `nihao` and confirm composition/candidates follow the new
+   caret after refocus. Cancel with Esc and close the fixture.
 
 Record the human result separately. Automated geometry does not complete this
 acceptance criterion. Linux IME, other IMEs and other display scaling combinations
