@@ -10,6 +10,8 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
+#include <string>
+#include <string_view>
 
 EditorFrame::EditorFrame()
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
@@ -145,8 +147,13 @@ void EditorFrame::ShowFind(bool replace) {
         buttons->Add(next, 0, wxRIGHT, 8);
         replaceButton_ = new wxButton(findDialog_, wxID_REPLACE, "&Replace");
         buttons->Add(replaceButton_, 0, wxRIGHT, 8);
+        replaceAllButton_ = new wxButton(findDialog_, wxID_REPLACE_ALL, "Replace &All");
+        buttons->Add(replaceAllButton_, 0, wxRIGHT, 8);
         buttons->Add(new wxButton(findDialog_, wxID_CANCEL, "Close"));
         layout->Add(buttons, 0, wxALL | wxALIGN_RIGHT, 8);
+        replacementResult_ = new wxStaticText(findDialog_, wxID_ANY, "");
+        replacementResult_->SetName("Replacement result");
+        layout->Add(replacementResult_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
         findDialog_->SetSizerAndFit(layout);
         const wxAcceleratorEntry nextKey(wxACCEL_NORMAL, WXK_F3, wxID_FORWARD);
         findDialog_->SetAcceleratorTable(wxAcceleratorTable(1, &nextKey));
@@ -154,6 +161,7 @@ void EditorFrame::ShowFind(bool replace) {
         findDialog_->Bind(wxEVT_CHAR_HOOK, &EditorFrame::OnSearchKey, this);
         findDialog_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
         findDialog_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceOne(); }, wxID_REPLACE);
+        findDialog_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceAll(); }, wxID_REPLACE_ALL);
         findQuery_->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent&) { FindNext(); });
         const auto close = [this] {
             findDialog_->Hide();
@@ -166,6 +174,8 @@ void EditorFrame::ShowFind(bool replace) {
     replacementLabel_->Show(replace);
     replacement_->Show(replace);
     replaceButton_->Show(replace);
+    replaceAllButton_->Show(replace);
+    replacementResult_->Show(replace);
     findDialog_->GetSizer()->Fit(findDialog_);
     findDialog_->Show();
     findQuery_->SetFocus();
@@ -227,6 +237,46 @@ void EditorFrame::ReplaceOne() {
     const auto after = editor_->Send(Message::GetTargetEnd);
     editor_->Send(Message::SetSel, after, after);
     FindNext();
+}
+
+void EditorFrame::ReplaceAll() {
+    const wxString queryText = findQuery_->GetValue();
+    const auto query = queryText.utf8_str();
+    const wxString replacementText = replacement_->GetValue();
+    const auto replacement = replacementText.utf8_str();
+    using Scintilla::Message;
+    size_t count = 0;
+    bool editing = false;
+    intptr_t start = 0;
+    auto limit = editor_->Send(Message::GetLength);
+    editor_->Send(Message::SetSearchFlags, 0);
+    while (query.length() && start < limit) {
+        editor_->Send(Message::SetTargetStart, start);
+        editor_->Send(Message::SetTargetEnd, limit);
+        if (editor_->Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) < 0) break;
+        const auto matchStart = editor_->Send(Message::GetTargetStart);
+        const auto matchEnd = editor_->Send(Message::GetTargetEnd);
+        const auto length = static_cast<size_t>(matchEnd - matchStart);
+        std::string matched(length + 1, '\0');
+        editor_->Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(matched.data()));
+        matched.resize(length);
+        if (matched != std::string_view(replacement.data(), replacement.length())) {
+            if (!editing) {
+                editor_->Send(Message::BeginUndoAction);
+                editing = true;
+            }
+            const auto inserted = editor_->Send(Message::ReplaceTarget, replacement.length(),
+                                                reinterpret_cast<intptr_t>(replacement.data()));
+            limit += inserted - (matchEnd - matchStart);
+            start = matchStart + inserted;
+        } else {
+            start = matchEnd;
+        }
+        ++count;
+    }
+    if (editing) editor_->Send(Message::EndUndoAction);
+    replacementResult_->SetLabel(wxString::Format("%zu replacements", count));
+    findDialog_->GetSizer()->Fit(findDialog_);
 }
 
 void EditorFrame::UpdateDocumentState() {

@@ -34,9 +34,12 @@ private:
     wxTextCtrl* replacement_ = nullptr;
     wxStaticText* replacementLabel_ = nullptr;
     wxButton* replaceButton_ = nullptr;
+    wxButton* replaceAllButton_ = nullptr;
+    wxStaticText* replacementResult_ = nullptr;
     void ShowFind(bool replace = false);
     void FindNext();
     void ReplaceOne();
+    void ReplaceAll();
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     bool ConfirmDiscardChanges(const wxString& action);
