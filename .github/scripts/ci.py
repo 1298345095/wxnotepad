@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -56,25 +57,37 @@ def dependencies():
 
 
 def configure(app_only):
+    if not WINDOWS:
+        header = VCPKG / 'installed' / TRIPLET / 'include/gtk-3.0/gdk/gdkconfig.h'
+        configuration = header.read_text(encoding='utf-8')
+        backends = {name.lower(): bool(re.search(r'^\s*#\s*define\s+GDK_WINDOWING_' + name + r'\b',
+                                                configuration, re.MULTILINE))
+                    for name in ('X11', 'WAYLAND')}
+        REPORTS.mkdir(parents=True, exist_ok=True)
+        (REPORTS / 'gtk-backends.json').write_text(json.dumps(backends, indent=2) + '\n', encoding='utf-8')
+        if not all(backends.values()):
+            raise SystemExit('The CI GTK3 dependency must support X11 and Wayland; enable gtk3[wayland]')
     run([sys.executable, '-X', 'utf8', ROOT / 'tools/build.py', '--prepare-only',
          '--build-dir', BUILD], 'prepare.log')
-    command = ['cmake', '-S', ROOT, '-B', BUILD / 'cmake',
+    command = cmake_command() + ['-S', ROOT, '-B', BUILD / 'cmake',
                f'-DNOTEPAD4_SOURCE={BUILD / "original-core"}',
                f'-DCMAKE_TOOLCHAIN_FILE={VCPKG / "scripts/buildsystems/vcpkg.cmake"}',
                f'-DVCPKG_INSTALLED_DIR={VCPKG / "installed"}',
                f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', '-DVCPKG_MANIFEST_MODE=OFF',
                f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
-               '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON',
+               '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON', '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
                '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON')]
-    if WINDOWS:
-        command += ['-G', 'Visual Studio 17 2022', '-A', 'x64']
-    else:
-        command += ['-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release']
     run(command, 'configure.log')
 
 
+def cmake_command():
+    if WINDOWS:
+        return ['pwsh', '-NoProfile', '-File', ROOT / '.github/scripts/msvc.ps1']
+    return ['cmake']
+
+
 def build(app_only):
-    command = ['cmake', '--build', BUILD / 'cmake', '--config', 'Release', '--parallel', '2']
+    command = cmake_command() + ['--build', BUILD / 'cmake', '--config', 'Release', '--parallel', '2']
     if app_only:
         command += ['--target', 'wxnotepad']
     run(command, 'build.log')
@@ -99,7 +112,7 @@ def test(backend, cmake_dir, expression):
 
 
 def bundle():
-    directory = BUILD / 'cmake' / ('Release' if WINDOWS else '')
+    directory = BUILD / 'cmake'
     executable = directory / ('wxnotepad.exe' if WINDOWS else 'wxnotepad')
     destination = WORK / 'artifact'
     destination.mkdir(parents=True, exist_ok=True)

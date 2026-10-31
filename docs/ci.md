@@ -29,16 +29,22 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
 - The vcpkg checkout uses the manifest's builtin baseline and wxWidgets override
   **3.3.3#1**. Only core features are requested, matching the prepared development
   dependencies; unused sound/SDL2 and debug-support features are not requested.
+- Linux explicitly requests GTK3's Wayland feature alongside its X11 backend.
+  Installing the system GTK development package does not enable Wayland inside
+  the separately built vcpkg GTK. Configure records and checks the actual SDK
+  backend macros before compiling; the full native suites still exercise both.
 - CI-only triplets build Release dependencies, avoiding unused Debug builds.
   Normal development triplets and the existing local installations are unchanged.
+- Windows uses the installed Visual Studio C++ developer shell and Ninja, matching
+  vcpkg's toolchain selection rather than hard-coding a Visual Studio generator.
 - Binary packages and downloads are cached by OS, architecture, runner image and
   manifest/triplet/provisioning hashes. vcpkg's own ABI keys validate restored packages. Cached installed
   trees or application build directories are not reused between checkouts.
 - The dependency cache is saved after successful installation, before GUI tests.
   A later test failure therefore does not discard an expensive successful build.
 - Core preparation goes through the existing build tool and pinned archive/patch
-  checks, with command-local LF conversion settings so a runner's Git autocrlf
-  configuration cannot change archive bytes. A real-Git regression test runs on
+  checks, with command-local LF settings for archive and patch application so a
+  runner's Git autocrlf configuration cannot change prepared bytes. A real-Git regression test runs on
   both hosts before dependency installation and also checks corrupted-archive rejection.
   Application CMake configurations explicitly disable manifest installation
   and use the dependency tree provisioned by the workflow.

@@ -13,6 +13,7 @@ import tarfile
 REVISION = "89b8b36e0ee2c23f73be922315f17261ccfbbe1a"
 UPSTREAM = "https://github.com/zufuliu/notepad4.git"
 ROOT = Path(__file__).resolve().parents[1]
+LF_GIT = ("git", "-c", "core.autocrlf=false", "-c", "core.eol=lf")
 
 
 def run(command, **kwargs):
@@ -35,7 +36,7 @@ def prepare(build, source, archive):
         archive = build / "notepad4-source.tar"
         # Hosted Windows Git enables autocrlf; archive conversion must not change
         # the bytes covered by the pinned source hash. Keep overrides per command.
-        run(["git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "-C", source,
+        run([*LF_GIT, "-C", source,
              "archive", "--format=tar", f"--output={archive}",
              REVISION, "scintilla", "License.txt"])
     # A supplied archive must be the exact git archive of the pinned paths.
@@ -61,8 +62,8 @@ def prepare(build, source, archive):
     for relative in re.findall(r"^--- a/(.+)$", patch.read_text(encoding="utf-8"), re.MULTILINE):
         target = staged / relative
         target.write_bytes(target.read_bytes().replace(b"\r\n", b"\n"))
-    run(["git", "apply", "--check", patch], cwd=staged)
-    run(["git", "apply", patch], cwd=staged)
+    run([*LF_GIT, "apply", "--check", patch], cwd=staged)
+    run([*LF_GIT, "apply", patch], cwd=staged)
     stamp.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     return staged
 

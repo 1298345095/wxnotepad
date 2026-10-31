@@ -1,6 +1,7 @@
 """Exercise pinned-source preparation against real Git archives and local config."""
 import hashlib
 import importlib.util
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -68,6 +69,18 @@ class PreparationTest(unittest.TestCase):
         corrupt.write_bytes(self.reference.read_bytes() + b'corrupted')
         with self.assertRaisesRegex(RuntimeError, 'SHA-256 does not match'):
             BUILD.prepare(self.root / 'bad-build', None, corrupt)
+
+    def test_process_line_ending_settings_preserve_patched_source(self):
+        for index, (autocrlf, eol) in enumerate([('true', 'lf'), ('false', 'crlf')]):
+            with self.subTest(autocrlf=autocrlf, eol=eol), patch.dict(os.environ, {
+                'GIT_CONFIG_COUNT': '2',
+                'GIT_CONFIG_KEY_0': 'core.autocrlf', 'GIT_CONFIG_VALUE_0': autocrlf,
+                'GIT_CONFIG_KEY_1': 'core.eol', 'GIT_CONFIG_VALUE_1': eol,
+            }):
+                destination = self.root / f'global-build-{index}'
+                destination.mkdir()
+                staged = BUILD.prepare(destination, self.source, None)
+                self.assertEqual((staged / 'scintilla/fixture.txt').read_bytes(), b'after\n')
 
 
 if __name__ == '__main__':
