@@ -51,10 +51,11 @@ public:
     int DeviceHeightFont(int points) const noexcept override {return points;}
     void SCICALL LineDraw(Point a,Point b,Stroke s) override {StrokeSet(s); dc_->DrawLine(a.x,a.y,b.x,b.y);}
     void SCICALL PolyLine(const Point* p,size_t n,Stroke s) override {
-        StrokeSet(s); std::vector<wxPoint> points; for(size_t i=0;i<n;++i) points.emplace_back(p[i].x,p[i].y); dc_->DrawLines(n,points.data());
+        StrokeSet(s); std::vector<wxPoint> points; points.reserve(n);
+        for(size_t i=0;i<n;++i) points.emplace_back(p[i].x,p[i].y); dc_->DrawLines(n,points.data());
     }
     void SCICALL Polygon(const Point* p,size_t n,FillStroke s) override {
-        StrokeSet(s.stroke); dc_->SetBrush(wxBrush(Color(s.fill.colour))); std::vector<wxPoint> points;
+        StrokeSet(s.stroke); dc_->SetBrush(wxBrush(Color(s.fill.colour))); std::vector<wxPoint> points; points.reserve(n);
         for(size_t i=0;i<n;++i) points.emplace_back(p[i].x,p[i].y); dc_->DrawPolygon(n,points.data());
     }
     void SCICALL RectangleDraw(PRectangle r,FillStroke s) override {StrokeSet(s.stroke); dc_->SetBrush(wxBrush(Color(s.fill.colour))); dc_->DrawRectangle(Rect(r));}
@@ -69,7 +70,8 @@ public:
     }
     void SCICALL DrawRGBAImage(PRectangle r,int width,int height,const unsigned char* data) override {
         wxImage image(width,height); image.InitAlpha();
-        for(int i=0;i<width*height;++i) {std::memcpy(image.GetData()+3*i,data+4*i,3); image.GetAlpha()[i]=data[4*i+3];}
+        const size_t pixels=static_cast<size_t>(width)*static_cast<size_t>(height);
+        for(size_t i=0;i<pixels;++i) {std::memcpy(image.GetData()+3*i,data+4*i,3); image.GetAlpha()[i]=data[4*i+3];}
         dc_->DrawBitmap(wxBitmap(image),r.left,r.top,true);
     }
     void SCICALL Ellipse(PRectangle r,FillStroke s) override {StrokeSet(s.stroke); dc_->SetBrush(wxBrush(Color(s.fill.colour))); dc_->DrawEllipse(Rect(r));}
