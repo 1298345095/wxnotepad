@@ -1,0 +1,1142 @@
+{
+  "source_commit": "3330c3661e9a5e670a4ac403dab80d92bd6e0688",
+  "executable": "/home/ctrls/.cache/wxnotepad-issue20/build/cmake/wxnotepad",
+  "exe_sha256": "064d44251c987d456acda92cac90c56a1de8e907634ca78f248293d9fce8d4e5",
+  "platform": "Linux-6.18.33.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "processor": "x86_64",
+  "logical_cpus": 20,
+  "environment": {
+    "DISPLAY": ":99",
+    "GDK_BACKEND": "x11",
+    "WAYLAND_DISPLAY": null
+  },
+  "poll_seconds": 0.01,
+  "hook_timer_ms": 10,
+  "quiet_seconds": 1.0,
+  "owned_topmost": false,
+  "planned_counts": {
+    "startup_per_case": 5,
+    "idle_per_case": 3,
+    "operations_per_size": 3
+  },
+  "cache": "OS caches retained; samples generated/hashed/copied before timing; fresh process each row",
+  "definitions": "External perf_counter observed upper bounds including command-file/input dispatch and polling. Actual shown frame; Open/Save frame commands, native one-byte X at zero. Hook calls Update before publishing; no compositor-present timestamp. Startup Update marker followed by native character acceptance; pristine idle uses separate processes. Windows WM_CHAR is process-local native character delivery, not a hardware/IME latency test. Linux xdotool input and focus subprocess overhead included in edit/startup endpoints. Memory snapshots after 1 s quiet, not peaks.",
+  "samples": {
+    "small": {
+      "bytes": 4096,
+      "sha256": "e607ea77fcb61bbb670bc98f5786d908518a96ebd92ed8d92af0cee5c9ba9164",
+      "expected_saved_sha256": "e358f88f1d9b33b435105a4ab90172211dd21531d615f39c78b2ea7c647c90b7"
+    },
+    "10MiB": {
+      "bytes": 10485760,
+      "sha256": "0c394497bc8ccd4f2803e8753d89e071df778c76500b4e31899464d1e1b8303a",
+      "expected_saved_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420"
+    },
+    "100MiB": {
+      "bytes": 104857600,
+      "sha256": "ddcefc1a31122572c470f66a28520921ab257c801ca659f54f5705d6e413beb7",
+      "expected_saved_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276"
+    }
+  },
+  "rows": [
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-empty-1",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43385.260450434,
+        "ready_observed": 43385.322042955,
+        "edit_begin": 43385.322045501,
+        "edit_observed": 43385.3423629
+      },
+      "pid": 37334,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "98440023913632"
+      },
+      "launch_to_update_observed_ms": 61.592521000420675,
+      "edit_observed_ms": 20.317399001214653,
+      "launch_to_native_edit_observed_ms": 81.91246600472368,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "98440023913632"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-empty-2",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43385.346262362,
+        "ready_observed": 43385.417934031,
+        "edit_begin": 43385.417938228,
+        "edit_observed": 43385.440177482
+      },
+      "pid": 37356,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "96941420318800"
+      },
+      "launch_to_update_observed_ms": 71.67166900035227,
+      "edit_observed_ms": 22.239254001760855,
+      "launch_to_native_edit_observed_ms": 93.91512000001967,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "96941420318800"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-empty-3",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43385.443996806,
+        "ready_observed": 43385.515581946,
+        "edit_begin": 43385.515584411,
+        "edit_observed": 43385.536071414
+      },
+      "pid": 37367,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "108272663757312"
+      },
+      "launch_to_update_observed_ms": 71.58513999456773,
+      "edit_observed_ms": 20.48700299928896,
+      "launch_to_native_edit_observed_ms": 92.07460799370892,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "108272663757312"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 4,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-empty-4",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43385.539917557,
+        "ready_observed": 43385.61147633,
+        "edit_begin": 43385.611478887,
+        "edit_observed": 43385.631884427
+      },
+      "pid": 37378,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "94296706748576"
+      },
+      "launch_to_update_observed_ms": 71.55877300101565,
+      "edit_observed_ms": 20.405539995408617,
+      "launch_to_native_edit_observed_ms": 91.96687000076054,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "94296706748576"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 5,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-empty-5",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43385.633608567,
+        "ready_observed": 43385.695040534,
+        "edit_begin": 43385.695042806,
+        "edit_observed": 43385.714349128
+      },
+      "pid": 37389,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "102365483072096"
+      },
+      "launch_to_update_observed_ms": 61.43196700577391,
+      "edit_observed_ms": 19.30632199946558,
+      "launch_to_native_edit_observed_ms": 80.74056100304006,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "102365483072096"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-small-1",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43385.716237352,
+        "ready_observed": 43385.798287844,
+        "edit_begin": 43385.798290438,
+        "edit_observed": 43385.820157174
+      },
+      "pid": 37400,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "94068965263040"
+      },
+      "launch_to_update_observed_ms": 82.05049200478243,
+      "edit_observed_ms": 21.866736002266407,
+      "launch_to_native_edit_observed_ms": 103.91982200235361,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "94068965263040"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-small-2",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43385.824112468,
+        "ready_observed": 43385.895972441,
+        "edit_begin": 43385.895975357,
+        "edit_observed": 43385.926056217
+      },
+      "pid": 37411,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "110796203660416"
+      },
+      "launch_to_update_observed_ms": 71.8599730025744,
+      "edit_observed_ms": 30.080860000452958,
+      "launch_to_native_edit_observed_ms": 101.94374900311232,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "110796203660416"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-small-3",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43385.929952153,
+        "ready_observed": 43386.001513935,
+        "edit_begin": 43386.001516044,
+        "edit_observed": 43386.031787197
+      },
+      "pid": 37422,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "96718211040912"
+      },
+      "launch_to_update_observed_ms": 71.56178200239083,
+      "edit_observed_ms": 30.2711529948283,
+      "launch_to_native_edit_observed_ms": 101.83504399901722,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "96718211040912"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 4,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-small-4",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43386.03575877,
+        "ready_observed": 43386.107319344,
+        "edit_begin": 43386.107321731,
+        "edit_observed": 43386.137180236
+      },
+      "pid": 37433,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "109745456258416"
+      },
+      "launch_to_update_observed_ms": 71.56057400425198,
+      "edit_observed_ms": 29.8585050040856,
+      "launch_to_native_edit_observed_ms": 101.42146600264823,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "109745456258416"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 5,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/startup-small-5",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43386.141245133,
+        "ready_observed": 43386.21286516,
+        "edit_begin": 43386.212867427,
+        "edit_observed": 43386.236695693
+      },
+      "pid": 37444,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "102496558064320"
+      },
+      "launch_to_update_observed_ms": 71.62002699624281,
+      "edit_observed_ms": 23.828265999327414,
+      "launch_to_native_edit_observed_ms": 95.45055999478791,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "102496558064320"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "empty",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/idle-empty-1",
+      "memory": {
+        "idle": {
+          "rss_bytes": 92086272
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43386.240881052,
+        "ready_observed": 43386.302350532,
+        "idle_memory": 43387.302597225
+      },
+      "pid": 37455,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "99106768798672"
+      },
+      "launch_to_update_observed_ms": 61.46948000241537,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "99106768798672"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "empty",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/idle-empty-2",
+      "memory": {
+        "idle": {
+          "rss_bytes": 92057600
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43387.306503263,
+        "ready_observed": 43387.378342171,
+        "idle_memory": 43388.378664847
+      },
+      "pid": 37463,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "110785972557072"
+      },
+      "launch_to_update_observed_ms": 71.83890800661175,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "110785972557072"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "empty",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/idle-empty-3",
+      "memory": {
+        "idle": {
+          "rss_bytes": 92401664
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43388.382670781,
+        "ready_observed": 43388.454483937,
+        "idle_memory": 43389.454756556
+      },
+      "pid": 37471,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "95625168853936"
+      },
+      "launch_to_update_observed_ms": 71.8131559988251,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "95625168853936"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "small",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/idle-small-1",
+      "memory": {
+        "idle": {
+          "rss_bytes": 95133696
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43389.467982182,
+        "ready_observed": 43389.529328001,
+        "idle_memory": 43390.52952125
+      },
+      "pid": 37481,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "103770985439904"
+      },
+      "launch_to_update_observed_ms": 61.34581899823388,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "103770985439904"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "small",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/idle-small-2",
+      "memory": {
+        "idle": {
+          "rss_bytes": 95092736
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43390.533630949,
+        "ready_observed": 43390.60515736,
+        "idle_memory": 43391.605420144
+      },
+      "pid": 37487,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "106206372700096"
+      },
+      "launch_to_update_observed_ms": 71.52641099673929,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "106206372700096"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "small",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/idle-small-3",
+      "memory": {
+        "idle": {
+          "rss_bytes": 94916608
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43391.60950433,
+        "ready_observed": 43391.681200765,
+        "idle_memory": 43392.681439863
+      },
+      "pid": 37495,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "94202695299152"
+      },
+      "launch_to_update_observed_ms": 71.69643499946687,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "94202695299152"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "10MiB",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/operations-10MiB-1",
+      "memory": {
+        "opened": {
+          "rss_bytes": 104480768
+        },
+        "edited": {
+          "rss_bytes": 104480768
+        },
+        "saved": {
+          "rss_bytes": 114974720
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43392.687683772,
+        "ready_observed": 43392.749001538,
+        "open_begin": 43392.749004035,
+        "open_observed": 43392.779749421,
+        "opened_memory": 43393.780040804,
+        "edit_begin": 43393.780041381,
+        "edit_observed": 43393.800081055,
+        "edited_memory": 43394.800316484,
+        "save_begin": 43394.800317031,
+        "save_observed": 43394.83108707,
+        "saved_memory": 43395.831319588
+      },
+      "pid": 37503,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "106530182259920"
+      },
+      "launch_to_update_observed_ms": 61.31776600523153,
+      "open_observed_ms": 30.745386000489816,
+      "edit_observed_ms": 20.039674003783148,
+      "save_observed_ms": 30.770039003982674,
+      "output_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420",
+      "output_bytes": 10485761,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "10485761",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "106530182259920"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "10MiB",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/operations-10MiB-2",
+      "memory": {
+        "opened": {
+          "rss_bytes": 104353792
+        },
+        "edited": {
+          "rss_bytes": 104353792
+        },
+        "saved": {
+          "rss_bytes": 114835456
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43395.851123246,
+        "ready_observed": 43395.912544581,
+        "open_begin": 43395.912547367,
+        "open_observed": 43395.943292622,
+        "opened_memory": 43396.943527248,
+        "edit_begin": 43396.943527822,
+        "edit_observed": 43396.963707046,
+        "edited_memory": 43397.963993246,
+        "save_begin": 43397.963993814,
+        "save_observed": 43397.98485945,
+        "saved_memory": 43398.985115568
+      },
+      "pid": 37514,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "107954905940288"
+      },
+      "launch_to_update_observed_ms": 61.42133499815827,
+      "open_observed_ms": 30.74525500414893,
+      "edit_observed_ms": 20.179224004095886,
+      "save_observed_ms": 20.865635997324716,
+      "output_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420",
+      "output_bytes": 10485761,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "10485761",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "107954905940288"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "10MiB",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/operations-10MiB-3",
+      "memory": {
+        "opened": {
+          "rss_bytes": 104833024
+        },
+        "edited": {
+          "rss_bytes": 104898560
+        },
+        "saved": {
+          "rss_bytes": 115339264
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43399.006211616,
+        "ready_observed": 43399.098762103,
+        "open_begin": 43399.098766177,
+        "open_observed": 43399.160848894,
+        "opened_memory": 43400.161105252,
+        "edit_begin": 43400.161105779,
+        "edit_observed": 43400.1817106,
+        "edited_memory": 43401.18201489,
+        "save_begin": 43401.182015419,
+        "save_observed": 43401.244097006,
+        "saved_memory": 43402.244401035
+      },
+      "pid": 37525,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "106504492811392"
+      },
+      "launch_to_update_observed_ms": 92.55048700288171,
+      "open_observed_ms": 62.08271699870238,
+      "edit_observed_ms": 20.60482100205263,
+      "save_observed_ms": 62.08158699882915,
+      "output_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420",
+      "output_bytes": 10485761,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "10485761",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "106504492811392"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "100MiB",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/operations-100MiB-1",
+      "memory": {
+        "opened": {
+          "rss_bytes": 202485760
+        },
+        "edited": {
+          "rss_bytes": 202485760
+        },
+        "saved": {
+          "rss_bytes": 202551296
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43402.295674005,
+        "ready_observed": 43402.367915813,
+        "open_begin": 43402.367919199,
+        "open_observed": 43402.615592938,
+        "opened_memory": 43403.615919381,
+        "edit_begin": 43403.615920223,
+        "edit_observed": 43403.653062105,
+        "edited_memory": 43404.653307975,
+        "save_begin": 43404.653308385,
+        "save_observed": 43404.765830786,
+        "saved_memory": 43405.766033063
+      },
+      "pid": 37538,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "104234607476176"
+      },
+      "launch_to_update_observed_ms": 72.24180800403701,
+      "open_observed_ms": 247.67373899521772,
+      "edit_observed_ms": 37.1418819995597,
+      "save_observed_ms": 112.52240099565824,
+      "output_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276",
+      "output_bytes": 104857601,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "104857601",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "104234607476176"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "100MiB",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/operations-100MiB-2",
+      "memory": {
+        "opened": {
+          "rss_bytes": 201498624
+        },
+        "edited": {
+          "rss_bytes": 201498624
+        },
+        "saved": {
+          "rss_bytes": 201564160
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43405.874974927,
+        "ready_observed": 43405.936562396,
+        "open_begin": 43405.936564642,
+        "open_observed": 43406.1524305,
+        "opened_memory": 43407.152812184,
+        "edit_begin": 43407.152812976,
+        "edit_observed": 43407.203033168,
+        "edited_memory": 43408.203266504,
+        "save_begin": 43408.203267107,
+        "save_observed": 43408.347656612,
+        "saved_memory": 43409.347911008
+      },
+      "pid": 37549,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "102315489916192"
+      },
+      "launch_to_update_observed_ms": 61.58746899745893,
+      "open_observed_ms": 215.8658580010524,
+      "edit_observed_ms": 50.220192002598196,
+      "save_observed_ms": 144.38950500334613,
+      "output_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276",
+      "output_bytes": 104857601,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "104857601",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "102315489916192"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "100MiB",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-x11/operations-100MiB-3",
+      "memory": {
+        "opened": {
+          "rss_bytes": 201838592
+        },
+        "edited": {
+          "rss_bytes": 201838592
+        },
+        "saved": {
+          "rss_bytes": 201904128
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43409.475086834,
+        "ready_observed": 43409.557319215,
+        "open_begin": 43409.557321543,
+        "open_observed": 43409.773895847,
+        "opened_memory": 43410.774221482,
+        "edit_begin": 43410.774221995,
+        "edit_observed": 43410.796604688,
+        "edited_memory": 43411.79690061,
+        "save_begin": 43411.79690127,
+        "save_observed": 43411.920638885,
+        "saved_memory": 43412.921015529
+      },
+      "pid": 37560,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "94527197179504"
+      },
+      "launch_to_update_observed_ms": 82.23238099890295,
+      "open_observed_ms": 216.57430400227895,
+      "edit_observed_ms": 22.382693001418374,
+      "save_observed_ms": 123.73761500202818,
+      "output_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276",
+      "output_bytes": 104857601,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "104857601",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkX11Display",
+        "editor_handle": "94527197179504"
+      },
+      "status": "ok"
+    }
+  ],
+  "core_build_record": {
+    "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+    "archive_sha256": "6872820d13812093dc26fab944efc1a6408dd296c786154c03c90ff65f042315",
+    "patch_sha256": "df15c4b8f110c16cea5386314f0be7d3daa47f50d17a92dadd79ef01ab283e17",
+    "preparation_sha256": "75ce0517900f1c30c046983b0c4a5a97901a5e6058a46ab5c2f4be2e1eda2348"
+  },
+  "cmake_build": [
+    "CMAKE_BUILD_TYPE:STRING=Release",
+    "CMAKE_CXX_COMPILER:FILEPATH=/usr/bin/c++",
+    "wxWidgets_DIR:PATH=/home/ctrls/vcpkg/installed/x64-linux/share/wxwidgets",
+    "CMAKE_GENERATOR:INTERNAL=Ninja",
+    "CMAKE_GENERATOR_TOOLSET:INTERNAL="
+  ],
+  "cpu_info": "model name\t: 13th Gen Intel(R) Core(TM) i9-13900H",
+  "mem_total": "MemTotal:       32668324 kB",
+  "os_release": "PRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n",
+  "summary": {
+    "startup/empty": {
+      "successful_processes": 5,
+      "launch_to_update_observed_ms": 71.55877300101565,
+      "edit_observed_ms": 20.405539995408617,
+      "launch_to_native_edit_observed_ms": 91.96687000076054,
+      "memory": {}
+    },
+    "startup/small": {
+      "successful_processes": 5,
+      "launch_to_update_observed_ms": 71.62002699624281,
+      "edit_observed_ms": 29.8585050040856,
+      "launch_to_native_edit_observed_ms": 101.83504399901722,
+      "memory": {}
+    },
+    "idle/empty": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 71.8131559988251,
+      "memory": {
+        "idle": {
+          "rss_bytes": 92086272
+        }
+      }
+    },
+    "idle/small": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 71.52641099673929,
+      "memory": {
+        "idle": {
+          "rss_bytes": 95092736
+        }
+      }
+    },
+    "operations/10MiB": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 61.42133499815827,
+      "open_observed_ms": 30.745386000489816,
+      "edit_observed_ms": 20.179224004095886,
+      "save_observed_ms": 30.770039003982674,
+      "memory": {
+        "opened": {
+          "rss_bytes": 104480768
+        },
+        "edited": {
+          "rss_bytes": 104480768
+        },
+        "saved": {
+          "rss_bytes": 114974720
+        }
+      }
+    },
+    "operations/100MiB": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 72.24180800403701,
+      "open_observed_ms": 216.57430400227895,
+      "edit_observed_ms": 37.1418819995597,
+      "save_observed_ms": 123.73761500202818,
+      "memory": {
+        "opened": {
+          "rss_bytes": 201838592
+        },
+        "edited": {
+          "rss_bytes": 201838592
+        },
+        "saved": {
+          "rss_bytes": 201904128
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1169 @@
+{
+  "source_commit": "3330c3661e9a5e670a4ac403dab80d92bd6e0688",
+  "executable": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\cmake\\Release\\wxnotepad.exe",
+  "exe_sha256": "f2a9e0f18727f5400eed9e6cbb1c0d5cb5c950873c42adf9b6930ae54d653dba",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.8 (tags/v3.13.8:a15ae61, Oct  7 2025, 12:34:25) [MSC v.1944 64 bit (AMD64)]",
+  "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+  "logical_cpus": 20,
+  "environment": {
+    "DISPLAY": null,
+    "GDK_BACKEND": null,
+    "WAYLAND_DISPLAY": null
+  },
+  "poll_seconds": 0.01,
+  "hook_timer_ms": 10,
+  "quiet_seconds": 1.0,
+  "owned_topmost": true,
+  "planned_counts": {
+    "startup_per_case": 5,
+    "idle_per_case": 3,
+    "operations_per_size": 3
+  },
+  "cache": "OS caches retained; samples generated/hashed/copied before timing; fresh process each row",
+  "definitions": "External perf_counter observed upper bounds including command-file/input dispatch and polling. Actual shown frame; Open/Save frame commands, native one-byte X at zero. Hook calls Update before publishing; no compositor-present timestamp. Startup Update marker followed by native character acceptance; pristine idle uses separate processes. Windows WM_CHAR is process-local native character delivery, not a hardware/IME latency test. Linux xdotool input and focus subprocess overhead included in edit/startup endpoints. Memory snapshots after 1 s quiet, not peaks.",
+  "samples": {
+    "small": {
+      "bytes": 4096,
+      "sha256": "e607ea77fcb61bbb670bc98f5786d908518a96ebd92ed8d92af0cee5c9ba9164",
+      "expected_saved_sha256": "e358f88f1d9b33b435105a4ab90172211dd21531d615f39c78b2ea7c647c90b7"
+    },
+    "10MiB": {
+      "bytes": 10485760,
+      "sha256": "0c394497bc8ccd4f2803e8753d89e071df778c76500b4e31899464d1e1b8303a",
+      "expected_saved_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420"
+    },
+    "100MiB": {
+      "bytes": 104857600,
+      "sha256": "ddcefc1a31122572c470f66a28520921ab257c801ca659f54f5705d6e413beb7",
+      "expected_saved_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276"
+    }
+  },
+  "rows": [
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 1,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-empty-1",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222189.5232046,
+        "ready_observed": 222189.6889463,
+        "edit_begin": 222189.6889526,
+        "edit_observed": 222189.7319059
+      },
+      "pid": 52616,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "97062170"
+      },
+      "launch_to_update_observed_ms": 165.7417000096757,
+      "edit_observed_ms": 42.9532999987714,
+      "launch_to_native_edit_observed_ms": 208.70129999821074,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "97062170"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 2,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-empty-2",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222189.7482785,
+        "ready_observed": 222189.920369,
+        "edit_begin": 222189.9203751,
+        "edit_observed": 222189.9422994
+      },
+      "pid": 54456,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "21694552"
+      },
+      "launch_to_update_observed_ms": 172.09050001110882,
+      "edit_observed_ms": 21.924300002865493,
+      "launch_to_native_edit_observed_ms": 194.02090000221506,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "21694552"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 3,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-empty-3",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222189.9582876,
+        "ready_observed": 222190.1189303,
+        "edit_begin": 222190.118935,
+        "edit_observed": 222190.1508415
+      },
+      "pid": 19704,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "39323028"
+      },
+      "launch_to_update_observed_ms": 160.64270000788383,
+      "edit_observed_ms": 31.90649999305606,
+      "launch_to_native_edit_observed_ms": 192.55390000762418,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "39323028"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 4,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-empty-4",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222190.1674949,
+        "ready_observed": 222190.3359368,
+        "edit_begin": 222190.3359413,
+        "edit_observed": 222190.3681554
+      },
+      "pid": 50072,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "58923280"
+      },
+      "launch_to_update_observed_ms": 168.44189999392256,
+      "edit_observed_ms": 32.21410000696778,
+      "launch_to_native_edit_observed_ms": 200.66050000605173,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "58923280"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 5,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-empty-5",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222190.3838939,
+        "ready_observed": 222190.5474458,
+        "edit_begin": 222190.5474512,
+        "edit_observed": 222190.5792314
+      },
+      "pid": 43652,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "66323846"
+      },
+      "launch_to_update_observed_ms": 163.55190001195297,
+      "edit_observed_ms": 31.78020002087578,
+      "launch_to_native_edit_observed_ms": 195.33750001573935,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "66323846"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 1,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-small-1",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222190.5956672,
+        "ready_observed": 222190.7667583,
+        "edit_begin": 222190.7667626,
+        "edit_observed": 222190.7988859
+      },
+      "pid": 31180,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "52238032"
+      },
+      "launch_to_update_observed_ms": 171.0910999972839,
+      "edit_observed_ms": 32.123300014063716,
+      "launch_to_native_edit_observed_ms": 203.2187000149861,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "52238032"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 2,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-small-2",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222190.8242558,
+        "ready_observed": 222190.9830266,
+        "edit_begin": 222190.9830314,
+        "edit_observed": 222191.0364288
+      },
+      "pid": 43576,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "22087768"
+      },
+      "launch_to_update_observed_ms": 158.77080001519062,
+      "edit_observed_ms": 53.39739998453297,
+      "launch_to_native_edit_observed_ms": 212.17300000716932,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "22087768"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 3,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-small-3",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222191.0536915,
+        "ready_observed": 222191.2310653,
+        "edit_begin": 222191.2310692,
+        "edit_observed": 222191.2629642
+      },
+      "pid": 44896,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "52434640"
+      },
+      "launch_to_update_observed_ms": 177.37379999016412,
+      "edit_observed_ms": 31.894999992800876,
+      "launch_to_native_edit_observed_ms": 209.2726999835577,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "52434640"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 4,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-small-4",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222191.2789567,
+        "ready_observed": 222191.4574994,
+        "edit_begin": 222191.4575045,
+        "edit_observed": 222191.4898854
+      },
+      "pid": 53900,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "40438010"
+      },
+      "launch_to_update_observed_ms": 178.54270001407713,
+      "edit_observed_ms": 32.38089999649674,
+      "launch_to_native_edit_observed_ms": 210.92869999120012,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "40438010"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 5,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\startup-small-5",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 222191.508124,
+        "ready_observed": 222191.6696717,
+        "edit_begin": 222191.6696773,
+        "edit_observed": 222191.7126316
+      },
+      "pid": 42896,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "41751238"
+      },
+      "launch_to_update_observed_ms": 161.54769997228868,
+      "edit_observed_ms": 42.95430000638589,
+      "launch_to_native_edit_observed_ms": 204.5075999922119,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "41751238"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "empty",
+      "run": 1,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\idle-empty-1",
+      "memory": {
+        "idle": {
+          "working_set_bytes": 34414592,
+          "private_bytes": 8278016
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222191.7307996,
+        "ready_observed": 222191.8835881,
+        "idle_memory": 222192.8848215
+      },
+      "pid": 25056,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "161224912"
+      },
+      "launch_to_update_observed_ms": 152.7885000105016,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "161224912"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "empty",
+      "run": 2,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\idle-empty-2",
+      "memory": {
+        "idle": {
+          "working_set_bytes": 34365440,
+          "private_bytes": 8228864
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222192.9121438,
+        "ready_observed": 222193.0927037,
+        "idle_memory": 222194.0935029
+      },
+      "pid": 53816,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "66848134"
+      },
+      "launch_to_update_observed_ms": 180.55990000721067,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "66848134"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "empty",
+      "run": 3,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\idle-empty-3",
+      "memory": {
+        "idle": {
+          "working_set_bytes": 34377728,
+          "private_bytes": 8302592
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222194.1238354,
+        "ready_observed": 222194.2946326,
+        "idle_memory": 222195.295177
+      },
+      "pid": 16988,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "41817416"
+      },
+      "launch_to_update_observed_ms": 170.79720000037923,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "41817416"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "small",
+      "run": 1,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\idle-small-1",
+      "memory": {
+        "idle": {
+          "working_set_bytes": 34701312,
+          "private_bytes": 8441856
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222195.3221176,
+        "ready_observed": 222195.5147536,
+        "idle_memory": 222196.515791
+      },
+      "pid": 7008,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "43913774"
+      },
+      "launch_to_update_observed_ms": 192.63599999248981,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "43913774"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "small",
+      "run": 2,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\idle-small-2",
+      "memory": {
+        "idle": {
+          "working_set_bytes": 34566144,
+          "private_bytes": 8384512
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222196.555279,
+        "ready_observed": 222196.7712271,
+        "idle_memory": 222197.7722834
+      },
+      "pid": 49728,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "40899696"
+      },
+      "launch_to_update_observed_ms": 215.94809999805875,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "40899696"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "small",
+      "run": 3,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\idle-small-3",
+      "memory": {
+        "idle": {
+          "working_set_bytes": 34660352,
+          "private_bytes": 8454144
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222197.8141854,
+        "ready_observed": 222198.0255489,
+        "idle_memory": 222199.026073
+      },
+      "pid": 54900,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "39588354"
+      },
+      "launch_to_update_observed_ms": 211.363500013249,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "39588354"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "10MiB",
+      "run": 1,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\operations-10MiB-1",
+      "memory": {
+        "opened": {
+          "working_set_bytes": 45641728,
+          "private_bytes": 19288064
+        },
+        "edited": {
+          "working_set_bytes": 45649920,
+          "private_bytes": 19292160
+        },
+        "saved": {
+          "working_set_bytes": 45666304,
+          "private_bytes": 19292160
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222199.0630175,
+        "ready_observed": 222199.2121842,
+        "open_begin": 222199.2121924,
+        "open_observed": 222199.2783716,
+        "opened_memory": 222200.2789933,
+        "edit_begin": 222200.2789943,
+        "edit_observed": 222200.2906712,
+        "edited_memory": 222201.2916532,
+        "save_begin": 222201.2916535,
+        "save_observed": 222201.3142609,
+        "saved_memory": 222202.3149624
+      },
+      "pid": 4268,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "9965828"
+      },
+      "launch_to_update_observed_ms": 149.16669999365695,
+      "open_observed_ms": 66.17919998825528,
+      "edit_observed_ms": 11.676900001475587,
+      "save_observed_ms": 22.607399994740263,
+      "output_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420",
+      "output_bytes": 10485761,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "10485761",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "9965828"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "10MiB",
+      "run": 2,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\operations-10MiB-2",
+      "memory": {
+        "opened": {
+          "working_set_bytes": 45690880,
+          "private_bytes": 19451904
+        },
+        "edited": {
+          "working_set_bytes": 45711360,
+          "private_bytes": 19456000
+        },
+        "saved": {
+          "working_set_bytes": 45723648,
+          "private_bytes": 19456000
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222202.373374,
+        "ready_observed": 222202.533557,
+        "open_begin": 222202.5335636,
+        "open_observed": 222202.5989958,
+        "opened_memory": 222203.5996189,
+        "edit_begin": 222203.5996192,
+        "edit_observed": 222203.6210652,
+        "edited_memory": 222204.6215242,
+        "save_begin": 222204.6215246,
+        "save_observed": 222204.6442978,
+        "saved_memory": 222205.6452303
+      },
+      "pid": 11544,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "101189602"
+      },
+      "launch_to_update_observed_ms": 160.18299999996088,
+      "open_observed_ms": 65.4322000045795,
+      "edit_observed_ms": 21.44599999883212,
+      "save_observed_ms": 22.773200005758554,
+      "output_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420",
+      "output_bytes": 10485761,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "10485761",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "101189602"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "10MiB",
+      "run": 3,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\operations-10MiB-3",
+      "memory": {
+        "opened": {
+          "working_set_bytes": 45608960,
+          "private_bytes": 19701760
+        },
+        "edited": {
+          "working_set_bytes": 45625344,
+          "private_bytes": 19705856
+        },
+        "saved": {
+          "working_set_bytes": 45637632,
+          "private_bytes": 19705856
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222205.7193311,
+        "ready_observed": 222205.9187816,
+        "open_begin": 222205.9187861,
+        "open_observed": 222205.9742665,
+        "opened_memory": 222206.974798,
+        "edit_begin": 222206.9747987,
+        "edit_observed": 222206.9963596,
+        "edited_memory": 222207.9969047,
+        "save_begin": 222207.996905,
+        "save_observed": 222208.0308904,
+        "saved_memory": 222209.0313527
+      },
+      "pid": 51564,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "19861882"
+      },
+      "launch_to_update_observed_ms": 199.45049998932518,
+      "open_observed_ms": 55.48040001303889,
+      "edit_observed_ms": 21.560900000622496,
+      "save_observed_ms": 33.98539999034256,
+      "output_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420",
+      "output_bytes": 10485761,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "10485761",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "19861882"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "100MiB",
+      "run": 1,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\operations-100MiB-1",
+      "memory": {
+        "opened": {
+          "working_set_bytes": 143077376,
+          "private_bytes": 118132736
+        },
+        "edited": {
+          "working_set_bytes": 143085568,
+          "private_bytes": 118136832
+        },
+        "saved": {
+          "working_set_bytes": 143118336,
+          "private_bytes": 118136832
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222209.1317768,
+        "ready_observed": 222209.2782209,
+        "open_begin": 222209.2782272,
+        "open_observed": 222209.4621122,
+        "opened_memory": 222210.462916,
+        "edit_begin": 222210.4629163,
+        "edit_observed": 222210.4849745,
+        "edited_memory": 222211.4857006,
+        "save_begin": 222211.4857008,
+        "save_observed": 222211.5990181,
+        "saved_memory": 222212.5996029
+      },
+      "pid": 29224,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "55514832"
+      },
+      "launch_to_update_observed_ms": 146.44410001346841,
+      "open_observed_ms": 183.88500000583008,
+      "edit_observed_ms": 22.05820000381209,
+      "save_observed_ms": 113.31730001256801,
+      "output_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276",
+      "output_bytes": 104857601,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "104857601",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "55514832"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "100MiB",
+      "run": 2,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\operations-100MiB-2",
+      "memory": {
+        "opened": {
+          "working_set_bytes": 142966784,
+          "private_bytes": 118104064
+        },
+        "edited": {
+          "working_set_bytes": 142995456,
+          "private_bytes": 118108160
+        },
+        "saved": {
+          "working_set_bytes": 143011840,
+          "private_bytes": 118108160
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222212.8696871,
+        "ready_observed": 222213.0093412,
+        "open_begin": 222213.0093454,
+        "open_observed": 222213.2026339,
+        "opened_memory": 222214.2035677,
+        "edit_begin": 222214.2035684,
+        "edit_observed": 222214.2249995,
+        "edited_memory": 222215.2256932,
+        "save_begin": 222215.2256941,
+        "save_observed": 222215.3385755,
+        "saved_memory": 222216.3393942
+      },
+      "pid": 24200,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "56757580"
+      },
+      "launch_to_update_observed_ms": 139.65409999946132,
+      "open_observed_ms": 193.28849998419173,
+      "edit_observed_ms": 21.431100001791492,
+      "save_observed_ms": 112.88140001124702,
+      "output_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276",
+      "output_bytes": 104857601,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "104857601",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "56757580"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "100MiB",
+      "run": 3,
+      "folder": "E:\\NewNotepad4\\.wxnotepad-worktrees\\issue-20\\build\\resources-windows\\operations-100MiB-3",
+      "memory": {
+        "opened": {
+          "working_set_bytes": 143003648,
+          "private_bytes": 118022144
+        },
+        "edited": {
+          "working_set_bytes": 143077376,
+          "private_bytes": 118030336
+        },
+        "saved": {
+          "working_set_bytes": 143089664,
+          "private_bytes": 118030336
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 222216.5945908,
+        "ready_observed": 222216.7317279,
+        "open_begin": 222216.731734,
+        "open_observed": 222216.9166774,
+        "opened_memory": 222217.9174347,
+        "edit_begin": 222217.9174349,
+        "edit_observed": 222217.9395689,
+        "edited_memory": 222218.9400505,
+        "save_begin": 222218.9400508,
+        "save_observed": 222219.0580832,
+        "saved_memory": 222220.0590603
+      },
+      "pid": 24960,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "58594964"
+      },
+      "launch_to_update_observed_ms": 137.13710001320578,
+      "open_observed_ms": 184.94340000324883,
+      "edit_observed_ms": 22.133999998914078,
+      "save_observed_ms": 118.03240000153892,
+      "output_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276",
+      "output_bytes": 104857601,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "104857601",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "Windows",
+        "editor_handle": "58594964"
+      },
+      "status": "ok"
+    }
+  ],
+  "core_build_record": {
+    "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+    "archive_sha256": "6872820d13812093dc26fab944efc1a6408dd296c786154c03c90ff65f042315",
+    "patch_sha256": "df15c4b8f110c16cea5386314f0be7d3daa47f50d17a92dadd79ef01ab283e17",
+    "preparation_sha256": "75ce0517900f1c30c046983b0c4a5a97901a5e6058a46ab5c2f4be2e1eda2348"
+  },
+  "cmake_build": [
+    "wxWidgets_DIR:PATH=G:/vcpkg/installed/x64-windows/share/wxwidgets",
+    "CMAKE_GENERATOR:INTERNAL=Visual Studio 18 2026",
+    "CMAKE_GENERATOR_TOOLSET:INTERNAL="
+  ],
+  "summary": {
+    "startup/empty": {
+      "successful_processes": 5,
+      "launch_to_update_observed_ms": 165.7417000096757,
+      "edit_observed_ms": 31.90649999305606,
+      "launch_to_native_edit_observed_ms": 195.33750001573935,
+      "memory": {}
+    },
+    "startup/small": {
+      "successful_processes": 5,
+      "launch_to_update_observed_ms": 171.0910999972839,
+      "edit_observed_ms": 32.38089999649674,
+      "launch_to_native_edit_observed_ms": 209.2726999835577,
+      "memory": {}
+    },
+    "idle/empty": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 170.79720000037923,
+      "memory": {
+        "idle": {
+          "working_set_bytes": 34377728,
+          "private_bytes": 8278016
+        }
+      }
+    },
+    "idle/small": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 211.363500013249,
+      "memory": {
+        "idle": {
+          "working_set_bytes": 34660352,
+          "private_bytes": 8441856
+        }
+      }
+    },
+    "operations/10MiB": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 160.18299999996088,
+      "open_observed_ms": 65.4322000045795,
+      "edit_observed_ms": 21.44599999883212,
+      "save_observed_ms": 22.773200005758554,
+      "memory": {
+        "opened": {
+          "working_set_bytes": 45641728,
+          "private_bytes": 19451904
+        },
+        "edited": {
+          "working_set_bytes": 45649920,
+          "private_bytes": 19456000
+        },
+        "saved": {
+          "working_set_bytes": 45666304,
+          "private_bytes": 19456000
+        }
+      }
+    },
+    "operations/100MiB": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 139.65409999946132,
+      "open_observed_ms": 184.94340000324883,
+      "edit_observed_ms": 22.05820000381209,
+      "save_observed_ms": 113.31730001256801,
+      "memory": {
+        "opened": {
+          "working_set_bytes": 143003648,
+          "private_bytes": 118104064
+        },
+        "edited": {
+          "working_set_bytes": 143077376,
+          "private_bytes": 118108160
+        },
+        "saved": {
+          "working_set_bytes": 143089664,
+          "private_bytes": 118108160
+        }
+      }
+    }
+  }
+}

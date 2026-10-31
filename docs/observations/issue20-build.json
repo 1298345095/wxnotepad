@@ -1,0 +1,143 @@
+{
+  "source_commit": "3330c3661e9a5e670a4ac403dab80d92bd6e0688",
+  "source_input_sha256": {
+    "CMakeLists.txt": "4c54058110b54684758d214a951c74c0f2b7ac67b8c5715c939e746c6ea94580",
+    "patches/README.md": "c3493024b080de656ec99845e62425c762154b19bb2b3ac6a0e0a41b6c5bbc17",
+    "patches/original-core.patch": "df15c4b8f110c16cea5386314f0be7d3daa47f50d17a92dadd79ef01ab283e17",
+    "patches/source.sha256": "82115c063799385da2ed66b49082672fee80a622b9d07c8177bbe077ad519165",
+    "src/document_session.cpp": "69d947bd9cbd233ba6a198f403650b940788a145a9a3c724d4b99fcd694b93f5",
+    "src/document_session.h": "6a01f4bf0e2cf9b949ce3ed80d71060c7989e17978d0f560ef746bb9fa25fbfd",
+    "src/editor_control.cpp": "8c84398b6314dd92ccd78769bdae032b93b1507fbb34699a20f26b72904f2773",
+    "src/editor_control.h": "d877eb201cd4d356c54eafdd56df12e83ee1046571b8ac98faddc0d6949e4bfc",
+    "src/editor_frame.cpp": "3ad0d3f93cf95e5ac8d967fe126677e153c39eba70cfafa8eed9021a76666e2c",
+    "src/editor_frame.h": "9f543601da864a29b9b6dd4bdf43000605fe4abca31bd70f474ddc6fca59dcd8",
+    "src/gbk_codec.cpp": "427e8be739a5f3ac3128689d13c5b510dbcde93ab7d8523a738b363a02922adf",
+    "src/gbk_codec.h": "1da8c68c055dad239962df967e434f9e5d0b3e964ba96274dc79139359d141aa",
+    "src/main.cpp": "b59d3aff63a842811086ae7f69a673f08e0d38e4340a6e05ba270087065c42e7",
+    "src/platform/conversion_port.h": "ab413e3844b9626521ef4fdefc4b1e78d56ca4b3649137b259f0d3707d2dc2e5",
+    "src/platform/core_headers.h": "6437bee040410e407bedb9eadc82271573aa9afa9b7018c7c4d1fac51ddf0255",
+    "src/platform/intrinsics_port.h": "be2435c098bce650f60e3efed9a23d6700f241420cb831dd29f3aa66991bb545",
+    "src/platform/parallel_port.h": "88262949ca6ec113383b399f810027361c2a8a452efa085c4581ad50d1c0efa6",
+    "src/platform/wx_platform.cpp": "2645c2ccf63f1bb106735ff78a5098afcb98aa139692b96468eb0626fa9dbd3b",
+    "src/utf16_codec.cpp": "97de80745d387d71520a493f72915732a020f81f00b576f6d2b5cbd1c0886fe5",
+    "src/utf16_codec.h": "d29c667bdee41ed6fe9ae4a54fd5588f1a3075716c7551303387b01ec6665dab",
+    "tools/build.py": "75ce0517900f1c30c046983b0c4a5a97901a5e6058a46ab5c2f4be2e1eda2348",
+    "tools/resources.py": "36b5f88fa72257867890d2c36d7fa3f63f364f2c3e19718066537a11633b4e1b"
+  },
+  "source_verification": "All 22 recorded build/observer inputs matched git-show bytes at the source commit in both Windows and native Linux source directories before results were finalized.",
+  "windows": {
+    "os": {
+      "Caption": "Microsoft Windows 11 企业版",
+      "Version": "10.0.26200",
+      "BuildNumber": "26200",
+      "OSArchitecture": "64 位"
+    },
+    "cpu": {
+      "Name": "13th Gen Intel(R) Core(TM) i9-13900H",
+      "NumberOfCores": 14,
+      "NumberOfLogicalProcessors": 20
+    },
+    "system": {
+      "Manufacturer": "ASUSTeK COMPUTER INC.",
+      "Model": "ROG Zephyrus M16 GU604VI_GU604VI",
+      "TotalPhysicalMemory": 68314955776
+    },
+    "display": [
+      {
+        "Name": "Todesk Virtual Display Adapter",
+        "DriverVersion": "16.44.2.509",
+        "CurrentHorizontalResolution": null,
+        "CurrentVerticalResolution": null
+      },
+      {
+        "Name": "OrayIddDriver Device",
+        "DriverVersion": "17.50.19.949",
+        "CurrentHorizontalResolution": null,
+        "CurrentVerticalResolution": null
+      },
+      {
+        "Name": "Intel(R) Iris(R) Xe Graphics",
+        "DriverVersion": "31.0.101.4502",
+        "CurrentHorizontalResolution": 2560,
+        "CurrentVerticalResolution": 1600
+      },
+      {
+        "Name": "NVIDIA GeForce RTX 4070 Laptop GPU",
+        "DriverVersion": "32.0.16.1692",
+        "CurrentHorizontalResolution": null,
+        "CurrentVerticalResolution": null
+      }
+    ]
+  },
+  "windows_display": {
+    "primary_pixels": [
+      2560,
+      1600
+    ],
+    "system_dpi": 144,
+    "app_logical_frame": [
+      900,
+      600
+    ],
+    "renderer": "Native wxDC/wxPaintDC; Windows GDI; each launched frame owned-topmost, no activation/global keyboard"
+  },
+  "windows_compiler": [
+    "set(CMAKE_CXX_COMPILER \"D:/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe\")",
+    "set(CMAKE_CXX_COMPILER_ARG1 \"\")",
+    "set(CMAKE_CXX_COMPILER_ID \"MSVC\")",
+    "set(CMAKE_CXX_COMPILER_VERSION \"19.51.36260.0\")",
+    "set(CMAKE_CXX_COMPILER_VERSION_INTERNAL \"\")"
+  ],
+  "windows_dependencies": {
+    "wxwidgets": "Package: wxwidgets\nFeature: sound\nArchitecture: x64-windows\nMulti-Arch: same\nDescription: Build wxSound support\nStatus: install ok installed"
+  },
+  "windows_vcpkg_revision": "d186940b2f0c4e8e5b4ff804af57d2a26fbfa091",
+  "linux_runtime": "Linux LAPTOP-9D2IN3NL 6.18.33.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Fri Jun  5 01:12:21 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux\nc++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\ncmake version 3.30.5\n1.12.1\n3.24.41\nweston 13.0.0\nweston\t13.0.0-4build3\nxdotool\t1:3.20160805.1-5build1\nxserver-xorg-core\t\nxvfb\t2:21.1.12-1ubuntu1.9\nMemTotal:       32668324 kB\nMemFree:        29541272 kB\nMemAvailable:   31638400 kB\nBuffers:           59904 kB\nCached:          2261752 kB\n",
+  "linux_dependencies": {
+    "cairo": "Package: cairo\nFeature: x11\nDepends: cairo, libx11, libxext, libxrender\nArchitecture: x64-linux\nMulti-Arch: same\nDescription: Build with X11 support\nStatus: install ok installed",
+    "gtk3": "Package: gtk3\nFeature: wayland\nDepends: libxkbcommon, wayland, wayland-protocols\nArchitecture: x64-linux\nMulti-Arch: same\nDescription: Build with Wayland support\nStatus: install ok installed",
+    "wxwidgets": "Package: wxwidgets\nVersion: 3.3.3\nPort-Version: 1\nDepends: cairo, curl, expat, gtk3, libiconv, libjpeg-turbo, libpng, libsm, libwebp, nanosvg, opengl, pcre2, tiff, vcpkg-cmake, vcpkg-cmake-config, zlib\nArchitecture: x64-linux\nMulti-Arch: same\nAbi: 3ee0eb5db32eccd003f1bb3a4eed9542bc04e095f1a76dd2c74472bdf8348d73\nDescription: Widget toolkit and tools library for creating graphical user interfaces (GUIs) for cross-platform applications.\n    Set WXWIDGETS_USE_STL in a custom triplet to build with the wxUSE_STL build option.\n    Set WXWIDGETS_USE_STD_CONTAINERS in a custom triplet to build with the wxUSE_STD_CONTAINERS build option.\nStatus: install ok installed"
+  },
+  "linux_vcpkg_revision": "d186940b2f0c4e8e5b4ff804af57d2a26fbfa091",
+  "linux_display": {
+    "resolution": [
+      1600,
+      1000
+    ],
+    "depth": 24,
+    "source_build_data_filesystem": "native WSL ext4 /home/ctrls/.cache/wxnotepad-issue20",
+    "x11": "Private Xvfb, no window manager/compositor; actual GdkX11Display; wxDC/GTK3 drawing",
+    "wayland": "Private Weston 13 x11 backend --renderer=pixman nested in Xvfb; actual GdkWaylandDisplay; wxDC/GTK3 drawing"
+  },
+  "calibration": {
+    "windows": "Untimed owned PrintWindow capture inspected: drawn X prefix, second line and dirty title; exact Save bytes. Final timed batch used owned-topmost to ensure the frame is shown above ordinary windows.",
+    "x11": "Untimed private-root screen capture inspected: full 900x600 frame, X prefix and second line; exact Save bytes.",
+    "wayland": "Untimed private-root capture inspected: unoccluded full decorated frame, X prefix, second line and dirty title; exact Save bytes. Early-focus race found before freeze; readiness now waits native activation."
+  },
+  "batches": {
+    "windows": {
+      "processes": 22,
+      "failed": 0,
+      "complete_saved_content_checks": 6,
+      "source_commit": "3330c3661e9a5e670a4ac403dab80d92bd6e0688",
+      "exe_sha256": "f2a9e0f18727f5400eed9e6cbb1c0d5cb5c950873c42adf9b6930ae54d653dba",
+      "elapsed_spawn_to_last_memory_seconds": 30.535855699999956
+    },
+    "wayland": {
+      "processes": 22,
+      "failed": 0,
+      "complete_saved_content_checks": 6,
+      "source_commit": "3330c3661e9a5e670a4ac403dab80d92bd6e0688",
+      "exe_sha256": "064d44251c987d456acda92cac90c56a1de8e907634ca78f248293d9fce8d4e5",
+      "elapsed_spawn_to_last_memory_seconds": 27.86760385800153
+    },
+    "x11": {
+      "processes": 22,
+      "failed": 0,
+      "complete_saved_content_checks": 6,
+      "source_commit": "3330c3661e9a5e670a4ac403dab80d92bd6e0688",
+      "exe_sha256": "064d44251c987d456acda92cac90c56a1de8e907634ca78f248293d9fce8d4e5",
+      "elapsed_spawn_to_last_memory_seconds": 27.660565095000493
+    }
+  }
+}
