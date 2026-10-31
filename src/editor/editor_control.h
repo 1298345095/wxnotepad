@@ -20,6 +20,7 @@ public:
     uint64_t DocumentRevision() const { return documentRevision_; }
     uint64_t SelectionRevision() const;
     void ToggleWordWrap();
+    void IndentLines(bool forwards);
     void SetIndentationWidth(int width);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);

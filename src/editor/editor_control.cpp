@@ -458,6 +458,11 @@ EditorControl::EditorControl(wxWindow* parent)
     Bind(wxEVT_SCROLLWIN_THUMBRELEASE, scroll);
     Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {
         if (!event.AltDown() && core_->Navigation(event.GetKeyCode(), event.ControlDown(), event.ShiftDown())) return;
+        if (event.GetKeyCode() == WXK_TAB && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
+            !event.MetaDown()) {
+            IndentLines(false);
+            return;
+        }
         Message command{};
         if (event.ControlDown() && !event.AltDown()) {
             if (event.GetKeyCode() == 'Z')
@@ -513,6 +518,17 @@ EditorControl::EditorControl(wxWindow* parent)
 }
 
 EditorControl::~EditorControl() = default;
+
+void EditorControl::IndentLines(bool forwards) {
+    if (Send(Message::GetReadOnly)) return;
+    if (Send(Message::GetSelectionEmpty)) {
+        // The core excludes an endpoint at a line start. Move an empty
+        // selection to its line end so the explicit line command includes it.
+        const auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));
+        Send(Message::GotoPos, Send(Message::GetLineEndPosition, line));
+    }
+    Send(forwards ? Message::LineIndent : Message::LineDedent);
+}
 
 void EditorControl::ToggleWordWrap() {
     const auto mode = Send(Message::GetWrapMode) == static_cast<intptr_t>(Scintilla::Wrap::None)
