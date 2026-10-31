@@ -1,5 +1,8 @@
 # Actual-program resource observations (#20)
 
+The retained measured run and comparison are in
+[issue20-README.md](observations/issue20-README.md).
+
 `tools/resources.py` launches the **actual Release wxnotepad** separately for
 every row. It does not link another host or hide the editor. `--startup-file PATH`
 opens through `EditorFrame::Open`. The optional `--observe DIRECTORY` enables a

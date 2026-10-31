@@ -1,0 +1,1142 @@
+{
+  "source_commit": "3330c3661e9a5e670a4ac403dab80d92bd6e0688",
+  "executable": "/home/ctrls/.cache/wxnotepad-issue20/build/cmake/wxnotepad",
+  "exe_sha256": "064d44251c987d456acda92cac90c56a1de8e907634ca78f248293d9fce8d4e5",
+  "platform": "Linux-6.18.33.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "processor": "x86_64",
+  "logical_cpus": 20,
+  "environment": {
+    "DISPLAY": ":99",
+    "GDK_BACKEND": "wayland",
+    "WAYLAND_DISPLAY": "wxnotepad-issue12"
+  },
+  "poll_seconds": 0.01,
+  "hook_timer_ms": 10,
+  "quiet_seconds": 1.0,
+  "owned_topmost": false,
+  "planned_counts": {
+    "startup_per_case": 5,
+    "idle_per_case": 3,
+    "operations_per_size": 3
+  },
+  "cache": "OS caches retained; samples generated/hashed/copied before timing; fresh process each row",
+  "definitions": "External perf_counter observed upper bounds including command-file/input dispatch and polling. Actual shown frame; Open/Save frame commands, native one-byte X at zero. Hook calls Update before publishing; no compositor-present timestamp. Startup Update marker followed by native character acceptance; pristine idle uses separate processes. Windows WM_CHAR is process-local native character delivery, not a hardware/IME latency test. Linux xdotool input and focus subprocess overhead included in edit/startup endpoints. Memory snapshots after 1 s quiet, not peaks.",
+  "samples": {
+    "small": {
+      "bytes": 4096,
+      "sha256": "e607ea77fcb61bbb670bc98f5786d908518a96ebd92ed8d92af0cee5c9ba9164",
+      "expected_saved_sha256": "e358f88f1d9b33b435105a4ab90172211dd21531d615f39c78b2ea7c647c90b7"
+    },
+    "10MiB": {
+      "bytes": 10485760,
+      "sha256": "0c394497bc8ccd4f2803e8753d89e071df778c76500b4e31899464d1e1b8303a",
+      "expected_saved_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420"
+    },
+    "100MiB": {
+      "bytes": 104857600,
+      "sha256": "ddcefc1a31122572c470f66a28520921ab257c801ca659f54f5705d6e413beb7",
+      "expected_saved_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276"
+    }
+  },
+  "rows": [
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-empty-1",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43434.953160048,
+        "ready_observed": 43435.045779875,
+        "edit_begin": 43435.045783079,
+        "edit_observed": 43435.06235967
+      },
+      "pid": 37618,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "94885524985824"
+      },
+      "launch_to_update_observed_ms": 92.61982700263616,
+      "edit_observed_ms": 16.576591006014496,
+      "launch_to_native_edit_observed_ms": 109.19962200568989,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "94885524985824"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-empty-2",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43435.06628569,
+        "ready_observed": 43435.148285835,
+        "edit_begin": 43435.148289425,
+        "edit_observed": 43435.167720481
+      },
+      "pid": 37638,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "102875028997920"
+      },
+      "launch_to_update_observed_ms": 82.00014499743702,
+      "edit_observed_ms": 19.431055996392388,
+      "launch_to_native_edit_observed_ms": 101.43479099497199,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "102875028997920"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-empty-3",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43435.200384494,
+        "ready_observed": 43435.282773859,
+        "edit_begin": 43435.282776584,
+        "edit_observed": 43435.299500539
+      },
+      "pid": 37645,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "95835046452448"
+      },
+      "launch_to_update_observed_ms": 82.38936500129057,
+      "edit_observed_ms": 16.723954999179114,
+      "launch_to_native_edit_observed_ms": 99.1160449993913,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "95835046452448"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 4,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-empty-4",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43435.332410525,
+        "ready_observed": 43435.414551787,
+        "edit_begin": 43435.414554017,
+        "edit_observed": 43435.431994823
+      },
+      "pid": 37652,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "95887442278464"
+      },
+      "launch_to_update_observed_ms": 82.14126199891325,
+      "edit_observed_ms": 17.44080599746667,
+      "launch_to_native_edit_observed_ms": 99.58429799735313,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "95887442278464"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "empty",
+      "run": 5,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-empty-5",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43435.464389271,
+        "ready_observed": 43435.536424534,
+        "edit_begin": 43435.536426436,
+        "edit_observed": 43435.563947468
+      },
+      "pid": 37659,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "110330527703440"
+      },
+      "launch_to_update_observed_ms": 72.03526300145313,
+      "edit_observed_ms": 27.52103199600242,
+      "launch_to_native_edit_observed_ms": 99.55819699825952,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "1",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "110330527703440"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-small-1",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43435.597101415,
+        "ready_observed": 43435.699806875,
+        "edit_begin": 43435.69980908,
+        "edit_observed": 43435.718312428
+      },
+      "pid": 37666,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "97814108299328"
+      },
+      "launch_to_update_observed_ms": 102.70546000538161,
+      "edit_observed_ms": 18.503348001104314,
+      "launch_to_native_edit_observed_ms": 121.21101299999282,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "97814108299328"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-small-2",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43435.751203202,
+        "ready_observed": 43435.823289713,
+        "edit_begin": 43435.823293543,
+        "edit_observed": 43435.840788723
+      },
+      "pid": 37673,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "101782158955056"
+      },
+      "launch_to_update_observed_ms": 72.08651099790586,
+      "edit_observed_ms": 17.49517999996897,
+      "launch_to_native_edit_observed_ms": 89.58552099647932,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "101782158955056"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-small-3",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43435.873722941,
+        "ready_observed": 43435.956112512,
+        "edit_begin": 43435.956117148,
+        "edit_observed": 43435.973954811
+      },
+      "pid": 37680,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "99898044517056"
+      },
+      "launch_to_update_observed_ms": 82.38957099820254,
+      "edit_observed_ms": 17.837662999227177,
+      "launch_to_native_edit_observed_ms": 100.23186999751488,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "99898044517056"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 4,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-small-4",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43435.977918592,
+        "ready_observed": 43436.039465142,
+        "edit_begin": 43436.039467546,
+        "edit_observed": 43436.056857528
+      },
+      "pid": 37687,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "95851885219744"
+      },
+      "launch_to_update_observed_ms": 61.546550001366995,
+      "edit_observed_ms": 17.389982000167947,
+      "launch_to_native_edit_observed_ms": 78.93893599975854,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "95851885219744"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "startup",
+      "case": "small",
+      "run": 5,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/startup-small-5",
+      "memory": {},
+      "timestamps": {
+        "spawn_begin": 43436.061539719,
+        "ready_observed": 43436.133827578,
+        "edit_begin": 43436.133831776,
+        "edit_observed": 43436.151741166
+      },
+      "pid": 37694,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "105040328287504"
+      },
+      "launch_to_update_observed_ms": 72.28785900224466,
+      "edit_observed_ms": 17.909390000568237,
+      "launch_to_native_edit_observed_ms": 90.2014470048016,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4097",
+        "dirty": "1",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "105040328287504"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "empty",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/idle-empty-1",
+      "memory": {
+        "idle": {
+          "rss_bytes": 39403520
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43436.15651294,
+        "ready_observed": 43436.238553377,
+        "idle_memory": 43437.238865106
+      },
+      "pid": 37701,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "103869466122640"
+      },
+      "launch_to_update_observed_ms": 82.04043700243346,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "103869466122640"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "empty",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/idle-empty-2",
+      "memory": {
+        "idle": {
+          "rss_bytes": 39714816
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43437.271243668,
+        "ready_observed": 43437.353662524,
+        "idle_memory": 43438.353925551
+      },
+      "pid": 37707,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "94138996551888"
+      },
+      "launch_to_update_observed_ms": 82.41885600000387,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "94138996551888"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "empty",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/idle-empty-3",
+      "memory": {
+        "idle": {
+          "rss_bytes": 40046592
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43438.370278749,
+        "ready_observed": 43438.452706333,
+        "idle_memory": 43439.453025283
+      },
+      "pid": 37713,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "94356934589504"
+      },
+      "launch_to_update_observed_ms": 82.4275840059272,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "94356934589504"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "small",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/idle-small-1",
+      "memory": {
+        "idle": {
+          "rss_bytes": 39346176
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43439.470302588,
+        "ready_observed": 43439.55266085,
+        "idle_memory": 43440.552940736
+      },
+      "pid": 37719,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "107042004749344"
+      },
+      "launch_to_update_observed_ms": 82.35826199961593,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "107042004749344"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "small",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/idle-small-2",
+      "memory": {
+        "idle": {
+          "rss_bytes": 39510016
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43440.569355052,
+        "ready_observed": 43440.651619713,
+        "idle_memory": 43441.651922402
+      },
+      "pid": 37725,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "105518073986208"
+      },
+      "launch_to_update_observed_ms": 82.26466099586105,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "105518073986208"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "idle",
+      "case": "small",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/idle-small-3",
+      "memory": {
+        "idle": {
+          "rss_bytes": 39899136
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43441.684461575,
+        "ready_observed": 43441.745949786,
+        "idle_memory": 43442.746196678
+      },
+      "pid": 37731,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "102870780763408"
+      },
+      "launch_to_update_observed_ms": 61.488211002142634,
+      "final_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "4096",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "102870780763408"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "10MiB",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/operations-10MiB-1",
+      "memory": {
+        "opened": {
+          "rss_bytes": 50290688
+        },
+        "edited": {
+          "rss_bytes": 50356224
+        },
+        "saved": {
+          "rss_bytes": 60801024
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43442.782632659,
+        "ready_observed": 43442.844362847,
+        "open_begin": 43442.844367383,
+        "open_observed": 43442.87552205,
+        "opened_memory": 43443.875848956,
+        "edit_begin": 43443.875849673,
+        "edit_observed": 43443.892418529,
+        "edited_memory": 43444.892674116,
+        "save_begin": 43444.892674735,
+        "save_observed": 43444.92345987,
+        "saved_memory": 43445.923813283
+      },
+      "pid": 37737,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "106978381257408"
+      },
+      "launch_to_update_observed_ms": 61.73018799745478,
+      "open_observed_ms": 31.154667005466763,
+      "edit_observed_ms": 16.568856000958476,
+      "save_observed_ms": 30.785135000769515,
+      "output_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420",
+      "output_bytes": 10485761,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "10485761",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "106978381257408"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "10MiB",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/operations-10MiB-2",
+      "memory": {
+        "opened": {
+          "rss_bytes": 50774016
+        },
+        "edited": {
+          "rss_bytes": 50839552
+        },
+        "saved": {
+          "rss_bytes": 61288448
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43445.94124672,
+        "ready_observed": 43446.003031628,
+        "open_begin": 43446.003034507,
+        "open_observed": 43446.034009286,
+        "opened_memory": 43447.034292277,
+        "edit_begin": 43447.034292935,
+        "edit_observed": 43447.050241215,
+        "edited_memory": 43448.05051514,
+        "save_begin": 43448.050515666,
+        "save_observed": 43448.081396743,
+        "saved_memory": 43449.081651001
+      },
+      "pid": 37744,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "111038786459840"
+      },
+      "launch_to_update_observed_ms": 61.78490800084546,
+      "open_observed_ms": 30.974779001553543,
+      "edit_observed_ms": 15.948280000884552,
+      "save_observed_ms": 30.881077000231016,
+      "output_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420",
+      "output_bytes": 10485761,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "10485761",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "111038786459840"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "10MiB",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/operations-10MiB-3",
+      "memory": {
+        "opened": {
+          "rss_bytes": 50577408
+        },
+        "edited": {
+          "rss_bytes": 50577408
+        },
+        "saved": {
+          "rss_bytes": 61022208
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43449.12679131,
+        "ready_observed": 43449.188624084,
+        "open_begin": 43449.188626347,
+        "open_observed": 43449.21988389,
+        "opened_memory": 43450.220312728,
+        "edit_begin": 43450.220313248,
+        "edit_observed": 43450.236170957,
+        "edited_memory": 43451.236556935,
+        "save_begin": 43451.236558089,
+        "save_observed": 43451.25717457,
+        "saved_memory": 43452.257401334
+      },
+      "pid": 37751,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "106070880231680"
+      },
+      "launch_to_update_observed_ms": 61.83277400123188,
+      "open_observed_ms": 31.25754299981054,
+      "edit_observed_ms": 15.857709004194476,
+      "save_observed_ms": 20.61648100061575,
+      "output_sha256": "5b7f1b7298a417b4e927ac51ffb2a55eb43381b4b6487dbf5f868bc193114420",
+      "output_bytes": 10485761,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "10485761",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "106070880231680"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "100MiB",
+      "run": 1,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/operations-100MiB-1",
+      "memory": {
+        "opened": {
+          "rss_bytes": 147779584
+        },
+        "edited": {
+          "rss_bytes": 147845120
+        },
+        "saved": {
+          "rss_bytes": 147910656
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43452.30652789,
+        "ready_observed": 43452.368468139,
+        "open_begin": 43452.368470599,
+        "open_observed": 43452.58408133,
+        "opened_memory": 43453.584421925,
+        "edit_begin": 43453.5844226,
+        "edit_observed": 43453.601431016,
+        "edited_memory": 43454.601749987,
+        "save_begin": 43454.60175047,
+        "save_observed": 43454.725354927,
+        "saved_memory": 43455.725581277
+      },
+      "pid": 37758,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "107929148214416"
+      },
+      "launch_to_update_observed_ms": 61.94024899741635,
+      "open_observed_ms": 215.61073100019712,
+      "edit_observed_ms": 17.008416005410254,
+      "save_observed_ms": 123.60445700323908,
+      "output_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276",
+      "output_bytes": 104857601,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "104857601",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "107929148214416"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "100MiB",
+      "run": 2,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/operations-100MiB-2",
+      "memory": {
+        "opened": {
+          "rss_bytes": 148422656
+        },
+        "edited": {
+          "rss_bytes": 148422656
+        },
+        "saved": {
+          "rss_bytes": 148488192
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43455.864090632,
+        "ready_observed": 43455.92573475,
+        "open_begin": 43455.925738467,
+        "open_observed": 43456.120693693,
+        "opened_memory": 43457.120961485,
+        "edit_begin": 43457.120961952,
+        "edit_observed": 43457.136399452,
+        "edited_memory": 43458.136672089,
+        "save_begin": 43458.136672696,
+        "save_observed": 43458.2703091,
+        "saved_memory": 43459.270557498
+      },
+      "pid": 37765,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "107809816770208"
+      },
+      "launch_to_update_observed_ms": 61.644118002732284,
+      "open_observed_ms": 194.95522600482218,
+      "edit_observed_ms": 15.437499998370185,
+      "save_observed_ms": 133.6364040034823,
+      "output_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276",
+      "output_bytes": 104857601,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "104857601",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "107809816770208"
+      },
+      "status": "ok"
+    },
+    {
+      "kind": "operations",
+      "case": "100MiB",
+      "run": 3,
+      "folder": "/home/ctrls/.cache/wxnotepad-issue20/build/resources-wayland/operations-100MiB-3",
+      "memory": {
+        "opened": {
+          "rss_bytes": 147853312
+        },
+        "edited": {
+          "rss_bytes": 147853312
+        },
+        "saved": {
+          "rss_bytes": 147918848
+        }
+      },
+      "timestamps": {
+        "spawn_begin": 43459.410839438,
+        "ready_observed": 43459.472292741,
+        "open_begin": 43459.472294689,
+        "open_observed": 43459.657438751,
+        "opened_memory": 43460.657738024,
+        "edit_begin": 43460.657738574,
+        "edit_observed": 43460.675850981,
+        "edited_memory": 43461.676102392,
+        "save_begin": 43461.676103065,
+        "save_observed": 43461.820529498,
+        "saved_memory": 43462.820763906
+      },
+      "pid": 37772,
+      "initial_state": {
+        "sequence": "0",
+        "result": "ok",
+        "length": "0",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "94875583590512"
+      },
+      "launch_to_update_observed_ms": 61.453302994777914,
+      "open_observed_ms": 185.14406199392397,
+      "edit_observed_ms": 18.112407000444364,
+      "save_observed_ms": 144.4264329984435,
+      "output_sha256": "2da31a97bf4fcac67bb11568feeeed43477bf37dc5de94917d54c68b6e090276",
+      "output_bytes": 104857601,
+      "content_verified": true,
+      "final_state": {
+        "sequence": "2",
+        "result": "ok",
+        "length": "104857601",
+        "dirty": "0",
+        "shown": "1",
+        "focus": "1",
+        "active": "1",
+        "backend": "GdkWaylandDisplay",
+        "editor_handle": "94875583590512"
+      },
+      "status": "ok"
+    }
+  ],
+  "core_build_record": {
+    "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+    "archive_sha256": "6872820d13812093dc26fab944efc1a6408dd296c786154c03c90ff65f042315",
+    "patch_sha256": "df15c4b8f110c16cea5386314f0be7d3daa47f50d17a92dadd79ef01ab283e17",
+    "preparation_sha256": "75ce0517900f1c30c046983b0c4a5a97901a5e6058a46ab5c2f4be2e1eda2348"
+  },
+  "cmake_build": [
+    "CMAKE_BUILD_TYPE:STRING=Release",
+    "CMAKE_CXX_COMPILER:FILEPATH=/usr/bin/c++",
+    "wxWidgets_DIR:PATH=/home/ctrls/vcpkg/installed/x64-linux/share/wxwidgets",
+    "CMAKE_GENERATOR:INTERNAL=Ninja",
+    "CMAKE_GENERATOR_TOOLSET:INTERNAL="
+  ],
+  "cpu_info": "model name\t: 13th Gen Intel(R) Core(TM) i9-13900H",
+  "mem_total": "MemTotal:       32668324 kB",
+  "os_release": "PRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n",
+  "summary": {
+    "startup/empty": {
+      "successful_processes": 5,
+      "launch_to_update_observed_ms": 82.14126199891325,
+      "edit_observed_ms": 17.44080599746667,
+      "launch_to_native_edit_observed_ms": 99.58429799735313,
+      "memory": {}
+    },
+    "startup/small": {
+      "successful_processes": 5,
+      "launch_to_update_observed_ms": 72.28785900224466,
+      "edit_observed_ms": 17.837662999227177,
+      "launch_to_native_edit_observed_ms": 90.2014470048016,
+      "memory": {}
+    },
+    "idle/empty": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 82.41885600000387,
+      "memory": {
+        "idle": {
+          "rss_bytes": 39714816
+        }
+      }
+    },
+    "idle/small": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 82.26466099586105,
+      "memory": {
+        "idle": {
+          "rss_bytes": 39510016
+        }
+      }
+    },
+    "operations/10MiB": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 61.78490800084546,
+      "open_observed_ms": 31.154667005466763,
+      "edit_observed_ms": 15.948280000884552,
+      "save_observed_ms": 30.785135000769515,
+      "memory": {
+        "opened": {
+          "rss_bytes": 50577408
+        },
+        "edited": {
+          "rss_bytes": 50577408
+        },
+        "saved": {
+          "rss_bytes": 61022208
+        }
+      }
+    },
+    "operations/100MiB": {
+      "successful_processes": 3,
+      "launch_to_update_observed_ms": 61.644118002732284,
+      "open_observed_ms": 194.95522600482218,
+      "edit_observed_ms": 17.008416005410254,
+      "save_observed_ms": 133.6364040034823,
+      "memory": {
+        "opened": {
+          "rss_bytes": 147853312
+        },
+        "edited": {
+          "rss_bytes": 147853312
+        },
+        "saved": {
+          "rss_bytes": 147918848
+        }
+      }
+    }
+  }
+}
