@@ -1,6 +1,7 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include <wx/wx.h>
+#include <wx/statusbr.h>
 #include <wx/timer.h>
 #include "native_dialog_helpers.h"
 #include <cstdio>
@@ -147,6 +148,14 @@ public:
                                                                "Native 中文\r\nsecond\nthird\r";
                 }
                 Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "source must open");
+                const auto choose = [frame](const char* language) {
+                    Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+                };
+                const auto hasOverride = [frame](const char* language) {
+                    return frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", language)) &&
+                           frame->GetStatusBar()->GetStatusText().Contains("override");
+                };
+                choose("C/C++");
                 Add(frame, "pending");
                 Require(frame->GetMenuBar()->FindItem(wxID_SAVEAS), "File menu must expose Save As");
                 const auto* saveAccelerator = frame->GetMenuBar()->FindItem(wxID_SAVE)->GetAccel();
@@ -163,13 +172,16 @@ public:
                 Command(frame, wxID_SAVEAS);
                 cancel.Stop();
                 Require(cancel.choosers == 1 && frame->DocumentPath() == Filename(source) &&
-                            frame->Editor()->Send(Scintilla::Message::GetModify),
+                            frame->Editor()->Send(Scintilla::Message::GetModify) && hasOverride("C/C++"),
                         "native cancellation must retain identity/dirty state");
                 NativeDriver accept(Filename(copy));
                 Command(frame, wxID_SAVEAS);
                 accept.Stop();
                 Require(accept.choosers == 1 && accept.confirmations == 0 && frame->DocumentPath() == Filename(copy),
                         "native new target must update identity");
+                Require(!frame->GetStatusBar()->GetStatusText().Contains("override") &&
+                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
+                        "native Save As must return to Automatic after successful naming");
                 Require(Bytes(copy) == "\xef\xbb\xbf"
                                        "Native 中文\r\nsecond\nthird\rpending" &&
                             Bytes(source) == "\xef\xbb\xbf"
@@ -177,6 +189,7 @@ public:
                         "native Save As must retain exact bytes and original source");
                 std::puts("PASS: native Save As menu/accelerator, picker Cancel and new target");
                 Add(frame, " overwrite");
+                choose("Python");
                 const auto target = directory / "overwrite.txt";
                 {
                     std::ofstream(target, std::ios::binary) << "sentinel";
@@ -186,7 +199,8 @@ public:
                 reject.Stop();
                 Require(reject.choosers == 1 && reject.confirmations == 1 && Bytes(target) == "sentinel",
                         "declining overwrite must retain target");
-                Require(frame->DocumentPath() == Filename(copy) && frame->Editor()->Send(Scintilla::Message::GetModify),
+                Require(frame->DocumentPath() == Filename(copy) &&
+                            frame->Editor()->Send(Scintilla::Message::GetModify) && hasOverride("Python"),
                         "declining overwrite must retain session");
                 NativeDriver overwrite(Filename(target));
                 Command(frame, wxID_SAVEAS);
@@ -198,6 +212,15 @@ public:
                 Require(!frame->Editor()->Send(Scintilla::Message::GetModify),
                         "confirmed overwrite must establish save point");
                 std::puts("PASS: native overwrite refusal and acceptance");
+                choose("Plain Text");
+                NativeDriver samePath(Filename(target));
+                Command(frame, wxID_SAVEAS);
+                samePath.Stop();
+                Require(samePath.choosers == 1 && samePath.confirmations == 1 &&
+                            !frame->GetStatusBar()->GetStatusText().Contains("override") &&
+                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
+                        "explicit native Save As to the same pathname must clear the manual choice");
+                choose("JSON");
                 Add(frame, " failure");
 #ifdef __WXMSW__
                 HANDLE sourceLock = CreateFileW(source.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
@@ -215,7 +238,7 @@ public:
                 Require(failedAs.choosers == 1 && failedAs.confirmations == 1 && failedAs.errors == 1,
                         "failed native Save As must show the shared save error after approved overwrite");
                 Require(frame->DocumentPath() == Filename(target) && frame->DocumentHasUtf8Bom() &&
-                            frame->Editor()->Send(Scintilla::Message::GetModify),
+                            frame->Editor()->Send(Scintilla::Message::GetModify) && hasOverride("JSON"),
                         "failed native Save As must retain identity, BOM and dirty state");
                 Require(Bytes(source) == "\xef\xbb\xbf"
                                          "Native 中文\r\nsecond\nthird\r",
@@ -238,7 +261,7 @@ public:
                 std::filesystem::permissions(directory, std::filesystem::perms::owner_all);
 #endif
                 Require(failure.errors == 1 && failure.choosers == 0 && frame->DocumentPath() == Filename(target) &&
-                            frame->Editor()->Send(Scintilla::Message::GetModify),
+                            frame->Editor()->Send(Scintilla::Message::GetModify) && hasOverride("JSON"),
                         "failed native Save must show error and retain identity/dirty state");
                 Require(Bytes(target) == "\xef\xbb\xbf"
                                          "Native 中文\r\nsecond\nthird\rpending overwrite",

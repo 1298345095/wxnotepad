@@ -183,9 +183,10 @@ public:
                 Style(frame, source, "name", SCE_JSON_PROPERTYNAME);
                 const auto plain = directory / "manual.txt";
                 FileCommand(frame, wxID_SAVEAS, plain);
-                Require(Bytes(plain) == source && frame->GetStatusBar()->GetStatusText().Contains("JSON") &&
-                            frame->GetStatusBar()->GetStatusText().Contains("override"),
-                        "explicit JSON must survive native Save As to .txt with exact bytes");
+                Require(Bytes(plain) == source && frame->GetStatusBar()->GetStatusText().Contains("Plain Text") &&
+                            !frame->GetStatusBar()->GetStatusText().Contains("override") &&
+                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
+                        "native Save As must clear manual JSON and identify .txt while retaining exact bytes");
                 Choose(frame, "Automatic");
                 Require(editor->Send(Message::GetLexer) == SCLEX_NULL,
                         "Automatic must follow the .txt path immediately");

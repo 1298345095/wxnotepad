@@ -180,7 +180,10 @@ public:
                 Require(frame->SaveAs(Filename(directory / "manual.txt")).status == SaveStatus::Saved,
                         "manual Python must save as differently named text");
                 Paint(frame);
-                Style(editor, 0, SCE_PY_WORD);
+                Style(editor, 0, 0);
+                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Plain Text | EOL: LF" &&
+                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
+                        "Save As must clear manual Python and identify the .txt filename");
                 Choose(frame, "Automatic");
                 Style(editor, 0, 0);
                 Require(frame->SaveAs(Filename(directory / "automatic.PYI")).status == SaveStatus::Saved,
@@ -202,7 +205,7 @@ public:
                         "unnamed text must support manual Python selection");
                 Command(frame, wxID_UNDO);
                 Require(frame->New(), "clean unnamed document must reset");
-                std::puts("PASS: extensions, native menu choices, transitions and override Save As lifetime");
+                std::puts("PASS: extensions, native menu choices, transitions and Save As language reidentification");
 
                 const std::string triple = "doc = \"\"\"中文\ninside\n\"\"\"\nreturn 42\n";
                 std::ofstream(path, std::ios::binary) << triple;

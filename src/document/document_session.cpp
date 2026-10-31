@@ -101,7 +101,7 @@ SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (!path_.empty()) return {SaveStatus::Failed, "This document already has a file name."};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
-    return SaveTo(*destination, decideLoss);
+    return SaveTo(*destination, decideLoss, true);
 }
 
 SaveResult DocumentSession::Save(const GbkLossDecision& decideLoss) {
@@ -112,10 +112,11 @@ SaveResult DocumentSession::Save(const GbkLossDecision& decideLoss) {
 SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
-    return SaveTo(*destination, decideLoss);
+    return SaveTo(*destination, decideLoss, true);
 }
 
-SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDecision& decideLoss) {
+SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
+                                   bool identifyLanguage) {
     const auto length = static_cast<size_t>(editor_.Send(Scintilla::Message::GetLength));
     std::string bytes(length + 1, '\0');
     editor_.Send(Scintilla::Message::GetText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
@@ -157,6 +158,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
     }
     const auto previousLanguage = Language();
     path_ = destination;
+    if (identifyLanguage) languageOverride_.reset();
     encoding_ = savedEncoding;
     hasBom_ = savedBom;
     editor_.Send(Scintilla::Message::SetSavePoint);

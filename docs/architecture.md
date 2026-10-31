@@ -113,7 +113,7 @@ facilities gives a useful reason to extract it.
 | State | Owner | Lifetime/rule |
 | --- | --- | --- |
 | Text, undo/redo, dirty/save point, EOL insertion, selection, fold visibility | Original core | One core document per existing editor window; read state through the editor. |
-| Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. Successful New/Open resets the language choice; successful Save As preserves an override. |
+| Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. Successful New/Open, first Save and explicit Save As reset the language choice to Automatic. Ordinary Save retains it. |
 | Effective language | Derived from session choice + path using the syntax catalog | The UI reads it from the session. Any last-applied style cache is internal installation state, not a second owner of the user's choice. |
 | Find query, replacement, options and wrap preference | `SearchSession` | Existing window/application session; survive New/Open as they do today. The dialog edits this state rather than owning the only copy. |
 | Last match, empty-match progress, revision stamps | `SearchSession` | Invalidated by relevant query/options/selection/document changes and successful document replacement. A failed/cancelled file operation does not reset them. |
@@ -170,10 +170,11 @@ test dependencies.
 
 The document-local language choice belongs to the session. It exposes a
 language selection operation and read-only effective-language/override state.
-After successful Open/New it installs the automatic scheme for the new document;
-after a successful path-changing save it re-evaluates automatic selection. A
-same-path Save and a manual override retain their existing behavior. Syntax
-installation itself remains in the syntax module.
+Successful Open/New, first Save and every explicit Save As select the automatic
+scheme from the resulting filename, clearing the manual choice even when Save As
+uses the same pathname or extension. Ordinary Save retains the current choice
+and fold/view state. Failed or cancelled operations retain the previous choice.
+Syntax installation itself remains in the syntax module.
 
 The resulting operation sequence is explicit:
 
@@ -182,7 +183,8 @@ The resulting operation sequence is explicit:
    metadata and language; invalidate old search matches; update UI.
 2. **Save As:** choose destination; obtain any encoding-loss decision; complete
    disk replacement; commit any confirmed GBK text conversion, file metadata and
-   save point; apply a changed automatic language; update UI.
+   save point; clear the manual language choice and apply any changed filename-based
+   language; update UI. First Save follows the same naming rule.
 3. **Choose language:** update the document choice and install its effective
    scheme; preserve bytes, selection, encoding and edit history.
 
