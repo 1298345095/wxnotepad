@@ -169,6 +169,8 @@ void EditorFrame::ShowFind(bool replace) {
             searchOptions_.regularExpression = event.IsChecked();
             lastEmptyMatch_ = -1;
             wholeWord->Enable(!event.IsChecked());
+            replaceButton_->Enable(!event.IsChecked());
+            replaceAllButton_->Enable(!event.IsChecked());
         });
         layout->Add(regularExpression, 0, wxLEFT | wxRIGHT | wxTOP, 8);
         replacementLabel_ = new wxStaticText(findDialog_, wxID_ANY, "Replace &with:");
@@ -367,6 +369,10 @@ void EditorFrame::ReplaceOne() {
 }
 
 void EditorFrame::ReplaceAll() {
+    if (searchOptions_.regularExpression) {
+        SetStatusText("Regex replacement is not available");
+        return;
+    }
     const wxString queryText = findQuery_->GetValue();
     const auto query = queryText.utf8_str();
     const wxString replacementText = replacement_->GetValue();

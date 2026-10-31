@@ -418,6 +418,18 @@
  		charInfo.lenCharacters = len;
  		charInfo.lenBytes = charExtracted.widthBytes;
  	} else {
+@@ -3586,7 +3595,10 @@
+ 		if (FlagSet(flags, FindOption::RegexDotAll)) {
+ 			flagsMatch = flagsMatch & ~boost::regex_constants::match_not_dot_newline;
+ 		}
+-		matched = boost::regex_search(itStart, itEnd, match, regexp, flagsMatch);
++		// The target start bounds candidate matches, not lookbehind context or
++		// buffer anchors. Keep the whole document available before that start.
++		const Iterator itBase(doc, 0, true);
++		matched = boost::regex_search(itStart, itEnd, match, regexp, flagsMatch, itBase);
+ 	} else {
+ 		// Line by line.
+ 		for (Sci::Line line = resr.lineRangeStart; line != resr.lineRangeBreak; line += resr.increment) {
 --- a/scintilla/src/ParallelSupport.h
 +++ b/scintilla/src/ParallelSupport.h
 @@ -1,3 +1,4 @@

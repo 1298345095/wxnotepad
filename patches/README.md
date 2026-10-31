@@ -22,10 +22,16 @@ The patch has these narrowly scoped purposes:
   `src/platform/parallel_port.h` elsewhere.
 - `Document.cxx`: use wx conversion in place of the Windows conversion function
   on Linux, and pass native 32-bit `wchar_t` characters to the vendored regex
-  matcher. The adapter currently exposes UTF-8 only.
+  matcher. The adapter currently exposes UTF-8 only. Forward Boost searches use
+  the existing six-argument `regex_search` overload with a document-start base:
+  the target start limits candidate matches while lookbehind and buffer anchors
+  retain document context. Without it, `aa|(?<=aa)b` skips `b` when Next restarts
+  after `aa`. The application also uses forward core searches for Previous,
+  because the pinned backward path searches individual lines. These adaptations
+  are covered through real Find commands in `tests/search_regex.cpp`.
 - Vendored Boost regex traits: preserve the original matcher and formatter, use
   the existing Windows traits on Windows, and derive Linux wide-character traits
-  from the same masks using `std::locale`. Search behavior is outside this ticket.
+  from the same masks using `std::locale`.
 - `LexerModule.cxx`: link only the plain-text lexer needed by the read-only host.
 
 The wx surface and portability primitives reuse and adapt the exercised code in
