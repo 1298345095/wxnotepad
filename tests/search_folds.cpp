@@ -90,7 +90,7 @@ public:
                 collapse();
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 17, 88, "Previous must wrap to the same complete multiline regex");
-                Require(frame->GetStatusBar()->GetStatusText() == "Search wrapped", "Previous must report wrap");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "Previous must report wrap");
                 for (int line = 1; line <= 7; ++line)
                     Require(editor->Send(Message::GetLineVisible, line),
                             "Previous must reveal the complete multiline match");
@@ -108,7 +108,7 @@ public:
                     Require(editor->Send(Message::GetLineVisible, 13), "second match must be revealed");
                     Click(dialog, wxID_FORWARD);
                     Selection(editor, 33, 39, "Next must wrap across folded document text");
-                    Require(frame->GetStatusBar()->GetStatusText() == "Search wrapped", "Next must report wrap");
+                    Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "Next must report wrap");
                     collapse();
                     Click(dialog, wxID_BACKWARD);
                     Selection(editor, 139, 145, "Previous must wrap to the final hidden match");
@@ -129,7 +129,7 @@ public:
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 139, 139, "zero-width Next must progress after unfolding");
                 Click(dialog, wxID_FORWARD);
-                Require(frame->GetStatusBar()->GetStatusText() == "No match found", "zero-width search must exhaust");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "zero-width search must exhaust");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 33, 33, "zero-width Previous must retain revision/progress bookkeeping");
                 Toggle(wrap, true);

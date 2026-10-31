@@ -147,7 +147,7 @@ public:
                 }
                 Require(Text(editor) == source && !editor->Send(Message::GetModify) &&
                             !editor->Send(Message::CanUndo) && frame->DocumentHasUtf8Bom() &&
-                            frame->GetStatusBar()->GetStatusText() == "UTF-8 (BOM) | C/C++",
+                            frame->GetStatusBar()->GetStatusText() == "UTF-8 (BOM) | C/C++ | EOL: LF",
                         "styling must preserve loaded text, clean save point, encoding and BOM status");
                 Require(frame->Save().status == SaveStatus::Saved, "highlighted document must save");
                 std::ifstream input(path, std::ios::binary);
@@ -184,7 +184,7 @@ public:
                 Command(frame, wxID_NEW);
                 Require(Text(editor).empty() && frame->DocumentPath().empty() && !editor->Send(Message::CanUndo) &&
                             !editor->Send(Message::GetModify) &&
-                            frame->GetStatusBar()->GetStatusText() == "UTF-8 | Plain Text",
+                            frame->GetStatusBar()->GetStatusText() == "UTF-8 | Plain Text | EOL: CRLF",
                         "real New command must reset language with the existing empty-document semantics");
                 std::puts("PASS: case-insensitive extension selection, failed/cancelled Open and real New");
 

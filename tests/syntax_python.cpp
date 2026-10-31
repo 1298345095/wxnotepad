@@ -91,7 +91,7 @@ public:
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "Python fixture must open");
                 Paint(frame);
                 Style(frame->Editor(), 0, SCE_PY_WORD);
-                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python",
+                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python | EOL: CRLF",
                         "Open must select Python and retain encoding status");
                 std::puts("PASS: Open selects Python and styles keywords");
                 auto* editor = frame->Editor();
@@ -175,7 +175,7 @@ public:
                 Require(Text(editor) == originalText && editor->Send(Message::GetAnchor) == 2 &&
                             editor->Send(Message::GetCurrentPos) == 5 && !editor->Send(Message::GetModify) &&
                             !editor->Send(Message::CanUndo) &&
-                            frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override)",
+                            frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: LF",
                         "manual Python choice preserves document state and displays override");
                 Require(frame->SaveAs(Filename(directory / "manual.txt")).status == SaveStatus::Saved,
                         "manual Python must save as differently named text");
@@ -193,12 +193,12 @@ public:
                 Style(editor, 0, SCE_PY_WORD);
                 Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
                             frame->Open(Filename(directory / "missing.py")).status == OpenStatus::Failed &&
-                            frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override)",
+                            frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: LF",
                         "failed and cancelled Open must preserve Python override");
                 Command(frame, wxID_NEW);
                 Character(editor, 'r');
                 Choose(frame, "Python");
-                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override)",
+                Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: CRLF",
                         "unnamed text must support manual Python selection");
                 Command(frame, wxID_UNDO);
                 Require(frame->New(), "clean unnamed document must reset");

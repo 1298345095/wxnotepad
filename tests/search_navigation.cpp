@@ -74,14 +74,14 @@ public:
                 Require(wrap && wrap->GetValue(), "Wrap around must be enabled by default");
                 Command(frame, wxID_BACKWARD);
                 Selection(editor, 7, 10, "Previous at the start must wrap to the final match");
-                Require(frame->GetStatusBar()->GetStatusText() == "Search wrapped",
+                Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped",
                         "a wrapped search must report crossing the boundary");
                 Command(frame, wxID_FORWARD);
                 Selection(editor, 0, 3, "Next at the end must wrap to the first match");
-                Require(frame->GetStatusBar()->GetStatusText() == "Search wrapped", "Next must report wrapping");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "Next must report wrapping");
                 Command(frame, wxID_FORWARD);
                 Selection(editor, 3, 6, "direction changes must not skip an adjacent match");
-                Require(frame->GetStatusBar()->GetStatusText() == "Match found",
+                Require(frame->GetStatusBar()->GetStatusText(2) == "Match found",
                         "a normal match must clear a stale wrapped result");
                 std::puts("PASS: default wrap in both directions and direction changes");
                 auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
@@ -99,7 +99,7 @@ public:
                 Click(dialog, wxID_BACKWARD);
                 Require(editor->Send(Message::GetAnchor) == 3 && editor->Send(Message::GetCurrentPos) == 0,
                         "disabled wrap at document start must preserve a reversed selection");
-                Require(frame->GetStatusBar()->GetStatusText() == "No match found",
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
                         "disabled wrap must report no match at the boundary");
                 editor->Send(Message::SetSel, 10, 7);
                 Click(dialog, wxID_FORWARD);
@@ -135,7 +135,7 @@ public:
                 Click(dialog, wxID_BACKWARD);
                 Click(dialog, wxID_FORWARD);
                 Require(editor->Send(Message::GetAnchor) == 10 && editor->Send(Message::GetCurrentPos) == 0 &&
-                            frame->GetStatusBar()->GetStatusText() == "No match found",
+                            frame->GetStatusBar()->GetStatusText(2) == "No match found",
                         "no match in either direction must preserve selection direction and report failure");
                 query->Clear();
                 Click(dialog, wxID_BACKWARD);
@@ -153,7 +153,7 @@ public:
                 query->SetValue("one");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 0, 3, "a single match must remain selected after backward wrapping");
-                Require(frame->GetStatusBar()->GetStatusText() == "Search wrapped", "single match must report wrap");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "single match must report wrap");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 3, "a single match must remain selected after forward wrapping");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(""));
@@ -161,7 +161,7 @@ public:
                 Click(dialog, wxID_BACKWARD);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 0, "empty document navigation must terminate at the caret");
-                Require(frame->GetStatusBar()->GetStatusText() == "No match found", "empty document has no match");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "empty document has no match");
                 std::puts("PASS: single match and empty document terminate with defined selections");
                 result_ = 0;
             } catch (const std::exception& error) {
