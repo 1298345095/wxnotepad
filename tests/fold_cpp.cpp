@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <numeric>
 #include <stdexcept>
 #include <vector>
@@ -58,14 +59,47 @@ void MarginClick(EditorControl* editor, int line) {
 #endif
     Paint(editor);
 }
+std::function<wxColour(int, int)> PixelReader(EditorControl* editor) {
+#ifdef __WXGTK__
+    // Wayland does not support reading pixels back from a window DC. Ask the
+    // actual native widget to paint its margin into an owned Cairo target.
+    const int width =
+        static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + editor->Send(Message::GetMarginWidthN, 1));
+    const int height = editor->GetClientSize().y;
+    auto* surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, width, height);
+    auto* context = cairo_create(surface);
+    gtk_widget_draw(editor->GetConnectWidget(), context);
+    cairo_destroy(context);
+    auto* pixels = gdk_pixbuf_get_from_surface(surface, 0, 0, width, height);
+    cairo_surface_destroy(surface);
+    Require(pixels != nullptr, "native widget margin must paint into its owned target");
+    wxImage image(width, height);
+    const auto* data = gdk_pixbuf_get_pixels(pixels);
+    const int stride = gdk_pixbuf_get_rowstride(pixels);
+    const int channels = gdk_pixbuf_get_n_channels(pixels);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const auto* pixel = data + y * stride + x * channels;
+            image.SetRGB(x, y, pixel[0], pixel[1], pixel[2]);
+        }
+    }
+    g_object_unref(pixels);
+    return [image](int x, int y) { return wxColour(image.GetRed(x, y), image.GetGreen(x, y), image.GetBlue(x, y)); };
+#else
+    return [dc = std::make_shared<wxClientDC>(editor)](int x, int y) {
+        wxColour pixel;
+        Require(dc->GetPixel(x, y, &pixel), "native control must expose its painted margin pixels");
+        return pixel;
+    };
+#endif
+}
 void MarginBackground(EditorControl* editor) {
-    wxClientDC dc(editor);
+    const auto read = PixelReader(editor);
     const int left = static_cast<int>(editor->Send(Message::GetMarginWidthN, 0));
     const int width = static_cast<int>(editor->Send(Message::GetMarginWidthN, 1));
     for (const int y : {150, editor->GetClientSize().y - 20}) {
         for (const int x : {left + 1, left + width - 2}) {
-            wxColour pixel;
-            Require(dc.GetPixel(x, y, &pixel), "native control must expose its painted margin pixels");
+            const auto pixel = read(x, y);
             std::printf("margin pixel %d,%d = %u,%u,%u\n", x, y, pixel.Red(), pixel.Green(), pixel.Blue());
             Require(pixel == wxColour(240, 240, 240),
                     "fold background must cover the complete margin beyond one 8x8 tile");
@@ -73,7 +107,7 @@ void MarginBackground(EditorControl* editor) {
     }
 }
 std::vector<unsigned int> MarkerPixels(EditorControl* editor, int line) {
-    wxClientDC dc(editor);
+    const auto read = PixelReader(editor);
     const int left = static_cast<int>(editor->Send(Message::GetMarginWidthN, 0));
     const int width = static_cast<int>(editor->Send(Message::GetMarginWidthN, 1));
     const auto position = editor->Send(Message::PositionFromLine, line);
@@ -82,8 +116,7 @@ std::vector<unsigned int> MarkerPixels(EditorControl* editor, int line) {
     std::vector<unsigned int> pixels;
     for (int y = top + 1; y < top + height - 1; ++y) {
         for (int x = left + 2; x < left + width - 2; ++x) {
-            wxColour pixel;
-            Require(dc.GetPixel(x, y, &pixel), "native fold marker pixels must be readable");
+            const auto pixel = read(x, y);
             pixels.push_back(pixel.GetRGB());
         }
     }
