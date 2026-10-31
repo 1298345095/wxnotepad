@@ -303,7 +303,7 @@ void EditorFrame::ReplaceAll() {
     bool editing = false;
     intptr_t start = 0;
     auto limit = editor_->Send(Message::GetLength);
-    editor_->Send(Message::SetSearchFlags, 0);
+    editor_->Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     while (query.length() && start < limit) {
         editor_->Send(Message::SetTargetStart, start);
         editor_->Send(Message::SetTargetEnd, limit);

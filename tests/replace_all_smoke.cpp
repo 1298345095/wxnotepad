@@ -3,6 +3,7 @@
 #include "native_dialog_helpers.h"
 #include <wx/wx.h>
 #include <wx/button.h>
+#include <wx/checkbox.h>
 #include <wx/dialog.h>
 #include <wx/statusbr.h>
 #include <wx/stattext.h>
@@ -53,6 +54,19 @@ void NativeF3(wxWindow* window) {
     gdk_event_free(event);
 #endif
     wxYield();
+}
+void Toggle(wxCheckBox* option, bool checked) {
+    Require(option, "Replace view must share the active search options");
+#ifdef __WXMSW__
+    const auto handle = static_cast<HWND>(option->GetHandle());
+    SendMessageW(handle, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessageW(static_cast<HWND>(option->GetParent()->GetHandle()), WM_COMMAND,
+                 MAKEWPARAM(GetDlgCtrlID(handle), BN_CLICKED), reinterpret_cast<LPARAM>(handle));
+#elif defined(__WXGTK__)
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(option->GetHandle()), checked);
+#endif
+    wxYield();
+    Require(option->GetValue() == checked, "native checkbox must retain its requested value");
 }
 std::string Text(EditorControl* editor) {
     const auto length = static_cast<size_t>(editor->Send(Scintilla::Message::GetLength));
@@ -194,6 +208,20 @@ public:
                         "Redo after Save must restore exact text and the new savepoint");
                 std::filesystem::remove(path);
                 std::puts("PASS: Save preserves independent UTF-16LE/BOM/mixed-EOL bytes and Undo/Redo savepoints");
+                auto* matchCase = wxDynamicCast(wxWindow::FindWindowByName("Match case", dialog), wxCheckBox);
+                auto* wholeWord = wxDynamicCast(wxWindow::FindWindowByName("Whole word", dialog), wxCheckBox);
+                auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", dialog), wxCheckBox);
+                Toggle(matchCase, true);
+                Toggle(wrap, false);
+                replace("one ONE one", "one", "X", "X ONE X", "2 replacements");
+                Toggle(wholeWord, true);
+                replace("one someone one_one one.", "one", "X", "X someone one_one X.", "2 replacements");
+                Toggle(matchCase, false);
+                replace("One someone one_one ONE.", "one", "X", "X someone one_one X.", "2 replacements");
+                Toggle(wholeWord, false);
+                replace("one someone one_one one.", "one", "X", "X someX X_X X.", "5 replacements");
+                std::puts(
+                    "PASS: Replace All follows native case/whole-word options independently of wrap and selection");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
