@@ -341,7 +341,14 @@ public:
                         "native current-scheme filter must retain the current filename extension");
 #endif
                 Selected(frame, "Python", SCLEX_PYTHON);
-                Require(Bytes(custom) == source, "default filter must force current Python despite custom extensions");
+#ifdef __WXMSW__
+                // The native dialog retains the initial filename's extra extension.
+                const auto savedCustom = directory / "copy.any.odd";
+#else
+                const auto& savedCustom = custom;
+#endif
+                Require(frame->DocumentPath() == Filename(savedCustom) && Bytes(savedCustom) == source,
+                        "default filter must force current Python and preserve native extension handling");
                 std::puts("PASS: native current filter retains an extra extension and forces its current scheme");
                 result_ = 0;
             } catch (const std::exception& error) {

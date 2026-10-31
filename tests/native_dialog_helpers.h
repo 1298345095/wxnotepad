@@ -37,9 +37,14 @@ inline void ChooseFileType(HWND window, const wxString& choice) {
                 SendMessageW(child, CB_GETLBTEXT, static_cast<WPARAM>(index), reinterpret_cast<LPARAM>(label));
                 if (selection.observed.length() < 768) selection.observed += " {" + wxString(label).Left(96) + "}";
                 if (!wxString(label).StartsWith(selection.name + " (")) continue;
-                SendMessageW(child, CB_SETCURSEL, static_cast<WPARAM>(index), 0);
-                SendMessageW(GetParent(child), WM_COMMAND, MAKEWPARAM(GetDlgCtrlID(child), CBN_SELCHANGE),
-                             reinterpret_cast<LPARAM>(child));
+                if (SendMessageW(child, CB_GETCURSEL, 0, 0) != index) {
+                    SendMessageW(child, CB_SETCURSEL, static_cast<WPARAM>(index), 0);
+                    SendMessageW(GetParent(child), WM_COMMAND, MAKEWPARAM(GetDlgCtrlID(child), CBN_SELCHANGE),
+                                 reinterpret_cast<LPARAM>(child));
+                    // The modern native dialog commits its file type on selection completion.
+                    SendMessageW(GetParent(child), WM_COMMAND, MAKEWPARAM(GetDlgCtrlID(child), CBN_SELENDOK),
+                                 reinterpret_cast<LPARAM>(child));
+                }
                 selection.found = true;
                 return FALSE;
             }
@@ -61,7 +66,10 @@ inline void ChooseFile(HWND window, const wxString& destination) {
                 wchar_t type[64]{};
                 GetClassNameW(child, type, 64);
                 if (IsWindowVisible(child) && wxString(type) == "Edit") {
-                    SetWindowTextW(child, reinterpret_cast<const wxString*>(data)->wc_str());
+                    // Replace as an edit so the dialog updates its filename after a type change.
+                    SendMessageW(child, EM_SETSEL, 0, -1);
+                    SendMessageW(child, EM_REPLACESEL, TRUE,
+                                 reinterpret_cast<LPARAM>(reinterpret_cast<const wxString*>(data)->wc_str()));
                     return FALSE;
                 }
                 return TRUE;
