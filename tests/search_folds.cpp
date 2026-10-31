@@ -230,35 +230,40 @@ public:
                 Require(Text(editor) == singleStructural,
                         "single structural replacement Redo must restore inserted lines");
                 std::puts("PASS: literal and structural single replacement preserve visibility and history");
-                const auto replaceAll = [&](const char* find, const wxString& with, const std::string& expected,
-                                            const char* count) {
+                struct ReplacementCase {
+                    const char* find;
+                    const char* with;
+                    const std::string& expected;
+                    const char* count;
+                };
+                const auto replaceAll = [&](const ReplacementCase& example) {
                     load(nested);
-                    query->SetValue(find);
-                    replacement->SetValue(with);
+                    query->SetValue(example.find);
+                    replacement->SetValue(example.with);
                     Click(dialog, wxID_REPLACE_ALL);
-                    Require(Text(editor) == expected && result->GetLabel() == count,
+                    Require(Text(editor) == example.expected && result->GetLabel() == example.count,
                             "Replace All must include hidden matches and report the exact count");
                     Command(frame, wxID_UNDO);
                     Require(Text(editor) == nested && !editor->Send(Message::GetModify) &&
                                 !editor->Send(Message::CanUndo),
                             "one Undo must restore all replaced bytes and savepoint");
                     Command(frame, wxID_REDO);
-                    Require(Text(editor) == expected, "one Redo must restore the complete replacement");
+                    Require(Text(editor) == example.expected, "one Redo must restore the complete replacement");
                 };
                 const std::string both = "void outer() {\n  if (true) {\n    needleX();\n  }\n  if (true) {\n"
                                          "    middle();\n  }\n  tail();\n  if (true) {\n    spare();\n  }\n}\n"
                                          "void other() {\n  needleX();\n}\n";
-                replaceAll("(needle)", "$1X", both, "2 replacements");
+                replaceAll({"(needle)", "$1X", both, "2 replacements"});
                 const std::string zero = "void outer() {\n  if (true) {\n    Xneedle();\n  }\n  if (true) {\n"
                                          "    middle();\n  }\n  tail();\n  if (true) {\n    spare();\n  }\n}\n"
                                          "void other() {\n  Xneedle();\n}\n";
-                replaceAll("(?=needle)", "X", zero, "2 replacements");
+                replaceAll({"(?=needle)", "X", zero, "2 replacements"});
                 std::puts("PASS: hidden capture and zero-width Replace All preserve counts and grouped Undo/Redo");
                 const std::string inserted =
                     "void outer() {\n  if (true) {\n    needle\n    extra();\n  }\n  if (true) {\n"
                     "    middle();\n  }\n  tail();\n  if (true) {\n    spare();\n  }\n}\n"
                     "void other() {\n  needle\n    extra();\n}\n";
-                replaceAll("(needle)", "$1\\n    extra", inserted, "2 replacements");
+                replaceAll({"(needle)", "$1\\n    extra", inserted, "2 replacements"});
                 editor->Send(Message::Colourise, 0, -1);
                 Require(editor->Send(Message::GetLineCount) == 18 &&
                             editor->Send(Message::GetLineVisible,
@@ -266,7 +271,7 @@ public:
                         "inserted lines must retain valid folding and a visible caret");
                 const std::string joined = "void outer() {  if (true) {    needle();  }  if (true) {    middle();  }"
                                            "  tail();  if (true) {    spare();  }}void other() {  needle();}";
-                replaceAll("\\n", "", joined, "15 replacements");
+                replaceAll({"\\n", "", joined, "15 replacements"});
                 editor->Send(Message::Colourise, 0, -1);
                 Require(editor->Send(Message::GetLineCount) == 1 && editor->Send(Message::GetLineVisible, 0) &&
                             editor->Send(Message::LineFromPosition, editor->Send(Message::GetCurrentPos)) == 0,
@@ -275,7 +280,7 @@ public:
                 const std::string structural = "void outer() \n  if (true) \n    needle();\n  \n  if (true) \n"
                                                "    middle();\n  \n  tail();\n  if (true) \n    spare();\n  \n\n"
                                                "void other() \n  needle();\n\n";
-                replaceAll("\\{|\\}", "", structural, "10 replacements");
+                replaceAll({"\\{|\\}", "", structural, "10 replacements"});
                 editor->Send(Message::Colourise, 0, -1);
                 wxYield();
                 for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line)
