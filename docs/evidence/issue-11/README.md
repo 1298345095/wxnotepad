@@ -21,13 +21,13 @@ and Home/End assignments with wrapping off. Character boundaries stay in the cor
 | Ubuntu 24.04 WSLg, GTK3 Wayland / GCC 13.3 | passed; 4/4 | same native keyboard/mouse/scroll/caret sequence passed |
 | Ubuntu 24.04 WSLg, GTK3 X11 / GCC 13.3 | same Linux executable; 4/4 | native keyboard/drag/edit/Undo passed; human scrollbar drag, selection after scroll and normal window resizing passed |
 
-The final X11 display check explicitly skipped only native-focus assertions
-because the desktop did not activate its top-level window. Paint, resize,
-cover/uncover, hide/show and caret/document preservation still ran and passed.
-Windows and Wayland focus assertions ran and passed. Earlier successful native
-focus evidence remains in #10; no fake focus event or product activation change
-was introduced. Final integrated suites also cover the merged IME geometry
-(Windows), first-save and unsaved-close behavior.
+An isolated X11 `display_repaint` rerun on the final code passed in 4.12 seconds,
+with native-focus assertions exercised. Showing, resizing, uncovering,
+hide/show, and native focus/caret/document preservation all passed. Windows and
+Wayland focus assertions also ran and passed. The test explicitly reports when
+desktop activation is unavailable rather than synthesizing focus. Final
+integrated suites also cover the merged IME geometry (Windows), first-save and
+unsaved-close behavior.
 
 During mixed WSLg backend tests the human observed an invisible pointer and
 could not initiate edge resize, including over a stock native GTK text field.
