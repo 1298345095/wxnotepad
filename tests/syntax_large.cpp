@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <SciLexer.h>
 #include <wx/wx.h>
 #include <wx/statusbr.h>
@@ -10,20 +11,10 @@
 
 namespace {
 using Scintilla::Message;
+using TestFiles::Bytes;
+using TestFiles::Filename;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
-}
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "large saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 }
 void Paint(EditorControl* editor) {
     for (int attempt = 0; attempt < 100; ++attempt) {
