@@ -32,6 +32,7 @@ EditorFrame::EditorFrame()
     edit->Append(wxID_PASTE, "&Paste\tCtrl+V");
     edit->AppendSeparator();
     edit->Append(wxID_FIND, "&Find...\tCtrl+F");
+    edit->Append(wxID_REPLACE, "&Replace...\tCtrl+H");
     edit->Append(wxID_FORWARD, "Find &Next\tF3");
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
@@ -39,6 +40,7 @@ EditorFrame::EditorFrame()
     SetMenuBar(menus);
     CreateStatusBar();
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(); }, wxID_FIND);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(true); }, wxID_REPLACE);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
     Bind(wxEVT_CHAR_HOOK, &EditorFrame::OnSearchKey, this);
     Bind(
@@ -124,7 +126,7 @@ EditorFrame::EditorFrame()
     editor_->SetFocus();
 }
 
-void EditorFrame::ShowFind() {
+void EditorFrame::ShowFind(bool replace) {
     if (!findDialog_) {
         findDialog_ = new wxDialog(this, wxID_ANY, "Find");
         auto* layout = new wxBoxSizer(wxVERTICAL);
@@ -132,10 +134,17 @@ void EditorFrame::ShowFind() {
         findQuery_ = new wxTextCtrl(findDialog_, wxID_ANY, {}, wxDefaultPosition, wxSize(320, -1), wxTE_PROCESS_ENTER);
         findQuery_->SetName("Find query");
         layout->Add(findQuery_, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
+        replacementLabel_ = new wxStaticText(findDialog_, wxID_ANY, "Replace &with:");
+        layout->Add(replacementLabel_, 0, wxALL, 8);
+        replacement_ = new wxTextCtrl(findDialog_, wxID_ANY, {}, wxDefaultPosition, wxSize(320, -1));
+        replacement_->SetName("Replacement text");
+        layout->Add(replacement_, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
         auto* buttons = new wxBoxSizer(wxHORIZONTAL);
         auto* next = new wxButton(findDialog_, wxID_FORWARD, "Find &Next");
         next->SetDefault();
         buttons->Add(next, 0, wxRIGHT, 8);
+        replaceButton_ = new wxButton(findDialog_, wxID_REPLACE, "&Replace");
+        buttons->Add(replaceButton_, 0, wxRIGHT, 8);
         buttons->Add(new wxButton(findDialog_, wxID_CANCEL, "Close"));
         layout->Add(buttons, 0, wxALL | wxALIGN_RIGHT, 8);
         findDialog_->SetSizerAndFit(layout);
@@ -144,6 +153,7 @@ void EditorFrame::ShowFind() {
         findDialog_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
         findDialog_->Bind(wxEVT_CHAR_HOOK, &EditorFrame::OnSearchKey, this);
         findDialog_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
+        findDialog_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceOne(); }, wxID_REPLACE);
         findQuery_->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent&) { FindNext(); });
         const auto close = [this] {
             findDialog_->Hide();
@@ -152,6 +162,11 @@ void EditorFrame::ShowFind() {
         findDialog_->Bind(wxEVT_BUTTON, [close](wxCommandEvent&) { close(); }, wxID_CANCEL);
         findDialog_->Bind(wxEVT_CLOSE_WINDOW, [close](wxCloseEvent&) { close(); });
     }
+    findDialog_->SetTitle(replace ? "Replace" : "Find");
+    replacementLabel_->Show(replace);
+    replacement_->Show(replace);
+    replaceButton_->Show(replace);
+    findDialog_->GetSizer()->Fit(findDialog_);
     findDialog_->Show();
     findQuery_->SetFocus();
     findQuery_->SelectAll();
@@ -160,6 +175,8 @@ void EditorFrame::ShowFind() {
 void EditorFrame::OnSearchKey(wxKeyEvent& event) {
     if (event.GetKeyCode() == 'F' && event.ControlDown() && !event.AltDown() && !event.ShiftDown())
         ShowFind();
+    else if (event.GetKeyCode() == 'H' && event.ControlDown() && !event.AltDown() && !event.ShiftDown())
+        ShowFind(true);
     else if (event.GetKeyCode() == WXK_F3 && !event.HasAnyModifiers())
         FindNext();
     else
@@ -184,6 +201,32 @@ void EditorFrame::FindNext() {
     }
     editor_->Send(Message::SetSel, editor_->Send(Message::GetTargetStart), editor_->Send(Message::GetTargetEnd));
     editor_->Send(Message::ScrollCaret);
+}
+
+void EditorFrame::ReplaceOne() {
+    const wxString queryText = findQuery_->GetValue();
+    const auto query = queryText.utf8_str();
+    if (!query.length()) return;
+    using Scintilla::Message;
+    const auto start = editor_->Send(Message::GetSelectionStart);
+    const auto end = editor_->Send(Message::GetSelectionEnd);
+    editor_->Send(Message::SetSearchFlags, 0);
+    editor_->Send(Message::SetTargetStart, start);
+    editor_->Send(Message::SetTargetEnd, end);
+    // Search the live selected range, including the core's case and word semantics.
+    // A range that merely contains a match is not a confirmed replacement.
+    if (start == end ||
+        editor_->Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) != start ||
+        editor_->Send(Message::GetTargetEnd) != end) {
+        FindNext();
+        return;
+    }
+    const wxString replacementText = replacement_->GetValue();
+    const auto replacement = replacementText.utf8_str();
+    editor_->Send(Message::ReplaceTarget, replacement.length(), reinterpret_cast<intptr_t>(replacement.data()));
+    const auto after = editor_->Send(Message::GetTargetEnd);
+    editor_->Send(Message::SetSel, after, after);
+    FindNext();
 }
 
 void EditorFrame::UpdateDocumentState() {
