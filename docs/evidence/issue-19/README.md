@@ -29,8 +29,9 @@ Unix iconv CP936 lacks 2,149 Windows PUA assignments. `gbk_codec.cpp` records
 those exact assignments in 54 contiguous byte/codepoint ranges, bidirectionally.
 Provenance: wxWidgets 3.3.3#1, Windows MSVC 19.51 vs Ubuntu WSL GCC 13;
 explicit-length strict CP936 exhaustive two-byte decoding and BMP encoding.
-Original probe and raw records are retained in the implementation coordination
-directory `codec-probe/`; `cp936-pua-delta.json` records the measured range
+Original probe and raw records are retained under
+`E:/NewNotepad4/.wxnotepad-implementation-context/codec-probe/`;
+`cp936-pua-delta.json` records the measured range
 compression. The table is this narrow compatibility delta, not a general
 encoding catalog.
 
@@ -58,4 +59,23 @@ input error, all three warning buttons, and failed UTF-8/replacement writes.
 The native tests run through `desktop_run.py`'s shared desktop mutex. No global
 keyboard/mouse injection, Linux IME installation, or proxy change was used.
 
-Final platform results are recorded after merging the latest integration.
+Final checks after merging integration `8452f76` (including UTF-16LE #18):
+
+| Platform | Relevant file suite | Time |
+| --- | --- | --- |
+| Windows / MSVC 19.51 / wxWidgets 3.3.3#1 | 9/9 passed | 17.60 s |
+| Ubuntu WSL / X11 / GCC 13 / wxWidgets 3.3.3#1 | 9/9 passed | 11.14 s |
+| Ubuntu WSL / Wayland / same native build | 9/9 passed | 11.47 s |
+
+CTest selection:
+`gbk_|utf16_|first_utf8_save|close_unsaved|open_utf8|open_new_native|save_existing|save_as_native`.
+Windows build used `python -X utf8 tools/build.py --source E:/NewNotepad4/notepad4`.
+Native Linux source/build/data were kept at
+`/home/ctrls/.cache/wxnotepad-issue19`, using the pinned source archive and
+existing `/home/ctrls/vcpkg` dependencies; the backend was selected through
+`GDK_BACKEND=x11` / `wayland`. Final builds succeeded on both toolchains.
+
+An independent comparison against both raw 65,536-entry decoding records
+verified every production compatibility-table pair: exactly 54 ranges and
+2,149 Windows-only records, equal codepoints and no reverse collisions.
+This is bounded CP936 evidence, alongside the application fixtures above.
