@@ -16,9 +16,26 @@ events retain their UTF-8 conversion storage through insertion.
 Windows binaries declare Per-Monitor V2 DPI awareness, and offscreen text buffers
 inherit the window's display scale. See the [font validation record](docs/observations/windows-font-README.md).
 
-Phase 1 supports keyboard navigation, Shift selection, mouse selection and
+The editor supports keyboard navigation, Shift selection, mouse selection and
 scrolling, plus native system clipboard Cut/Copy/Paste and their Ctrl+X/C/V
 shortcuts. Clipboard edits participate in the same Undo/Redo history.
+
+Edit → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
+Shift+F3 finds the previous match. Wrap around is enabled by default, while
+Match case, Whole word and Regular expression are initially off. Find and
+Replace share the query and options for the current application session.
+
+Edit → Replace / Ctrl+H opens the replacement view. Replace revalidates the
+selected match before editing; Replace All searches the complete current
+document and reports its count in the dialog. Each single replacement, or one
+Replace All operation, can be undone once. Byte-identical replacements preserve
+the save point and redo history.
+
+Regular expressions use the pinned original core's Boost engine and capture
+formatter, including numeric `$1` / `\1` references and `$&` / `$0` for the whole
+match. Whole word is disabled in regex mode; use explicit regex word boundaries
+instead. Zero-length matches advance on character boundaries, including at
+document ends. Invalid patterns report an error without editing the document.
 
 File → New / Ctrl+N and Open / Ctrl+O replace the current document after any
 unsaved changes are saved or discarded. Close uses the same Save/Discard/Cancel
@@ -38,9 +55,10 @@ LF and CR bytes remain intact when saved.
 
 Microsoft Pinyin human validation passed; see the
 [IME validation record](docs/evidence/issue-13/README.md). Linux IME remains
-deferred. Search/replace UI, syntax highlighting, advanced editing, settings
-migration and release packaging are outside this phase. See the
-[phase 1 spec](https://github.com/1298345095/wxnotepad/issues/8) and the
+deferred. Syntax highlighting, advanced editing, settings migration and release
+packaging remain future work. See the
+[phase 1 spec](https://github.com/1298345095/wxnotepad/issues/8),
+[search/replace spec](https://github.com/1298345095/wxnotepad/issues/21) and the
 [full-application resource observations](docs/observations/issue20-README.md).
 
 ## Build and run
@@ -102,3 +120,11 @@ human checks are recorded separately in the
 [Save/Save As](docs/evidence/issue-17/README.md),
 [UTF-16LE](docs/evidence/issue-18/README.md) and
 [GBK](docs/evidence/issue-19/README.md).
+
+Search tests exercise native dialog controls and commands, explicit UTF-8 match
+ranges, regex captures, zero-length progress, editing history and independently
+read saved bytes on Windows, private X11 and private Wayland displays.
+
+Format tracked C++ files under `src/` and `tests/` with clang-format **23.1.2**
+and the repository's `.clang-format`. The configuration also parses with the
+installed Linux clang-format 18.1.3; version 23.1.2 is the canonical formatter.
