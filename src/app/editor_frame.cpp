@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "app/find_replace_dialog.h"
+#include "app/go_to_line_dialog.h"
 #include <wx/menu.h>
 #include <wx/filedlg.h>
 #include <wx/filename.h>
@@ -31,6 +32,9 @@ EditorFrame::EditorFrame()
     edit->Append(wxID_REPLACE, "&Replace...\tCtrl+H");
     edit->Append(wxID_FORWARD, "Find &Next\tF3");
     edit->Append(wxID_BACKWARD, "Find &Previous\tShift+F3");
+    const int goToLine = wxWindow::NewControlId();
+    edit->Append(goToLine, "&Go To Line...\tCtrl+G");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowGoToLineDialog(this, *editor_); }, goToLine);
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
