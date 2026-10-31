@@ -30,6 +30,7 @@ to the window width without changing newline bytes. View → Show Whitespace /
 Ctrl+Shift+8 displays spaces and tabs. Line numbers start on; wrapping and
 whitespace markers start off. These choices stay with the current window through
 New, Open, Save As and language changes; they are not saved between runs.
+See the [navigation and view validation record](docs/observations/navigation-view-README.md).
 
 Edit → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
 Shift+F3 finds the previous match. Wrap around is enabled by default, while
