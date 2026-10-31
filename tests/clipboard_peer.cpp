@@ -43,6 +43,8 @@ private:
             }
             const auto command = pendingCommand_;
             pendingCommand_.clear();
+            wxString focusFile;
+            if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) { wxFFile file(focusFile, "wb"); }
             frame_->SetTitle("wxnotepad clipboard test peer");
             Perform(command);
             return;
@@ -59,6 +61,10 @@ private:
         wxRemoveFile(request);
         if (command == "copy" || command == "wxcopy" || command == "nontext" || command == "paste") {
             frame_->SetTitle(wxString::Format("wxnotepad clipboard focus: peer [%lu]", wxGetProcessId()));
+            wxString focusFile;
+            if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) {
+                wxFFile file(focusFile, "wb"); file.Write("peer");
+            }
             frame_->Raise();
             text_->SetFocus();
             activationStarted_ = wxGetUTCTimeMillis();

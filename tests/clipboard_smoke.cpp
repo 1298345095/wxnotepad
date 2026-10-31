@@ -61,6 +61,10 @@ public:
         const auto title = frame_->GetTitle();
         const auto focusTitle = wxString::Format("wxnotepad clipboard focus: editor [%lu]", wxGetProcessId());
         frame_->SetTitle(focusTitle);
+        wxString privateFocusFile;
+        if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &privateFocusFile)) {
+            wxFFile file(privateFocusFile, "wb"); file.Write("editor");
+        }
         frame_->Raise();
         editor_->SetFocus();
         wxStopWatch activation;
@@ -70,6 +74,7 @@ public:
             wxMilliSleep(10);
         }
         Require(frame_->IsActive() && editor_->HasFocus(), "editor must receive actual native focus before clipboard commands");
+        if (!privateFocusFile.empty()) { wxFFile file(privateFocusFile, "wb"); }
         frame_->SetTitle(title);
         SettleClipboard();
         return response;
@@ -79,7 +84,24 @@ private:
     EditorFrame* frame_;
     EditorControl* editor_;
 };
+void Gesture(EditorControl* editor) {
+    wxString focusFile;
+    if (!wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) return;
+    bool received = false;
+    wxEvtHandler nativeEvents;
+    nativeEvents.Bind(wxEVT_KEY_UP, [&received](wxKeyEvent& event) {
+        if (event.GetKeyCode() == WXK_SHIFT) received = true;
+        event.Skip();
+    });
+    editor->PushEventHandler(&nativeEvents);
+    { wxFFile file(focusFile, "wb"); file.Write("gesture"); }
+    wxStopWatch wait;
+    while (!received && wait.Time() < 3000) { wxYield(); wxMilliSleep(10); }
+    editor->PopEventHandler(false);
+    Require(received, "private native modifier gesture must be received before clipboard ownership changes");
+}
 void Key(EditorControl* editor, int key) {
+    Gesture(editor);
     wxKeyEvent event(wxEVT_KEY_DOWN);
     event.m_keyCode = key;
     event.m_controlDown = true;
@@ -87,6 +109,7 @@ void Key(EditorControl* editor, int key) {
     editor->GetEventHandler()->ProcessEvent(event);
 }
 void Menu(EditorFrame* frame, int id) {
+    if (id == wxID_COPY || id == wxID_CUT || id == wxID_PASTE) Gesture(frame->Editor());
     wxCommandEvent event(wxEVT_MENU, id);
     frame->GetEventHandler()->ProcessEvent(event);
 }
@@ -184,6 +207,7 @@ public:
                 SettleClipboard();
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("A中文\r\nline B"));
                 editor->Send(Message::SetSel, 1, 15);
+                Gesture(editor);
                 editor->Send(Message::Copy);
                 SettleClipboard();
                 wxTextDataObject copied;
@@ -193,6 +217,8 @@ public:
                 }
                 auto copiedText = copied.GetText();
                 copiedText.Replace("\r\n", "\n");
+                if (copiedText != wxString::FromUTF8("中文\nline B"))
+                    std::fprintf(stderr, "Copy diagnostic: seed remains=%d, returned characters=%zu, selection=%ld..%ld\n", copiedText == "owned seed", copiedText.length(), static_cast<long>(editor->Send(Message::GetSelectionStart)), static_cast<long>(editor->Send(Message::GetSelectionEnd)));
                 Require(copiedText == wxString::FromUTF8("中文\nline B"), "Copy publishes selected Unicode multiline text");
                 std::puts("PASS: Copy selected Unicode multiline text to system clipboard");
                 editor->Send(Message::EmptyUndoBuffer);
@@ -220,6 +246,7 @@ public:
                     "failed system copy must not delete Cut selection or change history");
                 Require(peer.Request("release") == "released", "external peer releases clipboard");
 #endif
+                Gesture(editor);
                 editor->Send(Message::Cut);
                 Require(Text(editor) == "A" && editor->Send(Message::GetModify), "Cut deletes selection after copy succeeds");
                 SettleClipboard();

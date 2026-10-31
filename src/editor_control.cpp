@@ -4,6 +4,9 @@
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <chrono>
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#endif
 #ifdef __WXMSW__
 #include <wx/caret.h>
 #include <imm.h>
@@ -184,7 +187,27 @@ private:
         wxTheClipboard->UsePrimarySelection(false);
         wxClipboardLocker lock;
         if (!lock) return false;
+#ifdef __WXGTK__
+        // Retain each publication with GTK's owner lifecycle. The legacy wx
+        // selection path returned empty text after repeat Wayland publications.
+        auto* value = new std::string(text.AsView());
+        auto* list = gtk_target_list_new(nullptr, 0);
+        gtk_target_list_add_text_targets(list, 0);
+        gint count = 0;
+        auto* targets = gtk_target_table_new_from_list(list, &count);
+        const bool copied = gtk_clipboard_set_with_data(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), targets, count,
+            [](GtkClipboard*, GtkSelectionData* data, guint, gpointer owner) {
+                const auto* value = static_cast<const std::string*>(owner);
+                gtk_selection_data_set_text(data, value->c_str(), -1);
+            },
+            [](GtkClipboard*, gpointer owner) { delete static_cast<std::string*>(owner); }, value);
+        gtk_target_table_free(targets, count);
+        gtk_target_list_unref(list);
+        if (!copied) delete value;
+        return copied;
+#else
         return wxTheClipboard->SetData(new wxTextDataObject(wxString::FromUTF8(text.Data(), text.Length())));
+#endif
     }
     void Copy(bool) const override {
         if (sel.Empty()) return;
