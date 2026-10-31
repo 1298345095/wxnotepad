@@ -4,6 +4,7 @@
 #include <wx/filedlg.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
+#include <wx/statusbr.h>
 
 EditorFrame::EditorFrame()
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
@@ -11,6 +12,8 @@ EditorFrame::EditorFrame()
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
     file->Append(wxID_OPEN, "&Open...\tCtrl+O");
+    const int openUtf16 = wxWindow::NewControlId();
+    file->Append(openUtf16, "Open As UTF-16LE...");
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
     file->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
     auto* edit = new wxMenu;
@@ -20,12 +23,18 @@ EditorFrame::EditorFrame()
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
     SetMenuBar(menus);
+    CreateStatusBar();
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { New(); }, wxID_NEW);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) {
         const auto result = Open();
         if (result.status == OpenStatus::Failed)
             wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
     }, wxID_OPEN);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        const auto result = OpenAs(FileEncoding::Utf16Le);
+        if (result.status == OpenStatus::Failed)
+            wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+    }, openUtf16);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) {
         const auto result = Save();
         if (result.status == SaveStatus::Failed)
@@ -56,6 +65,9 @@ EditorFrame::EditorFrame()
 void EditorFrame::UpdateDocumentState() {
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + " - wxnotepad");
+    const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE" :
+                              document_.Encoding() == FileEncoding::Gbk ? "GBK" : "UTF-8";
+    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : ""));
 }
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination) {
@@ -90,8 +102,8 @@ SaveResult EditorFrame::SaveAs() {
     return SaveAs(dialog.GetPath());
 }
 
-OpenResult EditorFrame::Open(const std::optional<wxString>& source) {
-    const auto result = document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); });
+OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
+    const auto result = document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     UpdateDocumentState();
     return result;
 }
@@ -101,6 +113,13 @@ OpenResult EditorFrame::Open() {
                         wxFD_OPEN | wxFD_FILE_MUST_EXIST);
     if (dialog.ShowModal() != wxID_OK) return Open(std::nullopt);
     return Open(dialog.GetPath());
+}
+
+OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
+    wxFileDialog dialog(this, "Open file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                        wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    if (dialog.ShowModal() != wxID_OK) return Open(std::nullopt, encoding);
+    return Open(dialog.GetPath(), encoding);
 }
 
 bool EditorFrame::New() {

@@ -1,5 +1,6 @@
 #include "document_session.h"
 #include "editor_control.h"
+#include "utf16_codec.h"
 #include "ScintillaTypes.h"
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -86,7 +87,12 @@ SaveResult DocumentSession::SaveTo(const wxString& destination) {
     std::string bytes(length + 1, '\0');
     editor_.Send(Scintilla::Message::GetText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     bytes.resize(length);
-    if (hasUtf8Bom_) bytes.insert(0, "\xef\xbb\xbf");
+    if (encoding_ == FileEncoding::Utf16Le) {
+        auto encoded = EncodeUtf16Le(bytes);
+        if (!encoded) return {SaveStatus::Failed, "The document could not be encoded as UTF-16LE."};
+        bytes = std::move(*encoded);
+        if (hasBom_) bytes.insert(0, "\xff\xfe");
+    } else if (hasBom_) bytes.insert(0, "\xef\xbb\xbf");
     const auto error = WriteSafely(destination, bytes);
     if (!error.empty()) return {SaveStatus::Failed, error};
     path_ = destination;
@@ -94,7 +100,8 @@ SaveResult DocumentSession::SaveTo(const wxString& destination) {
     return {SaveStatus::Saved, {}};
 }
 
-OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace) {
+OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
+                                 std::optional<FileEncoding> encoding) {
     if (!source) return {OpenStatus::Cancelled, {}};
     wxLogNull quiet;
     if (!wxFileName::FileExists(*source))
@@ -106,20 +113,25 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     std::string bytes(static_cast<size_t>(length), '\0');
     if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
         return {OpenStatus::Failed, "Could not read the complete file."};
-    const bool bom = bytes.starts_with("\xef\xbb\xbf");
-    if (bom) bytes.erase(0, 3);
-    if (!IsUtf8(bytes)) return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
+    const auto format = encoding.value_or(bytes.starts_with("\xff\xfe") ? FileEncoding::Utf16Le : FileEncoding::Utf8);
+    const bool bom = format == FileEncoding::Utf16Le ? bytes.starts_with("\xff\xfe") : bytes.starts_with("\xef\xbb\xbf");
+    if (bom) bytes.erase(0, format == FileEncoding::Utf16Le ? 2 : 3);
+    if (format == FileEncoding::Utf16Le) {
+        auto decoded = DecodeUtf16Le(bytes);
+        if (!decoded) return {OpenStatus::Failed, "The file is not valid UTF-16LE."};
+        bytes = std::move(*decoded);
+    } else if (!IsUtf8(bytes)) return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
     const bool wasModified = editor_.Send(Scintilla::Message::GetModify);
     if (!beforeReplace()) return {OpenStatus::Cancelled, {}};
     // Save may have rewritten the selected source (including a newly chosen
     // first-save destination). Read it again after that explicit Save succeeds.
     if (wasModified && !editor_.Send(Scintilla::Message::GetModify))
-        return Open(source, [] { return true; });
-    Replace(bytes, *source, bom);
+        return Open(source, [] { return true; }, encoding);
+    Replace(bytes, *source, format, bom);
     return {OpenStatus::Opened, {}};
 }
 
-void DocumentSession::Replace(const std::string& bytes, const wxString& path, bool bom) {
+void DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom) {
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
     editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
@@ -129,10 +141,11 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, bo
     editor_.Send(Scintilla::Message::SetXOffset, 0);
     editor_.Send(Scintilla::Message::SetSavePoint);
     path_ = path;
-    hasUtf8Bom_ = bom;
+    encoding_ = encoding;
+    hasBom_ = bom;
 }
 
 void DocumentSession::New() {
-    Replace({}, {}, false);
+    Replace({}, {}, FileEncoding::Utf8, false);
     editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf));
 }
