@@ -65,6 +65,7 @@ private:
     void Search(bool forward);
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
+    void RefreshLanguageAfterSave(const wxString& previousPath, const SaveResult& result);
     bool ConfirmDiscardChanges(const wxString& action);
     GbkLossChoice ConfirmGbkLoss();
 };

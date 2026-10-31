@@ -469,7 +469,9 @@ void EditorFrame::UpdateDocumentState() {
 }
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    const wxString previousPath = document_.Path();
     const auto result = document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+    RefreshLanguageAfterSave(previousPath, result);
     UpdateDocumentState();
     return result;
 }
@@ -487,9 +489,19 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
 }
 
 SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    const wxString previousPath = document_.Path();
     const auto result = document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+    RefreshLanguageAfterSave(previousPath, result);
     UpdateDocumentState();
     return result;
+}
+
+void EditorFrame::RefreshLanguageAfterSave(const wxString& previousPath, const SaveResult& result) {
+    if (result.status != SaveStatus::Saved || previousPath == document_.Path()) return;
+    const auto language = LanguageForPath(document_.Path());
+    if (language == language_) return;
+    language_ = language;
+    ApplySyntaxLanguage(*editor_, language_);
 }
 
 SaveResult EditorFrame::SaveAs() {
