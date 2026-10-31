@@ -1,6 +1,6 @@
 #include "editor_control.h"
 #include "editor_frame.h"
-#include "native_dialog_helpers.h"
+#include "native_search_helpers.h"
 #include <wx/wx.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
@@ -10,42 +10,16 @@
 #include <stdexcept>
 
 namespace {
+using NativeSearch::Command;
+using NativeSearch::Selection;
+using NativeSearch::Text;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
-}
-void Command(EditorFrame* frame, int id) {
-    if (!frame->GetMenuBar()->FindItem(id)) std::fprintf(stderr, "Missing menu command: %d\n", id);
-    Require(frame->GetMenuBar()->FindItem(id), "native menu command must exist");
-#ifdef __WXMSW__
-    SendMessageW(static_cast<HWND>(frame->GetHandle()), WM_COMMAND, MAKEWPARAM(id, 0), 0);
-#elif defined(__WXGTK__)
-    gtk_menu_item_activate(GTK_MENU_ITEM(frame->GetMenuBar()->FindItem(id)->GetMenuItem()));
-#endif
-    wxYield();
 }
 void Click(wxWindow* parent, int id) {
     auto* button = wxDynamicCast(parent->FindWindow(id), wxButton);
     Require(button && button->IsShown(), "Replace view must expose its native button");
-#ifdef __WXMSW__
-    SendMessageW(static_cast<HWND>(parent->GetHandle()), WM_COMMAND,
-                 MAKEWPARAM(GetDlgCtrlID(static_cast<HWND>(button->GetHandle())), BN_CLICKED),
-                 reinterpret_cast<LPARAM>(button->GetHandle()));
-#elif defined(__WXGTK__)
-    gtk_button_clicked(GTK_BUTTON(button->GetHandle()));
-#endif
-    wxYield();
-}
-std::string Text(EditorControl* editor) {
-    const auto length = static_cast<size_t>(editor->Send(Scintilla::Message::GetLength));
-    std::string text(length + 1, '\0');
-    editor->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
-void Selection(EditorControl* editor, intptr_t start, intptr_t end, const char* message) {
-    Require(editor->Send(Scintilla::Message::GetSelectionStart) == start &&
-                editor->Send(Scintilla::Message::GetSelectionEnd) == end,
-            message);
+    NativeSearch::Click(parent, id);
 }
 class ReplaceApp final : public wxApp {
 public:

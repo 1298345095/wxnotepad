@@ -6,13 +6,18 @@
 #include <wx/button.h>
 #include <wx/statusbr.h>
 #include <wx/checkbox.h>
-#include "native_dialog_helpers.h"
+#include "native_search_helpers.h"
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
 
 namespace {
+using NativeSearch::Click;
+using NativeSearch::Command;
+using NativeSearch::NativeF3;
+using NativeSearch::Selection;
+using NativeSearch::Text;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
@@ -24,73 +29,12 @@ bool Focused(wxWindow* window) {
     }
     return wxWindow::FindFocus() == window;
 }
-void Command(EditorFrame* frame, int id) {
-#ifdef __WXMSW__
-    SendMessageW(static_cast<HWND>(frame->GetHandle()), WM_COMMAND, MAKEWPARAM(id, 0), 0);
-#elif defined(__WXGTK__)
-    auto* item = frame->GetMenuBar()->FindItem(id);
-    Require(item, "native menu command must exist");
-    gtk_menu_item_activate(GTK_MENU_ITEM(item->GetMenuItem()));
-#else
-    wxCommandEvent command(wxEVT_MENU, id);
-    frame->GetEventHandler()->ProcessEvent(command);
-#endif
-    wxYield();
-}
 void Key(wxWindow* window, int key, bool control = false) {
     wxKeyEvent event(wxEVT_CHAR_HOOK);
     event.m_keyCode = key;
     event.m_controlDown = control;
     event.SetEventObject(window);
     window->GetEventHandler()->ProcessEvent(event);
-    wxYield();
-}
-void NativeF3(wxWindow* window) {
-#ifdef __WXMSW__
-    PostMessageW(static_cast<HWND>(window->GetHandle()), WM_KEYDOWN, VK_F3, 0);
-    PostMessageW(static_cast<HWND>(window->GetHandle()), WM_KEYUP, VK_F3, 0);
-#elif defined(__WXGTK__)
-    auto* widget = GTK_WIDGET(window->GetHandle());
-    auto* event = gdk_event_new(GDK_KEY_PRESS);
-    event->key.window = static_cast<GdkWindow*>(g_object_ref(gtk_widget_get_window(widget)));
-    event->key.send_event = TRUE;
-    event->key.time = GDK_CURRENT_TIME;
-    event->key.keyval = GDK_KEY_F3;
-    gtk_widget_event(widget, event);
-    gdk_event_free(event);
-#endif
-    wxYield();
-}
-std::string Text(EditorControl* editor) {
-    const auto length = static_cast<size_t>(editor->Send(Scintilla::Message::GetLength));
-    std::string text(length + 1, '\0');
-    editor->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
-void Selection(EditorControl* editor, intptr_t start, intptr_t end, const char* message) {
-    if (editor->Send(Scintilla::Message::GetSelectionStart) != start ||
-        editor->Send(Scintilla::Message::GetSelectionEnd) != end)
-        std::fprintf(stderr, "Range: %lld..%lld; expected %lld..%lld\n",
-                     static_cast<long long>(editor->Send(Scintilla::Message::GetSelectionStart)),
-                     static_cast<long long>(editor->Send(Scintilla::Message::GetSelectionEnd)),
-                     static_cast<long long>(start), static_cast<long long>(end));
-    Require(editor->Send(Scintilla::Message::GetSelectionStart) == start &&
-                editor->Send(Scintilla::Message::GetSelectionEnd) == end,
-            message);
-}
-void Click(wxWindow* parent, int id) {
-    auto* button = wxDynamicCast(parent->FindWindow(id), wxButton);
-    Require(button, "dialog must expose the expected native button");
-#ifdef __WXMSW__
-    // Deliver the native button notification to this owned dialog. BM_CLICK
-    // requires activating an inactive dialog, which would steal desktop focus.
-    SendMessageW(static_cast<HWND>(parent->GetHandle()), WM_COMMAND,
-                 MAKEWPARAM(GetDlgCtrlID(static_cast<HWND>(button->GetHandle())), BN_CLICKED),
-                 reinterpret_cast<LPARAM>(button->GetHandle()));
-#elif defined(__WXGTK__)
-    gtk_button_clicked(GTK_BUTTON(button->GetHandle()));
-#endif
     wxYield();
 }
 wxString Filename(const std::filesystem::path& path) {

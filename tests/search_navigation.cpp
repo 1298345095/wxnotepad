@@ -6,56 +6,20 @@
 #include <wx/checkbox.h>
 #include <wx/statusbr.h>
 #include <wx/button.h>
-#include "native_dialog_helpers.h"
+#include "native_search_helpers.h"
 #include <cstdio>
 #include <stdexcept>
 
 namespace {
+using NativeSearch::Click;
+using NativeSearch::Command;
+using NativeSearch::Selection;
+using NativeSearch::Text;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-void Command(EditorFrame* frame, int id) {
-    Require(frame->GetMenuBar()->FindItem(id), "native navigation menu command must exist");
-#ifdef __WXMSW__
-    SendMessageW(static_cast<HWND>(frame->GetHandle()), WM_COMMAND, MAKEWPARAM(id, 0), 0);
-#elif defined(__WXGTK__)
-    gtk_menu_item_activate(GTK_MENU_ITEM(frame->GetMenuBar()->FindItem(id)->GetMenuItem()));
-#endif
-    wxYield();
-}
-void Selection(EditorControl* editor, intptr_t start, intptr_t end, const char* message) {
-    if (editor->Send(Scintilla::Message::GetSelectionStart) != start ||
-        editor->Send(Scintilla::Message::GetSelectionEnd) != end)
-        std::fprintf(stderr, "Range: %lld..%lld; expected %lld..%lld\n",
-                     static_cast<long long>(editor->Send(Scintilla::Message::GetSelectionStart)),
-                     static_cast<long long>(editor->Send(Scintilla::Message::GetSelectionEnd)),
-                     static_cast<long long>(start), static_cast<long long>(end));
-    Require(editor->Send(Scintilla::Message::GetSelectionStart) == start &&
-                editor->Send(Scintilla::Message::GetSelectionEnd) == end,
-            message);
-}
-void Click(wxWindow* parent, int id) {
-    auto* button = wxDynamicCast(parent->FindWindow(id), wxButton);
-    Require(button, "dialog navigation button must exist");
-#ifdef __WXMSW__
-    SendMessageW(static_cast<HWND>(parent->GetHandle()), WM_COMMAND,
-                 MAKEWPARAM(GetDlgCtrlID(static_cast<HWND>(button->GetHandle())), BN_CLICKED),
-                 reinterpret_cast<LPARAM>(button->GetHandle()));
-#elif defined(__WXGTK__)
-    gtk_button_clicked(GTK_BUTTON(button->GetHandle()));
-#endif
-    wxYield();
-}
 void Wrap(wxCheckBox* checkbox, bool enabled) {
-#ifdef __WXMSW__
-    SendMessageW(static_cast<HWND>(checkbox->GetHandle()), BM_SETCHECK, enabled ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessageW(static_cast<HWND>(checkbox->GetParent()->GetHandle()), WM_COMMAND,
-                 MAKEWPARAM(GetDlgCtrlID(static_cast<HWND>(checkbox->GetHandle())), BN_CLICKED),
-                 reinterpret_cast<LPARAM>(checkbox->GetHandle()));
-#elif defined(__WXGTK__)
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbox->GetHandle()), enabled);
-#endif
-    wxYield();
+    NativeSearch::Toggle(checkbox, enabled);
 }
 void ShiftF3(wxWindow* window) {
 #ifdef __WXMSW__
@@ -83,12 +47,6 @@ void ShiftF3(wxWindow* window) {
     gdk_event_free(event);
 #endif
     wxYield();
-}
-std::string Text(EditorControl* editor) {
-    std::string text(static_cast<size_t>(editor->Send(Scintilla::Message::GetLength)) + 1, '\0');
-    editor->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.pop_back();
-    return text;
 }
 class NavigationApp final : public wxApp {
 public:
