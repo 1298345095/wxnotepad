@@ -5,6 +5,7 @@
 #include <wx/textctrl.h>
 #include <wx/button.h>
 #include <wx/statusbr.h>
+#include <wx/checkbox.h>
 #include "native_dialog_helpers.h"
 #include <cstdio>
 #include <filesystem>
@@ -114,6 +115,9 @@ public:
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 Require(query && query->IsShownOnScreen(), "Find command must open a modeless query field");
+                auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
+                Require(wrap, "Find must expose the Wrap around option");
+                wrap->SetValue(false);
                 query->SetValue("one");
                 Command(frame, wxID_FORWARD);
                 Selection(editor, 4, 7, "Find Next must select the next case-insensitive literal from the caret");

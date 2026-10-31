@@ -12,6 +12,7 @@
 #include <wx/textctrl.h>
 #include <string>
 #include <string_view>
+#include <wx/checkbox.h>
 
 EditorFrame::EditorFrame()
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
@@ -36,6 +37,7 @@ EditorFrame::EditorFrame()
     edit->Append(wxID_FIND, "&Find...\tCtrl+F");
     edit->Append(wxID_REPLACE, "&Replace...\tCtrl+H");
     edit->Append(wxID_FORWARD, "Find &Next\tF3");
+    edit->Append(wxID_BACKWARD, "Find &Previous\tShift+F3");
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
@@ -44,6 +46,7 @@ EditorFrame::EditorFrame()
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(); }, wxID_FIND);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(true); }, wxID_REPLACE);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindPrevious(); }, wxID_BACKWARD);
     Bind(wxEVT_CHAR_HOOK, &EditorFrame::OnSearchKey, this);
     Bind(
         wxEVT_MENU,
@@ -141,6 +144,10 @@ void EditorFrame::ShowFind(bool replace) {
         replacement_ = new wxTextCtrl(findDialog_, wxID_ANY, {}, wxDefaultPosition, wxSize(320, -1));
         replacement_->SetName("Replacement text");
         layout->Add(replacement_, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
+        wrapAround_ = new wxCheckBox(findDialog_, wxID_ANY, "&Wrap around");
+        wrapAround_->SetName("Wrap around");
+        wrapAround_->SetValue(true);
+        layout->Add(wrapAround_, 0, wxALL, 8);
         auto* buttons = new wxBoxSizer(wxHORIZONTAL);
         auto* next = new wxButton(findDialog_, wxID_FORWARD, "Find &Next");
         next->SetDefault();
@@ -149,19 +156,23 @@ void EditorFrame::ShowFind(bool replace) {
         buttons->Add(replaceButton_, 0, wxRIGHT, 8);
         replaceAllButton_ = new wxButton(findDialog_, wxID_REPLACE_ALL, "Replace &All");
         buttons->Add(replaceAllButton_, 0, wxRIGHT, 8);
+        buttons->Add(new wxButton(findDialog_, wxID_BACKWARD, "Find &Previous"), 0, wxRIGHT, 8);
         buttons->Add(new wxButton(findDialog_, wxID_CANCEL, "Close"));
         layout->Add(buttons, 0, wxALL | wxALIGN_RIGHT, 8);
         replacementResult_ = new wxStaticText(findDialog_, wxID_ANY, "");
         replacementResult_->SetName("Replacement result");
         layout->Add(replacementResult_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
         findDialog_->SetSizerAndFit(layout);
-        const wxAcceleratorEntry nextKey(wxACCEL_NORMAL, WXK_F3, wxID_FORWARD);
-        findDialog_->SetAcceleratorTable(wxAcceleratorTable(1, &nextKey));
+        const wxAcceleratorEntry searchKeys[] = {{wxACCEL_NORMAL, WXK_F3, wxID_FORWARD},
+                                                 {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD}};
+        findDialog_->SetAcceleratorTable(wxAcceleratorTable(2, searchKeys));
         findDialog_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
+        findDialog_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindPrevious(); }, wxID_BACKWARD);
         findDialog_->Bind(wxEVT_CHAR_HOOK, &EditorFrame::OnSearchKey, this);
         findDialog_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
         findDialog_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceOne(); }, wxID_REPLACE);
         findDialog_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceAll(); }, wxID_REPLACE_ALL);
+        findDialog_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { FindPrevious(); }, wxID_BACKWARD);
         findQuery_->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent&) { FindNext(); });
         const auto close = [this] {
             findDialog_->Hide();
@@ -189,11 +200,22 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
         ShowFind(true);
     else if (event.GetKeyCode() == WXK_F3 && !event.HasAnyModifiers())
         FindNext();
+    else if (event.GetKeyCode() == WXK_F3 && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
+             !event.MetaDown())
+        FindPrevious();
     else
         event.Skip();
 }
 
 void EditorFrame::FindNext() {
+    Search(true);
+}
+
+void EditorFrame::FindPrevious() {
+    Search(false);
+}
+
+void EditorFrame::Search(bool forward) {
     if (!findQuery_) {
         ShowFind();
         return;
@@ -203,14 +225,26 @@ void EditorFrame::FindNext() {
     if (!query.length()) return;
     using Scintilla::Message;
     editor_->Send(Message::SetSearchFlags, 0);
-    editor_->Send(Message::SetTargetStart, editor_->Send(Message::GetSelectionEnd));
-    editor_->Send(Message::SetTargetEnd, editor_->Send(Message::GetLength));
-    if (editor_->Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) < 0) {
+    const auto start = editor_->Send(forward ? Message::GetSelectionEnd : Message::GetSelectionStart);
+    const auto length = editor_->Send(Message::GetLength);
+    const auto search = [&](intptr_t from, intptr_t to) {
+        editor_->Send(Message::SetTargetStart, from);
+        editor_->Send(Message::SetTargetEnd, to);
+        return editor_->Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) >= 0;
+    };
+    bool wrapped = false;
+    bool found = search(start, forward ? length : 0);
+    if (!found && wrapAround_->GetValue()) {
+        wrapped = true;
+        found = search(forward ? 0 : length, start);
+    }
+    if (!found) {
         SetStatusText("No match found");
         return;
     }
     editor_->Send(Message::SetSel, editor_->Send(Message::GetTargetStart), editor_->Send(Message::GetTargetEnd));
     editor_->Send(Message::ScrollCaret);
+    SetStatusText(wrapped ? "Search wrapped" : "Match found");
 }
 
 void EditorFrame::ReplaceOne() {

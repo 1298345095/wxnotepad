@@ -8,6 +8,7 @@ class wxDialog;
 class wxTextCtrl;
 class wxStaticText;
 class wxButton;
+class wxCheckBox;
 
 class EditorFrame final : public wxFrame {
 public:
@@ -36,10 +37,13 @@ private:
     wxButton* replaceButton_ = nullptr;
     wxButton* replaceAllButton_ = nullptr;
     wxStaticText* replacementResult_ = nullptr;
+    wxCheckBox* wrapAround_ = nullptr;
     void ShowFind(bool replace = false);
     void FindNext();
     void ReplaceOne();
     void ReplaceAll();
+    void FindPrevious();
+    void Search(bool forward);
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     bool ConfirmDiscardChanges(const wxString& action);
