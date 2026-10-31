@@ -13,6 +13,24 @@
 #endif
 
 namespace {
+Scintilla::EndOfLine DetectEol(std::string_view bytes) {
+    size_t crlf = 0;
+    size_t cr = 0;
+    size_t lf = 0;
+    for (size_t i = 0; i < bytes.size(); ++i) {
+        if (bytes[i] == '\r') {
+            if (i + 1 < bytes.size() && bytes[i + 1] == '\n') {
+                ++crlf;
+                ++i;
+            } else ++cr;
+        } else if (bytes[i] == '\n') ++lf;
+    }
+    // Original EditDetectEOLMode policy with the current default CRLF:
+    // retain CRLF when tied for most common; otherwise prefer LF over CR.
+    if (crlf >= cr && crlf >= lf) return Scintilla::EndOfLine::CrLf;
+    return lf >= cr ? Scintilla::EndOfLine::Lf : Scintilla::EndOfLine::Cr;
+}
+
 bool IsUtf8(std::string_view bytes) {
     for (size_t i = 0; i < bytes.size();) {
         const auto lead = static_cast<unsigned char>(bytes[i++]);
@@ -162,6 +180,7 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, Fi
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
     editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
+    editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(DetectEol(bytes)));
     editor_.Send(Scintilla::Message::SetUndoCollection, 1);
     editor_.Send(Scintilla::Message::EmptyUndoBuffer);
     editor_.Send(Scintilla::Message::GotoPos, 0);
@@ -174,5 +193,4 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, Fi
 
 void DocumentSession::New() {
     Replace({}, {}, FileEncoding::Utf8, false);
-    editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf));
 }
