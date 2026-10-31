@@ -12,9 +12,14 @@ public:
     const wxString& DocumentPath() const { return document_.Path(); }
     SaveResult Save();
     SaveResult SaveFirst(const std::optional<wxString>& destination);
+    OpenResult Open(const std::optional<wxString>& source);
+    OpenResult Open();
+    bool DocumentHasUtf8Bom() const { return document_.HasUtf8Bom(); }
+    bool New();
 
 private:
     EditorControl* editor_;
     DocumentSession document_;
     void UpdateDocumentState();
+    bool ConfirmDiscardChanges(const wxString& action);
 };
