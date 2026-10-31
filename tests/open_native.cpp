@@ -3,6 +3,7 @@
 #include <wx/wx.h>
 #include <wx/timer.h>
 #include <wx/filename.h>
+#include <wx/statusbr.h>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -85,7 +86,7 @@ public:
                         PostMessageW(window, WM_COMMAND, IDOK, 0);
                     }
                 }
-            } else if (IsWindowVisible(window) && wxString(title) == "Could not save file") {
+            } else if (IsWindowVisible(window) && (wxString(title) == "Could not save file" || wxString(title) == "Could not open file")) {
                 ++driver.errors;
                 SendMessageW(window, WM_USER + 102, IDOK, 0);
             }
@@ -118,7 +119,7 @@ public:
             if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Save changes?") {
                 ++prompts;
                 Respond(widget, choice_ == wxID_YES ? GTK_RESPONSE_YES : choice_ == wxID_NO ? GTK_RESPONSE_NO : GTK_RESPONSE_CANCEL);
-            } else if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not save file") {
+            } else if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not save file" || wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not open file") {
                 ++errors;
                 Respond(widget, GTK_RESPONSE_OK);
             }
@@ -248,6 +249,29 @@ public:
                     Require(closeSave.prompts == 1 && closeSave.choosers == 0 && Bytes(roundtripPath) == samples[index], "close Save must roundtrip exact encoding/BOM/EOL bytes");
                 }
                 std::puts("PASS: eight unchanged-content UTF-8/BOM/EOL byte roundtrips through close Save");
+                frame->Show();
+                frame->Update();
+                const int utf16Menu = frame->GetMenuBar()->GetMenu(0)->FindItem("Open As UTF-16LE...");
+                Require(utf16Menu != wxNOT_FOUND, "File menu must offer explicit UTF-16LE Open As");
+                const auto utf16Path = directory / "utf16-no-bom.txt";
+                { std::ofstream output(utf16Path, std::ios::binary); const std::string bytes("\x41\0\x2d\x4e\x3d\xd8\0\xde\r\0\n\0", 12); output.write(bytes.data(), bytes.size()); }
+                NativeDriver utf16Pick(wxID_NO, Filename(utf16Path));
+                wxCommandEvent utf16Open(wxEVT_MENU, utf16Menu);
+                frame->GetEventHandler()->ProcessEvent(utf16Open);
+                utf16Pick.Stop();
+                Require(utf16Pick.choosers == 1 && Text(frame) == "A中😀\r\n" && frame->DocumentEncoding() == FileEncoding::Utf16Le && !frame->DocumentHasBom(), "native explicit Open As must decode no-BOM UTF-16LE");
+                Require(frame->GetStatusBar() && frame->GetStatusBar()->GetStatusText().Contains("UTF-16LE"), "status must identify current UTF-16LE encoding");
+                NativeDriver utf16Cancel(wxID_CANCEL);
+                frame->GetEventHandler()->ProcessEvent(utf16Open);
+                utf16Cancel.Stop();
+                Require(utf16Cancel.choosers == 1 && Text(frame) == "A中😀\r\n", "cancelled native Open As must preserve current document");
+                const auto invalidUtf16Path = directory / "invalid-utf16.txt";
+                { std::ofstream output(invalidUtf16Path, std::ios::binary); const std::string bytes("\0\xd8", 2); output.write(bytes.data(), bytes.size()); }
+                NativeDriver utf16Invalid(wxID_CANCEL, Filename(invalidUtf16Path));
+                frame->GetEventHandler()->ProcessEvent(utf16Open);
+                utf16Invalid.Stop();
+                Require(utf16Invalid.errors == 1 && utf16Invalid.prompts == 0 && Text(frame) == "A中😀\r\n", "invalid native UTF-16LE Open As must show error and retain document");
+                std::puts("PASS: native UTF-16LE Open As accept/cancel/error and visible encoding status");
                 frame->Destroy();
                 result_ = 0;
             } catch (const std::exception& error) {
