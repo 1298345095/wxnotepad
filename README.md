@@ -93,9 +93,10 @@ packaging remain future work. See the
 
 ## Code structure
 
-See the [current structure and proposed evolution plan](docs/architecture.md) for
-module responsibilities, state ownership, future feature placement and a staged
-refactoring sequence. It describes a proposal; the source layout is unchanged.
+See the [code structure and evolution plan](docs/architecture.md) for module
+responsibilities, state ownership and future feature placement. The source is
+organized into app, document, search, syntax and editor modules, built as runtime,
+feature and application-shell libraries.
 
 ## Build and run
 

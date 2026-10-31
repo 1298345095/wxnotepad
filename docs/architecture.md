@@ -1,32 +1,33 @@
 # Code structure and evolution plan
 
-Status: proposal, based on `d52c22041b0de7995c5d578ba57c6025d56158c6`.
-This document inventories the implemented code and proposes a sequence of
-behavior-preserving changes. The proposed files and interfaces do not exist yet.
+Status: implemented structure, with future extensions identified separately.
+The restructuring follows the proposal committed at `6cd13eb`. Validation is
+recorded in [the restructuring report](observations/architecture-refactor.md).
 
-Keep the current original-core + wxWidgets design. Concentrate search semantics,
-document transitions and language definitions in their respective modules before
-adding more features. The first useful change is extracting search behavior from
-`EditorFrame`; moving files alone would leave the same coupling in place.
+The original-core + wxWidgets design is retained. Search semantics, document
+transitions and language definitions now live in their respective modules.
+`EditorFrame` composes them and presents native UI; it does not implement the
+search algorithm or own the document's language choice.
 
 ## Current structure
 
 | Location | Current responsibility | Assessment |
 | --- | --- | --- |
-| `src/main.cpp` | App startup, command-line options, process observation protocol | Startup is small; move the opt-in observer to its own implementation when reorganizing the app. |
-| `src/editor_frame.*` | Menus, modeless Find/Replace UI, prompts, file-command coordination, search/replacement algorithms, language choice, title/status | Main source of mixed responsibilities. Search match validity and replacement progress currently depend directly on dialog controls. |
-| `src/document_session.*` | Path, encoding/BOM, Open/New/Save transactions, save-point updates, safe replacement of disk files | Useful existing module. Preserve its commit-on-success behavior and deepen it around document-local policy. |
-| `src/gbk_codec.*`, `src/utf16_codec.*` | Encoding conversions, including CP936 compatibility | Retain the tested conversions and provenance. Their implementation can continue to use wx conversion facilities. |
-| `src/syntax_scheme.*`, `src/*_scheme_data.h` | Extension detection, names, fold capability, lexer/style installation, generated upstream data | Language knowledge also appears in the frame's menu and in the build/lexer registration list. A static catalog can centralize runtime definitions. |
-| `src/editor_control.*` | wx window, original core lifetime, input, selection/scrolling, clipboard, IME, notifications, fold selection repair | Keep as the editor host. Extract native details internally without exposing `Scintilla::Internal` to application code. |
-| `src/platform/*` | Original platform interface implementations, rendering/fonts/windows, portability primitives | Keep tightly coupled to the pinned core. This is an implementation of the existing upstream interface, not an independent replacement editor. |
+| `src/app/main.cpp`, `process_observer.*` | Startup/options and the opt-in process observation protocol | Observation uses the actual application's commands and exists only when requested. |
+| `src/app/editor_frame.*`, `find_replace_dialog.*` | Menus, prompts, file-command coordination, title/status and modeless search UI | The frame formats search outcomes; the dialog synchronizes controls with a shared search session. |
+| `src/document/document_session.*` | Path, encoding/BOM, file transactions, save point and language choice | File metadata and language transitions commit after successful operations. File I/O mechanics remain private to this module. |
+| `src/document/encoding/*` | Encoding conversions, including CP936 compatibility | Tested conversions and provenance are retained; the implementations use wx conversion facilities. |
+| `src/search/search_session.*` | Find/replace, match validity, zero-width progress, fold reveal and history grouping | The interface takes requests and returns structured outcomes; it creates no widgets. |
+| `src/syntax/*`, `src/syntax/generated/*` | Static catalog, extension detection, lexer/style installation and generated data | Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
+| `src/editor/editor_control.*` | wx window, core lifetime, input, selection/scrolling, clipboard, IME, notifications and fold selection repair | The existing host behavior is retained. Native implementation extraction can accompany future changes to those facilities. |
+| `src/editor/platform/*` | Original platform interface, rendering/fonts/windows and portability primitives | Tightly coupled to the pinned core, behind the editor host. |
 | `patches/`, `tools/build.py`, `tools/update_*_scheme.py` | Pinned source preparation, portability patch, reproducible lexer data | Keep the offline path, revision/hash checks and selective upstream reuse. |
-| `tests/`, `tools/clipboard_*`, `tools/resources.py` | Real editor, native UI, disk-byte and independent-process checks | Valuable behavior coverage. Many search cases currently need dialog automation to reach their logic. |
+| `tests/`, `tools/clipboard_*`, `tools/resources.py` | Real editor, native UI, disk-byte and independent-process checks | Existing native regressions remain. `feature_sessions.cpp` exercises the extracted interfaces without linking the app shell. |
 
-The CMake target named `editor_control` currently includes the frame, file session,
-codecs, syntax and platform implementation. It is an application library, despite
-its name. `notepad4_core` is a separate static target but already depends on wx
-facilities through the port; it is not a toolkit-independent engine in this build.
+The former `editor_control` application library is split into `editor_runtime`,
+`editor_features` and `app_shell`. `notepad4_core` is an object target incorporated
+into the runtime archive. The port uses wx facilities; the core is not a
+toolkit-independent engine in this build.
 
 Two useful properties already hold:
 
@@ -40,7 +41,7 @@ must understand message ordering, byte positions, temporary-buffer lifetime,
 regex capture validity and undo grouping. The goal is to concentrate those
 protocols in feature implementations, rather than wrap every message individually.
 
-## Proposed module arrangement
+## Module arrangement
 
 Arrows below denote calls/dependencies, not copies of document state. All current
 editor and UI operations remain on the GUI thread.
@@ -64,7 +65,7 @@ controller would mostly relocate its current responsibilities. Native menu
 bindings can stay in the frame once feature algorithms and dialog construction
 have their own modules.
 
-Proposed destinations for code already implemented:
+Current source layout:
 
 ```text
 src/
@@ -76,7 +77,6 @@ src/
     windows.rc
   document/
     document_session.{h,cpp}
-    file_io.{h,cpp}              # private file/encoding mechanics
     encoding/
       gbk_codec.{h,cpp}
       utf16_codec.{h,cpp}
@@ -92,27 +92,25 @@ src/
       json_scheme_data.h
   editor/
     editor_control.{h,cpp}
-    internal/                   # private host/core declarations, only as needed
     platform/
       wx_platform.cpp
       core_headers.h
       conversion_port.h
       intrinsics_port.h
       parallel_port.h
-      msw_ime.cpp               # extracted when changing this implementation
-      gtk_clipboard.cpp         # extracted with its ownership/reentrancy tests
 patches/                        # pinned core changes and source provenance
 tools/                          # build, generation and measurement entry points
 tests/                          # gradual organization by tested behavior
 ```
 
-These directories describe responsibility, not a requirement for one library or
-abstract base class per directory. Small related implementations can remain in one
-translation unit. Create each destination as its code is extracted.
+Directories describe responsibility, not one abstract base class or library per
+directory. Related file transaction mechanics remain in `document_session.cpp`;
+native IME/clipboard implementation remains in the host until work on those
+facilities gives a useful reason to extract it.
 
 ## State ownership and lifetime
 
-| State | Owner after extraction | Lifetime/rule |
+| State | Owner | Lifetime/rule |
 | --- | --- | --- |
 | Text, undo/redo, dirty/save point, EOL insertion, selection, fold visibility | Original core | One core document per existing editor window; read state through the editor. |
 | Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. Successful New/Open resets the language choice; successful Save As preserves an override. |
@@ -126,18 +124,18 @@ wx parent-child ownership continues to own windows. Sessions borrow the editor;
 their callbacks must be disconnected before the referenced window is destroyed.
 Extracted observers stop their timer on frame destruction, preserving today's
 lifecycle. Future tabs or multiple views would need a separate ownership decision;
-this proposal retains the present one-document window.
+the current structure retains the one-document window.
 
-## The first three useful extractions
+## Feature interfaces
 
 ### SearchSession and FindReplaceDialog
 
-Move `Search`, `SearchFlags`, `ReplaceOne`, `ReplaceAll`, and their match/progress
-state from `editor_frame.cpp` into `SearchSession`. It operates on the real
+`SearchSession` contains Find, ReplaceOne, ReplaceAll and their match/progress
+state, extracted from `editor_frame.cpp`. It operates on the real
 `EditorControl`, uses the original matcher/formatter and returns structured
 outcomes. It does not create widgets or set status-bar strings.
 
-The intended interface has a small set of operations:
+The interface has a small set of operations:
 
 | Operation | Caller supplies | Caller receives |
 | --- | --- | --- |
@@ -170,7 +168,7 @@ in the session. Extract file/codec mechanics into private functions only where
 this makes the transaction easier to read; real temporary files remain suitable
 test dependencies.
 
-Move the document-local language choice out of the frame. The session exposes a
+The document-local language choice belongs to the session. It exposes a
 language selection operation and read-only effective-language/override state.
 After successful Open/New it installs the automatic scheme for the new document;
 after a successful path-changing save it re-evaluates automatic selection. A
@@ -188,10 +186,9 @@ The resulting operation sequence is explicit:
 3. **Choose language:** update the document choice and install its effective
    scheme; preserve bytes, selection, encoding and edit history.
 
-Use a successful document-replacement result or a small explicit callback for
-search invalidation. Avoid using every dirty-state notification as a document-
-replacement event. The frame can perform this small coordination without owning
-the search algorithm or language transition rules.
+The frame calls `SearchSession::ResetMatch()` after successful Open/New. A dirty-
+state notification does not imply document replacement. This small coordination
+keeps the search algorithm and language transition rules out of the frame.
 
 ### Static syntax catalog
 
@@ -243,18 +240,17 @@ cleaner diagram. Core public messages/types remain available to feature modules
 and tests. Native IME and GTK clipboard helpers can be extracted behind small
 private functions with their current lifetime and reentrancy behavior intact.
 
-Start with source/interface extraction under the existing CMake targets. Once
-dependencies are clear, use a small number of static build targets:
+The build uses three static targets:
 
 - **Editor runtime:** original core plus wx host/platform implementation.
 - **Editor features:** document, codecs, search and syntax.
 - **App shell:** frame/dialogs/observation, shared by the executable and native UI tests.
 
-The original source preparation target can remain an implementation detail of the
-runtime. The core calls platform symbols supplied by the host, so splitting both
-into unrelated static archives can introduce link-order cycles. An object-library
-arrangement or one combined runtime archive is preferable if target separation
-exposes that problem. Verify both MSVC and GCC before changing link structure.
+`notepad4_core` supplies object files and compile requirements to `editor_runtime`.
+Core and host/platform symbols share the runtime archive, avoiding a static
+archive link-order cycle. `editor_features` depends on that runtime; `app_shell`
+depends on features. The direct feature test links only features/runtime. Existing
+native UI tests link the shell. Source preparation still uses `tools/build.py`.
 
 Keep wx types where useful; a toolkit-free rewrite of every session value is not
 needed. Use concrete modules and functions for the current in-process code.
@@ -271,23 +267,22 @@ Measure a large-file styling policy separately before choosing a threshold, a
 streaming design or an upstream storage change. Switching an already-styled
 document to Plain Text must not be assumed to release its allocated style buffer.
 
-## Suggested implementation order and verification
+## Restructuring and verification
 
-These are proposed refactoring steps, not newly published implementation tickets.
+The restructuring followed this order; it did not add editor features:
 
 | Step | Change | Completion evidence |
 | --- | --- | --- |
-| 1 | Extract `SearchSession` behind the existing frame/dialog | Existing literal/regex/folded-search cases retain their outputs, selection, progress, undo/redo and no-op behavior on Windows/X11/Wayland. |
-| 2 | Extract `FindReplaceDialog` and opt-in process observer | Native controls/shortcuts/focus still use the same feature operations; process protocol and resource observation entry points remain compatible. |
-| 3 | Introduce the static catalog and move language choice to `DocumentSession` | Existing extension/manual/save/language-transition tests pass; generated data remains byte-identical unless intentionally regenerated. |
-| 4 | Move cohesive sources into directories; extract native details when useful | Includes, generators, source preparation, formatting/analysis scopes and test paths follow the moves. Offline builds work on both platforms. |
-| 5 | Separate build targets only if the earlier steps establish a useful seam | UI tests link the shell, feature tests link features/runtime, and platform tests retain required private access. No target/link cycle or new runtime dependency. |
+| 1 | Extract `SearchSession` behind the existing UI | Literal/regex/folded-search results, progress and history regressions. |
+| 2 | Extract `FindReplaceDialog` and the opt-in observer | Dialog controls, shortcuts, focus and independent-process observation protocol. |
+| 3 | Introduce the catalog and move language choice to `DocumentSession` | Extension/manual/save/language-transition tests and byte-identical regenerated data. |
+| 4 | Move sources and separate runtime/features/shell build targets | MSVC/GCC offline builds, native integration suites and direct feature-interface contracts. |
 
-Initially retain the existing tests during extraction. Then move algorithmic
-cases to the real `SearchSession` interface with a real editor host, keeping native
-integration cases for dialog wiring, accelerators, focus and menu state. Replace
-coverage deliberately instead of duplicating the entire matrix at each layer.
-These tests still require wx initialization and a display where the real host does.
+The existing native cases remain during this extraction. The direct feature test
+checks structured results, request invalidation, no-op history and document
+language transitions with an actual editor, without frame/dialog dependencies.
+Further algorithmic cases can use this interface while native cases retain UI
+wiring coverage. These tests still require wx initialization and a display.
 
 Keep the three agreed verification surfaces: public editor/command state, file
 operations plus independently read bytes, and independent application processes.
