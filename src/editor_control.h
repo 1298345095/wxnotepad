@@ -15,6 +15,7 @@ public:
     explicit EditorControl(wxWindow* parent);
     ~EditorControl() override;
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
+    uint64_t DocumentRevision() const { return documentRevision_; }
 
 private:
     class Core;
@@ -22,6 +23,7 @@ private:
     wxTimer scrollTimer_;
     wxTimer widenTimer_;
     std::unique_ptr<Core> core_;
+    uint64_t documentRevision_ = 0;
     void OnPaint(wxPaintEvent& event);
     void OnSize(wxSizeEvent& event);
 #ifdef __WXMSW__

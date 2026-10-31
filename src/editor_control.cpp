@@ -286,6 +286,10 @@ private:
     }
     void NotifyChange() const noexcept override {}
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override {
+        if (notification.nmhdr.code == Scintilla::Notification::Modified &&
+            (static_cast<int>(notification.modificationType) &
+             static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText)))
+            ++window_.documentRevision_;
         if (notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
             notification.nmhdr.code == Scintilla::Notification::SavePointLeft) {
             auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());

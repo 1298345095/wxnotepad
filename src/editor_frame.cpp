@@ -137,19 +137,38 @@ void EditorFrame::ShowFind(bool replace) {
         layout->Add(new wxStaticText(findDialog_, wxID_ANY, "Find &what:"), 0, wxALL, 8);
         findQuery_ = new wxTextCtrl(findDialog_, wxID_ANY, {}, wxDefaultPosition, wxSize(320, -1), wxTE_PROCESS_ENTER);
         findQuery_->SetName("Find query");
+        findQuery_->Bind(wxEVT_TEXT, [this](wxCommandEvent& event) {
+            lastEmptyMatch_ = -1;
+            event.Skip();
+        });
         layout->Add(findQuery_, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
         auto* matchCase = new wxCheckBox(findDialog_, wxID_ANY, "Match &case");
         matchCase->SetName("Match case");
         matchCase->SetValue(searchOptions_.matchCase);
-        matchCase->Bind(wxEVT_CHECKBOX,
-                        [this](wxCommandEvent& event) { searchOptions_.matchCase = event.IsChecked(); });
+        matchCase->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& event) {
+            searchOptions_.matchCase = event.IsChecked();
+            lastEmptyMatch_ = -1;
+        });
         layout->Add(matchCase, 0, wxLEFT | wxRIGHT | wxTOP, 8);
         auto* wholeWord = new wxCheckBox(findDialog_, wxID_ANY, "Whole &word");
         wholeWord->SetName("Whole word");
         wholeWord->SetValue(searchOptions_.wholeWord);
-        wholeWord->Bind(wxEVT_CHECKBOX,
-                        [this](wxCommandEvent& event) { searchOptions_.wholeWord = event.IsChecked(); });
+        wholeWord->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& event) {
+            searchOptions_.wholeWord = event.IsChecked();
+            lastEmptyMatch_ = -1;
+        });
         layout->Add(wholeWord, 0, wxLEFT | wxRIGHT | wxTOP, 8);
+        auto* regularExpression = new wxCheckBox(findDialog_, wxID_ANY, "Regular &expression");
+        regularExpression->SetName("Regular expression");
+        regularExpression->SetValue(searchOptions_.regularExpression);
+        wholeWord->SetToolTip("Applies to literal searches. Use word boundaries in a regular expression.");
+        wholeWord->Enable(!searchOptions_.regularExpression);
+        regularExpression->Bind(wxEVT_CHECKBOX, [this, wholeWord](wxCommandEvent& event) {
+            searchOptions_.regularExpression = event.IsChecked();
+            lastEmptyMatch_ = -1;
+            wholeWord->Enable(!event.IsChecked());
+        });
+        layout->Add(regularExpression, 0, wxLEFT | wxRIGHT | wxTOP, 8);
         replacementLabel_ = new wxStaticText(findDialog_, wxID_ANY, "Replace &with:");
         layout->Add(replacementLabel_, 0, wxALL, 8);
         replacement_ = new wxTextCtrl(findDialog_, wxID_ANY, {}, wxDefaultPosition, wxSize(320, -1));
@@ -228,24 +247,72 @@ void EditorFrame::Search(bool forward) {
     if (!query.length()) return;
     using Scintilla::Message;
     editor_->Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
+    editor_->Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
     const auto start = editor_->Send(forward ? Message::GetSelectionEnd : Message::GetSelectionStart);
     const auto length = editor_->Send(Message::GetLength);
+    const bool afterEmpty = searchOptions_.regularExpression && start == lastEmptyMatch_ &&
+                            editor_->Send(Message::GetSelectionStart) == editor_->Send(Message::GetSelectionEnd) &&
+                            lastEmptyRevision_ == editor_->DocumentRevision();
     const auto search = [&](intptr_t from, intptr_t to) {
         editor_->Send(Message::SetTargetStart, from);
         editor_->Send(Message::SetTargetEnd, to);
         return editor_->Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) >= 0;
     };
     bool wrapped = false;
-    bool found = search(start, forward ? length : 0);
-    if (!found && wrapAround_->GetValue()) {
+    bool found = false;
+    if (searchOptions_.regularExpression && !forward) {
+        // The pinned Boost backward path is line-by-line. Scan forward so
+        // Previous sees the same explicit cross-line matches as Next.
+        intptr_t previousStart = -1, previousEnd = -1;
+        intptr_t lastStart = -1, lastEnd = -1;
+        for (intptr_t position = 0; position <= length;) {
+            if (!search(position, length)) break;
+            lastStart = editor_->Send(Message::GetTargetStart);
+            lastEnd = editor_->Send(Message::GetTargetEnd);
+            if (lastEnd <= start && !(afterEmpty && lastStart == start && lastEnd == start)) {
+                previousStart = lastStart;
+                previousEnd = lastEnd;
+            }
+            if (lastStart == lastEnd) {
+                if (lastEnd == length) break;
+                position = editor_->Send(Message::PositionAfter, lastEnd);
+            } else {
+                position = lastEnd;
+            }
+        }
+        if (previousStart < 0 && wrapAround_->GetValue()) {
+            wrapped = true;
+            previousStart = lastStart;
+            previousEnd = lastEnd;
+        }
+        found = previousStart >= 0;
+        if (found) {
+            editor_->Send(Message::SetTargetStart, previousStart);
+            editor_->Send(Message::SetTargetEnd, previousEnd);
+        }
+    } else {
+        found = !(afterEmpty && start == length) &&
+                search(afterEmpty ? editor_->Send(Message::PositionAfter, start) : start, forward ? length : 0);
+    }
+    if (!found && wrapAround_->GetValue() && !(searchOptions_.regularExpression && !forward)) {
         wrapped = true;
-        found = search(forward ? 0 : length, start);
+        found = search(forward ? 0 : length, searchOptions_.regularExpression ? length : start);
+        if (searchOptions_.regularExpression && found && editor_->Send(Message::GetTargetStart) > start) found = false;
+    }
+    if (editor_->Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
+        SetStatusText("Invalid regular expression");
+        return;
     }
     if (!found) {
         SetStatusText("No match found");
         return;
     }
     editor_->Send(Message::SetSel, editor_->Send(Message::GetTargetStart), editor_->Send(Message::GetTargetEnd));
+    lastEmptyMatch_ = searchOptions_.regularExpression &&
+                              editor_->Send(Message::GetTargetStart) == editor_->Send(Message::GetTargetEnd)
+                          ? editor_->Send(Message::GetTargetStart)
+                          : -1;
+    lastEmptyRevision_ = editor_->DocumentRevision();
     editor_->Send(Message::ScrollCaret);
     SetStatusText(wrapped ? "Search wrapped" : "Match found");
 }
@@ -254,10 +321,16 @@ Scintilla::FindOption EditorFrame::SearchFlags() const {
     auto flags = Scintilla::FindOption::None;
     if (searchOptions_.matchCase) flags = flags | Scintilla::FindOption::MatchCase;
     if (searchOptions_.wholeWord) flags = flags | Scintilla::FindOption::WholeWord;
+    if (searchOptions_.regularExpression)
+        flags = flags | Scintilla::FindOption::RegExp | Scintilla::FindOption::Cxx11RegEx;
     return flags;
 }
 
 void EditorFrame::ReplaceOne() {
+    if (searchOptions_.regularExpression) {
+        SetStatusText("Regex replacement is not available");
+        return;
+    }
     const wxString queryText = findQuery_->GetValue();
     const auto query = queryText.utf8_str();
     if (!query.length()) return;
