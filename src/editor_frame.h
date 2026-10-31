@@ -3,6 +3,7 @@
 #include <wx/frame.h>
 #include "document_session.h"
 #include "search_options.h"
+#include "syntax_scheme.h"
 #include "ScintillaTypes.h"
 
 class EditorControl;
@@ -32,6 +33,7 @@ public:
 private:
     EditorControl* editor_;
     DocumentSession document_;
+    SyntaxLanguage language_ = SyntaxLanguage::PlainText;
     wxDialog* findDialog_ = nullptr;
     wxTextCtrl* findQuery_ = nullptr;
     SearchOptions searchOptions_;

@@ -22,14 +22,15 @@ endif()
 file(GLOB core_sources CONFIGURE_DEPENDS "${NOTEPAD4_SOURCE}/scintilla/src/*.cxx")
 file(GLOB lexlib_sources CONFIGURE_DEPENDS "${NOTEPAD4_SOURCE}/scintilla/lexlib/*.cxx")
 add_library(notepad4_core STATIC ${core_sources} ${lexlib_sources}
-    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx")
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx")
 target_include_directories(notepad4_core PUBLIC
     "${NOTEPAD4_SOURCE}/scintilla/include"
     PRIVATE src/platform "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
 target_compile_definitions(notepad4_core PUBLIC __WX__ BOOST_REGEX_STANDALONE NO_CXX11_REGEX NOMINMAX WIN32_LEAN_AND_MEAN)
 target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
-add_library(editor_control STATIC src/editor_control.cpp src/editor_frame.cpp src/document_session.cpp src/gbk_codec.cpp src/utf16_codec.cpp src/platform/wx_platform.cpp)
+add_library(editor_control STATIC src/editor_control.cpp src/editor_frame.cpp src/syntax_scheme.cpp src/document_session.cpp src/gbk_codec.cpp src/utf16_codec.cpp src/platform/wx_platform.cpp)
 target_include_directories(editor_control PUBLIC src PRIVATE src/platform
     "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
 target_link_libraries(editor_control PUBLIC notepad4_core)
@@ -100,6 +101,7 @@ if(BUILD_TESTING)
     add_editor_test(file_smoke first_utf8_save 30)
     add_editor_test(close_smoke close_unsaved 30)
     add_editor_test(open_smoke open_utf8 30)
+    add_editor_test(syntax_cpp cpp_highlighting 30)
     add_editor_test(eol_smoke loaded_eol_input 30)
     add_editor_test(open_native open_new_native 60)
     add_editor_test(save_smoke save_existing 30)

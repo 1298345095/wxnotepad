@@ -32,7 +32,24 @@ The patch has these narrowly scoped purposes:
 - Vendored Boost regex traits: preserve the original matcher and formatter, use
   the existing Windows traits on Windows, and derive Linux wide-character traits
   from the same masks using `std::locale`.
-- `LexerModule.cxx`: link only the plain-text lexer needed by the read-only host.
+- `LexerModule.cxx`: register only the delivered Plain Text and C/C++ lexers.
+
+The C/C++ lexer is the unmodified `scintilla/lexers/LexCPP.cxx` in this same
+archive. `src/cpp_scheme_data.h` contains its 13 lexer-consumed keyword lists and
+the expanded style groups from `src/EditLexers/stlCPP.cpp` at the same pinned
+commit. Completion-only lists 13–15 are excluded. The upstream NoAutoComp
+attributes on lists 2, 3, 11 and 12 do not reach the lexer; no consumed list has
+PreSorted or MakeLower attributes. C/C++ uses the upstream `lexer.lang=0` dialect.
+Application-only lexer attributes (completion, indentation and encoding defaults)
+are not imported. Existing document and native font settings remain in effect.
+
+Regenerate the checked-in data offline with
+`python tools/update_cpp_scheme.py --source /path/to/notepad4`. The command reads
+the pinned Git object without changing the source checkout and records the
+original file's SHA-256 in the generated header. Builds use that checked-in
+header and the verified source archive, so no additional download is needed.
+The selected data carries the original BSD 3-Clause attribution in
+`licenses/Notepad4.txt`.
 
 The wx surface and portability primitives reuse and adapt the exercised code in
 the separate prototype (`codex/prototype-original-core`, `2f44bb9`). The formal

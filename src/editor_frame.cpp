@@ -465,7 +465,7 @@ void EditorFrame::UpdateDocumentState() {
     const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
                               : document_.Encoding() == FileEncoding::Gbk   ? "GBK (CP936)"
                                                                             : "UTF-8";
-    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : ""));
+    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " + LanguageName(language_));
 }
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
@@ -504,6 +504,8 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
+        language_ = LanguageForPath(document_.Path());
+        ApplySyntaxLanguage(*editor_, language_);
         regexMatch_.reset();
         lastEmptyMatch_.reset();
     }
@@ -528,6 +530,8 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    language_ = SyntaxLanguage::PlainText;
+    ApplySyntaxLanguage(*editor_, language_);
     regexMatch_.reset();
     lastEmptyMatch_.reset();
     UpdateDocumentState();
