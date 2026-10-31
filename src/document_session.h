@@ -6,6 +6,9 @@
 #include <string>
 
 class EditorControl;
+enum class FileEncoding { Utf8, Utf16Le, Gbk };
+enum class GbkLossChoice { Cancel, Utf8, Replace };
+using GbkLossDecision = std::function<GbkLossChoice()>;
 
 enum class SaveStatus { Saved, Cancelled, Failed };
 struct SaveResult {
@@ -24,17 +27,21 @@ public:
     explicit DocumentSession(EditorControl& editor) : editor_(editor) {}
     const wxString& Path() const { return path_; }
     // A chosen path represents the caller's approved destination; no path is Cancel.
-    SaveResult SaveFirst(const std::optional<wxString>& destination);
-    SaveResult Save();
-    SaveResult SaveAs(const std::optional<wxString>& destination);
-    OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace);
+    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult Save(const GbkLossDecision& decideLoss = {});
+    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
+                    std::optional<FileEncoding> encoding = std::nullopt);
     void New();
-    bool HasUtf8Bom() const { return hasUtf8Bom_; }
+    bool HasUtf8Bom() const { return encoding_ == FileEncoding::Utf8 && hasBom_; }
+    FileEncoding Encoding() const { return encoding_; }
+    bool HasBom() const { return hasBom_; }
 
 private:
     EditorControl& editor_;
     wxString path_;
-    bool hasUtf8Bom_ = false;
-    SaveResult SaveTo(const wxString& destination);
-    void Replace(const std::string& bytes, const wxString& path, bool bom);
+    FileEncoding encoding_ = FileEncoding::Utf8;
+    bool hasBom_ = false;
+    SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss);
+    void Replace(const std::string& bytes, const wxString& path, bool bom, FileEncoding encoding = FileEncoding::Utf8);
 };

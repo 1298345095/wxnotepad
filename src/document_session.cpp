@@ -1,5 +1,6 @@
 #include "document_session.h"
 #include "editor_control.h"
+#include "gbk_codec.h"
 #include "ScintillaTypes.h"
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -63,38 +64,60 @@ wxString WriteSafely(const wxString& destination, const std::string& bytes) {
 }
 }
 
-SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination) {
+SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (!path_.empty()) return {SaveStatus::Failed, "This document already has a file name."};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
-    return SaveTo(*destination);
+    return SaveTo(*destination, decideLoss);
 }
 
-SaveResult DocumentSession::Save() {
+SaveResult DocumentSession::Save(const GbkLossDecision& decideLoss) {
     if (path_.empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
-    return SaveTo(path_);
+    return SaveTo(path_, decideLoss);
 }
 
-SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination) {
+SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
-    return SaveTo(*destination);
+    return SaveTo(*destination, decideLoss);
 }
 
-SaveResult DocumentSession::SaveTo(const wxString& destination) {
+SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDecision& decideLoss) {
     const auto length = static_cast<size_t>(editor_.Send(Scintilla::Message::GetLength));
     std::string bytes(length + 1, '\0');
     editor_.Send(Scintilla::Message::GetText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     bytes.resize(length);
-    if (hasUtf8Bom_) bytes.insert(0, "\xef\xbb\xbf");
+    std::optional<std::string> savedText;
+    auto savedEncoding = encoding_;
+    bool savedBom = hasBom_;
+    if (encoding_ == FileEncoding::Gbk) {
+        if (!IsUtf8(bytes)) return {SaveStatus::Failed, "The document contains invalid UTF-8."};
+        const auto encoded = EncodeGbk(bytes);
+        if (encoded.loss) {
+            const auto choice = decideLoss ? decideLoss() : GbkLossChoice::Cancel;
+            if (choice == GbkLossChoice::Cancel) return {SaveStatus::Cancelled, {}};
+            if (choice == GbkLossChoice::Utf8) { savedEncoding = FileEncoding::Utf8; savedBom = false; }
+            else { bytes = encoded.bytes; savedText = DecodeGbk(bytes); }
+        } else bytes = encoded.bytes;
+    } else if (hasBom_) bytes.insert(0, "\xef\xbb\xbf");
     const auto error = WriteSafely(destination, bytes);
     if (!error.empty()) return {SaveStatus::Failed, error};
+    if (savedText) {
+        editor_.Send(Scintilla::Message::BeginUndoAction);
+        editor_.Send(Scintilla::Message::SetTargetStart, 0);
+        editor_.Send(Scintilla::Message::SetTargetEnd, length);
+        editor_.Send(Scintilla::Message::ReplaceTarget, savedText->size(), reinterpret_cast<intptr_t>(savedText->data()));
+        editor_.Send(Scintilla::Message::EndUndoAction);
+    }
     path_ = destination;
+    encoding_ = savedEncoding;
+    hasBom_ = savedBom;
     editor_.Send(Scintilla::Message::SetSavePoint);
     return {SaveStatus::Saved, {}};
 }
 
-OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace) {
+OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
+                                 std::optional<FileEncoding> encoding) {
     if (!source) return {OpenStatus::Cancelled, {}};
     wxLogNull quiet;
     if (!wxFileName::FileExists(*source))
@@ -106,20 +129,25 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     std::string bytes(static_cast<size_t>(length), '\0');
     if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
         return {OpenStatus::Failed, "Could not read the complete file."};
-    const bool bom = bytes.starts_with("\xef\xbb\xbf");
+    const auto selectedEncoding = encoding.value_or(FileEncoding::Utf8);
+    const bool bom = selectedEncoding == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf");
     if (bom) bytes.erase(0, 3);
-    if (!IsUtf8(bytes)) return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
+    if (selectedEncoding == FileEncoding::Gbk) {
+        const auto decoded = DecodeGbk(bytes);
+        if (!decoded) return {OpenStatus::Failed, "The file is not valid GBK (CP936). The document was not changed."};
+        bytes = *decoded;
+    } else if (!IsUtf8(bytes)) return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
     const bool wasModified = editor_.Send(Scintilla::Message::GetModify);
     if (!beforeReplace()) return {OpenStatus::Cancelled, {}};
     // Save may have rewritten the selected source (including a newly chosen
     // first-save destination). Read it again after that explicit Save succeeds.
     if (wasModified && !editor_.Send(Scintilla::Message::GetModify))
-        return Open(source, [] { return true; });
-    Replace(bytes, *source, bom);
+        return Open(source, [] { return true; }, encoding);
+    Replace(bytes, *source, bom, selectedEncoding);
     return {OpenStatus::Opened, {}};
 }
 
-void DocumentSession::Replace(const std::string& bytes, const wxString& path, bool bom) {
+void DocumentSession::Replace(const std::string& bytes, const wxString& path, bool bom, FileEncoding encoding) {
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
     editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
@@ -129,7 +157,8 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, bo
     editor_.Send(Scintilla::Message::SetXOffset, 0);
     editor_.Send(Scintilla::Message::SetSavePoint);
     path_ = path;
-    hasUtf8Bom_ = bom;
+    hasBom_ = bom;
+    encoding_ = encoding;
 }
 
 void DocumentSession::New() {

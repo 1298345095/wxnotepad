@@ -4,6 +4,7 @@
 #include <wx/filedlg.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
+#include <wx/statusbr.h>
 
 EditorFrame::EditorFrame()
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
@@ -11,6 +12,8 @@ EditorFrame::EditorFrame()
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
     file->Append(wxID_OPEN, "&Open...\tCtrl+O");
+    const int openGbk = wxWindow::NewControlId();
+    file->Append(openGbk, "Open As &GBK...");
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
     file->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
     auto* edit = new wxMenu;
@@ -20,6 +23,12 @@ EditorFrame::EditorFrame()
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
     SetMenuBar(menus);
+    CreateStatusBar();
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        const auto result = OpenAs(FileEncoding::Gbk);
+        if (result.status == OpenStatus::Failed)
+            wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+    }, openGbk);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { New(); }, wxID_NEW);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) {
         const auto result = Open();
@@ -56,28 +65,29 @@ EditorFrame::EditorFrame()
 void EditorFrame::UpdateDocumentState() {
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + " - wxnotepad");
+    SetStatusText(document_.Encoding() == FileEncoding::Gbk ? "GBK (CP936)" : (document_.HasBom() ? "UTF-8 BOM" : "UTF-8"));
 }
 
-SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination) {
-    const auto result = document_.SaveFirst(destination);
+SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    const auto result = document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
     UpdateDocumentState();
     return result;
 }
 
-SaveResult EditorFrame::Save() {
+SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
     if (!document_.Path().empty()) {
-        const auto result = document_.Save();
+        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
         UpdateDocumentState();
         return result;
     }
     wxFileDialog dialog(this, "Save file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-    if (dialog.ShowModal() != wxID_OK) return SaveFirst(std::nullopt);
-    return SaveFirst(dialog.GetPath());
+    if (dialog.ShowModal() != wxID_OK) return SaveFirst(std::nullopt, decideLoss);
+    return SaveFirst(dialog.GetPath(), decideLoss);
 }
 
-SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination) {
-    const auto result = document_.SaveAs(destination);
+SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    const auto result = document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
     UpdateDocumentState();
     return result;
 }
@@ -90,17 +100,21 @@ SaveResult EditorFrame::SaveAs() {
     return SaveAs(dialog.GetPath());
 }
 
-OpenResult EditorFrame::Open(const std::optional<wxString>& source) {
-    const auto result = document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); });
+OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
+    const auto result = document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     UpdateDocumentState();
     return result;
 }
 
 OpenResult EditorFrame::Open() {
+    return OpenAs(FileEncoding::Utf8);
+}
+
+OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
     wxFileDialog dialog(this, "Open file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
                         wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-    if (dialog.ShowModal() != wxID_OK) return Open(std::nullopt);
-    return Open(dialog.GetPath());
+    if (dialog.ShowModal() != wxID_OK) return Open(std::nullopt, encoding);
+    return Open(dialog.GetPath(), encoding);
 }
 
 bool EditorFrame::New() {
@@ -123,4 +137,17 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (result.status == SaveStatus::Failed)
         wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
     return result.status == SaveStatus::Saved;
+}
+
+GbkLossChoice EditorFrame::ConfirmGbkLoss() {
+    wxMessageDialog dialog(this,
+        "GBK cannot preserve every character in this document. Save as UTF-8 without a BOM to keep all text, "
+        "or confirm GBK replacement. Replace in GBK changes unsupported characters to ? in both the file "
+        "and document after saving; Undo restores the original text.",
+        "GBK character loss", wxYES_NO | wxCANCEL | wxCANCEL_DEFAULT | wxICON_WARNING);
+    dialog.SetYesNoCancelLabels("Save as &UTF-8", "&Replace in GBK", "&Cancel");
+    const auto choice = dialog.ShowModal();
+    if (choice == wxID_YES) return GbkLossChoice::Utf8;
+    if (choice == wxID_NO) return GbkLossChoice::Replace;
+    return GbkLossChoice::Cancel;
 }
