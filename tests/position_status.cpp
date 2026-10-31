@@ -30,7 +30,7 @@ void Status(EditorFrame* frame, const wxString& expected) {
         std::fprintf(stderr, "Status: %s; expected %s\n", actual.utf8_str().data(), expected.utf8_str().data());
     Require(actual == expected, "status must describe the active logical caret");
 }
-void Key(EditorControl* editor, bool shift = false) {
+void PressRight(EditorControl* editor, bool shift = false) {
 #ifdef __WXMSW__
     BYTE previous[256];
     Require(GetKeyboardState(previous), "read owned thread keyboard state");
@@ -152,9 +152,9 @@ public:
                 editor->Send(Message::GotoPos, 0);
                 editor->SetFocus();
                 NativeFold::Paint(editor);
-                Key(editor);
+                PressRight(editor);
                 Status(frame, "Ln 1, Col 2");
-                Key(editor, true);
+                PressRight(editor, true);
                 Status(frame, "Ln 1, Col 3 | Sel 1");
                 Mouse(editor, 5);
                 Status(frame, "Ln 2, Col 2");

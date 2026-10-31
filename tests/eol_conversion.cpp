@@ -1,11 +1,14 @@
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
+#include "file_helpers.h"
 #include <wx/statusbr.h>
 #include <filesystem>
 #include <fstream>
 
 namespace {
 using Scintilla::Message;
+using TestFiles::Bytes;
+using TestFiles::Filename;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -94,18 +97,6 @@ void FoldedSelection(EditorFrame* frame) {
     Require(frame->GetMenuBar()->FindItem(language)->IsChecked(), "conversion must retain manual syntax choice");
     editor->ToggleWordWrap();
     std::puts("PASS: reversed Unicode selection and caret visibility through wrapped folded conversion");
-}
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 }
 void RecordBytes(const char* sample, const char* action, const std::filesystem::path& path) {
     std::printf("BYTES %s %s:", sample, action);
