@@ -60,6 +60,14 @@ Text; the status bar shows the language alongside encoding/BOM. Typing and
 Undo/Redo update syntax through the core's incremental styling lifecycle.
 See the [C/C++ validation record](docs/observations/syntax-cpp-README.md).
 
+Opening `.py`, `.pyw` or `.pyi` selects Python with the pinned original lexer,
+lexer-consumed keywords and default light palette. Python is also available in
+the Language menu and follows the existing Automatic and Save As rules.
+The keyword/style data can be reproduced offline with
+`python tools/update_python_scheme.py --source <original-checkout>`; the generated
+header records the source revision, hash and license. Completion-only lists are
+omitted. See the [Python validation record](docs/observations/syntax-python-README.md).
+
 Microsoft Pinyin human validation passed; see the
 [IME validation record](docs/evidence/issue-13/README.md). Linux IME remains
 deferred. More syntax languages, advanced editing, settings migration and release

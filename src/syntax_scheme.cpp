@@ -12,6 +12,8 @@ struct SyntaxStyle {
     bool bold;
 };
 #include "cpp_scheme_data.h"
+#include "json_scheme_data.h"
+#include "python_scheme_data.h"
 
 // Scintilla's public color values are BGR; upstream default strings are RGB.
 constexpr unsigned int Colour(unsigned int rgb) {
@@ -28,11 +30,18 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
     for (const auto* candidate : {"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"}) {
         if (extension == candidate) return SyntaxLanguage::Cpp;
     }
+    if (extension == "json") return SyntaxLanguage::Json;
+    for (const auto* candidate : {"py", "pyw", "pyi"}) {
+        if (extension == candidate) return SyntaxLanguage::Python;
+    }
     return SyntaxLanguage::PlainText;
 }
 
 wxString LanguageName(SyntaxLanguage language) {
-    return language == SyntaxLanguage::Cpp ? "C/C++" : "Plain Text";
+    if (language == SyntaxLanguage::Cpp) return "C/C++";
+    if (language == SyntaxLanguage::Json) return "JSON";
+    if (language == SyntaxLanguage::Python) return "Python";
+    return "Plain Text";
 }
 
 bool LanguageCanFold(SyntaxLanguage language) {
@@ -66,7 +75,10 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::MarkerSetBackTranslucent, marker, 0xFF000000U | Colour(0xFFFFFF));
         editor.Send(Message::MarkerSetStrokeWidth, marker, editor.FromDIP(100));
     }
-    editor.Send(Message::SetLexer, language == SyntaxLanguage::Cpp ? SCLEX_CPP : SCLEX_NULL);
+    editor.Send(Message::SetLexer, language == SyntaxLanguage::Cpp      ? SCLEX_CPP
+                                   : language == SyntaxLanguage::Python ? SCLEX_PYTHON
+                                   : language == SyntaxLanguage::Json   ? SCLEX_JSON
+                                                                        : SCLEX_NULL);
     editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("fold"),
                 reinterpret_cast<intptr_t>(fold ? "1" : "0"));
     // Keep the native font/point size already installed on STYLE_DEFAULT.
@@ -79,6 +91,27 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
             editor.Send(Message::SetKeyWords, index, reinterpret_cast<intptr_t>(cppKeywords[index]));
         }
         for (const auto& style : cppStyles) {
+            editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
+            editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
+            editor.Send(Message::StyleSetBold, style.id, style.bold);
+        }
+    } else if (language == SyntaxLanguage::Json) {
+        for (size_t index = 0; index < std::size(jsonKeywords); ++index) {
+            editor.Send(Message::SetKeyWords, index | jsonKeywordAttributes,
+                        reinterpret_cast<intptr_t>(jsonKeywords[index]));
+        }
+        for (const auto& style : jsonStyles) {
+            editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
+            editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
+            editor.Send(Message::StyleSetBold, style.id, style.bold);
+        }
+    }
+    if (language == SyntaxLanguage::Python) {
+        // The pinned core encodes WordList::KeywordAttr_PreSorted above the index.
+        for (size_t index = 0; index < std::size(pythonKeywords); ++index) {
+            editor.Send(Message::SetKeyWords, index | (2U << 8U), reinterpret_cast<intptr_t>(pythonKeywords[index]));
+        }
+        for (const auto& style : pythonStyles) {
             editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
             editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
             editor.Send(Message::StyleSetBold, style.id, style.bold);
