@@ -49,6 +49,17 @@ public:
     }
     ~Core() override { Finalise(); }
 
+    uint64_t SelectionRevision() const noexcept {
+        const auto anchor = sel.MainAnchor();
+        const auto caret = sel.MainCaret();
+        if (anchor != observedAnchor_ || caret != observedCaret_) {
+            observedAnchor_ = anchor;
+            observedCaret_ = caret;
+            ++selectionRevision_;
+        }
+        return selectionRevision_;
+    }
+
     void Draw(wxDC& dc) {
         auto surface = core::Surface::Allocate(Scintilla::Technology::Default);
         surface->Init(&dc, &window_);
@@ -286,6 +297,7 @@ private:
     }
     void NotifyChange() const noexcept override {}
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override {
+        SelectionRevision();
         if (notification.nmhdr.code == Scintilla::Notification::Modified &&
             (static_cast<int>(notification.modificationType) &
              static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText)))
@@ -345,6 +357,9 @@ private:
     std::string EncodedFromUTF8(std::string_view text) const override { return std::string(text); }
     intptr_t DefWndProc(Message, uintptr_t, intptr_t) override { return 0; }
     void SCICALL CreateCallTipWindow(core::PRectangle) noexcept override {}
+    mutable Sci::Position observedAnchor_ = -1;
+    mutable Sci::Position observedCaret_ = -1;
+    mutable uint64_t selectionRevision_ = 0;
 };
 
 EditorControl::EditorControl(wxWindow* parent)
@@ -459,7 +474,21 @@ EditorControl::EditorControl(wxWindow* parent)
 EditorControl::~EditorControl() = default;
 
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
-    return core_->WndProc(message, wParam, lParam);
+    core_->SelectionRevision();
+    const auto result = core_->WndProc(message, wParam, lParam);
+    core_->SelectionRevision();
+    return result;
+}
+
+uint64_t EditorControl::SelectionRevision() const {
+    return core_->SelectionRevision();
+}
+
+std::optional<std::string> EditorControl::ExpandRegexReplacement(const std::string& replacement) {
+    Sci::Position length = static_cast<Sci::Position>(replacement.size());
+    const char* expanded = core_->pdoc->SubstituteByPosition(replacement.c_str(), &length);
+    if (!expanded) return std::nullopt;
+    return std::string(expanded, static_cast<size_t>(length));
 }
 
 void EditorControl::OnPaint(wxPaintEvent&) {

@@ -255,16 +255,15 @@ public:
                         "restored literal Whole word must reject scatter");
                 Toggle(regex, true);
                 Command(frame, wxID_REPLACE);
-                Require(!dialog->FindWindow(wxID_REPLACE)->IsEnabled() &&
+                Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled() &&
                             !dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(),
-                        "regex replacement actions must stay disabled until their implementation tickets");
+                        "single regex Replace must be available while Replace All remains scoped to #29");
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
                 Require(replacement, "Replace must retain the shared regex options and query");
                 replacement->SetValue("X");
                 const auto before = Text(editor);
-                Click(dialog, wxID_REPLACE);
                 Click(dialog, wxID_REPLACE_ALL);
-                Require(Text(editor) == before, "unsupported regex replacement commands must not edit the document");
+                Require(Text(editor) == before, "unsupported regex Replace All must not edit the document");
                 Toggle(regex, false);
                 Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled() &&
                             dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(),

@@ -37,6 +37,14 @@ private:
     SearchOptions searchOptions_;
     intptr_t lastEmptyMatch_ = -1;
     uint64_t lastEmptyRevision_ = 0;
+    uint64_t lastEmptySelectionRevision_ = 0;
+    struct RegexMatch {
+        intptr_t start;
+        intptr_t end;
+        uint64_t documentRevision;
+        uint64_t selectionRevision;
+    };
+    std::optional<RegexMatch> regexMatch_;
     Scintilla::FindOption SearchFlags() const;
     wxTextCtrl* replacement_ = nullptr;
     wxStaticText* replacementLabel_ = nullptr;
