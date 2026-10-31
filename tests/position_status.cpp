@@ -107,14 +107,14 @@ public:
                 const std::string selected = "\xE4\xB8\xAD\xE6\x96\x87\xF0\x9F\x98\x80"
                                              "e\xCC\x81\t\r\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(selected.c_str()));
-                editor->Send(Message::SetSel, 0, selected.size());
+                editor->Send(Message::SetSel, 0, static_cast<intptr_t>(selected.size()));
                 Status(frame, "Ln 2, Col 1 | Sel 8");
                 editor->Send(Message::SetSel, selected.size(), 0);
                 Status(frame, "Ln 1, Col 1 | Sel 8");
                 editor->Send(Message::SetTargetStart, 0);
                 editor->Send(Message::SetTargetEnd, 3);
                 editor->Send(Message::ReplaceTarget, 3, reinterpret_cast<intptr_t>("abc"));
-                editor->Send(Message::SetSel, 0, selected.size());
+                editor->Send(Message::SetSel, 0, static_cast<intptr_t>(selected.size()));
                 Status(frame, "Ln 2, Col 1 | Sel 10");
                 editor->Send(Message::GotoPos, 0);
                 Status(frame, "Ln 1, Col 1");

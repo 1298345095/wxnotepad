@@ -353,8 +353,8 @@ void EditorFrame::UpdatePositionStatus() {
     const auto caret = editor_->Send(Scintilla::Message::GetCurrentPos);
     const auto line = editor_->Send(Scintilla::Message::LineFromPosition, caret);
     const auto column = editor_->Send(Scintilla::Message::GetColumn, caret, line);
-    wxString position =
-        wxString::Format("Ln %lld, Col %lld", static_cast<long long>(line + 1), static_cast<long long>(column + 1));
+    wxString position = wxString::Format("Ln %llu, Col %llu", static_cast<unsigned long long>(line) + 1,
+                                         static_cast<unsigned long long>(column) + 1);
     const auto selected = editor_->SelectionCharacterCount();
     if (selected) position += wxString::Format(" | Sel %lld", static_cast<long long>(selected));
     SetStatusText(position, 1);

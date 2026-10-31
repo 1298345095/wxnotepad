@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WXNOTEPAD_TESTS_FILE_HELPERS_H
+#define WXNOTEPAD_TESTS_FILE_HELPERS_H
 
 #include <wx/string.h>
 #include <filesystem>
@@ -21,3 +22,5 @@ inline std::string Bytes(const std::filesystem::path& path) {
     return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 }
 } // namespace TestFiles
+
+#endif // WXNOTEPAD_TESTS_FILE_HELPERS_H
