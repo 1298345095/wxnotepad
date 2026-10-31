@@ -21,6 +21,7 @@ public:
     uint64_t SelectionRevision() const;
     intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
+    void SetIndentationWidth(int width);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.

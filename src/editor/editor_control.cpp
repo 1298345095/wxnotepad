@@ -547,6 +547,12 @@ void EditorControl::ToggleWordWrap() {
     core_->UpdateWrapLayout();
 }
 
+void EditorControl::SetIndentationWidth(int width) {
+    Send(Message::SetTabWidth, width);
+    Send(Message::SetIndent, width);
+    core_->UpdateWrapLayout();
+}
+
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
     core_->SelectionRevision();
     const auto result = core_->WndProc(message, wParam, lParam);
