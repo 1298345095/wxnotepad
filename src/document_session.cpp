@@ -75,6 +75,12 @@ SaveResult DocumentSession::Save() {
     return SaveTo(path_);
 }
 
+SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination) {
+    if (!destination) return {SaveStatus::Cancelled, {}};
+    if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
+    return SaveTo(*destination);
+}
+
 SaveResult DocumentSession::SaveTo(const wxString& destination) {
     const auto length = static_cast<size_t>(editor_.Send(Scintilla::Message::GetLength));
     std::string bytes(length + 1, '\0');

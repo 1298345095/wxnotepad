@@ -11,6 +11,8 @@ public:
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
     SaveResult Save();
+    SaveResult SaveAs(const std::optional<wxString>& destination);
+    SaveResult SaveAs();
     SaveResult SaveFirst(const std::optional<wxString>& destination);
     OpenResult Open(const std::optional<wxString>& source);
     OpenResult Open();
