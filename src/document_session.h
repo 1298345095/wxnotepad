@@ -18,8 +18,10 @@ public:
     const wxString& Path() const { return path_; }
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination);
+    SaveResult Save();
 
 private:
     EditorControl& editor_;
     wxString path_;
+    SaveResult SaveTo(const wxString& destination);
 };

@@ -44,13 +44,22 @@ SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (!path_.empty()) return {SaveStatus::Failed, "This document already has a file name."};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
+    return SaveTo(*destination);
+}
+
+SaveResult DocumentSession::Save() {
+    if (path_.empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
+    return SaveTo(path_);
+}
+
+SaveResult DocumentSession::SaveTo(const wxString& destination) {
     const auto length = static_cast<size_t>(editor_.Send(Scintilla::Message::GetLength));
     std::string bytes(length + 1, '\0');
     editor_.Send(Scintilla::Message::GetText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     bytes.resize(length);
-    const auto error = WriteSafely(*destination, bytes);
+    const auto error = WriteSafely(destination, bytes);
     if (!error.empty()) return {SaveStatus::Failed, error};
-    path_ = *destination;
+    path_ = destination;
     editor_.Send(Scintilla::Message::SetSavePoint);
     return {SaveStatus::Saved, {}};
 }
