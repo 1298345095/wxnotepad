@@ -1,6 +1,9 @@
 #include "native_search_helpers.h"
+#include "native_fold_helpers.h"
+#include <wx/dialog.h>
 #include <wx/ffile.h>
 #include <wx/filename.h>
+#include <wx/textctrl.h>
 #include <cstdio>
 #include <stdexcept>
 
@@ -215,6 +218,7 @@ public:
                 Require(fresh->Editor()->Send(Message::GetWrapMode) == 0, "a separate window starts unwrapped");
                 fresh->Destroy();
                 std::puts("PASS: per-window lifetime, language transitions and byte-identical BOM/CRLF saving");
+                Combined(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
@@ -231,6 +235,110 @@ public:
 
 private:
     int result_ = 1;
+    void Combined(EditorFrame* frame) {
+        auto* editor = frame->Editor();
+        Files files;
+        std::string comment = "// ";
+        for (int repeat = 0; repeat < 40; ++repeat)
+            comment += "space\t中文😀 ";
+        const std::string source = comment + "\nvoid outer() {\n  if (true) {\n    target();\n  }\n}\n"
+                                             "void other() {\n  untouched();\n}\n";
+        {
+            wxFFile output(files.source, "wb");
+            Require(output.IsOpened() && output.Write(source.data(), source.size()) == source.size(),
+                    "write the combined navigation/view fixture");
+        }
+        Require(frame->Open(files.source).status == OpenStatus::Opened, "Open the combined fixture");
+        const int numbers = frame->GetMenuBar()->FindMenuItem("View", "Line Numbers");
+        const int whitespace = frame->GetMenuBar()->FindMenuItem("View", "Show Whitespace");
+        const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
+        const int goTo = frame->GetMenuBar()->FindMenuItem("Edit", "Go To Line...");
+        Require(numbers != wxNOT_FOUND && whitespace != wxNOT_FOUND && goTo != wxNOT_FOUND,
+                "the combined scenario requires every sibling native control");
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+        NativeFold::Paint(editor);
+        Layout(frame);
+        editor->Send(Message::GotoPos, 0);
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+        Require(!editor->Send(Message::GetLineVisible, 3) && !editor->Send(Message::GetLineVisible, 7),
+                "the combined fixture hides nested and unrelated blocks");
+        NativeSearch::Command(frame, whitespace);
+        frame->SetSize(500, 400);
+        Layout(frame);
+        const auto foldWidth = editor->Send(Message::GetMarginWidthN, 1);
+        editor->Send(Message::SetSel, 2, comment.size());
+        editor->Send(Message::ScrollCaret);
+        NativeSearch::Command(frame, numbers);
+        Layout(frame);
+        Require(editor->Send(Message::GetMarginWidthN, 0) == 0 &&
+                    editor->Send(Message::GetMarginWidthN, 1) == foldWidth,
+                "hiding numbers while wrapped preserves the fold margin");
+        NativeSearch::Command(frame, numbers);
+        Layout(frame);
+        NativeSearch::Selection(editor, 2, comment.size(), "number visibility preserves wrapped selection bytes");
+        const auto marginCaretY = editor->Send(Message::PointYFromPosition, 0, comment.size());
+        Require(marginCaretY >= 0 && marginCaretY < editor->GetClientSize().y,
+                "changing number margin width keeps the wrapped caret visible");
+        Require(editor->Send(Message::GetMarginWidthN, 0) > 0 && editor->Send(Message::GetViewWS) == 1,
+                "numbers and whitespace remain enabled together");
+        editor->Send(Message::GotoPos, 0);
+        NativeSearch::Command(frame, wrap);
+        NativeSearch::Command(frame, wrap);
+        const auto wideRows = editor->Send(Message::WrapCount, 0);
+        frame->SetSize(300, 280);
+        Layout(frame);
+        Require(editor->Send(Message::WrapCount, 0) > wideRows && editor->Send(Message::GetLineCount) == 10 &&
+                    !editor->Send(Message::GetLineVisible, 3) && !editor->Send(Message::GetLineVisible, 7),
+                "resize and view toggles retain logical numbering and existing folds");
+        editor->Send(Message::EmptyUndoBuffer);
+        editor->Send(Message::SetSavePoint);
+        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Message::Undo);
+        const auto encoding = frame->DocumentEncoding();
+        const auto eol = editor->Send(Message::GetEOLMode);
+        const auto lexer = editor->Send(Message::GetLexer);
+        const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
+        std::exception_ptr failure;
+        CallAfter([&] {
+            auto* dialog = wxDynamicCast(wxWindow::FindWindowByName("Go to line", frame), wxDialog);
+            try {
+                Require(dialog && dialog->IsModal(), "native Go To Line opens in the combined view");
+                auto* input = wxDynamicCast(wxWindow::FindWindowByName("Go to line number", dialog), wxTextCtrl);
+                Require(input, "Go To Line exposes its logical line input");
+                input->SetValue("4");
+                NativeSearch::Click(dialog, wxID_OK);
+            } catch (...) {
+                failure = std::current_exception();
+                if (dialog && dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
+            }
+        });
+        NativeSearch::Command(frame, goTo);
+        if (failure) std::rethrow_exception(failure);
+        const auto target = editor->Send(Message::PositionFromLine, 3);
+        NativeSearch::Selection(editor, target, target, "Go To Line counts logical lines past wrapped rows");
+        Require(editor->Send(Message::GetFoldExpanded, 1) && editor->Send(Message::GetFoldExpanded, 2) &&
+                    editor->Send(Message::GetLineVisible, 3) && !editor->Send(Message::GetFoldExpanded, 6) &&
+                    !editor->Send(Message::GetLineVisible, 7),
+                "Go To Line reveals only the requested nested ancestors with all view options active");
+        SearchSession search(*editor);
+        search.Configure({"target", "", {}, false});
+        const auto found = search.Find(SearchDirection::Forward);
+        Require(found.status == FindStatus::Found && found.start == target + 4 && found.end == target + 10,
+                "search reveals core byte positions in the combined view");
+        const auto y = editor->Send(Message::PointYFromPosition, 0, found.end);
+        Require(y >= 0 && y < editor->GetClientSize().y && editor->Send(Message::GetWrapMode) != 0 &&
+                    editor->Send(Message::GetViewWS) == 1 && editor->Send(Message::GetMarginWidthN, 0) > 0,
+                "all view options remain effective while navigation keeps the caret visible");
+        Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
+                    !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
+                    frame->DocumentEncoding() == encoding && editor->Send(Message::GetEOLMode) == eol &&
+                    editor->Send(Message::GetLexer) == lexer &&
+                    editor->Send(Message::StyleGetSizeFractional, 32) == font,
+                "combined presentation and navigation preserve bytes, history, encoding, EOL, syntax and font");
+        Require(frame->SaveAs(files.saved).status == SaveStatus::Saved && Bytes(files.saved) == source,
+                "the combined view saves byte-identical text");
+        std::puts("PASS: combined line numbers, whitespace, wrapping, resize, folded Go To Line, search and saving");
+    }
 };
 } // namespace
 wxIMPLEMENT_APP(WordWrapApp);
