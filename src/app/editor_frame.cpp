@@ -65,6 +65,30 @@ EditorFrame::EditorFrame()
         wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible()); },
         lineNumbers);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->LineNumbersVisible()); }, lineNumbers);
+    const int whitespace = wxWindow::NewControlId();
+    view->AppendCheckItem(whitespace, "Show &Whitespace\tCtrl+Shift+8");
+    Bind(
+        wxEVT_MENU,
+        [this, whitespace](wxCommandEvent&) {
+            const bool visible = editor_->Send(Scintilla::Message::GetViewWS) == 0;
+            editor_->Send(Scintilla::Message::SetViewWS,
+                          static_cast<uintptr_t>(visible ? Scintilla::WhiteSpace::VisibleAlways
+                                                         : Scintilla::WhiteSpace::Invisible));
+            GetMenuBar()->Check(whitespace, visible);
+        },
+        whitespace);
+    Bind(wxEVT_CHAR_HOOK, [this, whitespace](wxKeyEvent& event) {
+        if ((event.GetKeyCode() == '8' || event.GetKeyCode() == '*') && event.ControlDown() && event.ShiftDown() &&
+            !event.AltDown() && !event.MetaDown()) {
+            wxCommandEvent command(wxEVT_MENU, whitespace);
+            GetEventHandler()->ProcessEvent(command);
+        } else {
+            event.Skip();
+        }
+    });
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetViewWS) != 0); }, whitespace);
     view->AppendSeparator();
     const auto addFoldCommand = [this, view](const wxString& label, uintptr_t action) {
         const int id = wxWindow::NewControlId();

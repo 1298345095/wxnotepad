@@ -160,6 +160,17 @@ public:
                 Require(editor->Send(Message::GetLineCount) == 4 && editor->Send(Message::GetMarginWidthN, 0) > 0,
                         "showing numbers after Go To Line must retain the same logical document");
                 std::puts("PASS: Go To Line and hidden line numbers share the original logical line model");
+                const int whitespace = frame->GetMenuBar()->FindMenuItem("View", "Show Whitespace");
+                NativeSearch::Command(frame, whitespace);
+                NativeSearch::Command(frame, command);
+                Require(editor->Send(Message::GetViewWS) != 0 && editor->Send(Message::GetMarginWidthN, 0) == 0 &&
+                            editor->Send(Message::GetLineCount) == 4,
+                        "visible whitespace must remain enabled when line numbers are hidden");
+                NativeSearch::Command(frame, command);
+                NativeSearch::Command(frame, whitespace);
+                Require(editor->Send(Message::GetViewWS) == 0 && editor->Send(Message::GetMarginWidthN, 0) > 0,
+                        "the two independent view choices must restore without affecting each other");
+                std::puts("PASS: whitespace markers coexist with the independent number margin");
 
                 const wxString originalPath = wxFileName::CreateTempFileName("wxnotepad-line-numbers-");
                 const wxString savedPath = originalPath + ".json";
