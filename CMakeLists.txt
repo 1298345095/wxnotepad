@@ -24,6 +24,7 @@ file(GLOB lexlib_sources CONFIGURE_DEPENDS "${NOTEPAD4_SOURCE}/scintilla/lexlib/
 add_library(notepad4_core STATIC ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx")
 target_include_directories(notepad4_core PUBLIC
     "${NOTEPAD4_SOURCE}/scintilla/include"
@@ -103,6 +104,7 @@ if(BUILD_TESTING)
     add_editor_test(close_smoke close_unsaved 30)
     add_editor_test(open_smoke open_utf8 30)
     add_editor_test(syntax_cpp cpp_highlighting 30)
+    add_editor_test(syntax_python python_highlighting 30)
     add_editor_test(syntax_json json_highlighting 60)
     add_editor_test(syntax_save automatic_language_save 60)
     add_editor_test(syntax_manual manual_language_choice 60)

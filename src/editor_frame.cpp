@@ -61,6 +61,7 @@ EditorFrame::EditorFrame()
     automaticLanguageId_ = addLanguage("&Automatic", std::nullopt);
     addLanguage("&Plain Text", SyntaxLanguage::PlainText);
     addLanguage("&C/C++", SyntaxLanguage::Cpp);
+    addLanguage("&Python", SyntaxLanguage::Python);
     addLanguage("&JSON", SyntaxLanguage::Json);
     menus->Append(languages, "&Language");
     SetMenuBar(menus);
