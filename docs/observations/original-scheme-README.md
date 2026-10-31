@@ -50,7 +50,51 @@ current C/C++/Python/JSON catalog and existing extension mapping. It does not ad
 the original command-line forced-scheme option, additional content detection,
 settings migration or the separate original large-document indexing mode.
 
-## Corrected filter validation
+## Final integration validation
+
+Tested integration: `c883b316b34cc6b32722344f3089a4e6b07d18d3`.
+Production source is unchanged from `d48cd724391c6a43b08abd77910a80f4cb293461`;
+the final three-file correction changes the Windows test driver and reuses existing
+test file helpers. This report update changes documentation only.
+
+| Check | Windows | Private X11 | Private Wayland |
+| --- | --- | --- | --- |
+| Full related/native suite | 40/40 | 42/42 | 42/42 |
+| Independent actual-app startup/native edit/Save/disk bytes | Passed | Passed | Passed |
+| Final affected save/large-language tests | 2/2 | 2/2 | 2/2 |
+
+The native full-suite provenance and subsequent test-only JSON wait are detailed
+below. Final integrated affected tests pass on both native backends. Windows'
+final full suite and actual-app protocol ran from the integration checkout after
+the driver correction. Its owned ComboBox selection now completes with
+CBN_SELENDOK, and filename editing uses EM_SETSEL/EM_REPLACESEL. No global input
+is used. Explicit native suffix assertions retain Windows `copy.any.odd` versus
+GTK `copy.any` under the current `.odd` filter, with independently read exact bytes.
+
+Canonical clang-format 23.1.2 passes 80 hand-maintained C/C++ inputs. Broader
+clang-tidy covers all 12 changed translation units against the preceding main,
+using LLVM 23.1.2 on Windows and 18.1.3 on Linux with the checks listed below.
+All analyzer commands complete without compiler errors. Windows retains 38
+normalized distinct diagnostics. Three land on changed lines: the existing wx
+dialog flag expression relocated into a helper (`bugprone-signed-bitwise`) and two
+required synchronous Win32 callback LPARAM-to-context casts
+(`performance-no-int-to-ptr`). These are classified API conventions; no suppression
+or extra abstraction was added. Native Linux retains seven classified findings in
+unchanged code. Complete locations/messages are archived; this is not a
+warning-free repository claim.
+
+Independent Spec review has zero cumulative findings. Independent Standards
+review's duplicate test-helper finding was fixed; zero findings remain outstanding.
+Both reviewers rechecked the final three-file correction.
+
+Final parent results are in `windows-filter-verified/` and
+`linux-filter-verified/`; driver red/probes/green are in
+`save-filter-review-fixes/`. Final reviews are `review-filter-spec.md` and
+`review-filter-standards.md`; final diagnostic classification is
+`filter-final-tidy-classification.json`. Earlier filename-only reports below
+are superseded and retained for provenance.
+
+## Corrected filter implementation validation
 
 The earlier unconditional filename-only interpretation omitted the original
 dialog's selected-type path. The historical evidence below demonstrates agreement
@@ -87,12 +131,11 @@ No new changed-line finding or compiler error remains in that scope.
 
 Active native source/build is under
 `/home/ctrls/.cache/wxnotepad-original-save-filter-44` (`src`, `build`), using the
-existing wxWidgets 3.3.3 installation and two build/analyzer workers. The owned
-Windows ComboBox type-selector driver now fails with bounded control/item details
-if unsupported; its runtime verification and final Windows results belong to the
-parent integration pass. The four Windows shared-desktop exclusions below remain
-reported; Linux IME remains deferred. This is current-catalog save-type coverage,
-not a claim of blanket upstream feature parity.
+existing wxWidgets 3.3.3#1 installation and two build/analyzer workers. The final
+Windows native selector verification is included in the parent results above.
+The four Windows shared-desktop exclusions below remain reported; Linux IME
+remains deferred. This is current-catalog save-type coverage, not a claim of
+blanket upstream feature parity.
 
 ## Historical intermediate validation (superseded save interpretation)
 
@@ -125,7 +168,7 @@ Windows excludes the same four shared-desktop tests as the preceding delivery:
 `system_clipboard`, `gbk_native_choices`, `open_new_native` and `save_as_native`.
 Both private Linux suites include them. Linux IME remains deferred.
 
-## Formatting, static analysis and review
+## Historical intermediate static analysis and review (superseded)
 
 Canonical clang-format 23.1.2 passed 80 hand-maintained C/C++ files. The implementer
 also checked all 83 tracked C++/header files including generated scheme headers.
@@ -165,7 +208,10 @@ it is not part of this product delivery. Source/history/runtime archives and a
 checksum manifest preserve evidence before disposable workspaces are retired.
 
 The retained native source/build is
-`/home/ctrls/.cache/wxnotepad-original-scheme-44` (source in `src`, CMake build in
-`cmake`). Windows reused `build-everyday/cmake` in the integration checkout. No new
-runtime, GoogleTest or installed system dependency was required. Final delivery
-and cleanup state is recorded in the external `completion.json` and manifests.
+`/home/ctrls/.cache/wxnotepad-original-save-filter-44` (source in `src`, CMake build
+in `build`). Windows reused `build-everyday/cmake` in the integration checkout.
+Deliverable configurations disable manifest installation and use existing installed
+dependencies. An initial configure accidentally started a manifest restore and was
+stopped; its logs are retained in `save-filter-44/`. No new runtime or GoogleTest
+dependency is needed. Final delivery and cleanup state is recorded in the external
+`completion.json` and manifests.
