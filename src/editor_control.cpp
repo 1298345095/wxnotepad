@@ -1,6 +1,7 @@
 #include "editor_control.h"
 #include "platform/core_headers.h"
 #include <wx/dcclient.h>
+#include <chrono>
 #ifdef __WXMSW__
 #include <wx/caret.h>
 #include <imm.h>
@@ -10,6 +11,17 @@
 using Scintilla::Message;
 namespace core = Scintilla::Internal;
 wxDEFINE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
+
+namespace {
+unsigned MouseTime() {
+    return static_cast<unsigned>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+Scintilla::KeyMod MouseModifiers(const wxMouseEvent& event) {
+    // This host supports one stream selection; Alt rectangular selection is deferred.
+    return event.ShiftDown() ? Scintilla::KeyMod::Shift : Scintilla::KeyMod::Norm;
+}
+}
 
 class EditorControl::Core final : public core::ScintillaBase {
 public:
@@ -24,6 +36,8 @@ public:
         WndProc(Message::StyleClearAll, 0, 0);
         WndProc(Message::SetCaretStyle, 1, 0);
         WndProc(Message::SetMarginWidthN, 1, 0);
+        WndProc(Message::SetScrollWidthTracking, 1, 0);
+        dragDropEnabled = false;
         WndProc(Message::EmptyUndoBuffer, 0, 0);
         WndProc(Message::SetSavePoint, 0, 0);
     }
@@ -43,11 +57,78 @@ public:
     }
     void Resize() { ChangeSize(); }
     void Character(std::string_view text) { InsertCharacter(text, Scintilla::CharacterSource::DirectInput); }
+    bool Navigation(int key, bool control, bool shift) {
+        Scintilla::Keys coreKey;
+        switch (key) {
+        case WXK_LEFT: coreKey = Scintilla::Keys::Left; break;
+        case WXK_RIGHT: coreKey = Scintilla::Keys::Right; break;
+        case WXK_UP: coreKey = Scintilla::Keys::Up; break;
+        case WXK_DOWN: coreKey = Scintilla::Keys::Down; break;
+        case WXK_HOME: coreKey = Scintilla::Keys::Home; break;
+        case WXK_END: coreKey = Scintilla::Keys::End; break;
+        case WXK_PAGEUP: coreKey = Scintilla::Keys::Prior; break;
+        case WXK_PAGEDOWN: coreKey = Scintilla::Keys::Next; break;
+        default: return false;
+        }
+        bool consumed = false;
+        KeyDownWithModifiers(coreKey, static_cast<Scintilla::KeyMod>((control ? 2 : 0) | (shift ? 1 : 0)), &consumed);
+        return consumed;
+    }
     void TickCaret() { TickFor(TickReason::caret); }
+    void TickScroll() { TickFor(TickReason::scroll); }
+    void TickWiden() { TickFor(TickReason::widen); }
+    void Scroll(wxScrollWinEvent& event) {
+        const bool vertical = event.GetOrientation() == wxVERTICAL;
+        int position = event.GetPosition();
+        const int current = vertical ? static_cast<int>(topLine) : xOffset;
+        const int line = vertical ? 1 : std::max(1, static_cast<int>(vs.spaceWidth));
+        const int page = vertical ? static_cast<int>(LinesOnScreen()) : window_.GetClientSize().x;
+        const auto type = event.GetEventType();
+        if (type == wxEVT_SCROLLWIN_LINEUP) position = current - line;
+        else if (type == wxEVT_SCROLLWIN_LINEDOWN) position = current + line;
+        else if (type == wxEVT_SCROLLWIN_PAGEUP) position = current - page;
+        else if (type == wxEVT_SCROLLWIN_PAGEDOWN) position = current + page;
+        else if (type == wxEVT_SCROLLWIN_TOP) position = 0;
+        else if (type == wxEVT_SCROLLWIN_BOTTOM) position = vertical ? static_cast<int>(MaxScrollPos()) : scrollWidth;
+        if (vertical) ScrollTo(position);
+        else HorizontalScrollTo(std::clamp(position, 0, std::max(0, scrollWidth - window_.GetClientSize().x)));
+    }
+    void Wheel(wxMouseEvent& event) {
+        const bool horizontal = event.GetWheelAxis() == wxMOUSE_WHEEL_HORIZONTAL || event.ShiftDown();
+        int& remainder = horizontal ? horizontalWheel_ : verticalWheel_;
+        remainder += event.GetWheelRotation();
+        const int delta = event.GetWheelDelta();
+        if (!delta) return;
+        const int steps = remainder / delta;
+        remainder %= delta;
+        if (horizontal) {
+            const int direction = event.GetWheelAxis() == wxMOUSE_WHEEL_HORIZONTAL ? 1 : -1;
+            const int distance = std::max(1, static_cast<int>(vs.spaceWidth)) * event.GetColumnsPerAction();
+            HorizontalScrollTo(std::clamp(xOffset + direction * steps * distance, 0,
+                std::max(0, scrollWidth - window_.GetClientSize().x)));
+        } else {
+            const auto distance = event.IsPageScroll() ? LinesOnScreen() : event.GetLinesPerAction();
+            ScrollTo(topLine - steps * distance);
+        }
+    }
+    void Mouse(wxMouseEvent& event) {
+        const core::Point point(event.GetX(), event.GetY());
+        if (event.GetEventType() == wxEVT_LEFT_DOWN) {
+            window_.SetFocus();
+            ButtonDownWithModifiers(point, MouseTime(), MouseModifiers(event));
+        } else if (event.GetEventType() == wxEVT_LEFT_UP) {
+            ButtonUpWithModifiers(point, MouseTime(), MouseModifiers(event));
+        } else {
+            ButtonMoveWithModifiers(point, MouseTime(), MouseModifiers(event));
+        }
+    }
+    void CaptureLost() { ChangeMouseCapture(false); }
     void SyncSystemCaret() { UpdateSystemCaret(); }
 
 private:
     EditorControl& window_;
+    int verticalWheel_ = 0;
+    int horizontalWheel_ = 0;
     void NotifyCaretMove() const noexcept override {}
     void UpdateSystemCaret() override {
 #ifdef __WXMSW__
@@ -82,9 +163,20 @@ private:
         }
 #endif
     }
-    void SetHorizontalScrollPos() override {}
-    bool ModifyScrollBars(Sci::Line, Sci::Line) override { return false; }
-    void SetVerticalScrollPos() override {}
+    void SetHorizontalScrollPos() override {
+        window_.SetScrollPos(wxHORIZONTAL, xOffset);
+        UpdateSystemCaret();
+    }
+    bool ModifyScrollBars(Sci::Line maximum, Sci::Line page) override {
+        const auto before = window_.GetClientSize();
+        window_.SetScrollbar(wxVERTICAL, static_cast<int>(topLine), static_cast<int>(page), static_cast<int>(maximum + 1));
+        window_.SetScrollbar(wxHORIZONTAL, xOffset, window_.GetClientSize().x, scrollWidth);
+        return before != window_.GetClientSize();
+    }
+    void SetVerticalScrollPos() override {
+        window_.SetScrollPos(wxVERTICAL, static_cast<int>(topLine));
+        UpdateSystemCaret();
+    }
     void Copy(bool) const override {}
     void CopyToClipboard(const core::SelectionText&) const override {}
     void Paste(bool) override {}
@@ -105,13 +197,19 @@ private:
     }
     void StartDrag() override {}
     bool FineTickerRunning(TickReason reason) const noexcept override {
+        if (reason == TickReason::scroll) return window_.scrollTimer_.IsRunning();
+        if (reason == TickReason::widen) return window_.widenTimer_.IsRunning();
         return reason == TickReason::caret && window_.caretTimer_.IsRunning();
     }
     void FineTickerStart(TickReason reason, int millis, int) noexcept override {
         if (reason == TickReason::caret) window_.caretTimer_.Start(millis);
+        else if (reason == TickReason::scroll) window_.scrollTimer_.Start(millis);
+        else if (reason == TickReason::widen) window_.widenTimer_.Start(millis);
     }
     void FineTickerCancel(TickReason reason) noexcept override {
         if (reason == TickReason::caret) window_.caretTimer_.Stop();
+        else if (reason == TickReason::scroll) window_.scrollTimer_.Stop();
+        else if (reason == TickReason::widen) window_.widenTimer_.Stop();
     }
     bool SetIdle(bool) noexcept override { return false; }
     void SetMouseCapture(bool on) noexcept override {
@@ -128,8 +226,8 @@ private:
 };
 
 EditorControl::EditorControl(wxWindow* parent)
-    : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_SIMPLE | wxWANTS_CHARS),
-      caretTimer_(this) {
+    : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_SIMPLE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
+      caretTimer_(this), scrollTimer_(this), widenTimer_(this) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
 #ifdef __WXMSW__
     SetCaret(new wxCaret(this, 1, 1));
@@ -148,11 +246,29 @@ EditorControl::EditorControl(wxWindow* parent)
     });
     Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) { Send(Message::SetFocus, 0); Refresh(false); event.Skip(); });
     Bind(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickCaret(); }, caretTimer_.GetId());
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickScroll(); }, scrollTimer_.GetId());
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickWiden(); }, widenTimer_.GetId());
+    Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    Bind(wxEVT_MOTION, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    Bind(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) { core_->CaptureLost(); });
+    Bind(wxEVT_MOUSEWHEEL, [this](wxMouseEvent& event) { core_->Wheel(event); });
+    const auto scroll = [this](wxScrollWinEvent& event) { core_->Scroll(event); };
+    Bind(wxEVT_SCROLLWIN_TOP, scroll);
+    Bind(wxEVT_SCROLLWIN_BOTTOM, scroll);
+    Bind(wxEVT_SCROLLWIN_LINEUP, scroll);
+    Bind(wxEVT_SCROLLWIN_LINEDOWN, scroll);
+    Bind(wxEVT_SCROLLWIN_PAGEUP, scroll);
+    Bind(wxEVT_SCROLLWIN_PAGEDOWN, scroll);
+    Bind(wxEVT_SCROLLWIN_THUMBTRACK, scroll);
+    Bind(wxEVT_SCROLLWIN_THUMBRELEASE, scroll);
     Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {
+        if (!event.AltDown() && core_->Navigation(event.GetKeyCode(), event.ControlDown(), event.ShiftDown())) return;
         Message command{};
         if (event.ControlDown() && !event.AltDown()) {
             if (event.GetKeyCode() == 'Z') command = event.ShiftDown() ? Message::Redo : Message::Undo;
             else if (event.GetKeyCode() == 'Y') command = Message::Redo;
+            else if (event.GetKeyCode() == 'A') command = Message::SelectAll;
         } else if (!event.AltDown() && !event.ShiftDown()) {
             switch (event.GetKeyCode()) {
             case WXK_RETURN: case WXK_NUMPAD_ENTER: command = Message::NewLine; break;
