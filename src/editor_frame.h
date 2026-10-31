@@ -34,6 +34,8 @@ private:
     EditorControl* editor_;
     DocumentSession document_;
     SyntaxLanguage language_ = SyntaxLanguage::PlainText;
+    std::optional<SyntaxLanguage> languageOverride_;
+    int automaticLanguageId_;
     wxDialog* findDialog_ = nullptr;
     wxTextCtrl* findQuery_ = nullptr;
     SearchOptions searchOptions_;
@@ -65,6 +67,7 @@ private:
     void Search(bool forward);
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
+    void ChooseLanguage(std::optional<SyntaxLanguage> language);
     void RefreshLanguageAfterSave(const wxString& previousPath, const SaveResult& result);
     bool ConfirmDiscardChanges(const wxString& action);
     GbkLossChoice ConfirmGbkLoss();
