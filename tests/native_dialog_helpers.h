@@ -2,18 +2,55 @@
 
 #include <wx/defs.h>
 #include <wx/string.h>
+#include <stdexcept>
 #ifdef __WXMSW__
 #include <windows.h>
 #elif defined(__WXGTK__)
 #include <wx/filename.h>
 #include <gtk/gtk.h>
-#include <stdexcept>
 #endif
 
 // Low-level operations on native modal widgets owned by the calling test.
 // Drivers retain their own dialog recognition, timer stages and assertions.
 namespace NativeDialogs {
 #ifdef __WXMSW__
+inline void ChooseFileType(HWND window, const wxString& choice) {
+    struct Selection {
+        const wxString& name;
+        bool found = false;
+        wxString observed;
+    } selection{choice};
+    EnumChildWindows(
+        window,
+        [](HWND child, LPARAM data) -> BOOL {
+            auto& selection = *reinterpret_cast<Selection*>(data);
+            wchar_t type[64]{};
+            GetClassNameW(child, type, 64);
+            if (!IsWindowVisible(child) || wxString(type) != "ComboBox") return TRUE;
+            const auto count = SendMessageW(child, CB_GETCOUNT, 0, 0);
+            selection.observed +=
+                wxString::Format(" ComboBox[id=%d,count=%lld]", GetDlgCtrlID(child), static_cast<long long>(count));
+            for (LRESULT index = 0; index < count; ++index) {
+                const auto length = SendMessageW(child, CB_GETLBTEXTLEN, static_cast<WPARAM>(index), 0);
+                if (length < 0 || length >= 1024) continue;
+                wchar_t label[1024]{};
+                SendMessageW(child, CB_GETLBTEXT, static_cast<WPARAM>(index), reinterpret_cast<LPARAM>(label));
+                if (selection.observed.length() < 768) selection.observed += " {" + wxString(label).Left(96) + "}";
+                if (!wxString(label).StartsWith(selection.name + " (")) continue;
+                SendMessageW(child, CB_SETCURSEL, static_cast<WPARAM>(index), 0);
+                SendMessageW(GetParent(child), WM_COMMAND, MAKEWPARAM(GetDlgCtrlID(child), CBN_SELCHANGE),
+                             reinterpret_cast<LPARAM>(child));
+                selection.found = true;
+                return FALSE;
+            }
+            return TRUE;
+        },
+        reinterpret_cast<LPARAM>(&selection));
+    if (!selection.found)
+        throw std::runtime_error(
+            ("Owned native file-type selector missing " + choice + "; observed:" + selection.observed.Left(1024))
+                .ToStdString());
+}
 inline void ChooseFile(HWND window, const wxString& destination) {
     if (destination.empty())
         SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
@@ -34,6 +71,17 @@ inline void ChooseFile(HWND window, const wxString& destination) {
     }
 }
 #elif defined(__WXGTK__)
+inline void ChooseFileType(GtkWidget* widget, const wxString& choice) {
+    GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
+    GtkFileFilter* selected = nullptr;
+    for (GSList* item = filters; item; item = item->next) {
+        auto* filter = GTK_FILE_FILTER(item->data);
+        if (wxString::FromUTF8(gtk_file_filter_get_name(filter)).StartsWith(choice + " (")) selected = filter;
+    }
+    g_slist_free(filters);
+    if (!selected) throw std::runtime_error("native file-type selector must expose requested choice");
+    gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(widget), selected);
+}
 inline void Respond(GtkWidget* dialog, int response) {
     auto* button = gtk_dialog_get_widget_for_response(GTK_DIALOG(dialog), response);
     if (!button || !GTK_IS_BUTTON(button)) throw std::runtime_error("native dialog must expose the expected button");

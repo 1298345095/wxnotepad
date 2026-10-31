@@ -7,6 +7,43 @@
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
+#include <vector>
+
+namespace {
+struct ChosenSaveFile {
+    wxString path;
+    SaveFileType type;
+};
+
+std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
+                                             const wxString& path) {
+    wxString wildcard;
+    std::vector<SaveFileType> types;
+    const auto addLanguage = [&](const SyntaxDefinition& definition, bool current) {
+        wxArrayString patterns;
+        for (const auto* extension : definition.extensions)
+            patterns.Add("*." + wxString(extension));
+        const auto extension = wxFileName(path).GetExt();
+        if (current && !extension.empty() && patterns.Index("*." + extension, false) == wxNOT_FOUND)
+            patterns.Add("*." + extension);
+        const auto pattern = wxJoin(patterns, ';');
+        wildcard += wxString(definition.name) + " (" + pattern + ")|" + pattern + "|";
+        types.emplace_back(definition.language);
+    };
+    addLanguage(SyntaxFor(currentLanguage), true);
+    for (const auto& definition : SyntaxCatalog()) {
+        if (definition.language != currentLanguage) addLanguage(definition, false);
+    }
+    wildcard += "All Files (*)|*";
+    types.emplace_back(SaveType::AllFiles);
+    const wxFileName current(path);
+    wxFileDialog dialog(parent, title, current.GetPath(), current.GetFullName(), wildcard,
+                        wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+    dialog.SetFilterIndex(0);
+    if (dialog.ShowModal() != wxID_OK) return std::nullopt;
+    return ChosenSaveFile{dialog.GetPath(), types.at(static_cast<size_t>(dialog.GetFilterIndex()))};
+}
+} // namespace
 
 EditorFrame::EditorFrame()
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
@@ -371,9 +408,11 @@ void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
     UpdateDocumentState();
 }
 
-SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
-    const auto result = document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
-    if (result.status == SaveStatus::Saved) GetMenuBar()->Check(automaticLanguageId_, true);
+SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
+                                  SaveFileType fileType) {
+    const auto result =
+        document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
 }
@@ -384,25 +423,24 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
         UpdateDocumentState();
         return result;
     }
-    wxFileDialog dialog(this, "Save file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
-                        wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-    if (dialog.ShowModal() != wxID_OK) return SaveFirst(std::nullopt, decideLoss);
-    return SaveFirst(dialog.GetPath(), decideLoss);
+    const auto chosen = ChooseSaveFile(this, "Save file", document_.Language(), document_.Path());
+    if (!chosen) return SaveFirst(std::nullopt, decideLoss);
+    return SaveFirst(chosen->path, decideLoss, chosen->type);
 }
 
-SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
-    const auto result = document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
-    if (result.status == SaveStatus::Saved) GetMenuBar()->Check(automaticLanguageId_, true);
+SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
+                               SaveFileType fileType) {
+    const auto result =
+        document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
 }
 
 SaveResult EditorFrame::SaveAs() {
-    const wxFileName current(document_.Path());
-    wxFileDialog dialog(this, "Save As", current.GetPath(), current.GetFullName(),
-                        "Text files (*.txt)|*.txt|All files (*.*)|*.*", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-    if (dialog.ShowModal() != wxID_OK) return SaveAs(std::nullopt);
-    return SaveAs(dialog.GetPath());
+    const auto chosen = ChooseSaveFile(this, "Save As", document_.Language(), document_.Path());
+    if (!chosen) return SaveAs(std::nullopt);
+    return SaveAs(chosen->path, {}, chosen->type);
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {

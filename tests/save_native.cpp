@@ -60,6 +60,7 @@ public:
     int choosers = 0;
     int confirmations = 0;
     int errors = 0;
+    wxString selectedType;
     void Notify() override {
 #ifdef __WXMSW__
         EnumThreadWindows(
@@ -74,6 +75,7 @@ public:
                 if (wxString(title) == "Save As" || wxString(title) == "Save file") {
                     if (!driver.stage_++) {
                         ++driver.choosers;
+                        if (!driver.selectedType.empty()) NativeDialogs::ChooseFileType(window, driver.selectedType);
                         NativeDialogs::ChooseFile(window, driver.destination_);
                     } else if (driver.cancelChooser_)
                         SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
@@ -96,6 +98,7 @@ public:
             if (GTK_IS_FILE_CHOOSER(widget)) {
                 if (!stage_++) {
                     ++choosers;
+                    if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
                     NativeDialogs::ChooseFile(widget, destination_);
                 } else if (cancelChooser_)
                     Respond(widget, GTK_RESPONSE_CANCEL);
@@ -179,9 +182,8 @@ public:
                 accept.Stop();
                 Require(accept.choosers == 1 && accept.confirmations == 0 && frame->DocumentPath() == Filename(copy),
                         "native new target must update identity");
-                Require(!frame->GetStatusBar()->GetStatusText().Contains("override") &&
-                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
-                        "native Save As must return to Automatic after successful naming");
+                Require(hasOverride("C/C++"),
+                        "native Save As default current type must retain C++ despite the returned .txt name");
                 Require(Bytes(copy) == "\xef\xbb\xbf"
                                        "Native 中文\r\nsecond\nthird\rpending" &&
                             Bytes(source) == "\xef\xbb\xbf"
@@ -195,6 +197,7 @@ public:
                     std::ofstream(target, std::ios::binary) << "sentinel";
                 }
                 NativeDriver reject(Filename(target), false);
+                reject.selectedType = "JSON";
                 Command(frame, wxID_SAVEAS);
                 reject.Stop();
                 Require(reject.choosers == 1 && reject.confirmations == 1 && Bytes(target) == "sentinel",
@@ -216,10 +219,8 @@ public:
                 NativeDriver samePath(Filename(target));
                 Command(frame, wxID_SAVEAS);
                 samePath.Stop();
-                Require(samePath.choosers == 1 && samePath.confirmations == 1 &&
-                            !frame->GetStatusBar()->GetStatusText().Contains("override") &&
-                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
-                        "explicit native Save As to the same pathname must clear the manual choice");
+                Require(samePath.choosers == 1 && samePath.confirmations == 1 && hasOverride("Plain Text"),
+                        "explicit native Save As to the same pathname must retain the selected current Plain type");
                 choose("JSON");
                 Add(frame, " failure");
 #ifdef __WXMSW__
@@ -228,6 +229,7 @@ public:
                 Require(sourceLock != INVALID_HANDLE_VALUE, "must lock Save As target against replacement");
 #endif
                 NativeDriver failedAs(Filename(source), true, true);
+                failedAs.selectedType = "C/C++";
                 Command(frame, wxID_SAVEAS);
                 failedAs.Stop();
 #ifdef __WXMSW__

@@ -44,6 +44,7 @@ class NativeDriver final : public wxTimer {
 public:
     explicit NativeDriver(int choice, wxString path = {}) : choice_(choice), path_(path) { Start(150); }
     int losses = 0, choosers = 0, errors = 0;
+    wxString selectedType;
     void Notify() override {
 #ifdef __WXMSW__
         EnumThreadWindows(
@@ -81,6 +82,7 @@ public:
                 } else if (wxString(title) == "Open file" || wxString(title) == "Save As") {
                     if (!driver.stage_++) {
                         ++driver.choosers;
+                        if (!driver.selectedType.empty()) NativeDialogs::ChooseFileType(window, driver.selectedType);
                         NativeDialogs::ChooseFile(window, driver.path_);
                     }
                 } else if (wxString(title) == "Could not save file" || wxString(title) == "Could not open file") {
@@ -98,6 +100,7 @@ public:
             if (GTK_IS_FILE_CHOOSER(widget)) {
                 if (!stage_++) {
                     ++choosers;
+                    if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
                     NativeDialogs::ChooseFile(widget, path_);
                 } else if (stage_ == 2 && !path_.empty())
                     Respond(widget, GTK_RESPONSE_ACCEPT);
@@ -172,6 +175,7 @@ public:
                         "cancelled native Save As must not prompt about loss or change bytes/text");
                 const auto cancelled = directory / "cancelled.CPP";
                 NativeDriver cancelLoss(wxID_CANCEL, Filename(cancelled));
+                cancelLoss.selectedType = "JSON";
                 Command(frame, wxID_SAVEAS);
                 cancelLoss.Stop();
                 Require(cancelLoss.choosers == 1 && cancelLoss.losses == 1 && !std::filesystem::exists(cancelled) &&
@@ -208,10 +212,9 @@ public:
                 Require(
                     utf8.choosers == 1 && utf8.losses == 1 && Bytes(target) == fallback &&
                         frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentHasBom() &&
-                        frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")) &&
-                        frame->GetStatusBar()->GetStatusText().Contains("C/C++") &&
-                        !frame->GetStatusBar()->GetStatusText().Contains("override"),
-                    "native Save As UTF8 must retain all text without BOM and change encoding only on success");
+                        frame->GetMenuBar()->IsChecked(python) &&
+                        frame->GetStatusBar()->GetStatusText().Contains("Python (override)"),
+                    "native Save As UTF8 must retain bytes without BOM and force selected current Python despite .CPP");
                 const auto invalid = directory / "invalid.txt";
                 {
                     std::ofstream stream(invalid, std::ios::binary);

@@ -17,12 +17,13 @@ template <size_t N> constexpr auto Keywords(const char* const (&text)[N], uintpt
 constexpr auto cppLists = Keywords(cppKeywords, 0);
 constexpr auto pythonLists = Keywords(pythonKeywords, 2U << 8U);
 constexpr auto jsonLists = Keywords(jsonKeywords, jsonKeywordAttributes);
+constexpr const char* textExtensions[] = {"txt"};
 constexpr const char* cppExtensions[] = {"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"};
 constexpr const char* pythonExtensions[] = {"py", "pyw", "pyi"};
 constexpr const char* jsonExtensions[] = {"json"};
 constexpr SyntaxProperty cppProperties[] = {{"lexer.lang", "0"}};
 constexpr SyntaxDefinition definitions[] = {
-    {"Plain Text", {}, {}, {}, {}, SCLEX_NULL, SyntaxLanguage::PlainText, false},
+    {"Plain Text", textExtensions, {}, {}, {}, SCLEX_NULL, SyntaxLanguage::PlainText, false},
     {"C/C++", cppExtensions, cppLists, cppStyles, cppProperties, SCLEX_CPP, SyntaxLanguage::Cpp, true},
     {"Python", pythonExtensions, pythonLists, pythonStyles, {}, SCLEX_PYTHON, SyntaxLanguage::Python, true},
     {"JSON", jsonExtensions, jsonLists, jsonStyles, {}, SCLEX_JSON, SyntaxLanguage::Json, true},

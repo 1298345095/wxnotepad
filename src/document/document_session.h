@@ -5,11 +5,15 @@
 #include <optional>
 #include <functional>
 #include <string>
+#include <variant>
 
 class EditorControl;
 enum class FileEncoding { Utf8, Utf16Le, Gbk };
 enum class GbkLossChoice { Cancel, Utf8, Replace };
 using GbkLossDecision = std::function<GbkLossChoice()>;
+// The dialog adapter translates its native filter index into this semantic choice.
+enum class SaveType : uint8_t { CurrentScheme, AllFiles };
+using SaveFileType = std::variant<SaveType, SyntaxLanguage>;
 
 enum class SaveStatus { Saved, Cancelled, Failed };
 struct SaveResult {
@@ -28,9 +32,11 @@ public:
     explicit DocumentSession(EditorControl& editor) : editor_(editor) {}
     const wxString& Path() const { return path_; }
     // A chosen path represents the caller's approved destination; no path is Cancel.
-    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+                         SaveFileType fileType = SaveType::CurrentScheme);
     SaveResult Save(const GbkLossDecision& decideLoss = {});
-    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+                      SaveFileType fileType = SaveType::CurrentScheme);
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt);
     void New();
@@ -47,6 +53,7 @@ private:
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
     std::optional<SyntaxLanguage> languageOverride_;
-    SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss, bool identifyLanguage = false);
+    SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
+                      std::optional<SaveFileType> fileType = std::nullopt);
     void Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom);
 };

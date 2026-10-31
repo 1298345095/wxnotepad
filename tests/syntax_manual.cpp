@@ -189,9 +189,9 @@ public:
                         "cancelled and failed first Save must preserve the unnamed dirty document");
                 Language(frame, true, true);
                 FileCommand(frame, wxID_SAVE, Filename(plain));
-                Language(frame, false, false);
-                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
-                        "successful first Save must select Automatic after identifying the filename");
+                Language(frame, true, true);
+                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "C/C++")),
+                        "successful first Save must retain selected current C++ type despite .txt");
                 Require(Bytes(plain) == source && !editor->Send(Message::GetModify),
                         "first Save with override must retain exact text and its save point");
                 Choose(frame, "C/C++");
@@ -199,9 +199,9 @@ public:
                 Language(frame, true, true);
                 Choose(frame, "Plain Text");
                 FileCommand(frame, wxID_SAVEAS, Filename(cpp));
-                Language(frame, true, false);
-                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
-                        "successful explicit Save As must check Automatic");
+                Language(frame, false, true);
+                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Plain Text")),
+                        "named Plain Text default type must force Plain Text despite .cpp");
                 Require(Bytes(cpp) == source && editor->Send(Message::CanUndo),
                         "Save As with explicit Plain Text must retain exact bytes and Undo");
                 Choose(frame, "Plain Text");
@@ -213,8 +213,8 @@ public:
                 Language(frame, false, true);
                 Choose(frame, "Automatic");
                 Language(frame, true, false);
-                std::puts(
-                    "PASS: naming selects Automatic; ordinary Save and failed/cancelled Save As retain overrides");
+                std::puts("PASS: naming honors the current type; ordinary Save and failed/cancelled Save As retain "
+                          "overrides");
                 Choose(frame, "Plain Text");
                 editor->Send(Message::GotoPos, source.size());
                 editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("x"));

@@ -100,10 +100,14 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 
 Unknown extensions and unnamed documents use Plain Text. The Language menu offers
 Automatic, Plain Text and each supported language. A manual choice applies to the
-current document. Successful New/Open, first Save and every explicit Save As
-restore Automatic and resolve the language from the filename. This includes Save
-As to an unchanged extension or the same pathname. Ordinary Save retains the
-current choice; failed or cancelled file operations retain it too. The status bar
+current document. Successful New/Open restore Automatic. First Save and Save As
+offer the current scheme first, the other supported types, and All Files last.
+A specific type chooses that language even when the filename differs; All Files
+restores Automatic and resolves from the filename. For an untitled document whose
+current and selected types are both Plain Text (the default), the filename also
+selects the language. Named Plain Text documents keep the selected Plain Text type.
+These rules also apply to unchanged extensions and identical paths. Ordinary Save
+retains the current choice; failed or cancelled file operations retain it too. The status bar
 shows the effective language and an explicit override alongside encoding/BOM.
 Highlighting continues to follow the selected language above 32 MiB. Select Plain
 Text to use the existing no-lexer path. See the

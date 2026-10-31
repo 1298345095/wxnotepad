@@ -183,15 +183,20 @@ public:
                 Style(frame, source, "name", SCE_JSON_PROPERTYNAME);
                 const auto plain = directory / "manual.txt";
                 FileCommand(frame, wxID_SAVEAS, plain);
-                Require(Bytes(plain) == source && frame->GetStatusBar()->GetStatusText().Contains("Plain Text") &&
-                            !frame->GetStatusBar()->GetStatusText().Contains("override") &&
-                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
-                        "native Save As must clear manual JSON and identify .txt while retaining exact bytes");
+                Require(Bytes(plain) == source && frame->GetStatusBar()->GetStatusText().Contains("JSON (override)") &&
+                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "JSON")),
+                        "native Save As current JSON type must retain JSON despite .txt and preserve exact bytes");
                 Choose(frame, "Automatic");
                 Require(editor->Send(Message::GetLexer) == SCLEX_NULL,
                         "Automatic must follow the .txt path immediately");
                 const auto automatic = directory / "automatic.JSON";
                 FileCommand(frame, wxID_SAVEAS, automatic);
+                Require(editor->Send(Message::GetLexer) == SCLEX_NULL &&
+                            frame->GetStatusBar()->GetStatusText().Contains("Plain Text (override)"),
+                        "named Plain Text default type must force Plain Text despite .JSON");
+                Require(frame->SaveAs(Filename(automatic), {}, SaveType::AllFiles).status == SaveStatus::Saved,
+                        "explicit All Files on the same pathname must use filename classification");
+                Paint(frame);
                 Style(frame, source, "name", SCE_JSON_PROPERTYNAME);
                 Require(Bytes(automatic) == source && !frame->GetStatusBar()->GetStatusText().Contains("override"),
                         "Automatic Save As must adopt JSON without creating an override");
