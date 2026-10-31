@@ -100,10 +100,14 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 
 Unknown extensions and unnamed documents use Plain Text. The Language menu offers
 Automatic, Plain Text and each supported language. A manual choice applies to the
-current document and survives Save As; successful New/Open restores Automatic.
-Automatic follows the filename after a successful first Save or Save As. Failed
-or cancelled file operations retain the current choice. The status bar shows the
-effective language and an explicit override alongside encoding/BOM.
+current document. Successful New/Open, first Save and every explicit Save As
+restore Automatic and resolve the language from the filename. This includes Save
+As to an unchanged extension or the same pathname. Ordinary Save retains the
+current choice; failed or cancelled file operations retain it too. The status bar
+shows the effective language and an explicit override alongside encoding/BOM.
+Highlighting continues to follow the selected language above 32 MiB. Select Plain
+Text to use the existing no-lexer path. See the
+[original scheme behavior validation record](docs/observations/original-scheme-README.md).
 
 Highlighting uses the pinned original lexers, consumed keyword lists and default
 light syntax colors while retaining the native font and point size. Typing and
