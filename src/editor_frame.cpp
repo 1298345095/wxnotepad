@@ -42,6 +42,26 @@ EditorFrame::EditorFrame()
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
+    auto* languages = new wxMenu;
+    const auto addLanguage = [this, languages](const wxString& label, std::optional<SyntaxLanguage> language) {
+        const int id = wxWindow::NewControlId();
+        languages->AppendRadioItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, id, language](wxCommandEvent&) {
+                GetMenuBar()->Check(id, true);
+                ChooseLanguage(language);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI, [this, language](wxUpdateUIEvent& event) { event.Check(languageOverride_ == language); },
+            id);
+        return id;
+    };
+    automaticLanguageId_ = addLanguage("&Automatic", std::nullopt);
+    addLanguage("&Plain Text", SyntaxLanguage::PlainText);
+    addLanguage("&C/C++", SyntaxLanguage::Cpp);
+    menus->Append(languages, "&Language");
     SetMenuBar(menus);
     CreateStatusBar();
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(); }, wxID_FIND);
@@ -465,7 +485,18 @@ void EditorFrame::UpdateDocumentState() {
     const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
                               : document_.Encoding() == FileEncoding::Gbk   ? "GBK (CP936)"
                                                                             : "UTF-8";
-    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " + LanguageName(language_));
+    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " + LanguageName(language_) +
+                  (languageOverride_ ? " (override)" : ""));
+}
+
+void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
+    languageOverride_ = language;
+    const auto effective = languageOverride_.value_or(LanguageForPath(document_.Path()));
+    if (effective != language_) {
+        language_ = effective;
+        ApplySyntaxLanguage(*editor_, language_);
+    }
+    UpdateDocumentState();
 }
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
@@ -497,7 +528,7 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
 }
 
 void EditorFrame::RefreshLanguageAfterSave(const wxString& previousPath, const SaveResult& result) {
-    if (result.status != SaveStatus::Saved || previousPath == document_.Path()) return;
+    if (languageOverride_ || result.status != SaveStatus::Saved || previousPath == document_.Path()) return;
     const auto language = LanguageForPath(document_.Path());
     if (language == language_) return;
     language_ = language;
@@ -516,6 +547,8 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
+        languageOverride_.reset();
+        GetMenuBar()->Check(automaticLanguageId_, true);
         language_ = LanguageForPath(document_.Path());
         ApplySyntaxLanguage(*editor_, language_);
         regexMatch_.reset();
@@ -542,6 +575,8 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    languageOverride_.reset();
+    GetMenuBar()->Check(automaticLanguageId_, true);
     language_ = SyntaxLanguage::PlainText;
     ApplySyntaxLanguage(*editor_, language_);
     regexMatch_.reset();
