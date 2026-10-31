@@ -115,6 +115,7 @@ public:
                 std::string text;
                 for (int i = 0; i < 50; ++i)
                     text += "words\t中文😀 ";
+                const auto textEnd = static_cast<intptr_t>(text.size());
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
@@ -132,23 +133,23 @@ public:
                 NativeSearch::Selection(editor, 6, 18, "wrapping retains selection byte positions");
                 Require(editor->Send(Message::GetLineCount) == 1 && NativeSearch::Text(editor) == text,
                         "wrapping preserves logical lines and bytes");
-                editor->Send(Message::SetSel, 6, text.size());
+                editor->Send(Message::SetSel, 6, textEnd);
                 editor->Send(Message::ScrollCaret);
                 Layout(frame);
                 const auto rows = editor->Send(Message::WrapCount, 0);
                 frame->SetSize(280, 240);
                 Layout(frame);
                 Require(editor->Send(Message::WrapCount, 0) > rows, "resizing recomputes continuation rows");
-                const auto caretY = editor->Send(Message::PointYFromPosition, 0, text.size());
+                const auto caretY = editor->Send(Message::PointYFromPosition, 0, textEnd);
                 Require(caretY >= 0 && caretY + editor->Send(Message::TextHeight, 0) <= editor->GetClientSize().y,
                         "resizing wrapped text keeps the caret visible");
-                NativeSearch::Selection(editor, 6, text.size(), "resizing retains the selection byte range");
+                NativeSearch::Selection(editor, 6, textEnd, "resizing retains the selection byte range");
                 NativeSearch::Command(frame, wrap);
                 Layout(frame);
                 Require(!frame->GetMenuBar()->IsChecked(wrap) && editor->Send(Message::WrapCount, 0) == 1,
                         "native menu disables wrapping");
-                const auto unwrappedX = editor->Send(Message::PointXFromPosition, 0, text.size());
-                const auto unwrappedY = editor->Send(Message::PointYFromPosition, 0, text.size());
+                const auto unwrappedX = editor->Send(Message::PointXFromPosition, 0, textEnd);
+                const auto unwrappedY = editor->Send(Message::PointYFromPosition, 0, textEnd);
                 Require(unwrappedX >= 0 && unwrappedX < editor->GetClientSize().x && unwrappedY >= 0 &&
                             unwrappedY < editor->GetClientSize().y,
                         "turning wrapping off keeps the selected caret visible");
@@ -241,6 +242,7 @@ private:
         std::string comment = "// ";
         for (int repeat = 0; repeat < 40; ++repeat)
             comment += "space\t中文😀 ";
+        const auto commentEnd = static_cast<intptr_t>(comment.size());
         const std::string source = comment + "\nvoid outer() {\n  if (true) {\n    target();\n  }\n}\n"
                                              "void other() {\n  untouched();\n}\n";
         {
@@ -266,7 +268,7 @@ private:
         frame->SetSize(500, 400);
         Layout(frame);
         const auto foldWidth = editor->Send(Message::GetMarginWidthN, 1);
-        editor->Send(Message::SetSel, 2, comment.size());
+        editor->Send(Message::SetSel, 2, commentEnd);
         editor->Send(Message::ScrollCaret);
         NativeSearch::Command(frame, numbers);
         Layout(frame);
@@ -275,8 +277,8 @@ private:
                 "hiding numbers while wrapped preserves the fold margin");
         NativeSearch::Command(frame, numbers);
         Layout(frame);
-        NativeSearch::Selection(editor, 2, comment.size(), "number visibility preserves wrapped selection bytes");
-        const auto marginCaretY = editor->Send(Message::PointYFromPosition, 0, comment.size());
+        NativeSearch::Selection(editor, 2, commentEnd, "number visibility preserves wrapped selection bytes");
+        const auto marginCaretY = editor->Send(Message::PointYFromPosition, 0, commentEnd);
         Require(marginCaretY >= 0 && marginCaretY < editor->GetClientSize().y,
                 "changing number margin width keeps the wrapped caret visible");
         Require(editor->Send(Message::GetMarginWidthN, 0) > 0 && editor->Send(Message::GetViewWS) == 1,
