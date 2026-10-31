@@ -230,7 +230,7 @@ public:
                 Require(Text(editor) == singleStructural,
                         "single structural replacement Redo must restore inserted lines");
                 std::puts("PASS: literal and structural single replacement preserve visibility and history");
-                const auto replaceAll = [&](const char* find, const char* with, const std::string& expected,
+                const auto replaceAll = [&](const char* find, const wxString& with, const std::string& expected,
                                             const char* count) {
                     load(nested);
                     query->SetValue(find);

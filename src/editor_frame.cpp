@@ -357,13 +357,10 @@ void EditorFrame::Search(bool forward) {
         editor_->Send(Message::EnsureVisible, line);
     editor_->Send(Message::SetSel, matchStart, matchEnd);
     lastEmptyMatch_.reset();
-    if (searchOptions_.regularExpression &&
-        editor_->Send(Message::GetTargetStart) == editor_->Send(Message::GetTargetEnd))
-        lastEmptyMatch_ = EmptyMatch{editor_->Send(Message::GetTargetStart), editor_->DocumentRevision(),
-                                     editor_->SelectionRevision()};
+    if (searchOptions_.regularExpression && matchStart == matchEnd)
+        lastEmptyMatch_ = EmptyMatch{matchStart, editor_->DocumentRevision(), editor_->SelectionRevision()};
     if (searchOptions_.regularExpression)
-        regexMatch_ = RegexMatch{editor_->Send(Message::GetTargetStart), editor_->Send(Message::GetTargetEnd),
-                                 editor_->DocumentRevision(), editor_->SelectionRevision()};
+        regexMatch_ = RegexMatch{matchStart, matchEnd, editor_->DocumentRevision(), editor_->SelectionRevision()};
     editor_->Send(Message::ScrollCaret);
     SetStatusText(wrapped ? "Search wrapped" : "Match found");
 }
