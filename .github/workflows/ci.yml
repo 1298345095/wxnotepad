@@ -26,7 +26,7 @@ jobs:
             name: Windows MSVC
             artifact: windows-x64
           - os: ubuntu-24.04
-            name: Linux GCC / X11 + Wayland
+            name: Linux GCC 13 / X11 + Wayland
             artifact: linux-x64
     env:
       PYTHONUTF8: '1'
@@ -40,6 +40,13 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
+      - name: Test reproducible source preparation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/reports
+          python -m unittest discover -s tests -p test_build_preparation.py -v \
+            2>&1 | tee .ci/reports/source-preparation-tests.log
       - name: Set up dependencies
         uses: ./.github/actions/dependencies
       - name: Configure
@@ -69,7 +76,7 @@ jobs:
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: build-${{ matrix.artifact }}-${{ github.sha }}
+          name: build-${{ matrix.artifact }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: .ci/artifact/
           include-hidden-files: true
           if-no-files-found: error
@@ -78,12 +85,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: evidence-${{ matrix.artifact }}-${{ github.sha }}
+          name: evidence-${{ matrix.artifact }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .ci/reports/
             .ci/build/cmake/Testing/Temporary/
             .ci/build/cmake/CMakeFiles/CMakeConfigureLog.yaml
             .ci/build/original-core/wxnotepad-source.json
+            .ci/build/notepad4-source.tar
             .ci/vcpkg/buildtrees/**/*.log
             vcpkg.json
           include-hidden-files: true

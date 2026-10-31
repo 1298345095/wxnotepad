@@ -8,7 +8,7 @@ and retain shareable results; they do not replace local verification.
 
 | Workflow | Trigger | Work |
 | --- | --- | --- |
-| CI | Pull requests, pushes to main/codex branches, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC builds, all registered CTest tests, development build output |
+| CI | Pull requests, pushes to main/codex branches, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC 13 builds, all registered CTest tests, development build output |
 | Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 18 |
 | CodeQL | Same | Traced C++ application build and Actions configuration analysis, with results in GitHub Security |
 
@@ -32,12 +32,15 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
 - CI-only triplets build Release dependencies, avoiding unused Debug builds.
   Normal development triplets and the existing local installations are unchanged.
 - Binary packages and downloads are cached by OS, architecture, runner image and
-  manifest hash. vcpkg's own ABI keys validate restored packages. Cached installed
+  manifest/triplet/provisioning hashes. vcpkg's own ABI keys validate restored packages. Cached installed
   trees or application build directories are not reused between checkouts.
 - The dependency cache is saved after successful installation, before GUI tests.
   A later test failure therefore does not discard an expensive successful build.
 - Core preparation goes through the existing build tool and pinned archive/patch
-  checks. Application CMake configurations explicitly disable manifest installation
+  checks, with command-local LF conversion settings so a runner's Git autocrlf
+  configuration cannot change archive bytes. A real-Git regression test runs on
+  both hosts before dependency installation and also checks corrupted-archive rejection.
+  Application CMake configurations explicitly disable manifest installation
   and use the dependency tree provisioned by the workflow.
 - CodeQL initializes after dependency installation, then traces compilation of the
   application and original core. It does not trace the entire vcpkg build.
@@ -66,7 +69,8 @@ clang-tidy exports per-file diagnostics and a JSON summary. Evidence retention i
 30 days; important results should be downloaded before expiry. Development build
 output is retained for 14 days, including after a test failure if compilation
 succeeded. Each output includes source metadata, the executable SHA-256 and
-bundled dependency notices.
+bundled dependency notices. Artifact names include the run attempt so rerunning
+a failed job retains earlier evidence rather than overwriting it.
 
 The artifacts are development builds rather than the planned Windows ZIP release
 or Ubuntu installer. Windows DLLs are included beside the executable. Linux
@@ -86,6 +90,7 @@ For the additional checks:
 ```text
 python -X utf8 .github/scripts/checks.py format
 python -m compileall -q .github/scripts tools tests
+python -m unittest discover -s tests -p test_build_preparation.py -v
 actionlint
 python3 .github/scripts/checks.py tidy --build-dir /path/to/native/cmake-build
 ```

@@ -33,13 +33,17 @@ def prepare(build, source, archive):
         if revision != REVISION:
             raise RuntimeError("Original core revision does not match the pinned commit")
         archive = build / "notepad4-source.tar"
-        run(["git", "-C", source, "archive", "--format=tar", f"--output={archive}",
+        # Hosted Windows Git enables autocrlf; archive conversion must not change
+        # the bytes covered by the pinned source hash. Keep overrides per command.
+        run(["git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "-C", source,
+             "archive", "--format=tar", f"--output={archive}",
              REVISION, "scintilla", "License.txt"])
     # A supplied archive must be the exact git archive of the pinned paths.
     archive_digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     expected = (ROOT / "patches/source.sha256").read_text(encoding="utf-8").strip()
     if archive_digest != expected:
-        raise RuntimeError("Original source archive SHA-256 does not match the pinned source")
+        raise RuntimeError(f"Original source archive SHA-256 does not match the pinned source: "
+                           f"expected {expected}, got {archive_digest}")
     record = {"revision": REVISION, "archive_sha256": archive_digest,
               "patch_sha256": hashlib.sha256(patch.read_bytes()).hexdigest(),
               "preparation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
