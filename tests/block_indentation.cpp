@@ -187,7 +187,7 @@ void SavedBytes(EditorFrame* frame) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         {
             std::ofstream file(path, std::ios::binary);
-            file.write(fixture.before.data(), fixture.before.size());
+            file.write(fixture.before.data(), static_cast<std::streamsize>(fixture.before.size()));
         }
         editor->Send(Message::SetSavePoint);
         Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,

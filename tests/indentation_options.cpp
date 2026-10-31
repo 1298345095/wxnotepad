@@ -104,9 +104,9 @@ public:
                     wrapped += "x\t";
                 wrapped += "end";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(wrapped.c_str()));
-                editor->Send(Message::SetSel, 3, wrapped.size());
+                editor->Send(Message::SetSel, 3, static_cast<intptr_t>(wrapped.size()));
                 NativeSearch::Command(frame, Option(frame, "8 Columns"));
-                const auto y = editor->Send(Message::PointYFromPosition, 0, wrapped.size());
+                const auto y = editor->Send(Message::PointYFromPosition, 0, static_cast<intptr_t>(wrapped.size()));
                 Require(editor->Send(Message::GetAnchor) == 3 &&
                             editor->Send(Message::GetCurrentPos) == static_cast<intptr_t>(wrapped.size()) && y >= 0 &&
                             y + editor->Send(Message::TextHeight, 0) <= editor->GetClientSize().y,
@@ -116,7 +116,7 @@ public:
                 editor->Send(Message::SetSavePoint);
                 editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
                 editor->Send(Message::Undo);
-                editor->Send(Message::SetSel, 3, wrapped.size());
+                editor->Send(Message::SetSel, 3, static_cast<intptr_t>(wrapped.size()));
                 const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
                 const auto eol = editor->Send(Message::GetEOLMode);
                 for (const auto* label : {"Spaces", "2 Columns", "Tabs", "4 Columns", "8 Columns"}) {
