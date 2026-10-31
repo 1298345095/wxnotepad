@@ -12,6 +12,10 @@ EditorFrame::EditorFrame()
     auto* edit = new wxMenu;
     edit->Append(wxID_UNDO, "&Undo\tCtrl+Z");
     edit->Append(wxID_REDO, "&Redo\tCtrl+Y");
+    edit->AppendSeparator();
+    edit->Append(wxID_CUT, "Cu&t\tCtrl+X");
+    edit->Append(wxID_COPY, "&Copy\tCtrl+C");
+    edit->Append(wxID_PASTE, "&Paste\tCtrl+V");
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
@@ -26,6 +30,17 @@ EditorFrame::EditorFrame()
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Redo); }, wxID_REDO);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanUndo)); }, wxID_UNDO);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanRedo)); }, wxID_REDO);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Copy); }, wxID_COPY);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Cut); }, wxID_CUT);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Paste); }, wxID_PASTE);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) {
+        event.Enable(editor_->Send(Scintilla::Message::GetSelectionStart) != editor_->Send(Scintilla::Message::GetSelectionEnd));
+    }, wxID_COPY);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) {
+        event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
+            editor_->Send(Scintilla::Message::GetSelectionStart) != editor_->Send(Scintilla::Message::GetSelectionEnd));
+    }, wxID_CUT);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanPaste)); }, wxID_PASTE);
     Bind(wxEVT_EDITOR_STATE_CHANGED, [this](wxCommandEvent&) { UpdateDocumentState(); });
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
         if (event.CanVeto() && editor_->Send(Scintilla::Message::GetModify)) {
