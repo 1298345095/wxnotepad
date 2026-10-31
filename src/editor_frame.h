@@ -6,6 +6,7 @@
 class EditorControl;
 class wxDialog;
 class wxTextCtrl;
+class wxCheckBox;
 
 class EditorFrame final : public wxFrame {
 public:
@@ -29,8 +30,11 @@ private:
     DocumentSession document_;
     wxDialog* findDialog_ = nullptr;
     wxTextCtrl* findQuery_ = nullptr;
+    wxCheckBox* wrapAround_ = nullptr;
     void ShowFind();
     void FindNext();
+    void FindPrevious();
+    void Find(bool forward);
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     bool ConfirmDiscardChanges(const wxString& action);
