@@ -25,20 +25,8 @@ void Layout(EditorFrame* frame) {
 }
 void Shortcut(EditorFrame* frame) {
 #ifdef __WXMSW__
-    BYTE previous[256];
-    Require(GetKeyboardState(previous), "read the owned thread's keyboard state");
-    BYTE modifiers[256];
-    std::copy(std::begin(previous), std::end(previous), std::begin(modifiers));
-    modifiers[VK_CONTROL] = 0x80;
-    modifiers[VK_SHIFT] = 0x80;
-    Require(SetKeyboardState(modifiers), "set the owned thread's shortcut modifiers");
-    MSG message{};
-    message.hwnd = static_cast<HWND>(frame->GetHandle());
-    message.message = WM_KEYDOWN;
-    message.wParam = 'W';
-    const bool handled = frame->MSWTranslateMessage(&message);
-    SetKeyboardState(previous);
-    Require(handled, "native window translates Ctrl+Shift+W");
+    Require(NativeSearch::WindowsShortcut(frame, 'W', {{VK_CONTROL, 0x80}, {VK_SHIFT, 0x80}}),
+            "native window translates Ctrl+Shift+W");
 #elif defined(__WXGTK__)
     auto* widget = GTK_WIDGET(frame->GetHandle());
     auto* event = gdk_event_new(GDK_KEY_PRESS);

@@ -6,13 +6,34 @@
 #include <wx/wx.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
+#include <algorithm>
 #include <cstdio>
+#include <initializer_list>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 // Native operations target only widgets owned by each independent search test.
 // Test cases and expected document bytes remain in their own GUI processes.
 namespace NativeSearch {
+#ifdef __WXMSW__
+inline bool WindowsShortcut(wxWindow* window, int key, std::initializer_list<std::pair<int, BYTE>> modifiers) {
+    BYTE previous[256];
+    if (!GetKeyboardState(previous)) throw std::runtime_error("must read this test thread's keyboard state");
+    BYTE modified[256];
+    std::copy(std::begin(previous), std::end(previous), std::begin(modified));
+    for (const auto& [modifier, state] : modifiers)
+        modified[modifier] = state;
+    if (!SetKeyboardState(modified)) throw std::runtime_error("must set this test thread's shortcut modifiers");
+    MSG message{};
+    message.hwnd = static_cast<HWND>(window->GetHandle());
+    message.message = WM_KEYDOWN;
+    message.wParam = key;
+    const bool handled = wxGetTopLevelParent(window)->MSWTranslateMessage(&message);
+    SetKeyboardState(previous);
+    return handled;
+}
+#endif
 inline void Command(EditorFrame* frame, int id) {
     // Opening a native menu refreshes command enablement before dispatch. Do
     // the same when sending a command directly to this test's owned frame.

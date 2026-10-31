@@ -11,19 +11,8 @@ void Require(bool condition, const char* message) {
 }
 void Shortcut(wxWindow* window) {
 #ifdef __WXMSW__
-    BYTE previous[256];
-    Require(GetKeyboardState(previous), "must read this test thread's keyboard state");
-    BYTE modifiers[256];
-    std::copy(std::begin(previous), std::end(previous), std::begin(modifiers));
-    modifiers[VK_CONTROL] = modifiers[VK_SHIFT] = 0x80;
-    Require(SetKeyboardState(modifiers), "must set this test thread's shortcut modifiers");
-    MSG message{};
-    message.hwnd = static_cast<HWND>(window->GetHandle());
-    message.message = WM_KEYDOWN;
-    message.wParam = 'N';
-    const bool handled = wxGetTopLevelParent(window)->MSWTranslateMessage(&message);
-    SetKeyboardState(previous);
-    Require(handled, "the owned native window must translate Ctrl+Shift+N");
+    Require(NativeSearch::WindowsShortcut(window, 'N', {{VK_CONTROL, 0x80}, {VK_SHIFT, 0x80}}),
+            "the owned native window must translate Ctrl+Shift+N");
 #elif defined(__WXGTK__)
     auto* widget = GTK_WIDGET(window->GetHandle());
     auto* event = gdk_event_new(GDK_KEY_PRESS);
