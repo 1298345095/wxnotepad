@@ -45,7 +45,7 @@ wxString LanguageName(SyntaxLanguage language) {
 }
 
 bool LanguageCanFold(SyntaxLanguage language) {
-    return language == SyntaxLanguage::Cpp || language == SyntaxLanguage::Json;
+    return language == SyntaxLanguage::Cpp || language == SyntaxLanguage::Python || language == SyntaxLanguage::Json;
 }
 
 void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
