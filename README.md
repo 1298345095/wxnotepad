@@ -20,6 +20,17 @@ The editor supports keyboard navigation, Shift selection, mouse selection and
 scrolling, plus native system clipboard Cut/Copy/Paste and their Ctrl+X/C/V
 shortcuts. Clipboard edits participate in the same Undo/Redo history.
 
+Edit → Go To Line / Ctrl+G navigates to an absolute, 1-based document line and
+reveals its folded ancestors. The dialog validates the current line range;
+Cancel retains the previous selection, viewport and folds.
+
+View → Line Numbers / Ctrl+Shift+N toggles a margin sized for the current line
+count, font and display scale. View → Word Wrap / Ctrl+Shift+W wraps long lines
+to the window width without changing newline bytes. View → Show Whitespace /
+Ctrl+Shift+8 displays spaces and tabs. Line numbers start on; wrapping and
+whitespace markers start off. These choices stay with the current window through
+New, Open, Save As and language changes; they are not saved between runs.
+
 Edit → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
 Shift+F3 finds the previous match. Wrap around is enabled by default, while
 Match case, Whole word and Regular expression are initially off. Find and

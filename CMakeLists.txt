@@ -114,6 +114,7 @@ if(BUILD_TESTING)
     add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
     add_editor_test(editor_smoke editor_input_undo 30)
     add_editor_test(font_smoke native_font_metrics 20)
+    add_editor_test(word_wrap word_wrap_view 60)
     target_include_directories(font_smoke PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     add_gui_program(display_smoke tests/display_smoke.cpp app_shell)

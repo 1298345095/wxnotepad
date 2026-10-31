@@ -59,6 +59,12 @@ EditorFrame::EditorFrame()
         addLanguage("&" + wxString(definition.name), definition.language);
     menus->Append(languages, "&Language");
     auto* view = new wxMenu;
+    const int wordWrap = wxWindow::NewControlId();
+    view->AppendCheckItem(wordWrap, "&Word Wrap\tCtrl+Shift+W");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleWordWrap(); }, wordWrap);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetWrapMode) != 0); }, wordWrap);
     const int lineNumbers = wxWindow::NewControlId();
     view->AppendCheckItem(lineNumbers, "Line &Numbers\tCtrl+Shift+N");
     Bind(
@@ -206,7 +212,10 @@ void EditorFrame::ShowFind(bool replace) {
 }
 
 void EditorFrame::OnSearchKey(wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+    if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+        editor_->ToggleWordWrap();
+    else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
         editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible());
     else if (event.GetKeyCode() == 'F' && event.ControlDown() && !event.AltDown() && !event.ShiftDown())
         ShowFind();
