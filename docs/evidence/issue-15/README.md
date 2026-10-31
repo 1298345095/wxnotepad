@@ -25,10 +25,25 @@ keeps the target sentinel, document identity, text and save-point/Undo history.
 `first_utf8_save` additionally checks exact bytes and clean state after updating
 an existing named document.
 
+Final merged-source results (integration through `c59706a`):
+
+| Backend | Release build | CTest | Native close flows |
+| --- | --- | --- | --- |
+| Windows 11 | passed | 5/5 passed | all seven passed |
+| WSLg GTK3 X11 | passed | 4/4 passed | all seven passed |
+| WSLg GTK3 Wayland | same Linux build | 4/4 passed | all seven passed |
+
+The suites include editor input/Undo, repaint, first UTF-8/named-path save and
+close protection; Windows additionally includes the existing IME geometry test.
+The final Linux run order was X11 then Wayland after the shared WSLg display
+reconnect. These tests do not assess the separately investigated WSLg pointer
+visibility issue.
+
 Windows uses MSVC 14.51 and wxWidgets 3.3.3, with the Release build under
 `build/cmake`. Linux uses Ubuntu 24.04 WSLg, GCC 13.3, GTK3 and the same wxWidgets
-version. Its independent source/build/data live under
-`/home/ctrls/.cache/wxnotepad-issue15/` on the native Linux filesystem.
+version. Its independent source/build live under
+`/home/ctrls/.cache/wxnotepad-issue15/` on the native Linux filesystem; disposable
+test files use the native Linux temporary directory.
 
 Build with the repository's `tools/build.py`, then run
 `ctest --test-dir build/cmake -C Release --output-on-failure`. Set
