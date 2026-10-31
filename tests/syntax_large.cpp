@@ -49,7 +49,7 @@ public:
                 const auto copy = directory / "copy.CPP";
                 std::string bytes = "int value;\r\n";
                 const std::string comment = "//" + std::string(125, 'x') + "\n";
-                while (bytes.size() <= 32U * 1024U * 1024U)
+                while (bytes.size() <= size_t{32} * 1024U * 1024U)
                     bytes += comment;
                 std::ofstream(source, std::ios::binary) << bytes;
                 Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "large C++ document must open");
