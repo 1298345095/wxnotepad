@@ -91,6 +91,12 @@ packaging remain future work. See the
 [syntax/folding spec](https://github.com/1298345095/wxnotepad/issues/30) and the
 [full-application resource observations](docs/observations/issue20-README.md).
 
+## Code structure
+
+See the [current structure and proposed evolution plan](docs/architecture.md) for
+module responsibilities, state ownership, future feature placement and a staged
+refactoring sequence. It describes a proposal; the source layout is unchanged.
+
 ## Build and run
 
 Prerequisites: Git, Python 3.12+, CMake 3.25+, an x64 C++23 compiler, and wxWidgets
