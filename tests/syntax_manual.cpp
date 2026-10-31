@@ -151,6 +151,7 @@ public:
             try {
                 std::filesystem::create_directory(directory);
                 auto* editor = frame->Editor();
+                const auto menuCount = frame->GetMenuBar()->GetMenuCount();
                 const std::string source = "int value; // 中文\r\n";
                 editor->Send(Message::AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
                 editor->Send(Message::SetSel, 8, 2);
@@ -168,7 +169,7 @@ public:
                 Language(frame, false, false);
                 Choose(frame, "C/C++");
                 Choose(frame, "C/C++");
-                Require(frame->GetMenuBar()->GetMenuCount() == 3, "repeated choices must not accumulate menus");
+                Require(frame->GetMenuBar()->GetMenuCount() == menuCount, "repeated choices must not accumulate menus");
                 Command(frame, wxID_UNDO);
                 Require(editor->Send(Message::GetLength) == 0 && !editor->Send(Message::GetModify) &&
                             editor->Send(Message::CanRedo),
