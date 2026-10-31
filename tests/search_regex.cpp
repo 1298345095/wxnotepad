@@ -256,20 +256,19 @@ public:
                 Toggle(regex, true);
                 Command(frame, wxID_REPLACE);
                 Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled() &&
-                            !dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(),
-                        "single regex Replace must be available while Replace All remains scoped to #29");
+                            dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(),
+                        "both regex replacement commands must be available");
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
                 Require(replacement, "Replace must retain the shared regex options and query");
                 replacement->SetValue("X");
-                const auto before = Text(editor);
                 Click(dialog, wxID_REPLACE_ALL);
-                Require(Text(editor) == before, "unsupported regex Replace All must not edit the document");
+                Require(Text(editor) == "a.b aXb Axb X sXter",
+                        "regex Replace All must use the shared mode and inactive Whole word policy");
                 Toggle(regex, false);
                 Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled() &&
                             dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(),
                         "literal mode must restore both replacement actions");
-                std::puts(
-                    "PASS: native F3, immediate mode/case changes, retained Whole word and scoped replacement UI");
+                std::puts("PASS: native F3, immediate mode/case changes, retained Whole word and replacement UI");
                 Toggle(regex, true);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("aab"));
                 editor->Send(Message::GotoPos, 0);
