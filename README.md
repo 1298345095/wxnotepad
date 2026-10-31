@@ -23,9 +23,9 @@ the Save command is disabled after the first successful save for this stage.
 
 This covers [#9](https://github.com/1298345095/wxnotepad/issues/9),
 [#10](https://github.com/1298345095/wxnotepad/issues/10),
-[#14](https://github.com/1298345095/wxnotepad/issues/14), and the automated portion
-of [#13](https://github.com/1298345095/wxnotepad/issues/13). Microsoft Pinyin human
-validation is pending; see the [IME validation record](docs/evidence/issue-13/README.md).
+[#14](https://github.com/1298345095/wxnotepad/issues/14), and
+[#13](https://github.com/1298345095/wxnotepad/issues/13). Microsoft Pinyin human
+validation passed; see the [IME validation record](docs/evidence/issue-13/README.md).
 Selection/navigation, clipboard and other file operations follow in later tickets.
 
 ## Build and run
