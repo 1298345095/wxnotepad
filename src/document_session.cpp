@@ -91,6 +91,8 @@ SaveResult DocumentSession::SaveTo(const wxString& destination) {
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace) {
     if (!source) return {OpenStatus::Cancelled, {}};
     wxLogNull quiet;
+    if (!wxFileName::FileExists(*source))
+        return {OpenStatus::Failed, "Choose an existing file to open."};
     wxFile file(*source, wxFile::read);
     if (!file.IsOpened()) return {OpenStatus::Failed, "Could not open the file for reading."};
     const auto length = file.Length();
