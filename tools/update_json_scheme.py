@@ -26,7 +26,7 @@ def main():
         "constexpr SyntaxStyle jsonStyles[] = {"]
     output.extend(style_initializers(styles, "SCE_JSON_"))
     output.append("};\n// clang-format on\n")
-    (ROOT / "src/json_scheme_data.h").write_text("\n".join(output), encoding="utf-8", newline="\n")
+    (ROOT / "src/syntax/generated/json_scheme_data.h").write_text("\n".join(output), encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":

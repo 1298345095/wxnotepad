@@ -24,7 +24,7 @@ def main():
         "constexpr SyntaxStyle cppStyles[] = {"]
     output.extend(style_initializers(styles, "SCE_C_"))
     output.append("};\n// clang-format on\n")
-    (ROOT / "src/cpp_scheme_data.h").write_text("\n".join(output), encoding="utf-8", newline="\n")
+    (ROOT / "src/syntax/generated/cpp_scheme_data.h").write_text("\n".join(output), encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":

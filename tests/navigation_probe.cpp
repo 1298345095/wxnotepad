@@ -1,6 +1,6 @@
 // Native input probe: the external desktop driver sends real OS input and
 // observes only the editor's public document/selection/viewport interface.
-#include "editor_control.h"
+#include "editor/editor_control.h"
 #include <wx/wx.h>
 #include <fstream>
 #include <iomanip>

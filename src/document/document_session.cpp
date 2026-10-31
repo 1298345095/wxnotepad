@@ -1,7 +1,8 @@
-#include "document_session.h"
-#include "editor_control.h"
-#include "gbk_codec.h"
-#include "utf16_codec.h"
+#include "document/document_session.h"
+#include "editor/editor_control.h"
+#include "syntax/syntax_scheme.h"
+#include "document/encoding/gbk_codec.h"
+#include "document/encoding/utf16_codec.h"
 #include "ScintillaTypes.h"
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -154,10 +155,12 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
                      reinterpret_cast<intptr_t>(savedText->data()));
         editor_.Send(Scintilla::Message::EndUndoAction);
     }
+    const auto previousLanguage = Language();
     path_ = destination;
     encoding_ = savedEncoding;
     hasBom_ = savedBom;
     editor_.Send(Scintilla::Message::SetSavePoint);
+    if (previousLanguage != Language()) ApplySyntaxLanguage(editor_, Language());
     return {SaveStatus::Saved, {}};
 }
 
@@ -210,8 +213,16 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, Fi
     path_ = path;
     encoding_ = encoding;
     hasBom_ = bom;
+    languageOverride_.reset();
+    ApplySyntaxLanguage(editor_, Language());
 }
 
 void DocumentSession::New() {
     Replace({}, {}, FileEncoding::Utf8, false);
+}
+
+void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
+    const auto previous = Language();
+    languageOverride_ = language;
+    if (previous != Language()) ApplySyntaxLanguage(editor_, Language());
 }

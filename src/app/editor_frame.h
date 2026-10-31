@@ -1,17 +1,11 @@
 #pragma once
 
 #include <wx/frame.h>
-#include "document_session.h"
-#include "search_options.h"
-#include "syntax_scheme.h"
-#include "ScintillaTypes.h"
+#include "document/document_session.h"
+#include "search/search_session.h"
 
 class EditorControl;
-class wxDialog;
-class wxTextCtrl;
-class wxStaticText;
-class wxButton;
-class wxCheckBox;
+class FindReplaceDialog;
 
 class EditorFrame final : public wxFrame {
 public:
@@ -33,42 +27,17 @@ public:
 private:
     EditorControl* editor_;
     DocumentSession document_;
-    SyntaxLanguage language_ = SyntaxLanguage::PlainText;
-    std::optional<SyntaxLanguage> languageOverride_;
     int automaticLanguageId_;
-    wxDialog* findDialog_ = nullptr;
-    wxTextCtrl* findQuery_ = nullptr;
-    SearchOptions searchOptions_;
-    struct EmptyMatch {
-        intptr_t position;
-        uint64_t documentRevision;
-        uint64_t selectionRevision;
-    };
-    std::optional<EmptyMatch> lastEmptyMatch_;
-    struct RegexMatch {
-        intptr_t start;
-        intptr_t end;
-        uint64_t documentRevision;
-        uint64_t selectionRevision;
-    };
-    std::optional<RegexMatch> regexMatch_;
-    Scintilla::FindOption SearchFlags() const;
-    wxTextCtrl* replacement_ = nullptr;
-    wxStaticText* replacementLabel_ = nullptr;
-    wxButton* replaceButton_ = nullptr;
-    wxButton* replaceAllButton_ = nullptr;
-    wxStaticText* replacementResult_ = nullptr;
-    wxCheckBox* wrapAround_ = nullptr;
+    SearchSession search_;
+    FindReplaceDialog* findDialog_ = nullptr;
+    void ReportFind(const FindResult& result);
     void ShowFind(bool replace = false);
     void FindNext();
-    void ReplaceOne();
-    void ReplaceAll();
     void FindPrevious();
     void Search(bool forward);
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
-    void RefreshLanguageAfterSave(const wxString& previousPath, const SaveResult& result);
     bool ConfirmDiscardChanges(const wxString& action);
     GbkLossChoice ConfirmGbkLoss();
 };

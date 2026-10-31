@@ -1,4 +1,4 @@
-#include "gbk_codec.h"
+#include "document/encoding/gbk_codec.h"
 #include <wx/strconv.h>
 #include <wx/string.h>
 #include "UniConversion.h"

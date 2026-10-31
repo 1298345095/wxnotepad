@@ -21,27 +21,47 @@ endif()
 
 file(GLOB core_sources CONFIGURE_DEPENDS "${NOTEPAD4_SOURCE}/scintilla/src/*.cxx")
 file(GLOB lexlib_sources CONFIGURE_DEPENDS "${NOTEPAD4_SOURCE}/scintilla/lexlib/*.cxx")
-add_library(notepad4_core STATIC ${core_sources} ${lexlib_sources}
+add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx")
 target_include_directories(notepad4_core PUBLIC
     "${NOTEPAD4_SOURCE}/scintilla/include"
-    PRIVATE src/platform "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+    PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
 target_compile_definitions(notepad4_core PUBLIC __WX__ BOOST_REGEX_STANDALONE NO_CXX11_REGEX NOMINMAX WIN32_LEAN_AND_MEAN)
 target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
-add_library(editor_control STATIC src/editor_control.cpp src/editor_frame.cpp src/syntax_scheme.cpp src/document_session.cpp src/gbk_codec.cpp src/utf16_codec.cpp src/platform/wx_platform.cpp)
-target_include_directories(editor_control PUBLIC src PRIVATE src/platform
+# Core objects and their platform symbols share one archive to avoid static link-order cycles.
+add_library(editor_runtime STATIC
+    src/editor/editor_control.cpp
+    src/editor/platform/wx_platform.cpp)
+target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
     "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
-target_link_libraries(editor_control PUBLIC notepad4_core)
+target_link_libraries(editor_runtime PUBLIC notepad4_core)
+
+add_library(editor_features STATIC
+    src/document/document_session.cpp
+    src/document/encoding/gbk_codec.cpp
+    src/document/encoding/utf16_codec.cpp
+    src/search/search_session.cpp
+    src/syntax/syntax_catalog.cpp
+    src/syntax/syntax_scheme.cpp)
+# The GBK compatibility codec reuses the pinned Unicode conversion utilities.
+target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla/src")
+target_link_libraries(editor_features PUBLIC editor_runtime)
+
+add_library(app_shell STATIC
+    src/app/editor_frame.cpp
+    src/app/find_replace_dialog.cpp
+    src/app/process_observer.cpp)
+target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
-    target_link_libraries(editor_control PRIVATE imm32)
+    target_link_libraries(editor_runtime PRIVATE imm32)
 endif()
 
 # The pinned core predates C++20 char8_t and is compiled without RTTI on Windows.
-foreach(target notepad4_core editor_control)
+foreach(target notepad4_core editor_runtime editor_features app_shell)
     if(MSVC)
         target_compile_options(${target} PRIVATE /utf-8 /GR- /Zc:char8_t-)
     else()
@@ -52,14 +72,14 @@ if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
     pkg_check_modules(WAYLAND REQUIRED IMPORTED_TARGET wayland-egl wayland-cursor)
-    target_link_libraries(editor_control PUBLIC PkgConfig::GTK PkgConfig::WAYLAND)
+    target_link_libraries(editor_runtime PUBLIC PkgConfig::GTK PkgConfig::WAYLAND)
 endif()
 
 function(add_gui_program target source)
     add_executable(${target} WIN32 ${source})
     target_link_libraries(${target} PRIVATE ${ARGN})
     if(WIN32)
-        target_sources(${target} PRIVATE src/windows.rc)
+        target_sources(${target} PRIVATE src/app/windows.rc)
     endif()
     if(MSVC)
         target_compile_options(${target} PRIVATE /utf-8)
@@ -68,15 +88,20 @@ function(add_gui_program target source)
     endif()
 endfunction()
 
-add_gui_program(wxnotepad src/main.cpp editor_control)
+add_gui_program(wxnotepad src/app/main.cpp app_shell)
 
 include(CTest)
 if(BUILD_TESTING)
     function(add_editor_test target test_name timeout)
-        add_gui_program(${target} tests/${target}.cpp editor_control)
+        add_gui_program(${target} tests/${target}.cpp app_shell)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+
+    # This test reaches feature interfaces without linking the frame or its dialogs.
+    add_gui_program(feature_sessions tests/feature_sessions.cpp editor_features)
+    add_test(NAME feature_session_contracts COMMAND feature_sessions)
+    set_tests_properties(feature_session_contracts PROPERTIES TIMEOUT 30)
 
     add_gui_program(clipboard_peer tests/clipboard_peer.cpp wx::core wx::base)
     add_editor_test(clipboard_smoke system_clipboard 30)
@@ -84,12 +109,12 @@ if(BUILD_TESTING)
     add_editor_test(gbk_smoke gbk_roundtrip 30)
     add_editor_test(gbk_native gbk_native_choices 60)
     add_editor_test(utf16_smoke utf16_roundtrip 30)
-    add_gui_program(navigation_probe tests/navigation_probe.cpp editor_control)
+    add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
     add_editor_test(editor_smoke editor_input_undo 30)
     add_editor_test(font_smoke native_font_metrics 20)
-    target_include_directories(font_smoke PRIVATE src/platform
+    target_include_directories(font_smoke PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
-    add_gui_program(display_smoke tests/display_smoke.cpp editor_control)
+    add_gui_program(display_smoke tests/display_smoke.cpp app_shell)
     add_test(NAME display_repaint COMMAND display_smoke)
     set_tests_properties(display_repaint PROPERTIES TIMEOUT 30)
     if(WIN32)

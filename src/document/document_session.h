@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wx/string.h>
+#include "syntax/syntax_catalog.h"
 #include <optional>
 #include <functional>
 #include <string>
@@ -36,12 +37,16 @@ public:
     bool HasUtf8Bom() const { return encoding_ == FileEncoding::Utf8 && hasBom_; }
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
+    SyntaxLanguage Language() const { return languageOverride_.value_or(LanguageForPath(path_)); }
+    std::optional<SyntaxLanguage> LanguageOverride() const { return languageOverride_; }
+    void SelectLanguage(std::optional<SyntaxLanguage> language);
 
 private:
     EditorControl& editor_;
     wxString path_;
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
+    std::optional<SyntaxLanguage> languageOverride_;
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss);
     void Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom);
 };

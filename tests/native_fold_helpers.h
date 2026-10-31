@@ -1,6 +1,6 @@
 #pragma once
 
-#include "editor_control.h"
+#include "editor/editor_control.h"
 #include <wx/wx.h>
 #include <stdexcept>
 

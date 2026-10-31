@@ -1,7 +1,7 @@
 #pragma once
 
-#include "editor_control.h"
-#include "editor_frame.h"
+#include "editor/editor_control.h"
+#include "app/editor_frame.h"
 #include "native_dialog_helpers.h"
 #include <wx/wx.h>
 #include <wx/button.h>

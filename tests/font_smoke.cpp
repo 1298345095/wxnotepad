@@ -1,4 +1,4 @@
-#include "platform/core_headers.h"
+#include "editor/platform/core_headers.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
 #include <cstdio>

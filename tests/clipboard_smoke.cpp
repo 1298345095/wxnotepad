@@ -1,5 +1,5 @@
-#include "editor_control.h"
-#include "editor_frame.h"
+#include "editor/editor_control.h"
+#include "app/editor_frame.h"
 #include <wx/wx.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>

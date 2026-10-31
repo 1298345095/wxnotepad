@@ -1,5 +1,5 @@
-#include "editor_control.h"
-#include "platform/core_headers.h"
+#include "editor/editor_control.h"
+#include "editor/platform/core_headers.h"
 #include <wx/dcclient.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>

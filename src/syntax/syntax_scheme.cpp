@@ -1,21 +1,9 @@
-#include "syntax_scheme.h"
-#include "editor_control.h"
-#include <SciLexer.h>
+#include "syntax/syntax_scheme.h"
+#include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <span>
-#include <wx/filename.h>
 
 namespace {
-struct SyntaxStyle {
-    int id;
-    unsigned int foreground;
-    unsigned int background;
-    bool bold;
-};
-#include "cpp_scheme_data.h"
-#include "json_scheme_data.h"
-#include "python_scheme_data.h"
-
 // Scintilla's public color values are BGR; upstream default strings are RGB.
 constexpr unsigned int Colour(unsigned int rgb) {
     return ((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU);
@@ -31,36 +19,10 @@ void InstallStyles(EditorControl& editor, std::span<const SyntaxStyle> styles) {
 }
 } // namespace
 
-SyntaxLanguage LanguageForPath(const wxString& path) {
-    wxString extension = wxFileName(path).GetExt();
-    for (size_t index = 0; index < extension.length(); ++index) {
-        const auto ch = extension[index].GetValue();
-        if (ch >= 'A' && ch <= 'Z') extension[index] = ch + ('a' - 'A');
-    }
-    for (const auto* candidate : {"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"}) {
-        if (extension == candidate) return SyntaxLanguage::Cpp;
-    }
-    if (extension == "json") return SyntaxLanguage::Json;
-    for (const auto* candidate : {"py", "pyw", "pyi"}) {
-        if (extension == candidate) return SyntaxLanguage::Python;
-    }
-    return SyntaxLanguage::PlainText;
-}
-
-wxString LanguageName(SyntaxLanguage language) {
-    if (language == SyntaxLanguage::Cpp) return "C/C++";
-    if (language == SyntaxLanguage::Json) return "JSON";
-    if (language == SyntaxLanguage::Python) return "Python";
-    return "Plain Text";
-}
-
-bool LanguageCanFold(SyntaxLanguage language) {
-    return language == SyntaxLanguage::Cpp || language == SyntaxLanguage::Python || language == SyntaxLanguage::Json;
-}
-
 void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
     using Scintilla::Message;
-    const bool fold = LanguageCanFold(language);
+    const auto& definition = SyntaxFor(language);
+    const bool fold = definition.canFold;
     editor.Send(Message::SetMarginTypeN, 1, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
     editor.Send(Message::SetMarginMaskN, 1, Scintilla::MaskFolders);
     editor.Send(Message::SetMarginSensitiveN, 1, fold);
@@ -85,35 +47,20 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::MarkerSetBackTranslucent, marker, 0xFF000000U | Colour(0xFFFFFF));
         editor.Send(Message::MarkerSetStrokeWidth, marker, editor.FromDIP(100));
     }
-    editor.Send(Message::SetLexer, language == SyntaxLanguage::Cpp      ? SCLEX_CPP
-                                   : language == SyntaxLanguage::Python ? SCLEX_PYTHON
-                                   : language == SyntaxLanguage::Json   ? SCLEX_JSON
-                                                                        : SCLEX_NULL);
+    editor.Send(Message::SetLexer, definition.lexer);
     editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("fold"),
                 reinterpret_cast<intptr_t>(fold ? "1" : "0"));
     // Keep the native font/point size already installed on STYLE_DEFAULT.
     editor.Send(Message::StyleSetFore, 32, Colour(0x000000));
     editor.Send(Message::StyleSetBack, 32, Colour(0xFFFFFF));
     editor.Send(Message::StyleClearAll);
-    if (language == SyntaxLanguage::Cpp) {
-        editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>("0"));
-        for (size_t index = 0; index < std::size(cppKeywords); ++index) {
-            editor.Send(Message::SetKeyWords, index, reinterpret_cast<intptr_t>(cppKeywords[index]));
-        }
-        InstallStyles(editor, cppStyles);
-    } else if (language == SyntaxLanguage::Json) {
-        for (size_t index = 0; index < std::size(jsonKeywords); ++index) {
-            editor.Send(Message::SetKeyWords, index | jsonKeywordAttributes,
-                        reinterpret_cast<intptr_t>(jsonKeywords[index]));
-        }
-        InstallStyles(editor, jsonStyles);
+    for (const auto& property : definition.properties)
+        editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>(property.name),
+                    reinterpret_cast<intptr_t>(property.value));
+    for (size_t index = 0; index < definition.keywords.size(); ++index) {
+        const auto& list = definition.keywords[index];
+        editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
-    if (language == SyntaxLanguage::Python) {
-        // The pinned core encodes WordList::KeywordAttr_PreSorted above the index.
-        for (size_t index = 0; index < std::size(pythonKeywords); ++index) {
-            editor.Send(Message::SetKeyWords, index | (2U << 8U), reinterpret_cast<intptr_t>(pythonKeywords[index]));
-        }
-        InstallStyles(editor, pythonStyles);
-    }
+    InstallStyles(editor, definition.styles);
     editor.Send(Message::ClearDocumentStyle);
 }
