@@ -73,7 +73,14 @@ public:
         paintState = PaintState::notPainting;
         UpdateSystemCaret();
     }
-    void Resize() { ChangeSize(); }
+    void Resize() {
+        ChangeSize();
+        if (Wrapping()) UpdateWrapLayout();
+    }
+    void UpdateWrapLayout() {
+        WrapLines(WrapScope::wsAll);
+        EnsureCaretVisible();
+    }
     void DpiChanged() {
         if (WndProc(Message::GetMarginWidthN, 1, 0) > 0) {
             WndProc(Message::SetMarginWidthN, 1, window_.FromDIP(16));
@@ -498,6 +505,14 @@ EditorControl::EditorControl(wxWindow* parent)
 }
 
 EditorControl::~EditorControl() = default;
+
+void EditorControl::ToggleWordWrap() {
+    const auto mode = Send(Message::GetWrapMode) == static_cast<intptr_t>(Scintilla::Wrap::None)
+                          ? Scintilla::Wrap::Word
+                          : Scintilla::Wrap::None;
+    Send(Message::SetWrapMode, static_cast<uintptr_t>(mode));
+    core_->UpdateWrapLayout();
+}
 
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
     core_->SelectionRevision();
