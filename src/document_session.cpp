@@ -101,7 +101,12 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     const bool bom = bytes.starts_with("\xef\xbb\xbf");
     if (bom) bytes.erase(0, 3);
     if (!IsUtf8(bytes)) return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
+    const bool wasModified = editor_.Send(Scintilla::Message::GetModify);
     if (!beforeReplace()) return {OpenStatus::Cancelled, {}};
+    // Save may have rewritten the selected source (including a newly chosen
+    // first-save destination). Read it again after that explicit Save succeeds.
+    if (wasModified && !editor_.Send(Scintilla::Message::GetModify))
+        return Open(source, [] { return true; });
     Replace(bytes, *source, bom);
     return {OpenStatus::Opened, {}};
 }

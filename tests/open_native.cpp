@@ -223,6 +223,13 @@ public:
                 Require(menuNew.prompts == 1 && Text(frame).empty() && frame->DocumentPath().empty() && !frame->DocumentHasUtf8Bom(), "native New command must reset the document");
                 Require(Bytes(pickedPath) == "\xef\xbb\xbfPicked\r\n", "Discard New must preserve source bytes");
                 std::puts("PASS: native Open chooser accept/cancel and New menu commands");
+                Require(frame->Open(Filename(pickedPath)).status == OpenStatus::Opened, "same-path reopen setup must load");
+                Add(frame, "saved");
+                NativeDriver samePathSave(wxID_YES);
+                Require(frame->Open(Filename(pickedPath)).status == OpenStatus::Opened, "Save then reopen same path must succeed");
+                samePathSave.Stop();
+                Require(samePathSave.prompts == 1 && Text(frame) == "Picked\r\nsaved" && Bytes(pickedPath) == "\xef\xbb\xbfPicked\r\nsaved", "same-path Open Save must show the newly saved content");
+                std::puts("PASS: reopening the current path after Save uses the saved content");
                 const std::vector<std::string> samples = {"", "\xef\xbb\xbf", "ASCII", "\xef\xbb\xbf" "ASCII", "中文😀\r\nsecond\r\n", "\xef\xbb\xbf中文😀\nsecond\n", "one\r\ntwo\nthree\rlast", "\xef\xbb\xbf" "one\r\ntwo\nthree\rlast"};
                 for (size_t index = 0; index < samples.size(); ++index) {
                     const auto roundtripPath = directory / ("roundtrip-" + std::to_string(index) + ".txt");

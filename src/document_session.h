@@ -3,6 +3,7 @@
 #include <wx/string.h>
 #include <optional>
 #include <functional>
+#include <string>
 
 class EditorControl;
 
