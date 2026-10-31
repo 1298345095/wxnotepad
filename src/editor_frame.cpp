@@ -421,13 +421,13 @@ void EditorFrame::ReplaceOne() {
     // The original formatter reads the byte after a trailing dollar/backslash.
     const std::string replacement(replacementUtf8.data(), replacementUtf8.length());
     auto after = end;
-    bool changesBytes = true;
+    std::string selected(static_cast<size_t>(end - start) + 1, '\0');
+    editor_->Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(selected.data()));
+    selected.pop_back();
+    bool changesBytes = replacement != selected;
     if (searchOptions_.regularExpression) {
         const auto expanded = editor_->ExpandRegexReplacement(replacement);
         if (!expanded) return;
-        std::string selected(static_cast<size_t>(end - start) + 1, '\0');
-        editor_->Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(selected.data()));
-        selected.pop_back();
         changesBytes = *expanded != selected;
     }
     if (changesBytes) {

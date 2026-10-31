@@ -2,6 +2,7 @@
 #include "editor_control.h"
 #include <SciLexer.h>
 #include <ScintillaTypes.h>
+#include <span>
 #include <wx/filename.h>
 
 namespace {
@@ -18,6 +19,15 @@ struct SyntaxStyle {
 // Scintilla's public color values are BGR; upstream default strings are RGB.
 constexpr unsigned int Colour(unsigned int rgb) {
     return ((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU);
+}
+
+void InstallStyles(EditorControl& editor, std::span<const SyntaxStyle> styles) {
+    using Scintilla::Message;
+    for (const auto& style : styles) {
+        editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
+        editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
+        editor.Send(Message::StyleSetBold, style.id, style.bold);
+    }
 }
 } // namespace
 
@@ -90,32 +100,20 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         for (size_t index = 0; index < std::size(cppKeywords); ++index) {
             editor.Send(Message::SetKeyWords, index, reinterpret_cast<intptr_t>(cppKeywords[index]));
         }
-        for (const auto& style : cppStyles) {
-            editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
-            editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
-            editor.Send(Message::StyleSetBold, style.id, style.bold);
-        }
+        InstallStyles(editor, cppStyles);
     } else if (language == SyntaxLanguage::Json) {
         for (size_t index = 0; index < std::size(jsonKeywords); ++index) {
             editor.Send(Message::SetKeyWords, index | jsonKeywordAttributes,
                         reinterpret_cast<intptr_t>(jsonKeywords[index]));
         }
-        for (const auto& style : jsonStyles) {
-            editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
-            editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
-            editor.Send(Message::StyleSetBold, style.id, style.bold);
-        }
+        InstallStyles(editor, jsonStyles);
     }
     if (language == SyntaxLanguage::Python) {
         // The pinned core encodes WordList::KeywordAttr_PreSorted above the index.
         for (size_t index = 0; index < std::size(pythonKeywords); ++index) {
             editor.Send(Message::SetKeyWords, index | (2U << 8U), reinterpret_cast<intptr_t>(pythonKeywords[index]));
         }
-        for (const auto& style : pythonStyles) {
-            editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
-            editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
-            editor.Send(Message::StyleSetBold, style.id, style.bold);
-        }
+        InstallStyles(editor, pythonStyles);
     }
     editor.Send(Message::ClearDocumentStyle);
 }

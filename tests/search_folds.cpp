@@ -155,6 +155,44 @@ public:
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
                 auto* result = wxDynamicCast(wxWindow::FindWindowByName("Replacement result", frame), wxStaticText);
                 Require(replacement && result, "native Replace must expose replacement text and count");
+                {
+                    load(nested);
+                    const auto path = std::filesystem::temp_directory_path() /
+                                      ("wxnotepad-single-noop-" + std::to_string(wxGetProcessId()) + ".cpp");
+#ifdef __WXMSW__
+                    const wxString filename(path.wstring());
+#else
+                    const auto filename = wxString::FromUTF8(path.string());
+#endif
+                    Require(frame->SaveAs(filename).status == SaveStatus::Saved, "no-op fixture must save");
+                    editor->Send(Message::GotoPos, 151);
+                    editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
+                    Command(frame, wxID_UNDO);
+                    collapse();
+                    query->SetValue("needle");
+                    replacement->SetValue("needle");
+                    Click(dialog, wxID_FORWARD);
+                    Selection(editor, 33, 39, "single no-op replacement must start on the found literal match");
+                    Click(dialog, wxID_REPLACE);
+                    Selection(editor, 139, 145, "single no-op replacement must continue to the next hidden match");
+                    Require(Text(editor) == nested && !editor->Send(Message::GetModify) &&
+                                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                            "literal no-op single Replace must preserve saved bytes, savepoint and redo");
+                    Require(editor->Send(Message::GetLineVisible, 2) && editor->Send(Message::GetLineVisible, 13) &&
+                                !editor->Send(Message::GetLineVisible, 5) && !editor->Send(Message::GetLineVisible, 9),
+                            "single no-op Replace must reveal its next match and retain unrelated folds");
+                    std::ifstream saved(path, std::ios::binary);
+                    Require(std::string(std::istreambuf_iterator<char>(saved), {}) == nested,
+                            "single no-op Replace must retain independently read saved file bytes");
+                    saved.close();
+                    Command(frame, wxID_REDO);
+                    Require(Text(editor) == nested + "!", "single no-op Replace must retain the original redo branch");
+                    Command(frame, wxID_UNDO);
+                    Require(Text(editor) == nested && !editor->Send(Message::GetModify),
+                            "Undo of retained redo must return to the saved document");
+                    std::filesystem::remove(path);
+                    std::puts("PASS: literal single no-op Replace preserves saved bytes, history and unrelated folds");
+                }
                 load(nested);
                 editor->Send(Message::GotoPos, 151);
                 editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
