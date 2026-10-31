@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include "editor/line_navigation.h"
 #include <wx/file.h>
 #include <wx/filename.h>
 #include <wx/menu.h>
@@ -30,7 +31,16 @@ void Shortcut(wxWindow* window) {
     event->key.send_event = TRUE;
     event->key.keyval = GDK_KEY_N;
     event->key.state = GDK_CONTROL_MASK | GDK_SHIFT_MASK;
-    gtk_widget_event(widget, event);
+    GdkKeymapKey* keys = nullptr;
+    gint count = 0;
+    auto* keymap = gdk_keymap_get_for_display(gtk_widget_get_display(widget));
+    if (gdk_keymap_get_entries_for_keyval(keymap, event->key.keyval, &keys, &count) && count > 0) {
+        event->key.hardware_keycode = keys[0].keycode;
+        event->key.group = keys[0].group;
+    }
+    g_free(keys);
+    auto* top = GTK_WINDOW(wxGetTopLevelParent(window)->GetHandle());
+    if (!gtk_window_activate_key(top, &event->key)) gtk_widget_event(widget, event);
     gdk_event_free(event);
 #endif
     wxYield();
@@ -58,11 +68,11 @@ public:
                 NativeSearch::Command(frame, command);
                 Require(editor->Send(Message::GetMarginWidthN, 0) > 0, "showing line numbers must restore the margin");
                 std::puts("PASS: native menu defaults and toggles preserve the fold margin");
-                Shortcut(frame);
+                Shortcut(editor);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(!frame->GetMenuBar()->IsChecked(command) && editor->Send(Message::GetMarginWidthN, 0) == 0,
                         "native Ctrl+Shift+N must control the same setting as the menu");
-                Shortcut(frame);
+                Shortcut(editor);
                 Require(editor->Send(Message::GetMarginWidthN, 0) > 0, "the shortcut must restore line numbers");
                 std::puts("PASS: native Ctrl+Shift+N shares the menu setting");
                 const auto lines = [](int count) { return std::string(static_cast<size_t>(count - 1), '\n'); };
@@ -141,6 +151,15 @@ public:
                 Require(NativeSearch::Text(editor) == folded + "firstsecond",
                         "Redo after toggling must retain both original edits");
                 std::puts("PASS: caret geometry, folds, selection, bytes, save point and history survive toggles");
+                NativeSearch::Command(frame, command);
+                Require(GoToLogicalLine(*editor, "3") &&
+                            editor->Send(Message::GetCurrentPos) == editor->Send(Message::PositionFromLine, 2) &&
+                            editor->Send(Message::GetLineVisible, 1) && editor->Send(Message::GetMarginWidthN, 0) == 0,
+                        "Go To Line must use logical lines and reveal folded targets while numbers are hidden");
+                NativeSearch::Command(frame, command);
+                Require(editor->Send(Message::GetLineCount) == 4 && editor->Send(Message::GetMarginWidthN, 0) > 0,
+                        "showing numbers after Go To Line must retain the same logical document");
+                std::puts("PASS: Go To Line and hidden line numbers share the original logical line model");
 
                 const wxString originalPath = wxFileName::CreateTempFileName("wxnotepad-line-numbers-");
                 const wxString savedPath = originalPath + ".json";
