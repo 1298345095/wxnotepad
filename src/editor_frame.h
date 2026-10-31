@@ -4,6 +4,8 @@
 #include "document_session.h"
 
 class EditorControl;
+class wxDialog;
+class wxTextCtrl;
 
 class EditorFrame final : public wxFrame {
 public:
@@ -25,6 +27,11 @@ public:
 private:
     EditorControl* editor_;
     DocumentSession document_;
+    wxDialog* findDialog_ = nullptr;
+    wxTextCtrl* findQuery_ = nullptr;
+    void ShowFind();
+    void FindNext();
+    void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     bool ConfirmDiscardChanges(const wxString& action);
     GbkLossChoice ConfirmGbkLoss();
