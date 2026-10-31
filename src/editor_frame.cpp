@@ -173,7 +173,6 @@ void EditorFrame::ShowFind(bool replace) {
             lastEmptyMatch_ = -1;
             regexMatch_.reset();
             wholeWord->Enable(!event.IsChecked());
-            replaceAllButton_->Enable(!event.IsChecked());
         });
         layout->Add(regularExpression, 0, wxLEFT | wxRIGHT | wxTOP, 8);
         replacementLabel_ = new wxStaticText(findDialog_, wxID_ANY, "Replace &with:");
@@ -404,10 +403,6 @@ void EditorFrame::ReplaceOne() {
 }
 
 void EditorFrame::ReplaceAll() {
-    if (searchOptions_.regularExpression) {
-        SetStatusText("Regex replacement is not available");
-        return;
-    }
     const wxString queryText = findQuery_->GetValue();
     const auto query = queryText.utf8_str();
     const wxString replacementText = replacement_->GetValue();
@@ -418,29 +413,49 @@ void EditorFrame::ReplaceAll() {
     intptr_t start = 0;
     auto limit = editor_->Send(Message::GetLength);
     editor_->Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
-    while (query.length() && start < limit) {
+    // Regex may match the empty document or the boundary after a consuming match.
+    while (query.length() && (start < limit || (searchOptions_.regularExpression && start == limit))) {
+        editor_->Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
         editor_->Send(Message::SetTargetStart, start);
         editor_->Send(Message::SetTargetEnd, limit);
-        if (editor_->Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) < 0) break;
+        if (editor_->Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) < 0) {
+            if (editor_->Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
+                replacementResult_->SetLabel("Invalid regular expression");
+                findDialog_->GetSizer()->Fit(findDialog_);
+                return;
+            }
+            break;
+        }
         const auto matchStart = editor_->Send(Message::GetTargetStart);
         const auto matchEnd = editor_->Send(Message::GetTargetEnd);
         const auto length = static_cast<size_t>(matchEnd - matchStart);
         std::string matched(length + 1, '\0');
         editor_->Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(matched.data()));
         matched.resize(length);
-        if (matched != std::string_view(replacement.data(), replacement.length())) {
+        const std::string replacementBytes(replacement.data(), replacement.length());
+        const auto expanded = searchOptions_.regularExpression ? editor_->ExpandRegexReplacement(replacementBytes)
+                                                               : std::optional<std::string>(replacementBytes);
+        if (!expanded) return;
+        if (matched != *expanded) {
             if (!editing) {
                 editor_->Send(Message::BeginUndoAction);
                 editing = true;
             }
-            const auto inserted = editor_->Send(Message::ReplaceTarget, replacement.length(),
-                                                reinterpret_cast<intptr_t>(replacement.data()));
+            const auto inserted =
+                editor_->Send(searchOptions_.regularExpression ? Message::ReplaceTargetRE : Message::ReplaceTarget,
+                              replacementBytes.size(), reinterpret_cast<intptr_t>(replacementBytes.c_str()));
             limit += inserted - (matchEnd - matchStart);
             start = matchStart + inserted;
         } else {
             start = matchEnd;
         }
         ++count;
+        if (matchStart == matchEnd) {
+            if (start == limit) break; // This EOF boundary has now been visited.
+            // Skip inserted bytes, then one original character. Never split UTF-8;
+            // the core normalizes a candidate between CR and LF to the next line.
+            start = editor_->Send(Message::PositionAfter, start);
+        }
     }
     if (editing) editor_->Send(Message::EndUndoAction);
     replacementResult_->SetLabel(wxString::Format("%zu replacements", count));

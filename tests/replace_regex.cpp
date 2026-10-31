@@ -98,7 +98,7 @@ public:
                 auto* dialog = query->GetParent();
                 Toggle(regex, true);
                 Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled(), "single regex Replace must be enabled");
-                Require(!dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(), "regex Replace All belongs to #29");
+                Require(dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(), "regex Replace All must be enabled");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文12 中文34"));
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
