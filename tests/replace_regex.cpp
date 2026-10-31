@@ -179,7 +179,7 @@ public:
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "中文" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
                         "empty expansion of empty match must leave history untouched");
-                Require(frame->GetStatusBar()->GetStatusText() == "No match found",
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
                         "an empty no-op must still advance");
                 std::puts("PASS: arbitrary caret confirmation, UTF-8 empty-match progress, EOF and empty no-op");
                 setup("a1 a2", "a([0-9])", "$1");
@@ -214,7 +214,7 @@ public:
                             editor->Send(Message::CanRedo),
                         "invalid regex Replace must preserve text, savepoint and redo history");
                 Require(editor->Send(Message::GetAnchor) == 1 && editor->Send(Message::GetCurrentPos) == 0 &&
-                            frame->GetStatusBar()->GetStatusText() == "Invalid regular expression",
+                            frame->GetStatusBar()->GetStatusText(2) == "Invalid regular expression",
                         "invalid regex Replace must preserve selection direction and report its error");
                 query->SetValue("(a)");
                 editor->Send(Message::GotoPos, 0);

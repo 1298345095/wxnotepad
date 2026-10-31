@@ -61,6 +61,22 @@ public:
         return selectionRevision_;
     }
 
+    intptr_t SelectionCharacterCount() {
+        if (WndProc(Message::GetSelectionMode, 0, 0) != static_cast<intptr_t>(Scintilla::SelectionMode::Stream) ||
+            WndProc(Message::GetSelections, 0, 0) != 1)
+            return 0;
+        const auto start = WndProc(Message::GetSelectionStart, 0, 0);
+        const auto end = WndProc(Message::GetSelectionEnd, 0, 0);
+        if (start == end) return 0;
+        if (selectionCountDirty_ || start != countedStart_ || end != countedEnd_) {
+            countedStart_ = start;
+            countedEnd_ = end;
+            selectedCharacters_ = WndProc(Message::CountCharacters, start, end);
+            selectionCountDirty_ = false;
+        }
+        return selectedCharacters_;
+    }
+
     void Draw(wxDC& dc) {
         window_.UpdateLineNumberMargin();
         auto surface = core::Surface::Allocate(Scintilla::Technology::Default);
@@ -338,9 +354,14 @@ private:
             (static_cast<int>(notification.modificationType) &
              static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {
             ++window_.documentRevision_;
+            // An edit within the cached range changes its contents; an edit
+            // before it can move its endpoints, even across a batch of edits
+            // that returns them to their old positions before the next query.
+            if (notification.position <= countedEnd_) selectionCountDirty_ = true;
             if (notification.linesAdded != 0) window_.lineNumberWidthDirty_ = true;
         }
-        if (notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
+        if (notification.nmhdr.code == Scintilla::Notification::UpdateUI ||
+            notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
             notification.nmhdr.code == Scintilla::Notification::SavePointLeft) {
             auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());
             event->SetEventObject(&window_);
@@ -398,6 +419,10 @@ private:
     mutable Sci::Position observedAnchor_ = -1;
     mutable Sci::Position observedCaret_ = -1;
     mutable uint64_t selectionRevision_ = 0;
+    intptr_t countedStart_ = -1;
+    intptr_t countedEnd_ = -1;
+    intptr_t selectedCharacters_ = 0;
+    mutable bool selectionCountDirty_ = true;
 };
 
 EditorControl::EditorControl(wxWindow* parent)
@@ -537,6 +562,10 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
 
 uint64_t EditorControl::SelectionRevision() const {
     return core_->SelectionRevision();
+}
+
+intptr_t EditorControl::SelectionCharacterCount() {
+    return core_->SelectionCharacterCount();
 }
 
 void EditorControl::SetLineNumbersVisible(bool visible) {

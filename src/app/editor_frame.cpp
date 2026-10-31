@@ -114,7 +114,11 @@ EditorFrame::EditorFrame()
     addFoldCommand("&Expand All", static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
     menus->Append(view, "&View");
     SetMenuBar(menus);
-    CreateStatusBar();
+    CreateStatusBar(3);
+    Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+        UpdatePositionStatus();
+        event.Skip();
+    });
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(); }, wxID_FIND);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(true); }, wxID_REPLACE);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
@@ -249,13 +253,13 @@ void EditorFrame::Search(bool forward) {
 void EditorFrame::ReportFind(const FindResult& result) {
     switch (result.status) {
     case FindStatus::Found:
-        SetStatusText(result.wrapped ? "Search wrapped" : "Match found");
+        SetStatusText(result.wrapped ? "Search wrapped" : "Match found", 2);
         break;
     case FindStatus::NotFound:
-        SetStatusText("No match found");
+        SetStatusText("No match found", 2);
         break;
     case FindStatus::InvalidPattern:
-        SetStatusText("Invalid regular expression");
+        SetStatusText("Invalid regular expression", 2);
         break;
     case FindStatus::EmptyQuery:
         break;
@@ -270,6 +274,26 @@ void EditorFrame::UpdateDocumentState() {
                                                                             : "UTF-8";
     SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " + LanguageName(document_.Language()) +
                   (document_.LanguageOverride() ? " (override)" : ""));
+    UpdatePositionStatus();
+}
+
+void EditorFrame::UpdatePositionStatus() {
+    const auto caret = editor_->Send(Scintilla::Message::GetCurrentPos);
+    const auto line = editor_->Send(Scintilla::Message::LineFromPosition, caret);
+    const auto column = editor_->Send(Scintilla::Message::GetColumn, caret, line);
+    wxString position =
+        wxString::Format("Ln %lld, Col %lld", static_cast<long long>(line + 1), static_cast<long long>(column + 1));
+    const auto selected = editor_->SelectionCharacterCount();
+    if (selected) position += wxString::Format(" | Sel %lld", static_cast<long long>(selected));
+    SetStatusText(position, 1);
+    auto* status = GetStatusBar();
+    const int metadataWidth = status->GetTextExtent(status->GetStatusText()).x + FromDIP(20);
+    const int positionWidth = status->GetTextExtent(position).x + FromDIP(20);
+    const int widths[] = {metadataWidth, positionWidth, -1};
+    if (status->GetStatusWidth(0) != metadataWidth || status->GetStatusWidth(1) != positionWidth) {
+        status->SetStatusWidths(3, widths);
+        SetMinClientSize(wxSize(metadataWidth + positionWidth + FromDIP(80), FromDIP(160)));
+    }
 }
 
 void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {

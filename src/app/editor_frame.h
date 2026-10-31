@@ -37,6 +37,7 @@ private:
     void Search(bool forward);
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
+    void UpdatePositionStatus();
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
     GbkLossChoice ConfirmGbkLoss();

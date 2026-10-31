@@ -97,7 +97,7 @@ public:
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 28, 35,
                           "forward search after a reversed selection must start at its end without wrapping");
-                Require(frame->GetStatusBar()->GetStatusText() == "No match found",
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
                         "exhausted search must report no match");
                 std::puts("PASS: native dialog button, Enter, Unicode ranges, case folding and literal punctuation");
                 editor->Send(Message::EmptyUndoBuffer);

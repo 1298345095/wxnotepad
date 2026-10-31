@@ -19,6 +19,7 @@ public:
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
     uint64_t DocumentRevision() const { return documentRevision_; }
     uint64_t SelectionRevision() const;
+    intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
