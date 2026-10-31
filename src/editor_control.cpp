@@ -39,6 +39,7 @@ public:
         WndProc(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf), 0);
         WndProc(Message::StyleSetFont, 32, reinterpret_cast<intptr_t>(core::Platform::DefaultFont()));
         WndProc(Message::StyleSetSize, 32, 12);
+        WndProc(Message::StyleSetBack, 32, 0xFFFFFF);
         WndProc(Message::StyleClearAll, 0, 0);
         WndProc(Message::SetCaretStyle, 1, 0);
         WndProc(Message::SetMarginWidthN, 1, 0);

@@ -53,9 +53,16 @@ Save as UTF-8, Replace in GBK, or Cancel. Newline insertion defaults to CRLF;
 loaded files use their detected newline style for Enter, while existing CRLF,
 LF and CR bytes remain intact when saved.
 
+Opening `.c`, `.cpp`, `.cxx`, `.cc`, `.h`, `.hpp`, `.hxx` or `.hh` selects C/C++
+highlighting with the pinned original lexer and default light syntax colors.
+Extension matching ignores ASCII case. Unknown extensions and New use Plain
+Text; the status bar shows the language alongside encoding/BOM. Typing and
+Undo/Redo update syntax through the core's incremental styling lifecycle.
+See the [C/C++ validation record](docs/observations/syntax-cpp-README.md).
+
 Microsoft Pinyin human validation passed; see the
 [IME validation record](docs/evidence/issue-13/README.md). Linux IME remains
-deferred. Syntax highlighting, advanced editing, settings migration and release
+deferred. More syntax languages, advanced editing, settings migration and release
 packaging remain future work. See the
 [phase 1 spec](https://github.com/1298345095/wxnotepad/issues/8),
 [search/replace spec](https://github.com/1298345095/wxnotepad/issues/21) and the
