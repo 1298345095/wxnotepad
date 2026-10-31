@@ -59,6 +59,12 @@ EditorFrame::EditorFrame()
         addLanguage("&" + wxString(definition.name), definition.language);
     menus->Append(languages, "&Language");
     auto* view = new wxMenu;
+    const int lineNumbers = wxWindow::NewControlId();
+    view->AppendCheckItem(lineNumbers, "Line &Numbers\tCtrl+Shift+N");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible()); },
+        lineNumbers);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->LineNumbersVisible()); }, lineNumbers);
     const int whitespace = wxWindow::NewControlId();
     view->AppendCheckItem(whitespace, "Show &Whitespace\tCtrl+Shift+8");
     Bind(
@@ -83,6 +89,7 @@ EditorFrame::EditorFrame()
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetViewWS) != 0); }, whitespace);
+    view->AppendSeparator();
     const auto addFoldCommand = [this, view](const wxString& label, uintptr_t action) {
         const int id = wxWindow::NewControlId();
         view->Append(id, label);
@@ -199,7 +206,9 @@ void EditorFrame::ShowFind(bool replace) {
 }
 
 void EditorFrame::OnSearchKey(wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'F' && event.ControlDown() && !event.AltDown() && !event.ShiftDown())
+    if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+        editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible());
+    else if (event.GetKeyCode() == 'F' && event.ControlDown() && !event.AltDown() && !event.ShiftDown())
         ShowFind();
     else if (event.GetKeyCode() == 'H' && event.ControlDown() && !event.AltDown() && !event.ShiftDown())
         ShowFind(true);
