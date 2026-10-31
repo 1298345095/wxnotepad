@@ -28,6 +28,17 @@ EditorFrame::EditorFrame()
     edit->Append(wxID_COPY, "&Copy\tCtrl+C");
     edit->Append(wxID_PASTE, "&Paste\tCtrl+V");
     edit->AppendSeparator();
+    const int indent = wxWindow::NewControlId();
+    edit->Append(indent, "&Indent");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->IndentLines(true); }, indent);
+    const int unindent = wxWindow::NewControlId();
+    edit->Append(unindent, "&Unindent");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->IndentLines(false); }, unindent);
+    for (const int id : {indent, unindent})
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+    edit->AppendSeparator();
     edit->Append(wxID_FIND, "&Find...\tCtrl+F");
     edit->Append(wxID_REPLACE, "&Replace...\tCtrl+H");
     edit->Append(wxID_FORWARD, "Find &Next\tF3");
