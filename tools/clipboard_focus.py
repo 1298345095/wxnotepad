@@ -30,7 +30,7 @@ def focus_requests():
         if user.IsWindowVisible(hwnd):
             title = c.create_unicode_buffer(256)
             user.GetWindowTextW(hwnd, title, len(title))
-            if inspect_only and "wxnotepad" in title.value.lower() and (hwnd, title.value) not in published:
+            if inspect_only and ("wxnotepad clipboard" in title.value or title.value.startswith("Untitled - wxnotepad")) and (hwnd, title.value) not in published:
                 published.add((hwnd, title.value))
                 print(f"Published fixture candidate: {hwnd} {title.value}", flush=True)
             if re.search(r"wxnotepad clipboard focus: (editor|peer) \[\d+\]", title.value):

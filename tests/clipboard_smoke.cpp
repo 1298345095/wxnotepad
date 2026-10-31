@@ -9,6 +9,9 @@
 #include <wx/stopwatch.h>
 #include <cstdio>
 #include <stdexcept>
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#endif
 
 namespace {
 void Require(bool value, const char* message) {
@@ -87,6 +90,51 @@ void Menu(EditorFrame* frame, int id) {
     wxCommandEvent event(wxEVT_MENU, id);
     frame->GetEventHandler()->ProcessEvent(event);
 }
+void NonTextOffer(EditorControl* editor) {
+#ifdef __WXGTK__
+    auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    std::string formats;
+    wxStopWatch watch;
+    do {
+        formats.clear();
+        GdkAtom* targets = nullptr;
+        gint count = 0;
+        if (gtk_clipboard_wait_for_targets(clipboard, &targets, &count)) {
+            for (int i = 0; i < count; ++i) {
+                auto* name = gdk_atom_name(targets[i]);
+                if (name) { formats += name; formats += ' '; g_free(name); }
+            }
+        }
+        g_free(targets);
+        if (formats.find("application/x-wxnotepad-test") != std::string::npos) break;
+        wxYield(); wxMilliSleep(20);
+    } while (watch.Time() < 2000);
+    const bool nativeText = gtk_clipboard_wait_is_text_available(clipboard);
+    const bool editorText = editor->Send(Scintilla::Message::CanPaste);
+    std::fprintf(stderr, "Owned offer targets: %s; GTK text=%d; editor CanPaste=%d\n", formats.c_str(), nativeText, editorText);
+    Require(formats.find("application/x-wxnotepad-test") != std::string::npos,
+        "owned non-text MIME offer has not arrived at the focused editor");
+    Require(nativeText == editorText, "editor CanPaste must agree with independent GTK native text availability");
+    Require(!nativeText, "non-text fixture is still accompanied by native text targets");
+#endif
+    Require(!editor->Send(Scintilla::Message::CanPaste), "CanPaste rejects non-text clipboard");
+}
+void TextOffer(EditorControl* editor) {
+#ifdef __WXGTK__
+    auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    wxStopWatch watch;
+    bool nativeText = false;
+    do {
+        nativeText = gtk_clipboard_wait_is_text_available(clipboard);
+        if (nativeText) break;
+        wxYield(); wxMilliSleep(20);
+    } while (watch.Time() < 2000);
+    const bool editorText = editor->Send(Scintilla::Message::CanPaste);
+    std::fprintf(stderr, "New text offer: GTK text=%d; editor CanPaste=%d\n", nativeText, editorText);
+    Require(nativeText, "new stock text MIME offer has not arrived at the focused editor");
+    Require(editorText == nativeText, "editor CanPaste must agree with the new native text offer");
+#endif
+}
 class ClipboardApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -117,6 +165,17 @@ public:
                 auto* editor = frame->Editor();
                 Peer peer(frame, editor);
                 Require(peer.Request("ready") == "ready", "external clipboard application is running");
+                wxString offerOnly;
+                if (wxGetEnv("WXNOTEPAD_CLIPBOARD_OFFER_ONLY", &offerOnly)) {
+                    Require(peer.Request("nontext") == "ready", "external app publishes non-text fixture");
+                    NonTextOffer(editor);
+                    Require(peer.Request("copy") == "ready", "external stock app publishes text fixture");
+                    TextOffer(editor);
+                    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+                    Require(editor->Send(Message::CanPaste) && frame->GetMenuBar()->IsEnabled(wxID_PASTE), "new native text offer enables Paste");
+                    std::puts("PASS: focused native offer arrival and Paste availability");
+                    result_ = 0;
+                } else {
                 {
                     wxClipboardLocker lock;
                     Require(!(!lock), "open system clipboard for owned fixture");
@@ -176,9 +235,10 @@ public:
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(!frame->GetMenuBar()->IsEnabled(wxID_COPY), "empty selection disables Copy");
                 Require(!frame->GetMenuBar()->IsEnabled(wxID_CUT), "empty selection disables Cut");
-                Require(!editor->Send(Message::CanPaste), "CanPaste rejects non-text clipboard");
+                NonTextOffer(editor);
                 Require(!frame->GetMenuBar()->IsEnabled(wxID_PASTE), "non-text clipboard disables Paste menu");
                 Require(peer.Request("copy") == "ready", "independent stock text app copies Unicode multiline fixture");
+                TextOffer(editor);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(frame->GetMenuBar()->IsEnabled(wxID_PASTE), "text from external app enables Paste");
                 editor->Send(Message::SetSel, 0, 1);
@@ -217,6 +277,7 @@ public:
                 Require(peer.Request("paste") == wxString::FromUTF8("peer English 中文 😀\n第二行\nlast"), "Copy menu sends external text");
                 std::puts("PASS: menus, Ctrl+C/X/V events, availability, independent process Unicode multiline roundtrips");
                 result_ = 0;
+                }
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
