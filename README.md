@@ -124,6 +124,8 @@ human checks are recorded separately in the
 Search tests exercise native dialog controls and commands, explicit UTF-8 match
 ranges, regex captures, zero-length progress, editing history and independently
 read saved bytes on Windows, private X11 and private Wayland displays.
+See the [search validation record](docs/observations/search-README.md) for final
+regression, review and static-analysis results.
 
 Format tracked C++ files under `src/` and `tests/` with clang-format **23.1.2**
 and the repository's `.clang-format`. The configuration also parses with the
