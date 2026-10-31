@@ -16,9 +16,15 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 void Status(EditorFrame* frame, const wxString& expected) {
-    NativeFold::Paint(frame->Editor());
     auto* status = frame->GetStatusBar();
     Require(status->GetFieldsCount() >= 2, "status must expose a position field");
+    // Native Wayland configure and paint acknowledgements arrive asynchronously.
+    wxStopWatch clock;
+    do {
+        NativeFold::Paint(frame->Editor());
+        if (status->GetStatusText(1) == expected) return;
+        wxMilliSleep(10);
+    } while (clock.Time() < 2000);
     const auto actual = status->GetStatusText(1);
     if (actual != expected)
         std::fprintf(stderr, "Status: %s; expected %s\n", actual.utf8_str().data(), expected.utf8_str().data());

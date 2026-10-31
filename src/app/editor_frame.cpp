@@ -290,10 +290,8 @@ void EditorFrame::UpdatePositionStatus() {
     const int metadataWidth = status->GetTextExtent(status->GetStatusText()).x + FromDIP(20);
     const int positionWidth = status->GetTextExtent(position).x + FromDIP(20);
     const int widths[] = {metadataWidth, positionWidth, -1};
-    if (status->GetStatusWidth(0) != metadataWidth || status->GetStatusWidth(1) != positionWidth) {
+    if (status->GetStatusWidth(0) != metadataWidth || status->GetStatusWidth(1) != positionWidth)
         status->SetStatusWidths(3, widths);
-        SetMinClientSize(wxSize(metadataWidth + positionWidth + FromDIP(80), FromDIP(160)));
-    }
 }
 
 void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
