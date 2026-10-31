@@ -14,6 +14,9 @@
 // Test cases and expected document bytes remain in their own GUI processes.
 namespace NativeSearch {
 inline void Command(EditorFrame* frame, int id) {
+    // Opening a native menu refreshes command enablement before dispatch. Do
+    // the same when sending a command directly to this test's owned frame.
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     auto* item = frame->GetMenuBar()->FindItem(id);
     if (!item) throw std::runtime_error("native menu command must exist");
 #ifdef __WXMSW__

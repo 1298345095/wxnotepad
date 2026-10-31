@@ -16,6 +16,16 @@ void Require(bool condition, const char* message) {
 }
 void Key(wxWindow* window, int key, bool control = false) {
 #ifdef __WXMSW__
+    if (key == WXK_ESCAPE) {
+        // The Windows keyboard hook converts Escape into this event. Target
+        // the owned input directly instead of injecting desktop keyboard input.
+        wxKeyEvent event(wxEVT_CHAR_HOOK);
+        event.m_keyCode = key;
+        event.SetEventObject(window);
+        Require(window->GetEventHandler()->ProcessEvent(event), "the dialog must handle Escape from its input");
+        wxYield();
+        return;
+    }
     BYTE previous[256];
     Require(GetKeyboardState(previous), "must read owned thread keyboard state");
     BYTE modified[256];
@@ -26,8 +36,9 @@ void Key(wxWindow* window, int key, bool control = false) {
     message.hwnd = static_cast<HWND>(window->GetHandle());
     message.message = WM_KEYDOWN;
     message.wParam = key;
-    wxGetTopLevelParent(window)->MSWTranslateMessage(&message);
+    const bool handled = wxGetTopLevelParent(window)->MSWTranslateMessage(&message);
     SetKeyboardState(previous);
+    Require(handled, "the owned native window must handle the requested key");
 #elif defined(__WXGTK__)
     auto* widget = GTK_WIDGET(window->GetHandle());
     auto* event = gdk_event_new(GDK_KEY_PRESS);
@@ -246,6 +257,7 @@ private:
                 auto* input = wxDynamicCast(wxWindow::FindWindowByName("Go to line number", dialog), wxTextCtrl);
                 Require(input, "dialog must expose a line number input");
                 action(dialog, input);
+                Require(!dialog->IsShown(), "the scenario must dismiss the Go To Line dialog");
             } catch (...) {
                 failure = std::current_exception();
                 if (dialog && dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
