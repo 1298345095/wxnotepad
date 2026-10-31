@@ -33,3 +33,7 @@ expected ranges are fixed examples, expressed as half-open UTF-8 byte offsets.
 
 No-match checks preserve text, selection direction, save point and redo history.
 The controls remain active when Find is hidden or the current document changes.
+Replace revalidates selected text with these same flags: `ONE` is rejected for
+`one` with Match case on, and the `one` fragment in `one_one` is rejected with
+Whole word on. Turning Whole word off makes that fragment immediately eligible
+for replacement.

@@ -201,6 +201,30 @@ public:
                 wxYield();
                 Selection(editor, 9, 16, "F3 with Find closed must use the retained case and whole-word options");
                 std::puts("PASS: Unicode folding, immediate toggles, session retention and unchanged editing history");
+                Command(frame, wxID_REPLACE);
+                auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
+                Require(replacement && replacement->IsShownOnScreen() && matchCase->IsShownOnScreen() &&
+                            wholeWord->IsShownOnScreen(),
+                        "Replace must share the query and visible session option controls");
+                replacement->SetValue("X");
+                query->SetValue("one");
+                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("ONE one one_one one"));
+                editor->Send(Message::SetSel, 0, 3);
+                Click(dialog, wxID_REPLACE);
+                Require(Text(editor) == "ONE one one_one one",
+                        "Replace must reject a selection invalid under Match case");
+                Selection(editor, 4, 7, "Replace must find the next match using the current case and word options");
+                editor->Send(Message::SetSel, 8, 11);
+                Click(dialog, wxID_REPLACE);
+                Require(Text(editor) == "ONE one one_one one",
+                        "Replace must reject a selection invalid under Whole word");
+                Selection(editor, 16, 19, "Replace must find the next whole word after an invalid substring selection");
+                Toggle(wholeWord, false);
+                editor->Send(Message::SetSel, 8, 11);
+                Click(dialog, wxID_REPLACE);
+                Require(Text(editor) == "ONE one X_one one",
+                        "Replace must immediately apply a changed Whole word option");
+                std::puts("PASS: Replace shares query/options and revalidates selection after option changes");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
