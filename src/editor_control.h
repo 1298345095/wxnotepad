@@ -22,4 +22,7 @@ private:
     std::unique_ptr<Core> core_;
     void OnPaint(wxPaintEvent& event);
     void OnSize(wxSizeEvent& event);
+#ifdef __WXMSW__
+    WXLRESULT MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam) override;
+#endif
 };
