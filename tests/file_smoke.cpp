@@ -113,7 +113,8 @@ public:
                 try {
 #ifdef __WXGTK__
                     GtkDialogProbe probe{mode, expectedPath};
-                    const guint timer = mode.StartsWith("--gtk-") ? g_timeout_add(250, GtkDialogProbe::Tick, &probe) : 0;
+                    const guint timer =
+                        mode.StartsWith("--gtk-") ? g_timeout_add(250, GtkDialogProbe::Tick, &probe) : 0;
                     if (timer) g_source_set_can_recurse(g_main_context_find_source_by_id(nullptr, timer), TRUE);
 #endif
                     wxCommandEvent command(wxEVT_MENU, wxID_SAVE);
@@ -121,8 +122,10 @@ public:
 #ifdef __WXGTK__
                     if (timer) g_source_remove(timer);
 #endif
-                    Require(frame->DocumentPath() == (save ? expectedPath : wxString()), "native dialog must update identity only on success");
-                    Require(bool(frame->Editor()->Send(Scintilla::Message::GetModify)) == !save, "native dialog must clear dirty state only on success");
+                    Require(frame->DocumentPath() == (save ? expectedPath : wxString()),
+                            "native dialog must update identity only on success");
+                    Require(bool(frame->Editor()->Send(Scintilla::Message::GetModify)) == !save,
+                            "native dialog must clear dirty state only on success");
                     std::puts(save ? "PASS: native Save accepted" : "PASS: native Save cancelled");
                     result_ = 0;
                 } catch (const std::exception& error) {
@@ -134,8 +137,8 @@ public:
             return true;
         }
         CallAfter([this, frame] {
-            const auto directory = std::filesystem::temp_directory_path() /
-                ("wxnotepad-file-" + std::to_string(wxGetProcessId()));
+            const auto directory =
+                std::filesystem::temp_directory_path() / ("wxnotepad-file-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "empty.txt";
@@ -144,17 +147,22 @@ public:
                 Require(result.status == SaveStatus::Saved, "first save must succeed");
                 Require(Bytes(path).empty(), "empty UTF-8 file must have no BOM");
                 Require(frame->DocumentPath() == filename, "successful save must establish file identity");
-                Require(!frame->Editor()->Send(Scintilla::Message::GetModify), "successful save must establish save point");
-                Require(!frame->GetTitle().StartsWith("*") && frame->GetTitle().Contains("empty.txt"), "title must show saved identity");
+                Require(!frame->Editor()->Send(Scintilla::Message::GetModify),
+                        "successful save must establish save point");
+                Require(!frame->GetTitle().StartsWith("*") && frame->GetTitle().Contains("empty.txt"),
+                        "title must show saved identity");
                 std::puts("PASS: first empty UTF-8 save and file identity");
                 auto* textFrame = new EditorFrame;
                 auto* editor = textFrame->Editor();
                 const std::string text = "A中文😀\r\nsecond\nthird\rlast";
                 editor->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
                 const auto textPath = directory / u8"中文.txt";
-                Require(textFrame->SaveFirst(Filename(textPath)).status == SaveStatus::Saved, "UTF-8 text save must succeed");
-                Require(Bytes(textPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast", "saved bytes must preserve Unicode and actual mixed EOL with no BOM");
-                Require(editor->Send(Scintilla::Message::GetEOLMode) == 0, "new documents must explicitly use original CRLF insertion mode");
+                Require(textFrame->SaveFirst(Filename(textPath)).status == SaveStatus::Saved,
+                        "UTF-8 text save must succeed");
+                Require(Bytes(textPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast",
+                        "saved bytes must preserve Unicode and actual mixed EOL with no BOM");
+                Require(editor->Send(Scintilla::Message::GetEOLMode) == 0,
+                        "new documents must explicitly use original CRLF insertion mode");
                 Require(!editor->Send(Scintilla::Message::GetModify), "text save must clear modified state");
                 editor->Send(Scintilla::Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
                 Require(editor->Send(Scintilla::Message::GetModify), "edit after save must be dirty");
@@ -163,43 +171,57 @@ public:
                 editor->Send(Scintilla::Message::Redo);
                 Require(editor->Send(Scintilla::Message::GetModify), "Redo away from save point must be dirty");
                 Require(textFrame->Save().status == SaveStatus::Saved, "saving a named document must reuse its path");
-                Require(Bytes(textPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast!", "named save must replace complete bytes at the existing path");
+                Require(Bytes(textPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast!",
+                        "named save must replace complete bytes at the existing path");
                 Require(!editor->Send(Scintilla::Message::GetModify), "named save must establish a new save point");
                 textFrame->Destroy();
                 std::puts("PASS: exact UTF-8/mixed-EOL bytes and savepoint history");
                 auto* pending = new EditorFrame;
-                pending->Editor()->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+                pending->Editor()->Send(Scintilla::Message::AddText, text.size(),
+                                        reinterpret_cast<intptr_t>(text.data()));
                 const auto unchanged = [&] {
                     Require(pending->DocumentPath().empty(), "cancel/failure must retain unnamed identity");
                     Require(Text(pending->Editor()) == text, "cancel/failure must retain document text");
-                    Require(pending->Editor()->Send(Scintilla::Message::GetModify), "cancel/failure must retain dirty state");
-                    Require(pending->Editor()->Send(Scintilla::Message::CanUndo), "cancel/failure must retain edit history");
+                    Require(pending->Editor()->Send(Scintilla::Message::GetModify),
+                            "cancel/failure must retain dirty state");
+                    Require(pending->Editor()->Send(Scintilla::Message::CanUndo),
+                            "cancel/failure must retain edit history");
                 };
-                Require(pending->SaveFirst(std::nullopt).status == SaveStatus::Cancelled, "cancelled save must return Cancelled");
+                Require(pending->SaveFirst(std::nullopt).status == SaveStatus::Cancelled,
+                        "cancelled save must return Cancelled");
                 unchanged();
                 const auto missing = pending->SaveFirst(Filename(directory / "missing" / "target.txt"));
-                Require(missing.status == SaveStatus::Failed && !missing.error.empty(), "temporary-file creation failure must explain the error");
-                Require(!std::filesystem::exists(directory / "missing"), "failed save must not create destination parents");
+                Require(missing.status == SaveStatus::Failed && !missing.error.empty(),
+                        "temporary-file creation failure must explain the error");
+                Require(!std::filesystem::exists(directory / "missing"),
+                        "failed save must not create destination parents");
                 unchanged();
                 const auto targetDirectory = directory / "directory-target";
                 std::filesystem::create_directory(targetDirectory);
-                { std::ofstream(targetDirectory / "sentinel", std::ios::binary) << "keep"; }
+                {
+                    std::ofstream(targetDirectory / "sentinel", std::ios::binary) << "keep";
+                }
                 const auto replacement = pending->SaveFirst(Filename(targetDirectory));
-                Require(replacement.status == SaveStatus::Failed && !replacement.error.empty(), "failed replacement must report failure");
-                Require(Bytes(targetDirectory / "sentinel") == "keep", "replacement failure must preserve existing target");
+                Require(replacement.status == SaveStatus::Failed && !replacement.error.empty(),
+                        "failed replacement must report failure");
+                Require(Bytes(targetDirectory / "sentinel") == "keep",
+                        "replacement failure must preserve existing target");
                 unchanged();
                 const auto protectedDirectory = directory / "protected";
                 std::filesystem::create_directory(protectedDirectory);
                 const auto protectedPath = protectedDirectory / "sentinel.txt";
-                { std::ofstream(protectedPath, std::ios::binary) << "original bytes"; }
+                {
+                    std::ofstream(protectedPath, std::ios::binary) << "original bytes";
+                }
 #ifdef __WXMSW__
-                HANDLE lock = CreateFileW(protectedPath.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                                          nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+                HANDLE lock = CreateFileW(protectedPath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                                          FILE_ATTRIBUTE_NORMAL, nullptr);
                 Require(lock != INVALID_HANDLE_VALUE, "must lock sentinel against replacement");
                 const auto blocked = pending->SaveFirst(Filename(protectedPath));
                 CloseHandle(lock);
 #else
-                std::filesystem::permissions(protectedDirectory, std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec);
+                std::filesystem::permissions(protectedDirectory,
+                                             std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec);
                 const auto blocked = pending->SaveFirst(Filename(protectedPath));
                 std::filesystem::permissions(protectedDirectory, std::filesystem::perms::owner_all);
 #endif
@@ -207,11 +229,15 @@ public:
                 Require(Bytes(protectedPath) == "original bytes", "failed save must not truncate original file");
                 unchanged();
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
-                    Require(entry.path().filename().string().find(".wxnotepad-") == std::string::npos, "failure must clean sibling temporary files");
-                Require(pending->SaveFirst(Filename(protectedPath)).status == SaveStatus::Saved, "approved overwrite must succeed after failure");
-                Require(Bytes(protectedPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast", "approved overwrite must write complete new bytes");
+                    Require(entry.path().filename().string().find(".wxnotepad-") == std::string::npos,
+                            "failure must clean sibling temporary files");
+                Require(pending->SaveFirst(Filename(protectedPath)).status == SaveStatus::Saved,
+                        "approved overwrite must succeed after failure");
+                Require(Bytes(protectedPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast",
+                        "approved overwrite must write complete new bytes");
                 pending->Destroy();
-                std::puts("PASS: cancellation, creation/replacement failures, preserved sentinel and approved overwrite");
+                std::puts(
+                    "PASS: cancellation, creation/replacement failures, preserved sentinel and approved overwrite");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
@@ -223,9 +249,13 @@ public:
         return true;
     }
     int OnExit() override { return result_; }
-    int OnRun() override { wxApp::OnRun(); return result_; }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+
 private:
     int result_ = 1;
 };
-}
+} // namespace
 wxIMPLEMENT_APP(FileApp);

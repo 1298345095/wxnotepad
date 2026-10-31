@@ -11,7 +11,10 @@ public:
     bool OnInit() override {
         frame_ = new EditorFrame;
         editor_ = frame_->Editor();
-        editor_->Bind(wxEVT_PAINT, [this](wxPaintEvent& event) { ++paints_; event.Skip(); });
+        editor_->Bind(wxEVT_PAINT, [this](wxPaintEvent& event) {
+            ++paints_;
+            event.Skip();
+        });
         frame_->Show();
         editor_->SetFocus();
         editor_->Send(Scintilla::Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("ASCII input\r\n中文输入\tcaret"));
@@ -21,7 +24,10 @@ public:
         timer_.Start(500, wxTIMER_ONE_SHOT);
         return true;
     }
-    int OnRun() override { wxApp::OnRun(); return result_; }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
 
 private:
     EditorFrame* frame_ = nullptr;
@@ -61,8 +67,7 @@ private:
         case 0:
             if (!Painted("show")) return;
             focusAvailable_ = editor_->Send(Scintilla::Message::GetFocus) != 0;
-            if (!focusAvailable_)
-                std::puts("SKIP: native focus assertions; desktop did not activate the test window");
+            if (!focusAvailable_) std::puts("SKIP: native focus assertions; desktop did not activate the test window");
             alternateFocus_ = new wxButton(frame_, wxID_ANY, "temporary focus target", wxPoint(400, 50));
             alternateFocus_->SetFocus();
             break;
@@ -78,7 +83,8 @@ private:
             break;
         case 3:
             if (!Painted("resize")) return;
-            cover_ = new wxFrame(frame_, wxID_ANY, "wxnotepad temporary cover", frame_->GetPosition(), frame_->GetSize());
+            cover_ =
+                new wxFrame(frame_, wxID_ANY, "wxnotepad temporary cover", frame_->GetPosition(), frame_->GetSize());
             cover_->Show();
             cover_->Raise();
             break;
@@ -105,8 +111,9 @@ private:
                 editor_->Send(Scintilla::Message::GetModify) != 1) {
                 std::fputs("FAIL: repaint changed original document state\n", stderr);
             } else {
-                std::puts(focusAvailable_ ? "PASS: native focus, caret and modified document survive repaint"
-                    : "PASS: caret and modified document survive repaint; native focus assertions skipped");
+                std::puts(focusAvailable_
+                              ? "PASS: native focus, caret and modified document survive repaint"
+                              : "PASS: caret and modified document survive repaint; native focus assertions skipped");
                 result_ = 0;
             }
             frame_->Destroy();

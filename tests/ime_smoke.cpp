@@ -21,22 +21,20 @@ void CheckGeometry(EditorControl* editor) {
     COMPOSITIONFORM composition{};
     CANDIDATEFORM candidate{};
     LOGFONTW font{};
-    const bool read = ImmGetCompositionWindow(context, &composition) &&
-        ImmGetCandidateWindow(context, 0, &candidate) && ImmGetCompositionFontW(context, &font);
+    const bool read = ImmGetCompositionWindow(context, &composition) && ImmGetCandidateWindow(context, 0, &candidate) &&
+                      ImmGetCompositionFontW(context, &font);
     ImmReleaseContext(window, context);
-    std::printf("IME caret=%lld:%lld composition=%ld:%ld candidate=%ld:%ld height=%lld\n",
-        static_cast<long long>(x), static_cast<long long>(y),
-        composition.ptCurrentPos.x, composition.ptCurrentPos.y,
-        candidate.ptCurrentPos.x, candidate.ptCurrentPos.y, static_cast<long long>(height));
+    std::printf("IME caret=%lld:%lld composition=%ld:%ld candidate=%ld:%ld height=%lld\n", static_cast<long long>(x),
+                static_cast<long long>(y), composition.ptCurrentPos.x, composition.ptCurrentPos.y,
+                candidate.ptCurrentPos.x, candidate.ptCurrentPos.y, static_cast<long long>(height));
     Require(read, "IMM must expose composition, candidate and font geometry");
-    Require(composition.dwStyle == CFS_POINT && composition.ptCurrentPos.x == x &&
-        composition.ptCurrentPos.y == y, "composition must start at the core caret position");
+    Require(composition.dwStyle == CFS_POINT && composition.ptCurrentPos.x == x && composition.ptCurrentPos.y == y,
+            "composition must start at the core caret position");
     Require(candidate.dwStyle == CFS_EXCLUDE && candidate.ptCurrentPos.x == x &&
-        candidate.ptCurrentPos.y == y + height && candidate.rcArea.left == x &&
-        candidate.rcArea.top == y && candidate.rcArea.right == x + 1 &&
-        candidate.rcArea.bottom == y + height, "candidate must exclude the caret line");
-    Require(font.lfHeight < 0 && font.lfFaceName[0] != 0,
-        "composition must use an explicit editor font");
+                candidate.ptCurrentPos.y == y + height && candidate.rcArea.left == x && candidate.rcArea.top == y &&
+                candidate.rcArea.right == x + 1 && candidate.rcArea.bottom == y + height,
+            "candidate must exclude the caret line");
+    Require(font.lfHeight < 0 && font.lfFaceName[0] != 0, "composition must use an explicit editor font");
 }
 
 class ImeApp final : public wxApp {
@@ -55,7 +53,8 @@ public:
             // A human-only fixture, kept out of the application. Positioning
             // uses the real control's public API without navigation-key mappings.
             std::string blankLines;
-            for (int line = 1; line < 100; ++line) blankLines += "\r\n";
+            for (int line = 1; line < 100; ++line)
+                blankLines += "\r\n";
             editor->Send(Scintilla::Message::SetText, 0, reinterpret_cast<intptr_t>(blankLines.c_str()));
             editor->Send(Scintilla::Message::EmptyUndoBuffer);
             editor->Send(Scintilla::Message::SetSavePoint);
@@ -92,18 +91,18 @@ public:
                 std::puts("PASS: first-line native IME composition/candidate position and font");
                 editor->Send(Message::GotoPos, 16);
                 Require(editor->Send(Message::PointYFromPosition, 0, 16) > 0,
-                    "the second-line sample must exercise a different vertical point");
+                        "the second-line sample must exercise a different vertical point");
                 editor->Update();
                 CheckGeometry(editor);
                 std::puts("PASS: second-line native IME position");
                 std::string lines;
-                for (int line = 0; line < 80; ++line) lines += "scroll sample\r\n";
+                for (int line = 0; line < 80; ++line)
+                    lines += "scroll sample\r\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(lines.c_str()));
                 const auto position = editor->Send(Message::PositionFromLine, 40) + 6;
                 editor->Send(Message::GotoPos, position);
                 editor->Send(Message::SetFirstVisibleLine, 38);
-                Require(editor->Send(Message::GetFirstVisibleLine) == 38,
-                    "the scroll sample must move the viewport");
+                Require(editor->Send(Message::GetFirstVisibleLine) == 38, "the scroll sample must move the viewport");
                 editor->Update();
                 CheckGeometry(editor);
                 std::puts("PASS: scrolled native IME position");
@@ -132,9 +131,13 @@ public:
         return true;
     }
     int OnExit() override { return result_; }
-    int OnRun() override { wxApp::OnRun(); return result_; }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+
 private:
     int result_ = 1;
 };
-}
+} // namespace
 wxIMPLEMENT_APP(ImeApp);

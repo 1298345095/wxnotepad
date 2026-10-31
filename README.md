@@ -28,8 +28,8 @@ Replace share the query and options for the current application session.
 Edit → Replace / Ctrl+H opens the replacement view. Replace revalidates the
 selected match before editing; Replace All searches the complete current
 document and reports its count in the dialog. Each single replacement, or one
-Replace All operation, can be undone once. Byte-identical replacements preserve
-the save point and redo history.
+Replace All operation, can be undone once. When Replace All leaves bytes
+unchanged, it preserves the save point and redo history.
 
 Regular expressions use the pinned original core's Boost engine and capture
 formatter, including numeric `$1` / `\1` references and `$&` / `$0` for the whole

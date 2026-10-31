@@ -35,8 +35,8 @@ public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
         CallAfter([this, frame] {
-            const auto directory = std::filesystem::temp_directory_path() /
-                ("wxnotepad-eol-" + std::to_string(wxGetProcessId()));
+            const auto directory =
+                std::filesystem::temp_directory_path() / ("wxnotepad-eol-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 using namespace std::string_literals;
@@ -63,24 +63,31 @@ public:
                 };
                 for (const auto& sample : samples) {
                     const auto path = directory / "sample.txt";
-                    { std::ofstream output(path, std::ios::binary); output << sample.source; }
-                    Require(frame->Open(Filename(path), sample.encoding).status == OpenStatus::Opened, "EOL sample must open");
+                    {
+                        std::ofstream output(path, std::ios::binary);
+                        output << sample.source;
+                    }
+                    Require(frame->Open(Filename(path), sample.encoding).status == OpenStatus::Opened,
+                            "EOL sample must open");
                     auto* editor = frame->Editor();
                     Require(!editor->Send(Scintilla::Message::GetModify) && !editor->Send(Scintilla::Message::CanUndo),
-                        "loading EOL mode must retain clean save point and isolated history");
+                            "loading EOL mode must retain clean save point and isolated history");
                     Key(editor, WXK_END, true);
                     Key(editor, WXK_RETURN);
                     Require(editor->Send(Scintilla::Message::GetModify), "Enter must mark loaded document modified");
                     Key(editor, 'Z', true);
-                    Require(!editor->Send(Scintilla::Message::GetModify), "Undo Enter must return to loaded save point");
+                    Require(!editor->Send(Scintilla::Message::GetModify),
+                            "Undo Enter must return to loaded save point");
                     Key(editor, 'Y', true);
                     Require(frame->Save().status == SaveStatus::Saved, "edited EOL sample must save");
                     if (Bytes(path) != sample.expected) {
                         std::fprintf(stderr, "Sample: %s\n", sample.name);
                         std::fprintf(stderr, "Saved bytes:");
-                        for (unsigned char byte : Bytes(path)) std::fprintf(stderr, " %02x", byte);
+                        for (unsigned char byte : Bytes(path))
+                            std::fprintf(stderr, " %02x", byte);
                         std::fprintf(stderr, "\n");
-                        Require(false, "Enter must follow loaded EOL policy and preserve original encoding, BOM and bytes");
+                        Require(false,
+                                "Enter must follow loaded EOL policy and preserve original encoding, BOM and bytes");
                     }
                     std::printf("PASS: %s, actual Enter/Undo/Redo and saved bytes\n", sample.name);
                 }
@@ -101,9 +108,13 @@ public:
         return true;
     }
     int OnExit() override { return result_; }
-    int OnRun() override { wxApp::OnRun(); return result_; }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+
 private:
     int result_ = 1;
 };
-}
+} // namespace
 wxIMPLEMENT_APP(EolApp);

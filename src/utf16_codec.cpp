@@ -18,7 +18,7 @@ std::optional<std::string> Convert(std::string_view bytes, const wxMBConv& from,
     result.resize(converted);
     return result;
 }
-}
+} // namespace
 
 std::optional<std::string> DecodeUtf16Le(std::string_view bytes) {
     return Convert(bytes, wxMBConvUTF16LE{}, wxMBConvUTF8{});

@@ -23,11 +23,13 @@ public:
                 const auto buffered = pixmap->WidthText(font.get(), "Hg 0123456789");
                 const auto directHeight = surface->Metrics(font.get()).height;
                 const auto bufferedHeight = pixmap->Metrics(font.get()).height;
-                std::printf("dpi=%d reference_width=%d direct_width=%g buffered_width=%g direct_height=%g buffered_height=%g\n",
+                std::printf(
+                    "dpi=%d reference_width=%d direct_width=%g buffered_width=%g direct_height=%g buffered_height=%g\n",
                     frame->GetDPI().y, expected.x, direct, buffered, directHeight, bufferedHeight);
                 if (direct != expected.x || buffered != expected.x || directHeight != bufferedHeight ||
                     surface->LogPixelsY() != pixmap->LogPixelsY())
-                    throw std::runtime_error("Buffered and direct editor text must use the same native point size at the window DPI");
+                    throw std::runtime_error(
+                        "Buffered and direct editor text must use the same native point size at the window DPI");
                 std::puts("PASS: buffered and direct font metrics match native window DPI");
                 result_ = 0;
             } catch (const std::exception& error) {
@@ -38,7 +40,11 @@ public:
         });
         return true;
     }
-    int OnRun() override { wxApp::OnRun(); return result_; }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+
 private:
     int result_ = 1;
 };

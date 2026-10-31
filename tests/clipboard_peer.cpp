@@ -21,6 +21,7 @@ public:
         started_ = wxGetUTCTimeMillis();
         return true;
     }
+
 private:
     wxString directory_;
     wxFrame* frame_ = nullptr;
@@ -31,39 +32,58 @@ private:
     wxString pendingCommand_;
     wxLongLong activationStarted_;
     void Respond(const wxString& value) {
-        { wxFFile file(directory_ + "/response.tmp", "wb"); file.Write(value, wxConvUTF8); }
+        {
+            wxFFile file(directory_ + "/response.tmp", "wb");
+            file.Write(value, wxConvUTF8);
+        }
         wxRenameFile(directory_ + "/response.tmp", directory_ + "/response", true);
     }
     void Poll() {
-        if (wxGetUTCTimeMillis() - started_ > 25000) { frame_->Destroy(); ExitMainLoop(); return; }
+        if (wxGetUTCTimeMillis() - started_ > 25000) {
+            frame_->Destroy();
+            ExitMainLoop();
+            return;
+        }
         if (!pendingCommand_.empty()) {
             if (!frame_->IsActive() || !text_->HasFocus()) {
-                if (wxGetUTCTimeMillis() - activationStarted_ > 3000) { pendingCommand_.clear(); Respond("native focus unavailable"); }
+                if (wxGetUTCTimeMillis() - activationStarted_ > 3000) {
+                    pendingCommand_.clear();
+                    Respond("native focus unavailable");
+                }
                 return;
             }
             const auto command = pendingCommand_;
             pendingCommand_.clear();
             wxString focusFile;
-            if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) { wxFFile file(focusFile, "wb"); }
+            if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) {
+                wxFFile file(focusFile, "wb");
+            }
             frame_->SetTitle("wxnotepad clipboard test peer");
             Perform(command);
             return;
         }
         if (pendingPaste_) {
             // GTK delivers the native clipboard request asynchronously.
-            if (!text_->GetValue().empty()) { pendingPaste_ = false; Respond(text_->GetValue()); }
+            if (!text_->GetValue().empty()) {
+                pendingPaste_ = false;
+                Respond(text_->GetValue());
+            }
             return;
         }
         const auto request = directory_ + "/request";
         if (!wxFileExists(request)) return;
         wxString command;
-        { wxFFile file(request, "rb"); file.ReadAll(&command, wxConvUTF8); }
+        {
+            wxFFile file(request, "rb");
+            file.ReadAll(&command, wxConvUTF8);
+        }
         wxRemoveFile(request);
         if (command == "copy" || command == "wxcopy" || command == "nontext" || command == "paste") {
             frame_->SetTitle(wxString::Format("wxnotepad clipboard focus: peer [%lu]", wxGetProcessId()));
             wxString focusFile;
             if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) {
-                wxFFile file(focusFile, "wb"); file.Write("peer");
+                wxFFile file(focusFile, "wb");
+                file.Write("peer");
             }
             frame_->Raise();
             text_->SetFocus();
@@ -78,7 +98,10 @@ private:
             Respond("ready");
         } else if (command == "wxcopy") {
             wxClipboardLocker lock;
-            Respond(!(!lock) && wxTheClipboard->SetData(new wxTextDataObject(wxString::FromUTF8("peer English 中文 😀\n第二行\nlast"))) ? "ready" : "failed");
+            Respond(!(!lock) && wxTheClipboard->SetData(
+                                    new wxTextDataObject(wxString::FromUTF8("peer English 中文 😀\n第二行\nlast")))
+                        ? "ready"
+                        : "failed");
         } else if (command == "nontext") {
             wxClipboardLocker lock;
             auto* object = new wxCustomDataObject(wxDataFormat("application/x-wxnotepad-test"));
