@@ -1,6 +1,7 @@
 #include "document_session.h"
 #include "editor_control.h"
 #include "gbk_codec.h"
+#include "utf16_codec.h"
 #include "ScintillaTypes.h"
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -99,6 +100,11 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
             if (choice == GbkLossChoice::Utf8) { savedEncoding = FileEncoding::Utf8; savedBom = false; }
             else { bytes = encoded.bytes; savedText = DecodeGbk(bytes); }
         } else bytes = encoded.bytes;
+    } else if (encoding_ == FileEncoding::Utf16Le) {
+        auto encoded = EncodeUtf16Le(bytes);
+        if (!encoded) return {SaveStatus::Failed, "The document could not be encoded as UTF-16LE."};
+        bytes = std::move(*encoded);
+        if (hasBom_) bytes.insert(0, "\xff\xfe");
     } else if (hasBom_) bytes.insert(0, "\xef\xbb\xbf");
     const auto error = WriteSafely(destination, bytes);
     if (!error.empty()) return {SaveStatus::Failed, error};
@@ -129,13 +135,18 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     std::string bytes(static_cast<size_t>(length), '\0');
     if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
         return {OpenStatus::Failed, "Could not read the complete file."};
-    const auto selectedEncoding = encoding.value_or(FileEncoding::Utf8);
-    const bool bom = selectedEncoding == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf");
-    if (bom) bytes.erase(0, 3);
-    if (selectedEncoding == FileEncoding::Gbk) {
+    const auto format = encoding.value_or(bytes.starts_with("\xff\xfe") ? FileEncoding::Utf16Le : FileEncoding::Utf8);
+    const bool bom = format == FileEncoding::Utf16Le ? bytes.starts_with("\xff\xfe") :
+                     format == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf");
+    if (bom) bytes.erase(0, format == FileEncoding::Utf16Le ? 2 : 3);
+    if (format == FileEncoding::Gbk) {
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return {OpenStatus::Failed, "The file is not valid GBK (CP936). The document was not changed."};
         bytes = *decoded;
+    } else if (format == FileEncoding::Utf16Le) {
+        auto decoded = DecodeUtf16Le(bytes);
+        if (!decoded) return {OpenStatus::Failed, "The file is not valid UTF-16LE."};
+        bytes = std::move(*decoded);
     } else if (!IsUtf8(bytes)) return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
     const bool wasModified = editor_.Send(Scintilla::Message::GetModify);
     if (!beforeReplace()) return {OpenStatus::Cancelled, {}};
@@ -143,11 +154,11 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     // first-save destination). Read it again after that explicit Save succeeds.
     if (wasModified && !editor_.Send(Scintilla::Message::GetModify))
         return Open(source, [] { return true; }, encoding);
-    Replace(bytes, *source, bom, selectedEncoding);
+    Replace(bytes, *source, format, bom);
     return {OpenStatus::Opened, {}};
 }
 
-void DocumentSession::Replace(const std::string& bytes, const wxString& path, bool bom, FileEncoding encoding) {
+void DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom) {
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
     editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
@@ -157,11 +168,11 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, bo
     editor_.Send(Scintilla::Message::SetXOffset, 0);
     editor_.Send(Scintilla::Message::SetSavePoint);
     path_ = path;
-    hasBom_ = bom;
     encoding_ = encoding;
+    hasBom_ = bom;
 }
 
 void DocumentSession::New() {
-    Replace({}, {}, false);
+    Replace({}, {}, FileEncoding::Utf8, false);
     editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf));
 }

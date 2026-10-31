@@ -43,5 +43,5 @@ private:
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss);
-    void Replace(const std::string& bytes, const wxString& path, bool bom, FileEncoding encoding = FileEncoding::Utf8);
+    void Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom);
 };
