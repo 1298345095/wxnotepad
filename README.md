@@ -13,6 +13,9 @@ On Windows the native caret, composition window and candidate window follow the
 core's caret, including after scrolling and regaining focus. Chinese character
 events retain their UTF-8 conversion storage through insertion.
 
+Windows binaries declare Per-Monitor V2 DPI awareness, and offscreen text buffers
+inherit the window's display scale. See the [font validation record](docs/observations/windows-font-README.md).
+
 Phase 1 supports keyboard navigation, Shift selection, mouse selection and
 scrolling, plus native system clipboard Cut/Copy/Paste and their Ctrl+X/C/V
 shortcuts. Clipboard edits participate in the same Undo/Redo history.

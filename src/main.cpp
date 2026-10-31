@@ -20,6 +20,7 @@ class NotepadApp final : public wxApp {
     // Opt-in external observation of this actual, shown application. No alternate
     // editor host or hidden operation path: Open/Save are the frame's commands.
     void Publish() {
+        if (!frame_) return;
         frame_->Update();
         frame_->Editor()->Update();
         lastDirty_ = frame_->Editor()->Send(Scintilla::Message::GetModify) != 0;
@@ -39,6 +40,7 @@ class NotepadApp final : public wxApp {
     }
 
     void Observe() {
+        if (!frame_) return;
         const wxString path = observation_ + "/command";
         if (wxFileExists(path)) {
             wxTextFile command(path);
@@ -74,9 +76,18 @@ public:
         frame_->Show();
         frame_->Editor()->SetFocus();
         if (!observation_.empty()) {
+            frame_->Bind(wxEVT_DESTROY, [this](wxWindowDestroyEvent& event) {
+                if (event.GetEventObject() == frame_) {
+                    observer_.Stop();
+                    frame_ = nullptr;
+                }
+                event.Skip();
+            });
             observer_.SetOwner(this);
             Bind(wxEVT_TIMER, [this](wxTimerEvent&) { Observe(); });
-            CallAfter([this] { Publish(); observer_.Start(10); });
+            CallAfter([this] {
+                if (frame_) { Publish(); observer_.Start(10); }
+            });
         }
         return true;
     }

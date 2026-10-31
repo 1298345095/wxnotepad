@@ -61,6 +61,7 @@ public:
         UpdateSystemCaret();
     }
     void Resize() { ChangeSize(); }
+    void DpiChanged() { InvalidateStyleRedraw(); ChangeSize(); }
     void Character(std::string_view text) { InsertCharacter(text, Scintilla::CharacterSource::DirectInput); }
     bool Navigation(int key, bool control, bool shift) {
         Scintilla::Keys coreKey;
@@ -309,6 +310,11 @@ EditorControl::EditorControl(wxWindow* parent)
 #ifdef __WXMSW__
     // Use one native caret for display and for input methods on Windows.
     Send(Message::SetCaretStyle, 0);
+    Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+        core_->DpiChanged();
+        Refresh(false);
+        event.Skip();
+    });
 #endif
     Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& event) {
         Send(Message::SetFocus, 1);

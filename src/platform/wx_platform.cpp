@@ -39,6 +39,10 @@ public:
     void Init(SurfaceID dc,WindowID,bool) noexcept override {dc_=static_cast<wxDC*>(dc);}
     std::unique_ptr<Surface> AllocatePixMap(int width,int height) override {
         auto p=std::make_unique<WxSurface>(); p->bitmap_=wxBitmap(std::max(1,width),std::max(1,height));
+#ifdef __WXMSW__
+        // wxMemoryDC sizes point fonts using the selected bitmap's scale factor.
+        p->bitmap_.SetScaleFactor(dc_->GetContentScaleFactor());
+#endif
         auto dc=std::make_unique<wxMemoryDC>(); dc->SelectObject(p->bitmap_); p->dc_=dc.get(); p->owned_=std::move(dc); return p;
     }
     void SetMode(SurfaceMode m) noexcept override {utf8_=m.codePage==65001;}
