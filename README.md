@@ -27,9 +27,9 @@ Replace share the query and options for the current application session.
 
 Edit → Replace / Ctrl+H opens the replacement view. Replace revalidates the
 selected match before editing; Replace All searches the complete current
-document and reports its count in the dialog. Each single replacement, or one
-Replace All operation, can be undone once. When Replace All leaves bytes
-unchanged, it preserves the save point and redo history.
+document and reports its count in the dialog. Each text-changing single
+replacement or Replace All operation can be undone once. Byte-identical
+single replacements and Replace All preserve the save point and redo history.
 
 Regular expressions use the pinned original core's Boost engine and capture
 formatter, including numeric `$1` / `\1` references and `$&` / `$0` for the whole
@@ -53,27 +53,42 @@ Save as UTF-8, Replace in GBK, or Cancel. Newline insertion defaults to CRLF;
 loaded files use their detected newline style for Enter, while existing CRLF,
 LF and CR bytes remain intact when saved.
 
-Opening `.c`, `.cpp`, `.cxx`, `.cc`, `.h`, `.hpp`, `.hxx` or `.hh` selects C/C++
-highlighting with the pinned original lexer and default light syntax colors.
-Extension matching ignores ASCII case. Unknown extensions and New use Plain
-Text; the status bar shows the language alongside encoding/BOM. Typing and
-Undo/Redo update syntax through the core's incremental styling lifecycle.
-See the [C/C++ validation record](docs/observations/syntax-cpp-README.md).
+Automatic language selection uses these extensions, ignoring ASCII case:
 
-Opening `.py`, `.pyw` or `.pyi` selects Python with the pinned original lexer,
-lexer-consumed keywords and default light palette. Python is also available in
-the Language menu and follows the existing Automatic and Save As rules.
-The keyword/style data can be reproduced offline with
-`python tools/update_python_scheme.py --source <original-checkout>`; the generated
-header records the source revision, hash and license. Completion-only lists are
-omitted. See the [Python validation record](docs/observations/syntax-python-README.md).
+| Language | Extensions |
+| --- | --- |
+| C/C++ | `.c`, `.cpp`, `.cxx`, `.cc`, `.h`, `.hpp`, `.hxx`, `.hh` |
+| Python | `.py`, `.pyw`, `.pyi` |
+| JSON | `.json` |
+
+Unknown extensions and unnamed documents use Plain Text. The Language menu offers
+Automatic, Plain Text and each supported language. A manual choice applies to the
+current document and survives Save As; successful New/Open restores Automatic.
+Automatic follows the filename after a successful first Save or Save As. Failed
+or cancelled file operations retain the current choice. The status bar shows the
+effective language and an explicit override alongside encoding/BOM.
+
+Highlighting uses the pinned original lexers, consumed keyword lists and default
+light syntax colors while retaining the native font and point size. Typing and
+Undo/Redo update syntax through the core's incremental styling lifecycle. The
+three `tools/update_*_scheme.py` scripts reproduce the checked-in data from the
+pinned original checkout; generated headers record revision, source hash and
+license, and omit completion-only lists.
+
+C/C++, Python and JSON support code folding. Click a header's margin marker to
+collapse or expand its block; View → Collapse All and Expand All include nested
+blocks. These commands change visibility without editing text or history. Find
+reveals the complete matched range, including hidden intermediate lines, while
+leaving unrelated folds collapsed. Replacement still searches the full document.
+See the [syntax and folding validation record](docs/observations/syntax-README.md).
 
 Microsoft Pinyin human validation passed; see the
 [IME validation record](docs/evidence/issue-13/README.md). Linux IME remains
 deferred. More syntax languages, advanced editing, settings migration and release
 packaging remain future work. See the
 [phase 1 spec](https://github.com/1298345095/wxnotepad/issues/8),
-[search/replace spec](https://github.com/1298345095/wxnotepad/issues/21) and the
+[search/replace spec](https://github.com/1298345095/wxnotepad/issues/21),
+[syntax/folding spec](https://github.com/1298345095/wxnotepad/issues/30) and the
 [full-application resource observations](docs/observations/issue20-README.md).
 
 ## Build and run
