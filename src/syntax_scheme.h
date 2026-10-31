@@ -7,4 +7,5 @@ enum class SyntaxLanguage : uint8_t { PlainText, Cpp, Python, Json };
 
 SyntaxLanguage LanguageForPath(const wxString& path);
 wxString LanguageName(SyntaxLanguage language);
+bool LanguageCanFold(SyntaxLanguage language);
 void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language);
