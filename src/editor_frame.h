@@ -39,10 +39,13 @@ private:
     wxTextCtrl* replacement_ = nullptr;
     wxStaticText* replacementLabel_ = nullptr;
     wxButton* replaceButton_ = nullptr;
+    wxButton* replaceAllButton_ = nullptr;
+    wxStaticText* replacementResult_ = nullptr;
     wxCheckBox* wrapAround_ = nullptr;
     void ShowFind(bool replace = false);
     void FindNext();
     void ReplaceOne();
+    void ReplaceAll();
     void FindPrevious();
     void Search(bool forward);
     void OnSearchKey(wxKeyEvent& event);
