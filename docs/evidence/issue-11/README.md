@@ -1,96 +1,65 @@
 # Navigation, selection and scrolling
 
 Date: 2026-10-30. Scope: [#11](https://github.com/1298345095/wxnotepad/issues/11).
-Original core remains pinned to `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`;
-wxWidgets is 3.3.3. Branch starts from integration `292514d`.
+Original core: `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`; wxWidgets: 3.3.3.
+Started from integration `292514d`, then merged #14, #13 and #15 through `a127588`.
+IME caret updates and navigation/scroll callbacks are both preserved.
 
-The agreed test seam is the real editor control's wx input events and public
+The agreed seam is the real editor control's wx input events and public
 Scintilla commands, observed through document bytes, selection and viewport.
-Three vertical TDD slices first failed on unhandled Right, then mouse drag,
-then scrollbar input; each was implemented before adding the next slice.
+Three TDD slices first failed on unhandled Right, mouse drag and scrollbar input;
+each was implemented before adding the next slice. Literal expected results
+cover UTF-8 movement, Shift selection, Home/End and document boundaries,
+select-all, replacement/deletion and Undo, mouse hit/drag/release, both scroll
+axes, hit-testing after resize, and revealing a nonempty long-line caret.
+Home's indentation/physical-start toggle matches the pinned Notepad4 key map
+and Home/End assignments with wrapping off. Character boundaries stay in the core.
 
-`editor_input_undo` now covers UTF-8 Right/Shift+Right, selected-text replacement
-and Undo; arrows, Home/End, Ctrl+Home/End, Ctrl+Shift+Home, select-all and deletion;
-mouse hit/drag/release, multiline replacement and Undo; both scrollbar axes,
-hit-testing after scrolling/resizing, and keyboard caret visibility. Literal
-byte positions and document results are independent expected values. Home
-alternates between indentation and physical line start, as in the pinned
-Notepad4 `KeyMap.cxx` and `src/Notepad4.cpp` Home/End assignments; wrapping is off.
-The host delegates character boundaries and selection movement to that core.
+| Backend | Final Release build / integrated CTest | Native interaction |
+| --- | --- | --- |
+| Windows 11, VS 18 / MSVC 14.51 | passed; 5/5 | OS keyboard UTF-8 selection/edit/Undo, multiline mouse drag, both wheel axes, visible caret passed |
+| Ubuntu 24.04 WSLg, GTK3 Wayland / GCC 13.3 | passed; 4/4 | same native keyboard/mouse/scroll/caret sequence passed |
+| Ubuntu 24.04 WSLg, GTK3 X11 / GCC 13.3 | same Linux executable; 4/4 | native keyboard/drag/edit/Undo passed; human scrollbar drag, selection after scroll and normal window resizing passed |
 
-| Backend | Release build | Public event checks | Native OS input |
-| --- | --- | --- | --- |
-| Windows 11, VS 18 / MSVC 14.51 | passed | final CTest 2/2 passed | keyboard, mouse drag, both wheel axes and visible caret passed |
-| Ubuntu 24.04 WSLg, GTK3 Wayland / GCC 13.3 | passed | final editor suite passed (0.21s, root rerun) | keyboard, mouse drag, both wheel axes and visible caret passed |
-| Ubuntu 24.04 WSLg, GTK3 X11 / GCC 13.3 | same Linux build | final editor suite passed (0.07s, root rerun) | keyboard and mouse selection/edit/Undo passed; human scrollbar drag and selection after scroll passed |
+The final X11 display check explicitly skipped only native-focus assertions
+because the desktop did not activate its top-level window. Paint, resize,
+cover/uncover, hide/show and caret/document preservation still ran and passed.
+Windows and Wayland focus assertions ran and passed. Earlier successful native
+focus evidence remains in #10; no fake focus event or product activation change
+was introduced. Final integrated suites also cover the merged IME geometry
+(Windows), first-save and unsaved-close behavior.
 
-The final assertion refinement requires a nonempty long-line end to enter the
-viewport (rather than the empty final line). The root reran the final suite on
-both WSLg backends successfully. Native X11 Windows-injected wheel input did not
-reach the GTK wheel event probe; this is not counted as a passing native wheel
-check. A separate human X11 run confirmed both scrollbar drags and selection
-after scrolling, but reported an invisible pointer and inability to initiate
-edge resize. Native resize acceptance remains pending diagnosis; programmatic
-resize/hit-testing checks passed. No Linux IME was installed.
+During mixed WSLg backend tests the human observed an invisible pointer and
+could not initiate edge resize, including over a stock native GTK text field.
+Native diagnostics found no residual capture, an opaque I-beam and enabled
+resize flags. The official WSLg repository has a
+[similar cross-application cursor-loss report](https://github.com/microsoft/wslg/issues/1424#issuecomment-6249999698)
+and [display-client reconnect recovery reports](https://github.com/microsoft/wslg/issues/1424#issuecomment-4442947473).
+With other GUI work quiescent, the root authorized one reconnect of the exact
+verified `C:\Program Files\WSL\msrdc.exe` client whose command line contained
+`/wslg` and whose visible-window inventory was empty. It automatically respawned;
+Ubuntu stayed alive. Human retest of the normal native window then confirmed a
+visible pointer and normal drag resizing. This records a successful recovery,
+not a universal root-cause claim. No WSL shutdown, install, configuration edit or
+production cursor/chrome workaround occurred. The resize cursor remaining an
+ordinary arrow was accepted as a cosmetic native/WSLg appearance difference.
+Local versions were WSL 2.7.8.0, WSLg 1.0.73.2 and MSRDC 1.2.6676.
 
-Hidden native diagnostics reproduced the actual adapter's cursor selection
-without moving the system pointer: no residual capture, a valid GTK I-beam with
-418 nontransparent pixels, wx resize style enabled, and GTK resizable enabled.
-These metadata do not establish that the pointer was displayed by WSLg. The
-diagnostic probe modes `--compare` (native GTK text field above the editor) and
-`--compare-csd` (same controls with GTK client decorations) are available for a
-focused differential human check. They do not change the production frame.
+Build with the root README's `tools/build.py` command. Linux source, generated
+core, binaries and reports are in `/home/ctrls/.cache/wxnotepad-issue11`; run CTest
+with explicit `GDK_BACKEND=x11` or `GDK_BACKEND=wayland`. Native drivers and
+captures are retained outside the repository in
+`E:/NewNotepad4/.wxnotepad-implementation-context` (`desktop_run.py`, `win_ui.py`,
+`navigation_native.py`). Focused runs use the shared desktop mutex; the OS input
+driver checks its owned foreground window before each batch.
 
-The subsequent human `--compare-csd` run found the pointer invisible over both
-the native `wxTextCtrl` and the editor, and could not initiate edge/corner resize.
-No production cursor/style workaround was added. All retained manual fixture
-modes now have an explicit **Close probe** button in their client area.
+`navigation_probe <report-path> --scroll` opens the 100-line long-line fixture
+for up to five minutes with an explicit **Close probe** button. F6 reloads it;
+Ctrl+End then Up/End reveals a long-line end, Ctrl+Home returns to the start.
+The test-only `--compare`/`--compare-csd` modes retain the native-text differential
+fixture; they do not change the production frame. Captures were assessed by the
+implementer, separately from public document assertions.
 
-Read-only WSLg follow-up found WSL 2.7.8.0, WSLg 1.0.73.2 and MSRDC 1.2.6676.
-The current Weston config contains only the standard Xwayland access/input-method
-sections; there is no user GTK cursor override. The official WSLg repository's
-[#1424](https://github.com/microsoft/wslg/issues/1424) contains community reports
-of pointer loss across applications after closing a Wayland GTK application and
-then launching an X11 application, including the
-[October 18 reproduction](https://github.com/microsoft/wslg/issues/1424#issuecomment-6249999698).
-Several reporters observed recovery by restarting only the `msrdc` client,
-[including existing windows reappearing with visible cursors](https://github.com/microsoft/wslg/issues/1424#issuecomment-4442947473).
-These are reports, not proof of the same root cause here. The root coordinated a
-quiescent GUI window and authorized one exact-client reconnect. Immediately before
-stopping PID 23448, its path was verified as `C:\Program Files\WSL\msrdc.exe`, its
-command line contained `/wslg`, and its visible-window inventory was empty. The
-client automatically respawned as PID 50376 in the same WSLg session; Ubuntu and
-the native GDK X11 connection remained alive. No WSL shutdown, installation or
-system configuration edit occurred. Normal native-frame pointer/resize human
-acceptance after reconnect is pending; no CSD production workaround is present.
-Separately, [#1008](https://github.com/microsoft/wslg/issues/1008) reports resize
-hit regions differing from window shadows; this does not establish that our
-observed resize failure has that cause.
-
-Reproduce builds with the root README's `tools/build.py` command. Linux source,
-generated core, executable and reports are all on the Linux filesystem at
-`/home/ctrls/.cache/wxnotepad-issue11`. Run the editor suite with
-`GDK_BACKEND=wayland` or `GDK_BACKEND=x11` and CTest's `-R editor_input_undo`.
-
-The separately built `navigation_probe` sends no input itself. It exposes the
-public document/selection/viewport and hit-test coordinates to an external OS
-driver. With a report path as its argument it opens `A中文\r\n  B\r\nlast`;
-F6 loads the 100-line, long-line fixture. Add `--scroll` to start with that fixture
-and keep the window available for five minutes. Manual X11 entry:
-
-```text
-wsl.exe -d Ubuntu --exec env GDK_BACKEND=x11 /home/ctrls/.cache/wxnotepad-issue11/build/cmake/navigation_probe /home/ctrls/.cache/wxnotepad-issue11/navigation-manual.txt --scroll
-```
-
-Temporary desktop drivers are retained outside the repository at
-`E:/NewNotepad4/.wxnotepad-implementation-context/{desktop_run.py,win_ui.py,navigation_native.py}`.
-All focused runs use the shared desktop mutex. The native driver verifies the
-owned foreground window before each input batch. Captures in that directory
-were visually assessed by the implementer: Windows/Wayland show the selected
-Chinese character and the scrolled long-line end with its caret; X11 shows the
-initial/selected text. Captures are not substituted for document assertions.
-The driver accounts for the existing Windows DPI-unaware executable and WSLg's
-different Wayland/X11 coordinate origins; cross-monitor DPI remains out of scope.
-
-Single stream selection only. Clipboard, IME, multiple carets, rectangular
-selection, text dragging and complex text layout remain separate tickets/scope.
+Single stream selection only. Complex layout, multiple/rectangular selections,
+text dragging and cross-monitor DPI remain outside this ticket. Linux IME was
+not installed or tested.
