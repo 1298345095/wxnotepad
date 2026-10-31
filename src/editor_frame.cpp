@@ -346,7 +346,16 @@ void EditorFrame::Search(bool forward) {
         SetStatusText("No match found");
         return;
     }
-    editor_->Send(Message::SetSel, editor_->Send(Message::GetTargetStart), editor_->Send(Message::GetTargetEnd));
+    const auto matchStart = editor_->Send(Message::GetTargetStart);
+    const auto matchEnd = editor_->Send(Message::GetTargetEnd);
+    const auto firstLine = editor_->Send(Message::LineFromPosition, matchStart);
+    // The target is end-exclusive. A zero-width match still needs its own line;
+    // a match ending at the next line start need not open that line's folds.
+    const auto lastPosition = matchEnd > matchStart ? editor_->Send(Message::PositionBefore, matchEnd) : matchStart;
+    const auto lastLine = editor_->Send(Message::LineFromPosition, lastPosition);
+    for (auto line = firstLine; line <= lastLine; ++line)
+        editor_->Send(Message::EnsureVisible, line);
+    editor_->Send(Message::SetSel, matchStart, matchEnd);
     lastEmptyMatch_.reset();
     if (searchOptions_.regularExpression &&
         editor_->Send(Message::GetTargetStart) == editor_->Send(Message::GetTargetEnd))
