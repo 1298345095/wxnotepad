@@ -32,6 +32,31 @@ whitespace markers start off. These choices stay with the current window through
 New, Open, Save As and language changes; they are not saved between runs.
 See the [navigation and view validation record](docs/observations/navigation-view-README.md).
 
+The status bar shows the 1-based logical line and core column at the active
+caret. Tabs follow the current tab stops; wrapped rows do not create document
+lines. A nonempty stream selection also shows its Unicode scalar count, rather
+than UTF-8 bytes or UTF-16 units. Combining code points count separately, and CR
+and LF each count once. Search feedback has a separate field, retaining the
+encoding/BOM, language and EOL information.
+
+Edit offers Convert to CRLF, Convert to LF and Convert to CR. Each command
+normalizes existing line endings without adding a final newline and sets the
+mode used by Enter. A text-changing conversion is one undo action; Undo restores
+the text while retaining the explicitly chosen insertion mode. The `EOL:` status
+label describes that insertion mode, including when Undo restores mixed endings.
+No-op conversions retain the save point and pending Redo history. New/Open keep
+the existing new-document default and loaded-file EOL detection.
+
+Edit → Indentation selects Tabs or Spaces and a shared tab/indentation width of
+2, 4 or 8 columns. Startup retains the original core's tabs and 8-column default.
+Changing options leaves existing whitespace and history intact; the choice lasts
+for this window across New/Open, Save As and language changes, without persistence.
+Edit → Indent / Unindent operates on the current or selected logical lines.
+Tab retains ordinary insertion and indents multiline selections; Shift+Tab
+unindents the current or selected lines. A selection ending exactly at the next
+line's start excludes that line. Text-changing block commands undo in one step.
+See the [everyday editing validation record](docs/observations/everyday-editing-README.md).
+
 Edit → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
 Shift+F3 finds the previous match. Wrap around is enabled by default, while
 Match case, Whole word and Regular expression are initially off. Find and
