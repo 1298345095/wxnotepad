@@ -35,9 +35,12 @@ private:
     wxDialog* findDialog_ = nullptr;
     wxTextCtrl* findQuery_ = nullptr;
     SearchOptions searchOptions_;
-    intptr_t lastEmptyMatch_ = -1;
-    uint64_t lastEmptyRevision_ = 0;
-    uint64_t lastEmptySelectionRevision_ = 0;
+    struct EmptyMatch {
+        intptr_t position;
+        uint64_t documentRevision;
+        uint64_t selectionRevision;
+    };
+    std::optional<EmptyMatch> lastEmptyMatch_;
     struct RegexMatch {
         intptr_t start;
         intptr_t end;

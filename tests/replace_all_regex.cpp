@@ -7,7 +7,7 @@
 #include <wx/stattext.h>
 #include <wx/statusbr.h>
 #include <wx/textctrl.h>
-#include "native_dialog_helpers.h"
+#include "native_search_helpers.h"
 #include <cstdio>
 #include <stdexcept>
 #include <vector>
@@ -19,69 +19,12 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-void Command(EditorFrame* frame, int id) {
-#ifdef __WXMSW__
-    SendMessageW(static_cast<HWND>(frame->GetHandle()), WM_COMMAND, MAKEWPARAM(id, 0), 0);
-#elif defined(__WXGTK__)
-    auto* item = frame->GetMenuBar()->FindItem(id);
-    Require(item, "native menu command must exist");
-    gtk_menu_item_activate(GTK_MENU_ITEM(item->GetMenuItem()));
-#endif
-    wxYield();
-}
-void Toggle(wxCheckBox* option, bool checked) {
-#ifdef __WXMSW__
-    const auto handle = static_cast<HWND>(option->GetHandle());
-    SendMessageW(handle, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessageW(static_cast<HWND>(option->GetParent()->GetHandle()), WM_COMMAND,
-                 MAKEWPARAM(GetDlgCtrlID(handle), BN_CLICKED), reinterpret_cast<LPARAM>(handle));
-#elif defined(__WXGTK__)
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(option->GetHandle()), checked);
-#endif
-    wxYield();
-}
-void Click(wxWindow* dialog, int id) {
-    auto* button = wxDynamicCast(dialog->FindWindow(id), wxButton);
-    Require(button, "native dialog button must exist");
-#ifdef __WXMSW__
-    const auto handle = static_cast<HWND>(button->GetHandle());
-    SendMessageW(static_cast<HWND>(dialog->GetHandle()), WM_COMMAND, MAKEWPARAM(GetDlgCtrlID(handle), BN_CLICKED),
-                 reinterpret_cast<LPARAM>(handle));
-#elif defined(__WXGTK__)
-    gtk_button_clicked(GTK_BUTTON(button->GetHandle()));
-#endif
-    wxYield();
-}
-void Selection(EditorControl* editor, intptr_t start, intptr_t end, const char* message) {
-    const auto actualStart = editor->Send(Scintilla::Message::GetSelectionStart);
-    const auto actualEnd = editor->Send(Scintilla::Message::GetSelectionEnd);
-    if (actualStart != start || actualEnd != end)
-        std::fprintf(stderr, "Range: %lld..%lld; expected %lld..%lld\n", static_cast<long long>(actualStart),
-                     static_cast<long long>(actualEnd), static_cast<long long>(start), static_cast<long long>(end));
-    Require(actualStart == start && actualEnd == end, message);
-}
-std::string Text(EditorControl* editor) {
-    std::string text(static_cast<size_t>(editor->Send(Scintilla::Message::GetLength)) + 1, '\0');
-    editor->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.pop_back();
-    return text;
-}
-void NativeF3(wxWindow* window) {
-#ifdef __WXMSW__
-    PostMessageW(static_cast<HWND>(window->GetHandle()), WM_KEYDOWN, VK_F3, 0);
-    PostMessageW(static_cast<HWND>(window->GetHandle()), WM_KEYUP, VK_F3, 0);
-#elif defined(__WXGTK__)
-    auto* widget = GTK_WIDGET(window->GetHandle());
-    auto* event = gdk_event_new(GDK_KEY_PRESS);
-    event->key.window = static_cast<GdkWindow*>(g_object_ref(gtk_widget_get_window(widget)));
-    event->key.send_event = TRUE;
-    event->key.keyval = GDK_KEY_F3;
-    event->key.state = static_cast<GdkModifierType>(0);
-    gtk_widget_event(widget, event);
-    gdk_event_free(event);
-#endif
-    wxYield();
-}
+using NativeSearch::Click;
+using NativeSearch::Command;
+using NativeSearch::NativeF3;
+using NativeSearch::Selection;
+using NativeSearch::Text;
+using NativeSearch::Toggle;
 class RegexReplaceAllApp final : public wxApp {
 public:
     bool OnInit() override {

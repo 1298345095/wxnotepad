@@ -1,6 +1,6 @@
 #include "editor_control.h"
 #include "editor_frame.h"
-#include "native_dialog_helpers.h"
+#include "native_search_helpers.h"
 #include <wx/wx.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
@@ -14,66 +14,21 @@
 #include <stdexcept>
 
 namespace {
+using NativeSearch::Command;
+using NativeSearch::NativeF3;
+using NativeSearch::Text;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
-}
-void Command(EditorFrame* frame, int id) {
-    auto* item = frame->GetMenuBar()->FindItem(id);
-    Require(item, "native menu command must exist");
-#ifdef __WXMSW__
-    SendMessageW(static_cast<HWND>(frame->GetHandle()), WM_COMMAND, MAKEWPARAM(id, 0), 0);
-#elif defined(__WXGTK__)
-    gtk_menu_item_activate(GTK_MENU_ITEM(item->GetMenuItem()));
-#endif
-    wxYield();
 }
 void Click(wxWindow* parent, int id) {
     auto* button = wxDynamicCast(parent->FindWindow(id), wxButton);
     Require(button && button->IsShown(), "Replace view must expose Replace All");
-#ifdef __WXMSW__
-    SendMessageW(static_cast<HWND>(parent->GetHandle()), WM_COMMAND,
-                 MAKEWPARAM(GetDlgCtrlID(static_cast<HWND>(button->GetHandle())), BN_CLICKED),
-                 reinterpret_cast<LPARAM>(button->GetHandle()));
-#elif defined(__WXGTK__)
-    gtk_button_clicked(GTK_BUTTON(button->GetHandle()));
-#endif
-    wxYield();
-}
-void NativeF3(wxWindow* window) {
-#ifdef __WXMSW__
-    PostMessageW(static_cast<HWND>(window->GetHandle()), WM_KEYDOWN, VK_F3, 0);
-    PostMessageW(static_cast<HWND>(window->GetHandle()), WM_KEYUP, VK_F3, 0);
-#elif defined(__WXGTK__)
-    auto* widget = GTK_WIDGET(window->GetHandle());
-    auto* event = gdk_event_new(GDK_KEY_PRESS);
-    event->key.window = static_cast<GdkWindow*>(g_object_ref(gtk_widget_get_window(widget)));
-    event->key.send_event = TRUE;
-    event->key.keyval = GDK_KEY_F3;
-    event->key.state = static_cast<GdkModifierType>(0);
-    gtk_widget_event(widget, event);
-    gdk_event_free(event);
-#endif
-    wxYield();
+    NativeSearch::Click(parent, id);
 }
 void Toggle(wxCheckBox* option, bool checked) {
     Require(option, "Replace view must share the active search options");
-#ifdef __WXMSW__
-    const auto handle = static_cast<HWND>(option->GetHandle());
-    SendMessageW(handle, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
-    SendMessageW(static_cast<HWND>(option->GetParent()->GetHandle()), WM_COMMAND,
-                 MAKEWPARAM(GetDlgCtrlID(handle), BN_CLICKED), reinterpret_cast<LPARAM>(handle));
-#elif defined(__WXGTK__)
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(option->GetHandle()), checked);
-#endif
-    wxYield();
+    NativeSearch::Toggle(option, checked);
     Require(option->GetValue() == checked, "native checkbox must retain its requested value");
-}
-std::string Text(EditorControl* editor) {
-    const auto length = static_cast<size_t>(editor->Send(Scintilla::Message::GetLength));
-    std::string text(length + 1, '\0');
-    editor->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
 }
 wxString Filename(const std::filesystem::path& path) {
 #ifdef __WXMSW__
