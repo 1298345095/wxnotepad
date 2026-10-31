@@ -32,7 +32,7 @@ The patch has these narrowly scoped purposes:
 - Vendored Boost regex traits: preserve the original matcher and formatter, use
   the existing Windows traits on Windows, and derive Linux wide-character traits
   from the same masks using `std::locale`.
-- `LexerModule.cxx`: register only the delivered Plain Text, C/C++ and JSON lexers.
+- `LexerModule.cxx`: register only the delivered Plain Text, C/C++, Python and JSON lexers.
 
 The C/C++ lexer is the unmodified `scintilla/lexers/LexCPP.cxx` in this same
 archive. `src/cpp_scheme_data.h` contains its 13 lexer-consumed keyword lists and

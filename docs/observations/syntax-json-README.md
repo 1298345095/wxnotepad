@@ -18,7 +18,10 @@ saves its exact bytes. The test observes natural styling without forcing
 The first Windows red failed because `.JsOn` opened as Plain Text. After the
 automatic slice passed, the second red failed because the native Language menu
 did not yet offer JSON. The pre-integration focused group passed **5/5 Windows,
-5/5 private X11 and 5/5 private Wayland**. Evidence, source snapshots and targeted
+5/5 private X11 and 5/5 private Wayland**. After merging Python integration
+`e02a428`, the combined C++/Python/JSON, automatic-save, manual-language and native
+font group passed **6/6 Windows, 6/6 private X11 and 6/6 private Wayland**.
+Evidence, source snapshots and targeted
 clang-tidy logs live at
 `E:/NewNotepad4/wxnotepad-evidence/syntax-phase3/issue-35`.
 
