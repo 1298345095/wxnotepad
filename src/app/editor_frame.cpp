@@ -35,6 +35,31 @@ EditorFrame::EditorFrame()
     const int goToLine = wxWindow::NewControlId();
     edit->Append(goToLine, "&Go To Line...\tCtrl+G");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowGoToLineDialog(this, *editor_); }, goToLine);
+    auto* indentation = new wxMenu;
+    for (const bool tabs : {true, false}) {
+        const int id = wxWindow::NewControlId();
+        indentation->AppendRadioItem(id, tabs ? "&Tabs" : "&Spaces");
+        Bind(wxEVT_MENU, [this, tabs](wxCommandEvent&) { editor_->Send(Scintilla::Message::SetUseTabs, tabs); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, tabs](wxUpdateUIEvent& event) {
+                event.Check((editor_->Send(Scintilla::Message::GetUseTabs) != 0) == tabs);
+            },
+            id);
+    }
+    indentation->AppendSeparator();
+    for (const int width : {2, 4, 8}) {
+        const int id = wxWindow::NewControlId();
+        indentation->AppendRadioItem(id, wxString::Format("&%d Columns", width));
+        Bind(wxEVT_MENU, [this, width](wxCommandEvent&) { editor_->SetIndentationWidth(width); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, width](wxUpdateUIEvent& event) {
+                event.Check(editor_->Send(Scintilla::Message::GetTabWidth) == width);
+            },
+            id);
+    }
+    edit->AppendSubMenu(indentation, "&Indentation");
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
