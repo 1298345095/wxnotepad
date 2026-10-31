@@ -14,6 +14,10 @@ public:
         directory_ = argv[1];
         frame_ = new wxFrame(nullptr, wxID_ANY, "wxnotepad clipboard test peer");
         text_ = new wxTextCtrl(frame_, wxID_ANY, {}, wxDefaultPosition, wxSize(400, 180), wxTE_MULTILINE);
+        text_->Bind(wxEVT_KEY_UP, [this](wxKeyEvent& event) {
+            if (event.GetKeyCode() == WXK_SHIFT) gestureReceived_ = true;
+            event.Skip();
+        });
         frame_->Show();
         timer_.SetOwner(this);
         Bind(wxEVT_TIMER, [this](wxTimerEvent&) { Poll(); });
@@ -31,6 +35,8 @@ private:
     bool pendingPaste_ = false;
     wxString pendingCommand_;
     wxLongLong activationStarted_;
+    bool gestureRequested_ = false;
+    bool gestureReceived_ = false;
     void Respond(const wxString& value) {
         {
             wxFFile file(directory_ + "/response.tmp", "wb");
@@ -52,12 +58,29 @@ private:
                 }
                 return;
             }
-            const auto command = pendingCommand_;
-            pendingCommand_.clear();
             wxString focusFile;
             if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) {
+                // Focus can arrive before the compositor delivers a key serial.
+                // Match the editor fixture: receive a native gesture before
+                // changing Wayland clipboard ownership in this process too.
+                if (!gestureRequested_) {
+                    gestureRequested_ = true;
+                    activationStarted_ = wxGetUTCTimeMillis();
+                    wxFFile file(focusFile, "wb");
+                    file.Write("gesture");
+                    return;
+                }
+                if (!gestureReceived_) {
+                    if (wxGetUTCTimeMillis() - activationStarted_ > 3000) {
+                        pendingCommand_.clear();
+                        Respond("native gesture unavailable");
+                    }
+                    return;
+                }
                 wxFFile file(focusFile, "wb");
             }
+            const auto command = pendingCommand_;
+            pendingCommand_.clear();
             frame_->SetTitle("wxnotepad clipboard test peer");
             Perform(command);
             return;
@@ -88,6 +111,8 @@ private:
             frame_->Raise();
             text_->SetFocus();
             activationStarted_ = wxGetUTCTimeMillis();
+            gestureRequested_ = false;
+            gestureReceived_ = false;
             pendingCommand_ = command;
             return;
         }

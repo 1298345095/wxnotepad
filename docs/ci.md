@@ -37,6 +37,8 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   Normal development triplets and the existing local installations are unchanged.
 - Windows uses the installed Visual Studio C++ developer shell and Ninja, matching
   vcpkg's toolchain selection rather than hard-coding a Visual Studio generator.
+  CMake arguments cross the PowerShell boundary as a JSON array so drive-letter
+  paths, spaces and literal characters survive `pwsh -File` parameter parsing.
 - Binary packages and downloads are cached by OS, architecture, runner image and
   manifest/triplet/provisioning hashes. vcpkg's own ABI keys validate restored packages. Cached installed
   trees or application build directories are not reused between checkouts.
@@ -46,6 +48,8 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   checks, with command-local LF settings for archive and patch application so a
   runner's Git autocrlf configuration cannot change prepared bytes. A real-Git regression test runs on
   both hosts before dependency installation and also checks corrupted-archive rejection.
+  Windows also checks actual CMake argument forwarding and failure propagation
+  through the installed developer shell before provisioning dependencies.
   Application CMake configurations explicitly disable manifest installation
   and use the dependency tree provisioned by the workflow.
 - CodeQL initializes after dependency installation, then traces compilation of the
@@ -96,7 +100,7 @@ For the additional checks:
 ```text
 python -X utf8 .github/scripts/checks.py format
 python -m compileall -q .github/scripts tools tests
-python -m unittest discover -s tests -p test_build_preparation.py -v
+python -m unittest discover -s tests -p 'test_*.py' -v
 actionlint
 python3 .github/scripts/checks.py tidy --build-dir /path/to/native/cmake-build
 ```

@@ -69,28 +69,32 @@ def configure(app_only):
             raise SystemExit('The CI GTK3 dependency must support X11 and Wayland; enable gtk3[wayland]')
     run([sys.executable, '-X', 'utf8', ROOT / 'tools/build.py', '--prepare-only',
          '--build-dir', BUILD], 'prepare.log')
-    command = cmake_command() + ['-S', ROOT, '-B', BUILD / 'cmake',
+    command = cmake_command(['-S', ROOT, '-B', BUILD / 'cmake',
                f'-DNOTEPAD4_SOURCE={BUILD / "original-core"}',
                f'-DCMAKE_TOOLCHAIN_FILE={VCPKG / "scripts/buildsystems/vcpkg.cmake"}',
                f'-DVCPKG_INSTALLED_DIR={VCPKG / "installed"}',
                f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', '-DVCPKG_MANIFEST_MODE=OFF',
                f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
                '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON', '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
-               '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON')]
+               '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON')])
     run(command, 'configure.log')
 
 
-def cmake_command():
+def cmake_command(arguments):
+    arguments = [str(item) for item in arguments]
     if WINDOWS:
-        return ['pwsh', '-NoProfile', '-File', ROOT / '.github/scripts/msvc.ps1']
-    return ['cmake']
+        # pwsh -File splits named arguments such as -DKEY=D:/path at the colon.
+        # Pass the array as one value and splat it only inside the script.
+        return ['pwsh', '-NoProfile', '-File', ROOT / '.github/scripts/msvc.ps1',
+                '-CMakeArgumentsJson', json.dumps(arguments)]
+    return ['cmake', *arguments]
 
 
 def build(app_only):
-    command = cmake_command() + ['--build', BUILD / 'cmake', '--config', 'Release', '--parallel', '2']
+    command = ['--build', BUILD / 'cmake', '--config', 'Release', '--parallel', '2']
     if app_only:
         command += ['--target', 'wxnotepad']
-    run(command, 'build.log')
+    run(cmake_command(command), 'build.log')
 
 
 def test(backend, cmake_dir, expression):

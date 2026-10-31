@@ -40,13 +40,13 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
-      - name: Test reproducible source preparation
+      - name: Test build preparation and CI invocation
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .ci/reports
-          python -m unittest discover -s tests -p test_build_preparation.py -v \
-            2>&1 | tee .ci/reports/source-preparation-tests.log
+          python -m unittest discover -s tests -p 'test_*.py' -v \
+            2>&1 | tee .ci/reports/preparation-tests.log
       - name: Set up dependencies
         uses: ./.github/actions/dependencies
       - name: Configure
