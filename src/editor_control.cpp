@@ -221,8 +221,8 @@ private:
             wxClipboardLocker lock;
             if (!lock || !wxTheClipboard->GetData(text)) return;
         }
-        // Own the converted buffer until the core has finished replacing and
-        // inserting. A view into text.ToUTF8() would dangle before insertion.
+        // Keep both owners alive through insertion. On UTF-8-native wx builds
+        // ToUTF8() may borrow the source wxString's storage.
         const wxString value = text.GetText();
         const auto utf8 = value.ToUTF8();
         const core::UndoGroup undo(pdoc);

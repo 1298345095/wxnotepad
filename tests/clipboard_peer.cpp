@@ -28,12 +28,25 @@ private:
     wxTimer timer_;
     wxLongLong started_;
     bool pendingPaste_ = false;
+    wxString pendingCommand_;
+    wxLongLong activationStarted_;
     void Respond(const wxString& value) {
         { wxFFile file(directory_ + "/response.tmp", "wb"); file.Write(value, wxConvUTF8); }
         wxRenameFile(directory_ + "/response.tmp", directory_ + "/response", true);
     }
     void Poll() {
         if (wxGetUTCTimeMillis() - started_ > 25000) { frame_->Destroy(); ExitMainLoop(); return; }
+        if (!pendingCommand_.empty()) {
+            if (!frame_->IsActive() || !text_->HasFocus()) {
+                if (wxGetUTCTimeMillis() - activationStarted_ > 3000) { pendingCommand_.clear(); Respond("native focus unavailable"); }
+                return;
+            }
+            const auto command = pendingCommand_;
+            pendingCommand_.clear();
+            frame_->SetTitle("wxnotepad clipboard test peer");
+            Perform(command);
+            return;
+        }
         if (pendingPaste_) {
             // GTK delivers the native clipboard request asynchronously.
             if (!text_->GetValue().empty()) { pendingPaste_ = false; Respond(text_->GetValue()); }
@@ -44,7 +57,20 @@ private:
         wxString command;
         { wxFFile file(request, "rb"); file.ReadAll(&command, wxConvUTF8); }
         wxRemoveFile(request);
-        if (command == "wxcopy") {
+        if (command == "copy" || command == "wxcopy" || command == "nontext" || command == "paste") {
+            frame_->SetTitle(wxString::Format("wxnotepad clipboard focus: peer [%lu]", wxGetProcessId()));
+            frame_->Raise();
+            text_->SetFocus();
+            activationStarted_ = wxGetUTCTimeMillis();
+            pendingCommand_ = command;
+            return;
+        }
+        Perform(command);
+    }
+    void Perform(const wxString& command) {
+        if (command == "ready") {
+            Respond("ready");
+        } else if (command == "wxcopy") {
             wxClipboardLocker lock;
             Respond(!(!lock) && wxTheClipboard->SetData(new wxTextDataObject(wxString::FromUTF8("peer English 中文 😀\n第二行\nlast"))) ? "ready" : "failed");
         } else if (command == "nontext") {

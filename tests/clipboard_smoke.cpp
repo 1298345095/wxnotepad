@@ -29,7 +29,7 @@ std::string Text(EditorControl* editor) {
 }
 class Peer {
 public:
-    Peer() {
+    Peer(EditorFrame* frame, EditorControl* editor) : frame_(frame), editor_(editor) {
         directory_ = wxFileName::CreateTempFileName("wxnotepad-clipboard-");
         wxRemoveFile(directory_);
         Require(wxMkdir(directory_), "create owned peer IPC directory");
@@ -55,10 +55,26 @@ public:
         Require(file.ReadAll(&response, wxConvUTF8), "read owned peer response");
         if (command == "copy") SettleClipboard();
         if (command == "paste") response.Replace("\r\n", "\n");
+        const auto title = frame_->GetTitle();
+        const auto focusTitle = wxString::Format("wxnotepad clipboard focus: editor [%lu]", wxGetProcessId());
+        frame_->SetTitle(focusTitle);
+        frame_->Raise();
+        editor_->SetFocus();
+        wxStopWatch activation;
+        while ((!frame_->IsActive() || !editor_->HasFocus()) && activation.Time() < 3000) {
+            frame_->SetTitle(focusTitle);
+            wxYield();
+            wxMilliSleep(10);
+        }
+        Require(frame_->IsActive() && editor_->HasFocus(), "editor must receive actual native focus before clipboard commands");
+        frame_->SetTitle(title);
+        SettleClipboard();
         return response;
     }
 private:
     wxString directory_;
+    EditorFrame* frame_;
+    EditorControl* editor_;
 };
 void Key(EditorControl* editor, int key) {
     wxKeyEvent event(wxEVT_KEY_DOWN);
@@ -77,11 +93,30 @@ public:
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         wxLog::SetActiveTarget(new wxLogStderr);
         auto* frame = new EditorFrame;
+        wxString focusProbe;
+        if (wxGetEnv("WXNOTEPAD_CLIPBOARD_FOCUS_PROBE", &focusProbe)) {
+            // Read-only native-window identity preflight: no clipboard query,
+            // activation request, keyboard or mouse input.
+            frame->SetMenuBar(nullptr);
+            const auto title = wxString::Format("wxnotepad clipboard focus: editor [%lu]", wxGetProcessId());
+            frame->SetTitle(title);
+            frame->ShowWithoutActivating();
+            probeTimer_.SetOwner(this);
+            const auto started = wxGetUTCTimeMillis();
+            Bind(wxEVT_TIMER, [this, frame, title, started](wxTimerEvent&) {
+                if (wxGetUTCTimeMillis() - started < 15000) frame->SetTitle(title);
+                else { probeTimer_.Stop(); result_ = 0; frame->Destroy(); ExitMainLoop(); }
+            });
+            probeTimer_.Start(100);
+            return true;
+        }
         frame->Show();
         CallAfter([this, frame] {
             try {
                 using Scintilla::Message;
                 auto* editor = frame->Editor();
+                Peer peer(frame, editor);
+                Require(peer.Request("ready") == "ready", "external clipboard application is running");
                 {
                     wxClipboardLocker lock;
                     Require(!(!lock), "open system clipboard for owned fixture");
@@ -116,7 +151,6 @@ public:
                 editor->Send(Message::Redo);
                 Require(Text(editor) == "Apaste中文\r\nsecond line\r\n第三行" && editor->Send(Message::GetModify), "Redo restores paste and modified state");
                 std::puts("PASS: Paste selection replacement, one-step Undo/Redo and save point");
-                Peer peer;
                 editor->Send(Message::SetSel, 1, editor->Send(Message::GetLength));
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
@@ -140,9 +174,10 @@ public:
                 SettleClipboard();
                 editor->Send(Message::SetSel, 0, 0);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-                Require(!frame->GetMenuBar()->IsEnabled(wxID_COPY) && !frame->GetMenuBar()->IsEnabled(wxID_CUT) && !frame->GetMenuBar()->IsEnabled(wxID_PASTE),
-                    "empty selection and non-text clipboard disable Copy/Cut/Paste");
+                Require(!frame->GetMenuBar()->IsEnabled(wxID_COPY), "empty selection disables Copy");
+                Require(!frame->GetMenuBar()->IsEnabled(wxID_CUT), "empty selection disables Cut");
                 Require(!editor->Send(Message::CanPaste), "CanPaste rejects non-text clipboard");
+                Require(!frame->GetMenuBar()->IsEnabled(wxID_PASTE), "non-text clipboard disables Paste menu");
                 Require(peer.Request("copy") == "ready", "independent stock text app copies Unicode multiline fixture");
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(frame->GetMenuBar()->IsEnabled(wxID_PASTE), "text from external app enables Paste");
@@ -194,6 +229,7 @@ public:
     int OnExit() override { return result_; }
 private:
     int result_ = 1;
+    wxTimer probeTimer_;
 };
 }
 wxIMPLEMENT_APP(ClipboardApp);
