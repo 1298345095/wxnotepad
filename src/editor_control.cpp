@@ -1,7 +1,12 @@
 #include "editor_control.h"
 #include "platform/core_headers.h"
 #include <wx/dcclient.h>
+#include <wx/clipbrd.h>
+#include <wx/dataobj.h>
 #include <chrono>
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#endif
 #ifdef __WXMSW__
 #include <wx/caret.h>
 #include <imm.h>
@@ -177,9 +182,76 @@ private:
         window_.SetScrollPos(wxVERTICAL, static_cast<int>(topLine));
         UpdateSystemCaret();
     }
-    void Copy(bool) const override {}
-    void CopyToClipboard(const core::SelectionText&) const override {}
-    void Paste(bool) override {}
+    bool WriteClipboard(const core::SelectionText& text) const {
+        if (wxTheClipboard->IsOpened()) return false;
+        wxTheClipboard->UsePrimarySelection(false);
+        wxClipboardLocker lock;
+        if (!lock) return false;
+#ifdef __WXGTK__
+        // Retain each publication with GTK's owner lifecycle. The legacy wx
+        // selection path returned empty text after repeat Wayland publications.
+        auto* value = new std::string(text.AsView());
+        auto* list = gtk_target_list_new(nullptr, 0);
+        gtk_target_list_add_text_targets(list, 0);
+        gint count = 0;
+        auto* targets = gtk_target_table_new_from_list(list, &count);
+        const bool copied = gtk_clipboard_set_with_data(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), targets, count,
+            [](GtkClipboard*, GtkSelectionData* data, guint, gpointer owner) {
+                const auto* value = static_cast<const std::string*>(owner);
+                gtk_selection_data_set_text(data, value->c_str(), -1);
+            },
+            [](GtkClipboard*, gpointer owner) { delete static_cast<std::string*>(owner); }, value);
+        gtk_target_table_free(targets, count);
+        gtk_target_list_unref(list);
+        if (!copied) delete value;
+        return copied;
+#else
+        return wxTheClipboard->SetData(new wxTextDataObject(wxString::FromUTF8(text.Data(), text.Length())));
+#endif
+    }
+    void Copy(bool) const override {
+        if (sel.Empty()) return;
+        core::SelectionText text;
+        CopySelectionRange(text);
+        WriteClipboard(text);
+    }
+    void CopyToClipboard(const core::SelectionText& text) const override { WriteClipboard(text); }
+    void Cut(bool, bool = false) override {
+        pdoc->CheckReadOnly();
+        if (sel.Empty() || pdoc->IsReadOnly() || SelectionContainsProtected()) return;
+        core::SelectionText text;
+        CopySelectionRange(text);
+        if (WriteClipboard(text)) ClearSelection();
+    }
+    bool CanPaste() const noexcept override {
+        if (!core::Editor::CanPaste()) return false;
+#ifdef __WXMSW__
+        return ::IsClipboardFormatAvailable(CF_UNICODETEXT) != 0;
+#else
+        // Native clipboard queries may pump UI events. An update-ui callback
+        // must not close the clipboard currently used by Copy/Paste.
+        if (wxTheClipboard->IsOpened()) return false;
+        wxTheClipboard->UsePrimarySelection(false);
+        wxClipboardLocker lock;
+        return !(!lock) && wxTheClipboard->IsSupported(wxDF_UNICODETEXT);
+#endif
+    }
+    void Paste(bool) override {
+        if (!core::Editor::CanPaste() || wxTheClipboard->IsOpened()) return;
+        wxTextDataObject text;
+        {
+            wxTheClipboard->UsePrimarySelection(false);
+            wxClipboardLocker lock;
+            if (!lock || !wxTheClipboard->GetData(text)) return;
+        }
+        // Keep both owners alive through insertion. On UTF-8-native wx builds
+        // ToUTF8() may borrow the source wxString's storage.
+        const wxString value = text.GetText();
+        const auto utf8 = value.ToUTF8();
+        const core::UndoGroup undo(pdoc);
+        ClearSelection();
+        InsertPasteShape(std::string_view(utf8.data(), utf8.length()), PasteShape::stream);
+    }
     void NotifyChange() const noexcept override {}
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override {
         if (notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
@@ -269,6 +341,9 @@ EditorControl::EditorControl(wxWindow* parent)
             if (event.GetKeyCode() == 'Z') command = event.ShiftDown() ? Message::Redo : Message::Undo;
             else if (event.GetKeyCode() == 'Y') command = Message::Redo;
             else if (event.GetKeyCode() == 'A') command = Message::SelectAll;
+            else if (event.GetKeyCode() == 'C') command = Message::Copy;
+            else if (event.GetKeyCode() == 'X') command = Message::Cut;
+            else if (event.GetKeyCode() == 'V') command = Message::Paste;
         } else if (!event.AltDown() && !event.ShiftDown()) {
             switch (event.GetKeyCode()) {
             case WXK_RETURN: case WXK_NUMPAD_ENTER: command = Message::NewLine; break;
