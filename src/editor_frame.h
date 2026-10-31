@@ -35,6 +35,8 @@ private:
     wxDialog* findDialog_ = nullptr;
     wxTextCtrl* findQuery_ = nullptr;
     SearchOptions searchOptions_;
+    intptr_t lastEmptyMatch_ = -1;
+    uint64_t lastEmptyRevision_ = 0;
     Scintilla::FindOption SearchFlags() const;
     wxTextCtrl* replacement_ = nullptr;
     wxStaticText* replacementLabel_ = nullptr;
