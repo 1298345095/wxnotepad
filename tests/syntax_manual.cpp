@@ -183,17 +183,28 @@ public:
                 std::puts("PASS: unnamed document native choices preserve selection, history and explicit status");
                 const auto plain = directory / "misnamed.txt";
                 const auto cpp = directory / "named.cpp";
-                FileCommand(frame, wxID_SAVE, Filename(plain));
+                FileCommand(frame, wxID_SAVE);
+                Require(frame->SaveFirst(Filename(directory / "missing" / "first.py")).status == SaveStatus::Failed &&
+                            frame->DocumentPath().empty() && editor->Send(Message::GetModify),
+                        "cancelled and failed first Save must preserve the unnamed dirty document");
                 Language(frame, true, true);
+                FileCommand(frame, wxID_SAVE, Filename(plain));
+                Language(frame, false, false);
+                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
+                        "successful first Save must select Automatic after identifying the filename");
                 Require(Bytes(plain) == source && !editor->Send(Message::GetModify),
                         "first Save with override must retain exact text and its save point");
+                Choose(frame, "C/C++");
                 Command(frame, wxID_SAVE);
                 Language(frame, true, true);
                 Choose(frame, "Plain Text");
                 FileCommand(frame, wxID_SAVEAS, Filename(cpp));
-                Language(frame, false, true);
+                Language(frame, true, false);
+                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
+                        "successful explicit Save As must check Automatic");
                 Require(Bytes(cpp) == source && editor->Send(Message::CanUndo),
                         "Save As with explicit Plain Text must retain exact bytes and Undo");
+                Choose(frame, "Plain Text");
                 FileCommand(frame, wxID_SAVEAS);
                 Require(frame->SaveAs(Filename(directory / "missing" / "failed.cpp")).status == SaveStatus::Failed &&
                             frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
@@ -202,7 +213,8 @@ public:
                 Language(frame, false, true);
                 Choose(frame, "Automatic");
                 Language(frame, true, false);
-                std::puts("PASS: overrides survive first Save, Save and Save As; Automatic immediately follows path");
+                std::puts(
+                    "PASS: naming selects Automatic; ordinary Save and failed/cancelled Save As retain overrides");
                 Choose(frame, "Plain Text");
                 editor->Send(Message::GotoPos, source.size());
                 editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("x"));
@@ -266,7 +278,7 @@ public:
                             !fresh->GetStatusBar()->GetStatusText().Contains("override"),
                         "a fresh editor session must start in Automatic without inheriting an override");
                 fresh->Destroy();
-                std::puts("PASS: only successful New/Open reset override; failed/cancelled operations retain it");
+                std::puts("PASS: successful New/Open reset override; failed/cancelled operations retain it");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

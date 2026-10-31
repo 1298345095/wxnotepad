@@ -103,8 +103,8 @@ public:
                         "document Open owns automatic classification without a frame");
                 document.SelectLanguage(SyntaxLanguage::Python);
                 Require(document.SaveAs(files.json).status == SaveStatus::Saved &&
-                            document.Language() == SyntaxLanguage::Python && document.LanguageOverride(),
-                        "Save As retains the document's explicit language choice");
+                            document.Language() == SyntaxLanguage::Json && !document.LanguageOverride(),
+                        "Save As clears the explicit language choice and reidentifies from the filename");
                 document.SelectLanguage(std::nullopt);
                 Require(document.Language() == SyntaxLanguage::Json, "Automatic follows the current file path");
                 Require(document.SaveAs(std::nullopt).status == SaveStatus::Cancelled &&

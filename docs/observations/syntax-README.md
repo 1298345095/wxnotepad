@@ -12,9 +12,11 @@ language modules are compiled. The original core remains the sole document,
 history, styling and folding owner; no new runtime or GoogleTest dependency was added.
 
 Automatic filename selection follows successful Open, first Save and Save As.
-Native Language menu overrides remain local to the document, survive saving, and
-reset after successful New/Open. Failed/cancelled file operations preserve the
-choice. Syntax colors inherit the existing native font, point size and DPI behavior.
+As corrected by #44 to match the pinned original interactive behavior, first Save
+and every explicit Save As clear document-local Language menu overrides, including
+the same pathname or extension. Ordinary Save retains the choice; successful
+New/Open reset it. Failed/cancelled file operations preserve the choice. Syntax
+colors inherit the existing native font, point size and DPI behavior.
 
 Native margin clicks preserve nested fold state and keep caret/anchor endpoints
 visible. The existing renderer now tiles the core's margin pattern and restores

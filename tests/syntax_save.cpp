@@ -106,6 +106,22 @@ void Language(EditorFrame* frame, bool cpp) {
     Require(frame->GetStatusBar()->GetStatusText().Contains(cpp ? "C/C++" : "Plain Text"),
             "status must follow the effective language");
 }
+void Choose(EditorFrame* frame, const char* label) {
+    const auto id = frame->GetMenuBar()->FindMenuItem("Language", label);
+    Require(id != wxNOT_FOUND, "supported language choice must exist");
+    Command(frame, id);
+    Require(frame->GetMenuBar()->IsChecked(id) && frame->GetStatusBar()->GetStatusText().Contains("override"),
+            "manual language command must check its item and display the override");
+}
+void Automatic(EditorFrame* frame, const char* language, int lexer) {
+    Paint(frame);
+    const auto status = frame->GetStatusBar()->GetStatusText();
+    Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")) &&
+                status.Contains(language) && !status.Contains("override") &&
+                frame->Editor()->Send(Message::GetLexer) == lexer &&
+                (frame->Editor()->Send(Message::GetMarginWidthN, 1) != 0) == (lexer != SCLEX_NULL),
+            "successful naming must select Automatic and install the filename's lexer and fold capability");
+}
 class SyntaxSaveApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -189,6 +205,45 @@ public:
                         "chooser cancellation and write failure must preserve path, scheme and document state");
                 Language(frame, true);
                 std::puts("PASS: unchanged-path saves, cancelled chooser and failed write preserve scheme and state");
+
+                struct NamingCase {
+                    const char* manual;
+                    const char* extension;
+                    const char* automatic;
+                    int lexer;
+                };
+                for (const auto& naming : {NamingCase{"C/C++", "PyW", "Python", SCLEX_PYTHON},
+                                           NamingCase{"Python", "JsOn", "JSON", SCLEX_JSON},
+                                           NamingCase{"JSON", "unknown", "Plain Text", SCLEX_NULL},
+                                           NamingCase{"Plain Text", "CxX", "C/C++", SCLEX_CPP}}) {
+                    Command(frame, wxID_NEW);
+                    editor->Send(Message::AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
+                    editor->Send(Message::SetSel, 9, 3);
+                    Choose(frame, naming.manual);
+                    const auto first = directory / (std::string("matrix-first.") + naming.extension);
+                    const auto renamed = directory / (std::string("matrix-renamed.") + naming.extension);
+                    Require(frame->SaveFirst(Filename(first)).status == SaveStatus::Saved,
+                            "first Save of every manual choice must succeed");
+                    Automatic(frame, naming.automatic, naming.lexer);
+                    Require(Bytes(first) == source && Text(editor) == source && !editor->Send(Message::GetModify) &&
+                                editor->Send(Message::CanUndo) && editor->Send(Message::GetAnchor) == 9 &&
+                                editor->Send(Message::GetCurrentPos) == 3,
+                            "first Save must preserve independent bytes, selection and existing edit history");
+                    Choose(frame, naming.manual);
+                    Require(frame->SaveAs(Filename(renamed)).status == SaveStatus::Saved,
+                            "explicit Save As with unchanged extension must succeed");
+                    Automatic(frame, naming.automatic, naming.lexer);
+                    Choose(frame, naming.manual);
+                    Require(frame->SaveAs(Filename(renamed)).status == SaveStatus::Saved,
+                            "explicit Save As to the identical pathname must succeed");
+                    Automatic(frame, naming.automatic, naming.lexer);
+                    Require(Bytes(first) == source && Bytes(renamed) == source && Text(editor) == source &&
+                                !editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
+                                editor->Send(Message::GetAnchor) == 9 && editor->Send(Message::GetCurrentPos) == 3,
+                            "both explicit Save As forms must preserve exact bytes, selection and history");
+                }
+                std::puts(
+                    "PASS: all manual languages reidentify on first Save, unchanged-extension and same-path Save As");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

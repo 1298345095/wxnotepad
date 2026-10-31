@@ -47,6 +47,6 @@ private:
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
     std::optional<SyntaxLanguage> languageOverride_;
-    SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss);
+    SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss, bool identifyLanguage = false);
     void Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom);
 };

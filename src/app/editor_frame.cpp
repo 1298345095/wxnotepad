@@ -373,6 +373,7 @@ void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
     const auto result = document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+    if (result.status == SaveStatus::Saved) GetMenuBar()->Check(automaticLanguageId_, true);
     UpdateDocumentState();
     return result;
 }
@@ -391,6 +392,7 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
 
 SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
     const auto result = document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+    if (result.status == SaveStatus::Saved) GetMenuBar()->Check(automaticLanguageId_, true);
     UpdateDocumentState();
     return result;
 }

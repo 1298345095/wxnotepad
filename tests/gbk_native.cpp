@@ -161,6 +161,8 @@ public:
                             frame->GetStatusBar()->GetStatusText().Contains("GBK"),
                         "native explicit open must record and display GBK");
                 Add(frame, "¥☃😀𝄞");
+                const auto python = frame->GetMenuBar()->FindMenuItem("Language", "Python");
+                Command(frame, python);
                 const auto rich = Text(frame);
                 NativeDriver cancelAs(wxID_CANCEL);
                 Command(frame, wxID_SAVEAS);
@@ -168,6 +170,16 @@ public:
                 Require(cancelAs.choosers == 1 && cancelAs.losses == 0 && Bytes(source) == original &&
                             Text(frame) == rich,
                         "cancelled native Save As must not prompt about loss or change bytes/text");
+                const auto cancelled = directory / "cancelled.CPP";
+                NativeDriver cancelLoss(wxID_CANCEL, Filename(cancelled));
+                Command(frame, wxID_SAVEAS);
+                cancelLoss.Stop();
+                Require(cancelLoss.choosers == 1 && cancelLoss.losses == 1 && !std::filesystem::exists(cancelled) &&
+                            frame->DocumentPath() == Filename(source) &&
+                            frame->DocumentEncoding() == FileEncoding::Gbk && Bytes(source) == original &&
+                            Text(frame) == rich && frame->GetMenuBar()->IsChecked(python) &&
+                            frame->GetStatusBar()->GetStatusText().Contains("Python (override)"),
+                        "GBK loss cancellation after Save As naming must retain path, override, text and disk bytes");
                 NativeDriver cancel(wxID_CANCEL);
                 Command(frame, wxID_SAVE);
                 cancel.Stop();
@@ -189,13 +201,17 @@ public:
                         "native loss Redo must reach clean saved text");
                 Add(frame, "😀");
                 const auto fallback = Text(frame);
-                const auto target = directory / "utf8.txt";
+                const auto target = directory / "utf8.CPP";
                 NativeDriver utf8(wxID_YES, Filename(target));
                 Command(frame, wxID_SAVEAS);
                 utf8.Stop();
-                Require(utf8.choosers == 1 && utf8.losses == 1 && Bytes(target) == fallback &&
-                            frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentHasBom(),
-                        "native Save As UTF8 must retain all text without BOM and change encoding only on success");
+                Require(
+                    utf8.choosers == 1 && utf8.losses == 1 && Bytes(target) == fallback &&
+                        frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentHasBom() &&
+                        frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")) &&
+                        frame->GetStatusBar()->GetStatusText().Contains("C/C++") &&
+                        !frame->GetStatusBar()->GetStatusText().Contains("override"),
+                    "native Save As UTF8 must retain all text without BOM and change encoding only on success");
                 const auto invalid = directory / "invalid.txt";
                 {
                     std::ofstream stream(invalid, std::ios::binary);
