@@ -122,7 +122,7 @@ public:
                                            "one\r\ntwo\nthree\r中文😀!?pending",
                         "approved same-path Save As must preserve full pending text");
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
-                    Require(entry.path().filename().string().find(".wxnotepad-") == std::string::npos,
+                    Require(entry.path().filename().u8string().find(u8".wxnotepad-") == std::u8string::npos,
                             "failed saves must clean temporary siblings");
                 std::puts("PASS: Save As cancellation and creation/replacement failures preserve session and disk");
                 const std::string samples[] = {"", "\xef\xbb\xbf", "ASCII\r\n",

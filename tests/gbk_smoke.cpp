@@ -174,7 +174,7 @@ public:
                     failure->Destroy();
                 }
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
-                    Require(entry.path().filename().string().find(".wxnotepad-") == std::string::npos,
+                    Require(entry.path().filename().u8string().find(u8".wxnotepad-") == std::u8string::npos,
                             "failed saves must clean temporary siblings");
                 std::puts("PASS: every loss choice cancellation/replacement failure preserves disk/session/history");
                 auto* lossyAs = new EditorFrame;

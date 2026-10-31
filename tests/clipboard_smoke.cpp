@@ -86,8 +86,9 @@ public:
             wxYield();
             wxMilliSleep(10);
         }
-        Require(frame_->IsActive() && editor_->HasFocus(),
-                "editor must receive actual native focus before clipboard commands");
+        if (!frame_->IsActive() || !editor_->HasFocus())
+            throw std::runtime_error("editor must receive actual native focus after peer command: " +
+                                     command.ToStdString());
         if (!privateFocusFile.empty()) {
             wxFFile file(privateFocusFile, "wb");
         }

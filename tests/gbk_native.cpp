@@ -179,7 +179,7 @@ public:
                 Command(frame, wxID_SAVEAS);
                 cancelLoss.Stop();
                 Require(cancelLoss.choosers == 1 && cancelLoss.losses == 1 && !std::filesystem::exists(cancelled) &&
-                            frame->DocumentPath() == Filename(source) &&
+                            NativeDialogs::PathEquals(frame->DocumentPath(), Filename(source)) &&
                             frame->DocumentEncoding() == FileEncoding::Gbk && Bytes(source) == original &&
                             Text(frame) == rich && frame->GetMenuBar()->IsChecked(python) &&
                             frame->GetStatusBar()->GetStatusText().Contains("Python (override)"),

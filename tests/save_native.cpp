@@ -180,7 +180,8 @@ public:
                 NativeDriver accept(Filename(copy));
                 Command(frame, wxID_SAVEAS);
                 accept.Stop();
-                Require(accept.choosers == 1 && accept.confirmations == 0 && frame->DocumentPath() == Filename(copy),
+                Require(accept.choosers == 1 && accept.confirmations == 0 &&
+                            NativeDialogs::PathEquals(frame->DocumentPath(), Filename(copy)),
                         "native new target must update identity");
                 Require(hasOverride("C/C++"),
                         "native Save As default current type must retain C++ despite the returned .txt name");

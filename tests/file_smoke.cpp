@@ -229,7 +229,7 @@ public:
                 Require(Bytes(protectedPath) == "original bytes", "failed save must not truncate original file");
                 unchanged();
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
-                    Require(entry.path().filename().string().find(".wxnotepad-") == std::string::npos,
+                    Require(entry.path().filename().u8string().find(u8".wxnotepad-") == std::u8string::npos,
                             "failure must clean sibling temporary files");
                 Require(pending->SaveFirst(Filename(protectedPath)).status == SaveStatus::Saved,
                         "approved overwrite must succeed after failure");

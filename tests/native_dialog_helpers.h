@@ -2,6 +2,7 @@
 
 #include <wx/defs.h>
 #include <wx/string.h>
+#include <cstdio>
 #include <stdexcept>
 #ifdef __WXMSW__
 #include <windows.h>
@@ -13,6 +14,12 @@
 // Low-level operations on native modal widgets owned by the calling test.
 // Drivers retain their own dialog recognition, timer stages and assertions.
 namespace NativeDialogs {
+inline bool PathEquals(const wxString& actual, const wxString& expected) {
+    if (actual == expected) return true;
+    std::fprintf(stderr, "Document path mismatch: expected='%s', actual='%s'\n", expected.utf8_str().data(),
+                 actual.utf8_str().data());
+    return false;
+}
 #ifdef __WXMSW__
 inline void ChooseFileType(HWND window, const wxString& choice) {
     struct Selection {

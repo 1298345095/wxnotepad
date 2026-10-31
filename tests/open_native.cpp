@@ -227,7 +227,8 @@ public:
                 wxCommandEvent openAccept(wxEVT_MENU, wxID_OPEN);
                 frame->GetEventHandler()->ProcessEvent(openAccept);
                 pickerAccept.Stop();
-                Require(pickerAccept.choosers == 1 && frame->DocumentPath() == Filename(pickedPath) &&
+                Require(pickerAccept.choosers == 1 &&
+                            NativeDialogs::PathEquals(frame->DocumentPath(), Filename(pickedPath)) &&
                             frame->DocumentHasUtf8Bom() && Text(frame) == "Picked\r\n",
                         "native Open command must use the chosen path");
                 Add(frame, "discard");

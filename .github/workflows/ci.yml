@@ -90,6 +90,8 @@ jobs:
             .ci/reports/
             .ci/build/cmake/Testing/Temporary/
             .ci/build/cmake/CMakeFiles/CMakeConfigureLog.yaml
+            .ci/build/cmake/clipboard_smoke
+            .ci/build/cmake/clipboard_peer
             .ci/build/original-core/wxnotepad-source.json
             .ci/build/notepad4-source.tar
             .ci/vcpkg/buildtrees/**/*.log

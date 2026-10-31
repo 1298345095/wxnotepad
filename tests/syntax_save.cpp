@@ -171,10 +171,11 @@ public:
                 const auto eol = editor->Send(Message::GetEOLMode);
                 SaveCommand(frame, wxID_SAVE, Filename(cpp));
                 Language(frame, true);
-                Require(frame->DocumentPath() == Filename(cpp) && Bytes(cpp) == source && Text(editor) == source &&
-                            !editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
-                            editor->Send(Message::GetAnchor) == 7 && editor->Send(Message::GetCurrentPos) == 2 &&
-                            editor->Send(Message::GetEOLMode) == eol && frame->DocumentEncoding() == FileEncoding::Utf8,
+                Require(NativeDialogs::PathEquals(frame->DocumentPath(), Filename(cpp)) && Bytes(cpp) == source &&
+                            Text(editor) == source && !editor->Send(Message::GetModify) &&
+                            editor->Send(Message::CanUndo) && editor->Send(Message::GetAnchor) == 7 &&
+                            editor->Send(Message::GetCurrentPos) == 2 && editor->Send(Message::GetEOLMode) == eol &&
+                            frame->DocumentEncoding() == FileEncoding::Utf8,
                         "first Save must preserve text, selection, EOL, encoding and history at its save point");
                 Command(frame, wxID_UNDO);
                 Require(Text(editor).empty() && editor->Send(Message::GetModify),

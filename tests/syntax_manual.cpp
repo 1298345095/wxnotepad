@@ -208,7 +208,7 @@ public:
                 FileCommand(frame, wxID_SAVEAS);
                 Require(frame->SaveAs(Filename(directory / "missing" / "failed.cpp")).status == SaveStatus::Failed &&
                             frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
-                            frame->DocumentPath() == Filename(cpp),
+                            NativeDialogs::PathEquals(frame->DocumentPath(), Filename(cpp)),
                         "failed or cancelled Save As must retain the current document path");
                 Language(frame, false, true);
                 Choose(frame, "Automatic");
