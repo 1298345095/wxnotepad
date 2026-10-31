@@ -110,6 +110,13 @@ suppressed by the experiment header filter, so this is not a whole-project scan.
 
 ## Approved implementation breakdown
 
+Published overview: [#41](https://github.com/1298345095/wxnotepad/issues/41).
+The three open implementation tickets have verified native dependencies:
+[#42](https://github.com/1298345095/wxnotepad/issues/42) ->
+[#43](https://github.com/1298345095/wxnotepad/issues/43) ->
+[#44](https://github.com/1298345095/wxnotepad/issues/44).
+Publication does not start implementation.
+
 1. **Manual highlighting control**, no blockers: Automatic/On/Off, distinct from
    language choice; pause/resume, status, fold-command availability and existing
    text/history semantics. Automatic initially retains existing normal styling
