@@ -559,7 +559,9 @@ void EditorControl::UpdateLineNumberMargin() {
     }
     if (core_->WndProc(Message::GetMarginWidthN, 0, 0) != width) {
         core_->WndProc(Message::SetMarginWidthN, 0, width);
-        core_->WndProc(Message::ScrollCaret, 0, 0);
+        // A changed text width invalidates wrapping. Reveal the caret against
+        // the new display rows, rather than scrolling with the old layout.
+        core_->UpdateWrapLayout();
     }
 }
 

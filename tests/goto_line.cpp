@@ -122,7 +122,8 @@ public:
                         input->SetValue("2");
                         NativeSearch::Click(dialog, wxID_OK);
                     });
-                    const intptr_t position = std::string("one").size() + std::char_traits<char>::length(eol);
+                    const auto position =
+                        static_cast<intptr_t>(std::string("one").size() + std::char_traits<char>::length(eol));
                     NativeSearch::Selection(editor, position, position,
                                             "EOL navigation must use logical UTF-8 byte boundaries");
                     Require(NativeSearch::Text(editor) == text, "navigation must preserve every EOL byte");

@@ -18,8 +18,9 @@ void ShowGoToLineDialog(wxWindow* parent, EditorControl& editor) {
     contents->Add(range, 0, wxALL, dialog.FromDIP(10));
     auto* input = new wxTextCtrl(
         &dialog, wxID_ANY,
-        wxString::Format("%lld", static_cast<long long>(
-                                     editor.Send(Message::LineFromPosition, editor.Send(Message::GetCurrentPos)) + 1)));
+        wxString::Format(
+            "%lld",
+            static_cast<long long>(editor.Send(Message::LineFromPosition, editor.Send(Message::GetCurrentPos))) + 1));
     input->SetName("Go to line number");
     contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
     auto* error = new wxStaticText(&dialog, wxID_ANY, "");
