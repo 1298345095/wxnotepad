@@ -10,10 +10,10 @@ public:
     EditorFrame();
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
-    SaveResult Save();
-    SaveResult SaveAs(const std::optional<wxString>& destination);
+    SaveResult Save(const GbkLossDecision& decideLoss = {});
+    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
     SaveResult SaveAs();
-    SaveResult SaveFirst(const std::optional<wxString>& destination);
+    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
     OpenResult Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding = std::nullopt);
     OpenResult Open();
     OpenResult OpenAs(FileEncoding encoding);
@@ -27,4 +27,5 @@ private:
     DocumentSession document_;
     void UpdateDocumentState();
     bool ConfirmDiscardChanges(const wxString& action);
+    GbkLossChoice ConfirmGbkLoss();
 };
