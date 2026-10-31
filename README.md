@@ -145,6 +145,10 @@ feature and application-shell libraries.
 
 ## Build and run
 
+GitHub Actions build and test Windows and isolated Linux X11/Wayland, check
+formatting/static analysis, and run CodeQL. See [CI workflows and local checks](docs/ci.md)
+for triggers, cached dependencies, downloadable builds and retained evidence.
+
 Prerequisites: Git, Python 3.12+, CMake 3.25+, an x64 C++23 compiler, and wxWidgets
 **3.3.3#1** from vcpkg. Tested compilers are MSVC 14.51 and GCC 13.3. On Linux use
 GTK3 with `gtk+-3.0`, `wayland-egl` and `wayland-cursor` development packages,

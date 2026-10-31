@@ -1,0 +1,90 @@
+name: Quality
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format-workflows:
+    name: Format and workflow syntax
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install canonical formatter
+        run: |
+          set -euo pipefail
+          python -m venv .ci/quality-venv
+          .ci/quality-venv/bin/python -m pip install --disable-pip-version-check clang-format==23.1.2
+          echo "$GITHUB_WORKSPACE/.ci/quality-venv/bin" >> "$GITHUB_PATH"
+      - name: Check canonical C++ formatting
+        run: python -X utf8 .github/scripts/checks.py format
+      - name: Check Python syntax
+        run: python -m compileall -q .github/scripts tools tests
+      - name: Install pinned actionlint
+        env:
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/bin
+          curl --fail --show-error --location --retry 3 \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            --output .ci/actionlint.tar.gz
+          printf '%s  %s\n' "$ACTIONLINT_SHA256" .ci/actionlint.tar.gz | sha256sum --check -
+          tar -xzf .ci/actionlint.tar.gz -C .ci/bin actionlint
+      - name: Validate workflow expressions and shell commands
+        run: .ci/bin/actionlint -color
+
+  clang-tidy:
+    name: Native clang-tidy
+    needs: format-workflows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Set up dependencies
+        uses: ./.github/actions/dependencies
+      - name: Install analyzer
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends clang-tidy-18
+      - name: Configure compilation database
+        run: python -X utf8 .github/scripts/ci.py configure
+      - name: Analyze maintained C++ translation units
+        run: python -X utf8 .github/scripts/checks.py tidy --executable clang-tidy-18
+      - name: Preserve analyzer and provisioning evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: evidence-clang-tidy-${{ github.sha }}
+          path: |
+            .ci/reports/
+            .ci/build/cmake/CMakeFiles/CMakeConfigureLog.yaml
+            .ci/vcpkg/buildtrees/**/*.log
+            vcpkg.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30

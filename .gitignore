@@ -1,4 +1,5 @@
 .codegraph/
+/.ci/
 
 # Out-of-source CMake builds and generated packages
 /build/
