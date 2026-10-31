@@ -41,6 +41,32 @@ diagnostic probe modes `--compare` (native GTK text field above the editor) and
 `--compare-csd` (same controls with GTK client decorations) are available for a
 focused differential human check. They do not change the production frame.
 
+The subsequent human `--compare-csd` run found the pointer invisible over both
+the native `wxTextCtrl` and the editor, and could not initiate edge/corner resize.
+No production cursor/style workaround was added. All retained manual fixture
+modes now have an explicit **Close probe** button in their client area.
+
+Read-only WSLg follow-up found WSL 2.7.8.0, WSLg 1.0.73.2 and MSRDC 1.2.6676.
+The current Weston config contains only the standard Xwayland access/input-method
+sections; there is no user GTK cursor override. The official WSLg repository's
+[#1424](https://github.com/microsoft/wslg/issues/1424) contains community reports
+of pointer loss across applications after closing a Wayland GTK application and
+then launching an X11 application, including the
+[October 18 reproduction](https://github.com/microsoft/wslg/issues/1424#issuecomment-6249999698).
+Several reporters observed recovery by restarting only the `msrdc` client,
+[including existing windows reappearing with visible cursors](https://github.com/microsoft/wslg/issues/1424#issuecomment-4442947473).
+These are reports, not proof of the same root cause here. The root coordinated a
+quiescent GUI window and authorized one exact-client reconnect. Immediately before
+stopping PID 23448, its path was verified as `C:\Program Files\WSL\msrdc.exe`, its
+command line contained `/wslg`, and its visible-window inventory was empty. The
+client automatically respawned as PID 50376 in the same WSLg session; Ubuntu and
+the native GDK X11 connection remained alive. No WSL shutdown, installation or
+system configuration edit occurred. Normal native-frame pointer/resize human
+acceptance after reconnect is pending; no CSD production workaround is present.
+Separately, [#1008](https://github.com/microsoft/wslg/issues/1008) reports resize
+hit regions differing from window shadows; this does not establish that our
+observed resize failure has that cause.
+
 Reproduce builds with the root README's `tools/build.py` command. Linux source,
 generated core, executable and reports are all on the Linux filesystem at
 `/home/ctrls/.cache/wxnotepad-issue11`. Run the editor suite with

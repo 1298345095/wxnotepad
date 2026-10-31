@@ -25,10 +25,15 @@ public:
         editor_ = new EditorControl(frame_);
         editor_->Send(Scintilla::Message::SetText, 0, reinterpret_cast<intptr_t>("A中文\r\n  B\r\nlast"));
         if (argc == 3 && argv[2] == "--scroll") LoadScrollSample();
-        if (argc == 3 && (argv[2] == "--compare" || argv[2] == "--compare-csd")) {
+        if (argc == 3 && (argv[2] == "--scroll" || argv[2] == "--compare" || argv[2] == "--compare-csd")) {
             auto* layout = new wxBoxSizer(wxVERTICAL);
-            layout->Add(new wxStaticText(frame_, wxID_ANY, "Native GTK text field above; original-core editor below"), 0, wxEXPAND);
-            layout->Add(new wxTextCtrl(frame_, wxID_ANY, "Move the pointer here, then into the editor below"), 0, wxEXPAND);
+            auto* close = new wxButton(frame_, wxID_CLOSE, "Close probe");
+            close->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { frame_->Close(); });
+            layout->Add(close, 0, wxALIGN_RIGHT);
+            if (argv[2] != "--scroll") {
+                layout->Add(new wxStaticText(frame_, wxID_ANY, "Native GTK text field above; original-core editor below"), 0, wxEXPAND);
+                layout->Add(new wxTextCtrl(frame_, wxID_ANY, "Move the pointer here, then into the editor below"), 0, wxEXPAND);
+            }
             layout->Add(editor_, 1, wxEXPAND);
             frame_->SetSizer(layout);
             LoadScrollSample();
