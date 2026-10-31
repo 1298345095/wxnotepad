@@ -3,6 +3,7 @@
 #include "native_dialog_helpers.h"
 #include <wx/wx.h>
 #include <wx/button.h>
+#include <wx/checkbox.h>
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
 #include <cstdio>
@@ -65,6 +66,9 @@ public:
                 Require(query && replacement && replacement->IsShownOnScreen(),
                         "Replace menu must open a modeless view with query and replacement text");
                 auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
+                auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
+                Require(wrap && wrap->GetValue(), "Replace must share the default-enabled Wrap around option");
+                wrap->SetValue(false);
                 query->SetValue("one");
                 replacement->SetValue("$1\\tail");
                 Click(dialog, wxID_REPLACE);
@@ -160,6 +164,20 @@ public:
                 Require(Text(editor).empty() && !editor->Send(Message::CanUndo),
                         "Replace must revalidate against the new empty document");
                 std::puts("PASS: query, selection, live edit and New changes revalidate without stale replacements");
+                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one"));
+                editor->Send(Message::SetSel, 4, 7);
+                replacement->SetValue("X");
+                wrap->SetValue(true);
+                Click(dialog, wxID_REPLACE);
+                Require(Text(editor) == "one X", "wrapped replacement must edit only the confirmed match");
+                Selection(editor, 0, 3, "Replace must wrap to the first match using the current search policy");
+                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one"));
+                editor->Send(Message::SetSel, 4, 7);
+                wrap->SetValue(false);
+                Click(dialog, wxID_REPLACE);
+                Require(Text(editor) == "one X", "non-wrapping Replace must still replace the confirmed match");
+                Selection(editor, 5, 5, "exhausted non-wrapping Replace must retain the post-replacement caret");
+                std::puts("PASS: replacement advancement uses the shared current wrap policy");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
