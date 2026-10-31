@@ -62,6 +62,7 @@ public:
     }
 
     void Draw(wxDC& dc) {
+        window_.UpdateLineNumberMargin();
         auto surface = core::Surface::Allocate(Scintilla::Technology::Default);
         surface->Init(&dc, &window_);
         surface->SetMode({65001});
@@ -88,6 +89,8 @@ public:
                 WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
         }
         InvalidateStyleRedraw();
+        window_.lineNumberWidthDirty_ = true;
+        window_.UpdateLineNumberMargin();
         ChangeSize();
     }
     void Character(std::string_view text) { InsertCharacter(text, Scintilla::CharacterSource::DirectInput); }
@@ -333,8 +336,10 @@ private:
         SelectionRevision();
         if (notification.nmhdr.code == Scintilla::Notification::Modified &&
             (static_cast<int>(notification.modificationType) &
-             static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText)))
+             static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {
             ++window_.documentRevision_;
+            if (notification.linesAdded != 0) window_.lineNumberWidthDirty_ = true;
+        }
         if (notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
             notification.nmhdr.code == Scintilla::Notification::SavePointLeft) {
             auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());
@@ -411,15 +416,18 @@ EditorControl::EditorControl(wxWindow* parent)
     GetCaret()->Show();
 #endif
     core_ = std::make_unique<Core>(*this);
+    Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
+    Send(Message::SetMarginMaskN, 0, 0);
+    SetLineNumbersVisible(true);
 #ifdef __WXMSW__
     // Use one native caret for display and for input methods on Windows.
     Send(Message::SetCaretStyle, 0);
+#endif
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         core_->DpiChanged();
         Refresh(false);
         event.Skip();
     });
-#endif
     Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& event) {
         Send(Message::SetFocus, 1);
         core_->SyncSystemCaret();
@@ -517,6 +525,11 @@ void EditorControl::ToggleWordWrap() {
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
     core_->SelectionRevision();
     const auto result = core_->WndProc(message, wParam, lParam);
+    if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
+        message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
+        message == Message::StyleSetItalic || message == Message::SetZoom)
+        lineNumberWidthDirty_ = true;
+    UpdateLineNumberMargin();
     if (message == Message::FoldAll) core_->RepairFoldSelection();
     core_->SelectionRevision();
     return result;
@@ -524,6 +537,30 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
 
 uint64_t EditorControl::SelectionRevision() const {
     return core_->SelectionRevision();
+}
+
+void EditorControl::SetLineNumbersVisible(bool visible) {
+    lineNumbersVisible_ = visible;
+    lineNumberWidthDirty_ = true;
+    UpdateLineNumberMargin();
+    Send(Message::ScrollCaret);
+}
+
+void EditorControl::UpdateLineNumberMargin() {
+    if (!lineNumberWidthDirty_) return;
+    lineNumberWidthDirty_ = false;
+    intptr_t width = 0;
+    if (lineNumbersVisible_) {
+        const auto count = core_->WndProc(Message::GetLineCount, 0, 0);
+        const std::string digits(std::to_string(count).size(), '9');
+        // Like Notepad4's UpdateLineNumberWidth, measure the core's number style.
+        // Use the required digit count and native DIP padding, without reading text.
+        width = core_->WndProc(Message::TextWidth, 33, reinterpret_cast<intptr_t>(digits.c_str())) + FromDIP(8);
+    }
+    if (core_->WndProc(Message::GetMarginWidthN, 0, 0) != width) {
+        core_->WndProc(Message::SetMarginWidthN, 0, width);
+        core_->WndProc(Message::ScrollCaret, 0, 0);
+    }
 }
 
 std::optional<std::string> EditorControl::ExpandRegexReplacement(const std::string& replacement) {

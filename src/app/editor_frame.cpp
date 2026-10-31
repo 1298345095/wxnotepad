@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "app/find_replace_dialog.h"
+#include "app/go_to_line_dialog.h"
 #include <wx/menu.h>
 #include <wx/filedlg.h>
 #include <wx/filename.h>
@@ -31,6 +32,9 @@ EditorFrame::EditorFrame()
     edit->Append(wxID_REPLACE, "&Replace...\tCtrl+H");
     edit->Append(wxID_FORWARD, "Find &Next\tF3");
     edit->Append(wxID_BACKWARD, "Find &Previous\tShift+F3");
+    const int goToLine = wxWindow::NewControlId();
+    edit->Append(goToLine, "&Go To Line...\tCtrl+G");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowGoToLineDialog(this, *editor_); }, goToLine);
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
@@ -61,6 +65,36 @@ EditorFrame::EditorFrame()
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetWrapMode) != 0); }, wordWrap);
+    const int lineNumbers = wxWindow::NewControlId();
+    view->AppendCheckItem(lineNumbers, "Line &Numbers\tCtrl+Shift+N");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible()); },
+        lineNumbers);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->LineNumbersVisible()); }, lineNumbers);
+    const int whitespace = wxWindow::NewControlId();
+    view->AppendCheckItem(whitespace, "Show &Whitespace\tCtrl+Shift+8");
+    Bind(
+        wxEVT_MENU,
+        [this, whitespace](wxCommandEvent&) {
+            const bool visible = editor_->Send(Scintilla::Message::GetViewWS) == 0;
+            editor_->Send(Scintilla::Message::SetViewWS,
+                          static_cast<uintptr_t>(visible ? Scintilla::WhiteSpace::VisibleAlways
+                                                         : Scintilla::WhiteSpace::Invisible));
+            GetMenuBar()->Check(whitespace, visible);
+        },
+        whitespace);
+    Bind(wxEVT_CHAR_HOOK, [this, whitespace](wxKeyEvent& event) {
+        if ((event.GetKeyCode() == '8' || event.GetKeyCode() == '*') && event.ControlDown() && event.ShiftDown() &&
+            !event.AltDown() && !event.MetaDown()) {
+            wxCommandEvent command(wxEVT_MENU, whitespace);
+            GetEventHandler()->ProcessEvent(command);
+        } else {
+            event.Skip();
+        }
+    });
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetViewWS) != 0); }, whitespace);
     view->AppendSeparator();
     const auto addFoldCommand = [this, view](const wxString& label, uintptr_t action) {
         const int id = wxWindow::NewControlId();
@@ -180,6 +214,9 @@ void EditorFrame::ShowFind(bool replace) {
 void EditorFrame::OnSearchKey(wxKeyEvent& event) {
     if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
         editor_->ToggleWordWrap();
+    else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
+        editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible());
     else if (event.GetKeyCode() == 'F' && event.ControlDown() && !event.AltDown() && !event.ShiftDown())
         ShowFind();
     else if (event.GetKeyCode() == 'H' && event.ControlDown() && !event.AltDown() && !event.ShiftDown())

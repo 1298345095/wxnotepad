@@ -41,6 +41,7 @@ target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
 target_link_libraries(editor_runtime PUBLIC notepad4_core)
 
 add_library(editor_features STATIC
+    src/editor/line_navigation.cpp
     src/document/document_session.cpp
     src/document/encoding/gbk_codec.cpp
     src/document/encoding/utf16_codec.cpp
@@ -52,6 +53,7 @@ target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/go_to_line_dialog.cpp
     src/app/editor_frame.cpp
     src/app/find_replace_dialog.cpp
     src/app/process_observer.cpp)
@@ -137,6 +139,8 @@ if(BUILD_TESTING)
     add_editor_test(fold_cpp cpp_fold_margin 60)
     add_editor_test(search_folds folded_search_replace 60)
     add_editor_test(fold_all fold_all_commands 60)
+    add_editor_test(line_numbers line_number_view 60)
+    add_editor_test(whitespace_view visible_whitespace 30)
     add_editor_test(fold_python python_fold_margin 60)
     add_editor_test(fold_json json_fold_margin 60)
     add_editor_test(eol_smoke loaded_eol_input 30)
@@ -148,6 +152,7 @@ if(BUILD_TESTING)
     add_editor_test(replace_smoke replace_literal_one 30)
     add_editor_test(replace_all_smoke replace_literal_all 30)
     add_editor_test(search_navigation find_literal_navigation 30)
+    add_editor_test(goto_line go_to_logical_line 30)
     add_editor_test(search_regex find_regular_expression 30)
     add_editor_test(replace_regex replace_regular_expression 30)
     add_editor_test(replace_all_regex replace_all_regular_expression 30)
