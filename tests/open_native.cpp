@@ -1,0 +1,262 @@
+#include "editor_control.h"
+#include "editor_frame.h"
+#include <wx/wx.h>
+#include <wx/timer.h>
+#include <wx/filename.h>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <stdexcept>
+#include <vector>
+#ifdef __WXMSW__
+#include <windows.h>
+#elif defined(__WXGTK__)
+#include <gtk/gtk.h>
+#endif
+
+namespace {
+void Require(bool condition, const char* message) {
+    if (!condition) throw std::runtime_error(message);
+}
+wxString Filename(const std::filesystem::path& path) {
+#ifdef __WXMSW__
+    return wxString(path.wstring());
+#else
+    return wxString::FromUTF8(path.string());
+#endif
+}
+std::string Bytes(const std::filesystem::path& path) {
+    std::ifstream input(path, std::ios::binary);
+    Require(input.is_open(), "saved file must exist");
+    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+}
+std::string Text(EditorFrame* frame) {
+    const auto length = static_cast<size_t>(frame->Editor()->Send(Scintilla::Message::GetLength));
+    std::string text(length + 1, '\0');
+    frame->Editor()->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+    text.resize(length);
+    return text;
+}
+void Add(EditorFrame* frame, const std::string& text) {
+    frame->Editor()->Send(Scintilla::Message::GotoPos, frame->Editor()->Send(Scintilla::Message::GetLength));
+    frame->Editor()->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+}
+#ifdef __WXGTK__
+void Respond(GtkWidget* dialog, int response) {
+    auto* button = gtk_dialog_get_widget_for_response(GTK_DIALOG(dialog), response);
+    Require(button && GTK_IS_BUTTON(button), "native dialog must expose the expected button");
+    gtk_button_clicked(GTK_BUTTON(button));
+}
+#endif
+
+// Drives actual native modal widgets belonging to this test process. It does
+// not inject keyboard/mouse input or require ownership of the foreground app.
+class NativeDriver final : public wxTimer {
+public:
+    explicit NativeDriver(int choice, wxString destination = {}) : choice_(choice), destination_(destination) { Start(100); }
+    int prompts = 0;
+    int choosers = 0;
+    int errors = 0;
+    void Notify() override {
+#ifdef __WXMSW__
+        EnumThreadWindows(GetCurrentThreadId(), [](HWND window, LPARAM data) -> BOOL {
+            auto& driver = *reinterpret_cast<NativeDriver*>(data);
+            wchar_t title[256]{};
+            GetWindowTextW(window, title, 256);
+            if (IsWindowVisible(window) && wxString(title) == "Save changes?") {
+                ++driver.prompts;
+                const int button = driver.choice_ == wxID_YES ? IDYES : driver.choice_ == wxID_NO ? IDNO : IDCANCEL;
+                // wxMessageDialog uses the Windows native task dialog.
+                SendMessageW(window, WM_USER + 102, button, 0); // TDM_CLICK_BUTTON
+            } else if (IsWindowVisible(window) && (wxString(title) == "Save file" || wxString(title) == "Open file")) {
+                if (!driver.chooserStage_++) {
+                    ++driver.choosers;
+                    if (driver.destination_.empty()) SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
+                    else {
+                        EnumChildWindows(window, [](HWND child, LPARAM data) -> BOOL {
+                            wchar_t type[64]{};
+                            GetClassNameW(child, type, 64);
+                            if (IsWindowVisible(child) && wxString(type) == "Edit") {
+                                SetWindowTextW(child, reinterpret_cast<NativeDriver*>(data)->destination_.wc_str());
+                                return FALSE;
+                            }
+                            return TRUE;
+                        }, reinterpret_cast<LPARAM>(&driver));
+                        PostMessageW(window, WM_COMMAND, IDOK, 0);
+                    }
+                }
+            } else if (IsWindowVisible(window) && wxString(title) == "Could not save file") {
+                ++driver.errors;
+                SendMessageW(window, WM_USER + 102, IDOK, 0);
+            }
+            return TRUE;
+        }, reinterpret_cast<LPARAM>(this));
+#elif defined(__WXGTK__)
+        GList* windows = gtk_window_list_toplevels();
+        for (GList* item = windows; item; item = item->next) {
+            auto* widget = GTK_WIDGET(item->data);
+            if (!gtk_widget_get_visible(widget)) continue;
+            if (GTK_IS_FILE_CHOOSER(widget)) {
+                if (!chooserStage_++) {
+                    ++choosers;
+                    if (destination_.empty()) Respond(widget, GTK_RESPONSE_CANCEL);
+                    else {
+                        if (gtk_file_chooser_get_action(GTK_FILE_CHOOSER(widget)) == GTK_FILE_CHOOSER_ACTION_OPEN)
+                            gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(widget), destination_.utf8_str());
+                        else {
+                            const wxFileName target(destination_);
+                            gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(widget), target.GetPath().utf8_str());
+                            gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(widget), target.GetFullName().utf8_str());
+                        }
+                    }
+                } else if (chooserStage_ == 2 && !destination_.empty()) {
+                    Respond(widget, GTK_RESPONSE_ACCEPT);
+                }
+                continue;
+            }
+            if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
+            if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Save changes?") {
+                ++prompts;
+                Respond(widget, choice_ == wxID_YES ? GTK_RESPONSE_YES : choice_ == wxID_NO ? GTK_RESPONSE_NO : GTK_RESPONSE_CANCEL);
+            } else if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not save file") {
+                ++errors;
+                Respond(widget, GTK_RESPONSE_OK);
+            }
+        }
+        g_list_free(windows);
+#endif
+    }
+private:
+    int choice_;
+    wxString destination_;
+    int chooserStage_ = 0;
+};
+
+class OpenNativeApp final : public wxApp {
+public:
+    bool OnInit() override {
+        SetExitOnFrameDelete(false);
+        auto* frame = new EditorFrame;
+        CallAfter([this, frame] {
+            const auto directory = std::filesystem::temp_directory_path() /
+                ("wxnotepad-switch-" + std::to_string(wxGetProcessId()));
+            try {
+                std::filesystem::create_directory(directory);
+                const auto path = directory / "source.txt";
+                { std::ofstream(path, std::ios::binary) << "opened 中文\n"; }
+                Add(frame, "pending");
+                NativeDriver cancel(wxID_CANCEL);
+                Require(frame->Open(Filename(path)).status == OpenStatus::Cancelled, "Cancel must prevent Open replacing dirty document");
+                cancel.Stop();
+                Require(cancel.prompts == 1 && Text(frame) == "pending" && frame->DocumentPath().empty(), "Open Cancel must retain identity and content");
+                NativeDriver cancelNew(wxID_CANCEL);
+                Require(!frame->New(), "Cancel must prevent New replacing dirty document");
+                cancelNew.Stop();
+                Require(cancelNew.prompts == 1 && Text(frame) == "pending" && frame->Editor()->Send(Scintilla::Message::CanUndo), "New Cancel must retain history");
+                std::puts("PASS: Open/New Cancel preserve the editable document");
+                NativeDriver cancelledSave(wxID_YES);
+                Require(frame->Open(Filename(path)).status == OpenStatus::Cancelled, "cancelled first Save must prevent Open");
+                cancelledSave.Stop();
+                Require(cancelledSave.prompts == 1 && cancelledSave.choosers == 1 && Text(frame) == "pending", "cancelled Save chooser must retain the current document");
+                NativeDriver cancelledNewSave(wxID_YES);
+                Require(!frame->New(), "cancelled first Save must prevent New");
+                cancelledNewSave.Stop();
+                Require(cancelledNewSave.prompts == 1 && cancelledNewSave.choosers == 1 && frame->Editor()->Send(Scintilla::Message::GetModify), "cancelled New Save must retain dirty state");
+                const auto savedPath = directory / "saved.txt";
+                NativeDriver saveNew(wxID_YES, Filename(savedPath));
+                Require(frame->New(), "successful first Save must allow New");
+                saveNew.Stop();
+                Require(saveNew.prompts == 1 && saveNew.choosers == 1 && Bytes(savedPath) == "pending", "New Save must write the old document first");
+                Require(Text(frame).empty() && frame->DocumentPath().empty() && !frame->DocumentHasUtf8Bom(), "New must reset identity, BOM and content");
+                Require(!frame->Editor()->Send(Scintilla::Message::GetModify) && !frame->Editor()->Send(Scintilla::Message::CanUndo) && frame->Editor()->Send(Scintilla::Message::GetEOLMode) == 0, "New must be clean, isolate Undo and default to CRLF");
+                std::puts("PASS: cancelled Save prevents switching; successful first Save then New resets the document");
+                Require(frame->Open(Filename(savedPath)).status == OpenStatus::Opened, "saved source must open");
+                Add(frame, " changed");
+                NativeDriver saveOpen(wxID_YES);
+                Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "successful named Save must allow Open");
+                saveOpen.Stop();
+                Require(saveOpen.prompts == 1 && saveOpen.choosers == 0 && Bytes(savedPath) == "pending changed", "Open Save must reuse the old path");
+                Require(Text(frame) == "opened 中文\n" && !frame->Editor()->Send(Scintilla::Message::CanUndo), "successful Open must clear previous history");
+                Add(frame, " changed");
+                const auto oldPath = frame->DocumentPath();
+                std::filesystem::remove(path);
+                std::filesystem::create_directory(path);
+                { std::ofstream(path / "sentinel", std::ios::binary) << "keep"; }
+                NativeDriver failedOpenSave(wxID_YES);
+                Require(frame->Open(Filename(savedPath)).status == OpenStatus::Cancelled, "failed old-document Save must prevent Open");
+                failedOpenSave.Stop();
+                Require(failedOpenSave.prompts == 1 && failedOpenSave.errors == 1 && frame->DocumentPath() == oldPath && Text(frame) == "opened 中文\n changed", "failed Open Save must retain identity and text");
+                NativeDriver failedNewSave(wxID_YES);
+                Require(!frame->New(), "failed old-document Save must prevent New");
+                failedNewSave.Stop();
+                Require(failedNewSave.errors == 1 && Bytes(path / "sentinel") == "keep", "failed New Save must preserve target");
+                frame->Editor()->Send(Scintilla::Message::Undo);
+                Require(Text(frame) == "opened 中文\n" && !frame->Editor()->Send(Scintilla::Message::GetModify), "failed switches must preserve the original save point and Undo");
+                Add(frame, " discard");
+                NativeDriver discardNew(wxID_NO);
+                Require(frame->New(), "Discard must allow New");
+                discardNew.Stop();
+                Require(discardNew.prompts == 1 && Bytes(path / "sentinel") == "keep", "Discard New must not save");
+                Add(frame, "discard me");
+                NativeDriver discardOpen(wxID_NO);
+                Require(frame->Open(Filename(savedPath)).status == OpenStatus::Opened, "Discard must allow Open");
+                discardOpen.Stop();
+                Require(discardOpen.prompts == 1 && Text(frame) == "pending changed" && !frame->Editor()->Send(Scintilla::Message::CanUndo), "Discard Open must replace and isolate history");
+                std::puts("PASS: named Save/Discard/failure protection shared by Open and New");
+                NativeDriver pickerCancel(wxID_CANCEL);
+                wxCommandEvent openCancel(wxEVT_MENU, wxID_OPEN);
+                frame->GetEventHandler()->ProcessEvent(openCancel);
+                pickerCancel.Stop();
+                Require(pickerCancel.choosers == 1 && pickerCancel.prompts == 0 && Text(frame) == "pending changed", "native Open cancellation must retain the clean document");
+                const auto pickedPath = directory / "picked.txt";
+                { std::ofstream(pickedPath, std::ios::binary) << "\xef\xbb\xbfPicked\r\n"; }
+                NativeDriver pickerAccept(wxID_NO, Filename(pickedPath));
+                wxCommandEvent openAccept(wxEVT_MENU, wxID_OPEN);
+                frame->GetEventHandler()->ProcessEvent(openAccept);
+                pickerAccept.Stop();
+                Require(pickerAccept.choosers == 1 && frame->DocumentPath() == Filename(pickedPath) && frame->DocumentHasUtf8Bom() && Text(frame) == "Picked\r\n", "native Open command must use the chosen path");
+                Add(frame, "discard");
+                NativeDriver menuNew(wxID_NO);
+                wxCommandEvent newCommand(wxEVT_MENU, wxID_NEW);
+                frame->GetEventHandler()->ProcessEvent(newCommand);
+                menuNew.Stop();
+                Require(menuNew.prompts == 1 && Text(frame).empty() && frame->DocumentPath().empty() && !frame->DocumentHasUtf8Bom(), "native New command must reset the document");
+                Require(Bytes(pickedPath) == "\xef\xbb\xbfPicked\r\n", "Discard New must preserve source bytes");
+                std::puts("PASS: native Open chooser accept/cancel and New menu commands");
+                const std::vector<std::string> samples = {"", "\xef\xbb\xbf", "ASCII", "\xef\xbb\xbf" "ASCII", "中文😀\r\nsecond\r\n", "\xef\xbb\xbf中文😀\nsecond\n", "one\r\ntwo\nthree\rlast", "\xef\xbb\xbf" "one\r\ntwo\nthree\rlast"};
+                for (size_t index = 0; index < samples.size(); ++index) {
+                    const auto roundtripPath = directory / ("roundtrip-" + std::to_string(index) + ".txt");
+                    { std::ofstream output(roundtripPath, std::ios::binary); output.write(samples[index].data(), samples[index].size()); }
+                    auto* roundtrip = new EditorFrame;
+                    Require(roundtrip->Open(Filename(roundtripPath)).status == OpenStatus::Opened, "roundtrip source must open");
+                    const auto originalText = Text(roundtrip);
+                    // The content is unchanged; an edit/delete moves away from the
+                    // save point so the real close-Save path rewrites the bytes.
+                    Add(roundtrip, "!");
+                    roundtrip->Editor()->Send(Scintilla::Message::DeleteBack);
+                    Require(Text(roundtrip) == originalText && roundtrip->Editor()->Send(Scintilla::Message::GetModify), "roundtrip must exercise close Save with unchanged content");
+                    NativeDriver closeSave(wxID_YES);
+                    Require(roundtrip->Close(), "roundtrip close Save must succeed");
+                    closeSave.Stop();
+                    Require(closeSave.prompts == 1 && closeSave.choosers == 0 && Bytes(roundtripPath) == samples[index], "close Save must roundtrip exact encoding/BOM/EOL bytes");
+                }
+                std::puts("PASS: eight unchanged-content UTF-8/BOM/EOL byte roundtrips through close Save");
+                frame->Destroy();
+                result_ = 0;
+            } catch (const std::exception& error) {
+                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                if (!frame->IsBeingDeleted()) frame->Destroy();
+            }
+            std::filesystem::remove_all(directory);
+            ExitMainLoop();
+        });
+        return true;
+    }
+    int OnExit() override { return result_; }
+    int OnRun() override { wxApp::OnRun(); return result_; }
+private:
+    int result_ = 1;
+};
+}
+wxIMPLEMENT_APP(OpenNativeApp);
+
