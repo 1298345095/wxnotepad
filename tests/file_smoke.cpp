@@ -162,6 +162,9 @@ public:
                 Require(!editor->Send(Scintilla::Message::GetModify), "Undo to saved text must be clean");
                 editor->Send(Scintilla::Message::Redo);
                 Require(editor->Send(Scintilla::Message::GetModify), "Redo away from save point must be dirty");
+                Require(textFrame->Save().status == SaveStatus::Saved, "saving a named document must reuse its path");
+                Require(Bytes(textPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast!", "named save must replace complete bytes at the existing path");
+                Require(!editor->Send(Scintilla::Message::GetModify), "named save must establish a new save point");
                 textFrame->Destroy();
                 std::puts("PASS: exact UTF-8/mixed-EOL bytes and savepoint history");
                 auto* pending = new EditorFrame;
