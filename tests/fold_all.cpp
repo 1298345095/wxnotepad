@@ -131,7 +131,10 @@ public:
                     Require(frame->GetMenuBar()->IsEnabled(collapse) == capable &&
                                 frame->GetMenuBar()->IsEnabled(expand) == capable,
                             "fold command enablement must follow the selected language's folding capability");
-                    if (!capable) continue;
+                    if (!capable) {
+                        std::printf("SKIP: %s folding is not enabled in this integration revision\n", language.name);
+                        continue;
+                    }
                     editor->Send(Message::GotoPos, 0);
                     NativeSearch::Command(frame, collapse);
                     Require(!editor->Send(Message::GetFoldExpanded, 0) && !editor->Send(Message::GetFoldExpanded, 1) &&
