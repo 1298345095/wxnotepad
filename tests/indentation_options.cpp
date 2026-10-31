@@ -1,11 +1,14 @@
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
+#include "file_helpers.h"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 
 namespace {
 using Scintilla::Message;
+using TestFiles::Bytes;
+using TestFiles::Filename;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -28,18 +31,6 @@ void Tab(EditorControl* editor) {
     gdk_event_free(event);
 #endif
     wxYield();
-}
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "the saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 }
 void CheckOptions(EditorFrame* frame) {
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
