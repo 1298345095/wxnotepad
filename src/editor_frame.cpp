@@ -27,6 +27,29 @@ EditorFrame::EditorFrame()
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanUndo)); }, wxID_UNDO);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanRedo)); }, wxID_REDO);
     Bind(wxEVT_EDITOR_STATE_CHANGED, [this](wxCommandEvent&) { UpdateDocumentState(); });
+    Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
+        if (event.CanVeto() && editor_->Send(Scintilla::Message::GetModify)) {
+            const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
+            wxMessageDialog dialog(this, "Save changes to " + name + " before closing?",
+                                   "Save changes?", wxYES_NO | wxCANCEL | wxICON_QUESTION);
+            dialog.SetYesNoCancelLabels("&Save", "&Discard", "&Cancel");
+            const int choice = dialog.ShowModal();
+            if (choice == wxID_CANCEL) {
+                event.Veto();
+                return;
+            }
+            if (choice == wxID_YES) {
+                const auto result = Save();
+                if (result.status != SaveStatus::Saved) {
+                    if (result.status == SaveStatus::Failed)
+                        wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
+                    event.Veto();
+                    return;
+                }
+            }
+        }
+        Destroy();
+    });
     UpdateDocumentState();
     editor_->SetFocus();
 }
@@ -43,7 +66,11 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination) {
 }
 
 SaveResult EditorFrame::Save() {
-    if (!document_.Path().empty()) return {SaveStatus::Failed, "This document already has a file name."};
+    if (!document_.Path().empty()) {
+        const auto result = document_.Save();
+        UpdateDocumentState();
+        return result;
+    }
     wxFileDialog dialog(this, "Save file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     if (dialog.ShowModal() != wxID_OK) return SaveFirst(std::nullopt);
