@@ -49,7 +49,7 @@ void MarginClick(EditorControl* editor, int line) {
         event->button.x = x;
         event->button.y = y;
         event->button.button = 1;
-        event->button.state = static_cast<GdkModifierType>(type == GDK_BUTTON_RELEASE ? GDK_BUTTON1_MASK : 0);
+        if (type == GDK_BUTTON_RELEASE) event->button.state = GDK_BUTTON1_MASK;
         const auto* display = gtk_widget_get_display(widget);
         gdk_event_set_device(event,
                              gdk_seat_get_pointer(gdk_display_get_default_seat(const_cast<GdkDisplay*>(display))));
@@ -79,7 +79,7 @@ std::function<wxColour(int, int)> PixelReader(EditorControl* editor) {
     const int channels = gdk_pixbuf_get_n_channels(pixels);
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            const auto* pixel = data + y * stride + x * channels;
+            const auto* pixel = data + static_cast<size_t>(y) * stride + static_cast<size_t>(x) * channels;
             image.SetRGB(x, y, pixel[0], pixel[1], pixel[2]);
         }
     }
