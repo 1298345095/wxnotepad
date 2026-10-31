@@ -51,7 +51,13 @@ EditorFrame::EditorFrame()
     for (const int width : {2, 4, 8}) {
         const int id = wxWindow::NewControlId();
         indentation->AppendRadioItem(id, wxString::Format("&%d Columns", width));
-        Bind(wxEVT_MENU, [this, width](wxCommandEvent&) { editor_->SetIndentationWidth(width); }, id);
+        Bind(
+            wxEVT_MENU,
+            [this, width](wxCommandEvent&) {
+                editor_->SetIndentationWidth(width);
+                UpdatePositionStatus();
+            },
+            id);
         Bind(
             wxEVT_UPDATE_UI,
             [this, width](wxUpdateUIEvent& event) {

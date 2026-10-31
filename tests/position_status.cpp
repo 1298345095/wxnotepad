@@ -98,6 +98,10 @@ public:
                 Status(frame, "Ln 2, Col 7");
                 editor->Send(Message::GotoPos, 6);
                 Status(frame, "Ln 2, Col 5");
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "8 Columns"));
+                Status(frame, "Ln 2, Col 9");
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "4 Columns"));
+                Status(frame, "Ln 2, Col 5");
                 Require(frame->GetStatusBar()->GetStatusText().Contains("UTF-8"), "metadata must remain visible");
                 std::puts("PASS: live logical line and core column use tab stops and Unicode characters");
                 const std::string selected = "\xE4\xB8\xAD\xE6\x96\x87\xF0\x9F\x98\x80"
