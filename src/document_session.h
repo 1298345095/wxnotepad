@@ -26,6 +26,7 @@ public:
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination);
     SaveResult Save();
+    SaveResult SaveAs(const std::optional<wxString>& destination);
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace);
     void New();
     bool HasUtf8Bom() const { return hasUtf8Bom_; }

@@ -2,6 +2,7 @@
 #include "editor_control.h"
 #include <wx/menu.h>
 #include <wx/filedlg.h>
+#include <wx/filename.h>
 #include <wx/msgdlg.h>
 
 EditorFrame::EditorFrame()
@@ -10,7 +11,8 @@ EditorFrame::EditorFrame()
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
     file->Append(wxID_OPEN, "&Open...\tCtrl+O");
-    file->Append(wxID_SAVE, "&Save...\tCtrl+S");
+    file->Append(wxID_SAVE, "&Save\tCtrl+S");
+    file->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
     auto* edit = new wxMenu;
     edit->Append(wxID_UNDO, "&Undo\tCtrl+Z");
     edit->Append(wxID_REDO, "&Redo\tCtrl+Y");
@@ -29,7 +31,12 @@ EditorFrame::EditorFrame()
         if (result.status == SaveStatus::Failed)
             wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
     }, wxID_SAVE);
-    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(document_.Path().empty()); }, wxID_SAVE);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, wxID_SAVE);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        const auto result = SaveAs();
+        if (result.status == SaveStatus::Failed)
+            wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
+    }, wxID_SAVEAS);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Undo); }, wxID_UNDO);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Redo); }, wxID_REDO);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanUndo)); }, wxID_UNDO);
@@ -67,6 +74,20 @@ SaveResult EditorFrame::Save() {
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     if (dialog.ShowModal() != wxID_OK) return SaveFirst(std::nullopt);
     return SaveFirst(dialog.GetPath());
+}
+
+SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination) {
+    const auto result = document_.SaveAs(destination);
+    UpdateDocumentState();
+    return result;
+}
+
+SaveResult EditorFrame::SaveAs() {
+    const wxFileName current(document_.Path());
+    wxFileDialog dialog(this, "Save As", current.GetPath(), current.GetFullName(),
+                        "Text files (*.txt)|*.txt|All files (*.*)|*.*", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+    if (dialog.ShowModal() != wxID_OK) return SaveAs(std::nullopt);
+    return SaveAs(dialog.GetPath());
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source) {
