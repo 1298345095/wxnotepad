@@ -21,6 +21,7 @@ public:
     uint64_t SelectionRevision() const;
     intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
+    void IndentLines(bool forwards);
     void SetIndentationWidth(int width);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
