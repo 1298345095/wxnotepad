@@ -64,6 +64,22 @@ EditorFrame::EditorFrame()
     addLanguage("&Python", SyntaxLanguage::Python);
     addLanguage("&JSON", SyntaxLanguage::Json);
     menus->Append(languages, "&Language");
+    auto* view = new wxMenu;
+    const auto addFoldCommand = [this, view](const wxString& label, uintptr_t action) {
+        const int id = wxWindow::NewControlId();
+        view->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, action](wxCommandEvent&) {
+                if (LanguageCanFold(language_)) editor_->Send(Scintilla::Message::FoldAll, action);
+            },
+            id);
+        Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(LanguageCanFold(language_)); }, id);
+    };
+    addFoldCommand("&Collapse All", static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
+                                        static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
+    addFoldCommand("&Expand All", static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
+    menus->Append(view, "&View");
     SetMenuBar(menus);
     CreateStatusBar();
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(); }, wxID_FIND);

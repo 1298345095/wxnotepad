@@ -168,23 +168,7 @@ public:
         if (event.GetEventType() == wxEVT_LEFT_DOWN) {
             window_.SetFocus();
             ButtonDownWithModifiers(point, MouseTime(), MouseModifiers(event));
-            // The core keeps contraction state but can leave the selection in
-            // hidden text. Move only hidden endpoints to their visible header.
-            const auto visibleEndpoint = [this](Sci::Position position) {
-                auto line = WndProc(Message::LineFromPosition, position, 0);
-                if (WndProc(Message::GetLineVisible, line, 0)) return position;
-                while (line > 0 && !WndProc(Message::GetLineVisible, line, 0)) {
-                    line = std::max<intptr_t>(0, WndProc(Message::GetFoldParent, line, 0));
-                }
-                return static_cast<Sci::Position>(WndProc(Message::PositionFromLine, line, 0));
-            };
-            const auto caret = visibleEndpoint(sel.MainCaret());
-            const auto anchor = visibleEndpoint(sel.MainAnchor());
-            if (caret != sel.MainCaret() || anchor != sel.MainAnchor()) {
-                SetSelection(caret, anchor);
-                EnsureCaretVisible();
-                UpdateSystemCaret();
-            }
+            RepairFoldSelection();
         } else if (event.GetEventType() == wxEVT_LEFT_UP) {
             ButtonUpWithModifiers(point, MouseTime(), MouseModifiers(event));
         } else {
@@ -193,6 +177,25 @@ public:
     }
     void CaptureLost() { ChangeMouseCapture(false); }
     void SyncSystemCaret() { UpdateSystemCaret(); }
+    void RepairFoldSelection() {
+        // The core keeps contraction state but can leave the selection in
+        // hidden text. Move only hidden endpoints to their visible header.
+        const auto visibleEndpoint = [this](Sci::Position position) {
+            auto line = WndProc(Message::LineFromPosition, position, 0);
+            if (WndProc(Message::GetLineVisible, line, 0)) return position;
+            while (line > 0 && !WndProc(Message::GetLineVisible, line, 0)) {
+                line = std::max<intptr_t>(0, WndProc(Message::GetFoldParent, line, 0));
+            }
+            return static_cast<Sci::Position>(WndProc(Message::PositionFromLine, line, 0));
+        };
+        const auto caret = visibleEndpoint(sel.MainCaret());
+        const auto anchor = visibleEndpoint(sel.MainAnchor());
+        if (caret != sel.MainCaret() || anchor != sel.MainAnchor()) {
+            SetSelection(caret, anchor);
+            EnsureCaretVisible();
+            UpdateSystemCaret();
+        }
+    }
 
 private:
     EditorControl& window_;
@@ -499,6 +502,7 @@ EditorControl::~EditorControl() = default;
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
     core_->SelectionRevision();
     const auto result = core_->WndProc(message, wParam, lParam);
+    if (message == Message::FoldAll) core_->RepairFoldSelection();
     core_->SelectionRevision();
     return result;
 }
