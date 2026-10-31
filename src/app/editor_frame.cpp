@@ -35,6 +35,31 @@ EditorFrame::EditorFrame()
     const int goToLine = wxWindow::NewControlId();
     edit->Append(goToLine, "&Go To Line...\tCtrl+G");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowGoToLineDialog(this, *editor_); }, goToLine);
+    edit->AppendSeparator();
+    const auto addEol = [this, edit](const wxString& label, Scintilla::EndOfLine mode) {
+        const int id = wxWindow::NewControlId();
+        // wxGTK suppresses activation of an already checked radio item. A
+        // conversion must run again after Undo restores mixed line endings.
+        edit->AppendCheckItem(id, "Convert to " + label);
+        Bind(
+            wxEVT_MENU,
+            [this, mode](wxCommandEvent&) {
+                editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(mode));
+                editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
+                UpdateDocumentState();
+                UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) {
+                event.Check(editor_->Send(Scintilla::Message::GetEOLMode) == static_cast<intptr_t>(mode));
+            },
+            id);
+    };
+    addEol("CRLF", Scintilla::EndOfLine::CrLf);
+    addEol("LF", Scintilla::EndOfLine::Lf);
+    addEol("CR", Scintilla::EndOfLine::Cr);
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
@@ -268,8 +293,12 @@ void EditorFrame::UpdateDocumentState() {
     const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
                               : document_.Encoding() == FileEncoding::Gbk   ? "GBK (CP936)"
                                                                             : "UTF-8";
+    const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
+    const wxString eol = eolMode == Scintilla::EndOfLine::CrLf ? "CRLF"
+                         : eolMode == Scintilla::EndOfLine::Cr ? "CR"
+                                                               : "LF";
     SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " + LanguageName(document_.Language()) +
-                  (document_.LanguageOverride() ? " (override)" : ""));
+                  (document_.LanguageOverride() ? " (override)" : "") + " | EOL: " + eol);
 }
 
 void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
