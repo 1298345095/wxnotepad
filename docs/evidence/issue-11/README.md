@@ -21,16 +21,25 @@ The host delegates character boundaries and selection movement to that core.
 | Backend | Release build | Public event checks | Native OS input |
 | --- | --- | --- | --- |
 | Windows 11, VS 18 / MSVC 14.51 | passed | final CTest 2/2 passed | keyboard, mouse drag, both wheel axes and visible caret passed |
-| Ubuntu 24.04 WSLg, GTK3 Wayland / GCC 13.3 | passed | editor suite passed before final long-line assertion refinement | keyboard, mouse drag, both wheel axes and visible caret passed |
-| Ubuntu 24.04 WSLg, GTK3 X11 / GCC 13.3 | same Linux build | editor suite passed before final long-line assertion refinement | keyboard and mouse selection/edit/Undo passed; native scrolling awaits manual confirmation |
+| Ubuntu 24.04 WSLg, GTK3 Wayland / GCC 13.3 | passed | final editor suite passed (0.21s, root rerun) | keyboard, mouse drag, both wheel axes and visible caret passed |
+| Ubuntu 24.04 WSLg, GTK3 X11 / GCC 13.3 | same Linux build | final editor suite passed (0.07s, root rerun) | keyboard and mouse selection/edit/Undo passed; human scrollbar drag and selection after scroll passed |
 
 The final assertion refinement requires a nonempty long-line end to enter the
-viewport (rather than the empty final line). The final Linux binaries are built;
-rerunning that refined suite on both WSLg backends is pending the coordinated
-desktop acceptance slot. Windows and Wayland native input already exercised this
-long-line path. Native X11 Windows-injected wheel input did not reach the GTK
-wheel event probe; this is not counted as a passing native scroll check. Its
-public scrollbar-event/resize/hit-testing checks passed. No Linux IME was installed.
+viewport (rather than the empty final line). The root reran the final suite on
+both WSLg backends successfully. Native X11 Windows-injected wheel input did not
+reach the GTK wheel event probe; this is not counted as a passing native wheel
+check. A separate human X11 run confirmed both scrollbar drags and selection
+after scrolling, but reported an invisible pointer and inability to initiate
+edge resize. Native resize acceptance remains pending diagnosis; programmatic
+resize/hit-testing checks passed. No Linux IME was installed.
+
+Hidden native diagnostics reproduced the actual adapter's cursor selection
+without moving the system pointer: no residual capture, a valid GTK I-beam with
+418 nontransparent pixels, wx resize style enabled, and GTK resizable enabled.
+These metadata do not establish that the pointer was displayed by WSLg. The
+diagnostic probe modes `--compare` (native GTK text field above the editor) and
+`--compare-csd` (same controls with GTK client decorations) are available for a
+focused differential human check. They do not change the production frame.
 
 Reproduce builds with the root README's `tools/build.py` command. Linux source,
 generated core, executable and reports are all on the Linux filesystem at
