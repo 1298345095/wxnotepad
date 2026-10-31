@@ -3,16 +3,11 @@
 #include <wx/wx.h>
 #include <wx/timer.h>
 #include <wx/statusbr.h>
-#include <wx/filename.h>
+#include "native_dialog_helpers.h"
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
 #include <stdexcept>
-#ifdef __WXMSW__
-#include <windows.h>
-#elif defined(__WXGTK__)
-#include <gtk/gtk.h>
-#endif
 
 namespace {
 void Require(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
@@ -39,11 +34,7 @@ void Add(EditorFrame* frame, const std::string& text) {
     frame->Editor()->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
 }
 #ifdef __WXGTK__
-void Respond(GtkWidget* dialog, int response) {
-    auto* button = gtk_dialog_get_widget_for_response(GTK_DIALOG(dialog), response);
-    Require(button && GTK_IS_BUTTON(button), "native response button must exist");
-    gtk_button_clicked(GTK_BUTTON(button));
-}
+using NativeDialogs::Respond;
 #endif
 // Only activate native modal widgets owned by this test process. No global input.
 class NativeDriver final : public wxTimer {
@@ -72,16 +63,7 @@ public:
             } else if (wxString(title) == "Open file" || wxString(title) == "Save As") {
                 if (!driver.stage_++) {
                     ++driver.choosers;
-                    if (driver.path_.empty()) SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
-                    else {
-                        EnumChildWindows(window, [](HWND child, LPARAM data) -> BOOL {
-                            wchar_t type[64]{}; GetClassNameW(child, type, 64);
-                            if (IsWindowVisible(child) && wxString(type) == "Edit") {
-                                SetWindowTextW(child, reinterpret_cast<NativeDriver*>(data)->path_.wc_str()); return FALSE;
-                            } return TRUE;
-                        }, data);
-                        PostMessageW(window, WM_COMMAND, IDOK, 0);
-                    }
+                    NativeDialogs::ChooseFile(window, driver.path_);
                 }
             } else if (wxString(title) == "Could not save file" || wxString(title) == "Could not open file") {
                 ++driver.errors; SendMessageW(window, WM_USER + 102, IDOK, 0);
@@ -96,14 +78,7 @@ public:
             if (GTK_IS_FILE_CHOOSER(widget)) {
                 if (!stage_++) {
                     ++choosers;
-                    if (path_.empty()) Respond(widget, GTK_RESPONSE_CANCEL);
-                    else if (gtk_file_chooser_get_action(GTK_FILE_CHOOSER(widget)) == GTK_FILE_CHOOSER_ACTION_OPEN)
-                        gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(widget), path_.utf8_str());
-                    else {
-                        const wxFileName target(path_);
-                        gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(widget), target.GetPath().utf8_str());
-                        gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(widget), target.GetFullName().utf8_str());
-                    }
+                    NativeDialogs::ChooseFile(widget, path_);
                 } else if (stage_ == 2 && !path_.empty()) Respond(widget, GTK_RESPONSE_ACCEPT);
             } else if (GTK_IS_MESSAGE_DIALOG(widget)) {
                 const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
