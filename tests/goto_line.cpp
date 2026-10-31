@@ -26,19 +26,8 @@ void Key(wxWindow* window, int key, bool control = false) {
         wxYield();
         return;
     }
-    BYTE previous[256];
-    Require(GetKeyboardState(previous), "must read owned thread keyboard state");
-    BYTE modified[256];
-    std::copy(std::begin(previous), std::end(previous), std::begin(modified));
-    modified[VK_CONTROL] = control ? 0x80 : 0;
-    Require(SetKeyboardState(modified), "must set owned thread keyboard modifier");
-    MSG message{};
-    message.hwnd = static_cast<HWND>(window->GetHandle());
-    message.message = WM_KEYDOWN;
-    message.wParam = key;
-    const bool handled = wxGetTopLevelParent(window)->MSWTranslateMessage(&message);
-    SetKeyboardState(previous);
-    Require(handled, "the owned native window must handle the requested key");
+    Require(NativeSearch::WindowsShortcut(window, key, {{VK_CONTROL, static_cast<BYTE>(control ? 0x80 : 0)}}),
+            "the owned native window must handle the requested key");
 #elif defined(__WXGTK__)
     auto* widget = GTK_WIDGET(window->GetHandle());
     auto* event = gdk_event_new(GDK_KEY_PRESS);

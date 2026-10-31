@@ -14,19 +14,8 @@ void Require(bool value, const char* message) {
 }
 void WhitespaceShortcut(EditorControl* window) {
 #ifdef __WXMSW__
-    BYTE previous[256];
-    Require(GetKeyboardState(previous), "must read this test thread's keyboard state");
-    BYTE modifiers[256];
-    std::copy(std::begin(previous), std::end(previous), std::begin(modifiers));
-    modifiers[VK_CONTROL] = modifiers[VK_SHIFT] = 0x80;
-    Require(SetKeyboardState(modifiers), "must set this test thread's Ctrl+Shift modifiers");
-    MSG message{};
-    message.hwnd = static_cast<HWND>(window->GetHandle());
-    message.message = WM_KEYDOWN;
-    message.wParam = '8';
-    const bool handled = wxGetTopLevelParent(window)->MSWTranslateMessage(&message);
-    SetKeyboardState(previous);
-    Require(handled, "the native owned window must translate Ctrl+Shift+8");
+    Require(NativeSearch::WindowsShortcut(window, '8', {{VK_CONTROL, 0x80}, {VK_SHIFT, 0x80}}),
+            "the native owned window must translate Ctrl+Shift+8");
 #elif defined(__WXGTK__)
     auto* widget = window->GetConnectWidget();
     auto* event = gdk_event_new(GDK_KEY_PRESS);
