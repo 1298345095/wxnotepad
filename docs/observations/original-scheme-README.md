@@ -14,9 +14,15 @@ that baseline on `codex/original-scheme-behavior`.
 
 ## Behavior and original-source comparison
 
-- Successful first Save and every explicit Save As reidentify the language from
-  the resulting filename and clear the document's manual override. Unchanged
-  extensions and identical-path Save As are included.
+- First Save and Save As initially select the current scheme type, followed by the
+  other supported types and All Files. Specific types force their scheme as an
+  explicit document language, including unchanged extensions and identical paths.
+  All Files clears the override and classifies the returned filename.
+- The untitled default/current/selected Plain Text exception also classifies the
+  filename. A named Plain Text document selecting Plain Text has no exception;
+  neither does an untitled non-Plain document selecting Plain Text. The default
+  supported scheme is Plain Text. Path-only APIs represent the current scheme;
+  callers can explicitly supply All Files or a specific language.
 - Ordinary Save retains the current manual/automatic choice and fold/view state.
   Failed/cancelled file operations retain the existing transactional state. The
   override changes only after successful disk replacement.
@@ -28,8 +34,14 @@ that baseline on `codex/original-scheme-behavior`.
 
 Pinned upstream revision: `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`.
 Its [normal existing-file Save and successful naming branch](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/src/Notepad4.cpp#L7094-L7129)
-separate ordinary saving from first Save/Save As; the latter invokes
-`Style_SetLexerFromFile`. Its
+separate ordinary saving from first Save/Save As. The successful naming branch
+honors the type set by [SaveFileDlg](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/src/Notepad4.cpp#L7302-L7319)
+before falling back to `Style_SetLexerFromFile`. [Style_GetFileDialogFilter](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/src/Styles.cpp#L3187-L3305)
+maps current/favorite/text schemes and All Files; the port uses its supported
+catalog and retains the current extension in its first filter. Native extension
+handling remains platform-owned. The original source does not establish persisted
+initial-selection behavior: its COM helper reads GetFileTypeIndex but does not
+call SetFileTypeIndex. wxnotepad explicitly starts on the current scheme. Its
 [scheme installation](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/src/Styles.cpp#L1428-L1442)
 selects the scheme's lexer without a 32 MiB pause policy.
 
@@ -38,7 +50,51 @@ current C/C++/Python/JSON catalog and existing extension mapping. It does not ad
 the original command-line forced-scheme option, additional content detection,
 settings migration or the separate original large-document indexing mode.
 
-## Validation
+## Corrected filter validation
+
+The earlier unconditional filename-only interpretation omitted the original
+dialog's selected-type path. The historical evidence below demonstrates agreement
+with that incomplete spec, not full original save-type parity. Corrected source,
+red/green/native filter checks and analysis are retained under external
+`save-filter-44/`; the prior source/logs remain preserved.
+
+The corrected implementation passes 42/42 tests on private native X11 and 42/42
+on private Weston/Wayland. The real GTK file chooser checks current-first initial
+selection, catalog order/no duplicates, catalog patterns plus retained current
+extension, specific Plain/Python choices despite `.cpp`, All Files classification,
+and the untitled Plain exception. Specific choices on identical paths apply every
+supported language. Cancelled chooser, refused overwrite, write failure and GBK-loss
+cancellation exercise a selected type different from the document's current type.
+
+The JSON test's newly added direct All Files transition initially read styles
+before Wayland's natural paint pass. It now waits using the existing paint helper;
+the final full Wayland suite and affected X11 JSON test pass. The full X11 suite
+passed before this test-observation-only wait. Production source is the same.
+The large-file test still observes exactly **33,554,444 bytes**, with C++ token
+styles, manual Plain Text/null lexer, default-current Save As retention and explicit
+All Files reidentification. UTF-8/UTF-16LE/GBK/BOM/EOL/final-newline, safe writes,
+history/folds/search and window view/indentation regressions remain substantive.
+
+Independent actual-app startup/native-edit/Save checks pass on both backends.
+Their actual disk files and native test byte snapshots are retained; a separate
+Python literal comparison verifies 30 snapshots, including encoding fallback.
+Canonical clang-format 23.1.2 passes all 83 tracked C++ inputs. Broader native
+clang-tidy 18.1.3 covers all 12 changed translation units relative to the preceding
+main baseline, using the checks below. New enum-size and parameter-order findings
+were fixed; seven distinct remaining findings concern unchanged enum declarations,
+existing native-driver copy conventions and an existing test stream-size conversion.
+No new changed-line finding or compiler error remains in that scope.
+
+Active native source/build is under
+`/home/ctrls/.cache/wxnotepad-original-save-filter-44` (`src`, `build`), using the
+existing wxWidgets 3.3.3 installation and two build/analyzer workers. The owned
+Windows ComboBox type-selector driver now fails with bounded control/item details
+if unsupported; its runtime verification and final Windows results belong to the
+parent integration pass. The four Windows shared-desktop exclusions below remain
+reported; Linux IME remains deferred. This is current-catalog save-type coverage,
+not a claim of blanket upstream feature parity.
+
+## Historical intermediate validation (superseded save interpretation)
 
 The full integration at `803920932ece4b5712fe615e095e0202cb40ee79` has the same
 tree as implementer source `f4393330bde60910c21b453eee68141b77414407`.

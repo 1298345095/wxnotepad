@@ -72,7 +72,11 @@ public:
                 Require(frame->Save().status == SaveStatus::Saved && Bytes(source) == bytes &&
                             editor->Send(Message::GetLexer) == SCLEX_NULL && frame->GetMenuBar()->IsChecked(plain),
                         "ordinary large-file Save must retain manual Plain Text and independent exact bytes");
-                Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved && Bytes(copy) == bytes,
+                Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved && Bytes(copy) == bytes &&
+                            editor->Send(Message::GetLexer) == SCLEX_NULL,
+                        "default large-file Save As must retain the current Plain Text scheme and exact bytes");
+                Require(frame->SaveAs(Filename(copy), {}, SaveType::AllFiles).status == SaveStatus::Saved &&
+                            Bytes(copy) == bytes,
                         "large-file Save As must retain exact bytes");
                 Paint(editor);
                 Require(editor->Send(Message::GetLexer) == SCLEX_CPP &&

@@ -177,7 +177,8 @@ public:
                             !editor->Send(Message::CanUndo) &&
                             frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: LF",
                         "manual Python choice preserves document state and displays override");
-                Require(frame->SaveAs(Filename(directory / "manual.txt")).status == SaveStatus::Saved,
+                Require(frame->SaveAs(Filename(directory / "manual.txt"), {}, SaveType::AllFiles).status ==
+                            SaveStatus::Saved,
                         "manual Python must save as differently named text");
                 Paint(frame);
                 Style(editor, 0, 0);
@@ -186,7 +187,8 @@ public:
                         "Save As must clear manual Python and identify the .txt filename");
                 Choose(frame, "Automatic");
                 Style(editor, 0, 0);
-                Require(frame->SaveAs(Filename(directory / "automatic.PYI")).status == SaveStatus::Saved,
+                Require(frame->SaveAs(Filename(directory / "automatic.PYI"), {}, SaveType::AllFiles).status ==
+                            SaveStatus::Saved,
                         "automatic Save As must select Python");
                 Paint(frame);
                 Style(editor, 0, SCE_PY_WORD);

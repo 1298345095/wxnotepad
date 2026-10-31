@@ -113,7 +113,7 @@ facilities gives a useful reason to extract it.
 | State | Owner | Lifetime/rule |
 | --- | --- | --- |
 | Text, undo/redo, dirty/save point, EOL insertion, selection, fold visibility | Original core | One core document per existing editor window; read state through the editor. |
-| Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. Successful New/Open, first Save and explicit Save As reset the language choice to Automatic. Ordinary Save retains it. |
+| Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. New/Open reset to Automatic. Successful first Save/Save As apply the semantic selected file type; ordinary Save retains the choice. |
 | Effective language | Derived from session choice + path using the syntax catalog | The UI reads it from the session. Any last-applied style cache is internal installation state, not a second owner of the user's choice. |
 | Find query, replacement, options and wrap preference | `SearchSession` | Existing window/application session; survive New/Open as they do today. The dialog edits this state rather than owning the only copy. |
 | Last match, empty-match progress, revision stamps | `SearchSession` | Invalidated by relevant query/options/selection/document changes and successful document replacement. A failed/cancelled file operation does not reset them. |
@@ -170,9 +170,17 @@ test dependencies.
 
 The document-local language choice belongs to the session. It exposes a
 language selection operation and read-only effective-language/override state.
-Successful Open/New, first Save and every explicit Save As select the automatic
-scheme from the resulting filename, clearing the manual choice even when Save As
-uses the same pathname or extension. Ordinary Save retains the current choice
+Successful Open/New reset to Automatic. First Save and Save As carry a semantic
+`SaveFileType`: a specific `SyntaxLanguage` forces that document language, while
+`SaveType::AllFiles` clears the override and classifies the resulting filename.
+Path-only calls default to `SaveType::CurrentScheme`, resolving the effective
+current language. An untitled document with default/current/selected Plain Text
+uses Automatic filename classification, even after manually selecting Plain Text.
+Named documents have no such exception. The frame builds catalog filters with the
+current scheme first (including its current extension), other schemes deduplicated,
+and All Files last; it initially selects the current type and translates the native
+filter index before calling the session. Native indices never enter the session.
+The same rules apply to identical paths/extensions. Ordinary Save retains the current choice
 and fold/view state. Failed or cancelled operations retain the previous choice.
 Syntax installation itself remains in the syntax module.
 
@@ -181,10 +189,11 @@ The resulting operation sequence is explicit:
 1. **Open:** choose path; read/decode candidate; obtain the existing discard/save
    decision; re-read if saving changed the source; replace the document; commit
    metadata and language; invalidate old search matches; update UI.
-2. **Save As:** choose destination; obtain any encoding-loss decision; complete
+2. **Save As:** choose destination and semantic file type; obtain any encoding-loss decision; complete
    disk replacement; commit any confirmed GBK text conversion, file metadata and
-   save point; clear the manual language choice and apply any changed filename-based
-   language; update UI. First Save follows the same naming rule.
+   save point; apply the selected type or filename exception and install any changed
+   language; update menu/status. First Save follows the same rule. Cancellation or
+   write failure commits neither path nor type and cannot leak a pending selection.
 3. **Choose language:** update the document choice and install its effective
    scheme; preserve bytes, selection, encoding and edit history.
 

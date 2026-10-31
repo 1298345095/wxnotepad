@@ -13,9 +13,11 @@ public:
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
     SaveResult Save(const GbkLossDecision& decideLoss = {});
-    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+                      SaveFileType fileType = SaveType::CurrentScheme);
     SaveResult SaveAs();
-    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+                         SaveFileType fileType = SaveType::CurrentScheme);
     OpenResult Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding = std::nullopt);
     OpenResult Open();
     OpenResult OpenAs(FileEncoding encoding);

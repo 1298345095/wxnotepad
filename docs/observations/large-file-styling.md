@@ -4,9 +4,10 @@ The owner withdrew the policy below in #41/#44 and closed #42/#43 as not planned
 It remains an historical experiment record. Production retains the selected
 language's lexer at every document size; manual Plain Text uses the existing
 Null lexer and style-buffer release. There is no independent highlighting
-preference or size-dependent pause. Successful first Save and every explicit
-Save As reidentify from the filename, including the same path or extension;
-ordinary Save retains the current language choice.
+preference or size-dependent pause. First Save and Save As honor the selected
+file type; All Files and the untitled default/current/selected Plain Text exception
+classify the filename. Specific types force their scheme even for identical paths
+or extensions. Ordinary Save retains the current language choice.
 
 The existing original core can avoid and later release its document-sized style
 buffer. A policy in the document session can use this capability while retaining

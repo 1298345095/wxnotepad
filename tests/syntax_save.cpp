@@ -10,24 +10,15 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include "file_helpers.h"
 
 namespace {
 using Scintilla::Message;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
+using TestFiles::Bytes;
+using TestFiles::Filename;
 std::string Text(EditorControl* editor) {
     const auto length = static_cast<size_t>(editor->Send(Message::GetLength));
     std::string text(length + 1, '\0');
@@ -56,8 +47,12 @@ void Command(EditorFrame* frame, int id) {
 // Drive only modal widgets owned by this test, without global input or focus.
 class SaveChooser final : public wxTimer {
 public:
-    explicit SaveChooser(const wxString& path = {}) : path_(path) { Start(150); }
+    SaveChooser(const wxString& path, SyntaxLanguage current, const wxString& type)
+        : path_(path), type_(type), current_(LanguageName(current)) {
+        Start(150);
+    }
     int choosers = 0;
+    wxString initialType;
     void Notify() override {
 #ifdef __WXMSW__
         EnumThreadWindows(
@@ -69,6 +64,7 @@ public:
                 if (IsWindowVisible(window) && (wxString(title) == "Save file" || wxString(title) == "Save As") &&
                     !driver.stage_++) {
                     ++driver.choosers;
+                    if (!driver.type_.empty()) NativeDialogs::ChooseFileType(window, driver.type_);
                     NativeDialogs::ChooseFile(window, driver.path_);
                 }
                 return TRUE;
@@ -81,6 +77,24 @@ public:
             if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
             if (!stage_++) {
                 ++choosers;
+                const auto* current = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(widget));
+                GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
+                initialType = wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(filters->data)));
+                Require(g_slist_length(filters) == 5 && current == filters->data &&
+                            initialType.StartsWith(current_ + " (") &&
+                            wxString::FromUTF8(gtk_file_filter_get_name(
+                                GTK_FILE_FILTER(g_slist_last(filters)->data))) == "All Files (*)",
+                        "native save types must initially select current scheme first, with All Files last");
+                GSList* remaining = filters->next;
+                for (const auto* name : {"Plain Text", "C/C++", "Python", "JSON"}) {
+                    if (current_ == name) continue;
+                    Require(remaining && wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(remaining->data)))
+                                             .StartsWith(wxString(name) + " ("),
+                            "remaining native file types must follow catalog order without duplicates");
+                    remaining = remaining->next;
+                }
+                g_slist_free(filters);
+                if (!type_.empty()) NativeDialogs::ChooseFileType(widget, type_);
                 NativeDialogs::ChooseFile(widget, path_);
             } else if (stage_ == 2 && !path_.empty())
                 NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
@@ -91,13 +105,21 @@ public:
 
 private:
     wxString path_;
+    wxString type_;
+    wxString current_;
     int stage_ = 0;
 };
-void SaveCommand(EditorFrame* frame, int id, const wxString& path = {}) {
-    SaveChooser chooser(path);
+wxString SaveCommand(EditorFrame* frame, int id, const wxString& path = {}, const wxString& type = {}) {
+    const auto lexer = frame->Editor()->Send(Message::GetLexer);
+    const auto current = lexer == SCLEX_CPP      ? SyntaxLanguage::Cpp
+                         : lexer == SCLEX_PYTHON ? SyntaxLanguage::Python
+                         : lexer == SCLEX_JSON   ? SyntaxLanguage::Json
+                                                 : SyntaxLanguage::PlainText;
+    SaveChooser chooser(path, current, type);
     Command(frame, id);
     chooser.Stop();
     Require(chooser.choosers == 1, "real save command must use its native chooser");
+    return chooser.initialType;
 }
 void Language(EditorFrame* frame, bool cpp) {
     Paint(frame);
@@ -121,6 +143,13 @@ void Automatic(EditorFrame* frame, const char* language, int lexer) {
                 frame->Editor()->Send(Message::GetLexer) == lexer &&
                 (frame->Editor()->Send(Message::GetMarginWidthN, 1) != 0) == (lexer != SCLEX_NULL),
             "successful naming must select Automatic and install the filename's lexer and fold capability");
+}
+void Selected(EditorFrame* frame, const char* language, int lexer) {
+    Paint(frame);
+    Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", language)) &&
+                frame->GetStatusBar()->GetStatusText().Contains(wxString(language) + " (override)") &&
+                frame->Editor()->Send(Message::GetLexer) == lexer,
+            "specific save type must install its language and reflect the explicit choice in menu and status");
 }
 class SyntaxSaveApp final : public wxApp {
 public:
@@ -159,12 +188,18 @@ public:
                 const std::string bytes = "\xef\xbb\xbf" + source;
                 std::ofstream(cpp, std::ios::binary) << bytes;
                 Require(frame->Open(Filename(cpp)).status == OpenStatus::Opened, "BOM fixture must open");
+                Require(frame->SaveAs(Filename(directory / "default.txt")).status == SaveStatus::Saved,
+                        "default Save As must save using the current scheme");
+                Language(frame, true);
+                Require(frame->GetStatusBar()->GetStatusText().Contains("override"),
+                        "named C++ default Save As to .txt must explicitly retain C++");
+                Require(frame->Open(Filename(cpp)).status == OpenStatus::Opened, "BOM fixture must reopen");
                 editor->Send(Message::GotoPos, source.size());
                 editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("x"));
                 Command(frame, wxID_UNDO);
                 editor->Send(Message::SetSel, 8, 1);
                 const auto loadedEol = editor->Send(Message::GetEOLMode);
-                SaveCommand(frame, wxID_SAVEAS, Filename(plain));
+                SaveCommand(frame, wxID_SAVEAS, Filename(plain), "All Files");
                 Language(frame, false);
                 Require(Bytes(plain) == bytes && Bytes(cpp) == bytes && Text(editor) == source &&
                             frame->DocumentHasUtf8Bom() && editor->Send(Message::CanRedo) &&
@@ -172,7 +207,7 @@ public:
                             editor->Send(Message::GetAnchor) == 8 && editor->Send(Message::GetCurrentPos) == 1 &&
                             editor->Send(Message::GetEOLMode) == loadedEol,
                         "C++ to Plain Text Save As must preserve BOM/EOL, selection and the pending redo branch");
-                SaveCommand(frame, wxID_SAVEAS, Filename(back));
+                SaveCommand(frame, wxID_SAVEAS, Filename(back), "All Files");
                 Language(frame, true);
                 Require(Bytes(back) == bytes && editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo),
                         "Plain Text to C++ Save As must retain exact bytes and redo history");
@@ -193,10 +228,10 @@ public:
                 Require(frame->SaveAs(Filename(back)).status == SaveStatus::Saved &&
                             editor->Send(Message::StyleGetFore, SCE_C_WORD2) == 0x123456,
                         "successful Save As to the unchanged path must not reinstall the scheme");
-                SaveCommand(frame, wxID_SAVEAS);
+                SaveCommand(frame, wxID_SAVEAS, {}, "JSON");
                 Require(frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
-                            frame->SaveAs(Filename(directory / "missing" / "failed.txt")).status ==
-                                SaveStatus::Failed &&
+                            frame->SaveAs(Filename(directory / "missing" / "failed.txt"), {}, SyntaxLanguage::Python)
+                                    .status == SaveStatus::Failed &&
                             frame->DocumentPath() == Filename(back) && Bytes(back) == bytes && Text(editor) == source &&
                             frame->DocumentHasUtf8Bom() && !editor->Send(Message::GetModify) &&
                             editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo) &&
@@ -222,7 +257,7 @@ public:
                     Choose(frame, naming.manual);
                     const auto first = directory / (std::string("matrix-first.") + naming.extension);
                     const auto renamed = directory / (std::string("matrix-renamed.") + naming.extension);
-                    Require(frame->SaveFirst(Filename(first)).status == SaveStatus::Saved,
+                    Require(frame->SaveFirst(Filename(first), {}, SaveType::AllFiles).status == SaveStatus::Saved,
                             "first Save of every manual choice must succeed");
                     Automatic(frame, naming.automatic, naming.lexer);
                     Require(Bytes(first) == source && Text(editor) == source && !editor->Send(Message::GetModify) &&
@@ -230,11 +265,11 @@ public:
                                 editor->Send(Message::GetCurrentPos) == 3,
                             "first Save must preserve independent bytes, selection and existing edit history");
                     Choose(frame, naming.manual);
-                    Require(frame->SaveAs(Filename(renamed)).status == SaveStatus::Saved,
+                    Require(frame->SaveAs(Filename(renamed), {}, SaveType::AllFiles).status == SaveStatus::Saved,
                             "explicit Save As with unchanged extension must succeed");
                     Automatic(frame, naming.automatic, naming.lexer);
                     Choose(frame, naming.manual);
-                    Require(frame->SaveAs(Filename(renamed)).status == SaveStatus::Saved,
+                    Require(frame->SaveAs(Filename(renamed), {}, SaveType::AllFiles).status == SaveStatus::Saved,
                             "explicit Save As to the identical pathname must succeed");
                     Automatic(frame, naming.automatic, naming.lexer);
                     Require(Bytes(first) == source && Bytes(renamed) == source && Text(editor) == source &&
@@ -243,7 +278,71 @@ public:
                             "both explicit Save As forms must preserve exact bytes, selection and history");
                 }
                 std::puts(
-                    "PASS: all manual languages reidentify on first Save, unchanged-extension and same-path Save As");
+                    "PASS: explicit All Files reidentifies every manual language on first Save and all Save As forms");
+
+                Command(frame, wxID_NEW);
+                Choose(frame, "Plain Text");
+                editor->Send(Message::AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
+                const auto exception = directory / "untitled-plain.cpp";
+                SaveCommand(frame, wxID_SAVE, Filename(exception), "Plain Text");
+                Automatic(frame, "C/C++", SCLEX_CPP);
+                Require(Bytes(exception) == source, "untitled Plain exception must preserve exact bytes");
+
+                Command(frame, wxID_NEW);
+                Choose(frame, "C/C++");
+                editor->Send(Message::AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
+                const auto forcedPlain = directory / "forced-plain.cpp";
+                SaveCommand(frame, wxID_SAVE, Filename(forcedPlain), "Plain Text");
+                Selected(frame, "Plain Text", SCLEX_NULL);
+                const auto namedPlain = directory / "named-plain.cpp";
+                SaveCommand(frame, wxID_SAVEAS, Filename(namedPlain), "Plain Text");
+                Selected(frame, "Plain Text", SCLEX_NULL);
+                Require(Bytes(forcedPlain) == source && Bytes(namedPlain) == source,
+                        "non-Plain current and named Plain must force selected Plain Text despite .cpp");
+
+                Choose(frame, "C/C++");
+                const auto forcedPython = directory / "forced-python.cpp";
+                const auto cppType = SaveCommand(frame, wxID_SAVEAS, Filename(forcedPython), "Python");
+#ifdef __WXGTK__
+                Require(cppType == "C/C++ (*.c;*.cpp;*.cxx;*.cc;*.h;*.hpp;*.hxx;*.hh)",
+                        "current catalog extension must not be duplicated in native filter patterns");
+#endif
+                Selected(frame, "Python", SCLEX_PYTHON);
+                Require(Bytes(forcedPython) == source, "native Python type must preserve bytes despite .cpp");
+                const auto automaticPython = directory / "automatic-python.py";
+                Choose(frame, "JSON");
+                SaveCommand(frame, wxID_SAVEAS, Filename(automaticPython), "All Files");
+                Automatic(frame, "Python", SCLEX_PYTHON);
+                Require(Bytes(automaticPython) == source, "native All Files must classify the returned .py path");
+                std::puts("PASS: actual native filter selection covers untitled exception, forced types and All Files");
+
+                for (const auto& naming : {std::pair{SyntaxLanguage::PlainText, SCLEX_NULL},
+                                           {SyntaxLanguage::Cpp, SCLEX_CPP},
+                                           {SyntaxLanguage::Python, SCLEX_PYTHON},
+                                           {SyntaxLanguage::Json, SCLEX_JSON}}) {
+                    Require(frame->SaveAs(Filename(automaticPython), {}, naming.first).status == SaveStatus::Saved,
+                            "specific type on identical path must save");
+                    Selected(frame, SyntaxFor(naming.first).name, naming.second);
+                    Require(Bytes(automaticPython) == source && Text(editor) == source &&
+                                editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+                            "specific types on the same path must retain bytes, history and save point");
+                }
+                std::puts("PASS: each specific type applies even on an identical path");
+
+                const auto unknown = directory / "current.odd";
+                std::ofstream(unknown, std::ios::binary) << source;
+                Require(frame->Open(Filename(unknown)).status == OpenStatus::Opened,
+                        "custom extension fixture must open");
+                Choose(frame, "Python");
+                const auto custom = directory / "copy.any";
+                const auto pythonType = SaveCommand(frame, wxID_SAVEAS, Filename(custom));
+#ifdef __WXGTK__
+                Require(pythonType == "Python (*.py;*.pyw;*.pyi;*.odd)",
+                        "native current-scheme filter must retain the current filename extension");
+#endif
+                Selected(frame, "Python", SCLEX_PYTHON);
+                Require(Bytes(custom) == source, "default filter must force current Python despite custom extensions");
+                std::puts("PASS: native current filter retains an extra extension and forces its current scheme");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

@@ -11,10 +11,11 @@ groups/attributes and original default light styles. Only Null and these three
 language modules are compiled. The original core remains the sole document,
 history, styling and folding owner; no new runtime or GoogleTest dependency was added.
 
-Automatic filename selection follows successful Open, first Save and Save As.
-As corrected by #44 to match the pinned original interactive behavior, first Save
-and every explicit Save As clear document-local Language menu overrides, including
-the same pathname or extension. Ordinary Save retains the choice; successful
+Automatic filename selection follows Open and the All Files save type. First Save
+and Save As apply the selected type, including the same path or extension: a specific
+type forces its language; All Files clears the override. Untitled default/current/
+selected Plain Text also classifies the filename. The native dialog initially
+selects the current scheme first. Ordinary Save retains the choice; successful
 New/Open reset it. Failed/cancelled file operations preserve the choice. Syntax
 colors inherit the existing native font, point size and DPI behavior.
 

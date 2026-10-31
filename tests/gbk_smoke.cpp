@@ -153,12 +153,15 @@ public:
                     const auto before = Text(failure);
                     Require(failure->SaveAs(std::nullopt, [choice] { return choice; }).status == SaveStatus::Cancelled,
                             "cancelled picker must not save");
-                    const auto result = failure->SaveAs(Filename(blocked), [choice] { return choice; });
+                    const auto result =
+                        failure->SaveAs(Filename(blocked), [choice] { return choice; }, SyntaxLanguage::Python);
                     Require(result.status ==
                                 (choice == GbkLossChoice::Cancel ? SaveStatus::Cancelled : SaveStatus::Failed),
                             "loss branch must cancel or report replacement failure");
                     Require(Text(failure) == before && failure->DocumentPath() == Filename(source) &&
                                 failure->DocumentEncoding() == FileEncoding::Gbk && !failure->DocumentHasBom() &&
+                                !failure->GetStatusBar()->GetStatusText().Contains("override") &&
+                                failure->GetStatusBar()->GetStatusText().Contains("Plain Text") &&
                                 failure->Editor()->Send(Scintilla::Message::GetModify),
                             "loss cancellation/failure must preserve rich document, identity, format and dirty state");
                     Require(Bytes(source) == original + "\xd6\xd0\xce\xc4" && Bytes(blocked / "sentinel") == "keep",
