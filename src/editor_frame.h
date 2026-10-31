@@ -14,9 +14,12 @@ public:
     SaveResult SaveAs(const std::optional<wxString>& destination);
     SaveResult SaveAs();
     SaveResult SaveFirst(const std::optional<wxString>& destination);
-    OpenResult Open(const std::optional<wxString>& source);
+    OpenResult Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding = std::nullopt);
     OpenResult Open();
+    OpenResult OpenAs(FileEncoding encoding);
     bool DocumentHasUtf8Bom() const { return document_.HasUtf8Bom(); }
+    FileEncoding DocumentEncoding() const { return document_.Encoding(); }
+    bool DocumentHasBom() const { return document_.HasBom(); }
     bool New();
 
 private:
