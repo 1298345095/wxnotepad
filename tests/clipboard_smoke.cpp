@@ -48,7 +48,8 @@ public:
         Require(wxRenameFile(directory_ + "/request.tmp", directory_ + "/request", true), "publish peer request");
         wxStopWatch watch;
         while (!wxFileExists(directory_ + "/response") && watch.Time() < 5000) { wxYield(); wxMilliSleep(10); }
-        Require(wxFileExists(directory_ + "/response"), "independent peer response timeout");
+        if (!wxFileExists(directory_ + "/response"))
+            throw std::runtime_error("independent peer response timeout: " + command.ToStdString());
         wxString response;
         wxFFile file(directory_ + "/response", "rb");
         Require(file.ReadAll(&response, wxConvUTF8), "read owned peer response");
@@ -73,6 +74,7 @@ void Menu(EditorFrame* frame, int id) {
 class ClipboardApp final : public wxApp {
 public:
     bool OnInit() override {
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
         wxLog::SetActiveTarget(new wxLogStderr);
         auto* frame = new EditorFrame;
         frame->Show();
@@ -134,14 +136,7 @@ public:
                 editor->Send(Message::Redo);
                 Require(Text(editor) == "A" && editor->Send(Message::GetModify), "Redo restores Cut and modified state");
                 std::puts("PASS: Cut success/failure, external receiver, one-step Undo/Redo and save point");
-                wxClipboard nonTextClipboard;
-                {
-                    wxClipboardLocker lock(&nonTextClipboard);
-                    Require(!(!lock), "open clipboard for non-text fixture");
-                    auto* object = new wxCustomDataObject(wxDataFormat("application/x-wxnotepad-test"));
-                    object->SetData(5, "owned");
-                    Require(nonTextClipboard.SetData(object), "publish non-text fixture");
-                }
+                Require(peer.Request("nontext") == "ready", "independent app publishes non-text fixture");
                 SettleClipboard();
                 editor->Send(Message::SetSel, 0, 0);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);

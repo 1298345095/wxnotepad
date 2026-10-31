@@ -3,6 +3,8 @@
 #include <wx/ffile.h>
 #include <wx/filename.h>
 #include <wx/timer.h>
+#include <wx/clipbrd.h>
+#include <wx/dataobj.h>
 
 class PeerApp final : public wxApp {
 public:
@@ -42,7 +44,15 @@ private:
         wxString command;
         { wxFFile file(request, "rb"); file.ReadAll(&command, wxConvUTF8); }
         wxRemoveFile(request);
-        if (command == "copy") {
+        if (command == "wxcopy") {
+            wxClipboardLocker lock;
+            Respond(!(!lock) && wxTheClipboard->SetData(new wxTextDataObject(wxString::FromUTF8("peer English 中文 😀\n第二行\nlast"))) ? "ready" : "failed");
+        } else if (command == "nontext") {
+            wxClipboardLocker lock;
+            auto* object = new wxCustomDataObject(wxDataFormat("application/x-wxnotepad-test"));
+            object->SetData(5, "owned");
+            Respond(!(!lock) && wxTheClipboard->SetData(object) ? "ready" : "failed");
+        } else if (command == "copy") {
             text_->SetValue(wxString::FromUTF8("peer English 中文 😀\n第二行\nlast"));
             text_->SelectAll();
             text_->Copy();
