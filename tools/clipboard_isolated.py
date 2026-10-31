@@ -3,10 +3,12 @@
 Usage: xvfb-run -a -s '-screen 0 1600x1000x24 -nolisten tcp' \
        dbus-run-session -- python3 tools/clipboard_isolated.py wayland ctest ...
 All focus/input stays on xvfb-run's private DISPLAY. No WSLg/Windows bridge.
+Set WXNOTEPAD_DISPLAY_LOG_DIR to retain the full private Weston log.
 """
 import os
 from pathlib import Path
 import signal
+import shutil
 import re
 import subprocess
 import sys
@@ -92,6 +94,10 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
         stop(test)
         stop(weston)
         log.close()
+        if os.environ.get("WXNOTEPAD_DISPLAY_LOG_DIR"):
+            artifacts = Path(os.environ["WXNOTEPAD_DISPLAY_LOG_DIR"])
+            artifacts.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(runtime / "weston.log", artifacts / f"{backend}-{os.getpid()}-weston.log")
         if weston is not None:
             print((runtime / "weston.log").read_text(encoding="utf-8")[-1500:], flush=True)
     raise SystemExit(result)

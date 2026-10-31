@@ -2,16 +2,11 @@
 #include "editor_frame.h"
 #include <wx/wx.h>
 #include <wx/timer.h>
-#include <wx/filename.h>
+#include "native_dialog_helpers.h"
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
-#ifdef __WXMSW__
-#include <windows.h>
-#elif defined(__WXGTK__)
-#include <gtk/gtk.h>
-#endif
 
 namespace {
 void Require(bool condition, const char* message) { if (!condition) throw std::runtime_error(message); }
@@ -33,11 +28,7 @@ void Add(EditorFrame* frame, const std::string& text) {
     editor->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
 }
 #ifdef __WXGTK__
-void Respond(GtkWidget* dialog, int response) {
-    auto* button = gtk_dialog_get_widget_for_response(GTK_DIALOG(dialog), response);
-    Require(button && GTK_IS_BUTTON(button), "native dialog must expose expected button");
-    gtk_button_clicked(GTK_BUTTON(button));
-}
+using NativeDialogs::Respond;
 bool Click(GtkWidget* widget, const char* label) {
     if (GTK_IS_BUTTON(widget)) {
         const char* text = gtk_button_get_label(GTK_BUTTON(widget));
@@ -72,19 +63,7 @@ public:
             if (wxString(title) == "Save As" || wxString(title) == "Save file") {
                 if (!driver.stage_++) {
                     ++driver.choosers;
-                    if (driver.destination_.empty()) SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
-                    else {
-                        EnumChildWindows(window, [](HWND child, LPARAM data) -> BOOL {
-                            wchar_t type[64]{};
-                            GetClassNameW(child, type, 64);
-                            if (IsWindowVisible(child) && wxString(type) == "Edit") {
-                                SetWindowTextW(child, reinterpret_cast<NativeDriver*>(data)->destination_.wc_str());
-                                return FALSE;
-                            }
-                            return TRUE;
-                        }, data);
-                        PostMessageW(window, WM_COMMAND, IDOK, 0);
-                    }
+                    NativeDialogs::ChooseFile(window, driver.destination_);
                 } else if (driver.cancelChooser_) SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
             } else if (wxString(ownerTitle) == "Save As" || wxString(ownerTitle) == "Save file") {
                 ++driver.confirmations;
@@ -104,12 +83,7 @@ public:
             if (GTK_IS_FILE_CHOOSER(widget)) {
                 if (!stage_++) {
                     ++choosers;
-                    if (destination_.empty()) Respond(widget, GTK_RESPONSE_CANCEL);
-                    else {
-                        const wxFileName target(destination_);
-                        gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(widget), target.GetPath().utf8_str());
-                        gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(widget), target.GetFullName().utf8_str());
-                    }
+                    NativeDialogs::ChooseFile(widget, destination_);
                 } else if (cancelChooser_) Respond(widget, GTK_RESPONSE_CANCEL);
                 else if (stage_ == 2 && !destination_.empty()) Respond(widget, GTK_RESPONSE_ACCEPT);
             } else if (GTK_IS_MESSAGE_DIALOG(widget)) {

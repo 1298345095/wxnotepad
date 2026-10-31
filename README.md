@@ -13,20 +13,32 @@ On Windows the native caret, composition window and candidate window follow the
 core's caret, including after scrolling and regaining focus. Chinese character
 events retain their UTF-8 conversion storage through insertion.
 
-File → Save / Ctrl+S opens the native save dialog for an unnamed document.
-The first save writes UTF-8 without a BOM, confirms overwriting an existing
-target, and updates the title/save point only after safe replacement succeeds.
-Newline insertion defaults to CRLF on every platform, matching unconfigured
-Notepad4; saving preserves CRLF, LF and CR characters already in the text.
-Cancel or failure retains the document. Saving named documents follows in #17;
-the Save command is disabled after the first successful save for this stage.
+Phase 1 supports keyboard navigation, Shift selection, mouse selection and
+scrolling, plus native system clipboard Cut/Copy/Paste and their Ctrl+X/C/V
+shortcuts. Clipboard edits participate in the same Undo/Redo history.
 
-This covers [#9](https://github.com/1298345095/wxnotepad/issues/9),
-[#10](https://github.com/1298345095/wxnotepad/issues/10),
-[#14](https://github.com/1298345095/wxnotepad/issues/14), and
-[#13](https://github.com/1298345095/wxnotepad/issues/13). Microsoft Pinyin human
-validation passed; see the [IME validation record](docs/evidence/issue-13/README.md).
-Selection/navigation, clipboard and other file operations follow in later tickets.
+File → New / Ctrl+N and Open / Ctrl+O replace the current document after any
+unsaved changes are saved or discarded. Close uses the same Save/Discard/Cancel
+confirmation. Save / Ctrl+S opens a native chooser for an unnamed document and
+reuses the current path thereafter; Save As / Ctrl+Shift+S chooses a new target
+and confirms overwrite. Cancellation or failure retains the current document,
+identity and history. A successful save safely replaces the target and updates
+the title and save point.
+
+New documents save as UTF-8 without a BOM. Open accepts UTF-8 with or without a
+BOM and recognizes BOM-marked UTF-16LE; Open As UTF-16LE also handles files
+without a BOM. Open As GBK explicitly decodes CP936. Save and Save As preserve
+the loaded encoding and BOM, shown in the status bar. GBK character loss offers
+Save as UTF-8, Replace in GBK, or Cancel. Newline insertion defaults to CRLF;
+loaded files use their detected newline style for Enter, while existing CRLF,
+LF and CR bytes remain intact when saved.
+
+Microsoft Pinyin human validation passed; see the
+[IME validation record](docs/evidence/issue-13/README.md). Linux IME remains
+deferred. Search/replace UI, syntax highlighting, advanced editing, settings
+migration and release packaging are outside this phase. See the
+[phase 1 spec](https://github.com/1298345095/wxnotepad/issues/8) and the
+[full-application resource observations](docs/observations/issue20-README.md).
 
 ## Build and run
 
@@ -73,14 +85,17 @@ against the pinned `patches/source.sha256` before extraction. Use `--prepare-onl
 to create the archive without compiling. See [patch provenance](patches/README.md)
 and [dependency licenses](licenses/README.md).
 
-`--test` runs separate real GUI processes: UTF-8 character events, basic
-editing, Undo/Redo, menu availability and save-point/title state; and native
-focus transfers plus show/resize/uncover/hide-show paint handling. These checks
-need a desktop and fail on a GUI process error or timeout. See the
-[input validation record](docs/evidence/issue-10/README.md) and the earlier
-[read-only display assessment](docs/evidence/issue-09/README.md).
-Windows also checks the real IMM composition/candidate positions and font on two
-lines, after scrolling and refocus, and at native composition start. Linux IME
-remains deferred.
-The [first-save record](docs/evidence/issue-14/README.md) covers file bytes,
-cancellation/failure, save-point history and native dialogs.
+`--test` runs separate real GUI processes covering input and Undo/Redo,
+clipboard exchange with a peer process, repaint/focus handling, native
+Open/Save/Save As/close dialogs, byte-exact UTF-8/UTF-16LE/GBK roundtrips,
+loaded newline insertion, and cancellation/write-failure state retention.
+Windows also checks IMM composition/candidate positions and font after
+scrolling, refocus and composition start. These checks need a desktop and fail
+on a GUI process error or timeout. Native navigation and Microsoft Pinyin
+human checks are recorded separately in the
+[navigation](docs/evidence/issue-11/README.md) and
+[IME](docs/evidence/issue-13/README.md) evidence. File workflow records cover
+[Open](docs/evidence/issue-16/README.md),
+[Save/Save As](docs/evidence/issue-17/README.md),
+[UTF-16LE](docs/evidence/issue-18/README.md) and
+[GBK](docs/evidence/issue-19/README.md).
