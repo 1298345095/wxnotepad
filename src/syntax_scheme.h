@@ -3,7 +3,7 @@
 #include <cstdint>
 
 class EditorControl;
-enum class SyntaxLanguage : uint8_t { PlainText, Cpp, Python };
+enum class SyntaxLanguage : uint8_t { PlainText, Cpp, Python, Json };
 
 SyntaxLanguage LanguageForPath(const wxString& path);
 wxString LanguageName(SyntaxLanguage language);

@@ -32,7 +32,7 @@ The patch has these narrowly scoped purposes:
 - Vendored Boost regex traits: preserve the original matcher and formatter, use
   the existing Windows traits on Windows, and derive Linux wide-character traits
   from the same masks using `std::locale`.
-- `LexerModule.cxx`: register only the delivered Plain Text and C/C++ lexers.
+- `LexerModule.cxx`: register only the delivered Plain Text, C/C++, Python and JSON lexers.
 
 The C/C++ lexer is the unmodified `scintilla/lexers/LexCPP.cxx` in this same
 archive. `src/cpp_scheme_data.h` contains its 13 lexer-consumed keyword lists and
@@ -50,6 +50,16 @@ original file's SHA-256 in the generated header. Builds use that checked-in
 header and the verified source archive, so no additional download is needed.
 The selected data carries the original BSD 3-Clause attribution in
 `licenses/Notepad4.txt`.
+
+JSON uses the unmodified `scintilla/lexers/LexJSON.cxx` from that archive.
+`src/json_scheme_data.h` contains the keyword list and expanded default style
+groups from pinned `src/EditLexers/stlJSON.cpp`, including the list's
+`KeywordAttr_PreSorted` attribute. Regenerate it offline with
+`python tools/update_json_scheme.py --source /path/to/notepad4`; the header
+records the source SHA-256 and uses the same license notice. JSON selects only
+`.json` automatically. The lexer also colors JSON5 constructs; no parser or
+schema validation is added, and document indentation/encoding defaults stay in
+effect.
 
 The wx surface and portability primitives reuse and adapt the exercised code in
 the separate prototype (`codex/prototype-original-core`, `2f44bb9`). The formal

@@ -62,6 +62,7 @@ EditorFrame::EditorFrame()
     addLanguage("&Plain Text", SyntaxLanguage::PlainText);
     addLanguage("&C/C++", SyntaxLanguage::Cpp);
     addLanguage("&Python", SyntaxLanguage::Python);
+    addLanguage("&JSON", SyntaxLanguage::Json);
     menus->Append(languages, "&Language");
     SetMenuBar(menus);
     CreateStatusBar();
