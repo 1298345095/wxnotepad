@@ -6,6 +6,8 @@
 class EditorControl;
 class wxDialog;
 class wxTextCtrl;
+class wxStaticText;
+class wxButton;
 
 class EditorFrame final : public wxFrame {
 public:
@@ -29,8 +31,12 @@ private:
     DocumentSession document_;
     wxDialog* findDialog_ = nullptr;
     wxTextCtrl* findQuery_ = nullptr;
-    void ShowFind();
+    wxTextCtrl* replacement_ = nullptr;
+    wxStaticText* replacementLabel_ = nullptr;
+    wxButton* replaceButton_ = nullptr;
+    void ShowFind(bool replace = false);
     void FindNext();
+    void ReplaceOne();
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     bool ConfirmDiscardChanges(const wxString& action);
