@@ -60,6 +60,9 @@ bool Header(EditorControl* editor, int line) {
     return (static_cast<uintptr_t>(editor->Send(Message::GetFoldLevel, line)) &
             static_cast<uintptr_t>(Scintilla::FoldLevel::HeaderFlag)) != 0;
 }
+int Level(EditorControl* editor, size_t line) {
+    return static_cast<int>(static_cast<uintptr_t>(editor->Send(Message::GetFoldLevel, line)) & 0xfffU);
+}
 void Reachable(EditorControl* editor) {
     for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line)
         Require(editor->Send(Message::GetLineVisible, static_cast<uintptr_t>(line)),
@@ -101,7 +104,7 @@ public:
                 // the next nonempty indentation; consecutive comments form a fold.
                 const int levels[] = {0, 4, 5, 4, 4, 8, 12, 8, 8, 8, 4, 0, 0};
                 for (size_t line = 0; line < std::size(levels); ++line) {
-                    Require((editor->Send(Message::GetFoldLevel, line) & 0xfff) == 0x400 + levels[line],
+                    Require(Level(editor, line) == 0x400 + levels[line],
                             "Python suite, blank and comment levels must match the pinned lexer");
                     Require(Header(editor, static_cast<int>(line)) ==
                                 (line == 0 || line == 1 || line == 4 || line == 5),
@@ -158,8 +161,7 @@ public:
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
                 Replace(editor, source.find("        tail()"), 0, "    ");
-                Require((editor->Send(Message::GetFoldLevel, 7) & 0xfff) == 0x40c &&
-                            (editor->Send(Message::GetFoldLevel, 8) & 0xfff) == 0x40c &&
+                Require(Level(editor, 7) == 0x40c && Level(editor, 8) == 0x40c &&
                             editor->Send(Message::GetLastChild, 5, -1) == 9,
                         "indenting tail must extend the suite and move intervening blank/comment levels");
                 NativeSearch::Command(frame, wxID_UNDO);
