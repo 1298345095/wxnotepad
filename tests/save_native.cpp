@@ -140,8 +140,8 @@ public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
         CallAfter([this, frame] {
-            const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-save-native-" + std::to_string(wxGetProcessId()));
+            const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
+                                   ("wxnotepad-save-native-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";

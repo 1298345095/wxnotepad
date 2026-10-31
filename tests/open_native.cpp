@@ -120,8 +120,8 @@ public:
         SetExitOnFrameDelete(false);
         auto* frame = new EditorFrame;
         CallAfter([this, frame] {
-            const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-switch-" + std::to_string(wxGetProcessId()));
+            const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
+                                   ("wxnotepad-switch-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "source.txt";

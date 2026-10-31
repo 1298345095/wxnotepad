@@ -145,8 +145,8 @@ public:
         auto* frame = new EditorFrame;
         frame->Show();
         CallAfter([this, frame] {
-            const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-gbk-native-" + std::to_string(wxGetProcessId()));
+            const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
+                                   ("wxnotepad-gbk-native-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";

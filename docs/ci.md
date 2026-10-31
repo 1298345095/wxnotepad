@@ -19,6 +19,12 @@ within a display session. Wayland still runs if X11 tests fail after a successfu
 build. Windows runs its full registered suite on the hosted VM: the four tests
 excluded on the development machine's shared desktop are not silently excluded.
 
+Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
+expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use
+UTF-8 rather than the runner's local code page. The private display helper claims
+an input request before delivering its native event so it cannot erase a newer
+request published by an event handler.
+
 Automated IME geometry checks do not establish real Microsoft Pinyin interaction;
 the existing human IME records remain applicable and Linux IME remains deferred.
 Hosted-runner resource measurements are not performance acceptance thresholds.
@@ -75,7 +81,8 @@ baseline. CodeQL results are available separately in GitHub Security.
 
 Evidence artifacts retain JUnit XML, complete CTest logs, Weston logs, configure
 logs, source provenance and dependency build logs, including on failed jobs.
-clang-tidy exports per-file diagnostics and a JSON summary. Evidence retention is
+clang-tidy exports per-file diagnostics and a JSON summary. Linux evidence also
+retains the clipboard test executables for native replay. Evidence retention is
 30 days; important results should be downloaded before expiry. Development build
 output is retained for 14 days, including after a test failure if compilation
 succeeded. Each output includes source metadata, the executable SHA-256 and

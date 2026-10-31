@@ -146,7 +146,7 @@ public:
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory = std::filesystem::temp_directory_path() /
+            const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                                    ("wxnotepad-syntax-manual-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);

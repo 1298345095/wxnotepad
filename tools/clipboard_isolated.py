@@ -72,28 +72,27 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
         print(f"Private native {backend}: DISPLAY={environment['DISPLAY']}; runtime mode={oct(runtime.stat().st_mode & 0o777)}", flush=True)
         test = subprocess.Popen(command, env=environment, start_new_session=True)
         last_switch = 0.0
-        last_request = None
         while test.poll() is None:
             focus = runtime / "focus"
             request = focus.read_text(encoding="utf-8") if focus.exists() else ""
-            if request != last_request:
-                print(f"[DEBUG-ci-focus] {time.monotonic():.3f} request={request!r}", flush=True)
-                last_request = request
             if (request in ("editor", "peer", "gesture") or request.startswith(("key:", "focus:"))) and time.monotonic() - last_switch > .25:
                 if request.startswith("focus:"):
                     if backend == "x11":
                         windows = xdo("search", "--onlyvisible", "--name", request[6:]).splitlines()
                         if not windows: time.sleep(.03); continue
+                        focus.write_text("", encoding="utf-8")
                         xdo("windowfocus", "--sync", windows[0])
                     else:
+                        focus.write_text("", encoding="utf-8")
                         xdo("windowfocus", "--sync", weston_window)
-                    focus.write_text("", encoding="utf-8")
                 elif request.startswith("key:"):
+                    focus.write_text("", encoding="utf-8")
                     xdo("key", "--clearmodifiers", request[4:])
-                    focus.write_text("", encoding="utf-8")
                 elif request == "gesture":
-                    xdo("key", "--clearmodifiers", "Shift_L")
+                    # Native events can make the receiver publish its next
+                    # request before xdotool exits. Claim this one first.
                     focus.write_text("", encoding="utf-8")
+                    xdo("key", "--clearmodifiers", "Shift_L")
                 elif backend == "x11":
                     windows = xdo("search", "--onlyvisible", "--name", "wxnotepad clipboard focus: " + request).splitlines()
                     if not windows: time.sleep(.03); continue
