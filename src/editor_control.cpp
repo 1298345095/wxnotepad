@@ -347,6 +347,12 @@ EditorControl::EditorControl(wxWindow* parent)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                 wxBORDER_SIMPLE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
       caretTimer_(this), scrollTimer_(this), widenTimer_(this) {
+    // The native Notepad4 host initializes these tables before any document
+    // copies its ASCII word classes. The wx host must do the same.
+    [[maybe_unused]] static const bool unicodeDataInitialized = [] {
+        core::CharClassify::InitUnicodeData();
+        return true;
+    }();
     SetBackgroundStyle(wxBG_STYLE_PAINT);
 #ifdef __WXMSW__
     SetCaret(new wxCaret(this, 1, 1));

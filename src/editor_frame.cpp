@@ -6,6 +6,7 @@
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
 #include <wx/button.h>
+#include <wx/checkbox.h>
 #include <wx/dialog.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
@@ -139,6 +140,18 @@ void EditorFrame::ShowFind(bool replace) {
         findQuery_ = new wxTextCtrl(findDialog_, wxID_ANY, {}, wxDefaultPosition, wxSize(320, -1), wxTE_PROCESS_ENTER);
         findQuery_->SetName("Find query");
         layout->Add(findQuery_, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
+        auto* matchCase = new wxCheckBox(findDialog_, wxID_ANY, "Match &case");
+        matchCase->SetName("Match case");
+        matchCase->SetValue(searchOptions_.matchCase);
+        matchCase->Bind(wxEVT_CHECKBOX,
+                        [this](wxCommandEvent& event) { searchOptions_.matchCase = event.IsChecked(); });
+        layout->Add(matchCase, 0, wxLEFT | wxRIGHT | wxTOP, 8);
+        auto* wholeWord = new wxCheckBox(findDialog_, wxID_ANY, "Whole &word");
+        wholeWord->SetName("Whole word");
+        wholeWord->SetValue(searchOptions_.wholeWord);
+        wholeWord->Bind(wxEVT_CHECKBOX,
+                        [this](wxCommandEvent& event) { searchOptions_.wholeWord = event.IsChecked(); });
+        layout->Add(wholeWord, 0, wxLEFT | wxRIGHT | wxTOP, 8);
         replacementLabel_ = new wxStaticText(findDialog_, wxID_ANY, "Replace &with:");
         layout->Add(replacementLabel_, 0, wxALL, 8);
         replacement_ = new wxTextCtrl(findDialog_, wxID_ANY, {}, wxDefaultPosition, wxSize(320, -1));
@@ -224,7 +237,7 @@ void EditorFrame::Search(bool forward) {
     const auto query = queryText.utf8_str();
     if (!query.length()) return;
     using Scintilla::Message;
-    editor_->Send(Message::SetSearchFlags, 0);
+    editor_->Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     const auto start = editor_->Send(forward ? Message::GetSelectionEnd : Message::GetSelectionStart);
     const auto length = editor_->Send(Message::GetLength);
     const auto search = [&](intptr_t from, intptr_t to) {
@@ -247,6 +260,13 @@ void EditorFrame::Search(bool forward) {
     SetStatusText(wrapped ? "Search wrapped" : "Match found");
 }
 
+Scintilla::FindOption EditorFrame::SearchFlags() const {
+    auto flags = Scintilla::FindOption::None;
+    if (searchOptions_.matchCase) flags = flags | Scintilla::FindOption::MatchCase;
+    if (searchOptions_.wholeWord) flags = flags | Scintilla::FindOption::WholeWord;
+    return flags;
+}
+
 void EditorFrame::ReplaceOne() {
     const wxString queryText = findQuery_->GetValue();
     const auto query = queryText.utf8_str();
@@ -254,7 +274,7 @@ void EditorFrame::ReplaceOne() {
     using Scintilla::Message;
     const auto start = editor_->Send(Message::GetSelectionStart);
     const auto end = editor_->Send(Message::GetSelectionEnd);
-    editor_->Send(Message::SetSearchFlags, 0);
+    editor_->Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_->Send(Message::SetTargetStart, start);
     editor_->Send(Message::SetTargetEnd, end);
     // Search the live selected range, including the core's case and word semantics.
