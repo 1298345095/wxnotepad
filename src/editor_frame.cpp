@@ -141,6 +141,7 @@ void EditorFrame::ShowFind(bool replace) {
         findQuery_->SetName("Find query");
         findQuery_->Bind(wxEVT_TEXT, [this](wxCommandEvent& event) {
             lastEmptyMatch_ = -1;
+            regexMatch_.reset();
             event.Skip();
         });
         layout->Add(findQuery_, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
@@ -150,6 +151,7 @@ void EditorFrame::ShowFind(bool replace) {
         matchCase->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& event) {
             searchOptions_.matchCase = event.IsChecked();
             lastEmptyMatch_ = -1;
+            regexMatch_.reset();
         });
         layout->Add(matchCase, 0, wxLEFT | wxRIGHT | wxTOP, 8);
         auto* wholeWord = new wxCheckBox(findDialog_, wxID_ANY, "Whole &word");
@@ -158,6 +160,7 @@ void EditorFrame::ShowFind(bool replace) {
         wholeWord->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& event) {
             searchOptions_.wholeWord = event.IsChecked();
             lastEmptyMatch_ = -1;
+            regexMatch_.reset();
         });
         layout->Add(wholeWord, 0, wxLEFT | wxRIGHT | wxTOP, 8);
         auto* regularExpression = new wxCheckBox(findDialog_, wxID_ANY, "Regular &expression");
@@ -168,8 +171,8 @@ void EditorFrame::ShowFind(bool replace) {
         regularExpression->Bind(wxEVT_CHECKBOX, [this, wholeWord](wxCommandEvent& event) {
             searchOptions_.regularExpression = event.IsChecked();
             lastEmptyMatch_ = -1;
+            regexMatch_.reset();
             wholeWord->Enable(!event.IsChecked());
-            replaceButton_->Enable(!event.IsChecked());
             replaceAllButton_->Enable(!event.IsChecked());
         });
         layout->Add(regularExpression, 0, wxLEFT | wxRIGHT | wxTOP, 8);
@@ -181,6 +184,7 @@ void EditorFrame::ShowFind(bool replace) {
         wrapAround_ = new wxCheckBox(findDialog_, wxID_ANY, "&Wrap around");
         wrapAround_->SetName("Wrap around");
         wrapAround_->SetValue(true);
+        wrapAround_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { regexMatch_.reset(); });
         layout->Add(wrapAround_, 0, wxALL, 8);
         auto* buttons = new wxBoxSizer(wxHORIZONTAL);
         auto* next = new wxButton(findDialog_, wxID_FORWARD, "Find &Next");
@@ -250,6 +254,7 @@ void EditorFrame::FindPrevious() {
 }
 
 void EditorFrame::Search(bool forward) {
+    regexMatch_.reset();
     if (!findQuery_) {
         ShowFind();
         return;
@@ -264,7 +269,8 @@ void EditorFrame::Search(bool forward) {
     const auto length = editor_->Send(Message::GetLength);
     const bool afterEmpty = searchOptions_.regularExpression && start == lastEmptyMatch_ &&
                             editor_->Send(Message::GetSelectionStart) == editor_->Send(Message::GetSelectionEnd) &&
-                            lastEmptyRevision_ == editor_->DocumentRevision();
+                            lastEmptyRevision_ == editor_->DocumentRevision() &&
+                            lastEmptySelectionRevision_ == editor_->SelectionRevision();
     const auto search = [&](intptr_t from, intptr_t to) {
         editor_->Send(Message::SetTargetStart, from);
         editor_->Send(Message::SetTargetEnd, to);
@@ -325,6 +331,10 @@ void EditorFrame::Search(bool forward) {
                           ? editor_->Send(Message::GetTargetStart)
                           : -1;
     lastEmptyRevision_ = editor_->DocumentRevision();
+    lastEmptySelectionRevision_ = editor_->SelectionRevision();
+    if (searchOptions_.regularExpression)
+        regexMatch_ = RegexMatch{editor_->Send(Message::GetTargetStart), editor_->Send(Message::GetTargetEnd),
+                                 editor_->DocumentRevision(), editor_->SelectionRevision()};
     editor_->Send(Message::ScrollCaret);
     SetStatusText(wrapped ? "Search wrapped" : "Match found");
 }
@@ -339,32 +349,57 @@ Scintilla::FindOption EditorFrame::SearchFlags() const {
 }
 
 void EditorFrame::ReplaceOne() {
-    if (searchOptions_.regularExpression) {
-        SetStatusText("Regex replacement is not available");
-        return;
-    }
     const wxString queryText = findQuery_->GetValue();
     const auto query = queryText.utf8_str();
     if (!query.length()) return;
     using Scintilla::Message;
     const auto start = editor_->Send(Message::GetSelectionStart);
     const auto end = editor_->Send(Message::GetSelectionEnd);
+    if (searchOptions_.regularExpression && (!regexMatch_ || regexMatch_->start != start || regexMatch_->end != end ||
+                                             regexMatch_->documentRevision != editor_->DocumentRevision() ||
+                                             regexMatch_->selectionRevision != editor_->SelectionRevision())) {
+        FindNext();
+        return;
+    }
     editor_->Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
+    editor_->Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
     editor_->Send(Message::SetTargetStart, start);
-    editor_->Send(Message::SetTargetEnd, end);
-    // Search the live selected range, including the core's case and word semantics.
-    // A range that merely contains a match is not a confirmed replacement.
-    if (start == end ||
+    editor_->Send(Message::SetTargetEnd, searchOptions_.regularExpression ? editor_->Send(Message::GetLength) : end);
+    // Regex assertions retain document-end context; the core patch also retains
+    // preceding context. Both result endpoints must still equal the selection.
+    if ((start == end && !(searchOptions_.regularExpression && lastEmptyMatch_ == start &&
+                           lastEmptyRevision_ == editor_->DocumentRevision())) ||
         editor_->Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) != start ||
         editor_->Send(Message::GetTargetEnd) != end) {
         FindNext();
         return;
     }
     const wxString replacementText = replacement_->GetValue();
-    const auto replacement = replacementText.utf8_str();
-    editor_->Send(Message::ReplaceTarget, replacement.length(), reinterpret_cast<intptr_t>(replacement.data()));
-    const auto after = editor_->Send(Message::GetTargetEnd);
+    const auto replacementUtf8 = replacementText.utf8_str();
+    // The original formatter reads the byte after a trailing dollar/backslash.
+    const std::string replacement(replacementUtf8.data(), replacementUtf8.length());
+    auto after = end;
+    bool changesBytes = true;
+    if (searchOptions_.regularExpression) {
+        const auto expanded = editor_->ExpandRegexReplacement(replacement);
+        if (!expanded) return;
+        std::string selected(static_cast<size_t>(end - start) + 1, '\0');
+        editor_->Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(selected.data()));
+        selected.pop_back();
+        changesBytes = *expanded != selected;
+    }
+    if (changesBytes) {
+        editor_->Send(searchOptions_.regularExpression ? Message::ReplaceTargetRE : Message::ReplaceTarget,
+                      replacement.length(), reinterpret_cast<intptr_t>(replacement.c_str()));
+        after = editor_->Send(Message::GetTargetEnd);
+    }
     editor_->Send(Message::SetSel, after, after);
+    if (searchOptions_.regularExpression && start == end) {
+        // Skip inserted bytes, then one original character. EOF is processed once.
+        lastEmptyMatch_ = after;
+        lastEmptyRevision_ = editor_->DocumentRevision();
+        lastEmptySelectionRevision_ = editor_->SelectionRevision();
+    }
     FindNext();
 }
 
@@ -456,6 +491,10 @@ SaveResult EditorFrame::SaveAs() {
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
+    if (result.status == OpenStatus::Opened) {
+        regexMatch_.reset();
+        lastEmptyMatch_ = -1;
+    }
     UpdateDocumentState();
     return result;
 }
@@ -477,6 +516,8 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    regexMatch_.reset();
+    lastEmptyMatch_ = -1;
     UpdateDocumentState();
     return true;
 }

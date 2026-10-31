@@ -5,6 +5,8 @@
 #include <wx/timer.h>
 #include <cstdint>
 #include <memory>
+#include <optional>
+#include <string>
 
 wxDECLARE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 
@@ -16,6 +18,9 @@ public:
     ~EditorControl() override;
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
     uint64_t DocumentRevision() const { return documentRevision_; }
+    uint64_t SelectionRevision() const;
+    // Requires a freshly revalidated regex match; copies the original formatter's buffer.
+    std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
 private:
     class Core;
