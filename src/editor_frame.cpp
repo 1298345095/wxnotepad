@@ -6,6 +6,7 @@
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
 #include <wx/button.h>
+#include <wx/checkbox.h>
 #include <wx/dialog.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
@@ -132,6 +133,18 @@ void EditorFrame::ShowFind() {
         findQuery_ = new wxTextCtrl(findDialog_, wxID_ANY, {}, wxDefaultPosition, wxSize(320, -1), wxTE_PROCESS_ENTER);
         findQuery_->SetName("Find query");
         layout->Add(findQuery_, 0, wxEXPAND | wxLEFT | wxRIGHT, 8);
+        auto* matchCase = new wxCheckBox(findDialog_, wxID_ANY, "Match &case");
+        matchCase->SetName("Match case");
+        matchCase->SetValue(searchOptions_.matchCase);
+        matchCase->Bind(wxEVT_CHECKBOX,
+                        [this](wxCommandEvent& event) { searchOptions_.matchCase = event.IsChecked(); });
+        layout->Add(matchCase, 0, wxLEFT | wxRIGHT | wxTOP, 8);
+        auto* wholeWord = new wxCheckBox(findDialog_, wxID_ANY, "Whole &word");
+        wholeWord->SetName("Whole word");
+        wholeWord->SetValue(searchOptions_.wholeWord);
+        wholeWord->Bind(wxEVT_CHECKBOX,
+                        [this](wxCommandEvent& event) { searchOptions_.wholeWord = event.IsChecked(); });
+        layout->Add(wholeWord, 0, wxLEFT | wxRIGHT | wxTOP, 8);
         auto* buttons = new wxBoxSizer(wxHORIZONTAL);
         auto* next = new wxButton(findDialog_, wxID_FORWARD, "Find &Next");
         next->SetDefault();
@@ -175,7 +188,7 @@ void EditorFrame::FindNext() {
     const auto query = queryText.utf8_str();
     if (!query.length()) return;
     using Scintilla::Message;
-    editor_->Send(Message::SetSearchFlags, 0);
+    editor_->Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_->Send(Message::SetTargetStart, editor_->Send(Message::GetSelectionEnd));
     editor_->Send(Message::SetTargetEnd, editor_->Send(Message::GetLength));
     if (editor_->Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) < 0) {
@@ -184,6 +197,13 @@ void EditorFrame::FindNext() {
     }
     editor_->Send(Message::SetSel, editor_->Send(Message::GetTargetStart), editor_->Send(Message::GetTargetEnd));
     editor_->Send(Message::ScrollCaret);
+}
+
+Scintilla::FindOption EditorFrame::SearchFlags() const {
+    auto flags = Scintilla::FindOption::None;
+    if (searchOptions_.matchCase) flags = flags | Scintilla::FindOption::MatchCase;
+    if (searchOptions_.wholeWord) flags = flags | Scintilla::FindOption::WholeWord;
+    return flags;
 }
 
 void EditorFrame::UpdateDocumentState() {

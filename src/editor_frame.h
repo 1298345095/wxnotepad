@@ -2,6 +2,8 @@
 
 #include <wx/frame.h>
 #include "document_session.h"
+#include "search_options.h"
+#include "ScintillaTypes.h"
 
 class EditorControl;
 class wxDialog;
@@ -29,6 +31,8 @@ private:
     DocumentSession document_;
     wxDialog* findDialog_ = nullptr;
     wxTextCtrl* findQuery_ = nullptr;
+    SearchOptions searchOptions_;
+    Scintilla::FindOption SearchFlags() const;
     void ShowFind();
     void FindNext();
     void OnSearchKey(wxKeyEvent& event);
