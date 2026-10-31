@@ -11,6 +11,7 @@ struct SyntaxStyle {
     bool bold;
 };
 #include "cpp_scheme_data.h"
+#include "json_scheme_data.h"
 
 // Scintilla's public color values are BGR; upstream default strings are RGB.
 constexpr unsigned int Colour(unsigned int rgb) {
@@ -27,16 +28,22 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
     for (const auto* candidate : {"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"}) {
         if (extension == candidate) return SyntaxLanguage::Cpp;
     }
+    if (extension == "json") return SyntaxLanguage::Json;
     return SyntaxLanguage::PlainText;
 }
 
 wxString LanguageName(SyntaxLanguage language) {
-    return language == SyntaxLanguage::Cpp ? "C/C++" : "Plain Text";
+    if (language == SyntaxLanguage::Cpp) return "C/C++";
+    if (language == SyntaxLanguage::Json) return "JSON";
+    return "Plain Text";
 }
 
 void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
     using Scintilla::Message;
-    editor.Send(Message::SetLexer, language == SyntaxLanguage::Cpp ? SCLEX_CPP : SCLEX_NULL);
+    const int lexer = language == SyntaxLanguage::Cpp    ? SCLEX_CPP
+                      : language == SyntaxLanguage::Json ? SCLEX_JSON
+                                                         : SCLEX_NULL;
+    editor.Send(Message::SetLexer, lexer);
     // Keep the native font/point size already installed on STYLE_DEFAULT.
     editor.Send(Message::StyleSetFore, 32, Colour(0x000000));
     editor.Send(Message::StyleSetBack, 32, Colour(0xFFFFFF));
@@ -47,6 +54,16 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
             editor.Send(Message::SetKeyWords, index, reinterpret_cast<intptr_t>(cppKeywords[index]));
         }
         for (const auto& style : cppStyles) {
+            editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
+            editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
+            editor.Send(Message::StyleSetBold, style.id, style.bold);
+        }
+    } else if (language == SyntaxLanguage::Json) {
+        for (size_t index = 0; index < std::size(jsonKeywords); ++index) {
+            editor.Send(Message::SetKeyWords, index | jsonKeywordAttributes,
+                        reinterpret_cast<intptr_t>(jsonKeywords[index]));
+        }
+        for (const auto& style : jsonStyles) {
             editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
             editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
             editor.Send(Message::StyleSetBold, style.id, style.bold);
