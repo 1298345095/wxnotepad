@@ -75,6 +75,11 @@ public:
     }
     void Resize() { ChangeSize(); }
     void DpiChanged() {
+        if (WndProc(Message::GetMarginWidthN, 1, 0) > 0) {
+            WndProc(Message::SetMarginWidthN, 1, window_.FromDIP(16));
+            for (int marker = 25; marker <= 31; ++marker)
+                WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
+        }
         InvalidateStyleRedraw();
         ChangeSize();
     }
@@ -163,6 +168,23 @@ public:
         if (event.GetEventType() == wxEVT_LEFT_DOWN) {
             window_.SetFocus();
             ButtonDownWithModifiers(point, MouseTime(), MouseModifiers(event));
+            // The core keeps contraction state but can leave the selection in
+            // hidden text. Move only hidden endpoints to their visible header.
+            const auto visibleEndpoint = [this](Sci::Position position) {
+                auto line = WndProc(Message::LineFromPosition, position, 0);
+                if (WndProc(Message::GetLineVisible, line, 0)) return position;
+                while (line > 0 && !WndProc(Message::GetLineVisible, line, 0)) {
+                    line = std::max<intptr_t>(0, WndProc(Message::GetFoldParent, line, 0));
+                }
+                return static_cast<Sci::Position>(WndProc(Message::PositionFromLine, line, 0));
+            };
+            const auto caret = visibleEndpoint(sel.MainCaret());
+            const auto anchor = visibleEndpoint(sel.MainAnchor());
+            if (caret != sel.MainCaret() || anchor != sel.MainAnchor()) {
+                SetSelection(caret, anchor);
+                EnsureCaretVisible();
+                UpdateSystemCaret();
+            }
         } else if (event.GetEventType() == wxEVT_LEFT_UP) {
             ButtonUpWithModifiers(point, MouseTime(), MouseModifiers(event));
         } else {

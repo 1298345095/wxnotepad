@@ -44,6 +44,7 @@ class WxSurface final : public Surface {
     wxDC* dc_ = nullptr;
     std::unique_ptr<wxDC> owned_;
     wxBitmap bitmap_;
+    std::vector<std::unique_ptr<wxDCClipper>> clips_;
     bool utf8_ = true;
     void FontSet(const Font* f) { dc_->SetFont(static_cast<const WxFont*>(f)->font); }
     wxString String(std::string_view s) const {
@@ -75,6 +76,7 @@ public:
     void SetMode(SurfaceMode m) noexcept override { utf8_ = m.codePage == 65001; }
     void SetRenderingParams(void*, void*) noexcept override {}
     void Release() noexcept override {
+        clips_.clear();
         owned_.reset();
         dc_ = nullptr;
     }
@@ -120,7 +122,22 @@ public:
         dc_->DrawRectangle(Rect(r));
     }
     void SCICALL FillRectangleAligned(PRectangle r, Fill f) override { FillRectangle(r, f); }
-    void SCICALL FillRectangle(PRectangle r, Surface& pattern) override { Copy(r, Point(0, 0), pattern); }
+    void SCICALL FillRectangle(PRectangle r, Surface& pattern) override {
+        const auto& other = static_cast<WxSurface&>(pattern);
+        const auto tile = other.dc_->GetSize();
+        const auto destination = Rect(r);
+        for (int y = destination.y; y < destination.GetBottom() + 1;) {
+            const int sourceY = (y % tile.y + tile.y) % tile.y;
+            const int height = std::min(tile.y - sourceY, destination.GetBottom() + 1 - y);
+            for (int x = destination.x; x < destination.GetRight() + 1;) {
+                const int sourceX = (x % tile.x + tile.x) % tile.x;
+                const int width = std::min(tile.x - sourceX, destination.GetRight() + 1 - x);
+                dc_->Blit(x, y, width, height, other.dc_, sourceX, sourceY);
+                x += width;
+            }
+            y += height;
+        }
+    }
     void SCICALL RoundedRectangle(PRectangle r, FillStroke s) override {
         StrokeSet(s.stroke);
         dc_->SetBrush(wxBrush(Color(s.fill.colour)));
@@ -225,8 +242,10 @@ public:
         utf8_ = true;
         return WidthText(f, t);
     }
-    void SCICALL SetClip(PRectangle r) noexcept override { dc_->SetClippingRegion(Rect(r)); }
-    void PopClip() noexcept override { dc_->DestroyClippingRegion(); }
+    void SCICALL SetClip(PRectangle r) noexcept override {
+        clips_.push_back(std::make_unique<wxDCClipper>(*dc_, Rect(r)));
+    }
+    void PopClip() noexcept override { clips_.pop_back(); }
     void FlushCachedState() noexcept override {}
     void FlushDrawing() noexcept override {}
 };
