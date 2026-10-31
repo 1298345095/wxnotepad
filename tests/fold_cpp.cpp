@@ -39,10 +39,10 @@ void MarginClick(EditorControl* editor, int line) {
     SendMessageW(handle, WM_LBUTTONDOWN, MK_LBUTTON, point);
     SendMessageW(handle, WM_LBUTTONUP, 0, point);
 #elif defined(__WXGTK__)
-    auto* widget = GTK_WIDGET(editor->GetHandle());
+    auto* widget = editor->GetConnectWidget();
     for (const auto type : {GDK_BUTTON_PRESS, GDK_BUTTON_RELEASE}) {
         auto* event = gdk_event_new(type);
-        event->button.window = static_cast<GdkWindow*>(g_object_ref(gtk_widget_get_window(widget)));
+        event->button.window = static_cast<GdkWindow*>(g_object_ref(editor->GTKGetDrawingWindow()));
         event->button.send_event = TRUE;
         event->button.time = GDK_CURRENT_TIME;
         event->button.x = x;
@@ -153,13 +153,16 @@ public:
                 editor->Send(Message::SetTargetEnd, brace + 1);
                 editor->Send(Message::ReplaceTarget, 0, reinterpret_cast<intptr_t>(""));
                 Paint(editor);
-                Require(editor->Send(Message::GetLineVisible, 1) && !(editor->Send(Message::GetFoldLevel, 0) & 0x2000),
+                Require(editor->Send(Message::GetLineVisible, 1) &&
+                            !(static_cast<uintptr_t>(editor->Send(Message::GetFoldLevel, 0)) &
+                              static_cast<uintptr_t>(Scintilla::FoldLevel::HeaderFlag)),
                         "deleting a collapsed header must expose its former descendants and recalculate levels");
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
                 Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
                             editor->Send(Message::GetLineVisible, 1) &&
-                            (editor->Send(Message::GetFoldLevel, 0) & 0x2000),
+                            (static_cast<uintptr_t>(editor->Send(Message::GetFoldLevel, 0)) &
+                             static_cast<uintptr_t>(Scintilla::FoldLevel::HeaderFlag)),
                         "Undo must restore the header and save point with reachable text");
                 NativeSearch::Command(frame, wxID_REDO);
                 Paint(editor);
@@ -205,7 +208,8 @@ public:
                 saved.close();
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
                 Require(editor->Send(Message::GetMarginWidthN, 1) == 0 && editor->Send(Message::GetLineVisible, 2) &&
-                            !(editor->Send(Message::GetFoldLevel, 0) & 0x2000),
+                            !(static_cast<uintptr_t>(editor->Send(Message::GetFoldLevel, 0)) &
+                              static_cast<uintptr_t>(Scintilla::FoldLevel::HeaderFlag)),
                         "Plain Text must hide and disable the margin and clear stale fold state");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
                 Paint(editor);
