@@ -12,6 +12,8 @@ EditorFrame::EditorFrame()
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
     file->Append(wxID_OPEN, "&Open...\tCtrl+O");
+    const int openGbk = wxWindow::NewControlId();
+    file->Append(openGbk, "Open As &GBK...");
     const int openUtf16 = wxWindow::NewControlId();
     file->Append(openUtf16, "Open As UTF-16LE...");
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
@@ -24,6 +26,11 @@ EditorFrame::EditorFrame()
     menus->Append(edit, "&Edit");
     SetMenuBar(menus);
     CreateStatusBar();
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        const auto result = OpenAs(FileEncoding::Gbk);
+        if (result.status == OpenStatus::Failed)
+            wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+    }, openGbk);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { New(); }, wxID_NEW);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) {
         const auto result = Open();
@@ -66,30 +73,30 @@ void EditorFrame::UpdateDocumentState() {
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + " - wxnotepad");
     const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE" :
-                              document_.Encoding() == FileEncoding::Gbk ? "GBK" : "UTF-8";
+                              document_.Encoding() == FileEncoding::Gbk ? "GBK (CP936)" : "UTF-8";
     SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : ""));
 }
 
-SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination) {
-    const auto result = document_.SaveFirst(destination);
+SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    const auto result = document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
     UpdateDocumentState();
     return result;
 }
 
-SaveResult EditorFrame::Save() {
+SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
     if (!document_.Path().empty()) {
-        const auto result = document_.Save();
+        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
         UpdateDocumentState();
         return result;
     }
     wxFileDialog dialog(this, "Save file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-    if (dialog.ShowModal() != wxID_OK) return SaveFirst(std::nullopt);
-    return SaveFirst(dialog.GetPath());
+    if (dialog.ShowModal() != wxID_OK) return SaveFirst(std::nullopt, decideLoss);
+    return SaveFirst(dialog.GetPath(), decideLoss);
 }
 
-SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination) {
-    const auto result = document_.SaveAs(destination);
+SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    const auto result = document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
     UpdateDocumentState();
     return result;
 }
@@ -142,4 +149,17 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (result.status == SaveStatus::Failed)
         wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
     return result.status == SaveStatus::Saved;
+}
+
+GbkLossChoice EditorFrame::ConfirmGbkLoss() {
+    wxMessageDialog dialog(this,
+        "GBK cannot preserve every character in this document. Save as UTF-8 without a BOM to keep all text, "
+        "or confirm GBK replacement. Replace in GBK changes unsupported characters to ? in both the file "
+        "and document after saving; Undo restores the original text.",
+        "GBK character loss", wxYES_NO | wxCANCEL | wxCANCEL_DEFAULT | wxICON_WARNING);
+    dialog.SetYesNoCancelLabels("Save as &UTF-8", "&Replace in GBK", "&Cancel");
+    const auto choice = dialog.ShowModal();
+    if (choice == wxID_YES) return GbkLossChoice::Utf8;
+    if (choice == wxID_NO) return GbkLossChoice::Replace;
+    return GbkLossChoice::Cancel;
 }
