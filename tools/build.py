@@ -1,5 +1,6 @@
 """Prepare the pinned original core, build wxnotepad, and optionally run CTest."""
 import argparse
+import ctypes
 import hashlib
 import json
 import os
@@ -88,7 +89,15 @@ def main():
                  f"-DNOTEPAD4_SOURCE={staged}",
                  f"-DCMAKE_TOOLCHAIN_FILE={args.vcpkg_root}/scripts/buildsystems/vcpkg.cmake",
                  "-DVCPKG_MANIFEST_MODE=OFF"]
-    if sys.platform != "win32":
+    if sys.platform == "win32":
+        # Keep CMake's cached /showIncludes prefix consistent with later builds.
+        os.environ["VSLANG"] = "1033"
+        # Localized MSVC output uses the console output code page, while CMake
+        # decodes it using the input code page. No console needs no adjustment.
+        if ctypes.windll.kernel32.GetConsoleCP():
+            ctypes.windll.kernel32.SetConsoleCP(65001)
+            ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+    else:
         configure += ["-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"]
     run(configure)
     run(["cmake", "--build", build / "cmake", "--config", "Release", "--parallel", "8"])
