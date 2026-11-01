@@ -29,7 +29,8 @@ struct OpenResult {
 // File identity belongs to the session; the original core owns text and history.
 class DocumentSession final {
 public:
-    explicit DocumentSession(EditorControl& editor) : editor_(editor) {}
+    explicit DocumentSession(EditorControl& editor, SyntaxDetectionOptions detection = {})
+        : editor_(editor), detection_(detection) {}
     const wxString& Path() const { return path_; }
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
@@ -43,7 +44,7 @@ public:
     bool HasUtf8Bom() const { return encoding_ == FileEncoding::Utf8 && hasBom_; }
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
-    SyntaxLanguage Language() const { return languageOverride_.value_or(LanguageForPath(path_)); }
+    SyntaxLanguage Language() const { return languageOverride_.value_or(automaticLanguage_); }
     std::optional<SyntaxLanguage> LanguageOverride() const { return languageOverride_; }
     void SelectLanguage(std::optional<SyntaxLanguage> language);
 
@@ -53,6 +54,9 @@ private:
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
     std::optional<SyntaxLanguage> languageOverride_;
+    SyntaxDetectionOptions detection_;
+    SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
+    void DetectAutomaticLanguage();
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt);
     void Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,

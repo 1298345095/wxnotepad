@@ -114,7 +114,7 @@ facilities gives a useful reason to extract it.
 | --- | --- | --- |
 | Text, undo/redo, dirty/save point, EOL insertion, selection, fold visibility | Original core | One core document per existing editor window; read state through the editor. |
 | Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. New/different-path Open reset to Automatic; same-path reopen retains the choice and effective scheme. Successful first Save/Save As apply the semantic selected file type; ordinary Save retains the choice. |
-| Effective language | Derived from session choice + path using the syntax catalog | The UI reads it from the session. Any last-applied style cache is internal installation state, not a second owner of the user's choice. |
+| Effective language | Session override or the automatic result selected through the syntax catalog | Automatic selection reads the path and original first-line prefix on different-path Open, explicit Automatic and filename-based Save As. It remains stable during edits and same-path reopen. The UI reads the session. |
 | Find query, replacement, options and wrap preference | `SearchSession` | Existing window/application session; survive New/Open as they do today. The dialog edits this state rather than owning the only copy. |
 | Regex captures | Original core | Each replacement re-runs the original matcher at the current selection to refresh captures before using them. |
 | Fonts, rendered geometry, native handles, clipboard publication lifetime | Editor/platform implementation | Editor/window or native ownership lifetime. Presentation uses the same layout geometry as input and hit testing. |

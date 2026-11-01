@@ -9,6 +9,8 @@ struct OriginalSettings {
     bool wordWrap = true;
     bool showLineNumbers = true;
     bool viewWhiteSpace = false;
+    bool autoSelect = true;
+    bool noCgiGuess = false;
 };
 
 class SettingsStore final {
@@ -22,6 +24,6 @@ private:
     wxString path_;
     std::vector<wxString> lines_;
     void LoadLines();
-    bool ReadBool(const wxString& key, bool fallback) const;
-    void WriteBool(const wxString& key, bool value, bool fallback);
+    bool ReadBool(const wxString& key, bool fallback, const wxString& sectionName = "Settings") const;
+    void WriteBool(const wxString& key, bool value, bool fallback, const wxString& sectionName = "Settings");
 };

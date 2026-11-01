@@ -111,7 +111,13 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 | Python | `.py`, `.pyw`, `.pyi` |
 | JSON | `.json` |
 
-Unknown extensions and unnamed documents use Plain Text. The Language menu offers
+For unmatched filenames, Automatic also recognizes the original Python interpreter
+line forms, including direct paths, `env` and `winpty` wrappers, and `py*`/`ipy*`
+names. Known filename associations take precedence; languages whose lexer has not
+been delivered retain the Plain Text fallback. The original `[Styles] AutoSelect`
+and `[Settings2] NoCGIGuess` settings control this selection. It runs on Open and
+explicit Automatic selection, without changing text or history; ordinary edits
+retain the selected language. Other unmatched content uses Plain Text. The Language menu offers
 Automatic, Plain Text and each supported language. A manual choice applies to the
 current document. New and opening a different supplied path restore Automatic.
 Reopening the current path retains its effective scheme, caret/anchor and view,

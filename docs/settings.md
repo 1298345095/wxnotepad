@@ -14,6 +14,14 @@ configuration overlay. An existing INI takes precedence over a distribution's
 fields. This is a partial original-settings implementation, not complete settings
 or appearance import.
 
+Automatic language selection also loads `[Styles] AutoSelect` (default `1`) and
+`[Settings2] NoCGIGuess` (default `0`). AutoSelect controls filename selection and
+first-line interpreter guessing; NoCGIGuess disables the interpreter guess while
+retaining known extension selection. They use the same original boolean parser
+and store lifecycle. Save Settings Now and enabled exit saving persist AutoSelect
+in `[Styles]`; NoCGIGuess remains an original load-only flag, preserved in place.
+`NoAutoDetection` does not disable original shebang guessing.
+
 Save Settings On Exit is enabled by default. A disabled exit save writes only
 `SaveSettings=0`, retaining the previously stored view choices. Save Settings Now
 writes current choices even while exit saving is disabled. Default-valued fields

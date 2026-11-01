@@ -4,6 +4,7 @@
 #include <wx/ffile.h>
 #include <wx/textfile.h>
 #include <wx/menu.h>
+#include <wx/statusbr.h>
 #include <utility>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
@@ -57,6 +58,7 @@ void ProcessObserver::Publish() {
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::WrapCount, 0)),
         frame_->Editor()->GetClientSize().x, frame_->Editor()->LineNumbersVisible(),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetViewWS))));
+    state.Write("document_status\t" + frame_->GetStatusBar()->GetStatusText() + "\n");
     state.Close();
     wxRenameFile(observation_ + "/state.tmp", observation_ + "/state", true);
 }
