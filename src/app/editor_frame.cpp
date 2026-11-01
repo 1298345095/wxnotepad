@@ -445,11 +445,11 @@ void EditorFrame::FindPrevious() {
 }
 
 void EditorFrame::Search(bool forward) {
-    if (!findDialog_) {
+    if (search_.Request().query.empty()) {
         ShowFind();
         return;
     }
-    findDialog_->Find(forward ? SearchDirection::Forward : SearchDirection::Backward);
+    ReportFind(search_.Find(forward ? SearchDirection::Forward : SearchDirection::Backward));
 }
 
 void EditorFrame::ReportFind(const FindResult& result) {
