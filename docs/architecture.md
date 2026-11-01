@@ -190,7 +190,7 @@ The resulting operation sequence is explicit:
    decision; re-read if saving changed the source; replace the document; commit
    metadata and language; invalidate old search matches; update UI.
 2. **Save As:** choose destination and semantic file type; obtain any encoding-loss decision; complete
-   disk replacement; commit any confirmed GBK text conversion, file metadata and
+   disk replacement; retain editor text/history, commit file metadata and
    save point; apply the selected type or filename exception and install any changed
    language; update menu/status. First Save follows the same rule. Cancellation or
    write failure commits neither path nor type and cannot leak a pending selection.
