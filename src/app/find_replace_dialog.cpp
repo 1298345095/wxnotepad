@@ -4,6 +4,7 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
+#include <wx/msgdlg.h>
 #include <utility>
 
 FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchSession& search,
@@ -47,6 +48,10 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     buttons->Add(replaceButton_, 0, wxRIGHT, 8);
     replaceAllButton_ = new wxButton(this, wxID_REPLACE_ALL, "Replace &All");
     buttons->Add(replaceAllButton_, 0, wxRIGHT, 8);
+    replaceSelectionButton_ = new wxButton(this, wxID_ANY, "In &Selection");
+    replaceSelectionButton_->SetName("Replace in selection");
+    replaceSelectionButton_->Enable(!query_->IsEmpty());
+    buttons->Add(replaceSelectionButton_, 0, wxRIGHT, 8);
     buttons->Add(new wxButton(this, wxID_BACKWARD, "Find &Previous"), 0, wxRIGHT, 8);
     buttons->Add(new wxButton(this, wxID_CANCEL, "Close"));
     layout->Add(buttons, 0, wxALL | wxALIGN_RIGHT, 8);
@@ -80,6 +85,7 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceOne(); }, wxID_REPLACE);
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceAll(); }, wxID_REPLACE_ALL);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceAll(true); }, replaceSelectionButton_->GetId());
     query_->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent&) { Find(SearchDirection::Forward); });
     const auto close = [this, &editor] {
         Hide();
@@ -95,6 +101,7 @@ void FindReplaceDialog::Present(bool replace) {
     replacement_->Show(replace);
     replaceButton_->Show(replace);
     replaceAllButton_->Show(replace);
+    replaceSelectionButton_->Show(replace);
     replacementResult_->Show(replace);
     GetSizer()->Fit(this);
     Show();
@@ -103,6 +110,7 @@ void FindReplaceDialog::Present(bool replace) {
 }
 
 void FindReplaceDialog::ConfigureSearch() {
+    replaceSelectionButton_->Enable(!query_->IsEmpty());
     search_.Configure({query_->GetValue(),
                        replacement_->GetValue(),
                        {matchCase_->GetValue(), wholeWord_->GetValue(), regularExpression_->GetValue()},
@@ -120,9 +128,14 @@ void FindReplaceDialog::ReplaceOne() {
     if (result.next) reportFind_(*result.next);
 }
 
-void FindReplaceDialog::ReplaceAll() {
+void FindReplaceDialog::ReplaceAll(bool inSelection) {
     ConfigureSearch();
-    const auto result = search_.ReplaceAll();
+    const auto result = inSelection ? search_.ReplaceInSelection() : search_.ReplaceAll();
+    if (result.status == ReplaceAllStatus::RectangularSelection) {
+        wxMessageBox("This operation can't be perfomed within a rectangular selection.", "wxnotepad",
+                     wxOK | wxICON_WARNING, this);
+        return;
+    }
     if (result.status == ReplaceAllStatus::ExpansionFailed) return;
     replacementResult_->SetLabel(result.status == ReplaceAllStatus::InvalidPattern
                                      ? wxString("Invalid regular expression")

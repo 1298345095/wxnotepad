@@ -27,7 +27,7 @@ struct ReplaceOneResult {
     bool changed = false;
     std::optional<FindResult> next;
 };
-enum class ReplaceAllStatus : uint8_t { Completed, InvalidPattern, ExpansionFailed };
+enum class ReplaceAllStatus : uint8_t { Completed, InvalidPattern, ExpansionFailed, RectangularSelection };
 struct ReplaceAllResult {
     ReplaceAllStatus status;
     size_t count = 0;
@@ -43,10 +43,12 @@ public:
     FindResult Find(SearchDirection direction);
     ReplaceOneResult ReplaceOne();
     ReplaceAllResult ReplaceAll();
+    ReplaceAllResult ReplaceInSelection();
 
 private:
     EditorControl& editor_;
     SearchRequest request_;
     Scintilla::FindOption SearchFlags() const;
     FindResult SelectTarget(bool wrapped);
+    ReplaceAllResult ReplaceRange(bool inSelection);
 };

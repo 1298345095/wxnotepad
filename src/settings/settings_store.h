@@ -9,6 +9,7 @@ struct OriginalSettings {
     bool wordWrap = true;
     bool showLineNumbers = true;
     bool viewWhiteSpace = false;
+    int zoomLevel = 100;
     int defaultEOLMode = 0;
     bool warnLineEndings = true;
 };
@@ -26,6 +27,6 @@ private:
     void LoadLines();
     bool ReadBool(const wxString& key, bool fallback) const;
     int ReadInt(const wxString& key, int fallback) const;
-    void WriteInt(const wxString& key, int value, int fallback);
     void WriteBool(const wxString& key, bool value, bool fallback);
+    void WriteInt(const wxString& key, int value, int fallback);
 };

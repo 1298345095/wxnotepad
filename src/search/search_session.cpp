@@ -112,6 +112,15 @@ ReplaceOneResult SearchSession::ReplaceOne() {
 }
 
 ReplaceAllResult SearchSession::ReplaceAll() {
+    return ReplaceRange(false);
+}
+
+ReplaceAllResult SearchSession::ReplaceInSelection() {
+    if (editor_.Send(Scintilla::Message::SelectionIsRectangle)) return {ReplaceAllStatus::RectangularSelection};
+    return ReplaceRange(true);
+}
+
+ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
     const wxString queryText = request_.query;
     const auto query = queryText.utf8_str();
     const wxString replacementText = request_.replacement;
@@ -120,7 +129,8 @@ ReplaceAllResult SearchSession::ReplaceAll() {
     size_t count = 0;
     bool editing = false;
     const bool regexStartOfLine = request_.options.regularExpression && query.length() && query.data()[0] == '^';
-    intptr_t start = 0;
+    intptr_t start = inSelection ? editor_.Send(Message::GetSelectionStart) : 0;
+    intptr_t replacementEnd = start;
     auto limit = editor_.Send(Message::GetLength);
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     // An initial empty document is eligible; EditReplaceAll stops as soon as a
@@ -138,6 +148,9 @@ ReplaceAllResult SearchSession::ReplaceAll() {
         }
         const auto matchStart = editor_.Send(Message::GetTargetStart);
         const auto matchEnd = editor_.Send(Message::GetTargetEnd);
+        // EditReplaceAllInSelection retains document-end search context and
+        // stops at the first match crossing the live, end-exclusive selection.
+        if (inSelection && matchEnd > editor_.Send(Message::GetSelectionEnd)) break;
         const auto length = static_cast<size_t>(matchEnd - matchStart);
         std::string matched(length + 1, '\0');
         editor_.Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(matched.data()));
@@ -163,6 +176,7 @@ ReplaceAllResult SearchSession::ReplaceAll() {
             start = matchEnd;
         }
         ++count;
+        replacementEnd = start;
         if (start == limit) break;
         if (matchStart == matchEnd && !regexStartOfLine) {
             start = editor_.Send(Message::PositionAfter, start);
@@ -178,5 +192,11 @@ ReplaceAllResult SearchSession::ReplaceAll() {
         }
     }
     if (editing) editor_.Send(Message::EndUndoAction);
+    if (inSelection && count && editor_.Send(Message::GetSelectionEnd) < replacementEnd) {
+        const auto anchor = editor_.Send(Message::GetAnchor);
+        const auto caret = editor_.Send(Message::GetCurrentPos);
+        editor_.Send(Message::SetSel, anchor > caret ? replacementEnd : anchor,
+                     anchor > caret ? caret : replacementEnd);
+    }
     return {ReplaceAllStatus::Completed, count, editing};
 }
