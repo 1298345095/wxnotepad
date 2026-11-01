@@ -44,3 +44,13 @@ The behavior and field names come from pinned Notepad4 revision
 `IniSectionParser::GetBoolImpl` in `src/Helpers.cpp`. The portable parser adapts
 those rules without pulling Windows profile APIs into the editor runtime. The
 upstream license remains in `licenses/Notepad4.txt`.
+
+Encoding selection adds the original `[Settings]` fields `DefaultEncoding`
+(built-in UTF-8, omitted on Save), `SkipUnicodeDetection=1`, `LoadANSIasUTF8=1`,
+`LoadASCIIasUTF8=1`, `LoadNFOasOEM=1` and `NoEncodingTags=0`. The original INI
+encoding-number mapping is retained, including `936` for CP936 and the special
+0–8 values; an explicit UTF-8 default is normalized to the omitted built-in
+default. `[Settings2] NoFileVariables=0` controls the file-variable gate and is
+retained in place. The same SettingsStore loads these options before the frame
+creates its document session. See [encoding selection](encoding.md) for the
+precedence and remaining codec catalog.

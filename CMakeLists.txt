@@ -45,6 +45,7 @@ add_library(editor_features STATIC
     src/document/document_session.cpp
     src/document/encoding/gbk_codec.cpp
     src/document/encoding/utf16_codec.cpp
+    src/document/encoding/encoding_detection.cpp
     src/search/search_session.cpp
     src/syntax/syntax_catalog.cpp
     src/syntax/syntax_scheme.cpp)
@@ -60,6 +61,7 @@ add_library(app_shell STATIC
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
+    target_link_libraries(editor_features PRIVATE advapi32)
     target_link_libraries(editor_runtime PRIVATE imm32)
     target_link_libraries(app_shell PRIVATE shell32 ole32)
 endif()
@@ -100,6 +102,9 @@ if(BUILD_TESTING)
     add_test(NAME original_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_settings_lifecycle PROPERTIES TIMEOUT 60)
+    add_test(NAME original_encoding_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/encoding_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_encoding_settings PROPERTIES TIMEOUT 60)
     function(add_editor_test target test_name timeout)
         add_gui_program(${target} tests/${target}.cpp app_shell)
         add_test(NAME ${test_name} COMMAND ${target})
@@ -121,6 +126,7 @@ if(BUILD_TESTING)
     add_editor_test(gbk_smoke gbk_roundtrip 30)
     add_editor_test(gbk_native gbk_native_choices 60)
     add_editor_test(utf16_smoke utf16_roundtrip 30)
+    add_editor_test(encoding_auto automatic_encoding_decisions 30)
     add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
     add_editor_test(editor_smoke editor_input_undo 30)
     add_editor_test(editing_keys original_editing_keys 30)

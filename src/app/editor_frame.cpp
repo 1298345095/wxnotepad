@@ -48,7 +48,8 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
-      editor_(new EditorControl(this)), settings_(settings), document_(*editor_), search_(*editor_) {
+      editor_(new EditorControl(this)), settings_(settings),
+      document_(*editor_, settings ? settings->values.encoding : EncodingOptions{}), search_(*editor_) {
     if (settings) {
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();

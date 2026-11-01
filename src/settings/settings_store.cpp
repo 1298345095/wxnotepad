@@ -6,6 +6,8 @@
 #include <wx/tokenzr.h>
 #include <wx/utils.h>
 #include <string>
+#include <algorithm>
+#include <climits>
 #ifdef __WXMSW__
 #include <shlobj.h>
 #include <filesystem>
@@ -62,6 +64,13 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.wordWrap = ReadBool("WordWrap", true);
     values.showLineNumbers = ReadBool("ShowLineNumbers", true);
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
+    values.encoding.defaultEncoding = NormalizeEncodingSetting(ReadInt("DefaultEncoding", -1));
+    values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", true);
+    values.encoding.loadANSIasUTF8 = ReadBool("LoadANSIasUTF8", true);
+    values.encoding.loadASCIIasUTF8 = ReadBool("LoadASCIIasUTF8", true);
+    values.encoding.loadNFOasOEM = ReadBool("LoadNFOasOEM", true);
+    values.encoding.noEncodingTags = ReadBool("NoEncodingTags", false);
+    values.encoding.noFileVariables = ReadBool("NoFileVariables", false, "Settings2");
 }
 
 void SettingsStore::LoadLines() {
@@ -90,13 +99,13 @@ void SettingsStore::LoadLines() {
     if (!lines_.empty() && lines_.back().empty()) lines_.pop_back();
 }
 
-bool SettingsStore::ReadBool(const wxString& key, bool fallback) const {
+bool SettingsStore::ReadBool(const wxString& key, bool fallback, const wxString& section) const {
     bool settings = false;
     for (const auto& raw : lines_) {
         wxString line = raw;
         line.Trim().Trim(false);
         if (line.StartsWith("[")) {
-            settings = line.CmpNoCase("[Settings]") == 0;
+            settings = line.CmpNoCase("[" + section + "]") == 0;
         } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
             const wxString value = line.AfterFirst('=').Trim().Trim(false);
             // Original IniSectionParser::GetBoolImpl accepts a leading 0 or 1.
@@ -106,6 +115,46 @@ bool SettingsStore::ReadBool(const wxString& key, bool fallback) const {
         }
     }
     return fallback;
+}
+
+int SettingsStore::ReadInt(const wxString& key, int fallback) const {
+    bool settings = false;
+    for (const auto& raw : lines_) {
+        wxString line = raw;
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            settings = line.CmpNoCase("[Settings]") == 0;
+        } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
+            const auto value = line.AfterFirst('=').Trim().Trim(false);
+            wchar_t* end = nullptr;
+            const long number = std::wcstol(value.wc_str(), &end, 10);
+            return end == value.wc_str()
+                       ? fallback
+                       : static_cast<int>(std::clamp(number, static_cast<long>(INT_MIN), static_cast<long>(INT_MAX)));
+        }
+    }
+    return fallback;
+}
+
+void SettingsStore::WriteInt(const wxString& key, int value, int fallback) {
+    // Use the same merge/removal rule as boolean fields.
+    WriteBool(key, false, false);
+    if (value == fallback) return;
+    size_t insertion = lines_.size();
+    bool found = false;
+    for (size_t index = 0; index < lines_.size(); ++index) {
+        wxString line = lines_[index];
+        if (line.Trim().Trim(false).CmpNoCase("[Settings]") == 0) {
+            insertion = index + 1;
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        lines_.push_back("[Settings]");
+        insertion = lines_.size();
+    }
+    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + wxString::Format("=%d", value));
 }
 
 void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
@@ -145,6 +194,12 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("WordWrap", values.wordWrap, true);
         WriteBool("ShowLineNumbers", values.showLineNumbers, true);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
+        WriteInt("DefaultEncoding", values.encoding.defaultEncoding, -1);
+        WriteBool("SkipUnicodeDetection", values.encoding.skipUnicodeDetection, true);
+        WriteBool("LoadANSIasUTF8", values.encoding.loadANSIasUTF8, true);
+        WriteBool("LoadASCIIasUTF8", values.encoding.loadASCIIasUTF8, true);
+        WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, true);
+        WriteBool("NoEncodingTags", values.encoding.noEncodingTags, false);
     }
     wxString text(wxUniChar(0xFEFF));
     for (const auto& line : lines_)

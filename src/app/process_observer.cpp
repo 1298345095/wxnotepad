@@ -47,16 +47,21 @@ void ProcessObserver::Publish() {
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
 #endif
     wxFFile state(observation_ + "/state.tmp", "wb");
+    const char* encoding = frame_->DocumentEncoding() == FileEncoding::Utf8      ? "UTF-8"
+                           : frame_->DocumentEncoding() == FileEncoding::Utf16Le ? "UTF-16LE"
+                                                                                 : "CP936";
     state.Write(wxString::Format(
         "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"
-        "handle\t%llu\nwrap_mode\t%lld\nwrap_rows\t%lld\nclient_width\t%d\nline_numbers\t%d\nwhitespace\t%lld\n",
+        "handle\t%llu\nwrap_mode\t%lld\nwrap_rows\t%lld\nclient_width\t%d\nline_numbers\t%d\nwhitespace\t%lld\n"
+        "encoding\t%s\nbom\t%d\n",
         sequence_, result_, static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetLength)), lastDirty_,
         frame_->IsShown() && !frame_->IsIconized(), wxWindow::FindFocus() == frame_->Editor(), lastActive_, backend,
         static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->Editor()->GetHandle())),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetWrapMode)),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::WrapCount, 0)),
         frame_->Editor()->GetClientSize().x, frame_->Editor()->LineNumbersVisible(),
-        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetViewWS))));
+        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetViewWS)), encoding,
+        frame_->DocumentHasBom()));
     state.Close();
     wxRenameFile(observation_ + "/state.tmp", observation_ + "/state", true);
 }

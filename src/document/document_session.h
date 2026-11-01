@@ -2,13 +2,13 @@
 
 #include <wx/string.h>
 #include "syntax/syntax_catalog.h"
+#include "document/encoding/encoding_detection.h"
 #include <optional>
 #include <functional>
 #include <string>
 #include <variant>
 
 class EditorControl;
-enum class FileEncoding { Utf8, Utf16Le, Gbk };
 enum class GbkLossChoice { Cancel, Replace };
 using GbkLossDecision = std::function<GbkLossChoice()>;
 // The dialog adapter translates its native filter index into this semantic choice.
@@ -29,7 +29,8 @@ struct OpenResult {
 // File identity belongs to the session; the original core owns text and history.
 class DocumentSession final {
 public:
-    explicit DocumentSession(EditorControl& editor) : editor_(editor) {}
+    explicit DocumentSession(EditorControl& editor, EncodingOptions options = {})
+        : editor_(editor), encodingOptions_(options) {}
     const wxString& Path() const { return path_; }
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
@@ -38,11 +39,13 @@ public:
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme);
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                    std::optional<FileEncoding> encoding = std::nullopt);
+                    std::optional<FileEncoding> encoding = std::nullopt,
+                    std::optional<FileEncoding> weakEncoding = std::nullopt);
     void New();
     bool HasUtf8Bom() const { return encoding_ == FileEncoding::Utf8 && hasBom_; }
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
+    bool IsDefaultEncoding() const { return systemDefaultEncoding_; }
     SyntaxLanguage Language() const { return languageOverride_.value_or(LanguageForPath(path_)); }
     std::optional<SyntaxLanguage> LanguageOverride() const { return languageOverride_; }
     void SelectLanguage(std::optional<SyntaxLanguage> language);
@@ -52,6 +55,8 @@ private:
     wxString path_;
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
+    EncodingOptions encodingOptions_;
+    bool systemDefaultEncoding_ = false;
     std::optional<SyntaxLanguage> languageOverride_;
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt);

@@ -34,38 +34,6 @@ Scintilla::EndOfLine DetectEol(std::string_view bytes) {
     return lf >= cr ? Scintilla::EndOfLine::Lf : Scintilla::EndOfLine::Cr;
 }
 
-bool IsUtf8(std::string_view bytes) {
-    for (size_t i = 0; i < bytes.size();) {
-        const auto lead = static_cast<unsigned char>(bytes[i++]);
-        if (lead < 0x80) continue;
-        unsigned int value;
-        size_t remaining;
-        unsigned int minimum;
-        if (lead >= 0xc2 && lead <= 0xdf) {
-            value = lead & 0x1f;
-            remaining = 1;
-            minimum = 0x80;
-        } else if (lead >= 0xe0 && lead <= 0xef) {
-            value = lead & 0x0f;
-            remaining = 2;
-            minimum = 0x800;
-        } else if (lead >= 0xf0 && lead <= 0xf4) {
-            value = lead & 7;
-            remaining = 3;
-            minimum = 0x10000;
-        } else
-            return false;
-        if (remaining > bytes.size() - i) return false;
-        while (remaining--) {
-            const auto next = static_cast<unsigned char>(bytes[i++]);
-            if ((next & 0xc0) != 0x80) return false;
-            value = (value << 6) | (next & 0x3f);
-        }
-        if (value < minimum || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff)) return false;
-    }
-    return true;
-}
-
 struct PendingSave {
     wxString path;
     wxFile file;
@@ -160,7 +128,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
 }
 
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                                 std::optional<FileEncoding> encoding) {
+                                 std::optional<FileEncoding> encoding, std::optional<FileEncoding> weakEncoding) {
     if (!source) return {OpenStatus::Cancelled, {}};
     using Scintilla::Message;
     // Notepad4 FileLoad compares the supplied spelling before canonicalizing the
@@ -185,6 +153,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     std::string bytes;
     FileEncoding format;
     bool bom;
+    bool systemDefault;
     const auto read = [&]() -> OpenResult {
         if (!loadPath.FileExists()) return {OpenStatus::Failed, "Choose an existing file to open."};
         wxFile file(loadPath.GetFullPath(), wxFile::read);
@@ -194,9 +163,11 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         bytes.assign(static_cast<size_t>(length), '\0');
         if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
             return {OpenStatus::Failed, "Could not read the complete file."};
-        format = encoding.value_or(bytes.starts_with("\xff\xfe") ? FileEncoding::Utf16Le : FileEncoding::Utf8);
-        bom = format == FileEncoding::Utf16Le ? bytes.starts_with("\xff\xfe")
-                                              : format == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf");
+        const auto detected = DetectEncoding(loadPath.GetFullPath(), bytes, encoding, encodingOptions_, weakEncoding);
+        if (!detected.encoding) return {OpenStatus::Failed, detected.error};
+        format = *detected.encoding;
+        bom = detected.bom;
+        systemDefault = detected.systemDefault;
         if (bom) bytes.erase(0, format == FileEncoding::Utf16Le ? 2 : 3);
         if (format == FileEncoding::Gbk) {
             const auto decoded = DecodeGbk(bytes);
@@ -222,6 +193,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         if (result.status != OpenStatus::Opened) return result;
     }
     Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
+    systemDefaultEncoding_ = systemDefault;
     if (samePath) {
         editor_.Send(Message::SetSel, anchor, caret);
         // Original FileLoad (Notepad4 89b8b36): compare the saved one-based line
@@ -273,6 +245,7 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, Fi
 
 void DocumentSession::New() {
     Replace({}, {}, FileEncoding::Utf8, false);
+    systemDefaultEncoding_ = false;
 }
 
 void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
