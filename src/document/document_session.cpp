@@ -256,6 +256,7 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, Fi
                               bool keepLanguage) {
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
+    editor_.Send(Scintilla::Message::MarkerDeleteAll, 0);
     editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(DetectEol(bytes)));
     editor_.Send(Scintilla::Message::SetUndoCollection, 1);

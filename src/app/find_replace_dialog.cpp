@@ -1,4 +1,5 @@
 #include "app/find_replace_dialog.h"
+#include "editor/editor_control.h"
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/sizer.h>
@@ -40,10 +41,18 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     wrapAround_->SetName("Wrap around");
     wrapAround_->SetValue(request.wrapAround);
     layout->Add(wrapAround_, 0, wxALL, 8);
+    bookmarkMatchedLines_ = new wxCheckBox(this, wxID_ANY, "Boo&kmark matched line");
+    bookmarkMatchedLines_->SetName("Bookmark matched line");
+    bookmarkMatchedLines_->SetValue(request.bookmarkMatchedLines);
+    layout->Add(bookmarkMatchedLines_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
     auto* buttons = new wxBoxSizer(wxHORIZONTAL);
     auto* next = new wxButton(this, wxID_FORWARD, "Find &Next");
     next->SetDefault();
     buttons->Add(next, 0, wxRIGHT, 8);
+    findAllButton_ = new wxButton(this, wxID_ANY, "&Find All");
+    findAllButton_->SetName("Find All");
+    findAllButton_->Enable(!query_->IsEmpty());
+    buttons->Add(findAllButton_, 0, wxRIGHT, 8);
     replaceButton_ = new wxButton(this, wxID_REPLACE, "&Replace");
     buttons->Add(replaceButton_, 0, wxRIGHT, 8);
     replaceAllButton_ = new wxButton(this, wxID_REPLACE_ALL, "Replace &All");
@@ -55,6 +64,9 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     buttons->Add(new wxButton(this, wxID_BACKWARD, "Find &Previous"), 0, wxRIGHT, 8);
     buttons->Add(new wxButton(this, wxID_CANCEL, "Close"));
     layout->Add(buttons, 0, wxALL | wxALIGN_RIGHT, 8);
+    findAllResult_ = new wxStaticText(this, wxID_ANY, "");
+    findAllResult_->SetName("Find All result");
+    layout->Add(findAllResult_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
     replacementResult_ = new wxStaticText(this, wxID_ANY, "");
     replacementResult_->SetName("Replacement result");
     layout->Add(replacementResult_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 8);
@@ -75,6 +87,8 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
         });
     }
     wrapAround_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { ConfigureSearch(); });
+    bookmarkMatchedLines_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { ConfigureSearch(); });
+    parent->Bind(wxEVT_EDITOR_STATE_CHANGED, &FindReplaceDialog::OnEditorState, this);
     const wxAcceleratorEntry searchKeys[] = {{wxACCEL_NORMAL, WXK_F3, wxID_FORWARD},
                                              {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD}};
     SetAcceleratorTable(wxAcceleratorTable(2, searchKeys));
@@ -83,6 +97,7 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     Bind(wxEVT_CHAR_HOOK, [onKey = std::move(onKey)](wxKeyEvent& event) { onKey(event); });
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Forward); }, wxID_FORWARD);
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { FindAll(); }, findAllButton_->GetId());
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceOne(); }, wxID_REPLACE);
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceAll(); }, wxID_REPLACE_ALL);
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceAll(true); }, replaceSelectionButton_->GetId());
@@ -93,6 +108,24 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     };
     Bind(wxEVT_BUTTON, [close](wxCommandEvent&) { close(); }, wxID_CANCEL);
     Bind(wxEVT_CLOSE_WINDOW, [close](wxCloseEvent&) { close(); });
+}
+
+FindReplaceDialog::~FindReplaceDialog() {
+    GetParent()->Unbind(wxEVT_EDITOR_STATE_CHANGED, &FindReplaceDialog::OnEditorState, this);
+}
+
+void FindReplaceDialog::OnEditorState(wxCommandEvent& event) {
+    if (!search_.MatchCount()) findAllResult_->SetLabel("");
+    event.Skip();
+}
+
+void FindReplaceDialog::FindAll() {
+    ConfigureSearch();
+    const auto result = search_.FindAll();
+    findAllResult_->SetLabel(result.status == FindStatus::InvalidPattern
+                                 ? wxString("Invalid regular expression")
+                                 : wxString::Format("%zu matches", result.count));
+    GetSizer()->Fit(this);
 }
 
 void FindReplaceDialog::Present(bool replace) {
@@ -111,10 +144,13 @@ void FindReplaceDialog::Present(bool replace) {
 
 void FindReplaceDialog::ConfigureSearch() {
     replaceSelectionButton_->Enable(!query_->IsEmpty());
+    findAllButton_->Enable(!query_->IsEmpty());
     search_.Configure({query_->GetValue(),
                        replacement_->GetValue(),
                        {matchCase_->GetValue(), wholeWord_->GetValue(), regularExpression_->GetValue()},
-                       wrapAround_->GetValue()});
+                       wrapAround_->GetValue(),
+                       bookmarkMatchedLines_->GetValue()});
+    if (!search_.MatchCount()) findAllResult_->SetLabel("");
 }
 
 void FindReplaceDialog::Find(SearchDirection direction) {

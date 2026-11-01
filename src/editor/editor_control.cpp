@@ -3,6 +3,7 @@
 #include <wx/dcclient.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#include <wx/settings.h>
 #include <chrono>
 #include <cstring>
 #include <cmath>
@@ -97,6 +98,13 @@ public:
         WndProc(Message::StyleSetSize, 32, 12);
         WndProc(Message::StyleSetBack, 32, 0xFFFFFF);
         WndProc(Message::StyleClearAll, 0, 0);
+        // Original Mark Occurrences indicator and default bookmark background.
+        WndProc(Message::IndicSetStyle, 8, static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox));
+        WndProc(Message::IndicSetFore, 8, wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT).GetRGB());
+        WndProc(Message::IndicSetAlpha, 8, 25);
+        WndProc(Message::MarkerDefine, 0, static_cast<intptr_t>(Scintilla::MarkerSymbol::Background));
+        WndProc(Message::MarkerSetBackTranslucent, 0, 0x2800FF00);
+        WndProc(Message::MarkerSetLayer, 0, static_cast<intptr_t>(Scintilla::Layer::OverText));
         WndProc(Message::SetCaretStyle, 1, 0);
         WndProc(Message::SetMarginWidthN, 1, 0);
         WndProc(Message::SetScrollWidthTracking, 1, 0);
@@ -874,6 +882,14 @@ void EditorControl::SetIndentationWidth(int width) {
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
     core_->SelectionRevision();
     const auto result = core_->WndProc(message, wParam, lParam);
+    if (message == Message::ClearAll) {
+        // A document replacement also invalidates search state when both the
+        // old and new document are empty, so no text notification was emitted.
+        ++documentRevision_;
+        auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, GetId());
+        event->SetEventObject(this);
+        wxQueueEvent(this, event);
+    }
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
         message == Message::StyleSetItalic || message == Message::SetZoom)

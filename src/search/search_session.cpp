@@ -3,8 +3,92 @@
 #include <string>
 #include <utility>
 
+SearchSession::SearchSession(EditorControl& editor) : editor_(editor) {
+    editor_.Bind(wxEVT_EDITOR_STATE_CHANGED, &SearchSession::OnEditorState, this);
+}
+
+SearchSession::~SearchSession() {
+    editor_.Unbind(wxEVT_EDITOR_STATE_CHANGED, &SearchSession::OnEditorState, this);
+}
+
 void SearchSession::Configure(SearchRequest request) {
+    if (request.query != request_.query || request.options != request_.options) ClearFindAll();
     request_ = std::move(request);
+}
+
+void SearchSession::ClearFindAll() {
+    if (matchCount_) {
+        editor_.Send(Scintilla::Message::SetIndicatorCurrent, 8);
+        editor_.Send(Scintilla::Message::IndicatorClearRange, 0, editor_.Send(Scintilla::Message::GetLength));
+        matchCount_.reset();
+    }
+}
+
+std::optional<size_t> SearchSession::MatchCount() {
+    if (markedRevision_ != editor_.DocumentRevision()) ClearFindAll();
+    return matchCount_;
+}
+
+void SearchSession::OnEditorState(wxCommandEvent& event) {
+    MatchCount();
+    event.Skip();
+}
+
+FindAllResult SearchSession::FindAll() {
+    using Scintilla::Message;
+    ClearFindAll();
+    // EditMarkAll::Reset retains Find All bookmarks on ordinary invalidation,
+    // and replaces them when another Find All operation starts.
+    if (bookmarkForFindAll_) editor_.Send(Message::MarkerDeleteAll, 0);
+    const auto query = request_.query.utf8_str();
+    if (!query.length()) return {FindStatus::EmptyQuery};
+    markedRevision_ = editor_.DocumentRevision();
+    matchCount_ = 0;
+    if (request_.options.regularExpression && query.length() == 1 &&
+        (query.data()[0] == '^' || query.data()[0] == '$')) {
+        // Pinned EditMarkAll::Start counts these anchors without indicators or bookmarks.
+        *matchCount_ = static_cast<size_t>(editor_.Send(Message::GetLineCount) - (query.data()[0] == '^'));
+        return {FindStatus::Found, *matchCount_};
+    }
+    bookmarkForFindAll_ = request_.bookmarkMatchedLines;
+    editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
+    editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
+    editor_.Send(Message::SetIndicatorCurrent, 8);
+    const auto limit = editor_.Send(Message::GetLength);
+    intptr_t start = 0;
+    // EditMarkAll::Continue excludes EOF and advances zero-width matches by a
+    // complete character; empty matches count but have no visible mark/bookmark.
+    while (start < limit) {
+        editor_.Send(Message::SetTargetStart, start);
+        editor_.Send(Message::SetTargetEnd, limit);
+        const auto found =
+            editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data()));
+        if (found < 0) {
+            if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
+                ClearFindAll();
+                return {FindStatus::InvalidPattern};
+            }
+            break;
+        }
+        ++*matchCount_;
+        const auto end = editor_.Send(Message::GetTargetEnd);
+        if (end == found) {
+            start = editor_.Send(Message::PositionAfter, found);
+            if (start <= found) break;
+            continue;
+        }
+        editor_.Send(Message::IndicatorFillRange, found, end - found);
+        if (request_.bookmarkMatchedLines) {
+            auto line = editor_.Send(Message::LineFromPosition, found);
+            const bool multiline = request_.query.find_first_of("\r\n") != wxString::npos;
+            const auto last = multiline ? editor_.Send(Message::LineFromPosition, end) : line;
+            for (; line <= last; ++line) {
+                if (!(editor_.Send(Message::MarkerGet, line) & 1)) editor_.Send(Message::MarkerAdd, line, 0);
+            }
+        }
+        start = end;
+    }
+    return {FindStatus::Found, *matchCount_};
 }
 
 FindResult SearchSession::Find(SearchDirection direction) {
