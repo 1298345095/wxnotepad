@@ -11,6 +11,7 @@ struct OriginalSettings {
     bool showLineNumbers = true;
     bool viewWhiteSpace = false;
     EncodingOptions encoding;
+    int zoomLevel = 100;
 };
 
 class SettingsStore final {
@@ -26,6 +27,6 @@ private:
     void LoadLines();
     bool ReadBool(const wxString& key, bool fallback, const wxString& section = "Settings") const;
     int ReadInt(const wxString& key, int fallback) const;
-    void WriteInt(const wxString& key, int value, int fallback);
     void WriteBool(const wxString& key, bool value, bool fallback);
+    void WriteInt(const wxString& key, int value, int fallback);
 };
