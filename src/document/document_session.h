@@ -33,6 +33,7 @@ struct OpenResult {
     OpenStatus status;
     wxString error;
     LineEndingCounts lineEndings;
+    bool unknownLanguage = false;
 };
 
 // File identity belongs to the session; the original core owns text and history.
@@ -67,9 +68,9 @@ private:
     std::optional<SyntaxLanguage> languageOverride_;
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
-    void DetectAutomaticLanguage();
+    bool DetectAutomaticLanguage();
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt);
-    LineEndingCounts Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
-                             bool keepLanguage = false);
+    OpenResult Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+                       bool keepLanguage = false);
 };

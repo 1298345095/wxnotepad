@@ -67,33 +67,35 @@ bool PythonInterpreter(std::string_view text) {
     return letters.starts_with("py") || letters.starts_with("ipy");
 }
 
-bool OriginalFilenameMatch(const wxString& path) {
+enum class FilenameMatch { Unknown, Associated, Config };
+FilenameMatch OriginalFilenameMatch(const wxString& path) {
     const wxFileName file(path);
     const auto name = file.GetFullName().Lower();
     const auto extension = FileExtension(path).Lower().ToStdString();
-    if (name.StartsWith(".") && (extension.starts_with("bash") || extension == "profile")) return true;
+    if (name.StartsWith(".") && (extension.starts_with("bash") || extension == "profile"))
+        return FilenameMatch::Associated;
     // The original treats MySQL ini/cnf files as Config, permitting sniffing.
-    if (name.StartsWith("my") && (extension == "ini" || extension == "cnf")) return false;
+    if (name.StartsWith("my") && (extension == "ini" || extension == "cnf")) return FilenameMatch::Config;
     size_t start = 0;
     while (start < originalAssociatedExtensions.size()) {
         const auto end = originalAssociatedExtensions.find(';', start);
-        if (originalAssociatedExtensions.substr(start, end - start) == extension) return true;
+        if (originalAssociatedExtensions.substr(start, end - start) == extension) return FilenameMatch::Associated;
         start = end + 1;
     }
     start = 0;
     while (start < originalConfigExtensions.size()) {
         const auto end = originalConfigExtensions.find(';', start);
-        if (originalConfigExtensions.substr(start, end - start) == extension) return false;
+        if (originalConfigExtensions.substr(start, end - start) == extension) return FilenameMatch::Config;
         start = end + 1;
     }
     for (const auto* prefix : {"readme", "makefile", "kbuild", "jamfile"}) {
-        if (name.StartsWith(prefix)) return true;
+        if (name.StartsWith(prefix)) return FilenameMatch::Associated;
     }
     for (const auto* exact : {"cakefile", "rakefile", "podfile", "steepfile", "mozconfig", "apkbuild", "pkgbuild",
                               "jamroot", "emakefile"}) {
-        if (name.CmpNoCase(exact) == 0) return true;
+        if (name.CmpNoCase(exact) == 0) return FilenameMatch::Associated;
     }
-    return false;
+    return FilenameMatch::Unknown;
 }
 } // namespace
 
@@ -122,8 +124,9 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
     return SyntaxLanguage::PlainText;
 }
 
-SyntaxLanguage DetectLanguage(const wxString& path, std::string_view prefix, SyntaxDetectionOptions options) {
-    if (!options.autoSelect) return SyntaxLanguage::PlainText;
+std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_view prefix,
+                                             SyntaxDetectionOptions options) {
+    if (!options.autoSelect) return std::nullopt;
     const auto language = LanguageForPath(path);
     if (language != SyntaxLanguage::PlainText || FileExtension(path).CmpNoCase("txt") == 0) return language;
     const auto extension = FileExtension(path).Lower();
@@ -131,8 +134,10 @@ SyntaxLanguage DetectLanguage(const wxString& path, std::string_view prefix, Syn
     // only after original filename matches. Config files are sniffed too.
     if (!options.noCgiGuess && (extension == "cgi" || extension == "fcgi") && PythonInterpreter(prefix))
         return SyntaxLanguage::Python;
-    if (OriginalFilenameMatch(path)) return SyntaxLanguage::PlainText;
-    return !options.noCgiGuess && PythonInterpreter(prefix) ? SyntaxLanguage::Python : SyntaxLanguage::PlainText;
+    const auto match = OriginalFilenameMatch(path);
+    if (match == FilenameMatch::Associated) return SyntaxLanguage::PlainText;
+    if (!options.noCgiGuess && PythonInterpreter(prefix)) return SyntaxLanguage::Python;
+    return match == FilenameMatch::Config ? std::optional{SyntaxLanguage::PlainText} : std::nullopt;
 }
 
 wxString LanguageName(SyntaxLanguage language) {

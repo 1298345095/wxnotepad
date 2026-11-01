@@ -627,7 +627,7 @@ GbkLossChoice EditorFrame::ConfirmGbkLoss() {
     return dialog.ShowModal() == wxID_OK ? GbkLossChoice::Replace : GbkLossChoice::Cancel;
 }
 
-void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts) {
+void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo) {
     wxDialog dialog(this, wxID_ANY, "Inconsistent Line Endings");
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(new wxStaticText(&dialog, wxID_ANY, "The line endings in this file are not consistent:"), 0, wxALL,
@@ -655,7 +655,7 @@ void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts) {
     buttons->Add(yes, 0, wxRIGHT, dialog.FromDIP(5));
     buttons->Add(no);
     contents->Add(buttons, 0, wxALIGN_RIGHT | wxALL, dialog.FromDIP(10));
-    yes->SetDefault();
+    (defaultNo ? no : yes)->SetDefault();
     dialog.SetSizerAndFit(contents);
     dialog.CentreOnParent();
     const bool convert = dialog.ShowModal() == wxID_OK;

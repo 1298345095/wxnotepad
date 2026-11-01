@@ -230,7 +230,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         result = read();
         if (result.status != OpenStatus::Opened) return result;
     }
-    const auto lineEndings = Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
+    const auto loaded = Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
     if (samePath) {
         editor_.Send(Message::SetSel, anchor, caret);
         // Original FileLoad (Notepad4 89b8b36): compare the saved one-based line
@@ -257,11 +257,11 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
             editor_.Send(Message::SetXOffset, xOffset);
         }
     }
-    return {OpenStatus::Opened, {}, lineEndings};
+    return loaded;
 }
 
-LineEndingCounts DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding,
-                                          bool bom, bool keepLanguage) {
+OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+                                    bool keepLanguage) {
     const auto lineEndings = CountLineEndings(bytes);
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
@@ -275,12 +275,13 @@ LineEndingCounts DocumentSession::Replace(const std::string& bytes, const wxStri
     path_ = path;
     encoding_ = encoding;
     hasBom_ = bom;
+    bool unknownLanguage = false;
     if (!keepLanguage) {
         languageOverride_.reset();
-        DetectAutomaticLanguage();
+        unknownLanguage = !DetectAutomaticLanguage();
         ApplySyntaxLanguage(editor_, Language());
     }
-    return lineEndings;
+    return {OpenStatus::Opened, {}, lineEndings, unknownLanguage};
 }
 
 void DocumentSession::New() {
@@ -294,10 +295,12 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     if (previous != Language()) ApplySyntaxLanguage(editor_, Language());
 }
 
-void DocumentSession::DetectAutomaticLanguage() {
+bool DocumentSession::DetectAutomaticLanguage() {
     // The pinned core's GetText count excludes its terminating NUL.
     // Match original SciCall_GetText(255) with the original 256-byte buffer.
     char prefix[256]{};
     editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
-    automaticLanguage_ = DetectLanguage(path_, prefix, detection_);
+    const auto detected = DetectLanguage(path_, prefix, detection_);
+    automaticLanguage_ = detected.value_or(SyntaxLanguage::PlainText);
+    return detected.has_value();
 }

@@ -46,6 +46,6 @@ private:
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
     GbkLossChoice ConfirmGbkLoss();
-    void ConfirmLineEndingConversion(const LineEndingCounts& counts);
+    void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo = false);
     bool SaveSettings(bool explicitSave);
 };
