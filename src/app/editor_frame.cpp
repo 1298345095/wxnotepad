@@ -163,6 +163,17 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     addEol("LF", Scintilla::EndOfLine::Lf);
     addEol("CR", Scintilla::EndOfLine::Cr);
     auto* view = new wxMenu;
+    const int autoIndent = wxWindow::NewControlId();
+    view->AppendCheckItem(autoIndent, "Auto &Indent");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            preferences.autoIndent = !preferences.autoIndent;
+            editor_->SetAutoIndent(preferences.autoIndent);
+        },
+        autoIndent);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoIndentEnabled()); }, autoIndent);
     const int spaces = wxWindow::NewControlId();
     view->AppendCheckItem(spaces, "Tabs as &Spaces");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { indentation_.ToggleSpaces(*editor_, document_.Language()); }, spaces);

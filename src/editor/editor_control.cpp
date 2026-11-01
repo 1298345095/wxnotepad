@@ -677,6 +677,12 @@ private:
     }
     void NotifyChange() const noexcept override {}
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override {
+        // Notepad4.cpp SCN_CHARADDED: ignore tentative/multiple-selection typing.
+        // The pinned CRLF condition handles CR, after the complete EOL is inserted.
+        if (notification.nmhdr.code == Scintilla::Notification::CharAdded && !notification.listType &&
+            window_.autoIndent_ && (notification.ch == '\r' || notification.ch == '\n') &&
+            (pdoc->eolMode != Scintilla::EndOfLine::CrLf || notification.ch != '\n'))
+            window_.AutoIndent();
         SelectionRevision();
         if (notification.nmhdr.code == Scintilla::Notification::Zoom) window_.lineNumberWidthDirty_ = true;
         if (notification.nmhdr.code == Scintilla::Notification::Modified &&

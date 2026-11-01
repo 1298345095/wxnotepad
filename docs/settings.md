@@ -60,6 +60,14 @@ dialog retains all prior values; disabling inheritance restores the values from
 before the dialog opened.
 Indentation detection and file-variable parsing are separate work.
 
+`[Settings] AutoIndent` defaults to `1` and follows the same explicit/exit save
+rules. View > Auto Indent toggles the option. Enter preserves the original
+leading whitespace and applies the pinned delimiter, colon and block-comment
+opener rules using the active file tab settings. These rules are shared by the
+delivered schemes; they do not add Python keyword completion or comment-prefix
+continuation. The port adapts `EditAutoC.cpp::EditAutoIndent` and the
+`Notepad4.cpp::SCN_CHARADDED` gate from the pinned original revision.
+
 Windows keeps the pinned original discovery rule: a resolved executable path beginning
 with `C:\Program Files`, or containing `WinGet` or `hocolatey`, uses
 `FOLDERID_LocalAppData/Notepad4/Notepad4.ini`. Other locations use

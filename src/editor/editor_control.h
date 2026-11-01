@@ -23,6 +23,8 @@ public:
     void ToggleWordWrap();
     void IndentLines(bool forwards);
     void SetIndentationWidths(int tabWidth, int indentWidth);
+    bool AutoIndentEnabled() const { return autoIndent_; }
+    void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
@@ -37,6 +39,8 @@ private:
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;
     bool lineNumberWidthDirty_ = true;
+    bool autoIndent_ = true;
+    void AutoIndent();
     void UpdateLineNumberMargin();
     void OnPaint(wxPaintEvent& event);
     void OnSize(wxSizeEvent& event);

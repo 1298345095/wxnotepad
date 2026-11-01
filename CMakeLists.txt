@@ -34,6 +34,7 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/autoindent.cpp
     src/editor/editor_control.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
@@ -177,6 +178,7 @@ if(BUILD_TESTING)
     add_editor_test(line_numbers line_number_view 60)
     add_editor_test(whitespace_view visible_whitespace 30)
     add_editor_test(indentation_options indentation_options 60)
+    add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(fold_python python_fold_margin 60)
     add_editor_test(fold_json json_fold_margin 60)
     add_editor_test(eol_smoke loaded_eol_input 30)

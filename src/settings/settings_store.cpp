@@ -80,6 +80,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", 4), 0, 256);
     values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", false);
     values.tabIndents = ReadBool("TabIndents", true);
+    values.autoIndent = ReadBool("AutoIndent", true);
     values.backspaceUnindents = static_cast<uint8_t>(ReadInt("BackspaceUnindents", 2));
     for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
         auto& tabs = values.schemeTabs[index];
@@ -205,6 +206,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteInt("ZoomLevel", values.zoomLevel, 100);
         WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, false);
         WriteBool("TabIndents", values.tabIndents, true);
+        WriteBool("AutoIndent", values.autoIndent, true);
         WriteInt("TabWidth", values.globalTabs.tabWidth, 4);
         WriteInt("IndentWidth", values.globalTabs.indentWidth, 4);
         WriteInt("BackspaceUnindents", values.backspaceUnindents, 2);
