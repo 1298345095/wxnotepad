@@ -270,6 +270,19 @@ public:
                 Character(editor, 'N');
                 Undo(editor, "abcd\r\nefgh\r\nijkl", "aNd\r\neNh\r\niNl");
                 std::puts("PASS: native mouse translation retains Alt rectangle endpoints and grouped editing");
+                Reset(editor, "abcd\r\nefgh\r\nijkl");
+                Drag(editor, Point(editor, 1), Point(editor, 1));
+                Key(editor, WXK_DOWN, true, true);
+                Key(editor, WXK_DOWN, true, true);
+                Key(editor, WXK_RIGHT, true, true);
+                Key(editor, WXK_RIGHT, true, true);
+                Require(editor->Send(Message::GetSelections) == 3 &&
+                            editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
+                            editor->Send(Message::GetRectangularSelectionCaret) == 15,
+                        "Alt+Shift arrows extend an original rectangle through the keyboard dispatcher");
+                Character(editor, 'K');
+                Undo(editor, "abcd\r\nefgh\r\nijkl", "aKd\r\neKh\r\niKl");
+                std::puts("PASS: Alt+Shift keyboard rectangle, all-range replacement and grouped Undo/Redo");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
