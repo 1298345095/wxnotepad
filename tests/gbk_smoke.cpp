@@ -71,24 +71,19 @@ public:
                         "loss cancellation must preserve bytes, text and dirty state");
                 Require(frame->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved,
                         "explicit replacement must save");
-                Require(Bytes(copy) == saved + "??????" && Text(frame) == "ASCII\r\n中文\n€\r中文??????",
-                        "loss bytes must match original no-best-fit BMP/surrogate widths");
-                Require(!frame->Editor()->Send(Scintilla::Message::GetModify), "saved replacement text must be clean");
+                Require(Bytes(copy) == saved + "??????" && Text(frame) == rich,
+                        "accepted loss writes original placeholders while retaining the rich editor text");
+                Require(!frame->Editor()->Send(Scintilla::Message::GetModify),
+                        "accepted loss establishes a save point");
                 frame->Editor()->Send(Scintilla::Message::Undo);
-                Require(Text(frame) == rich && frame->Editor()->Send(Scintilla::Message::GetModify),
-                        "Undo must restore rich text and dirty state");
+                Require(Text(frame) == "ASCII\r\n中文\n€\r中文" && frame->Editor()->Send(Scintilla::Message::GetModify),
+                        "Undo must undo the pre-save edit without a conversion undo action");
                 frame->Editor()->Send(Scintilla::Message::Redo);
-                Require(Text(frame) == "ASCII\r\n中文\n€\r中文??????" &&
-                            !frame->Editor()->Send(Scintilla::Message::GetModify),
-                        "Redo must restore saved replacement text and clean state");
-                Add(frame, "😀");
-                const auto fallback = Text(frame);
-                Require(frame->Save([] { return GbkLossChoice::Utf8; }).status == SaveStatus::Saved,
-                        "UTF8 fallback must save losslessly");
-                Require(Bytes(copy) == fallback && frame->DocumentEncoding() == FileEncoding::Utf8 &&
-                            !frame->DocumentHasBom(),
-                        "fallback must write exact UTF8 without BOM and update format");
-                std::puts("PASS: loss Cancel, original replacement bytes/Undo/Redo, UTF8 fallback");
+                Require(Text(frame) == rich && !frame->Editor()->Send(Scintilla::Message::GetModify),
+                        "Redo must restore the rich text at the save point");
+                Require(frame->DocumentEncoding() == FileEncoding::Gbk && !frame->DocumentHasBom(),
+                        "accepted loss retains GBK encoding without a BOM");
+                std::puts("PASS: loss Cancel, original replacement bytes, rich text and savepoint Undo/Redo");
                 const std::string pua = "\xa1\x40\xa2\xe3\xaa\xa1\xfe\xa0";
                 const auto puaPath = directory / "pua.txt";
                 Write(puaPath, pua);
@@ -120,7 +115,7 @@ public:
                     Require(result.status == OpenStatus::Failed && !result.error.empty(),
                             "malformed GBK must fail clearly before prompting about dirty document");
                     Require(Text(frame) == pending && frame->DocumentPath() == identity &&
-                                frame->DocumentEncoding() == FileEncoding::Utf8 &&
+                                frame->DocumentEncoding() == FileEncoding::Gbk &&
                                 frame->Editor()->Send(Scintilla::Message::GetModify),
                             "malformed GBK must preserve current text/identity/encoding/dirty state");
                 }
@@ -145,7 +140,7 @@ public:
                 const auto blocked = directory / "blocked.txt";
                 std::filesystem::create_directory(blocked);
                 Write(blocked / "sentinel", "keep");
-                for (const auto choice : {GbkLossChoice::Cancel, GbkLossChoice::Utf8, GbkLossChoice::Replace}) {
+                for (const auto choice : {GbkLossChoice::Cancel, GbkLossChoice::Replace}) {
                     auto* failure = new EditorFrame;
                     Require(failure->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
                             "failure source must open");
@@ -187,17 +182,18 @@ public:
                             SaveStatus::Saved,
                         "confirmed lossy Save As must succeed");
                 Require(Bytes(lossyTarget) == original + "\xd6\xd0\xce\xc4??????" &&
-                            Bytes(source) == original + "\xd6\xd0\xce\xc4" &&
+                            Bytes(source) == original + "\xd6\xd0\xce\xc4" && Text(lossyAs) == richAs &&
                             lossyAs->DocumentPath() == Filename(lossyTarget) &&
                             lossyAs->DocumentEncoding() == FileEncoding::Gbk &&
                             !lossyAs->Editor()->Send(Scintilla::Message::GetModify),
                         "lossy Save As must change identity only on success and retain source bytes");
                 lossyAs->Editor()->Send(Scintilla::Message::Undo);
-                Require(Text(lossyAs) == richAs && lossyAs->Editor()->Send(Scintilla::Message::GetModify),
-                        "lossy Save As Undo must restore rich text dirty");
+                Require(Text(lossyAs) == "ASCII\r\n中文\n€\r中文" &&
+                            lossyAs->Editor()->Send(Scintilla::Message::GetModify),
+                        "lossy Save As Undo must undo only the preceding user edit");
                 lossyAs->Editor()->Send(Scintilla::Message::Redo);
-                Require(!lossyAs->Editor()->Send(Scintilla::Message::GetModify),
-                        "lossy Save As Redo must restore clean saved text");
+                Require(Text(lossyAs) == richAs && !lossyAs->Editor()->Send(Scintilla::Message::GetModify),
+                        "lossy Save As Redo must restore rich text at the save point");
                 lossyAs->Destroy();
                 std::puts("PASS: confirmed lossy Save As exact bytes, source isolation and Undo/Redo");
                 result_ = 0;

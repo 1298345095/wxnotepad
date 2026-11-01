@@ -495,13 +495,8 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
 GbkLossChoice EditorFrame::ConfirmGbkLoss() {
     wxMessageDialog dialog(
         this,
-        "GBK cannot preserve every character in this document. Save as UTF-8 without a BOM to keep all text, "
-        "or confirm GBK replacement. Replace in GBK changes unsupported characters to ? in both the file "
-        "and document after saving; Undo restores the original text.",
-        "GBK character loss", wxYES_NO | wxCANCEL | wxCANCEL_DEFAULT | wxICON_WARNING);
-    dialog.SetYesNoCancelLabels("Save as &UTF-8", "&Replace in GBK", "&Cancel");
-    const auto choice = dialog.ShowModal();
-    if (choice == wxID_YES) return GbkLossChoice::Utf8;
-    if (choice == wxID_NO) return GbkLossChoice::Replace;
-    return GbkLossChoice::Cancel;
+        "Certain characters in the current text are not supported by the selected encoding, and may be replaced "
+        "by default placeholders when saving. It's recommended to choose another file encoding. Continue?",
+        "GBK character loss", wxOK | wxCANCEL | wxICON_WARNING);
+    return dialog.ShowModal() == wxID_OK ? GbkLossChoice::Replace : GbkLossChoice::Cancel;
 }
