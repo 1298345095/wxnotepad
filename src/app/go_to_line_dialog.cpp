@@ -13,7 +13,7 @@ void ShowGoToLineDialog(wxWindow* parent, EditorControl& editor) {
     auto* contents = new wxBoxSizer(wxVERTICAL);
     auto* range = new wxStaticText(
         &dialog, wxID_ANY,
-        wxString::Format("Line number (1 to %lld):", static_cast<long long>(editor.Send(Message::GetLineCount))));
+        wxString::Format("&Line (empty or 1 - %lld):", static_cast<long long>(editor.Send(Message::GetLineCount))));
     range->SetName("Go to line range");
     contents->Add(range, 0, wxALL, dialog.FromDIP(10));
     auto* input = new wxTextCtrl(
@@ -22,25 +22,34 @@ void ShowGoToLineDialog(wxWindow* parent, EditorControl& editor) {
             "%lld",
             static_cast<long long>(editor.Send(Message::LineFromPosition, editor.Send(Message::GetCurrentPos))) + 1));
     input->SetName("Go to line number");
+    input->SetMaxLength(20);
     contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
-    auto* error = new wxStaticText(&dialog, wxID_ANY, "");
-    error->SetName("Go to line error");
-    contents->Add(error, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
+    auto* columnRange = new wxStaticText(
+        &dialog, wxID_ANY,
+        wxString::Format("&Column (empty or 1 - %lld):", static_cast<long long>(editor.Send(Message::GetLength))));
+    columnRange->SetName("Go to column range");
+    contents->Add(columnRange, 0, wxALL, dialog.FromDIP(10));
+    auto* column = new wxTextCtrl(&dialog, wxID_ANY);
+    column->SetName("Go to column number");
+    column->SetMaxLength(20);
+    contents->Add(column, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     dialog.SetSizerAndFit(contents);
     dialog.Bind(
         wxEVT_BUTTON,
         [&](wxCommandEvent&) {
-            if (GoToLogicalLine(editor, input->GetValue())) {
+            const auto result = GoToLocation(editor, input->GetValue(), column->GetValue());
+            if (result == GoToResult::Moved) {
                 dialog.EndModal(wxID_OK);
                 return;
             }
-            error->SetLabel(wxString::Format("Enter a whole line number from 1 to %lld.",
-                                             static_cast<long long>(editor.Send(Message::GetLineCount))));
-            contents->Fit(&dialog);
-            dialog.Layout();
-            input->SetSelection(-1, -1);
-            input->SetFocus();
+            auto* invalid = result == GoToResult::InvalidColumn ? column : input;
+            // Like the original posted WM_NEXTDLGCTL, move focus after the
+            // command and pending native dialog initialization have completed.
+            dialog.CallAfter([invalid] {
+                invalid->SetSelection(-1, -1);
+                invalid->SetFocus();
+            });
         },
         wxID_OK);
     input->SetSelection(-1, -1);
