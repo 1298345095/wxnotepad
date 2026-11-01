@@ -52,7 +52,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
     try:
         weston_window = None
         if backend == "wayland":
-            weston = subprocess.Popen(["weston", "--backend=x11", "--renderer=pixman",
+            weston = subprocess.Popen(["weston", "--debug", "--backend=x11", "--renderer=pixman",
                 "--no-config", "--socket=wxnotepad-issue12", "--idle-time=0",
                 "--width=1600", "--height=1000"], env=environment, stdout=log,
                 stderr=subprocess.STDOUT, start_new_session=True)
@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
         while test.poll() is None:
             focus = runtime / "focus"
             request = focus.read_text(encoding="utf-8") if focus.exists() else ""
-            if (request in ("editor", "peer", "gesture") or request.startswith(("key:", "focus:", "drag:", "front:", "place:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "gesture") or request.startswith(("key:", "focus:", "drag:", "front:", "geometry:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 def front(title):
                     if backend == "x11":
                         windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
@@ -85,28 +85,31 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     else:
                         xdo("key", "--clearmodifiers", "super+Tab")
                     time.sleep(.3)
-                if request.startswith("place:"):
-                    # Place the two owned Wayland transfer windows side by side
-                    # using Weston's native move gesture and native local hits.
-                    pointer_file, target_x, target_y = request[6:].rsplit(",", 2)
-                    pointer = Path(pointer_file)
-                    pointer.unlink(missing_ok=True)
+                if request.startswith("geometry:"):
+                    focus.write_text("", encoding="utf-8")
+                    # Read only the two owned drag fixture surfaces. Wayland
+                    # clients cannot query their global compositor positions.
+                    scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
+                                           capture_output=True, text=True, timeout=2, check=True).stdout
+                    positions = {name: (int(x), int(y)) for name, x, y in re.findall(
+                        r"top-level window 'wxnotepad stream drag (main|peer)'[^\n]*\n\s*position: \((-?\d+), (-?\d+)\)", scene)}
+                    if set(positions) != {"main", "peer"}:
+                        raise RuntimeError("Private compositor must expose both owned drag surfaces")
+                    response = Path(request[9:])
+                    pending = response.with_suffix(".tmp")
+                    pending.write_text(",".join(map(str, (*positions["main"], *positions["peer"]))), encoding="utf-8")
+                    pending.replace(response)
+                elif request.startswith("move-peer:"):
+                    x1, y1, x2, y2 = map(int, request[10:].split(","))
                     geometry = xdo("getwindowgeometry", "--shell", weston_window)
                     values = dict(line.split("=", 1) for line in geometry.splitlines())
                     ox, oy = int(values["X"]), int(values["Y"])
-                    hit = None
-                    for px, py in ((500, 400), (800, 400), (300, 400), (1100, 400)):
-                        xdo("mousemove", str(px + ox), str(py + oy))
-                        time.sleep(.15)
-                        if pointer.exists():
-                            hit = tuple(map(int, pointer.read_text().split(",")))
-                            break
-                    if hit is None: raise RuntimeError("Owned Wayland peer did not receive native pointer probe")
+                    xdo("mousemove", str(x1 + ox), str(y1 + oy))
                     xdo("keydown", "Super_L")
                     xdo("mousedown", "1")
-                    time.sleep(.1)
-                    xdo("mousemove", str(int(target_x) + hit[0] + ox), str(int(target_y) + hit[1] + oy))
-                    time.sleep(.3)
+                    time.sleep(.15)
+                    xdo("mousemove", str(x2 + ox), str(y2 + oy))
+                    time.sleep(.2)
                     xdo("mouseup", "1")
                     xdo("keyup", "Super_L")
                     focus.write_text("", encoding="utf-8")
