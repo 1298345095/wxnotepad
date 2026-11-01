@@ -82,12 +82,14 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
     sync(true);
     layout->Add(groups, 0, wxEXPAND);
     auto* tabIndents = new wxCheckBox(&dialog, wxID_ANY, "Tab Indents");
-    tabIndents->SetValue(preferences.tabIndents);
+    tabIndents->SetValue(indentation.TabIndents());
     auto* backspace = new wxCheckBox(&dialog, wxID_ANY, "Backspace Unindents");
     backspace->SetValue((preferences.backspaceUnindents & 1) != 0);
     auto* smart = new wxCheckBox(&dialog, wxID_ANY, "Backspace at Indentation Deletes up to Tab Stop");
     smart->SetValue((preferences.backspaceUnindents & 2) != 0);
-    for (auto* control : {tabIndents, backspace, smart})
+    auto* detect = new wxCheckBox(&dialog, wxID_ANY, "Detect Indentation");
+    detect->SetValue(preferences.detectIndentation);
+    for (auto* control : {tabIndents, backspace, smart, detect})
         layout->Add(control, 0, wxALL, 5);
     layout->Add(dialog.CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, 5);
     dialog.SetSizerAndFit(layout);
@@ -96,7 +98,8 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
     scheme = schemeControls.Read();
     scheme.useGlobal = useGlobal->GetValue();
     indentation.SetFileSettings(useScheme->GetValue() ? std::nullopt : std::optional<OriginalTabs>(file.Read()));
-    preferences.tabIndents = tabIndents->GetValue();
+    indentation.SetTabIndents(tabIndents->GetValue());
     preferences.backspaceUnindents = (backspace->GetValue() ? 1 : 0) | (smart->GetValue() ? 2 : 0);
+    preferences.detectIndentation = detect->GetValue();
     return true;
 }

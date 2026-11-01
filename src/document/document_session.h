@@ -3,6 +3,7 @@
 #include <wx/string.h>
 #include "syntax/syntax_catalog.h"
 #include "document/encoding/encoding_detection.h"
+#include "document/file_variables.h"
 #include <optional>
 #include <functional>
 #include <string>
@@ -46,6 +47,7 @@ public:
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
     bool IsDefaultEncoding() const { return systemDefaultEncoding_; }
+    const OriginalFileVariables& FileVariables() const { return fileVariables_; }
     SyntaxLanguage Language() const { return languageOverride_.value_or(automaticLanguage_); }
     std::optional<SyntaxLanguage> LanguageOverride() const { return languageOverride_; }
     void SelectLanguage(std::optional<SyntaxLanguage> language);
@@ -57,6 +59,7 @@ private:
     bool hasBom_ = false;
     EncodingOptions encodingOptions_;
     bool systemDefaultEncoding_ = false;
+    OriginalFileVariables fileVariables_;
     std::optional<SyntaxLanguage> languageOverride_;
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;

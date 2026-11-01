@@ -81,6 +81,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", 4), 0, 256);
     values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", false);
     values.tabIndents = ReadBool("TabIndents", true);
+    values.detectIndentation = ReadBool("DetectIndentation", true);
     values.backspaceUnindents = static_cast<uint8_t>(ReadInt("BackspaceUnindents", 2));
     for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
         auto& tabs = values.schemeTabs[index];
@@ -207,6 +208,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteInt("LineSelection", values.lineSelection, 1);
         WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, false);
         WriteBool("TabIndents", values.tabIndents, true);
+        WriteBool("DetectIndentation", values.detectIndentation, true);
         WriteInt("TabWidth", values.globalTabs.tabWidth, 4);
         WriteInt("IndentWidth", values.globalTabs.indentWidth, 4);
         WriteInt("BackspaceUnindents", values.backspaceUnindents, 2);
