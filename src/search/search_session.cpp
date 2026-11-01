@@ -1,5 +1,6 @@
 #include "search/search_session.h"
 #include "editor/editor_control.h"
+#include <array>
 #include <string>
 #include <utility>
 
@@ -56,6 +57,26 @@ FindAllResult SearchSession::FindAll() {
     editor_.Send(Message::SetIndicatorCurrent, 8);
     const auto limit = editor_.Send(Message::GetLength);
     intptr_t start = 0;
+    const bool multiline = request_.query.find_first_of("\r\n") != wxString::npos;
+    const bool searchForLineEnd = request_.options.regularExpression && query.length() > 1 &&
+                                  query.data()[query.length() - 1] == '$' && query.data()[query.length() - 2] != '\\';
+    // Keep EditMarkAll's 240-range cache and adjacent-range aggregation. This
+    // also determines which lines receive bookmarks for multiline regex ranges.
+    std::array<intptr_t, 480> ranges{};
+    size_t index = 0;
+    const auto markRanges = [&] {
+        for (size_t i = 0; i < index; i += 2) {
+            editor_.Send(Message::IndicatorFillRange, ranges[i], ranges[i + 1]);
+            if (request_.bookmarkMatchedLines) {
+                auto line = editor_.Send(Message::LineFromPosition, ranges[i]);
+                const auto last = multiline ? editor_.Send(Message::LineFromPosition, ranges[i] + ranges[i + 1]) : line;
+                for (; line <= last; ++line) {
+                    if (!(editor_.Send(Message::MarkerGet, line) & 1)) editor_.Send(Message::MarkerAdd, line, 0);
+                }
+            }
+        }
+        index = 0;
+    };
     // EditMarkAll::Continue excludes EOF and advances zero-width matches by a
     // complete character; empty matches count but have no visible mark/bookmark.
     while (start < limit) {
@@ -77,17 +98,16 @@ FindAllResult SearchSession::FindAll() {
             if (start <= found) break;
             continue;
         }
-        editor_.Send(Message::IndicatorFillRange, found, end - found);
-        if (request_.bookmarkMatchedLines) {
-            auto line = editor_.Send(Message::LineFromPosition, found);
-            const bool multiline = request_.query.find_first_of("\r\n") != wxString::npos;
-            const auto last = multiline ? editor_.Send(Message::LineFromPosition, end) : line;
-            for (; line <= last; ++line) {
-                if (!(editor_.Send(Message::MarkerGet, line) & 1)) editor_.Send(Message::MarkerAdd, line, 0);
-            }
+        if (index && found == start && !searchForLineEnd) {
+            ranges[index - 1] += end - found;
+        } else {
+            ranges[index++] = found;
+            ranges[index++] = end - found;
+            if (index == ranges.size()) markRanges();
         }
         start = end;
     }
+    markRanges();
     return {FindStatus::Found, *matchCount_};
 }
 

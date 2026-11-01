@@ -103,6 +103,18 @@ public:
                 Require(result->GetLabel() == "0 matches", "no matches reports zero");
                 std::puts("PASS: original empty-match and anchor counts, invalid regex and no matches");
 
+                load("abc");
+                query->SetValue("a|(?=b)|c");
+                run();
+                Require(result->GetLabel() == "3 matches" && marked(0) && marked(1) && !marked(2),
+                        "original adjacent range aggregation retains mixed zero-width indicator positions");
+                load("a\nb");
+                query->SetValue("a\\n|b");
+                run();
+                Require(result->GetLabel() == "2 matches" && marked(2) && (editor->Send(Message::MarkerGet, 0) & 1) &&
+                            !(editor->Send(Message::MarkerGet, 1) & 1),
+                        "original adjacent multiline regex ranges share the first bookmarked line");
+
                 load("a\nb\na\nb");
                 query->SetValue("a\\nb");
                 run();
