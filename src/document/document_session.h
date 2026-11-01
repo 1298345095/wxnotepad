@@ -40,7 +40,7 @@ public:
                       SaveFileType fileType = SaveType::CurrentScheme);
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt,
-                    std::optional<FileEncoding> weakEncoding = std::nullopt);
+                    std::optional<EncodingChoice> weakEncoding = std::nullopt);
     void New();
     bool HasUtf8Bom() const { return encoding_ == FileEncoding::Utf8 && hasBom_; }
     FileEncoding Encoding() const { return encoding_; }

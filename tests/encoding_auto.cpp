@@ -4,6 +4,9 @@
 #include <wx/wx.h>
 #include <cstdio>
 #include <stdexcept>
+#ifdef __WXMSW__
+#include <windows.h>
+#endif
 
 namespace {
 void Require(bool value, const char* message) {
@@ -42,7 +45,8 @@ public:
                         "ASCII declarations precede the ASCII-as-UTF8 default");
                 const auto check = [&](const char* name, const std::string& input, const std::string& text,
                                        FileEncoding encoding, bool bom, const EncodingOptions& options = {},
-                                       std::optional<FileEncoding> strong = {}, std::optional<FileEncoding> weak = {}) {
+                                       std::optional<FileEncoding> strong = {},
+                                       std::optional<EncodingChoice> weak = {}) {
                     const auto fixture = directory / name;
                     std::ofstream(fixture, std::ios::binary) << input;
                     DocumentSession opened(*editor, options);
@@ -64,6 +68,57 @@ public:
                       {}, {}, FileEncoding::Gbk);
                 check("weak-utf8.txt", "中文\n", "中文\n", FileEncoding::Utf8, false, {}, {}, FileEncoding::Gbk);
                 check("weak-utf16.txt", "plain", "plain", FileEncoding::Utf8, false, {}, {}, FileEncoding::Utf16Le);
+                const auto empty = directory / "empty-reload.txt";
+                std::ofstream(empty, std::ios::binary).close();
+                DocumentSession emptyReload(*editor);
+                Require(emptyReload.Open(
+                                       TestFiles::Filename(empty), [] { return true; }, {},
+                                       EncodingChoice(FileEncoding::Utf16Le, true))
+                                    .status == OpenStatus::Opened &&
+                            emptyReload.Encoding() == FileEncoding::Utf16Le && emptyReload.HasBom(),
+                        "an empty reload keeps the weak UTF-16 BOM choice");
+                Require(emptyReload.Save().status == SaveStatus::Saved && TestFiles::Bytes(empty) == "\xff\xfe",
+                        "Save writes the BOM selected for the empty reload");
+                check("weak-utf16-bom-ascii.txt", "plain", "plain", FileEncoding::Utf8, false, {}, {},
+                      EncodingChoice(FileEncoding::Utf16Le, true));
+                check("weak-utf8-bom-ascii.txt", "plain", "plain", FileEncoding::Utf8, false, {}, {},
+                      EncodingChoice(FileEncoding::Utf8, true));
+                std::ofstream(empty, std::ios::binary).close();
+                Require(emptyReload.Open(
+                                       TestFiles::Filename(empty), [] { return true; }, {},
+                                       EncodingChoice(FileEncoding::Utf8, true))
+                                    .status == OpenStatus::Opened &&
+                            emptyReload.Encoding() == FileEncoding::Utf8 && emptyReload.HasBom(),
+                        "an empty reload keeps the weak UTF-8 BOM choice");
+                Require(emptyReload.Save().status == SaveStatus::Saved && TestFiles::Bytes(empty) == "\xef\xbb\xbf",
+                        "Save writes the UTF-8 BOM selected for the empty reload");
+                const auto nativePath = directory / "native-ansi.txt";
+                const std::string nativeBytes = "\xd6\xd0\xce\xc4\r\n";
+                std::ofstream(nativePath, std::ios::binary) << nativeBytes;
+                DocumentSession nativeDocument(*editor);
+                const auto nativeResult = nativeDocument.Open(
+                    TestFiles::Filename(nativePath), [] { return true; }, {},
+                    EncodingChoice(FileEncoding::Gbk, false, true));
+#ifdef __WXMSW__
+                if (GetACP() == 936) {
+                    Require(
+                        nativeResult.status == OpenStatus::Opened && nativeDocument.Encoding() == FileEncoding::Gbk &&
+                            nativeDocument.IsDefaultEncoding(),
+                        "weak ANSI retains its original native-default identity instead of becoming explicit CP936");
+                    Require(nativeDocument.Save().status == SaveStatus::Saved &&
+                                TestFiles::Bytes(nativePath) == nativeBytes,
+                            "weak ANSI native CP936 Save retains exact bytes");
+                    DocumentSession convertedNative(*editor);
+                    Require(convertedNative.Open(TestFiles::Filename(nativePath), [] { return true; }).status ==
+                                    OpenStatus::Opened &&
+                                !convertedNative.IsDefaultEncoding(),
+                            "LoadANSIasUTF8 maps valid native CP936 to its explicit encoding without weak ANSI");
+                }
+#else
+                if (wxLocale::GetSystemEncodingName().CmpNoCase("UTF-8") == 0)
+                    Require(nativeResult.status == OpenStatus::Failed && nativeResult.error.Contains("UTF-8"),
+                            "a native UTF-8 locale does not invent CP936 as weak ANSI fallback");
+#endif
                 check("strong.txt", "# coding: gbk\nplain", "# coding: gbk\nplain", FileEncoding::Utf8, false, {},
                       FileEncoding::Utf8);
                 check("strong-legacy.txt", "\xc3\xa9", "茅", FileEncoding::Gbk, false, {}, FileEncoding::Gbk);
@@ -130,7 +185,7 @@ public:
                             rejected.error.Contains("not migrated"),
                         "recognized unsupported encoding is explicit");
                 unchanged();
-                std::ofstream(unsupported, std::ios::binary) << "\xfe\xff\0A";
+                std::ofstream(unsupported, std::ios::binary).write("\xfe\xff\0A", 4);
                 Require(protectedDocument.Open(TestFiles::Filename(unsupported), [] { return true; }).status ==
                             OpenStatus::Failed,
                         "UTF-16BE is not silently labeled UTF-8 or UTF-16LE");

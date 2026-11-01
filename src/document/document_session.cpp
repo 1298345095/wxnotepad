@@ -128,7 +128,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
 }
 
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                                 std::optional<FileEncoding> encoding, std::optional<FileEncoding> weakEncoding) {
+                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding) {
     if (!source) return {OpenStatus::Cancelled, {}};
     using Scintilla::Message;
     // Notepad4 FileLoad compares the supplied spelling before canonicalizing the

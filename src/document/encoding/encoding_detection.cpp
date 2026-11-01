@@ -104,6 +104,13 @@ int EncodingIndex(FileEncoding encoding) {
     return -1;
 }
 
+int EncodingIndex(const EncodingChoice& choice) {
+    if (choice.systemDefault) return 0;
+    if (choice.bom && choice.encoding == FileEncoding::Utf16Le) return 2;
+    if (choice.bom && choice.encoding == FileEncoding::Utf8) return 7;
+    return EncodingIndex(choice.encoding);
+}
+
 bool ValidLegacy(unsigned page, std::string_view bytes) {
     if (page == 936) return DecodeGbk(bytes).has_value();
     if (page == 65001) return IsUtf8(bytes);
@@ -140,7 +147,7 @@ std::optional<std::string> FileVariable(std::string_view text, std::string_view 
         std::string value;
         while (offset < text.size() && value.size() < 31) {
             const auto ch = static_cast<unsigned char>(text[offset++]);
-            if (!(std::isalnum(ch) || std::string_view("+-/_#").find(ch) != std::string_view::npos ||
+            if (!(std::isalnum(ch) || std::string_view("+-/_#").find(static_cast<char>(ch)) != std::string_view::npos ||
                   (quoted && ch == ' ')))
                 break;
             value += static_cast<char>(ch);
@@ -275,8 +282,8 @@ int UnicodeFallback(std::string_view bytes, bool skipWithoutNull, unsigned nativ
         if (unit == 0 || unit == 0xffff || unit == 0xfffe || unit == 0xa0d) return 0;
         controls |= unit == 9 || unit == 10 || unit == 13 || unit == 32 || unit == 0x3000;
         reverseControls |= unit == 0x900 || unit == 0xa00 || unit == 0xd00 || unit == 0x2000;
-        const int low = unit & 0xff;
-        const int high = unit >> 8;
+        const int low = static_cast<int>(unit & 0xff);
+        const int high = static_cast<int>(unit >> 8);
         crossLineEndings += (previousHigh == 10 && low == 13) || (previousHigh == 13 && low == 10);
         lowVariation += std::abs(low - previousLow);
         highVariation += std::abs(high - previousHigh);
@@ -354,7 +361,7 @@ bool IsUtf8(std::string_view bytes) {
 
 DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
                                 std::optional<FileEncoding> explicitEncoding, const EncodingOptions& options,
-                                std::optional<FileEncoding> weakEncoding) {
+                                std::optional<EncodingChoice> weakEncoding) {
     const auto native = NativeCodePage();
     const auto legacy = LegacyCodePage(native);
     const auto oem = OemCodePage(native);
@@ -390,7 +397,7 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
                            true);
     constexpr size_t maxConvertedSize = (1U << 30) - 16;
     if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == FileEncoding::Utf8)) {
-        return {*explicitEncoding,
+        return {explicitEncoding,
                 *explicitEncoding == FileEncoding::Utf16Le
                     ? bytes.starts_with("\xff\xfe")
                     : *explicitEncoding == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf"),
@@ -410,12 +417,12 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
     }
     const bool ascii = std::all_of(bytes.begin(), bytes.end(), [](unsigned char ch) { return ch < 128; });
     if (ascii) {
-        int index = weak >= 0 && weak != 4           ? weak
-                    : preferred >= 0                 ? preferred
-                    : declared >= 0                  ? declared
-                    : options.loadASCIIasUTF8        ? 6
-                    : fallback >= 2 && fallback <= 5 ? 0
-                                                     : fallback;
+        int index = weak >= 0 && !(weak >= 2 && weak <= 5) ? weak
+                    : preferred >= 0                       ? preferred
+                    : declared >= 0                        ? declared
+                    : options.loadASCIIasUTF8              ? 6
+                    : fallback >= 2 && fallback <= 5       ? 0
+                                                           : fallback;
         if (index == declared && index > 0 && (catalog[index].codePage == 28591 || catalog[index].codePage == 28599))
             index = CodePageIndex(catalog[index].codePage == 28591 ? 1252 : 1254);
         return asciiChoice(index, false);
@@ -436,5 +443,5 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
         const int unicode = UnicodeFallback(bytes, options.skipUnicodeDetection, native);
         if (unicode) return choose(unicode);
     }
-    return choose(0, !nativeValid || binary || !options.loadANSIasUTF8);
+    return choose(0, !nativeValid || binary || !options.loadANSIasUTF8 || weak == 0);
 }

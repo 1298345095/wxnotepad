@@ -5,7 +5,9 @@ UTF-8/UTF-16LE BOM metadata retained by Save. `DocumentSession::Open` applies
 Notepad4 `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`'s
 `EditDetermineEncoding` decision order. Explicit Open As is authoritative.
 An optional weak choice is available to reload callers; ordinary same-path Open
-does not invent a weak choice.
+does not invent a weak choice. It carries the loaded codec, BOM and native-ANSI
+identity, so an empty reload retains the original BOM choice and a weak native
+ANSI choice retains the original conversion gate.
 
 For nonempty files below the original conversion-size limit, automatic Open
 checks even-sized UTF-16 BOMs, UTF-8 BOMs and Latin UTF-16 without a BOM before
