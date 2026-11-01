@@ -1,6 +1,6 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
-#include "native_search_helpers.h"
+#include "tab_settings_helpers.h"
 #include <wx/app.h>
 #include <wx/ffile.h>
 #include <wx/menu.h>
@@ -69,8 +69,6 @@ void Paint(EditorControl* editor) {
 }
 #ifdef __WXGTK__
 void DialogTab(GtkWidget* dialog, bool shift) {
-    auto* previous = gtk_window_get_focus(GTK_WINDOW(dialog));
-    Require(previous, "native dialog has keyboard focus");
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "dialog keys require private display helper");
     {
@@ -88,6 +86,8 @@ void DialogTab(GtkWidget* dialog, bool shift) {
         wxYield();
         wxMilliSleep(10);
     }
+    auto* previous = gtk_window_get_focus(GTK_WINDOW(dialog));
+    Require(previous, "activated native dialog has keyboard focus");
     {
         wxFFile file(focusFile, "wb");
         file.Write(shift ? "key:shift+Tab" : "key:Tab");
@@ -113,8 +113,26 @@ public:
                 continue;
             Stop();
             try {
+                wxWindow* line = nullptr;
+                wxWindow* column = nullptr;
+                if (title_ == "Go To Line") {
+                    for (auto* window : wxTopLevelWindows) {
+                        if (window->GetHandle() != dialog) continue;
+                        line = wxWindow::FindWindowByName("Go to line number", window);
+                        column = wxWindow::FindWindowByName("Go to column number", window);
+                    }
+                    Require(line && column, "Go To Line exposes its original line and column inputs");
+                    line->SetFocus();
+                    wxYield();
+                }
                 DialogTab(dialog, false);
+                if (column)
+                    Require(gtk_window_get_focus(GTK_WINDOW(dialog)) == column->GetHandle(),
+                            "Tab moves from Go To Line to its Column input");
                 DialogTab(dialog, true);
+                if (line)
+                    Require(gtk_window_get_focus(GTK_WINDOW(dialog)) == line->GetHandle(),
+                            "Shift+Tab returns from Column to Line");
                 checked = true;
             } catch (const std::exception& failure) {
                 error = failure.what();
@@ -349,16 +367,14 @@ public:
                         "indentation invalidates the previous regex match before replacement");
                 std::puts("PASS: search revalidates matches after indentation");
                 SavedBytes(frame);
-                Menu(frame, "Spaces");
-                Menu(frame, "2 Columns");
+                TabDialog::File(frame, 2, 2, true);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文\nB"));
                 editor->Send(Message::SelectAll);
                 Menu(frame, "Indent");
                 Require(Text(editor) == "  中文\n  B", "block menu uses the user-selected spaces and width");
                 NativeTab(editor, true);
                 Require(Text(editor) == "中文\nB", "Shift+Tab uses the user-selected indentation width");
-                Menu(frame, "Tabs");
-                Menu(frame, "8 Columns");
+                TabDialog::File(frame, 8, 8, false);
                 std::puts("PASS: block commands honor native indentation settings menu choices");
 #ifdef __WXGTK__
                 DialogTraversal(frame);

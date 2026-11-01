@@ -57,7 +57,7 @@ public:
                                                std::string("\xff\xfe\x41\0\0\0\0\xdc", 8)};
                 for (const auto& bytes : invalid) {
                     Write(bad, bytes);
-                    const auto failed = frame->Open(Filename(bad));
+                    const auto failed = frame->Open(Filename(bad), FileEncoding::Utf16Le);
                     Require(failed.status == OpenStatus::Failed && failed.error.Contains("UTF-16LE"),
                             "malformed UTF-16LE must report a strict decoding error");
                     Require(Text(frame) == "A中😀\r\nB\nC\r" && frame->DocumentPath() == Filename(source),

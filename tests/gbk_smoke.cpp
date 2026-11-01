@@ -128,15 +128,15 @@ public:
                 const std::string nulBytes("A\0\xd6\xd0", 4);
                 Write(nulPath, nulBytes);
                 auto* binary = new EditorFrame;
-                Require(binary->Open(Filename(nulPath)).status == OpenStatus::Failed,
-                        "default open must not guess GBK");
+                Require(binary->Open(Filename(nulPath), FileEncoding::Utf8).status == OpenStatus::Failed,
+                        "explicit UTF-8 must not fall back to GBK");
                 Require(binary->Open(Filename(nulPath), FileEncoding::Gbk).status == OpenStatus::Opened &&
                             Text(binary) == std::string("A\0中", 5),
                         "explicit GBK must decode after embedded NUL");
                 Require(binary->Save().status == SaveStatus::Saved && Bytes(nulPath) == nulBytes,
                         "embedded NUL must roundtrip");
                 binary->Destroy();
-                std::puts("PASS: malformed complete stream rejection, no guessing/BOM stripping, embedded NUL");
+                std::puts("PASS: malformed stream rejection, explicit encoding/BOM handling, embedded NUL");
                 const auto blocked = directory / "blocked.txt";
                 std::filesystem::create_directory(blocked);
                 Write(blocked / "sentinel", "keep");

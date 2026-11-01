@@ -45,6 +45,12 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   vcpkg's toolchain selection rather than hard-coding a Visual Studio generator.
   CMake arguments cross the PowerShell boundary as a JSON array so drive-letter
   paths, spaces and literal characters survive `pwsh -File` parameter parsing.
+  Both Windows build entry points request English MSVC output and normalize the
+  console input/output code pages to UTF-8 before configuring and building. This
+  keeps CMake and Ninja's `/showIncludes` dependency prefix consistent even when
+  MSVC has only localized message resources installed.
+  A build directory configured with an incorrect localized prefix must be replaced
+  with a fresh build directory; setting the language later does not repair its cache.
 - Binary packages and downloads are cached by OS, architecture, runner image and
   manifest/triplet/provisioning hashes. vcpkg's own ABI keys validate restored packages. Cached installed
   trees or application build directories are not reused between checkouts.
@@ -54,8 +60,9 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   checks, with command-local LF settings for archive and patch application so a
   runner's Git autocrlf configuration cannot change prepared bytes. A real-Git regression test runs on
   both hosts before dependency installation and also checks corrupted-archive rejection.
-  Windows also checks actual CMake argument forwarding and failure propagation
-  through the installed developer shell before provisioning dependencies.
+  Windows also checks actual CMake argument forwarding, failure propagation and
+  header-triggered Ninja rebuilds through the installed developer shell before
+  provisioning dependencies.
   Application CMake configurations explicitly disable manifest installation
   and use the dependency tree provisioned by the workflow.
 - CodeQL initializes after dependency installation, then traces compilation of the
