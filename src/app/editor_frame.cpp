@@ -92,6 +92,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                                    : SyntaxDetectionOptions{}),
       search_(*editor_) {
     if (settings) {
+        editor_->SetLineSelectionMode(static_cast<LineSelectionMode>(settings->values.lineSelection));
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
@@ -191,6 +192,18 @@ EditorFrame::EditorFrame(SettingsStore* settings)
             id);
     }
     edit->AppendSubMenu(indentation, "&Indentation");
+    auto* lineSelection = new wxMenu;
+    const char* lineModes[] = {"&None", "&Visual Studio", "&Normal", "&Old Visual Studio"};
+    for (int value = 0; value < 4; ++value) {
+        const auto mode = static_cast<LineSelectionMode>(value);
+        const int id = wxWindow::NewControlId();
+        lineSelection->AppendRadioItem(id, lineModes[value]);
+        Bind(wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->SetLineSelectionMode(mode); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) { event.Check(editor_->GetLineSelectionMode() == mode); }, id);
+    }
+    edit->AppendSubMenu(lineSelection, "Line Selection &Mode");
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
@@ -366,22 +379,17 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanRedo)); },
         wxID_REDO);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Copy); }, wxID_COPY);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Cut); }, wxID_CUT);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Copy(); }, wxID_COPY);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Cut(); }, wxID_CUT);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Paste); }, wxID_PASTE);
     Bind(
         wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) {
-            event.Enable(editor_->Send(Scintilla::Message::GetSelectionStart) !=
-                         editor_->Send(Scintilla::Message::GetSelectionEnd));
-        },
-        wxID_COPY);
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, wxID_COPY);
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) {
             event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
-                         editor_->Send(Scintilla::Message::GetSelectionStart) !=
-                             editor_->Send(Scintilla::Message::GetSelectionEnd));
+                         editor_->Send(Scintilla::Message::GetLength) != 0);
         },
         wxID_CUT);
     Bind(
@@ -406,6 +414,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
     return settings_->Save(explicitSave);
 }
 

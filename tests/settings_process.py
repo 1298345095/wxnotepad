@@ -21,9 +21,9 @@ class Application:
         self.process = subprocess.Popen(arguments, env=environment)
         self.state = wait_state(folder, self.process, lambda s: s["sequence"] == "0")
 
-    def menu(self, item):
+    def menu(self, item, menu="View"):
         self.sequence += 1
-        command(self.folder, f"{self.sequence}\nmenu\nView\t{item}\n")
+        command(self.folder, f"{self.sequence}\nmenu\n{menu}\t{item}\n")
         self.state = wait_state(self.folder, self.process, lambda s: s["sequence"] == str(self.sequence))
         assert self.state["result"] == "ok", item
 

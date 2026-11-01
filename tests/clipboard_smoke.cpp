@@ -43,9 +43,8 @@ public:
                 "read independently saved native clipboard bytes");
         return bytes;
     }
-    void PreserveSavedRectangle() const {
-        Require(wxCopyFile(directory_ + "/received.txt", "clipboard-shape-peer.txt", true),
-                "retain peer's independent rectangle bytes");
+    void PreserveSavedText(const wxString& filename) const {
+        Require(wxCopyFile(directory_ + "/received.txt", filename, true), "retain peer's independent clipboard bytes");
     }
     Peer(EditorFrame* frame, EditorControl* editor) : frame_(frame), editor_(editor) {
         directory_ = wxFileName::CreateTempFileName("wxnotepad-clipboard-");
@@ -136,11 +135,12 @@ void Gesture(EditorControl* editor) {
     editor->PopEventHandler(false);
     Require(received, "private native modifier gesture must be received before clipboard ownership changes");
 }
-void Key(EditorControl* editor, int key) {
+void Key(EditorControl* editor, int key, bool shift = false, bool control = true) {
     Gesture(editor);
     wxKeyEvent event(wxEVT_KEY_DOWN);
     event.m_keyCode = key;
-    event.m_controlDown = true;
+    event.m_controlDown = control;
+    event.m_shiftDown = shift;
     event.SetEventObject(editor);
     editor->GetEventHandler()->ProcessEvent(event);
 }
@@ -203,6 +203,35 @@ void TextOffer(EditorControl* editor) {
 }
 void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("first\nmiddle\nlast"));
+    editor->Send(Message::GotoPos, 2);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(frame->GetMenuBar()->IsEnabled(wxID_COPY) && frame->GetMenuBar()->IsEnabled(wxID_CUT),
+            "built-in Visual Studio mode enables current-line Copy/Cut with an empty selection");
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    Menu(frame, wxID_COPY);
+    SettleClipboard();
+    Require(peer.Request("shape-read") == "line" && peer.SavedText() == "first\n",
+            "default empty-selection Copy publishes the current line and original line tags");
+    Require(Text(editor) == "first\nmiddle\nlast" && editor->Send(Message::GetCurrentPos) == 2 &&
+                !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+            "current-line Copy preserves bytes, caret and history");
+    editor->Send(Message::GotoPos, 8);
+    Menu(frame, wxID_CUT);
+    Require(Text(editor) == "first\nlast" && editor->Send(Message::GetCurrentPos) == 8,
+            "default empty-selection Cut removes the middle line and retains the next line's column");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "first\nmiddle\nlast" && !editor->Send(Message::GetModify) &&
+                !editor->Send(Message::CanUndo),
+            "one Undo restores current-line Cut and save point");
+    editor->Send(Message::Redo);
+    Require(Text(editor) == "first\nlast", "Redo restores current-line Cut");
+    editor->Send(Message::GotoPos, 8);
+    Key(editor, 'C');
+    SettleClipboard();
+    Require(peer.Request("shape-read") == "line" && peer.SavedText() == "last",
+            "Ctrl+C follows the same current-line option as Copy menu");
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("A\t中文Z\nB\t日本Q"));
     editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
     editor->Send(Message::SetRectangularSelectionAnchor, 1);
@@ -216,7 +245,7 @@ void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 #else
     Require(peer.SavedText() == "\t中文\n\t日本\n", "peer independently saves exact rectangle Unicode/tab bytes");
 #endif
-    peer.PreserveSavedRectangle();
+    peer.PreserveSavedText("clipboard-shape-peer.txt");
     std::puts("PASS: native rectangle marker and independent saved Unicode bytes");
     const auto load = [editor](const char* text, intptr_t start, intptr_t end) {
         editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
@@ -332,6 +361,159 @@ void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer) {
             "stock native text widget offers ordinary Unicode without line/rectangle metadata");
     std::puts("PASS: line/rectangle precedence, insertion/EOL/multi-paste rules, history, read-only and saved bytes");
 }
+void CurrentLines(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const auto load = [editor](const char* text, intptr_t position,
+                               Scintilla::EndOfLine eol = Scintilla::EndOfLine::Lf) {
+        editor->Send(Message::SetReadOnly, 0);
+        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
+        editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(eol));
+        editor->Send(Message::GotoPos, position);
+        editor->Send(Message::EmptyUndoBuffer);
+        editor->Send(Message::SetSavePoint);
+    };
+    auto* other = new EditorControl(frame);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(!frame->GetMenuBar()->IsEnabled(wxID_COPY) && !frame->GetMenuBar()->IsEnabled(wxID_CUT),
+            "empty document disables Copy/Cut menus in the original default mode");
+    for (const auto mode : {LineSelectionMode::None, LineSelectionMode::VisualStudio, LineSelectionMode::Normal,
+                            LineSelectionMode::OldVisualStudio}) {
+        editor->SetLineSelectionMode(mode);
+        load("first\nmiddle\nlast", 8);
+        Require(peer.Request("shape-line") == "ready", "seed a separately owned line clipboard");
+        Key(editor, 'C');
+        SettleClipboard();
+        const auto shape = peer.Request("shape-read");
+        if (mode == LineSelectionMode::None) {
+            Require(shape == "stream" && peer.SavedText() == "中文\tX\n日本\tY",
+                    "None leaves the clipboard untouched for empty-selection Copy");
+            Key(editor, 'X');
+            Require(Text(editor) == "first\nmiddle\nlast" && editor->Send(Message::GetCurrentPos) == 8 &&
+                        !editor->Send(Message::CanUndo),
+                    "None leaves bytes, caret and history untouched for empty-selection Cut");
+        } else {
+            const bool line = mode != LineSelectionMode::Normal;
+            Require(shape == (line ? "line" : "stream") && peer.SavedText() == "middle\n",
+                    "current-line Copy follows the original mode's clipboard meaning");
+            Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify) &&
+                        editor->Send(Message::GetCurrentPos) == 8,
+                    "Copy preserves caret, save point and undo history in every enabled mode");
+            other->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("ab\ncd"));
+            other->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
+            other->Send(Message::GotoPos, 1);
+            other->Send(Message::Paste);
+            Require(Text(other) == (line ? "middle\nab\ncd" : "amiddle\nb\ncd") &&
+                        other->Send(Message::GetCurrentPos) == 8,
+                    "a separate editor document pastes line/stream text at the original position");
+            Key(editor, 'V');
+            Require(Text(editor) == (line ? "first\nmiddle\nmiddle\nlast" : "first\nmimiddle\nddle\nlast") &&
+                        editor->Send(Message::GetCurrentPos) == 15,
+                    "same-editor paste follows the original line/stream meaning and caret offset");
+            editor->Send(Message::Undo);
+            Require(Text(editor) == "first\nmiddle\nlast" && !editor->Send(Message::CanUndo) &&
+                        !editor->Send(Message::GetModify),
+                    "one Undo restores current-line paste and save point");
+            editor->Send(Message::GotoPos, 8);
+            Key(editor, 'X');
+            Require(Text(editor) == "first\nlast" &&
+                        editor->Send(Message::GetCurrentPos) == (mode == LineSelectionMode::OldVisualStudio ? 2 : 8),
+                    "Cut follows the original next-line or old Visual Studio previous-line column");
+            editor->Send(Message::Undo);
+            Require(Text(editor) == "first\nmiddle\nlast" && !editor->Send(Message::CanUndo) &&
+                        !editor->Send(Message::GetModify),
+                    "one Undo restores Cut and save point in every enabled mode");
+            editor->Send(Message::Redo);
+            Require(Text(editor) == "first\nlast", "Redo restores each mode's Cut bytes");
+        }
+        // Explicit line commands remain available in None and use the same tag bit.
+        load("first\nmiddle\nlast", 8);
+        Key(editor, 'C', true);
+        SettleClipboard();
+        Require(peer.Request("shape-read") == ((static_cast<int>(mode) & 1) ? "line" : "stream") &&
+                    peer.SavedText() == "middle\n",
+                "Ctrl+Shift+C follows the actual line-selection option");
+        Key(editor, 'X', true);
+        Require(Text(editor) == "first\nlast" && editor->Send(Message::GetCurrentPos) == 6,
+                "Ctrl+Shift+X retains the original explicit line command position");
+    }
+    delete other;
+    editor->SetLineSelectionMode(LineSelectionMode::VisualStudio);
+    struct Case {
+        const char* before;
+        intptr_t caret;
+        const char* after;
+        intptr_t cutCaret;
+        const char* copied;
+        Scintilla::EndOfLine eol = Scintilla::EndOfLine::Lf;
+    };
+    for (const auto& item : {
+             Case{"first\nmiddle\nlast", 2, "middle\nlast", 2, "first\n"},
+             Case{"first\nmiddle\nlast", 8, "first\nlast", 8, "middle\n"},
+             Case{"first\nmiddle\nlast", 15, "first\nmiddle\n", 13, "last"},
+             Case{"first\nmiddle\nlast\n", 15, "first\nmiddle\n", 13, "last\n"},
+             Case{"first\r\nmiddle\r\nlast", 2, "middle\r\nlast", 2, "first\r\n", Scintilla::EndOfLine::CrLf},
+             Case{"first\r\nmiddle\r\nlast", 9, "first\r\nlast", 9, "middle\r\n", Scintilla::EndOfLine::CrLf},
+             Case{"first\r\nmiddle\r\nlast", 17, "first\r\nmiddle\r\n", 15, "last", Scintilla::EndOfLine::CrLf},
+             Case{"first\r\nmiddle\r\nlast\r\n", 17, "first\r\nmiddle\r\n", 15, "last\r\n", Scintilla::EndOfLine::CrLf},
+             Case{"first\rmiddle\rlast", 8, "first\rlast", 8, "middle\r", Scintilla::EndOfLine::Cr},
+         }) {
+        load(item.before, item.caret, item.eol);
+        Menu(frame, wxID_CUT);
+        Require(Text(editor) == item.after && editor->Send(Message::GetCurrentPos) == item.cutCaret,
+                "first/middle/final-line Cut preserves original EOL and next-line column");
+        SettleClipboard();
+        Require(peer.Request("shape-read") == "line" && peer.SavedText() == item.copied,
+                "independent peer saves exact current-line bytes including the actual final newline");
+        editor->Send(Message::Undo);
+        Require(Text(editor) == item.before && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+                "one Undo restores each boundary Cut and save point");
+        editor->Send(Message::Redo);
+        Require(Text(editor) == item.after, "Redo restores each boundary Cut");
+    }
+    load("first\n\t中文long\nab\tXYZ", 13);
+    Key(editor, 'X');
+    Require(Text(editor) == "first\nab\tXYZ" && editor->Send(Message::GetCurrentPos) == 11,
+            "Cut restores the original expanded column across tabs and Unicode");
+    load("first\nlast\n", 11);
+    Key(editor, 'X');
+    Require(Text(editor) == "first\nlast\n" && editor->Send(Message::GetCurrentPos) == 11 &&
+                !editor->Send(Message::CanUndo),
+            "Cut on the empty final line preserves bytes and history");
+    load("first\nmiddle\nlast", 8);
+    Key(editor, WXK_INSERT);
+    SettleClipboard();
+    Require(peer.Request("shape-read") == "line" && peer.SavedText() == "middle\n",
+            "Ctrl+Insert uses current-line Copy");
+    editor->Send(Message::SetReadOnly, 1);
+    Key(editor, WXK_DELETE, true, false);
+    Require(Text(editor) == "first\nmiddle\nlast" && !editor->Send(Message::CanUndo),
+            "read-only current-line Cut preserves bytes/history");
+    Key(editor, 'C');
+    SettleClipboard();
+    Require(peer.Request("shape-read") == "line" && peer.SavedText() == "middle\n",
+            "read-only current-line Copy remains available");
+    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(Message::GotoPos, 8);
+    Key(editor, WXK_DELETE, true, false);
+    Require(Text(editor) == "first\nlast" && editor->Send(Message::GetCurrentPos) == 8,
+            "Shift+Delete uses current-line Cut");
+    load("first\n中文\tline\nlast", 8);
+    Menu(frame, wxID_COPY);
+    SettleClipboard();
+    Require(peer.Request("shape-read") == "line" && peer.SavedText() == "中文\tline\n",
+            "independent peer saves current-line Unicode and tab bytes");
+    peer.PreserveSavedText("clipboard-line-peer.txt");
+    Key(editor, 'V');
+    Require(frame->SaveAs(wxFileName::GetCwd() + "/clipboard-line-editor.txt").status == SaveStatus::Saved,
+            "save actual same-editor line paste");
+    {
+        wxFFile file("clipboard-line-editor.txt", "rb");
+        std::string bytes(static_cast<size_t>(file.Length()), '\0');
+        Require(file.Read(bytes.data(), bytes.size()) == bytes.size() && bytes == "first\n中文\tline\n中文\tline\nlast",
+                "independent disk bytes preserve current-line paste Unicode, tabs and line position");
+    }
+    std::puts("PASS: all original current-line modes, boundary EOLs, columns, same/peer paste, shortcuts and history");
+}
 class ClipboardApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -370,7 +552,10 @@ public:
                 Require(peer.Request("ready") == "ready", "external clipboard application is running");
                 wxString shapes;
                 if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-                    Shapes(frame, editor, peer);
+                    if (shapes == "lines")
+                        CurrentLines(frame, editor, peer);
+                    else
+                        Shapes(frame, editor, peer);
                     result_ = 0;
                 } else {
                     wxString offerOnly;
@@ -465,8 +650,8 @@ public:
                         SettleClipboard();
                         editor->Send(Message::SetSel, 0, 0);
                         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-                        Require(!frame->GetMenuBar()->IsEnabled(wxID_COPY), "empty selection disables Copy");
-                        Require(!frame->GetMenuBar()->IsEnabled(wxID_CUT), "empty selection disables Cut");
+                        Require(frame->GetMenuBar()->IsEnabled(wxID_COPY), "nonempty document enables Copy");
+                        Require(frame->GetMenuBar()->IsEnabled(wxID_CUT), "nonempty writable document enables Cut");
                         NonTextOffer(editor);
                         Require(!frame->GetMenuBar()->IsEnabled(wxID_PASTE), "non-text clipboard disables Paste menu");
                         Require(peer.Request("copy") == "ready",

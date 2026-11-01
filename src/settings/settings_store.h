@@ -12,6 +12,7 @@ struct OriginalSettings {
     bool autoSelect = true;
     bool noCgiGuess = false;
     int zoomLevel = 100;
+    int lineSelection = 1;
 };
 
 class SettingsStore final {

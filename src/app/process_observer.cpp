@@ -61,6 +61,7 @@ void ProcessObserver::Publish() {
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetViewWS)),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetZoom))));
     state.Write("document_status\t" + frame_->GetStatusBar()->GetStatusText() + "\n");
+    state.Write(wxString::Format("line_selection\t%d\n", static_cast<int>(frame_->Editor()->GetLineSelectionMode())));
     state.Close();
     wxRenameFile(observation_ + "/state.tmp", observation_ + "/state", true);
 }
