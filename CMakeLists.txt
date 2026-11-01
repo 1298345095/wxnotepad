@@ -53,6 +53,7 @@ target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/settings/settings_store.cpp
     src/app/go_to_line_dialog.cpp
     src/app/editor_frame.cpp
     src/app/find_replace_dialog.cpp
@@ -60,6 +61,7 @@ add_library(app_shell STATIC
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
     target_link_libraries(editor_runtime PRIVATE imm32)
+    target_link_libraries(app_shell PRIVATE shell32 ole32)
 endif()
 
 # The pinned core predates C++20 char8_t and is compiled without RTTI on Windows.
@@ -94,6 +96,10 @@ add_gui_program(wxnotepad src/app/main.cpp app_shell)
 
 include(CTest)
 if(BUILD_TESTING)
+    find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME original_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_settings_lifecycle PROPERTIES TIMEOUT 60)
     function(add_editor_test target test_name timeout)
         add_gui_program(${target} tests/${target}.cpp app_shell)
         add_test(NAME ${test_name} COMMAND ${target})
@@ -124,7 +130,6 @@ if(BUILD_TESTING)
     if(WIN32)
         add_editor_test(ime_smoke windows_ime_geometry 30)
         target_link_libraries(ime_smoke PRIVATE imm32)
-        find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
         add_test(NAME windows_dpi_awareness COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_dpi.py" "$<TARGET_FILE:wxnotepad>")
         set_tests_properties(windows_dpi_awareness PROPERTIES TIMEOUT 20)

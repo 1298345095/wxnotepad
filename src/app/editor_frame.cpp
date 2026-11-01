@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "app/find_replace_dialog.h"
 #include "app/go_to_line_dialog.h"
+#include "settings/settings_store.h"
 #include <wx/menu.h>
 #include <wx/filedlg.h>
 #include <wx/filename.h>
@@ -45,9 +46,16 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 }
 } // namespace
 
-EditorFrame::EditorFrame()
+EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
-      editor_(new EditorControl(this)), document_(*editor_), search_(*editor_) {
+      editor_(new EditorControl(this)), settings_(settings), document_(*editor_), search_(*editor_) {
+    if (settings) {
+        editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
+        if (settings->values.wordWrap) editor_->ToggleWordWrap();
+        editor_->Send(Scintilla::Message::SetViewWS,
+                      static_cast<uintptr_t>(settings->values.viewWhiteSpace ? Scintilla::WhiteSpace::VisibleAlways
+                                                                             : Scintilla::WhiteSpace::Invisible));
+    }
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
     file->Append(wxID_OPEN, "&Open...\tCtrl+O");
@@ -217,6 +225,29 @@ EditorFrame::EditorFrame()
     addFoldCommand("&Collapse All", static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
                                         static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
     addFoldCommand("&Expand All", static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
+    if (settings_) {
+        view->AppendSeparator();
+        const int saveOnExit = wxWindow::NewControlId();
+        view->AppendCheckItem(saveOnExit, "Save Settings On E&xit");
+        Bind(
+            wxEVT_MENU, [this](wxCommandEvent&) { settings_->values.saveSettings = !settings_->values.saveSettings; },
+            saveOnExit);
+        Bind(
+            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveSettings); },
+            saveOnExit);
+        const int saveNow = wxWindow::NewControlId();
+        view->Append(saveNow, "Save Settings &Now");
+        Bind(
+            wxEVT_MENU,
+            [this](wxCommandEvent&) {
+                if (SaveSettings(true))
+                    SetStatusText("Settings saved");
+                else
+                    wxMessageBox("Could not write " + settings_->Path(), "Could not save settings", wxOK | wxICON_ERROR,
+                                 this);
+            },
+            saveNow);
+    }
     menus->Append(view, "&View");
     SetMenuBar(menus);
     CreateStatusBar(3);
@@ -306,10 +337,19 @@ EditorFrame::EditorFrame()
             event.Veto();
             return;
         }
+        SaveSettings(false);
         Destroy();
     });
     UpdateDocumentState();
     editor_->SetFocus();
+}
+
+bool EditorFrame::SaveSettings(bool explicitSave) {
+    if (!settings_) return true;
+    settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+    settings_->values.showLineNumbers = editor_->LineNumbersVisible();
+    settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    return settings_->Save(explicitSave);
 }
 
 void EditorFrame::ShowFind(bool replace) {
