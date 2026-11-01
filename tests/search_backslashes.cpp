@@ -185,6 +185,35 @@ public:
                 Require(nativeResult.start == 0 && nativeResult.end == 2,
                         "unchecking transform searches input backslashes literally");
                 std::puts("PASS: native Find/Replace transform control, regex exclusion and enabled/off behavior");
+                dialog->Hide();
+                Load(*editor, "中\n文 中\n文");
+                editor->Send(Message::SetSel, 0, 7);
+                SearchSession seededSearch(*editor);
+                FindResult seededResult{FindStatus::NotFound};
+                auto* seededDialog = new FindReplaceDialog(
+                    frame, *editor, seededSearch, [&](const FindResult& result) { seededResult = result; },
+                    [](wxKeyEvent& event) { event.Skip(); }, 2);
+                seededDialog->Present(false);
+                auto* seededQuery = wxDynamicCast(wxWindow::FindWindowByName("Find query", seededDialog), wxTextCtrl);
+                auto* seededTransform =
+                    wxDynamicCast(wxWindow::FindWindowByName("Transform backslashes", seededDialog), wxCheckBox);
+                Require(seededQuery && seededTransform && seededQuery->GetValue() == wxString::FromUTF8("中\\n文") &&
+                            seededTransform->GetValue(),
+                        "selected multiline query seeds original escaping and enables transform");
+                NativeSearch::Click(seededDialog, wxID_FORWARD);
+                Require(seededResult.status == FindStatus::Found && seededResult.start == 8 && seededResult.end == 15,
+                        "seeded escaped query finds the next actual multiline UTF-8 range");
+                seededDialog->Present(true);
+                wxYield();
+                auto* seededReplacement =
+                    wxDynamicCast(wxWindow::FindWindowByName("Replacement text", seededDialog), wxTextCtrl);
+                Require(seededReplacement, "seeded replacement view exposes replacement input");
+                seededReplacement->SetValue("\\u4E2D\\t\\u6587");
+                NativeSearch::Click(seededDialog, wxID_REPLACE);
+                Require(Text(*editor) == "中\n文 中\t文", "seeded Find and Replace share transformed query bytes");
+                editor->Send(Message::Undo);
+                Require(Text(*editor) == "中\n文 中\n文", "seeded transformed replacement undoes exactly");
+                std::puts("PASS: selected multiline query seeding, automatic transform and actual Find/Replace");
                 frame->Destroy();
                 ExitMainLoop();
             } catch (const std::exception& error) {
