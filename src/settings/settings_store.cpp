@@ -6,6 +6,9 @@
 #include <wx/tokenzr.h>
 #include <wx/utils.h>
 #include <string>
+#include <algorithm>
+#include <cstdlib>
+#include <limits>
 #ifdef __WXMSW__
 #include <shlobj.h>
 #include <filesystem>
@@ -62,6 +65,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.wordWrap = ReadBool("WordWrap", true);
     values.showLineNumbers = ReadBool("ShowLineNumbers", true);
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
+    values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
 }
 
 void SettingsStore::LoadLines() {
@@ -108,7 +112,31 @@ bool SettingsStore::ReadBool(const wxString& key, bool fallback) const {
     return fallback;
 }
 
+int SettingsStore::ReadInt(const wxString& key, int fallback) const {
+    bool settings = false;
+    for (const auto& raw : lines_) {
+        wxString line = raw;
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            settings = line.CmpNoCase("[Settings]") == 0;
+        } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
+            // Original CRTStrToInt accepts a decimal prefix (including a sign).
+            const auto value = line.AfterFirst('=').ToStdString(wxConvUTF8);
+            char* end = nullptr;
+            const long number = std::strtol(value.c_str(), &end, 10);
+            if (end == value.c_str()) return fallback;
+            return static_cast<int>(std::clamp(number, static_cast<long>(std::numeric_limits<int>::min()),
+                                               static_cast<long>(std::numeric_limits<int>::max())));
+        }
+    }
+    return fallback;
+}
+
 void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
+    WriteInt(key, value, fallback);
+}
+
+void SettingsStore::WriteInt(const wxString& key, int value, int fallback) {
     bool settings = false;
     bool foundSection = false;
     size_t insertion = lines_.size();
@@ -132,7 +160,7 @@ void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
         lines_.push_back("[Settings]");
         insertion = lines_.size();
     }
-    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + (value ? "=1" : "=0"));
+    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + wxString::Format("=%d", value));
 }
 
 bool SettingsStore::Save(bool explicitSave) {
@@ -145,6 +173,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("WordWrap", values.wordWrap, true);
         WriteBool("ShowLineNumbers", values.showLineNumbers, true);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
+        WriteInt("ZoomLevel", values.zoomLevel, 100);
     }
     wxString text(wxUniChar(0xFEFF));
     for (const auto& line : lines_)

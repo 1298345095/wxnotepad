@@ -9,6 +9,7 @@ struct OriginalSettings {
     bool wordWrap = true;
     bool showLineNumbers = true;
     bool viewWhiteSpace = false;
+    int zoomLevel = 100;
 };
 
 class SettingsStore final {
@@ -23,5 +24,7 @@ private:
     std::vector<wxString> lines_;
     void LoadLines();
     bool ReadBool(const wxString& key, bool fallback) const;
+    int ReadInt(const wxString& key, int fallback) const;
     void WriteBool(const wxString& key, bool value, bool fallback);
+    void WriteInt(const wxString& key, int value, int fallback);
 };
