@@ -22,6 +22,7 @@ public:
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 auto* wildcard = wxDynamicCast(wxWindow::FindWindowByName("Wildcard search", frame), wxCheckBox);
                 Require(query && wildcard, "native Find exposes original wildcard search mode");
+                Require(!wildcard->GetValue(), "wildcard search defaults off");
                 Toggle(wildcard, true);
                 query->SetValue("a?c");
                 Click(query->GetParent(), wxID_FORWARD);
@@ -127,6 +128,14 @@ public:
                 Require(Text(editor) == "X X\naxc", "selection replacement uses the shared wildcard preparation");
                 editor->Send(Message::Undo);
                 Require(Text(editor) == "a1c a2c\naxc", "wildcard selection replacement undoes together");
+                load("");
+                query->SetValue("*");
+                replacement->SetValue("X");
+                Click(query->GetParent(), wxID_REPLACE_ALL);
+                Require(Text(editor) == "X", "wildcard Replace All includes an initial empty document once");
+                editor->Send(Message::Undo);
+                Require(Text(editor).empty() && !editor->Send(Message::CanUndo),
+                        "empty wildcard replacement restores the original undo boundary");
                 std::puts("PASS: shared Find All, Replace, Replace All, selection replacement and Undo/Redo");
                 result_ = 0;
             } catch (const std::exception& error) {
