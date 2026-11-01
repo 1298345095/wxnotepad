@@ -85,9 +85,9 @@ public:
                     Require(Text(editor) == expected && editor->Send(Message::GetModify),
                             "one Redo restores each complete replacement");
                 };
-                example("a", "a*", "_", "__", "2 replacements");
-                std::puts("PASS: consuming match followed by eligible empty EOF match");
-                example("a", "a|$", "_", "__", "2 replacements");
+                example("a", "a*", "_", "_", "1 replacements");
+                std::puts("PASS: original replacement stops when consuming match reaches EOF");
+                example("a", "a|$", "_", "_", "1 replacements");
                 example("ab", "a|(?=b)", "_", "__b", "2 replacements");
                 example("中文ab", "a*", "_", "_中_文__b_", "5 replacements");
                 example("中文中文", "(?=中)", "_", "_中文_中文", "2 replacements");
@@ -100,7 +100,7 @@ public:
                 example("", "^", "X", "X", "1 replacements");
                 example("", "$", "X", "X", "1 replacements");
                 example("", "\\A|\\z", "X", "X", "1 replacements");
-                example("中\n", "\\A|\\z", "X", "X中\nX", "2 replacements");
+                example("中\n", "\\A|\\z", "X", "X中X\nX", "3 replacements");
                 example("a\r\n", "^", "\\n>", "\n>a\r\n\n>", "2 replacements");
                 example("中", "(?=中)", "中", "中中", "1 replacements");
                 std::puts("PASS: empty/consuming alternatives, anchors, empty/final-newline documents, CRLF and UTF-8 "

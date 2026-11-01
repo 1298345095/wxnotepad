@@ -71,8 +71,11 @@ single replacements and Replace All preserve the save point and redo history.
 Regular expressions use the pinned original core's Boost engine and capture
 formatter, including numeric `$1` / `\1` references and `$&` / `$0` for the whole
 match. Whole word is disabled in regex mode; use explicit regex word boundaries
-instead. Zero-length matches advance on character boundaries, including at
-document ends. Invalid patterns report an error without editing the document.
+instead. Find resumes at the selection endpoint, including repeated zero-length
+matches. Forward assertions use target-local context; backward regex search is
+line by line. Replace All uses the original character/line progress and EOF
+stopping rules. See the [original regex behavior record](docs/observations/original-regex-README.md).
+Invalid patterns report an error without editing the document.
 
 File → New / Ctrl+N and Open / Ctrl+O replace the current document after any
 unsaved changes are saved or discarded. Close uses the same Save/Discard/Cancel

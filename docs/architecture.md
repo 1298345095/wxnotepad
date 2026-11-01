@@ -116,7 +116,7 @@ facilities gives a useful reason to extract it.
 | Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. New/Open reset to Automatic. Successful first Save/Save As apply the semantic selected file type; ordinary Save retains the choice. |
 | Effective language | Derived from session choice + path using the syntax catalog | The UI reads it from the session. Any last-applied style cache is internal installation state, not a second owner of the user's choice. |
 | Find query, replacement, options and wrap preference | `SearchSession` | Existing window/application session; survive New/Open as they do today. The dialog edits this state rather than owning the only copy. |
-| Last match, empty-match progress, revision stamps | `SearchSession` | Invalidated by relevant query/options/selection/document changes and successful document replacement. A failed/cancelled file operation does not reset them. |
+| Regex captures | Original core | Each replacement re-runs the original matcher at the current selection to refresh captures before using them. |
 | Fonts, rendered geometry, native handles, clipboard publication lifetime | Editor/platform implementation | Editor/window or native ownership lifetime. Presentation uses the same layout geometry as input and hit testing. |
 | Dialog visibility/focus, menu widgets, status text | App/UI | Presentation state; never authoritative text or dirty state. |
 
@@ -130,8 +130,8 @@ the current structure retains the one-document window.
 
 ### SearchSession and FindReplaceDialog
 
-`SearchSession` contains Find, ReplaceOne, ReplaceAll and their match/progress
-state, extracted from `editor_frame.cpp`. It operates on the real
+`SearchSession` contains Find, ReplaceOne and ReplaceAll, extracted from
+`editor_frame.cpp`. It operates on the real
 `EditorControl`, uses the original matcher/formatter and returns structured
 outcomes. It does not create widgets or set status-bar strings.
 
@@ -149,10 +149,13 @@ should not repeat the sequence of setting core targets, validating a match,
 expanding folds and scrolling the caret. Byte offsets remain UTF-8 offsets; GUI
 string indices do not become document positions.
 
-Preserve the forward scan used for backward multiline regex searches, capture
-revalidation, zero-width progress, full-document replacement and no-op history
-semantics. Preserve one undo group for a text-changing Replace All. Extraction
-must retain these behaviors before changing an algorithm.
+Regex search uses the pinned target-local context and backward line-by-line
+path. Find resumes directly at the selection endpoint, including an empty match.
+Replace revalidates captures from selection start to document end; Replace All
+uses the original EOF and pattern-leading `^` progress rules. Preserve
+full-document replacement, no-op history semantics and one undo group for a
+text-changing Replace All. The [regex behavior record](observations/original-regex-README.md)
+explains the restored original expectations.
 
 `FindReplaceDialog` owns its widgets and forwards requests to this same session.
 F3, Shift+F3, menu items and dialog buttons share the operations. The frame formats
@@ -197,9 +200,9 @@ The resulting operation sequence is explicit:
 3. **Choose language:** update the document choice and install its effective
    scheme; preserve bytes, selection, encoding and edit history.
 
-The frame calls `SearchSession::ResetMatch()` after successful Open/New. A dirty-
-state notification does not imply document replacement. This small coordination
-keeps the search algorithm and language transition rules out of the frame.
+Search commands read the current core document and selection on every request;
+Open/New need no application match-confirmation state. Search algorithms and
+language transition rules remain outside the frame.
 
 ### Static syntax catalog
 

@@ -4,22 +4,11 @@
 #include <utility>
 
 void SearchSession::Configure(SearchRequest request) {
-    if (request.query != request_.query || request.options != request_.options) {
-        ResetMatch();
-    } else if (request.wrapAround != request_.wrapAround) {
-        regexMatch_.reset();
-    }
     request_ = std::move(request);
-}
-
-void SearchSession::ResetMatch() {
-    regexMatch_.reset();
-    lastEmptyMatch_.reset();
 }
 
 FindResult SearchSession::Find(SearchDirection direction) {
     const bool forward = direction == SearchDirection::Forward;
-    regexMatch_.reset();
     const wxString queryText = request_.query;
     const auto query = queryText.utf8_str();
     if (!query.length()) return {FindStatus::EmptyQuery};
@@ -28,56 +17,18 @@ FindResult SearchSession::Find(SearchDirection direction) {
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
     const auto start = editor_.Send(forward ? Message::GetSelectionEnd : Message::GetSelectionStart);
     const auto length = editor_.Send(Message::GetLength);
-    const bool afterEmpty = request_.options.regularExpression && lastEmptyMatch_ &&
-                            start == lastEmptyMatch_->position &&
-                            editor_.Send(Message::GetSelectionStart) == editor_.Send(Message::GetSelectionEnd) &&
-                            lastEmptyMatch_->documentRevision == editor_.DocumentRevision() &&
-                            lastEmptyMatch_->selectionRevision == editor_.SelectionRevision();
     const auto search = [&](intptr_t from, intptr_t to) {
         editor_.Send(Message::SetTargetStart, from);
         editor_.Send(Message::SetTargetEnd, to);
         return editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) >= 0;
     };
     bool wrapped = false;
-    bool found = false;
-    if (request_.options.regularExpression && !forward) {
-        // The pinned Boost backward path is line-by-line. Scan forward so
-        // Previous sees the same explicit cross-line matches as Next.
-        intptr_t previousStart = -1, previousEnd = -1;
-        intptr_t lastStart = -1, lastEnd = -1;
-        for (intptr_t position = 0; position <= length;) {
-            if (!search(position, length)) break;
-            lastStart = editor_.Send(Message::GetTargetStart);
-            lastEnd = editor_.Send(Message::GetTargetEnd);
-            if (lastEnd <= start && !(afterEmpty && lastStart == start && lastEnd == start)) {
-                previousStart = lastStart;
-                previousEnd = lastEnd;
-            }
-            if (lastStart == lastEnd) {
-                if (lastEnd == length) break;
-                position = editor_.Send(Message::PositionAfter, lastEnd);
-            } else {
-                position = lastEnd;
-            }
-        }
-        if (previousStart < 0 && request_.wrapAround) {
-            wrapped = true;
-            previousStart = lastStart;
-            previousEnd = lastEnd;
-        }
-        found = previousStart >= 0;
-        if (found) {
-            editor_.Send(Message::SetTargetStart, previousStart);
-            editor_.Send(Message::SetTargetEnd, previousEnd);
-        }
-    } else {
-        found = !(afterEmpty && start == length) &&
-                search(afterEmpty ? editor_.Send(Message::PositionAfter, start) : start, forward ? length : 0);
-    }
-    if (!found && request_.wrapAround && !(request_.options.regularExpression && !forward)) {
+    // EditFindNext/EditFindPrev use the selection endpoint directly, even
+    // after an empty match. Let the pinned matcher choose the backward path.
+    bool found = search(start, forward ? length : 0);
+    if (!found && request_.wrapAround && (forward ? start > 0 : start < length)) {
         wrapped = true;
-        found = search(forward ? 0 : length, request_.options.regularExpression ? length : start);
-        if (request_.options.regularExpression && found && editor_.Send(Message::GetTargetStart) > start) found = false;
+        found = search(forward ? 0 : length, forward ? length : 0);
     }
     if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
         return {FindStatus::InvalidPattern};
@@ -85,6 +36,11 @@ FindResult SearchSession::Find(SearchDirection direction) {
     if (!found) {
         return {FindStatus::NotFound};
     }
+    return SelectTarget(wrapped);
+}
+
+FindResult SearchSession::SelectTarget(bool wrapped) {
+    using Scintilla::Message;
     const auto matchStart = editor_.Send(Message::GetTargetStart);
     const auto matchEnd = editor_.Send(Message::GetTargetEnd);
     const auto firstLine = editor_.Send(Message::LineFromPosition, matchStart);
@@ -95,11 +51,6 @@ FindResult SearchSession::Find(SearchDirection direction) {
     for (auto line = firstLine; line <= lastLine; ++line)
         editor_.Send(Message::EnsureVisible, line);
     editor_.Send(Message::SetSel, matchStart, matchEnd);
-    lastEmptyMatch_.reset();
-    if (request_.options.regularExpression && matchStart == matchEnd)
-        lastEmptyMatch_ = EmptyMatch{matchStart, editor_.DocumentRevision(), editor_.SelectionRevision()};
-    if (request_.options.regularExpression)
-        regexMatch_ = RegexMatch{matchStart, matchEnd, editor_.DocumentRevision(), editor_.SelectionRevision()};
     editor_.Send(Message::ScrollCaret);
     return {FindStatus::Found, wrapped, matchStart, matchEnd};
 }
@@ -120,22 +71,21 @@ ReplaceOneResult SearchSession::ReplaceOne() {
     using Scintilla::Message;
     const auto start = editor_.Send(Message::GetSelectionStart);
     const auto end = editor_.Send(Message::GetSelectionEnd);
-    if (request_.options.regularExpression && (!regexMatch_ || regexMatch_->start != start || regexMatch_->end != end ||
-                                               regexMatch_->documentRevision != editor_.DocumentRevision() ||
-                                               regexMatch_->selectionRevision != editor_.SelectionRevision())) {
-        return {false, Find(SearchDirection::Forward)};
-    }
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
     editor_.Send(Message::SetTargetStart, start);
     editor_.Send(Message::SetTargetEnd, request_.options.regularExpression ? editor_.Send(Message::GetLength) : end);
-    // Regex assertions retain document-end context; the core patch also retains
-    // preceding context. Both result endpoints must still equal the selection.
-    if ((start == end &&
-         !(request_.options.regularExpression && lastEmptyMatch_ && lastEmptyMatch_->position == start &&
-           lastEmptyMatch_->documentRevision == editor_.DocumentRevision())) ||
-        editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) != start ||
-        editor_.Send(Message::GetTargetEnd) != end) {
+    // EditReplace re-runs the original forward matcher from selection start to
+    // document end, then uses those captures only if both endpoints match.
+    if (!request_.options.regularExpression && start == end) return {false, Find(SearchDirection::Forward)};
+    const auto found = editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data()));
+    if (request_.options.regularExpression && found >= 0 &&
+        (found != start || editor_.Send(Message::GetTargetEnd) != end)) {
+        // EditReplace selects this candidate without replacing it; restarting
+        // at selection end would skip matches within the original selection.
+        return {false, SelectTarget(false)};
+    }
+    if (found != start || editor_.Send(Message::GetTargetEnd) != end) {
         return {false, Find(SearchDirection::Forward)};
     }
     const wxString replacementText = request_.replacement;
@@ -158,10 +108,6 @@ ReplaceOneResult SearchSession::ReplaceOne() {
         after = editor_.Send(Message::GetTargetEnd);
     }
     editor_.Send(Message::SetSel, after, after);
-    if (request_.options.regularExpression && start == end) {
-        // Skip inserted bytes, then one original character. EOF is processed once.
-        lastEmptyMatch_ = EmptyMatch{after, editor_.DocumentRevision(), editor_.SelectionRevision()};
-    }
     return {changesBytes, Find(SearchDirection::Forward)};
 }
 
@@ -173,10 +119,12 @@ ReplaceAllResult SearchSession::ReplaceAll() {
     using Scintilla::Message;
     size_t count = 0;
     bool editing = false;
+    const bool regexStartOfLine = request_.options.regularExpression && query.length() && query.data()[0] == '^';
     intptr_t start = 0;
     auto limit = editor_.Send(Message::GetLength);
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
-    // Regex may match the empty document or the boundary after a consuming match.
+    // An initial empty document is eligible; EditReplaceAll stops as soon as a
+    // replacement reaches the updated document end.
     while (query.length() && (start < limit || (request_.options.regularExpression && start == limit))) {
         editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
         editor_.Send(Message::SetTargetStart, start);
@@ -215,11 +163,18 @@ ReplaceAllResult SearchSession::ReplaceAll() {
             start = matchEnd;
         }
         ++count;
-        if (matchStart == matchEnd) {
-            if (start == limit) break; // This EOF boundary has now been visited.
-            // Skip inserted bytes, then one original character. Never split UTF-8;
-            // the core normalizes a candidate between CR and LF to the next line.
+        if (start == limit) break;
+        if (matchStart == matchEnd && !regexStartOfLine) {
             start = editor_.Send(Message::PositionAfter, start);
+        }
+        // Preserve the original pattern-leading '^' progress rule when the
+        // replacement ends at a line start. Other anchor spellings use
+        // ordinary empty-match character progress (Edit.cpp:5828-5842).
+        if (regexStartOfLine) {
+            const auto line = editor_.Send(Message::LineFromPosition, start);
+            if (editor_.Send(Message::PositionFromLine, line) == start)
+                start = editor_.Send(Message::PositionFromLine, line + 1);
+            if (start == limit) break;
         }
     }
     if (editing) editor_.Send(Message::EndUndoAction);

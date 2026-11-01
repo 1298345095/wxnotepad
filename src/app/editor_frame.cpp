@@ -448,7 +448,6 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
         GetMenuBar()->Check(automaticLanguageId_, true);
-        search_.ResetMatch();
     }
     UpdateDocumentState();
     return result;
@@ -472,7 +471,6 @@ bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
     GetMenuBar()->Check(automaticLanguageId_, true);
-    search_.ResetMatch();
     UpdateDocumentState();
     return true;
 }
