@@ -113,7 +113,7 @@ facilities gives a useful reason to extract it.
 | State | Owner | Lifetime/rule |
 | --- | --- | --- |
 | Text, undo/redo, dirty/save point, EOL insertion, selection, fold visibility | Original core | One core document per existing editor window; read state through the editor. |
-| Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. New/Open reset to Automatic. Successful first Save/Save As apply the semantic selected file type; ordinary Save retains the choice. |
+| Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. New/different-path Open reset to Automatic; same-path reopen retains the choice and effective scheme. Successful first Save/Save As apply the semantic selected file type; ordinary Save retains the choice. |
 | Effective language | Derived from session choice + path using the syntax catalog | The UI reads it from the session. Any last-applied style cache is internal installation state, not a second owner of the user's choice. |
 | Find query, replacement, options and wrap preference | `SearchSession` | Existing window/application session; survive New/Open as they do today. The dialog edits this state rather than owning the only copy. |
 | Regex captures | Original core | Each replacement re-runs the original matcher at the current selection to refresh captures before using them. |
@@ -173,7 +173,7 @@ test dependencies.
 
 The document-local language choice belongs to the session. It exposes a
 language selection operation and read-only effective-language/override state.
-Successful Open/New reset to Automatic. First Save and Save As carry a semantic
+Successful New and different-path Open reset to Automatic; reopening the current supplied path retains the effective scheme and document language choice. First Save and Save As carry a semantic
 `SaveFileType`: a specific `SyntaxLanguage` forces that document language, while
 `SaveType::AllFiles` clears the override and classifies the resulting filename.
 Path-only calls default to `SaveType::CurrentScheme`, resolving the effective
