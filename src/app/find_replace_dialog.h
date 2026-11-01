@@ -25,6 +25,7 @@ private:
     wxCheckBox* matchCase_;
     wxCheckBox* wholeWord_;
     wxCheckBox* regularExpression_;
+    wxCheckBox* wildcardSearch_;
     wxCheckBox* wrapAround_;
     wxCheckBox* bookmarkMatchedLines_;
     wxButton* findAllButton_;

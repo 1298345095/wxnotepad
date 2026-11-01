@@ -4,5 +4,6 @@ struct SearchOptions {
     bool matchCase = false;
     bool wholeWord = false;
     bool regularExpression = false;
+    bool wildcardSearch = false;
     bool operator==(const SearchOptions&) const = default;
 };

@@ -4,6 +4,35 @@
 #include <string>
 #include <utility>
 
+namespace {
+// Adapted from Notepad4 89b8b36, src/Edit.cpp EscapeWildcards
+// (BSD-3-Clause; see licenses/Notepad4.txt). Documents use UTF-8, without DBCS pairs.
+std::string EscapeWildcards(const char* input) {
+    std::string output;
+    while (*input) {
+        char ch = *input++;
+        if (ch == '*') {
+            output.push_back('.');
+        } else if (ch == '?') {
+            ch = '.';
+        } else if (ch == '.' || ch == '^' || ch == '$' || ch == '\\' || ch == '[' || ch == ']' || ch == '+') {
+            output.push_back('\\');
+        }
+        output.push_back(ch);
+    }
+    return output;
+}
+} // namespace
+
+std::string SearchSession::QueryBytes() const {
+    const auto utf8 = request_.query.utf8_str();
+    return request_.options.wildcardSearch ? EscapeWildcards(utf8.data()) : std::string(utf8.data(), utf8.length());
+}
+
+bool SearchSession::UsesRegex() const {
+    return request_.options.regularExpression || request_.options.wildcardSearch;
+}
+
 SearchSession::SearchSession(EditorControl& editor) : editor_(editor) {
     editor_.Bind(wxEVT_EDITOR_STATE_CHANGED, &SearchSession::OnEditorState, this);
 }
@@ -41,12 +70,11 @@ FindAllResult SearchSession::FindAll() {
     // EditMarkAll::Reset retains Find All bookmarks on ordinary invalidation,
     // and replaces them when another Find All operation starts.
     if (bookmarkForFindAll_) editor_.Send(Message::MarkerDeleteAll, 0);
-    const auto query = request_.query.utf8_str();
+    const auto query = QueryBytes();
     if (!query.length()) return {FindStatus::EmptyQuery};
     markedRevision_ = editor_.DocumentRevision();
     matchCount_ = 0;
-    if (request_.options.regularExpression && query.length() == 1 &&
-        (query.data()[0] == '^' || query.data()[0] == '$')) {
+    if (UsesRegex() && query.length() == 1 && (query.data()[0] == '^' || query.data()[0] == '$')) {
         // Pinned EditMarkAll::Start counts these anchors without indicators or bookmarks.
         *matchCount_ = static_cast<size_t>(editor_.Send(Message::GetLineCount) - (query.data()[0] == '^'));
         return {FindStatus::Found, *matchCount_};
@@ -58,8 +86,8 @@ FindAllResult SearchSession::FindAll() {
     const auto limit = editor_.Send(Message::GetLength);
     intptr_t start = 0;
     const bool multiline = request_.query.find_first_of("\r\n") != wxString::npos;
-    const bool searchForLineEnd = request_.options.regularExpression && query.length() > 1 &&
-                                  query.data()[query.length() - 1] == '$' && query.data()[query.length() - 2] != '\\';
+    const bool searchForLineEnd = UsesRegex() && query.length() > 1 && query.data()[query.length() - 1] == '$' &&
+                                  query.data()[query.length() - 2] != '\\';
     // Keep EditMarkAll's 240-range cache and adjacent-range aggregation. This
     // also determines which lines receive bookmarks for multiline regex ranges.
     std::array<intptr_t, 480> ranges{};
@@ -113,8 +141,7 @@ FindAllResult SearchSession::FindAll() {
 
 FindResult SearchSession::Find(SearchDirection direction) {
     const bool forward = direction == SearchDirection::Forward;
-    const wxString queryText = request_.query;
-    const auto query = queryText.utf8_str();
+    const auto query = QueryBytes();
     if (!query.length()) return {FindStatus::EmptyQuery};
     using Scintilla::Message;
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
@@ -165,12 +192,13 @@ Scintilla::FindOption SearchSession::SearchFlags() const {
     if (request_.options.wholeWord) flags = flags | Scintilla::FindOption::WholeWord;
     if (request_.options.regularExpression)
         flags = flags | Scintilla::FindOption::RegExp | Scintilla::FindOption::Cxx11RegEx;
+    else if (request_.options.wildcardSearch)
+        flags = flags | Scintilla::FindOption::RegExp;
     return flags;
 }
 
 ReplaceOneResult SearchSession::ReplaceOne() {
-    const wxString queryText = request_.query;
-    const auto query = queryText.utf8_str();
+    const auto query = QueryBytes();
     if (!query.length()) return {false, FindResult{FindStatus::EmptyQuery}};
     using Scintilla::Message;
     const auto start = editor_.Send(Message::GetSelectionStart);
@@ -178,13 +206,12 @@ ReplaceOneResult SearchSession::ReplaceOne() {
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
     editor_.Send(Message::SetTargetStart, start);
-    editor_.Send(Message::SetTargetEnd, request_.options.regularExpression ? editor_.Send(Message::GetLength) : end);
+    editor_.Send(Message::SetTargetEnd, UsesRegex() ? editor_.Send(Message::GetLength) : end);
     // EditReplace re-runs the original forward matcher from selection start to
     // document end, then uses those captures only if both endpoints match.
-    if (!request_.options.regularExpression && start == end) return {false, Find(SearchDirection::Forward)};
+    if (!UsesRegex() && start == end) return {false, Find(SearchDirection::Forward)};
     const auto found = editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data()));
-    if (request_.options.regularExpression && found >= 0 &&
-        (found != start || editor_.Send(Message::GetTargetEnd) != end)) {
+    if (UsesRegex() && found >= 0 && (found != start || editor_.Send(Message::GetTargetEnd) != end)) {
         // EditReplace selects this candidate without replacing it; restarting
         // at selection end would skip matches within the original selection.
         return {false, SelectTarget(false)};
@@ -201,14 +228,14 @@ ReplaceOneResult SearchSession::ReplaceOne() {
     editor_.Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(selected.data()));
     selected.pop_back();
     bool changesBytes = replacement != selected;
-    if (request_.options.regularExpression) {
+    if (UsesRegex()) {
         const auto expanded = editor_.ExpandRegexReplacement(replacement);
         if (!expanded) return {};
         changesBytes = *expanded != selected;
     }
     if (changesBytes) {
-        editor_.Send(request_.options.regularExpression ? Message::ReplaceTargetRE : Message::ReplaceTarget,
-                     replacement.length(), reinterpret_cast<intptr_t>(replacement.c_str()));
+        editor_.Send(UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget, replacement.length(),
+                     reinterpret_cast<intptr_t>(replacement.c_str()));
         after = editor_.Send(Message::GetTargetEnd);
     }
     editor_.Send(Message::SetSel, after, after);
@@ -225,21 +252,20 @@ ReplaceAllResult SearchSession::ReplaceInSelection() {
 }
 
 ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
-    const wxString queryText = request_.query;
-    const auto query = queryText.utf8_str();
+    const auto query = QueryBytes();
     const wxString replacementText = request_.replacement;
     const auto replacement = replacementText.utf8_str();
     using Scintilla::Message;
     size_t count = 0;
     bool editing = false;
-    const bool regexStartOfLine = request_.options.regularExpression && query.length() && query.data()[0] == '^';
+    const bool regexStartOfLine = UsesRegex() && query.length() && query.data()[0] == '^';
     intptr_t start = inSelection ? editor_.Send(Message::GetSelectionStart) : 0;
     intptr_t replacementEnd = start;
     auto limit = editor_.Send(Message::GetLength);
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     // An initial empty document is eligible; EditReplaceAll stops as soon as a
     // replacement reaches the updated document end.
-    while (query.length() && (start < limit || (request_.options.regularExpression && start == limit))) {
+    while (query.length() && (start < limit || (UsesRegex() && start == limit))) {
         editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
         editor_.Send(Message::SetTargetStart, start);
         editor_.Send(Message::SetTargetEnd, limit);
@@ -260,8 +286,8 @@ ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
         editor_.Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(matched.data()));
         matched.resize(length);
         const std::string replacementBytes(replacement.data(), replacement.length());
-        const auto expanded = request_.options.regularExpression ? editor_.ExpandRegexReplacement(replacementBytes)
-                                                                 : std::optional<std::string>(replacementBytes);
+        const auto expanded = UsesRegex() ? editor_.ExpandRegexReplacement(replacementBytes)
+                                          : std::optional<std::string>(replacementBytes);
         if (!expanded) {
             if (editing) editor_.Send(Message::EndUndoAction);
             return {ReplaceAllStatus::ExpansionFailed, count, editing};
@@ -272,8 +298,8 @@ ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
                 editing = true;
             }
             const auto inserted =
-                editor_.Send(request_.options.regularExpression ? Message::ReplaceTargetRE : Message::ReplaceTarget,
-                             replacementBytes.size(), reinterpret_cast<intptr_t>(replacementBytes.c_str()));
+                editor_.Send(UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget, replacementBytes.size(),
+                             reinterpret_cast<intptr_t>(replacementBytes.c_str()));
             limit += inserted - (matchEnd - matchStart);
             start = matchStart + inserted;
         } else {

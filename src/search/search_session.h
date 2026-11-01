@@ -5,6 +5,7 @@
 #include <ScintillaTypes.h>
 #include <wx/string.h>
 #include <optional>
+#include <string>
 
 class EditorControl;
 class wxCommandEvent;
@@ -63,6 +64,8 @@ private:
     void ClearFindAll();
     void OnEditorState(wxCommandEvent& event);
     Scintilla::FindOption SearchFlags() const;
+    bool UsesRegex() const;
+    std::string QueryBytes() const;
     FindResult SelectTarget(bool wrapped);
     ReplaceAllResult ReplaceRange(bool inSelection);
 };

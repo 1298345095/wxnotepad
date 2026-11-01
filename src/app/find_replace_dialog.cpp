@@ -32,6 +32,11 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     regularExpression_->SetName("Regular expression");
     regularExpression_->SetValue(request.options.regularExpression);
     layout->Add(regularExpression_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
+    wildcardSearch_ = new wxCheckBox(this, wxID_ANY, "&Wildcard search");
+    wildcardSearch_->SetName("Wildcard search");
+    wildcardSearch_->SetValue(request.options.wildcardSearch);
+    wildcardSearch_->SetToolTip("* matches zero or more characters; ? matches exactly one character.");
+    layout->Add(wildcardSearch_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
     replacementLabel_ = new wxStaticText(this, wxID_ANY, "Replace &with:");
     layout->Add(replacementLabel_, 0, wxALL, 8);
     replacement_ = new wxTextCtrl(this, wxID_ANY, request.replacement, wxDefaultPosition, wxSize(320, -1));
@@ -80,7 +85,17 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
         ConfigureSearch();
         event.Skip();
     });
-    for (auto* option : {matchCase_, wholeWord_, regularExpression_}) {
+    regularExpression_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+        if (regularExpression_->GetValue()) wildcardSearch_->SetValue(false);
+        wholeWord_->Enable(!regularExpression_->GetValue());
+        ConfigureSearch();
+    });
+    wildcardSearch_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+        regularExpression_->SetValue(false);
+        wholeWord_->Enable();
+        ConfigureSearch();
+    });
+    for (auto* option : {matchCase_, wholeWord_}) {
         option->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
             wholeWord_->Enable(!regularExpression_->GetValue());
             ConfigureSearch();
@@ -145,11 +160,12 @@ void FindReplaceDialog::Present(bool replace) {
 void FindReplaceDialog::ConfigureSearch() {
     replaceSelectionButton_->Enable(!query_->IsEmpty());
     findAllButton_->Enable(!query_->IsEmpty());
-    search_.Configure({query_->GetValue(),
-                       replacement_->GetValue(),
-                       {matchCase_->GetValue(), wholeWord_->GetValue(), regularExpression_->GetValue()},
-                       wrapAround_->GetValue(),
-                       bookmarkMatchedLines_->GetValue()});
+    search_.Configure(
+        {query_->GetValue(),
+         replacement_->GetValue(),
+         {matchCase_->GetValue(), wholeWord_->GetValue(), regularExpression_->GetValue(), wildcardSearch_->GetValue()},
+         wrapAround_->GetValue(),
+         bookmarkMatchedLines_->GetValue()});
     if (!search_.MatchCount()) findAllResult_->SetLabel("");
 }
 
