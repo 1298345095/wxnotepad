@@ -11,11 +11,14 @@ from resource_process import command, wait_state
 
 
 class Application:
-    def __init__(self, executable, folder, environment):
+    def __init__(self, executable, folder, environment, startup=None):
         self.folder = folder
         self.sequence = 0
         (folder / "state").unlink(missing_ok=True)
-        self.process = subprocess.Popen([str(executable), "--observe", str(folder)], env=environment)
+        arguments = [str(executable), "--observe", str(folder)]
+        if startup is not None:
+            arguments += ["--startup-file", str(startup)]
+        self.process = subprocess.Popen(arguments, env=environment)
         self.state = wait_state(folder, self.process, lambda s: s["sequence"] == "0")
 
     def menu(self, item):
@@ -61,6 +64,8 @@ def main():
         seed = executable_folder / "Notepad4.ini-default"
         seed.write_text("[Settings]\nWordWrap=invalid\nShowLineNumbers=1\nViewWhiteSpace=0\n"
                         "UnrelatedSetting=keep\n[Styles]\nUnrelatedStyle=保留\n", encoding="utf-16")
+        startup = folder / "startup.txt"
+        startup.write_bytes(b"settings survive startup file loading\n")
         app = Application(executable, folder, environment)
         try:
             view(app.state, True, True, False)
@@ -72,7 +77,7 @@ def main():
             assert "WordWrap=0" in saved and "ShowLineNumbers=0" in saved and "ViewWhiteSpace=1" in saved, repr(saved)
         finally:
             app.stop()
-        app = Application(executable, folder, environment)
+        app = Application(executable, folder, environment, startup)
         try:
             view(app.state, False, False, True)
             app.menu("Save Settings On Exit")
