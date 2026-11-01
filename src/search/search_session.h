@@ -40,7 +40,6 @@ public:
     explicit SearchSession(EditorControl& editor) : editor_(editor) {}
     const SearchRequest& Request() const { return request_; }
     void Configure(SearchRequest request);
-    void ResetMatch();
     FindResult Find(SearchDirection direction);
     ReplaceOneResult ReplaceOne();
     ReplaceAllResult ReplaceAll();
@@ -48,18 +47,6 @@ public:
 private:
     EditorControl& editor_;
     SearchRequest request_;
-    struct EmptyMatch {
-        intptr_t position;
-        uint64_t documentRevision;
-        uint64_t selectionRevision;
-    };
-    struct RegexMatch {
-        intptr_t start;
-        intptr_t end;
-        uint64_t documentRevision;
-        uint64_t selectionRevision;
-    };
-    std::optional<EmptyMatch> lastEmptyMatch_;
-    std::optional<RegexMatch> regexMatch_;
     Scintilla::FindOption SearchFlags() const;
+    FindResult SelectTarget(bool wrapped);
 };
