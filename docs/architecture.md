@@ -143,6 +143,7 @@ The interface has a small set of operations:
 | Find | Direction | Found/no match/invalid pattern/empty query, matched byte range and wrap status |
 | Replace one | Current configured search | Whether a replacement occurred and the following search outcome |
 | Replace all | Current configured search | Replacement count, whether bytes changed, or an error |
+| Replace in selection | Current configured search and live editor selection | Replacement count, whether bytes changed, or an error/rectangular-selection outcome |
 
 The module performs match selection and fold reveal as part of Find. Callers
 should not repeat the sequence of setting core targets, validating a match,
@@ -156,6 +157,11 @@ uses the original EOF and pattern-leading `^` progress rules. Preserve
 full-document replacement, no-op history semantics and one undo group for a
 text-changing Replace All. The [regex behavior record](observations/original-regex-README.md)
 explains the restored original expectations.
+Replace in Selection shares that loop and its matcher/formatter. It searches from
+the original stream selection start to document end, rejects the first match
+whose end crosses the live selection end, and retains the original core's endpoint
+adjustments plus final replacement-end repair. Its structured rectangular-selection
+outcome is presented as a native warning by the dialog.
 
 `FindReplaceDialog` owns its widgets and forwards requests to this same session.
 F3, Shift+F3, menu items and dialog buttons share the operations. The frame formats

@@ -8,6 +8,11 @@
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
+#include <wx/combobox.h>
+#include <wx/dialog.h>
+#include <wx/sizer.h>
+#include <wx/stattext.h>
+#include <cstdlib>
 #include <vector>
 
 namespace {
@@ -15,6 +20,40 @@ struct ChosenSaveFile {
     wxString path;
     SaveFileType type;
 };
+
+void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
+    using Scintilla::Message;
+    // Original Dialogs.cpp::ZoomLevelDlgProc and InitZoomLevelComboBox.
+    wxDialog dialog(parent, wxID_ANY, "Zoom Level");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Zoom level (10% to 500%):"), 0, wxALL, dialog.FromDIP(10));
+    auto* input =
+        new wxComboBox(&dialog, wxID_ANY, wxString::Format("%d%%", static_cast<int>(editor.Send(Message::GetZoom))));
+    input->SetName("Zoom level");
+    input->SetMaxLength(8);
+    for (int level : {500, 450, 400, 350, 300, 250, 200, 175, 150, 125, 100, 75, 50, 25})
+        input->Append(wxString::Format("%d%%", level));
+    contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL | wxAPPLY), 0, wxEXPAND | wxALL,
+                  dialog.FromDIP(10));
+    const auto apply = [&](wxCommandEvent& event) {
+        const auto value = input->GetValue().ToStdString(wxConvUTF8);
+        char* end = nullptr;
+        const long level = std::strtol(value.c_str(), &end, 10);
+        if (end != value.c_str() && level >= 10 && level <= 500) editor.Send(Message::SetZoom, level);
+        // As in the original, invalid OK closes without changing zoom; Apply
+        // keeps the dialog open, and Cancel retains any already applied zoom.
+        if (event.GetId() == wxID_OK) dialog.EndModal(wxID_OK);
+    };
+    dialog.Bind(wxEVT_BUTTON, apply, wxID_OK);
+    dialog.Bind(wxEVT_BUTTON, apply, wxID_APPLY);
+    dialog.SetSizerAndFit(contents);
+    input->SetSelection(-1, -1);
+    input->SetFocus();
+    dialog.CentreOnParent();
+    dialog.ShowModal();
+    editor.SetFocus();
+}
 
 std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
                                              const wxString& path) {
@@ -53,6 +92,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                                    : SyntaxDetectionOptions{}),
       search_(*editor_) {
     if (settings) {
+        editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
         editor_->Send(Scintilla::Message::SetViewWS,
@@ -175,6 +215,19 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         addLanguage("&" + wxString(definition.name), definition.language);
     menus->Append(languages, "&Language");
     auto* view = new wxMenu;
+    auto* zoom = new wxMenu;
+    const auto addZoom = [this, zoom](const wxString& label, Scintilla::Message message, uintptr_t value = 0) {
+        const int id = wxWindow::NewControlId();
+        zoom->Append(id, label);
+        Bind(wxEVT_MENU, [this, message, value](wxCommandEvent&) { editor_->Send(message, value); }, id);
+    };
+    addZoom("Zoom &In\tCtrl++", Scintilla::Message::ZoomIn);
+    addZoom("Zoom &Out\tCtrl+-", Scintilla::Message::ZoomOut);
+    const int zoomLevel = wxWindow::NewControlId();
+    zoom->Append(zoomLevel, "Zoom &Level...");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowZoomLevelDialog(this, *editor_); }, zoomLevel);
+    addZoom("&Reset Zoom\tCtrl+\\", Scintilla::Message::SetZoom, 100);
+    view->AppendSubMenu(zoom, "&Zoom");
     const int wordWrap = wxWindow::NewControlId();
     view->AppendCheckItem(wordWrap, "&Word Wrap\tCtrl+Shift+W");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleWordWrap(); }, wordWrap);
@@ -352,6 +405,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
     return settings_->Save(explicitSave);
 }
 
