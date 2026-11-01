@@ -34,6 +34,38 @@ public:
     explicit Core(EditorControl& window) : window_(window) {
         wMain = static_cast<wxWindow*>(&window_);
         Initialise();
+        // Original Notepad4.cpp: wrapped Home/End visit visual then logical boundaries.
+        WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(Scintilla::Keys::Home),
+                static_cast<intptr_t>(Message::VCHomeWrap));
+        WndProc(Message::AssignCmdKey,
+                static_cast<uintptr_t>(Scintilla::Keys::Home) |
+                    (static_cast<uintptr_t>(Scintilla::KeyMod::Shift) << 16),
+                static_cast<intptr_t>(Message::VCHomeWrapExtend));
+        WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(Scintilla::Keys::End),
+                static_cast<intptr_t>(Message::LineEndWrap));
+        WndProc(Message::AssignCmdKey,
+                static_cast<uintptr_t>(Scintilla::Keys::End) | (static_cast<uintptr_t>(Scintilla::KeyMod::Shift) << 16),
+                static_cast<intptr_t>(Message::LineEndWrapExtend));
+        // Original application overrides the core's Ctrl+Page scroll bindings.
+        WndProc(Message::AssignCmdKey,
+                static_cast<uintptr_t>(Scintilla::Keys::Prior) |
+                    (static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) << 16),
+                static_cast<intptr_t>(Message::ParaUp));
+        WndProc(Message::AssignCmdKey,
+                static_cast<uintptr_t>(Scintilla::Keys::Next) | (static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) << 16),
+                static_cast<intptr_t>(Message::ParaDown));
+        WndProc(
+            Message::AssignCmdKey,
+            static_cast<uintptr_t>(Scintilla::Keys::Prior) |
+                ((static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) | static_cast<uintptr_t>(Scintilla::KeyMod::Shift))
+                 << 16),
+            static_cast<intptr_t>(Message::ParaUpExtend));
+        WndProc(
+            Message::AssignCmdKey,
+            static_cast<uintptr_t>(Scintilla::Keys::Next) |
+                ((static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) | static_cast<uintptr_t>(Scintilla::KeyMod::Shift))
+                 << 16),
+            static_cast<intptr_t>(Message::ParaDownExtend));
         WndProc(Message::SetCodePage, 65001, 0);
         // Match unconfigured Notepad4 on every host; saving preserves actual EOLs.
         WndProc(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf), 0);
