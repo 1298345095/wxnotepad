@@ -19,6 +19,7 @@ void IndentationSettings::Apply(EditorControl& editor, SyntaxLanguage language) 
     editor.Send(Message::SetUseTabs, !tabs.tabsAsSpaces);
     editor.Send(Message::SetTabIndents, preferences_.tabIndents);
     editor.Send(Message::SetBackSpaceUnIndents, preferences_.backspaceUnindents);
+    editor.SetAutoIndent(preferences_.autoIndent);
     editor.Send(Message::ScrollCaret);
 }
 
