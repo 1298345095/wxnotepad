@@ -91,8 +91,12 @@ public:
                 example("a", "(a)", "$$|\\\\|$10|${name}|$`|$'|\\u|\\x|$|\\", "$|\\|a0|${name}|$`|$'|\\u|\\x|$|\\");
                 example("b", "(a)?(b)", "$1|\\1|$2|\\2", "||b|b");
                 example("a", "(a)", "\\1\\n\\t", "a\n\t");
-                example("中文后", "(?<=中)文(?=后)", "X", "中X后");
-                example("aab", "(?<=aa)b", "X", "aaX");
+                setup("aab", "(?<=aa)(b)", "$1!");
+                Click(dialog, wxID_FORWARD);
+                Selection(editor, 2, 3, "lookbehind is initially found from document start");
+                Click(dialog, wxID_REPLACE);
+                Require(Text(editor) == "aab" && !editor->Send(Message::CanUndo),
+                        "original replacement revalidation cannot retain lookbehind before selection start");
                 example("中\n文", "(中)\\n(文)", "$2:$1", "文:中");
                 example("a", "(a)", "", "");
                 std::puts("PASS: explicit original dollar/backslash literals, optional groups, Unicode and contextual "
@@ -112,8 +116,7 @@ public:
                 Click(dialog, wxID_FORWARD);
                 editor->Send(Message::SetSel, 2, 3);
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "a a",
-                        "moving to another matching selection must invalidate regex confirmation");
+                Require(Text(editor) == "a X", "original Replace revalidates an arbitrary matching selection");
                 setup("a a!", "(a)", "X");
                 editor->Send(Message::GotoPos, 4);
                 editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
@@ -124,53 +127,45 @@ public:
                 editor->Send(Message::ReplaceTarget, 1, reinterpret_cast<intptr_t>("A"));
                 editor->Send(Message::SetSel, 0, 1);
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "A a!!",
-                        "an edit while dirty must invalidate still-matching selected captures");
+                Require(Text(editor) == "X a!!", "original Replace refreshes captures after an edit while dirty");
                 setup("a a", "(a)", "X");
                 Click(dialog, wxID_FORWARD);
                 query->SetValue("(a)|b");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "a a",
-                        "query changes must require a fresh match even if selection still matches");
+                Require(Text(editor) == "X a", "changed query revalidates the current matching selection");
                 auto* matchCase = wxDynamicCast(wxWindow::FindWindowByName("Match case", frame), wxCheckBox);
                 setup("a a", "(a)", "X");
                 Click(dialog, wxID_FORWARD);
                 Toggle(matchCase, true);
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "a a", "option changes must invalidate prior confirmation");
+                Require(Text(editor) == "X a", "changed options revalidate the current matching selection");
                 Toggle(matchCase, false);
                 setup("a a", "(a)", "X");
                 Click(dialog, wxID_FORWARD);
                 Toggle(regex, false);
                 Toggle(regex, true);
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "a a", "mode changes must invalidate prior confirmation");
-                std::puts(
-                    "PASS: moved selection, dirty edit, changed query/options and mode cannot reuse confirmation");
+                Require(Text(editor) == "X a", "restored regex mode revalidates the current selection");
+                std::puts("PASS: original replacement revalidation uses live query, options and selection");
                 setup("中文中文", "(?=中)", "_");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "中文中文",
-                        "an arbitrary caret must first confirm an empty match without inserting");
-                Selection(editor, 0, 0, "first Replace must select the empty lookahead");
+                Require(Text(editor) == "_中文中文", "original matching caret is replaced immediately");
+                Selection(editor, 1, 1, "original Replace resumes at the insertion end");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "_中文中文", "confirmed empty lookahead must insert once");
-                Selection(editor, 7, 7, "Replace must advance past a whole Chinese character to the next lookahead");
+                Require(Text(editor) == "__中文中文", "original Replace can repeat at the same original character");
+                Selection(editor, 2, 2, "replacement continuation does not skip an original character");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "_中文_中文", "second Replace must use the next original lookahead");
-                Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "_中文_中文", "exhausted empty matches must not keep reinserting");
+                Require(Text(editor) == "___中文中文", "repeated empty replacements follow original target context");
                 setup("中文", "a*", "_");
+                editor->Send(Message::GotoPos, 6);
                 Click(dialog, wxID_FORWARD);
                 Click(dialog, wxID_REPLACE);
-                Selection(editor, 4, 4, "zero-length continuation must preserve UTF-8 boundaries");
+                Selection(editor, 7, 7, "original EOF continuation stays at the new document end");
                 Click(dialog, wxID_REPLACE);
-                Selection(editor, 8, 8, "zero-length continuation must include EOF once");
-                Click(dialog, wxID_REPLACE);
-                Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "_中_文_", "empty EOF match must be replaced once and then exhausted");
+                Require(Text(editor) == "中文__", "original EOF empty match can be replaced repeatedly");
                 setup("", "^", "X");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor).empty(), "empty document caret requires confirmation");
+                Require(Text(editor) == "X", "original empty document caret is replaced immediately");
                 Click(dialog, wxID_REPLACE);
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "X", "empty document start must be replaced only once without wrap");
@@ -179,9 +174,9 @@ public:
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "中文" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
                         "empty expansion of empty match must leave history untouched");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
-                        "an empty no-op must still advance");
-                std::puts("PASS: arbitrary caret confirmation, UTF-8 empty-match progress, EOF and empty no-op");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "Match found",
+                        "an empty no-op resumes at the same original match");
+                std::puts("PASS: original empty replacement continuation, repeated EOF and empty no-op");
                 setup("a1 a2", "a([0-9])", "$1");
                 editor->Send(Message::GotoPos, 3);
                 Click(dialog, wxID_BACKWARD);
@@ -193,16 +188,14 @@ public:
                 editor->Send(Message::GotoPos, 2);
                 editor->Send(Message::SetSel, 0, 1);
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "a a",
-                        "moving away and restoring the selected range must invalidate confirmation");
+                Require(Text(editor) == "X a", "restored selection is revalidated through the original matcher");
                 setup("中文", "(?=中)", "_");
                 Click(dialog, wxID_FORWARD);
                 editor->Send(Message::GotoPos, 3);
                 editor->Send(Message::GotoPos, 0);
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "中文",
-                        "restoring an arbitrary caret must not restore an empty-match confirmation");
-                Selection(editor, 0, 0, "restored arbitrary caret must search the current position afresh");
+                Require(Text(editor) == "_中文", "restored caret is immediately revalidated as an empty match");
+                Selection(editor, 1, 1, "replacement resumes after insertion at restored caret");
                 setup("a", "(a)", "X");
                 editor->Send(Message::GotoPos, 1);
                 editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
@@ -263,19 +256,18 @@ public:
                 query->SetValue("^");
                 replacement->SetValue("X");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor).empty(), "New must invalidate captures from the prior document");
+                Require(Text(editor) == "X", "New uses fresh original captures from the current empty document");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "X", "New must permit a fresh confirmed empty match");
+                Require(Text(editor) == "X", "continuation after insertion cannot match the preceding line start");
                 std::puts("PASS: Save bytes, BOM/mixed EOL, savepoint Undo/Redo and live New document");
                 setup("", "^", "X");
                 Click(dialog, wxID_FORWARD);
                 Require(frame->New(), "New must also succeed when the old document is already empty");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor).empty(),
-                        "New must invalidate an empty-match confirmation even when no bytes change");
+                Require(Text(editor) == "X", "empty New uses the current original matching caret immediately");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "X", "fresh confirmation after empty New must permit replacement");
-                std::puts("PASS: empty New invalidates document identity without requiring a text change");
+                Require(Text(editor) == "X", "repeated continuation after empty New follows original line context");
+                std::puts("PASS: empty New reads fresh regex context without separate confirmation state");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

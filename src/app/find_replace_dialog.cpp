@@ -56,7 +56,6 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     SetSizerAndFit(layout);
 
     query_->Bind(wxEVT_TEXT, [this](wxCommandEvent& event) {
-        search_.ResetMatch();
         ConfigureSearch();
         event.Skip();
     });
@@ -66,7 +65,6 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     });
     for (auto* option : {matchCase_, wholeWord_, regularExpression_}) {
         option->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
-            search_.ResetMatch();
             wholeWord_->Enable(!regularExpression_->GetValue());
             ConfigureSearch();
         });
