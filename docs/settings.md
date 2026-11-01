@@ -21,6 +21,30 @@ are omitted, as in the original. Other keys, sections and comments survive. Writ
 use the original Unicode INI format (UTF-16LE with BOM); the reader also accepts
 existing text INI files through the platform text converter.
 
+Tab settings use this same store. `[Settings]` defaults are `TabWidth=4`,
+`IndentWidth=4`, `TabsAsSpaces=0`, `TabIndents=1`, and `BackspaceUnindents=2`.
+Tab widths range from 1 to 256; indentation widths range from 0 to 256, with 0
+using the tab width. Backspace's original bit 1 unindents the line; bit 2 deletes
+spaces to the previous indentation stop. Both choices are exposed in Tab Settings.
+
+The original scheme sections are `[Text File]`, `[C/C++ Source]`,
+`[Python Script]`, and `[JSON Document]`. All support `TabWidth`, `IndentWidth`,
+`TabsAsSpaces`, and `UseGlobalTabSettings`. The first three default to 4/4, tabs,
+and global inheritance. JSON defaults to 2/2, spaces, and independent settings.
+Tab Settings edits global, current scheme and current file settings. Scheme
+inheritance takes precedence over stored scheme widths; current file overrides
+take precedence over the effective scheme. The Tabs as Spaces command overrides
+only that file option, so later language changes still apply scheme widths.
+New and successful Open reset file overrides. Language changes, first Save and
+Save As apply the effective scheme while retaining file overrides. Preferences
+do not rewrite whitespace or change selection, modification state or Undo/Redo.
+Accepting Tab Settings immediately saves the current scheme section, as the
+original dialog does, including when Save Settings On Exit is disabled. Global
+preferences still follow the normal explicit/exit save rule. Cancelling the
+dialog retains all prior values; disabling inheritance restores the values from
+before the dialog opened.
+Indentation detection and file-variable parsing are separate work.
+
 Windows keeps the pinned original discovery rule: a resolved executable path beginning
 with `C:\Program Files`, or containing `WinGet` or `hocolatey`, uses
 `FOLDERID_LocalAppData/Notepad4/Notepad4.ini`. Other locations use

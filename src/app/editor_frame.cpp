@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "app/find_replace_dialog.h"
 #include "app/go_to_line_dialog.h"
+#include "app/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/menu.h>
 #include <wx/filedlg.h>
@@ -48,7 +49,9 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
-      editor_(new EditorControl(this)), settings_(settings), document_(*editor_), search_(*editor_) {
+      editor_(new EditorControl(this)), settings_(settings), indentation_(settings ? settings->values : defaults_),
+      document_(*editor_), search_(*editor_) {
+    indentation_.Apply(*editor_, document_.Language());
     if (settings) {
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
@@ -116,38 +119,26 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     addEol("CRLF", Scintilla::EndOfLine::CrLf);
     addEol("LF", Scintilla::EndOfLine::Lf);
     addEol("CR", Scintilla::EndOfLine::Cr);
-    edit->AppendSeparator();
-    auto* indentation = new wxMenu;
-    for (const bool tabs : {true, false}) {
-        const int id = wxWindow::NewControlId();
-        indentation->AppendRadioItem(id, tabs ? "&Tabs" : "&Spaces");
-        Bind(wxEVT_MENU, [this, tabs](wxCommandEvent&) { editor_->Send(Scintilla::Message::SetUseTabs, tabs); }, id);
-        Bind(
-            wxEVT_UPDATE_UI,
-            [this, tabs](wxUpdateUIEvent& event) {
-                event.Check((editor_->Send(Scintilla::Message::GetUseTabs) != 0) == tabs);
-            },
-            id);
-    }
-    indentation->AppendSeparator();
-    for (const int width : {2, 4, 8}) {
-        const int id = wxWindow::NewControlId();
-        indentation->AppendRadioItem(id, wxString::Format("&%d Columns", width));
-        Bind(
-            wxEVT_MENU,
-            [this, width](wxCommandEvent&) {
-                editor_->SetIndentationWidth(width);
+    auto* view = new wxMenu;
+    const int spaces = wxWindow::NewControlId();
+    view->AppendCheckItem(spaces, "Tabs as &Spaces");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { indentation_.ToggleSpaces(*editor_, document_.Language()); }, spaces);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(!editor_->Send(Scintilla::Message::GetUseTabs)); }, spaces);
+    const int tabSettings = wxWindow::NewControlId();
+    view->Append(tabSettings, "&Tab Settings...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            if (ShowTabSettingsDialog(this, preferences, document_.Language(), indentation_)) {
+                if (settings_) settings_->SaveSchemeTabs(document_.Language());
+                indentation_.Apply(*editor_, document_.Language());
                 UpdatePositionStatus();
-            },
-            id);
-        Bind(
-            wxEVT_UPDATE_UI,
-            [this, width](wxUpdateUIEvent& event) {
-                event.Check(editor_->Send(Scintilla::Message::GetTabWidth) == width);
-            },
-            id);
-    }
-    edit->AppendSubMenu(indentation, "&Indentation");
+            }
+        },
+        tabSettings);
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
@@ -171,7 +162,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     for (const auto& definition : SyntaxCatalog())
         addLanguage("&" + wxString(definition.name), definition.language);
     menus->Append(languages, "&Language");
-    auto* view = new wxMenu;
+    view->AppendSeparator();
     const int wordWrap = wxWindow::NewControlId();
     view->AppendCheckItem(wordWrap, "&Word Wrap\tCtrl+Shift+W");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleWordWrap(); }, wordWrap);
@@ -445,6 +436,7 @@ void EditorFrame::UpdatePositionStatus() {
 
 void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
     document_.SelectLanguage(language);
+    indentation_.Apply(*editor_, document_.Language());
     UpdateDocumentState();
 }
 
@@ -452,6 +444,7 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
                                   SaveFileType fileType) {
     const auto result =
         document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -472,6 +465,7 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
                                SaveFileType fileType) {
     const auto result =
         document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -487,6 +481,7 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
+        indentation_.Reset(*editor_, document_.Language());
         UpdateWindowUI(wxUPDATE_UI_RECURSE);
     }
     UpdateDocumentState();
@@ -510,6 +505,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    indentation_.Reset(*editor_, document_.Language());
     GetMenuBar()->Check(automaticLanguageId_, true);
     UpdateDocumentState();
     return true;

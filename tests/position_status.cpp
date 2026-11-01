@@ -1,6 +1,6 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
-#include "native_search_helpers.h"
+#include "tab_settings_helpers.h"
 #include "native_fold_helpers.h"
 #include <wx/statusbr.h>
 #include <wx/textctrl.h>
@@ -98,9 +98,9 @@ public:
                 Status(frame, "Ln 2, Col 7");
                 editor->Send(Message::GotoPos, 6);
                 Status(frame, "Ln 2, Col 5");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "8 Columns"));
+                TabDialog::File(frame, 8, 4, false);
                 Status(frame, "Ln 2, Col 9");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "4 Columns"));
+                TabDialog::File(frame, 4, 4, false);
                 Status(frame, "Ln 2, Col 5");
                 Require(frame->GetStatusBar()->GetStatusText().Contains("UTF-8"), "metadata must remain visible");
                 std::puts("PASS: live logical line and core column use tab stops and Unicode characters");

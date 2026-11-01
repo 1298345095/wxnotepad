@@ -49,14 +49,20 @@ void ProcessObserver::Publish() {
     wxFFile state(observation_ + "/state.tmp", "wb");
     state.Write(wxString::Format(
         "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"
-        "handle\t%llu\nwrap_mode\t%lld\nwrap_rows\t%lld\nclient_width\t%d\nline_numbers\t%d\nwhitespace\t%lld\n",
+        "handle\t%llu\nwrap_mode\t%lld\nwrap_rows\t%lld\nclient_width\t%d\nline_numbers\t%d\nwhitespace\t%lld\n"
+        "tab_width\t%lld\nindent_width\t%lld\nuse_tabs\t%lld\ntab_indents\t%lld\nbackspace_unindents\t%lld\n",
         sequence_, result_, static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetLength)), lastDirty_,
         frame_->IsShown() && !frame_->IsIconized(), wxWindow::FindFocus() == frame_->Editor(), lastActive_, backend,
         static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->Editor()->GetHandle())),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetWrapMode)),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::WrapCount, 0)),
         frame_->Editor()->GetClientSize().x, frame_->Editor()->LineNumbersVisible(),
-        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetViewWS))));
+        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetViewWS)),
+        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetTabWidth)),
+        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetIndent)),
+        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetUseTabs)),
+        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetTabIndents)),
+        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetBackSpaceUnIndents))));
     state.Close();
     wxRenameFile(observation_ + "/state.tmp", observation_ + "/state", true);
 }

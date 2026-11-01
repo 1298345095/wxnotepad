@@ -1,6 +1,6 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
-#include "native_search_helpers.h"
+#include "tab_settings_helpers.h"
 #include <wx/app.h>
 #include <wx/ffile.h>
 #include <wx/menu.h>
@@ -349,16 +349,14 @@ public:
                         "indentation invalidates the previous regex match before replacement");
                 std::puts("PASS: search revalidates matches after indentation");
                 SavedBytes(frame);
-                Menu(frame, "Spaces");
-                Menu(frame, "2 Columns");
+                TabDialog::File(frame, 2, 2, true);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文\nB"));
                 editor->Send(Message::SelectAll);
                 Menu(frame, "Indent");
                 Require(Text(editor) == "  中文\n  B", "block menu uses the user-selected spaces and width");
                 NativeTab(editor, true);
                 Require(Text(editor) == "中文\nB", "Shift+Tab uses the user-selected indentation width");
-                Menu(frame, "Tabs");
-                Menu(frame, "8 Columns");
+                TabDialog::File(frame, 8, 8, false);
                 std::puts("PASS: block commands honor native indentation settings menu choices");
 #ifdef __WXGTK__
                 DialogTraversal(frame);

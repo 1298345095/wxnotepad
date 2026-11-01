@@ -6,12 +6,15 @@
 #include <wx/tokenzr.h>
 #include <wx/utils.h>
 #include <string>
+#include <algorithm>
+#include <cstdio>
 #ifdef __WXMSW__
 #include <shlobj.h>
 #include <filesystem>
 #endif
 
 namespace {
+constexpr const char* SchemeSections[] = {"Text File", "C/C++ Source", "Python Script", "JSON Document"};
 wxString ConfigurationPath() {
     wxFileName executable(wxStandardPaths::Get().GetExecutablePath());
 #ifdef __WXMSW__
@@ -62,6 +65,18 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.wordWrap = ReadBool("WordWrap", true);
     values.showLineNumbers = ReadBool("ShowLineNumbers", true);
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
+    values.globalTabs.tabWidth = std::clamp(ReadInt("Settings", "TabWidth", 4), 1, 256);
+    values.globalTabs.indentWidth = std::clamp(ReadInt("Settings", "IndentWidth", 4), 0, 256);
+    values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", false);
+    values.tabIndents = ReadBool("TabIndents", true);
+    values.backspaceUnindents = static_cast<uint8_t>(ReadInt("Settings", "BackspaceUnindents", 2));
+    for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
+        auto& tabs = values.schemeTabs[index];
+        tabs.tabWidth = std::clamp(ReadInt(SchemeSections[index], "TabWidth", tabs.tabWidth), 1, 256);
+        tabs.indentWidth = std::clamp(ReadInt(SchemeSections[index], "IndentWidth", tabs.indentWidth), 0, 256);
+        tabs.tabsAsSpaces = ReadInt(SchemeSections[index], "TabsAsSpaces", tabs.tabsAsSpaces) != 0;
+        tabs.useGlobal = ReadInt(SchemeSections[index], "UseGlobalTabSettings", tabs.useGlobal) != 0;
+    }
 }
 
 void SettingsStore::LoadLines() {
@@ -109,6 +124,29 @@ bool SettingsStore::ReadBool(const wxString& key, bool fallback) const {
 }
 
 void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
+    WriteValue("Settings", key, value ? "1" : "0", value == fallback);
+}
+
+wxString SettingsStore::ReadValue(const wxString& section, const wxString& key) const {
+    bool matches = false;
+    for (auto line : lines_) {
+        line.Trim().Trim(false);
+        if (line.StartsWith("["))
+            matches = line.CmpNoCase("[" + section + "]") == 0;
+        else if (matches && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key)
+            return line.AfterFirst('=').Trim().Trim(false);
+    }
+    return {};
+}
+
+int SettingsStore::ReadInt(const wxString& section, const wxString& key, int fallback) const {
+    const auto value = ReadValue(section, key);
+    // Original integer settings accept a signed decimal prefix.
+    int result;
+    return std::sscanf(value.utf8_str(), "%d", &result) == 1 ? result : fallback;
+}
+
+void SettingsStore::WriteValue(const wxString& section, const wxString& key, const wxString& value, bool omit) {
     bool settings = false;
     bool foundSection = false;
     size_t insertion = lines_.size();
@@ -116,7 +154,7 @@ void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
         wxString line = lines_[index];
         line.Trim().Trim(false);
         if (line.StartsWith("[")) {
-            settings = line.CmpNoCase("[Settings]") == 0;
+            settings = line.CmpNoCase("[" + section + "]") == 0;
             if (settings && !foundSection) {
                 insertion = index + 1;
                 foundSection = true;
@@ -127,12 +165,12 @@ void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
         }
         ++index;
     }
-    if (value == fallback) return;
+    if (omit) return;
     if (!foundSection) {
-        lines_.push_back("[Settings]");
+        lines_.push_back("[" + section + "]");
         insertion = lines_.size();
     }
-    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + (value ? "=1" : "=0"));
+    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + "=" + value);
 }
 
 bool SettingsStore::Save(bool explicitSave) {
@@ -145,7 +183,41 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("WordWrap", values.wordWrap, true);
         WriteBool("ShowLineNumbers", values.showLineNumbers, true);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
+        WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, false);
+        WriteBool("TabIndents", values.tabIndents, true);
+        const auto writeInt = [this](const wxString& section, const wxString& key, int value, int fallback) {
+            WriteValue(section, key, wxString::Format("%d", value), value == fallback);
+        };
+        writeInt("Settings", "TabWidth", values.globalTabs.tabWidth, 4);
+        writeInt("Settings", "IndentWidth", values.globalTabs.indentWidth, 4);
+        writeInt("Settings", "BackspaceUnindents", values.backspaceUnindents, 2);
+        for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
+            WriteSchemeTabs(index);
+        }
     }
+    return SaveLines();
+}
+
+void SettingsStore::WriteSchemeTabs(size_t index) {
+    const auto& tabs = values.schemeTabs[index];
+    const auto fallback = OriginalSettings{}.schemeTabs[index];
+    const auto write = [this, index](const wxString& key, int value, int defaultValue) {
+        WriteValue(SchemeSections[index], key, wxString::Format("%d", value), value == defaultValue);
+    };
+    write("TabWidth", tabs.tabWidth, fallback.tabWidth);
+    write("IndentWidth", tabs.indentWidth, fallback.indentWidth);
+    write("TabsAsSpaces", tabs.tabsAsSpaces, fallback.tabsAsSpaces);
+    write("UseGlobalTabSettings", tabs.useGlobal, fallback.useGlobal);
+}
+
+bool SettingsStore::SaveSchemeTabs(SyntaxLanguage language) {
+    if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
+    LoadLines();
+    WriteSchemeTabs(static_cast<size_t>(language));
+    return SaveLines();
+}
+
+bool SettingsStore::SaveLines() {
     wxString text(wxUniChar(0xFEFF));
     for (const auto& line : lines_)
         text += line + "\r\n";

@@ -650,9 +650,9 @@ void EditorControl::ToggleWordWrap() {
     core_->UpdateWrapLayout();
 }
 
-void EditorControl::SetIndentationWidth(int width) {
-    Send(Message::SetTabWidth, width);
-    Send(Message::SetIndent, width);
+void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
+    Send(Message::SetTabWidth, tabWidth);
+    Send(Message::SetIndent, indentWidth);
     core_->UpdateWrapLayout();
 }
 
