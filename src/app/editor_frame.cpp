@@ -89,8 +89,9 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
       editor_(new EditorControl(this)), settings_(settings), indentation_(settings ? settings->values : defaults_),
-      document_(*editor_, settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
-                                   : SyntaxDetectionOptions{}),
+      document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
+                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
+                         : SyntaxDetectionOptions{}),
       search_(*editor_) {
     indentation_.Apply(*editor_, document_.Language());
     if (settings) {

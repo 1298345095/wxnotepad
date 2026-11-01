@@ -106,7 +106,7 @@ public:
                         std::ofstream output(invalidPath, std::ios::binary);
                         output << "valid prefix\r\n" << suffix;
                     }
-                    const auto result = frame->Open(Filename(invalidPath));
+                    const auto result = frame->Open(Filename(invalidPath), FileEncoding::Utf8);
                     Require(result.status == OpenStatus::Failed && result.error.Contains("UTF-8"),
                             "malformed UTF-8 must report an explicit decoding error");
                     unchanged();

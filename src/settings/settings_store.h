@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wx/string.h>
+#include "document/encoding/encoding_detection.h"
 #include <vector>
 #include <array>
 #include "syntax/syntax_catalog.h"
@@ -20,6 +21,7 @@ struct OriginalSettings {
     bool viewWhiteSpace = false;
     bool autoSelect = true;
     bool noCgiGuess = false;
+    EncodingOptions encoding;
     int zoomLevel = 100;
     OriginalTabs globalTabs;
     std::array<OriginalTabs, 4> schemeTabs{{{}, {}, {}, {2, 2, true, false}}};

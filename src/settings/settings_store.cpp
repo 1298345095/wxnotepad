@@ -68,6 +68,13 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
     values.autoSelect = ReadBool("AutoSelect", true, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", false, "Settings2");
+    values.encoding.defaultEncoding = NormalizeEncodingSetting(ReadInt("DefaultEncoding", -1));
+    values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", true);
+    values.encoding.loadANSIasUTF8 = ReadBool("LoadANSIasUTF8", true);
+    values.encoding.loadASCIIasUTF8 = ReadBool("LoadASCIIasUTF8", true);
+    values.encoding.loadNFOasOEM = ReadBool("LoadNFOasOEM", true);
+    values.encoding.noEncodingTags = ReadBool("NoEncodingTags", false);
+    values.encoding.noFileVariables = ReadBool("NoFileVariables", false, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
     values.globalTabs.tabWidth = std::clamp(ReadInt("TabWidth", 4), 1, 256);
     values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", 4), 0, 256);
@@ -189,6 +196,12 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ShowLineNumbers", values.showLineNumbers, true);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
         WriteBool("AutoSelect", values.autoSelect, true, "Styles");
+        WriteInt("DefaultEncoding", values.encoding.defaultEncoding, -1);
+        WriteBool("SkipUnicodeDetection", values.encoding.skipUnicodeDetection, true);
+        WriteBool("LoadANSIasUTF8", values.encoding.loadANSIasUTF8, true);
+        WriteBool("LoadASCIIasUTF8", values.encoding.loadASCIIasUTF8, true);
+        WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, true);
+        WriteBool("NoEncodingTags", values.encoding.noEncodingTags, false);
         WriteInt("ZoomLevel", values.zoomLevel, 100);
         WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, false);
         WriteBool("TabIndents", values.tabIndents, true);
