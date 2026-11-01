@@ -20,6 +20,11 @@ The editor supports keyboard navigation, Shift selection, mouse selection and
 scrolling, plus native system clipboard Cut/Copy/Paste and their Ctrl+X/C/V
 shortcuts. Clipboard edits participate in the same Undo/Redo history.
 
+Home/End first visit a wrapped row's start/end, then the logical line boundary;
+Home retains the original indentation/start toggle. Shift extends the selection
+with the same rules. Ctrl+PageUp/PageDown move between paragraphs separated by
+blank or whitespace-only lines; adding Shift extends the selection.
+
 Edit → Go To Line / Ctrl+G navigates to an absolute, 1-based document line and
 reveals its folded ancestors. The dialog validates the current line range;
 Cancel retains the previous selection, viewport and folds.
