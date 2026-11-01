@@ -1,8 +1,11 @@
 #include "editor/editor_control.h"
 #include "search/search_session.h"
 #include "document/document_session.h"
+#include "app/find_replace_dialog.h"
+#include "native_search_helpers.h"
 #include <wx/wx.h>
 #include <wx/filename.h>
+#include <wx/textctrl.h>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -128,6 +131,52 @@ public:
                 Require(bytes == std::string("\xff\xfe\x87\x65\x09\0\x2d\x4e", 8),
                         "independent disk bytes preserve file encoding after transformed replacement");
                 std::puts("PASS: independent UTF-16LE disk bytes and UTF-8 search positions");
+                SearchSession nativeSearch(*editor);
+                FindResult nativeResult{FindStatus::NotFound};
+                auto* dialog = new FindReplaceDialog(
+                    frame, *editor, nativeSearch, [&](const FindResult& result) { nativeResult = result; },
+                    [](wxKeyEvent& event) { event.Skip(); }, 0);
+                dialog->Present(false);
+                auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", dialog), wxTextCtrl);
+                auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", dialog), wxTextCtrl);
+                auto* transform =
+                    wxDynamicCast(wxWindow::FindWindowByName("Transform backslashes", dialog), wxCheckBox);
+                auto* regex = wxDynamicCast(wxWindow::FindWindowByName("Regular expression", dialog), wxCheckBox);
+                Require(query && replacement && transform && regex && transform->IsEnabled() && !transform->GetValue(),
+                        "native Find exposes enabled unchecked transform option");
+                NativeSearch::Toggle(regex, true);
+                NativeSearch::Toggle(transform, true);
+                Require(!regex->GetValue() && transform->GetValue(), "checking transform unchecks regular expression");
+                Load(*editor, "\\n\n");
+                query->SetValue("\\n");
+                NativeSearch::Click(dialog, wxID_FORWARD);
+                Require(nativeResult.status == FindStatus::Found && nativeResult.start == 2 && nativeResult.end == 3,
+                        "native Find applies transformed newline");
+                NativeSearch::Toggle(regex, true);
+                Require(regex->GetValue() && !transform->GetValue() && transform->IsEnabled(),
+                        "checking regex unchecks transform while keeping it enabled");
+                dialog->Present(true);
+                wxYield();
+                NativeSearch::Toggle(transform, true);
+                Require(transform->GetValue() && !regex->GetValue(), "replacement view enables transform exclusively");
+                query->SetValue("\\n");
+                replacement->SetValue("\\t$1");
+                NativeSearch::Click(dialog, wxID_REPLACE_ALL);
+                if (Text(*editor) != "\\n\t$1")
+                    std::fprintf(stderr, "Native bytes [%s]; transform=%d regex=%d replacement=[%s]\n",
+                                 Text(*editor).c_str(), nativeSearch.Request().options.transformBackslashes,
+                                 nativeSearch.Request().options.regularExpression,
+                                 nativeSearch.Request().replacement.utf8_str().data());
+                Require(Text(*editor) == "\\n\t$1",
+                        "native Replace shares literal transform without capture formatting");
+                editor->Send(Message::Undo);
+                Require(Text(*editor) == "\\n\n", "native transformed Replace All undoes once");
+                NativeSearch::Toggle(transform, false);
+                editor->Send(Message::SetSel, 0, 0);
+                NativeSearch::Click(dialog, wxID_FORWARD);
+                Require(nativeResult.start == 0 && nativeResult.end == 2,
+                        "unchecking transform searches input backslashes literally");
+                std::puts("PASS: native Find/Replace transform control, regex exclusion and enabled/off behavior");
                 frame->Destroy();
                 ExitMainLoop();
             } catch (const std::exception& error) {

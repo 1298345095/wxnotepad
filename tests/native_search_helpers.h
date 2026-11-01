@@ -51,6 +51,7 @@ inline void Command(EditorFrame* frame, int id) {
     wxYield();
 }
 inline void Toggle(wxCheckBox* option, bool checked) {
+    if (option->GetValue() == checked) return;
 #ifdef __WXMSW__
     const auto handle = static_cast<HWND>(option->GetHandle());
     SendMessageW(handle, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
