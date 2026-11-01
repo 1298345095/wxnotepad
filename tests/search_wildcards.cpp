@@ -132,11 +132,24 @@ public:
                 query->SetValue("*");
                 replacement->SetValue("X");
                 Click(query->GetParent(), wxID_REPLACE_ALL);
-                Require(Text(editor) == "X", "wildcard Replace All includes an initial empty document once");
-                editor->Send(Message::Undo);
                 Require(Text(editor).empty() && !editor->Send(Message::CanUndo),
-                        "empty wildcard replacement restores the original undo boundary");
+                        "original builtin wildcard matcher leaves an empty document and history unchanged");
                 std::puts("PASS: shared Find All, Replace, Replace All, selection replacement and Undo/Redo");
+                auto* transform = wxDynamicCast(wxWindow::FindWindowByName("Transform backslashes", frame), wxCheckBox);
+                Require(transform, "wildcard search exposes the shared backslash transform option");
+                Toggle(transform, true);
+                Require(wildcard->GetValue() && !regex->GetValue(),
+                        "original wildcard and backslash transform options can be combined");
+                load(".A AA .B");
+                query->SetValue("\\x2e?");
+                replacement->SetValue("\\x24\\x30\\t");
+                Click(query->GetParent(), findAll->GetId());
+                Require(count->GetLabel() == "2 matches", "transformation precedes wildcard metacharacter escaping");
+                Click(query->GetParent(), wxID_REPLACE_ALL);
+                Require(Text(editor) == ".A\t AA .B\t",
+                        "combined wildcard replacement transforms first and then uses original regex formatting");
+                editor->Send(Message::Undo);
+                Require(Text(editor) == ".A AA .B", "combined transform replacement undoes as one edit");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
