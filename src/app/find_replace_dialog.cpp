@@ -1,16 +1,21 @@
 #include "app/find_replace_dialog.h"
+#include "editor/editor_control.h"
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/msgdlg.h>
+#include <wx/clipbrd.h>
+#include <wx/dataobj.h>
+#include <string>
 #include <utility>
 
-FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchSession& search,
+FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, SearchSession& search,
                                      std::function<void(const FindResult&)> reportFind,
-                                     std::function<void(wxKeyEvent&)> onKey)
-    : wxDialog(parent, wxID_ANY, "Find"), search_(search), reportFind_(std::move(reportFind)) {
+                                     std::function<void(wxKeyEvent&)> onKey, int selectionOptions)
+    : wxDialog(parent, wxID_ANY, "Find"), editor_(editor), search_(search), reportFind_(std::move(reportFind)),
+      selectionOptions_(selectionOptions) {
     const auto& request = search_.Request();
     auto* layout = new wxBoxSizer(wxVERTICAL);
     layout->Add(new wxStaticText(this, wxID_ANY, "Find &what:"), 0, wxALL, 8);
@@ -31,6 +36,10 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     regularExpression_->SetName("Regular expression");
     regularExpression_->SetValue(request.options.regularExpression);
     layout->Add(regularExpression_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
+    transformBackslashes_ = new wxCheckBox(this, wxID_ANY, "Transform &backslashes");
+    transformBackslashes_->SetName("Transform backslashes");
+    transformBackslashes_->SetValue(request.options.transformBackslashes);
+    layout->Add(transformBackslashes_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
     replacementLabel_ = new wxStaticText(this, wxID_ANY, "Replace &with:");
     layout->Add(replacementLabel_, 0, wxALL, 8);
     replacement_ = new wxTextCtrl(this, wxID_ANY, request.replacement, wxDefaultPosition, wxSize(320, -1));
@@ -61,26 +70,28 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     SetSizerAndFit(layout);
 
     query_->Bind(wxEVT_TEXT, [this](wxCommandEvent& event) {
-        ConfigureSearch();
+        replaceSelectionButton_->Enable(!query_->IsEmpty());
         event.Skip();
     });
-    replacement_->Bind(wxEVT_TEXT, [this](wxCommandEvent& event) {
-        ConfigureSearch();
-        event.Skip();
+    regularExpression_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+        if (regularExpression_->GetValue()) transformBackslashes_->SetValue(false);
+        wholeWord_->Enable(!regularExpression_->GetValue());
     });
-    for (auto* option : {matchCase_, wholeWord_, regularExpression_}) {
-        option->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
-            wholeWord_->Enable(!regularExpression_->GetValue());
-            ConfigureSearch();
-        });
-    }
-    wrapAround_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { ConfigureSearch(); });
+    transformBackslashes_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+        if (transformBackslashes_->GetValue()) regularExpression_->SetValue(false);
+        wholeWord_->Enable(!regularExpression_->GetValue());
+    });
     const wxAcceleratorEntry searchKeys[] = {{wxACCEL_NORMAL, WXK_F3, wxID_FORWARD},
                                              {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD}};
     SetAcceleratorTable(wxAcceleratorTable(2, searchKeys));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward); }, wxID_FORWARD);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
-    Bind(wxEVT_CHAR_HOOK, [onKey = std::move(onKey)](wxKeyEvent& event) { onKey(event); });
+    Bind(wxEVT_CHAR_HOOK, [onKey = std::move(onKey)](wxKeyEvent& event) {
+        if (event.GetKeyCode() == WXK_F3)
+            event.Skip();
+        else
+            onKey(event);
+    });
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Forward); }, wxID_FORWARD);
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceOne(); }, wxID_REPLACE);
@@ -96,6 +107,28 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
 }
 
 void FindReplaceDialog::Present(bool replace) {
+    const bool firstTime = !IsShown() || replace_ != replace;
+    if (IsShown() && replace_ != replace) {
+        // Ctrl+F/Ctrl+H retain edited text across the dialog switch. Options
+        // are committed only by a search/replace command in the original.
+        auto request = search_.Request();
+        request.query = query_->GetValue();
+        if (replace_) request.replacement = replacement_->GetValue();
+        search_.Configure(std::move(request));
+    }
+    if (firstTime) {
+        const auto& request = search_.Request();
+        query_->ChangeValue(request.query);
+        replacement_->ChangeValue(request.replacement);
+        matchCase_->SetValue(request.options.matchCase);
+        wholeWord_->SetValue(request.options.wholeWord);
+        regularExpression_->SetValue(request.options.regularExpression);
+        transformBackslashes_->SetValue(request.options.transformBackslashes);
+        wrapAround_->SetValue(request.wrapAround);
+        wholeWord_->Enable(!request.options.regularExpression);
+    }
+    const bool selected = SeedQuery(firstTime);
+    replace_ = replace;
     SetTitle(replace ? "Replace" : "Find");
     replacementLabel_->Show(replace);
     replacement_->Show(replace);
@@ -105,30 +138,84 @@ void FindReplaceDialog::Present(bool replace) {
     replacementResult_->Show(replace);
     GetSizer()->Fit(this);
     Show();
-    query_->SetFocus();
-    query_->SelectAll();
+    auto* focus = selected && replace ? replacement_ : query_;
+    focus->SetFocus();
+    focus->SelectAll();
+}
+
+bool FindReplaceDialog::SeedQuery(bool firstTime) {
+    // Pinned Edit.cpp::CopySelectionAsFindText and Helpers.cpp::AddBackslashW.
+    const auto length = editor_.Send(Scintilla::Message::GetSelText);
+    wxString text;
+    if (length > 0 && length <= 1024 * 1024 && (selectionOptions_ & 2)) {
+        std::string bytes(static_cast<size_t>(length) + 1, '\0');
+        editor_.Send(Scintilla::Message::GetSelText, 0, reinterpret_cast<intptr_t>(bytes.data()));
+        text = wxString::FromUTF8(bytes.c_str());
+    }
+    const bool selected = !text.empty();
+    if (!selected && firstTime && (selectionOptions_ & 4) && wxTheClipboard->Open()) {
+        wxTextDataObject data;
+        if (wxTheClipboard->IsSupported(wxDF_UNICODETEXT) && wxTheClipboard->GetData(data)) text = data.GetText();
+        wxTheClipboard->Close();
+    }
+    if (!text.empty()) {
+        text = text.BeforeFirst(wxUniChar(0));
+        wxString escaped;
+        bool control = false;
+        for (const auto value : text) {
+            const auto ch = value.GetValue();
+            if (ch >= '\a' && ch <= '\r') {
+                escaped += '\\';
+                escaped += "abtnvfr"[ch - '\a'];
+                control = true;
+            } else if (ch == 0x1b) {
+                escaped += "\\e";
+                control = true;
+            } else if (ch < ' ' || ch == 0x7f) {
+                escaped += wxString::Format("\\x%02X", ch);
+                control = true;
+            } else {
+                escaped += value;
+                if (ch == '\\') escaped += value;
+            }
+        }
+        transformBackslashes_->SetValue(control && !regularExpression_->GetValue());
+        auto request = search_.Request();
+        request.options.transformBackslashes = transformBackslashes_->GetValue();
+        search_.Configure(std::move(request));
+        // APPM_COPYDATA in the original leaves the existing query control alone.
+        if (firstTime) query_->ChangeValue(control ? escaped : text);
+    }
+    return selected;
 }
 
 void FindReplaceDialog::ConfigureSearch() {
     replaceSelectionButton_->Enable(!query_->IsEmpty());
-    search_.Configure({query_->GetValue(),
-                       replacement_->GetValue(),
-                       {matchCase_->GetValue(), wholeWord_->GetValue(), regularExpression_->GetValue()},
-                       wrapAround_->GetValue()});
+    if (query_->IsEmpty()) return;
+    auto request = search_.Request();
+    request.query = query_->GetValue();
+    if (replace_) request.replacement = replacement_->GetValue();
+    request.options = {matchCase_->GetValue(), wholeWord_->GetValue(), regularExpression_->GetValue(),
+                       transformBackslashes_->GetValue()};
+    request.wrapAround = wrapAround_->GetValue();
+    search_.Configure(std::move(request));
 }
 
 void FindReplaceDialog::Find(SearchDirection direction) {
+    if (query_->IsEmpty()) return;
     ConfigureSearch();
     reportFind_(search_.Find(direction));
 }
 
 void FindReplaceDialog::ReplaceOne() {
+    if (query_->IsEmpty()) return;
     ConfigureSearch();
     const auto result = search_.ReplaceOne();
     if (result.next) reportFind_(*result.next);
 }
 
 void FindReplaceDialog::ReplaceAll(bool inSelection) {
+    if (query_->IsEmpty()) return;
     ConfigureSearch();
     const auto result = inSelection ? search_.ReplaceInSelection() : search_.ReplaceAll();
     if (result.status == ReplaceAllStatus::RectangularSelection) {
