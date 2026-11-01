@@ -3,6 +3,9 @@
 #include <wx/wx.h>
 #include <cstdio>
 #include <stdexcept>
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#endif
 
 namespace {
 using Scintilla::Message;
@@ -52,6 +55,48 @@ void Drag(EditorControl* editor, wxPoint anchor, wxPoint caret, bool control = f
     for (int motion = 0; motion < 12; ++motion)
         Mouse(editor, wxEVT_MOTION, caret, control, shift, alt);
     Mouse(editor, wxEVT_LEFT_UP, caret, control, shift, alt);
+}
+void NativeMouse(EditorControl* editor, wxEventType type, wxPoint point, bool control = false, bool alt = false) {
+#ifdef __WXMSW__
+    BYTE previous[256];
+    Require(GetKeyboardState(previous), "read owned native test thread keyboard state");
+    BYTE modified[256];
+    std::copy(std::begin(previous), std::end(previous), std::begin(modified));
+    modified[VK_MENU] = alt ? 0x80 : 0;
+    Require(SetKeyboardState(modified), "set owned native test thread Alt state");
+    const UINT message = type == wxEVT_LEFT_DOWN ? WM_LBUTTONDOWN : type == wxEVT_LEFT_UP ? WM_LBUTTONUP : WM_MOUSEMOVE;
+    const WPARAM flags = (type == wxEVT_LEFT_UP ? 0 : MK_LBUTTON) | (control ? MK_CONTROL : 0);
+    SendMessageW(static_cast<HWND>(editor->GetHandle()), message, flags, MAKELPARAM(point.x, point.y));
+    SetKeyboardState(previous);
+#elif defined(__WXGTK__)
+    auto* widget = editor->GetConnectWidget();
+    const auto nativeType = type == wxEVT_LEFT_DOWN ? GDK_BUTTON_PRESS
+                            : type == wxEVT_LEFT_UP ? GDK_BUTTON_RELEASE
+                                                    : GDK_MOTION_NOTIFY;
+    auto* event = gdk_event_new(nativeType);
+    const guint modifiers =
+        (control ? GDK_CONTROL_MASK : 0) | (alt ? GDK_MOD1_MASK : 0) | (type == wxEVT_LEFT_DOWN ? 0 : GDK_BUTTON1_MASK);
+    if (type == wxEVT_MOTION) {
+        event->motion.window = static_cast<GdkWindow*>(g_object_ref(editor->GTKGetDrawingWindow()));
+        event->motion.send_event = TRUE;
+        event->motion.time = GDK_CURRENT_TIME;
+        event->motion.x = point.x;
+        event->motion.y = point.y;
+        event->motion.state = modifiers;
+    } else {
+        event->button.window = static_cast<GdkWindow*>(g_object_ref(editor->GTKGetDrawingWindow()));
+        event->button.send_event = TRUE;
+        event->button.time = GDK_CURRENT_TIME;
+        event->button.x = point.x;
+        event->button.y = point.y;
+        event->button.button = 1;
+        event->button.state = modifiers;
+    }
+    auto* display = gtk_widget_get_display(widget);
+    gdk_event_set_device(event, gdk_seat_get_pointer(gdk_display_get_default_seat(display)));
+    gtk_widget_event(widget, event);
+    gdk_event_free(event);
+#endif
 }
 void Character(EditorControl* editor, int character) {
     wxKeyEvent event(wxEVT_CHAR);
@@ -212,6 +257,19 @@ public:
                             editor->Send(Message::GetRectangularSelectionCaret) == 19 * 102 + 42,
                         "scrolled rectangle hit-testing includes both native scrollbar offsets");
                 std::puts("PASS: horizontal/vertical scrolling preserves rectangle endpoints");
+                Reset(editor, "abcd\r\nefgh\r\nijkl");
+                wxMilliSleep(550);
+                NativeMouse(editor, wxEVT_LEFT_DOWN, Point(editor, 1), false, true);
+                for (int motion = 0; motion < 12; ++motion)
+                    NativeMouse(editor, wxEVT_MOTION, Point(editor, 15), false, true);
+                NativeMouse(editor, wxEVT_LEFT_UP, Point(editor, 15), false, true);
+                Require(editor->Send(Message::GetSelections) == 3 &&
+                            editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
+                            editor->Send(Message::GetRectangularSelectionCaret) == 15,
+                        "native mouse Alt modifier reaches the rectangular selection core");
+                Character(editor, 'N');
+                Undo(editor, "abcd\r\nefgh\r\nijkl", "aNd\r\neNh\r\niNl");
+                std::puts("PASS: native mouse translation retains Alt rectangle endpoints and grouped editing");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
