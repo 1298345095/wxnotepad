@@ -100,7 +100,11 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 
 Unknown extensions and unnamed documents use Plain Text. The Language menu offers
 Automatic, Plain Text and each supported language. A manual choice applies to the
-current document. Successful New/Open restore Automatic. First Save and Save As
+current document. New and opening a different supplied path restore Automatic.
+Reopening the current path retains its effective scheme, caret/anchor and view,
+using the original line/column fallback when changed bytes move the caret far from
+its saved line. Windows recognizes case variants before load-path normalization;
+other native path spellings follow ordinary Open. First Save and Save As
 offer the current scheme first, the other supported types, and All Files last.
 A specific type chooses that language even when the filename differs; All Files
 restores Automatic and resolves from the filename. For an untitled document whose

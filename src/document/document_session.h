@@ -55,5 +55,6 @@ private:
     std::optional<SyntaxLanguage> languageOverride_;
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt);
-    void Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom);
+    void Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+                 bool keepLanguage = false);
 };
