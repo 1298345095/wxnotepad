@@ -487,7 +487,7 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
-        GetMenuBar()->Check(automaticLanguageId_, true);
+        UpdateWindowUI(wxUPDATE_UI_RECURSE);
         search_.ResetMatch();
     }
     UpdateDocumentState();
