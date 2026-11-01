@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include <wx/ffile.h>
 #include <wx/textfile.h>
+#include <wx/menu.h>
 #include <utility>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
@@ -48,13 +49,14 @@ void ProcessObserver::Publish() {
     wxFFile state(observation_ + "/state.tmp", "wb");
     state.Write(wxString::Format(
         "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"
-        "handle\t%llu\nwrap_mode\t%lld\nwrap_rows\t%lld\nclient_width\t%d\n",
+        "handle\t%llu\nwrap_mode\t%lld\nwrap_rows\t%lld\nclient_width\t%d\nline_numbers\t%d\nwhitespace\t%lld\n",
         sequence_, result_, static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetLength)), lastDirty_,
         frame_->IsShown() && !frame_->IsIconized(), wxWindow::FindFocus() == frame_->Editor(), lastActive_, backend,
         static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->Editor()->GetHandle())),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetWrapMode)),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::WrapCount, 0)),
-        frame_->Editor()->GetClientSize().x));
+        frame_->Editor()->GetClientSize().x, frame_->Editor()->LineNumbersVisible(),
+        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetViewWS))));
     state.Close();
     wxRenameFile(observation_ + "/state.tmp", observation_ + "/state", true);
 }
@@ -74,7 +76,17 @@ void ProcessObserver::Observe() {
         if (operation == "open" && !source.empty())
             result_ = frame_->Open(source).status == OpenStatus::Opened ? "ok" : "failed";
         if (operation == "save") result_ = frame_->Save().status == SaveStatus::Saved ? "ok" : "failed";
+        if (operation == "close") result_ = "ok";
+        if (operation == "menu") {
+            const int id = frame_->GetMenuBar()->FindMenuItem(source.BeforeFirst('\t'), source.AfterFirst('\t'));
+            if (id != wxNOT_FOUND) {
+                wxCommandEvent event(wxEVT_MENU, id);
+                result_ = frame_->GetEventHandler()->ProcessEvent(event) ? "ok" : "failed";
+                frame_->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            }
+        }
         Publish();
+        if (operation == "close") frame_->Close();
     } else if ((frame_->Editor()->Send(Scintilla::Message::GetModify) != 0) != lastDirty_ ||
                frame_->IsActive() != lastActive_) {
         Publish();
