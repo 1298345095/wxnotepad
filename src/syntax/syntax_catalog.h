@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <span>
 #include <string_view>
+#include <optional>
 
 enum class SyntaxLanguage : uint8_t { PlainText, Cpp, Python, Json };
 struct SyntaxDetectionOptions {
@@ -38,6 +39,7 @@ struct SyntaxDefinition {
 std::span<const SyntaxDefinition> SyntaxCatalog();
 const SyntaxDefinition& SyntaxFor(SyntaxLanguage language);
 SyntaxLanguage LanguageForPath(const wxString& path);
-SyntaxLanguage DetectLanguage(const wxString& path, std::string_view prefix, SyntaxDetectionOptions options = {});
+std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_view prefix,
+                                             SyntaxDetectionOptions options = {});
 wxString LanguageName(SyntaxLanguage language);
 bool LanguageCanFold(SyntaxLanguage language);

@@ -3,6 +3,8 @@
 #include <wx/wx.h>
 #include <filesystem>
 #include <fstream>
+#include "settings/settings_store.h"
+#include <memory>
 #include <cstdio>
 #include <stdexcept>
 
@@ -35,7 +37,10 @@ std::string Text(EditorFrame* frame) {
 class Utf16App final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values.warnLineEndings = false;
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory =
                 std::filesystem::temp_directory_path() / ("wxnotepad-utf16-" + std::to_string(wxGetProcessId()));
@@ -57,7 +62,7 @@ public:
                                                std::string("\xff\xfe\x41\0\0\0\0\xdc", 8)};
                 for (const auto& bytes : invalid) {
                     Write(bad, bytes);
-                    const auto failed = frame->Open(Filename(bad));
+                    const auto failed = frame->Open(Filename(bad), FileEncoding::Utf16Le);
                     Require(failed.status == OpenStatus::Failed && failed.error.Contains("UTF-16LE"),
                             "malformed UTF-16LE must report a strict decoding error");
                     Require(Text(frame) == "A中😀\r\nB\nC\r" && frame->DocumentPath() == Filename(source),
@@ -127,6 +132,7 @@ public:
     int OnExit() override { return result_; }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace

@@ -7,6 +7,8 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include "settings/settings_store.h"
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
@@ -117,8 +119,11 @@ private:
 class OpenNativeApp final : public wxApp {
 public:
     bool OnInit() override {
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values.warnLineEndings = false;
+        settings_->values.wordWrap = false;
         SetExitOnFrameDelete(false);
-        auto* frame = new EditorFrame;
+        auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                                    ("wxnotepad-switch-" + std::to_string(wxGetProcessId()));
@@ -268,7 +273,7 @@ public:
                         std::ofstream output(roundtripPath, std::ios::binary);
                         output.write(samples[index].data(), samples[index].size());
                     }
-                    auto* roundtrip = new EditorFrame;
+                    auto* roundtrip = new EditorFrame(settings_.get());
                     Require(roundtrip->Open(Filename(roundtripPath)).status == OpenStatus::Opened,
                             "roundtrip source must open");
                     const auto originalText = Text(roundtrip);
@@ -339,6 +344,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
