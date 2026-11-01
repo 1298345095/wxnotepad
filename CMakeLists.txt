@@ -100,6 +100,9 @@ if(BUILD_TESTING)
     add_test(NAME original_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_settings_lifecycle PROPERTIES TIMEOUT 60)
+    add_test(NAME original_shebang_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/shebang_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_shebang_settings PROPERTIES TIMEOUT 60)
     add_test(NAME original_zoom_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/zoom_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_zoom_preference PROPERTIES TIMEOUT 60)
@@ -150,6 +153,7 @@ if(BUILD_TESTING)
     add_editor_test(open_smoke open_utf8 30)
     add_editor_test(syntax_cpp cpp_highlighting 30)
     add_editor_test(syntax_python python_highlighting 30)
+    add_editor_test(syntax_shebang original_python_shebang 60)
     add_editor_test(syntax_json json_highlighting 60)
     add_editor_test(syntax_save automatic_language_save 60)
     add_editor_test(syntax_manual manual_language_choice 60)

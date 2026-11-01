@@ -3,8 +3,13 @@
 #include <wx/string.h>
 #include <cstdint>
 #include <span>
+#include <string_view>
 
 enum class SyntaxLanguage : uint8_t { PlainText, Cpp, Python, Json };
+struct SyntaxDetectionOptions {
+    bool autoSelect = true;
+    bool noCgiGuess = false;
+};
 struct SyntaxStyle {
     int id;
     unsigned int foreground;
@@ -33,5 +38,6 @@ struct SyntaxDefinition {
 std::span<const SyntaxDefinition> SyntaxCatalog();
 const SyntaxDefinition& SyntaxFor(SyntaxLanguage language);
 SyntaxLanguage LanguageForPath(const wxString& path);
+SyntaxLanguage DetectLanguage(const wxString& path, std::string_view prefix, SyntaxDetectionOptions options = {});
 wxString LanguageName(SyntaxLanguage language);
 bool LanguageCanFold(SyntaxLanguage language);

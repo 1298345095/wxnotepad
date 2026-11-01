@@ -87,7 +87,10 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
-      editor_(new EditorControl(this)), settings_(settings), document_(*editor_), search_(*editor_) {
+      editor_(new EditorControl(this)), settings_(settings),
+      document_(*editor_, settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
+                                   : SyntaxDetectionOptions{}),
+      search_(*editor_) {
     if (settings) {
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
