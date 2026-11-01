@@ -15,6 +15,7 @@
 #endif
 
 namespace {
+constexpr const char* SchemeSections[] = {"Text File", "C/C++ Source", "Python Script", "JSON Document"};
 wxString ConfigurationPath() {
     wxFileName executable(wxStandardPaths::Get().GetExecutablePath());
 #ifdef __WXMSW__
@@ -68,6 +69,18 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.autoSelect = ReadBool("AutoSelect", true, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", false, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
+    values.globalTabs.tabWidth = std::clamp(ReadInt("TabWidth", 4), 1, 256);
+    values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", 4), 0, 256);
+    values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", false);
+    values.tabIndents = ReadBool("TabIndents", true);
+    values.backspaceUnindents = static_cast<uint8_t>(ReadInt("BackspaceUnindents", 2));
+    for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
+        auto& tabs = values.schemeTabs[index];
+        tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, SchemeSections[index]), 1, 256);
+        tabs.indentWidth = std::clamp(ReadInt("IndentWidth", tabs.indentWidth, SchemeSections[index]), 0, 256);
+        tabs.tabsAsSpaces = ReadInt("TabsAsSpaces", tabs.tabsAsSpaces, SchemeSections[index]) != 0;
+        tabs.useGlobal = ReadInt("UseGlobalTabSettings", tabs.useGlobal, SchemeSections[index]) != 0;
+    }
 }
 
 void SettingsStore::LoadLines() {
@@ -114,13 +127,13 @@ bool SettingsStore::ReadBool(const wxString& key, bool fallback, const wxString&
     return fallback;
 }
 
-int SettingsStore::ReadInt(const wxString& key, int fallback) const {
+int SettingsStore::ReadInt(const wxString& key, int fallback, const wxString& sectionName) const {
     bool settings = false;
     for (const auto& raw : lines_) {
         wxString line = raw;
         line.Trim().Trim(false);
         if (line.StartsWith("[")) {
-            settings = line.CmpNoCase("[Settings]") == 0;
+            settings = line.CmpNoCase("[" + sectionName + "]") == 0;
         } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
             // Original CRTStrToInt accepts a decimal prefix (including a sign).
             const auto value = line.AfterFirst('=').ToStdString(wxConvUTF8);
@@ -177,7 +190,38 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
         WriteBool("AutoSelect", values.autoSelect, true, "Styles");
         WriteInt("ZoomLevel", values.zoomLevel, 100);
+        WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, false);
+        WriteBool("TabIndents", values.tabIndents, true);
+        WriteInt("TabWidth", values.globalTabs.tabWidth, 4);
+        WriteInt("IndentWidth", values.globalTabs.indentWidth, 4);
+        WriteInt("BackspaceUnindents", values.backspaceUnindents, 2);
+        for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
+            WriteSchemeTabs(index);
+        }
     }
+    return SaveLines();
+}
+
+void SettingsStore::WriteSchemeTabs(size_t index) {
+    const auto& tabs = values.schemeTabs[index];
+    const auto fallback = OriginalSettings{}.schemeTabs[index];
+    const auto write = [this, index](const wxString& key, int value, int defaultValue) {
+        WriteInt(key, value, defaultValue, SchemeSections[index]);
+    };
+    write("TabWidth", tabs.tabWidth, fallback.tabWidth);
+    write("IndentWidth", tabs.indentWidth, fallback.indentWidth);
+    write("TabsAsSpaces", tabs.tabsAsSpaces, fallback.tabsAsSpaces);
+    write("UseGlobalTabSettings", tabs.useGlobal, fallback.useGlobal);
+}
+
+bool SettingsStore::SaveSchemeTabs(SyntaxLanguage language) {
+    if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
+    LoadLines();
+    WriteSchemeTabs(static_cast<size_t>(language));
+    return SaveLines();
+}
+
+bool SettingsStore::SaveLines() {
     wxString text(wxUniChar(0xFEFF));
     for (const auto& line : lines_)
         text += line + "\r\n";

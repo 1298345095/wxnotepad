@@ -22,8 +22,11 @@ class Application:
         self.state = wait_state(folder, self.process, lambda s: s["sequence"] == "0")
 
     def menu(self, item):
+        self.named_menu("View", item)
+
+    def named_menu(self, menu, item):
         self.sequence += 1
-        command(self.folder, f"{self.sequence}\nmenu\nView\t{item}\n")
+        command(self.folder, f"{self.sequence}\nmenu\n{menu}\t{item}\n")
         self.state = wait_state(self.folder, self.process, lambda s: s["sequence"] == str(self.sequence))
         assert self.state["result"] == "ok", item
 
@@ -40,6 +43,11 @@ class Application:
 def view(state, wrap, numbers, whitespace):
     assert (state["wrap_mode"] != "0", state["line_numbers"] == "1", state["whitespace"] != "0") == (
         wrap, numbers, whitespace), state
+
+
+def tabs(state, tab, indent, use_tabs, tab_indents=1, backspace=2):
+    assert tuple(int(state[key]) for key in ("tab_width", "indent_width", "use_tabs", "tab_indents",
+                                           "backspace_unindents")) == (tab, indent, use_tabs, tab_indents, backspace), state
 
 
 def main():
@@ -69,6 +77,9 @@ def main():
         app = Application(executable, folder, environment)
         try:
             view(app.state, True, True, False)
+            tabs(app.state, 4, 4, 1)
+            app.named_menu("Language", "JSON")
+            tabs(app.state, 2, 2, 0)
             for item in ("Word Wrap", "Line Numbers", "Show Whitespace"):
                 app.menu(item)
             view(app.state, False, False, True)
@@ -111,6 +122,26 @@ def main():
         assert "SaveSettings=0" in saved, saved
         assert "WordWrap=" not in saved and "ShowLineNumbers=" not in saved and "ViewWhiteSpace=" not in saved, saved
         assert "UnrelatedSetting=keep" in saved and "UnrelatedStyle=保留" in saved, saved
+        config = config_folder / "Notepad4.ini"
+        config.write_text("[Settings]\nTabWidth=7\nIndentWidth=3\nTabsAsSpaces=1\nTabIndents=0\n"
+                          "BackspaceUnindents=3\n[Python Script]\nTabWidth=9\nIndentWidth=0\n"
+                          "TabsAsSpaces=0\nUseGlobalTabSettings=0\n[JSON Document]\nUseGlobalTabSettings=1\n"
+                          "[C/C++ Source]\nTabWidth=999\nIndentWidth=-5\nUseGlobalTabSettings=0\n", encoding="utf-16")
+        app = Application(executable, folder, environment)
+        try:
+            tabs(app.state, 7, 3, 0, 0, 3)
+            app.named_menu("Language", "Python")
+            tabs(app.state, 9, 0, 1, 0, 3)
+            app.named_menu("Language", "JSON")
+            tabs(app.state, 7, 3, 0, 0, 3)
+            app.named_menu("Language", "C/C++")
+            tabs(app.state, 256, 0, 1, 0, 3)
+            app.close()
+        finally:
+            app.stop()
+        saved = config.read_text(encoding="utf-16")
+        assert "TabWidth=7" in saved and "IndentWidth=3" in saved and "BackspaceUnindents=3" in saved, saved
+        assert "[Python Script]" in saved and "TabWidth=9" in saved and "IndentWidth=0" in saved, saved
     print("Original defaults, seed, restoration, disabled exit save, explicit save and unrelated settings passed")
 
 
