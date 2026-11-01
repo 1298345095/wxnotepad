@@ -176,7 +176,11 @@ public:
         window_.UpdateLineNumberMargin();
         ChangeSize();
     }
-    void Character(std::string_view text) { InsertCharacter(text, Scintilla::CharacterSource::DirectInput); }
+    void Character(std::string_view text) {
+        InsertCharacter(text, Scintilla::CharacterSource::DirectInput);
+        // Character events bypass WndProc's end-of-message selection snapshot.
+        RememberCurrentSelectionForRedoOntoStack();
+    }
     bool EditingKey(const wxKeyEvent& event) {
         if (event.MetaDown()) return false;
         if (!event.AltDown() && ((event.GetKeyCode() == WXK_INSERT && event.ControlDown() && !event.ShiftDown()) ||
@@ -916,9 +920,9 @@ void EditorControl::ToggleWordWrap() {
     core_->UpdateWrapLayout();
 }
 
-void EditorControl::SetIndentationWidth(int width) {
-    Send(Message::SetTabWidth, width);
-    Send(Message::SetIndent, width);
+void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
+    Send(Message::SetTabWidth, tabWidth);
+    Send(Message::SetIndent, indentWidth);
     core_->UpdateWrapLayout();
 }
 

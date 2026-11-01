@@ -25,7 +25,7 @@ public:
     intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
     void IndentLines(bool forwards);
-    void SetIndentationWidth(int width);
+    void SetIndentationWidths(int tabWidth, int indentWidth);
     void Copy();
     void Cut();
     LineSelectionMode GetLineSelectionMode() const { return lineSelectionMode_; }
