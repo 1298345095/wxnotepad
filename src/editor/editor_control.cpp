@@ -24,8 +24,8 @@ unsigned MouseTime() {
             .count());
 }
 Scintilla::KeyMod MouseModifiers(const wxMouseEvent& event) {
-    // This host supports one stream selection; Alt rectangular selection is deferred.
-    return event.ShiftDown() ? Scintilla::KeyMod::Shift : Scintilla::KeyMod::Norm;
+    return static_cast<Scintilla::KeyMod>((event.ShiftDown() ? 1 : 0) | (event.ControlDown() ? 2 : 0) |
+                                          (event.AltDown() ? 4 : 0));
 }
 } // namespace
 
@@ -76,6 +76,17 @@ public:
         WndProc(Message::SetCaretStyle, 1, 0);
         WndProc(Message::SetMarginWidthN, 1, 0);
         WndProc(Message::SetScrollWidthTracking, 1, 0);
+        // Notepad4 CreateEditor: SelectOption_Default enables multiple selection.
+        WndProc(Message::SetMultipleSelection, 1, 0);
+        WndProc(Message::SetAdditionalSelectionTyping, 1, 0);
+        WndProc(Message::SetMultiPaste, static_cast<uintptr_t>(Scintilla::MultiPaste::Each), 0);
+        WndProc(Message::SetVirtualSpaceOptions, static_cast<uintptr_t>(Scintilla::VirtualSpace::RectangularSelection),
+                0);
+        // EditNewText enables selection restoration and viewport restoration by default.
+        WndProc(Message::SetUndoSelectionHistory,
+                static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
+                    static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll),
+                0);
         dragDropEnabled = false;
         WndProc(Message::EmptyUndoBuffer, 0, 0);
         WndProc(Message::SetSavePoint, 0, 0);
@@ -665,7 +676,8 @@ EditorControl::~EditorControl() = default;
 
 void EditorControl::IndentLines(bool forwards) {
     if (Send(Message::GetReadOnly)) return;
-    if (Send(Message::GetSelectionEmpty)) {
+    if (Send(Message::GetSelectionEmpty) && Send(Message::GetSelections) == 1 &&
+        Send(Message::GetSelectionMode) == static_cast<intptr_t>(Scintilla::SelectionMode::Stream)) {
         // The core excludes an endpoint at a line start. Move an empty
         // selection to its line end so the explicit line command includes it.
         const auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));
