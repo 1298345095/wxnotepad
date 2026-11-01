@@ -4,13 +4,13 @@
 #include <cstdint>
 #include "ScintillaTypes.h"
 #include "syntax/syntax_catalog.h"
+#include "document/encoding/encoding_detection.h"
 #include <optional>
 #include <functional>
 #include <string>
 #include <variant>
 
 class EditorControl;
-enum class FileEncoding { Utf8, Utf16Le, Gbk };
 enum class GbkLossChoice { Cancel, Replace };
 using GbkLossDecision = std::function<GbkLossChoice()>;
 // The dialog adapter translates its native filter index into this semantic choice.
@@ -39,8 +39,8 @@ struct OpenResult {
 // File identity belongs to the session; the original core owns text and history.
 class DocumentSession final {
 public:
-    explicit DocumentSession(EditorControl& editor, SyntaxDetectionOptions detection = {})
-        : editor_(editor), detection_(detection) {}
+    explicit DocumentSession(EditorControl& editor, EncodingOptions options = {}, SyntaxDetectionOptions detection = {})
+        : editor_(editor), encodingOptions_(options), detection_(detection) {}
     const wxString& Path() const { return path_; }
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
@@ -49,12 +49,14 @@ public:
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme);
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                    std::optional<FileEncoding> encoding = std::nullopt);
+                    std::optional<FileEncoding> encoding = std::nullopt,
+                    std::optional<EncodingChoice> weakEncoding = std::nullopt);
     void New();
     void SetDefaultEolMode(Scintilla::EndOfLine mode) { defaultEolMode_ = mode; }
     bool HasUtf8Bom() const { return encoding_ == FileEncoding::Utf8 && hasBom_; }
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
+    bool IsDefaultEncoding() const { return systemDefaultEncoding_; }
     SyntaxLanguage Language() const { return languageOverride_.value_or(automaticLanguage_); }
     std::optional<SyntaxLanguage> LanguageOverride() const { return languageOverride_; }
     void SelectLanguage(std::optional<SyntaxLanguage> language);
@@ -65,6 +67,8 @@ private:
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
     Scintilla::EndOfLine defaultEolMode_ = Scintilla::EndOfLine::CrLf;
+    EncodingOptions encodingOptions_;
+    bool systemDefaultEncoding_ = false;
     std::optional<SyntaxLanguage> languageOverride_;
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;

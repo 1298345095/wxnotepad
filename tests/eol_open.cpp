@@ -9,6 +9,9 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#ifdef __WXMSW__
+#include <windows.h>
+#endif
 
 namespace {
 using Scintilla::EndOfLine;
@@ -212,6 +215,59 @@ void WarningChoices(const std::filesystem::path& directory, SettingsStore& setti
         std::printf("PASS: warning choices %d, No/Yes, checkbox, Undo/Redo and independent saved bytes\n", selected);
     }
 }
+void UnknownFileDefaults(const std::filesystem::path& directory, SettingsStore& settings) {
+    settings.values.defaultEOLMode = 0;
+    settings.values.warnLineEndings = true;
+    settings.values.encoding.defaultEncoding = 0;
+    settings.values.encoding.loadANSIasUTF8 = false;
+    settings.values.encoding.loadASCIIasUTF8 = false;
+    bool nativeAnsi = false;
+#ifdef __WXMSW__
+    UINT legacy = GetACP();
+    if (legacy == CP_UTF8) {
+        constexpr LCTYPE legacyAnsi = 0x00000666;
+        GetLocaleInfoEx(LOCALE_NAME_SYSTEM_DEFAULT, legacyAnsi | LOCALE_RETURN_NUMBER,
+                        reinterpret_cast<LPWSTR>(&legacy), sizeof(legacy) / sizeof(WCHAR));
+    }
+    nativeAnsi = legacy == 936;
+#endif
+    // Native ANSI codecs outside the delivered CP936 codec remain unsupported.
+    // The UTF-8 case still checks that unknown language alone does not imply No.
+    if (!nativeAnsi) settings.values.encoding.defaultEncoding = -1;
+    const std::string mixed = nativeAnsi ? "\xd6\xd0one\r\ntwo\nthree\rlast" : "one\r\ntwo\nthree\rlast";
+    auto* frame = new EditorFrame(&settings);
+    frame->ShowWithoutActivating();
+    for (const auto* name : {"known.txt", "known.ini", "unknown.eol-unknown"}) {
+        const auto input = directory / name;
+        Write(input, mixed);
+        WarningDriver warning;
+        warning.defaultNo = nativeAnsi && std::string_view(name) == "unknown.eol-unknown";
+        warning.Start(20);
+        Require(frame->Open(Filename(input)).status == OpenStatus::Opened,
+                "native-default fixture must open through the application");
+        warning.Check();
+        Require(!frame->Editor()->Send(Message::GetModify) && frame->Save().status == SaveStatus::Saved &&
+                    Bytes(input) == mixed && !frame->Editor()->Send(Message::GetModify),
+                "Save after declining native-default conversion must preserve exact disk bytes and the save point");
+        if (std::string_view(name) == "unknown.eol-unknown") {
+            WarningDriver reopened;
+            reopened.always = false;
+            reopened.Start(20);
+            Require(frame->Open(Filename(input)).status == OpenStatus::Opened, "same-path unknown file must reopen");
+            reopened.Check();
+            WarningDriver disabled;
+            disabled.Start(20);
+            Require(frame->Open(Filename(input)).status == OpenStatus::Opened, "No may disable future warnings");
+            disabled.Stop();
+            Require(!disabled.seen && !frame->Editor()->Send(Message::GetModify),
+                    "unchecking Always show on No must suppress the next warning");
+        }
+    }
+    frame->Destroy();
+    wxYield();
+    std::puts(nativeAnsi ? "PASS: native ANSI known/unknown defaults, same-path default Yes and No checkbox"
+                         : "PASS: UTF-8 known/unknown defaults, same-path default Yes and No checkbox");
+}
 class EolOpenApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -223,6 +279,7 @@ public:
                 SettingsStore settings;
                 CountAndDefault(directory, settings);
                 WarningChoices(directory, settings);
+                UnknownFileDefaults(directory, settings);
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 result_ = 1;

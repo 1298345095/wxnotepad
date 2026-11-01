@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "file_helpers.h"
+#include "settings/settings_store.h"
 #include <SciLexer.h>
 #include <wx/wx.h>
 #include <wx/statusbr.h>
@@ -9,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <memory>
 
 namespace {
 using Scintilla::Message;
@@ -54,7 +56,10 @@ void Language(EditorFrame* frame, SyntaxLanguage expected) {
 class ShebangApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values.warnLineEndings = false;
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             const auto folder =
@@ -232,6 +237,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 0;
 };
 } // namespace

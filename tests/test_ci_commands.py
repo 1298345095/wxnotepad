@@ -1,5 +1,7 @@
 """Exercise CI's Windows CMake invocation through the actual developer shell."""
 import importlib.util
+import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -14,6 +16,43 @@ SPEC.loader.exec_module(CI)
 
 @unittest.skipUnless(sys.platform == 'win32', 'The developer-shell wrapper is Windows-only')
 class WindowsCMakeCommands(unittest.TestCase):
+    def test_header_changes_rebuild_ninja_consumers_with_mixed_console_codepages(self):
+        with tempfile.TemporaryDirectory(prefix='wxnotepad header dependency ') as folder:
+            directory = Path(folder)
+            source = directory / 'source'
+            source.mkdir()
+            (source / 'CMakeLists.txt').write_text(
+                'cmake_minimum_required(VERSION 3.25)\nproject(HeaderDependency LANGUAGES CXX)\n'
+                'add_executable(probe main.cpp)\n'
+                'target_compile_options(probe PRIVATE /utf-8)\n', encoding='utf-8')
+            (source / 'main.cpp').write_text(
+                '#include "value.h"\nint main() { return VALUE; }\n', encoding='utf-8')
+            header = source / 'value.h'
+            header.write_text('#define VALUE 11\n', encoding='utf-8')
+            build = directory / 'build'
+            environment = dict(os.environ, VSLANG='2052')
+
+            def cmake(*arguments):
+                # A private console reproduces the input/output encoding mismatch
+                # without changing the developer's console or showing a window.
+                driver = ('import ctypes,json,subprocess,sys; '
+                          'ctypes.windll.kernel32.SetConsoleCP(936); '
+                          'ctypes.windll.kernel32.SetConsoleOutputCP(65001); '
+                          'sys.exit(subprocess.run(json.loads(sys.argv[1])).returncode)')
+                command = [sys.executable, '-X', 'utf8', '-c', driver,
+                           json.dumps([str(item) for item in CI.cmake_command(arguments)])]
+                result = subprocess.run(command, env=environment,
+                                        creationflags=subprocess.CREATE_NO_WINDOW,
+                                        capture_output=True, text=True, encoding='utf-8', errors='replace')
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            cmake('-S', source, '-B', build, '-G', 'Ninja')
+            cmake('--build', build)
+            self.assertEqual(subprocess.run([build / 'probe.exe']).returncode, 11)
+            header.write_text('#define VALUE 22\n', encoding='utf-8')
+            cmake('--build', build)
+            self.assertEqual(subprocess.run([build / 'probe.exe']).returncode, 22)
+
     def test_paths_and_literal_arguments_reach_cmake(self):
         with tempfile.TemporaryDirectory(prefix='wxnotepad cmake ') as folder:
             directory = Path(folder)
