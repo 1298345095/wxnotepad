@@ -5,6 +5,7 @@
 #include <ScintillaTypes.h>
 #include <wx/string.h>
 #include <optional>
+#include <string>
 
 class EditorControl;
 
@@ -48,6 +49,8 @@ public:
 private:
     EditorControl& editor_;
     SearchRequest request_;
+    std::string QueryBytes() const;
+    std::string ReplacementBytes() const;
     Scintilla::FindOption SearchFlags() const;
     FindResult SelectTarget(bool wrapped);
     ReplaceAllResult ReplaceRange(bool inSelection);
