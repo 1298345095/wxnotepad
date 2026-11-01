@@ -6,6 +6,9 @@
 #include <wx/tokenzr.h>
 #include <wx/utils.h>
 #include <string>
+#include <algorithm>
+#include <cstdlib>
+#include <limits>
 #ifdef __WXMSW__
 #include <shlobj.h>
 #include <filesystem>
@@ -62,6 +65,9 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.wordWrap = ReadBool("WordWrap", true);
     values.showLineNumbers = ReadBool("ShowLineNumbers", true);
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
+    values.autoSelect = ReadBool("AutoSelect", true, "Styles");
+    values.noCgiGuess = ReadBool("NoCGIGuess", false, "Settings2");
+    values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
 }
 
 void SettingsStore::LoadLines() {
@@ -90,13 +96,13 @@ void SettingsStore::LoadLines() {
     if (!lines_.empty() && lines_.back().empty()) lines_.pop_back();
 }
 
-bool SettingsStore::ReadBool(const wxString& key, bool fallback) const {
+bool SettingsStore::ReadBool(const wxString& key, bool fallback, const wxString& sectionName) const {
     bool settings = false;
     for (const auto& raw : lines_) {
         wxString line = raw;
         line.Trim().Trim(false);
         if (line.StartsWith("[")) {
-            settings = line.CmpNoCase("[Settings]") == 0;
+            settings = line.CmpNoCase("[" + sectionName + "]") == 0;
         } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
             const wxString value = line.AfterFirst('=').Trim().Trim(false);
             // Original IniSectionParser::GetBoolImpl accepts a leading 0 or 1.
@@ -108,7 +114,31 @@ bool SettingsStore::ReadBool(const wxString& key, bool fallback) const {
     return fallback;
 }
 
-void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
+int SettingsStore::ReadInt(const wxString& key, int fallback) const {
+    bool settings = false;
+    for (const auto& raw : lines_) {
+        wxString line = raw;
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            settings = line.CmpNoCase("[Settings]") == 0;
+        } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
+            // Original CRTStrToInt accepts a decimal prefix (including a sign).
+            const auto value = line.AfterFirst('=').ToStdString(wxConvUTF8);
+            char* end = nullptr;
+            const long number = std::strtol(value.c_str(), &end, 10);
+            if (end == value.c_str()) return fallback;
+            return static_cast<int>(std::clamp(number, static_cast<long>(std::numeric_limits<int>::min()),
+                                               static_cast<long>(std::numeric_limits<int>::max())));
+        }
+    }
+    return fallback;
+}
+
+void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback, const wxString& sectionName) {
+    WriteInt(key, value, fallback, sectionName);
+}
+
+void SettingsStore::WriteInt(const wxString& key, int value, int fallback, const wxString& sectionName) {
     bool settings = false;
     bool foundSection = false;
     size_t insertion = lines_.size();
@@ -116,7 +146,7 @@ void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
         wxString line = lines_[index];
         line.Trim().Trim(false);
         if (line.StartsWith("[")) {
-            settings = line.CmpNoCase("[Settings]") == 0;
+            settings = line.CmpNoCase("[" + sectionName + "]") == 0;
             if (settings && !foundSection) {
                 insertion = index + 1;
                 foundSection = true;
@@ -129,10 +159,10 @@ void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
     }
     if (value == fallback) return;
     if (!foundSection) {
-        lines_.push_back("[Settings]");
+        lines_.push_back("[" + sectionName + "]");
         insertion = lines_.size();
     }
-    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + (value ? "=1" : "=0"));
+    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + wxString::Format("=%d", value));
 }
 
 bool SettingsStore::Save(bool explicitSave) {
@@ -145,6 +175,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("WordWrap", values.wordWrap, true);
         WriteBool("ShowLineNumbers", values.showLineNumbers, true);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
+        WriteBool("AutoSelect", values.autoSelect, true, "Styles");
+        WriteInt("ZoomLevel", values.zoomLevel, 100);
     }
     wxString text(wxUniChar(0xFEFF));
     for (const auto& line : lines_)

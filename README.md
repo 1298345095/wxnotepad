@@ -16,6 +16,13 @@ events retain their UTF-8 conversion storage through insertion.
 Windows binaries declare Per-Monitor V2 DPI awareness, and offscreen text buffers
 inherit the window's display scale. See the [font validation record](docs/observations/windows-font-README.md).
 
+View → Zoom offers Zoom In (Ctrl++ / Ctrl+= and keypad +), Zoom Out (Ctrl+- and
+keypad -), Zoom Level and Reset Zoom (Ctrl+\\). The original core uses 10%–500%
+zoom, with 10-point steps below 200% and 25-point steps above it; reset restores
+100%. Ctrl+wheel changes zoom; horizontal wheel and Shift+wheel scroll
+horizontally first, including when Ctrl is held. The `ZoomLevel` preference uses
+the shared [settings lifecycle](docs/settings.md).
+
 The editor supports keyboard navigation, Shift selection, mouse selection and
 scrolling, plus native system clipboard Cut/Copy/Paste and their Ctrl+X/C/V
 shortcuts. Clipboard edits participate in the same Undo/Redo history.
@@ -72,6 +79,11 @@ selected match before editing; Replace All searches the complete current
 document and reports its count in the dialog. Each text-changing single
 replacement or Replace All operation can be undone once. Byte-identical
 single replacements and Replace All preserve the save point and redo history.
+In Selection uses the current stream range, reports its replacement count, and
+groups edits into one Undo operation. It retains the original search context and
+stops before a match crossing the selection end. Rectangular selections show the
+original unsupported-operation warning. See the
+[selection replacement record](docs/observations/replace-selection-README.md).
 
 Regular expressions use the pinned original core's Boost engine and capture
 formatter, including numeric `$1` / `\1` references and `$&` / `$0` for the whole
@@ -111,7 +123,13 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 | Python | `.py`, `.pyw`, `.pyi` |
 | JSON | `.json` |
 
-Unknown extensions and unnamed documents use Plain Text. The Language menu offers
+For unmatched filenames, Automatic also recognizes the original Python interpreter
+line forms, including direct paths, `env` and `winpty` wrappers, and `py*`/`ipy*`
+names. Known filename associations take precedence; languages whose lexer has not
+been delivered retain the Plain Text fallback. The original `[Styles] AutoSelect`
+and `[Settings2] NoCGIGuess` settings control this selection. It runs on Open and
+explicit Automatic selection, without changing text or history; ordinary edits
+retain the selected language. Other unmatched content uses Plain Text. The Language menu offers
 Automatic, Plain Text and each supported language. A manual choice applies to the
 current document. New and opening a different supplied path restore Automatic.
 Reopening the current path retains its effective scheme, caret/anchor and view,
