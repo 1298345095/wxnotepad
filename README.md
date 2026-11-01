@@ -86,7 +86,8 @@ New documents save as UTF-8 without a BOM. Open accepts UTF-8 with or without a
 BOM and recognizes BOM-marked UTF-16LE; Open As UTF-16LE also handles files
 without a BOM. Open As GBK explicitly decodes CP936. Save and Save As preserve
 the loaded encoding and BOM, shown in the status bar. GBK character loss offers
-Save as UTF-8, Replace in GBK, or Cancel. Newline insertion defaults to CRLF;
+OK/Cancel. Accepting writes replacement bytes while retaining the editor text and
+establishing its save point. Newline insertion defaults to CRLF;
 loaded files use their detected newline style for Enter, while existing CRLF,
 LF and CR bytes remain intact when saved.
 
