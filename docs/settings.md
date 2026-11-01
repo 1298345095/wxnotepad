@@ -94,6 +94,25 @@ The behavior and field names come from pinned Notepad4 revision
 those rules without pulling Windows profile APIs into the editor runtime. The
 upstream license remains in `licenses/Notepad4.txt`.
 
+`DefaultEOLMode` defaults to `0` (CRLF); `1` selects LF and `2` selects CR.
+Values are clamped to that range, matching the original settings order, which
+differs from Scintilla's numeric EOL order. Open counts CRLF pairs separately
+from standalone CR and LF. It retains the configured default when that mode
+ties for the largest count, including files with no line endings. Otherwise it
+chooses the largest count, preferring CRLF and then LF on a tie.
+
+`WarnLineEndings` defaults to `1`. Mixed endings show the original counts,
+CRLF/LF/CR selector, Yes/No choices and Always Show preference after the file has
+opened. No retains the mixed bytes and loaded save point. Yes converts through
+the original core, retaining the selected insertion mode while making one
+undoable edit. Save writes the current bytes; it does not normalize them again.
+These fields use the same settings load/save lifecycle described above.
+
+The warning defaults to No for a newly loaded unknown language when the encoding
+detector classified the file as native ANSI. Recognized Plain Text and same-path
+reopens retain the original Yes default. The original actual-Diff-lexer branch
+remains outside the delivered language catalog.
+
 Encoding selection adds the original `[Settings]` fields `DefaultEncoding`
 (built-in UTF-8, omitted on Save), `SkipUnicodeDetection=1`, `LoadANSIasUTF8=1`,
 `LoadASCIIasUTF8=1`, `LoadNFOasOEM=1` and `NoEncodingTags=0`. The original INI

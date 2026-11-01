@@ -1,6 +1,8 @@
 #pragma once
 
 #include <wx/string.h>
+#include <cstdint>
+#include "ScintillaTypes.h"
 #include "syntax/syntax_catalog.h"
 #include "document/encoding/encoding_detection.h"
 #include <optional>
@@ -21,9 +23,17 @@ struct SaveResult {
     wxString error;
 };
 enum class OpenStatus { Opened, Cancelled, Failed };
+struct LineEndingCounts {
+    size_t crlf = 0;
+    size_t cr = 0;
+    size_t lf = 0;
+    bool Mixed() const { return (crlf != 0) + (cr != 0) + (lf != 0) > 1; }
+};
 struct OpenResult {
     OpenStatus status;
     wxString error;
+    LineEndingCounts lineEndings;
+    bool unknownLanguage = false;
 };
 
 // File identity belongs to the session; the original core owns text and history.
@@ -42,6 +52,7 @@ public:
                     std::optional<FileEncoding> encoding = std::nullopt,
                     std::optional<EncodingChoice> weakEncoding = std::nullopt);
     void New();
+    void SetDefaultEolMode(Scintilla::EndOfLine mode) { defaultEolMode_ = mode; }
     bool HasUtf8Bom() const { return encoding_ == FileEncoding::Utf8 && hasBom_; }
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
@@ -55,14 +66,15 @@ private:
     wxString path_;
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
+    Scintilla::EndOfLine defaultEolMode_ = Scintilla::EndOfLine::CrLf;
     EncodingOptions encodingOptions_;
     bool systemDefaultEncoding_ = false;
     std::optional<SyntaxLanguage> languageOverride_;
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
-    void DetectAutomaticLanguage();
+    bool DetectAutomaticLanguage();
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt);
-    void Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
-                 bool keepLanguage = false);
+    OpenResult Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+                       bool keepLanguage = false);
 };

@@ -24,6 +24,8 @@ struct OriginalSettings {
     EncodingOptions encoding;
     int zoomLevel = 100;
     int lineSelection = 1;
+    int defaultEOLMode = 0;
+    bool warnLineEndings = true;
     OriginalTabs globalTabs;
     std::array<OriginalTabs, 4> schemeTabs{{{}, {}, {}, {2, 2, true, false}}};
     bool tabIndents = true;

@@ -9,29 +9,37 @@
 #include <wx/log.h>
 #include <wx/utils.h>
 #include <cstdio>
+#include <algorithm>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
 
 namespace {
-Scintilla::EndOfLine DetectEol(std::string_view bytes) {
-    size_t crlf = 0;
-    size_t cr = 0;
-    size_t lf = 0;
+LineEndingCounts CountLineEndings(std::string_view bytes) {
+    LineEndingCounts counts;
     for (size_t i = 0; i < bytes.size(); ++i) {
         if (bytes[i] == '\r') {
             if (i + 1 < bytes.size() && bytes[i + 1] == '\n') {
-                ++crlf;
+                ++counts.crlf;
                 ++i;
             } else
-                ++cr;
+                ++counts.cr;
         } else if (bytes[i] == '\n')
-            ++lf;
+            ++counts.lf;
     }
-    // Original EditDetectEOLMode policy with the current default CRLF:
-    // retain CRLF when tied for most common; otherwise prefer LF over CR.
-    if (crlf >= cr && crlf >= lf) return Scintilla::EndOfLine::CrLf;
-    return lf >= cr ? Scintilla::EndOfLine::Lf : Scintilla::EndOfLine::Cr;
+    return counts;
+}
+
+Scintilla::EndOfLine SelectEol(const LineEndingCounts& counts, Scintilla::EndOfLine configured) {
+    // Notepad4 89b8b36 EditDetectEOLMode: retain the configured mode when tied,
+    // otherwise choose the largest count, preferring CRLF and then LF.
+    const size_t maximum = std::max({counts.crlf, counts.cr, counts.lf});
+    const size_t preferred = configured == Scintilla::EndOfLine::CrLf ? counts.crlf
+                             : configured == Scintilla::EndOfLine::Lf ? counts.lf
+                                                                      : counts.cr;
+    if (preferred == maximum) return configured;
+    if (counts.crlf == maximum) return Scintilla::EndOfLine::CrLf;
+    return counts.lf == maximum ? Scintilla::EndOfLine::Lf : Scintilla::EndOfLine::Cr;
 }
 
 struct PendingSave {
@@ -193,7 +201,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         result = read();
         if (result.status != OpenStatus::Opened) return result;
     }
-    Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
+    const auto loaded = Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
     systemDefaultEncoding_ = systemDefault;
     if (samePath) {
         editor_.Send(Message::SetSel, anchor, caret);
@@ -221,16 +229,17 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
             editor_.Send(Message::SetXOffset, xOffset);
         }
     }
-    return {OpenStatus::Opened, {}};
+    return loaded;
 }
 
-void DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
-                              bool keepLanguage) {
+OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+                                    bool keepLanguage) {
+    const auto lineEndings = CountLineEndings(bytes);
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
     editor_.Send(Scintilla::Message::MarkerDeleteAll, 0);
     editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
-    editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(DetectEol(bytes)));
+    editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(SelectEol(lineEndings, defaultEolMode_)));
     editor_.Send(Scintilla::Message::SetUndoCollection, 1);
     editor_.Send(Scintilla::Message::EmptyUndoBuffer);
     editor_.Send(Scintilla::Message::GotoPos, 0);
@@ -239,11 +248,13 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, Fi
     path_ = path;
     encoding_ = encoding;
     hasBom_ = bom;
+    bool unknownLanguage = false;
     if (!keepLanguage) {
         languageOverride_.reset();
-        DetectAutomaticLanguage();
+        unknownLanguage = !DetectAutomaticLanguage();
         ApplySyntaxLanguage(editor_, Language());
     }
+    return {OpenStatus::Opened, {}, lineEndings, unknownLanguage};
 }
 
 void DocumentSession::New() {
@@ -258,10 +269,12 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     if (previous != Language()) ApplySyntaxLanguage(editor_, Language());
 }
 
-void DocumentSession::DetectAutomaticLanguage() {
+bool DocumentSession::DetectAutomaticLanguage() {
     // The pinned core's GetText count excludes its terminating NUL.
     // Match original SciCall_GetText(255) with the original 256-byte buffer.
     char prefix[256]{};
     editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
-    automaticLanguage_ = DetectLanguage(path_, prefix, detection_);
+    const auto detected = DetectLanguage(path_, prefix, detection_);
+    automaticLanguage_ = detected.value_or(SyntaxLanguage::PlainText);
+    return detected.has_value();
 }

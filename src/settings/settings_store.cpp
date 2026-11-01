@@ -77,6 +77,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.noFileVariables = ReadBool("NoFileVariables", false, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
     values.lineSelection = ReadInt("LineSelection", 1);
+    values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", 0), 0, 2);
+    values.warnLineEndings = ReadBool("WarnLineEndings", true);
     values.globalTabs.tabWidth = std::clamp(ReadInt("TabWidth", 4), 1, 256);
     values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", 4), 0, 256);
     values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", false);
@@ -205,6 +207,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("NoEncodingTags", values.encoding.noEncodingTags, false);
         WriteInt("ZoomLevel", values.zoomLevel, 100);
         WriteInt("LineSelection", values.lineSelection, 1);
+        WriteInt("DefaultEOLMode", values.defaultEOLMode, 0);
+        WriteBool("WarnLineEndings", values.warnLineEndings, true);
         WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, false);
         WriteBool("TabIndents", values.tabIndents, true);
         WriteInt("TabWidth", values.globalTabs.tabWidth, 4);
