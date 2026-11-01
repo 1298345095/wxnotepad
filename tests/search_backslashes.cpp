@@ -52,6 +52,14 @@ public:
                 const auto previous = search.Find(SearchDirection::Backward);
                 Require(previous.status == FindStatus::Found && previous.start == 10 && previous.end == 19,
                         "literal Previous supports transformed multiline ranges");
+                auto markedRequest = search.Request();
+                markedRequest.bookmarkMatchedLines = true;
+                search.Configure(markedRequest);
+                Require(search.FindAll().count == 2 && editor->Send(Message::IndicatorValueAt, 8, 0) &&
+                            editor->Send(Message::IndicatorValueAt, 8, 18) &&
+                            (editor->Send(Message::MarkerGet, 0) & 1) && (editor->Send(Message::MarkerGet, 1) & 1) &&
+                            (editor->Send(Message::MarkerGet, 2) & 1),
+                        "Find All shares transformed bytes and bookmarks multiline matches");
                 std::puts("PASS: transformed multiline Find Next/Previous and UTF-8 positions");
                 Load(*editor, "中\r\n\t文 中\r\n\t文");
                 search.Configure(

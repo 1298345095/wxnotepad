@@ -74,6 +74,13 @@ Shift+F3 finds the previous match. Wrap around is enabled by default, while
 Match case, Whole word and Regular expression are initially off. Find and
 Replace share the query and options for the current application session.
 
+Find All counts and marks matches across the whole document, including folded
+content, while preserving the selection and folds. Bookmark matched line is off
+by default. Empty regex matches count without visible marks or bookmarks; the
+original single-anchor `^` and `$` line-count rules are retained. Query/options
+changes and edits clear the count and indicators. Find All bookmarks remain until
+the next Find All operation; New/Open clear them with the replaced document.
+
 Edit → Replace / Ctrl+H opens the replacement view. Replace revalidates the
 selected match before editing; Replace All searches the complete current
 document and reports its count in the dialog. Each text-changing single

@@ -141,6 +141,7 @@ The interface has a small set of operations:
 | --- | --- | --- |
 | Configure search | Query, replacement, options, wrap setting | Updated session; relevant match state invalidated |
 | Find | Direction | Found/no match/invalid pattern/empty query, matched byte range and wrap status |
+| Find all | Current configured search and bookmark option | Whole-document match count or error; original occurrence indicators and optional line bookmarks |
 | Replace one | Current configured search | Whether a replacement occurred and the following search outcome |
 | Replace all | Current configured search | Replacement count, whether bytes changed, or an error |
 | Replace in selection | Current configured search and live editor selection | Replacement count, whether bytes changed, or an error/rectangular-selection outcome |
@@ -149,6 +150,12 @@ The module performs match selection and fold reveal as part of Find. Callers
 should not repeat the sequence of setting core targets, validating a match,
 expanding folds and scrolling the caret. Byte offsets remain UTF-8 offsets; GUI
 string indices do not become document positions.
+
+Find All uses the original forward matcher and `EditMarkAll` count/progress rules.
+Its indicator/count state is tied to the editor document revision and cleared on
+query/options changes or edits. Find All bookmarks survive ordinary mark
+invalidation and are replaced by the next Find All request. Document replacement
+also clears bookmarks, including transitions between two empty documents.
 
 Regex search uses the pinned target-local context and backward line-by-line
 path. Find resumes directly at the selection endpoint, including an empty match.
