@@ -29,6 +29,16 @@ retains the stored value, Save Settings Now writes the current value, and the
 default `100` is omitted. It scales the existing native point-size font through
 the original core and does not replace the base font size or DPI handling.
 
+`LineSelection` restores the original four modes: `0` None, `1` Visual Studio
+(the built-in default), `2` Normal and `3` Old Visual Studio. It uses the original
+integer-prefix parser without an added range clamp. The Edit menu changes the
+same value, and Save Settings Now/enabled exit saving persist it while omitting
+the default. None keeps empty-selection Copy/Cut as no-ops. The enabled modes
+copy or cut the current line; Visual Studio modes tag it for insertion at the
+destination line start, while Normal publishes stream text. Cut keeps the
+expanded caret column on the next line, or the previous line in Old Visual
+Studio mode. Explicit Ctrl+Shift+C/X line commands use the same tag option.
+
 Save Settings On Exit is enabled by default. A disabled exit save writes only
 `SaveSettings=0`, retaining the previously stored view choices. Save Settings Now
 writes current choices even while exit saving is disabled. Default-valued fields
