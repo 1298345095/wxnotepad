@@ -69,8 +69,6 @@ void Paint(EditorControl* editor) {
 }
 #ifdef __WXGTK__
 void DialogTab(GtkWidget* dialog, bool shift) {
-    auto* previous = gtk_window_get_focus(GTK_WINDOW(dialog));
-    Require(previous, "native dialog has keyboard focus");
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "dialog keys require private display helper");
     {
@@ -88,6 +86,8 @@ void DialogTab(GtkWidget* dialog, bool shift) {
         wxYield();
         wxMilliSleep(10);
     }
+    auto* previous = gtk_window_get_focus(GTK_WINDOW(dialog));
+    Require(previous, "activated native dialog has keyboard focus");
     {
         wxFFile file(focusFile, "wb");
         file.Write(shift ? "key:shift+Tab" : "key:Tab");
@@ -113,8 +113,26 @@ public:
                 continue;
             Stop();
             try {
+                wxWindow* line = nullptr;
+                wxWindow* column = nullptr;
+                if (title_ == "Go To Line") {
+                    for (auto* window : wxTopLevelWindows) {
+                        if (window->GetHandle() != dialog) continue;
+                        line = wxWindow::FindWindowByName("Go to line number", window);
+                        column = wxWindow::FindWindowByName("Go to column number", window);
+                    }
+                    Require(line && column, "Go To Line exposes its original line and column inputs");
+                    line->SetFocus();
+                    wxYield();
+                }
                 DialogTab(dialog, false);
+                if (column)
+                    Require(gtk_window_get_focus(GTK_WINDOW(dialog)) == column->GetHandle(),
+                            "Tab moves from Go To Line to its Column input");
                 DialogTab(dialog, true);
+                if (line)
+                    Require(gtk_window_get_focus(GTK_WINDOW(dialog)) == line->GetHandle(),
+                            "Shift+Tab returns from Column to Line");
                 checked = true;
             } catch (const std::exception& failure) {
                 error = failure.what();

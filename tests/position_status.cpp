@@ -181,7 +181,12 @@ public:
                 Status(frame, "Ln 3, Col 1");
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
-                editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
+                // User typing records selection history; programmatic AddText does not.
+                wxKeyEvent character(wxEVT_CHAR);
+                character.m_keyCode = '!';
+                character.m_uniChar = '!';
+                character.SetEventObject(editor);
+                editor->GetEventHandler()->ProcessEvent(character);
                 Status(frame, "Ln 3, Col 2");
                 NativeSearch::Command(frame, wxID_UNDO);
                 Status(frame, "Ln 3, Col 1");
