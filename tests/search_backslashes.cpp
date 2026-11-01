@@ -122,7 +122,7 @@ public:
                 const std::string original("\xff\xfe\x2d\x4e\x0d\0\x0a\0\x87\x65", 10);
                 {
                     std::ofstream file(nativePath, std::ios::binary);
-                    file.write(original.data(), original.size());
+                    file.write(original.data(), static_cast<std::streamsize>(original.size()));
                 }
                 DocumentSession document(*editor);
                 Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,

@@ -34,7 +34,7 @@ void AppendUtf8(std::string& output, unsigned value) {
 }
 std::string TransformBackslashes(const wxString& text, bool transform) {
     const auto utf8 = text.utf8_str();
-    const std::string input(utf8.data(), utf8.length());
+    std::string input(utf8.data(), utf8.length());
     if (!transform) return input;
     std::string output;
     const auto hex = [&](size_t start, size_t count) {
