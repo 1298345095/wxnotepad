@@ -67,7 +67,7 @@ bool PythonInterpreter(std::string_view text) {
     return letters.starts_with("py") || letters.starts_with("ipy");
 }
 
-enum class FilenameMatch { Unknown, Associated, Config };
+enum class FilenameMatch : uint8_t { Unknown, Associated, Config };
 FilenameMatch OriginalFilenameMatch(const wxString& path) {
     const wxFileName file(path);
     const auto name = file.GetFullName().Lower();
