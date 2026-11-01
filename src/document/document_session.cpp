@@ -123,24 +123,11 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
     std::string bytes(length + 1, '\0');
     editor_.Send(Scintilla::Message::GetText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     bytes.resize(length);
-    std::optional<std::string> savedText;
-    auto savedEncoding = encoding_;
-    bool savedBom = hasBom_;
     if (encoding_ == FileEncoding::Gbk) {
         if (!IsUtf8(bytes)) return {SaveStatus::Failed, "The document contains invalid UTF-8."};
         const auto encoded = EncodeGbk(bytes);
-        if (encoded.loss) {
-            const auto choice = decideLoss ? decideLoss() : GbkLossChoice::Cancel;
-            if (choice == GbkLossChoice::Cancel) return {SaveStatus::Cancelled, {}};
-            if (choice == GbkLossChoice::Utf8) {
-                savedEncoding = FileEncoding::Utf8;
-                savedBom = false;
-            } else {
-                bytes = encoded.bytes;
-                savedText = DecodeGbk(bytes);
-            }
-        } else
-            bytes = encoded.bytes;
+        if (encoded.loss && (!decideLoss || decideLoss() != GbkLossChoice::Replace)) return {SaveStatus::Cancelled, {}};
+        bytes = encoded.bytes;
     } else if (encoding_ == FileEncoding::Utf16Le) {
         auto encoded = EncodeUtf16Le(bytes);
         if (!encoded) return {SaveStatus::Failed, "The document could not be encoded as UTF-16LE."};
@@ -150,14 +137,6 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
         bytes.insert(0, "\xef\xbb\xbf");
     const auto error = WriteSafely(destination, bytes);
     if (!error.empty()) return {SaveStatus::Failed, error};
-    if (savedText) {
-        editor_.Send(Scintilla::Message::BeginUndoAction);
-        editor_.Send(Scintilla::Message::SetTargetStart, 0);
-        editor_.Send(Scintilla::Message::SetTargetEnd, length);
-        editor_.Send(Scintilla::Message::ReplaceTarget, savedText->size(),
-                     reinterpret_cast<intptr_t>(savedText->data()));
-        editor_.Send(Scintilla::Message::EndUndoAction);
-    }
     const auto previousLanguage = Language();
     if (fileType) {
         const auto* selected = std::get_if<SyntaxLanguage>(&*fileType);
@@ -174,8 +153,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
             languageOverride_.reset();
     }
     path_ = destination;
-    encoding_ = savedEncoding;
-    hasBom_ = savedBom;
+    // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
     if (previousLanguage != Language()) ApplySyntaxLanguage(editor_, Language());
     return {SaveStatus::Saved, {}};
@@ -184,40 +162,97 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                                  std::optional<FileEncoding> encoding) {
     if (!source) return {OpenStatus::Cancelled, {}};
+    using Scintilla::Message;
+    // Notepad4 FileLoad compares the supplied spelling before canonicalizing the
+    // load path. Do not turn distinct spellings or file-system aliases into reloads.
+#ifdef __WXMSW__
+    const bool samePath =
+        !path_.empty() && CompareStringOrdinal(source->wc_str(), -1, path_.wc_str(), -1, TRUE) == CSTR_EQUAL;
+#else
+    const bool samePath = !path_.empty() && *source == path_;
+#endif
+    const auto caret = editor_.Send(Message::GetCurrentPos);
+    const auto anchor = editor_.Send(Message::GetAnchor);
+    const auto line = editor_.Send(Message::LineFromPosition, caret);
+    const auto column = editor_.Send(Message::GetColumn, caret, line);
+    const auto visibleTop = editor_.Send(Message::GetFirstVisibleLine);
+    const auto documentTop = editor_.Send(Message::DocLineFromVisible, visibleTop);
+    const auto xOffset = editor_.Send(Message::GetXOffset);
+    wxFileName loadPath(*source);
+    loadPath.Normalize(wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE | wxPATH_NORM_LONG |
+                       wxPATH_NORM_SHORTCUT);
     wxLogNull quiet;
-    if (!wxFileName::FileExists(*source)) return {OpenStatus::Failed, "Choose an existing file to open."};
-    wxFile file(*source, wxFile::read);
-    if (!file.IsOpened()) return {OpenStatus::Failed, "Could not open the file for reading."};
-    const auto length = file.Length();
-    if (length < 0) return {OpenStatus::Failed, "Could not determine the file size."};
-    std::string bytes(static_cast<size_t>(length), '\0');
-    if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
-        return {OpenStatus::Failed, "Could not read the complete file."};
-    const auto format = encoding.value_or(bytes.starts_with("\xff\xfe") ? FileEncoding::Utf16Le : FileEncoding::Utf8);
-    const bool bom = format == FileEncoding::Utf16Le
-                         ? bytes.starts_with("\xff\xfe")
-                         : format == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf");
-    if (bom) bytes.erase(0, format == FileEncoding::Utf16Le ? 2 : 3);
-    if (format == FileEncoding::Gbk) {
-        const auto decoded = DecodeGbk(bytes);
-        if (!decoded) return {OpenStatus::Failed, "The file is not valid GBK (CP936). The document was not changed."};
-        bytes = *decoded;
-    } else if (format == FileEncoding::Utf16Le) {
-        auto decoded = DecodeUtf16Le(bytes);
-        if (!decoded) return {OpenStatus::Failed, "The file is not valid UTF-16LE."};
-        bytes = std::move(*decoded);
-    } else if (!IsUtf8(bytes))
-        return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
+    std::string bytes;
+    FileEncoding format;
+    bool bom;
+    const auto read = [&]() -> OpenResult {
+        if (!loadPath.FileExists()) return {OpenStatus::Failed, "Choose an existing file to open."};
+        wxFile file(loadPath.GetFullPath(), wxFile::read);
+        if (!file.IsOpened()) return {OpenStatus::Failed, "Could not open the file for reading."};
+        const auto length = file.Length();
+        if (length < 0) return {OpenStatus::Failed, "Could not determine the file size."};
+        bytes.assign(static_cast<size_t>(length), '\0');
+        if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
+            return {OpenStatus::Failed, "Could not read the complete file."};
+        format = encoding.value_or(bytes.starts_with("\xff\xfe") ? FileEncoding::Utf16Le : FileEncoding::Utf8);
+        bom = format == FileEncoding::Utf16Le ? bytes.starts_with("\xff\xfe")
+                                              : format == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf");
+        if (bom) bytes.erase(0, format == FileEncoding::Utf16Le ? 2 : 3);
+        if (format == FileEncoding::Gbk) {
+            const auto decoded = DecodeGbk(bytes);
+            if (!decoded)
+                return {OpenStatus::Failed, "The file is not valid GBK (CP936). The document was not changed."};
+            bytes = *decoded;
+        } else if (format == FileEncoding::Utf16Le) {
+            auto decoded = DecodeUtf16Le(bytes);
+            if (!decoded) return {OpenStatus::Failed, "The file is not valid UTF-16LE."};
+            bytes = std::move(*decoded);
+        } else if (!IsUtf8(bytes))
+            return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
+        return {OpenStatus::Opened, {}};
+    };
+    auto result = read();
+    if (result.status != OpenStatus::Opened) return result;
     const bool wasModified = editor_.Send(Scintilla::Message::GetModify);
     if (!beforeReplace()) return {OpenStatus::Cancelled, {}};
     // Save may have rewritten the selected source (including a newly chosen
     // first-save destination). Read it again after that explicit Save succeeds.
-    if (wasModified && !editor_.Send(Scintilla::Message::GetModify)) return Open(source, [] { return true; }, encoding);
-    Replace(bytes, *source, format, bom);
+    if (wasModified && !editor_.Send(Scintilla::Message::GetModify)) {
+        result = read();
+        if (result.status != OpenStatus::Opened) return result;
+    }
+    Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
+    if (samePath) {
+        editor_.Send(Message::SetSel, anchor, caret);
+        // Original FileLoad (Notepad4 89b8b36): compare the saved one-based line
+        // against the restored zero-based line, then use EditJumpTo/EditSelectEx.
+        const auto displacement =
+            line + 1 - editor_.Send(Message::LineFromPosition, editor_.Send(Message::GetCurrentPos));
+        if (displacement > 5 || displacement < -5) {
+            const auto position = line >= editor_.Send(Message::GetLineCount)
+                                      ? editor_.Send(Message::GetLength)
+                                      : editor_.Send(Message::FindColumn, line, column);
+            constexpr auto slop = static_cast<uintptr_t>(Scintilla::CaretPolicy::Slop);
+            constexpr auto strict = static_cast<uintptr_t>(Scintilla::CaretPolicy::Strict);
+            constexpr auto even = static_cast<uintptr_t>(Scintilla::CaretPolicy::Even);
+            editor_.Send(Message::SetXCaretPolicy, slop | strict | even, 50);
+            editor_.Send(Message::SetYCaretPolicy, slop | strict | even, 5);
+            editor_.Send(Message::EnsureVisibleEnforcePolicy, editor_.Send(Message::LineFromPosition, position));
+            editor_.Send(Message::GotoPos, position);
+            editor_.Send(Message::SetXCaretPolicy, slop | even, 50);
+            editor_.Send(Message::SetYCaretPolicy, even, 0);
+            editor_.Send(Message::ChooseCaretX);
+        } else {
+            editor_.Send(Message::EnsureVisible, documentTop);
+            editor_.Send(Message::LineScroll, 0, visibleTop - editor_.Send(Message::GetFirstVisibleLine));
+            editor_.Send(Message::SetXOffset, xOffset);
+        }
+    }
     return {OpenStatus::Opened, {}};
 }
 
-void DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom) {
+void DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+                              bool keepLanguage) {
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
     editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
@@ -230,8 +265,10 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, Fi
     path_ = path;
     encoding_ = encoding;
     hasBom_ = bom;
-    languageOverride_.reset();
-    ApplySyntaxLanguage(editor_, Language());
+    if (!keepLanguage) {
+        languageOverride_.reset();
+        ApplySyntaxLanguage(editor_, Language());
+    }
 }
 
 void DocumentSession::New() {

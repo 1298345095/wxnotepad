@@ -105,6 +105,10 @@ if(BUILD_TESTING)
     add_test(NAME feature_session_contracts COMMAND feature_sessions)
     set_tests_properties(feature_session_contracts PROPERTIES TIMEOUT 30)
 
+    add_gui_program(reopen_document tests/reopen_document.cpp app_shell)
+    add_test(NAME reopen_current_document COMMAND reopen_document)
+    set_tests_properties(reopen_current_document PROPERTIES TIMEOUT 30)
+
     add_gui_program(clipboard_peer tests/clipboard_peer.cpp wx::core wx::base)
     add_editor_test(clipboard_smoke system_clipboard 30)
     add_dependencies(clipboard_smoke clipboard_peer)

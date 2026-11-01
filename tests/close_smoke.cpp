@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <string_view>
 
 namespace {
 void Require(bool condition, const char* message) {
@@ -61,7 +62,8 @@ public:
                     const int button = driver.choice_ == wxID_YES ? IDYES : driver.choice_ == wxID_NO ? IDNO : IDCANCEL;
                     // wxMessageDialog uses the Windows native task dialog.
                     SendMessageW(window, WM_USER + 102, button, 0); // TDM_CLICK_BUTTON
-                } else if (IsWindowVisible(window) && wxString(title) == "Save file") {
+                } else if (IsWindowVisible(window) &&
+                           (wxString(title) == "Save file" || wxString(title) == "Save As")) {
                     if (!driver.chooserStage_++) {
                         ++driver.choosers;
                         NativeDialogs::ChooseFile(window, driver.destination_);
@@ -108,6 +110,102 @@ private:
     int chooserStage_ = 0;
 };
 
+void CheckWhitespacePrompts(const std::filesystem::path& directory) {
+    const auto source = directory / "open-whitespace.txt";
+    std::ofstream(source, std::ios::binary) << "opened";
+    struct Sample {
+        const char* name;
+        std::string bytes;
+        bool prompt;
+        bool named = false;
+    };
+    const Sample samples[] = {
+        {"2047 spaces", std::string(2047, ' '), false},
+        {"2048 spaces", std::string(2048, ' '), true},
+        {"tabs", "\t\t", false},
+        {"line endings", "\r\n\n\r", false},
+        {"vertical tab and form feed", "\v\f", false},
+        {"mixed ASCII whitespace", " \t\r\n\v\f", false},
+        {"empty after editing", "", false},
+        {"non-whitespace", " \tx\r\n", true},
+        {"embedded NUL", std::string(" \0 ", 3), true},
+        {"non-breaking space", "\xc2\xa0", true},
+        {"Unicode em space", "\xe2\x80\x83", true},
+        {"named whitespace", " \t\r\n", true, true},
+        {"named empty after editing", "", true, true},
+    };
+    for (const auto& sample : samples) {
+        for (const auto* action : {"New", "Open", "Close"}) {
+            auto* candidate = new EditorFrame;
+            if (sample.named)
+                Require(candidate->SaveFirst(Filename(directory / "named-whitespace.txt")).status == SaveStatus::Saved,
+                        "named whitespace fixture must save");
+            if (sample.bytes.empty()) {
+                Add(candidate, "x");
+                candidate->Editor()->Send(Scintilla::Message::ClearAll);
+            } else
+                Add(candidate, sample.bytes);
+            const auto path = candidate->DocumentPath();
+            Require(candidate->Editor()->Send(Scintilla::Message::GetModify), "sample must be modified");
+            NativeDriver driver(wxID_CANCEL);
+            const bool closing = std::string_view(action) == "Close";
+            const bool opening = std::string_view(action) == "Open";
+            const bool completed = closing   ? candidate->Close()
+                                   : opening ? candidate->Open(Filename(source)).status == OpenStatus::Opened
+                                             : candidate->New();
+            driver.Stop();
+            if (completed == sample.prompt || driver.prompts != (sample.prompt ? 1 : 0))
+                throw std::runtime_error(std::string(action) + " prompt mismatch: " + sample.name);
+            if (sample.prompt) {
+                Require(Text(candidate) == sample.bytes && candidate->DocumentPath() == path &&
+                            candidate->Editor()->Send(Scintilla::Message::GetModify) &&
+                            candidate->Editor()->Send(Scintilla::Message::CanUndo),
+                        "Cancel must preserve bytes, path, dirty state and history");
+            } else if (!closing) {
+                Require(Text(candidate) == (opening ? "opened" : "") &&
+                            !candidate->Editor()->Send(Scintilla::Message::GetModify),
+                        "successful replacement must establish the new document");
+            }
+            if (!closing || sample.prompt) candidate->Destroy();
+        }
+        std::printf("PASS: New/Open/Close whitespace rule: %s\n", sample.name);
+    }
+
+    auto* explicitSave = new EditorFrame;
+    const std::string whitespace = " \t\r\n\v\f";
+    Add(explicitSave, whitespace);
+    Require(explicitSave->Open(std::nullopt).status == OpenStatus::Cancelled &&
+                explicitSave->Open(Filename(directory / "missing.txt")).status == OpenStatus::Failed &&
+                Text(explicitSave) == whitespace && explicitSave->DocumentPath().empty() &&
+                explicitSave->Editor()->Send(Scintilla::Message::GetModify),
+            "cancelled and failed Open must preserve short whitespace-only Untitled");
+    NativeDriver cancelSave(wxID_CANCEL);
+    Require(explicitSave->Save().status == SaveStatus::Cancelled, "explicit Save must still open its chooser");
+    cancelSave.Stop();
+    Require(cancelSave.choosers == 1 && cancelSave.prompts == 0 && Text(explicitSave) == whitespace &&
+                explicitSave->DocumentPath().empty() && explicitSave->Editor()->Send(Scintilla::Message::GetModify),
+            "cancelled explicit Save must retain whitespace and dirty state");
+    Require(explicitSave->SaveFirst(Filename(directory / "missing" / "failure.txt")).status == SaveStatus::Failed &&
+                Text(explicitSave) == whitespace && explicitSave->DocumentPath().empty() &&
+                explicitSave->Editor()->Send(Scintilla::Message::GetModify),
+            "failed explicit Save must retain whitespace and dirty state");
+    const auto firstPath = directory / "explicit-whitespace.txt";
+    NativeDriver saveDriver(wxID_YES, Filename(firstPath));
+    Require(explicitSave->Save().status == SaveStatus::Saved, "explicit Save must write short whitespace Untitled");
+    saveDriver.Stop();
+    Require(saveDriver.choosers == 1 && Bytes(firstPath) == whitespace,
+            "explicit Save must preserve exact whitespace bytes on disk");
+    const auto secondPath = directory / "explicit-whitespace-copy.txt";
+    NativeDriver saveAsDriver(wxID_YES, Filename(secondPath));
+    Require(explicitSave->SaveAs().status == SaveStatus::Saved, "explicit Save As must write short whitespace");
+    saveAsDriver.Stop();
+    Require(saveAsDriver.choosers == 1 && Bytes(secondPath) == whitespace &&
+                !explicitSave->Editor()->Send(Scintilla::Message::GetModify),
+            "explicit Save As must preserve exact whitespace bytes and establish its save point");
+    explicitSave->Destroy();
+    std::puts("PASS: explicit whitespace Save/Save As and cancelled/failed operation state");
+}
+
 class CloseApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -130,6 +228,7 @@ public:
                 const auto directory =
                     std::filesystem::temp_directory_path() / ("wxnotepad-close-" + std::to_string(wxGetProcessId()));
                 std::filesystem::create_directory(directory);
+                CheckWhitespacePrompts(directory);
                 auto* saved = new EditorFrame;
                 const auto path = directory / "known.txt";
                 Add(saved, "first");

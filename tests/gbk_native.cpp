@@ -56,29 +56,30 @@ public:
                 GetWindowTextW(window, title, 256);
                 if (wxString(title) == "GBK character loss") {
                     ++driver.losses;
-                    // The displayed native buttons must make all three choices explicit.
-                    struct Labels {
-                        bool utf8 = false, replace = false, cancel = false;
-                    } labels;
+                    struct Buttons {
+                        int count = 0;
+                        bool alternative = false;
+                    } buttons;
                     EnumChildWindows(
                         window,
                         [](HWND child, LPARAM data) -> BOOL {
-                            wchar_t text[1024]{};
-                            GetWindowTextW(child, text, 1024);
-                            auto& labels = *reinterpret_cast<Labels*>(data);
-                            labels.utf8 |= wxString(text).Contains("UTF-8");
-                            labels.replace |= wxString(text).Contains("Replace in GBK");
-                            labels.cancel |= wxString(text).Contains("Cancel");
+                            wchar_t className[32]{};
+                            GetClassNameW(child, className, 32);
+                            wchar_t title[256]{};
+                            GetWindowTextW(child, title, 256);
+                            if (wxString(className) != "Button") return TRUE;
+                            auto& buttons = *reinterpret_cast<Buttons*>(data);
+                            ++buttons.count;
+                            buttons.alternative |=
+                                wxString(title).Contains("UTF-8") || wxString(title).Contains("Replace in GBK");
                             return TRUE;
                         },
-                        reinterpret_cast<LPARAM>(&labels));
-                    Require(labels.utf8 && labels.replace && labels.cancel,
-                            "native loss prompt must expose UTF8/GBK replacement/Cancel");
-                    SendMessageW(window, WM_USER + 102,
-                                 driver.choice_ == wxID_YES  ? IDYES
-                                 : driver.choice_ == wxID_NO ? IDNO
-                                                             : IDCANCEL,
-                                 0);
+                        reinterpret_cast<LPARAM>(&buttons));
+                    // Common TaskDialog buttons have localized labels and ID 0 child windows.
+                    // The response below exercises their semantic IDOK/IDCANCEL commands.
+                    Require(buttons.count == 2 && !buttons.alternative,
+                            "native loss prompt must expose original OK/Cancel choices");
+                    SendMessageW(window, WM_USER + 102, driver.choice_ == wxID_OK ? IDOK : IDCANCEL, 0);
                 } else if (wxString(title) == "Open file" || wxString(title) == "Save As") {
                     if (!driver.stage_++) {
                         ++driver.choosers;
@@ -113,13 +114,12 @@ public:
                         Require(button && GTK_IS_BUTTON(button), "native loss button must exist");
                         return wxString::FromUTF8(gtk_button_get_label(GTK_BUTTON(button)));
                     };
-                    Require(label(GTK_RESPONSE_YES).Contains("UTF-8") &&
-                                label(GTK_RESPONSE_NO).Contains("Replace in GBK") &&
-                                label(GTK_RESPONSE_CANCEL).Contains("Cancel"),
-                            "native loss choices must be explicit");
-                    Respond(widget, choice_ == wxID_YES  ? GTK_RESPONSE_YES
-                                    : choice_ == wxID_NO ? GTK_RESPONSE_NO
-                                                         : GTK_RESPONSE_CANCEL);
+                    Require(label(GTK_RESPONSE_OK).Contains("OK") && label(GTK_RESPONSE_CANCEL).Contains("Cancel"),
+                            "native loss choices must be original OK/Cancel");
+                    Require(!gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_YES) &&
+                                !gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_NO),
+                            "native loss prompt must not offer a UTF8 alternative");
+                    Respond(widget, choice_ == wxID_OK ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
                 } else if (title == "Could not save file" || title == "Could not open file") {
                     ++errors;
                     Respond(widget, GTK_RESPONSE_OK);
@@ -190,31 +190,28 @@ public:
                 Require(cancel.losses == 1 && Bytes(source) == original && Text(frame) == rich &&
                             frame->Editor()->Send(Scintilla::Message::GetModify),
                         "native Cancel must retain all text/disk state");
-                NativeDriver replace(wxID_NO);
+                NativeDriver replace(wxID_OK);
                 Command(frame, wxID_SAVE);
                 replace.Stop();
-                Require(replace.losses == 1 && Bytes(source) == original + "??????" &&
-                            Text(frame) == "Native\r\n中文\n€\r??????" &&
+                Require(replace.losses == 1 && Bytes(source) == original + "??????" && Text(frame) == rich &&
                             !frame->Editor()->Send(Scintilla::Message::GetModify),
-                        "native confirmed loss must save original placeholder bytes and clean replacement text");
+                        "native OK must save original placeholder bytes and retain clean rich text");
                 frame->Editor()->Send(Scintilla::Message::Undo);
-                Require(Text(frame) == rich && frame->Editor()->Send(Scintilla::Message::GetModify),
-                        "native loss Undo must restore richer dirty text");
+                Require(Text(frame) == "Native\r\n中文\n€\r" && frame->Editor()->Send(Scintilla::Message::GetModify),
+                        "native loss Undo must undo the preceding user edit");
                 frame->Editor()->Send(Scintilla::Message::Redo);
-                Require(!frame->Editor()->Send(Scintilla::Message::GetModify),
-                        "native loss Redo must reach clean saved text");
-                Add(frame, "😀");
-                const auto fallback = Text(frame);
-                const auto target = directory / "utf8.CPP";
-                NativeDriver utf8(wxID_YES, Filename(target));
+                Require(Text(frame) == rich && !frame->Editor()->Send(Scintilla::Message::GetModify),
+                        "native loss Redo must reach the rich text save point");
+                const auto target = directory / "lossy.CPP";
+                NativeDriver saveAs(wxID_OK, Filename(target));
                 Command(frame, wxID_SAVEAS);
-                utf8.Stop();
-                Require(
-                    utf8.choosers == 1 && utf8.losses == 1 && Bytes(target) == fallback &&
-                        frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentHasBom() &&
-                        frame->GetMenuBar()->IsChecked(python) &&
-                        frame->GetStatusBar()->GetStatusText().Contains("Python (override)"),
-                    "native Save As UTF8 must retain bytes without BOM and force selected current Python despite .CPP");
+                saveAs.Stop();
+                Require(saveAs.choosers == 1 && saveAs.losses == 1 && Bytes(target) == original + "??????" &&
+                            Text(frame) == rich && frame->DocumentEncoding() == FileEncoding::Gbk &&
+                            !frame->DocumentHasBom() && !frame->Editor()->Send(Scintilla::Message::GetModify) &&
+                            frame->GetMenuBar()->IsChecked(python) &&
+                            frame->GetStatusBar()->GetStatusText().Contains("Python (override)"),
+                        "native lossy Save As must preserve rich text/GBK and apply current Python despite .CPP");
                 const auto invalid = directory / "invalid.txt";
                 {
                     std::ofstream stream(invalid, std::ios::binary);
@@ -223,12 +220,11 @@ public:
                 NativeDriver invalidOpen(wxID_CANCEL, Filename(invalid));
                 Command(frame, openGbk);
                 invalidOpen.Stop();
-                Require(invalidOpen.choosers == 1 && invalidOpen.errors == 1 && Text(frame) == fallback &&
-                            frame->DocumentPath() == Filename(target) &&
-                            frame->DocumentEncoding() == FileEncoding::Utf8,
+                Require(invalidOpen.choosers == 1 && invalidOpen.errors == 1 && Text(frame) == rich &&
+                            frame->DocumentPath() == Filename(target) && frame->DocumentEncoding() == FileEncoding::Gbk,
                         "native malformed GBK must show error and retain current document and format");
-                std::puts("PASS: native GBK menu/picker/status, loss Cancel/Replace/UTF8 Save As and Undo/Redo");
-                for (const auto choice : {wxID_YES, wxID_NO}) {
+                std::puts("PASS: native GBK menu/picker/status, loss OK/Cancel Save/Save As and Undo/Redo");
+                {
                     auto* failure = new EditorFrame;
                     failure->Show();
                     Require(failure->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
@@ -243,7 +239,7 @@ public:
                     std::filesystem::permissions(directory, std::filesystem::perms::owner_read |
                                                                 std::filesystem::perms::owner_exec);
 #endif
-                    NativeDriver failed(choice);
+                    NativeDriver failed(wxID_OK);
                     Command(failure, wxID_SAVE);
                     failed.Stop();
 #ifdef __WXMSW__
@@ -255,11 +251,11 @@ public:
                                 failure->DocumentPath() == Filename(source) &&
                                 failure->DocumentEncoding() == FileEncoding::Gbk &&
                                 failure->Editor()->Send(Scintilla::Message::GetModify),
-                            "native failed UTF8/replacement save must retain rich text, identity, GBK and dirty state");
+                            "native failed accepted-loss save must retain rich text, identity, GBK and dirty state");
                     Require(Bytes(source) == original + "??????", "native failed save must preserve disk bytes");
                     failure->Destroy();
                 }
-                std::puts("PASS: native UTF8/replacement Save write failures preserve disk and session");
+                std::puts("PASS: native accepted-loss Save write failure preserves disk and session");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
