@@ -14,6 +14,13 @@ configuration overlay. An existing INI takes precedence over a distribution's
 fields. This is a partial original-settings implementation, not complete settings
 or appearance import.
 
+`ZoomLevel` uses the original percentage default of `100`, clamped to `10` through
+`500` when loaded. Decimal prefixes (for example `175%`) follow the original
+integer parser. Zoom extends this same settings lifecycle: disabled exit saving
+retains the stored value, Save Settings Now writes the current value, and the
+default `100` is omitted. It scales the existing native point-size font through
+the original core and does not replace the base font size or DPI handling.
+
 Save Settings On Exit is enabled by default. A disabled exit save writes only
 `SaveSettings=0`, retaining the previously stored view choices. Save Settings Now
 writes current choices even while exit saving is disabled. Default-valued fields

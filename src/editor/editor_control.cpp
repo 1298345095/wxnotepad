@@ -5,6 +5,7 @@
 #include <wx/dataobj.h>
 #include <chrono>
 #include <cstring>
+#include <cmath>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
@@ -192,6 +193,21 @@ public:
         Message applicationCommand{};
         if (event.ControlDown() && !event.AltDown()) {
             switch (event.GetKeyCode()) {
+            case '+':
+            case '=':
+            case WXK_NUMPAD_ADD:
+                if (!event.ShiftDown()) applicationCommand = Message::ZoomIn;
+                break;
+            case '-':
+            case WXK_NUMPAD_SUBTRACT:
+                if (!event.ShiftDown()) applicationCommand = Message::ZoomOut;
+                break;
+            case '\\':
+                if (!event.ShiftDown()) {
+                    window_.Send(Message::SetZoom, 100);
+                    return true;
+                }
+                break;
             case WXK_TAB:
                 if (!event.ShiftDown()) {
                     const auto useTabs = window_.Send(Message::GetUseTabs);
@@ -342,20 +358,32 @@ public:
             HorizontalScrollTo(std::clamp(position, 0, std::max(0, scrollWidth - window_.GetClientSize().x)));
     }
     void Wheel(wxMouseEvent& event) {
-        const bool horizontal = event.GetWheelAxis() == wxMOUSE_WHEEL_HORIZONTAL || event.ShiftDown();
-        int& remainder = horizontal ? horizontalWheel_ : verticalWheel_;
+        // Pinned ScintillaWin: horizontal/Shift precedes Ctrl; the physical
+        // wheel axis chooses the accumulator even when Shift changes scrolling.
+        const bool horizontalAxis = event.GetWheelAxis() == wxMOUSE_WHEEL_HORIZONTAL;
+        const bool horizontal = horizontalAxis || event.ShiftDown();
+        if (horizontal ? Wrapping() || event.GetColumnsPerAction() == 0 : event.GetLinesPerAction() == 0) return;
+        int& remainder = horizontalAxis ? horizontalWheel_ : verticalWheel_;
         remainder += event.GetWheelRotation();
         const int delta = event.GetWheelDelta();
         if (!delta) return;
         const int steps = remainder / delta;
         remainder %= delta;
+        if (!steps) return;
         if (horizontal) {
-            const int direction = event.GetWheelAxis() == wxMOUSE_WHEEL_HORIZONTAL ? 1 : -1;
-            const int distance = std::max(1, static_cast<int>(vs.spaceWidth)) * event.GetColumnsPerAction();
-            HorizontalScrollTo(std::clamp(xOffset + direction * steps * distance, 0,
-                                          std::max(0, scrollWidth - window_.GetClientSize().x)));
+            const int direction = horizontalAxis ? 1 : -1;
+            const auto distance =
+                static_cast<int>(std::lround(direction * steps * event.GetColumnsPerAction() * vs.aveCharWidth));
+            const int pageWidth = static_cast<int>(GetTextRectangle().Width());
+            const int maximum = horizontalScrollBarVisible ? std::max(scrollWidth - pageWidth + 1, 0) : 0;
+            HorizontalScrollTo(std::clamp(xOffset + distance, 0, maximum));
+        } else if (event.ControlDown()) {
+            // One core zoom action per accumulated event, independent of the
+            // system's lines per action and the number of notches in the batch.
+            window_.Send(steps > 0 ? Message::ZoomIn : Message::ZoomOut);
         } else {
-            const auto distance = event.IsPageScroll() ? LinesOnScreen() : event.GetLinesPerAction();
+            const auto distance =
+                std::max<Sci::Line>(event.IsPageScroll() ? LinesOnScreen() - 1 : event.GetLinesPerAction(), 1);
             ScrollTo(topLine - steps * distance);
         }
     }
@@ -638,6 +666,7 @@ private:
     void NotifyChange() const noexcept override {}
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override {
         SelectionRevision();
+        if (notification.nmhdr.code == Scintilla::Notification::Zoom) window_.lineNumberWidthDirty_ = true;
         if (notification.nmhdr.code == Scintilla::Notification::Modified &&
             (static_cast<int>(notification.modificationType) &
              static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {
@@ -650,7 +679,8 @@ private:
         }
         if (notification.nmhdr.code == Scintilla::Notification::UpdateUI ||
             notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
-            notification.nmhdr.code == Scintilla::Notification::SavePointLeft) {
+            notification.nmhdr.code == Scintilla::Notification::SavePointLeft ||
+            notification.nmhdr.code == Scintilla::Notification::Zoom) {
             auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());
             event->SetEventObject(&window_);
             wxQueueEvent(&window_, event);
