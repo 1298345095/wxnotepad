@@ -89,12 +89,16 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     focus.write_text("", encoding="utf-8")
                     # Read only the two owned drag fixture surfaces. Wayland
                     # clients cannot query their global compositor positions.
-                    scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
-                                           capture_output=True, text=True, timeout=2, check=True).stdout
-                    positions = {name: (int(x), int(y)) for name, x, y in re.findall(
-                        r"top-level window 'wxnotepad stream drag (main|peer)'[^\n]*\n\s*position: \((-?\d+), (-?\d+)\)", scene)}
-                    if set(positions) != {"main", "peer"}:
-                        raise RuntimeError("Private compositor must expose both owned drag surfaces")
+                    mapping_deadline = time.monotonic() + 3
+                    while True:
+                        scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
+                                               capture_output=True, text=True, timeout=2, check=True).stdout
+                        positions = {name: (int(x), int(y)) for name, x, y in re.findall(
+                            r"top-level window 'wxnotepad stream drag (main|peer)'[^\n]*\n\s*position: \((-?\d+), (-?\d+)\)", scene)}
+                        if set(positions) == {"main", "peer"}: break
+                        if time.monotonic() > mapping_deadline:
+                            raise RuntimeError("Private compositor must map both owned drag surfaces")
+                        time.sleep(.05)
                     response = Path(request[9:])
                     pending = response.with_suffix(".tmp")
                     pending.write_text(",".join(map(str, (*positions["main"], *positions["peer"]))), encoding="utf-8")
