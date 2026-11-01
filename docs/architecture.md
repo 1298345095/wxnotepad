@@ -113,10 +113,10 @@ facilities gives a useful reason to extract it.
 | State | Owner | Lifetime/rule |
 | --- | --- | --- |
 | Text, undo/redo, dirty/save point, EOL insertion, selection, fold visibility | Original core | One core document per existing editor window; read state through the editor. |
-| Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. New/Open reset to Automatic. Successful first Save/Save As apply the semantic selected file type; ordinary Save retains the choice. |
-| Effective language | Derived from session choice + path using the syntax catalog | The UI reads it from the session. Any last-applied style cache is internal installation state, not a second owner of the user's choice. |
+| Path, disk encoding, BOM, automatic/manual language choice | `DocumentSession` | Current document. New/different-path Open reset to Automatic; same-path reopen retains the choice and effective scheme. Successful first Save/Save As apply the semantic selected file type; ordinary Save retains the choice. |
+| Effective language | Session override or the automatic result selected through the syntax catalog | Automatic selection reads the path and original first-line prefix on different-path Open, explicit Automatic and filename-based Save As. It remains stable during edits and same-path reopen. The UI reads the session. |
 | Find query, replacement, options and wrap preference | `SearchSession` | Existing window/application session; survive New/Open as they do today. The dialog edits this state rather than owning the only copy. |
-| Last match, empty-match progress, revision stamps | `SearchSession` | Invalidated by relevant query/options/selection/document changes and successful document replacement. A failed/cancelled file operation does not reset them. |
+| Regex captures | Original core | Each replacement re-runs the original matcher at the current selection to refresh captures before using them. |
 | Fonts, rendered geometry, native handles, clipboard publication lifetime | Editor/platform implementation | Editor/window or native ownership lifetime. Presentation uses the same layout geometry as input and hit testing. |
 | Dialog visibility/focus, menu widgets, status text | App/UI | Presentation state; never authoritative text or dirty state. |
 
@@ -130,8 +130,8 @@ the current structure retains the one-document window.
 
 ### SearchSession and FindReplaceDialog
 
-`SearchSession` contains Find, ReplaceOne, ReplaceAll and their match/progress
-state, extracted from `editor_frame.cpp`. It operates on the real
+`SearchSession` contains Find, ReplaceOne and ReplaceAll, extracted from
+`editor_frame.cpp`. It operates on the real
 `EditorControl`, uses the original matcher/formatter and returns structured
 outcomes. It does not create widgets or set status-bar strings.
 
@@ -143,16 +143,25 @@ The interface has a small set of operations:
 | Find | Direction | Found/no match/invalid pattern/empty query, matched byte range and wrap status |
 | Replace one | Current configured search | Whether a replacement occurred and the following search outcome |
 | Replace all | Current configured search | Replacement count, whether bytes changed, or an error |
+| Replace in selection | Current configured search and live editor selection | Replacement count, whether bytes changed, or an error/rectangular-selection outcome |
 
 The module performs match selection and fold reveal as part of Find. Callers
 should not repeat the sequence of setting core targets, validating a match,
 expanding folds and scrolling the caret. Byte offsets remain UTF-8 offsets; GUI
 string indices do not become document positions.
 
-Preserve the forward scan used for backward multiline regex searches, capture
-revalidation, zero-width progress, full-document replacement and no-op history
-semantics. Preserve one undo group for a text-changing Replace All. Extraction
-must retain these behaviors before changing an algorithm.
+Regex search uses the pinned target-local context and backward line-by-line
+path. Find resumes directly at the selection endpoint, including an empty match.
+Replace revalidates captures from selection start to document end; Replace All
+uses the original EOF and pattern-leading `^` progress rules. Preserve
+full-document replacement, no-op history semantics and one undo group for a
+text-changing Replace All. The [regex behavior record](observations/original-regex-README.md)
+explains the restored original expectations.
+Replace in Selection shares that loop and its matcher/formatter. It searches from
+the original stream selection start to document end, rejects the first match
+whose end crosses the live selection end, and retains the original core's endpoint
+adjustments plus final replacement-end repair. Its structured rectangular-selection
+outcome is presented as a native warning by the dialog.
 
 `FindReplaceDialog` owns its widgets and forwards requests to this same session.
 F3, Shift+F3, menu items and dialog buttons share the operations. The frame formats
@@ -170,7 +179,7 @@ test dependencies.
 
 The document-local language choice belongs to the session. It exposes a
 language selection operation and read-only effective-language/override state.
-Successful Open/New reset to Automatic. First Save and Save As carry a semantic
+Successful New and different-path Open reset to Automatic; reopening the current supplied path retains the effective scheme and document language choice. First Save and Save As carry a semantic
 `SaveFileType`: a specific `SyntaxLanguage` forces that document language, while
 `SaveType::AllFiles` clears the override and classifies the resulting filename.
 Path-only calls default to `SaveType::CurrentScheme`, resolving the effective
@@ -197,9 +206,9 @@ The resulting operation sequence is explicit:
 3. **Choose language:** update the document choice and install its effective
    scheme; preserve bytes, selection, encoding and edit history.
 
-The frame calls `SearchSession::ResetMatch()` after successful Open/New. A dirty-
-state notification does not imply document replacement. This small coordination
-keeps the search algorithm and language transition rules out of the frame.
+Search commands read the current core document and selection on every request;
+Open/New need no application match-confirmation state. Search algorithms and
+language transition rules remain outside the frame.
 
 ### Static syntax catalog
 
@@ -225,16 +234,18 @@ code-generation framework is not needed for this catalog.
 | --- | --- |
 | More languages | Add a catalog descriptor, pinned data/provenance, compiled lexer/registration and representative behavior checks. Keep window code unchanged. |
 | Editing commands such as indentation, line transforms, case conversion | Add cohesive operations near the editor features; reuse original core/Notepad4 routines where suitable. Menus invoke operations that own selection and undo semantics. |
-| Settings and Notepad4 import | Add a `settings` module when implementing the accepted settings scope. Separate stored values, one-time import and effective editor settings; resolve portable/user paths there. Apply settings to existing modules rather than let each read INI files. |
+| Settings and Notepad4 import | `settings/settings_store.*` owns original INI discovery and the shared load/save lifecycle. The first slice applies Line Numbers, Word Wrap and Show Whitespace; later fields extend this store and apply through their responsible modules. Complete import and appearance migration remain future work. |
 | Themes and configurable fonts | Separate lexer selection from appearance application. One appearance operation should update text styles, selection/caret/fold colors and font-dependent geometry consistently. Keep point-size and DPI behavior established by the existing tests. |
 | Completion and calltips | Use original completion/word data selectively. Complete and test the native popup/list/calltip implementation before exposing the feature; current platform stubs are not a finished capability. |
 | Large-file behavior | Make a measured load/styling decision in the document-opening flow, then apply it through syntax/editor operations. Keep the user's language choice distinct from any reduced-styling mode. |
 | File association, external changes and shell integration | Add narrowly scoped native implementations when needed. Keep their policy and UI out of the core/platform drawing code. |
 
-For settings, the proposed precedence is explicit document choice, then user or
-imported defaults, then built-in defaults. The actual fields, storage format and
-portable-mode selection still need design. Configuration should be loaded once
-and applied deliberately, rather than consulted during each paint or key event.
+Settings load once before frame creation from the original `Notepad4.ini`, using
+the original Windows installed/portable discovery and a documented Linux native
+directory mapping. A missing file can be seeded by `Notepad4.ini-default`; missing
+fields use original built-in defaults. Save Settings Now and Save Settings On
+Exit share this lifecycle and preserve unrelated fields. See
+[the limited settings slice](settings.md) for names and platform mapping.
 
 Stream-text drag/drop uses the existing native text transfer protocols: wx/OLE
 on Windows and GTK text targets on Linux. The pinned original core owns drag

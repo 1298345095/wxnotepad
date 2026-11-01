@@ -5,6 +5,7 @@
 #include <wx/dataobj.h>
 #include <wx/dnd.h>
 #include <chrono>
+#include <cmath>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
@@ -25,8 +26,8 @@ unsigned MouseTime() {
             .count());
 }
 Scintilla::KeyMod MouseModifiers(const wxMouseEvent& event) {
-    // This host supports one stream selection; Alt rectangular selection is deferred.
-    return event.ShiftDown() ? Scintilla::KeyMod::Shift : Scintilla::KeyMod::Norm;
+    return static_cast<Scintilla::KeyMod>((event.ShiftDown() ? 1 : 0) | (event.ControlDown() ? 2 : 0) |
+                                          (event.AltDown() ? 4 : 0));
 }
 } // namespace
 
@@ -35,6 +36,38 @@ public:
     explicit Core(EditorControl& window) : window_(window) {
         wMain = static_cast<wxWindow*>(&window_);
         Initialise();
+        // Original Notepad4.cpp: wrapped Home/End visit visual then logical boundaries.
+        WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(Scintilla::Keys::Home),
+                static_cast<intptr_t>(Message::VCHomeWrap));
+        WndProc(Message::AssignCmdKey,
+                static_cast<uintptr_t>(Scintilla::Keys::Home) |
+                    (static_cast<uintptr_t>(Scintilla::KeyMod::Shift) << 16),
+                static_cast<intptr_t>(Message::VCHomeWrapExtend));
+        WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(Scintilla::Keys::End),
+                static_cast<intptr_t>(Message::LineEndWrap));
+        WndProc(Message::AssignCmdKey,
+                static_cast<uintptr_t>(Scintilla::Keys::End) | (static_cast<uintptr_t>(Scintilla::KeyMod::Shift) << 16),
+                static_cast<intptr_t>(Message::LineEndWrapExtend));
+        // Original application overrides the core's Ctrl+Page scroll bindings.
+        WndProc(Message::AssignCmdKey,
+                static_cast<uintptr_t>(Scintilla::Keys::Prior) |
+                    (static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) << 16),
+                static_cast<intptr_t>(Message::ParaUp));
+        WndProc(Message::AssignCmdKey,
+                static_cast<uintptr_t>(Scintilla::Keys::Next) | (static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) << 16),
+                static_cast<intptr_t>(Message::ParaDown));
+        WndProc(
+            Message::AssignCmdKey,
+            static_cast<uintptr_t>(Scintilla::Keys::Prior) |
+                ((static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) | static_cast<uintptr_t>(Scintilla::KeyMod::Shift))
+                 << 16),
+            static_cast<intptr_t>(Message::ParaUpExtend));
+        WndProc(
+            Message::AssignCmdKey,
+            static_cast<uintptr_t>(Scintilla::Keys::Next) |
+                ((static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) | static_cast<uintptr_t>(Scintilla::KeyMod::Shift))
+                 << 16),
+            static_cast<intptr_t>(Message::ParaDownExtend));
         WndProc(Message::SetCodePage, 65001, 0);
         // Match unconfigured Notepad4 on every host; saving preserves actual EOLs.
         WndProc(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf), 0);
@@ -45,6 +78,17 @@ public:
         WndProc(Message::SetCaretStyle, 1, 0);
         WndProc(Message::SetMarginWidthN, 1, 0);
         WndProc(Message::SetScrollWidthTracking, 1, 0);
+        // Notepad4 CreateEditor: SelectOption_Default enables multiple selection.
+        WndProc(Message::SetMultipleSelection, 1, 0);
+        WndProc(Message::SetAdditionalSelectionTyping, 1, 0);
+        WndProc(Message::SetMultiPaste, static_cast<uintptr_t>(Scintilla::MultiPaste::Each), 0);
+        WndProc(Message::SetVirtualSpaceOptions, static_cast<uintptr_t>(Scintilla::VirtualSpace::RectangularSelection),
+                0);
+        // EditNewText enables selection restoration and viewport restoration by default.
+        WndProc(Message::SetUndoSelectionHistory,
+                static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
+                    static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll),
+                0);
 #ifdef __WXGTK__
         InstallGtkTextDropTarget();
 #else
@@ -121,9 +165,125 @@ public:
         ChangeSize();
     }
     void Character(std::string_view text) { InsertCharacter(text, Scintilla::CharacterSource::DirectInput); }
-    bool Navigation(int key, bool control, bool shift) {
+    bool EditingKey(const wxKeyEvent& event) {
+        if (event.MetaDown()) return false;
+        if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers()) {
+            // CMD_ESCAPE cancels completion UI, not the core's selection modes.
+            if (window_.Send(Message::AutoCActive))
+                window_.Send(Message::AutoCCancel);
+            else if (window_.Send(Message::CallTipActive))
+                window_.Send(Message::CallTipCancel);
+            return true;
+        }
+        // IDR_MAINWND accelerators in pinned Notepad4.rc precede KeyMap.cxx.
+        // Keep application commands on their original keys, rather than exposing
+        // unrelated core defaults such as Ctrl+L (LineCut) or Ctrl+T (transpose).
+        Message applicationCommand{};
+        if (event.ControlDown() && !event.AltDown()) {
+            switch (event.GetKeyCode()) {
+            case '+':
+            case '=':
+            case WXK_NUMPAD_ADD:
+                if (!event.ShiftDown()) applicationCommand = Message::ZoomIn;
+                break;
+            case '-':
+            case WXK_NUMPAD_SUBTRACT:
+                if (!event.ShiftDown()) applicationCommand = Message::ZoomOut;
+                break;
+            case '\\':
+                if (!event.ShiftDown()) {
+                    window_.Send(Message::SetZoom, 100);
+                    return true;
+                }
+                break;
+            case WXK_TAB:
+                if (!event.ShiftDown()) {
+                    const auto useTabs = window_.Send(Message::GetUseTabs);
+                    const auto tabIndents = window_.Send(Message::GetTabIndents);
+                    window_.Send(Message::SetTabIndents, 0);
+                    window_.Send(Message::SetUseTabs, 1);
+                    window_.Send(Message::Tab);
+                    window_.Send(Message::SetUseTabs, useTabs);
+                    window_.Send(Message::SetTabIndents, tabIndents);
+                    return true;
+                }
+                break;
+            case 'C':
+            case 'X':
+                if (event.ShiftDown()) {
+                    window_.Send(event.GetKeyCode() == 'C' ? Message::LineCopy : Message::LineCut, 1);
+                    return true;
+                }
+                break;
+            case 'D':
+                applicationCommand = event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
+                break;
+            case 'Y':
+                applicationCommand = event.ShiftDown() ? Message::Undo : Message::Redo;
+                break;
+            case 'Z':
+                applicationCommand = event.ShiftDown() ? Message::Redo : Message::Undo;
+                break;
+            case 'U':
+                window_.Send(Message::CustomCaseMapping,
+                             static_cast<uintptr_t>(event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower));
+                return true;
+            default:
+                break;
+            }
+        } else if (event.AltDown() && !event.ControlDown() && !event.ShiftDown()) {
+            if (event.GetKeyCode() == 'D') applicationCommand = Message::SelectionDuplicate;
+            if (event.GetKeyCode() == 'S') applicationCommand = Message::LineTranspose;
+        }
+        if (applicationCommand != Message{}) {
+            window_.Send(applicationCommand);
+            return true;
+        }
+        Scintilla::Keys key;
+        switch (event.GetKeyCode()) {
+        case WXK_RETURN:
+        case WXK_NUMPAD_ENTER:
+            key = Scintilla::Keys::Return;
+            break;
+        case WXK_TAB:
+            key = Scintilla::Keys::Tab;
+            break;
+        case WXK_BACK:
+            key = Scintilla::Keys::Back;
+            break;
+        case WXK_DELETE:
+            key = Scintilla::Keys::Delete;
+            break;
+        case WXK_INSERT:
+            key = Scintilla::Keys::Insert;
+            break;
+        case WXK_ESCAPE:
+            key = Scintilla::Keys::Escape;
+            break;
+        case 'A':
+        case 'C':
+        case 'V':
+        case 'X':
+        case 'Y':
+        case 'Z':
+        case '[':
+        case ']':
+            key = static_cast<Scintilla::Keys>(event.GetKeyCode());
+            break;
+        default:
+            return false;
+        }
+        bool consumed = false;
+        KeyDownWithModifiers(key,
+                             static_cast<Scintilla::KeyMod>((event.ControlDown() ? 2 : 0) |
+                                                            (event.ShiftDown() ? 1 : 0) | (event.AltDown() ? 4 : 0)),
+                             &consumed);
+        return consumed;
+    }
+    bool Navigation(const wxKeyEvent& event) {
+        if (event.MetaDown()) return false;
         Scintilla::Keys coreKey;
-        switch (key) {
+        switch (event.GetKeyCode()) {
         case WXK_LEFT:
             coreKey = Scintilla::Keys::Left;
             break;
@@ -152,7 +312,10 @@ public:
             return false;
         }
         bool consumed = false;
-        KeyDownWithModifiers(coreKey, static_cast<Scintilla::KeyMod>((control ? 2 : 0) | (shift ? 1 : 0)), &consumed);
+        KeyDownWithModifiers(coreKey,
+                             static_cast<Scintilla::KeyMod>((event.ControlDown() ? 2 : 0) |
+                                                            (event.ShiftDown() ? 1 : 0) | (event.AltDown() ? 4 : 0)),
+                             &consumed);
         return consumed;
     }
     void TickCaret() { TickFor(TickReason::caret); }
@@ -183,20 +346,32 @@ public:
             HorizontalScrollTo(std::clamp(position, 0, std::max(0, scrollWidth - window_.GetClientSize().x)));
     }
     void Wheel(wxMouseEvent& event) {
-        const bool horizontal = event.GetWheelAxis() == wxMOUSE_WHEEL_HORIZONTAL || event.ShiftDown();
-        int& remainder = horizontal ? horizontalWheel_ : verticalWheel_;
+        // Pinned ScintillaWin: horizontal/Shift precedes Ctrl; the physical
+        // wheel axis chooses the accumulator even when Shift changes scrolling.
+        const bool horizontalAxis = event.GetWheelAxis() == wxMOUSE_WHEEL_HORIZONTAL;
+        const bool horizontal = horizontalAxis || event.ShiftDown();
+        if (horizontal ? Wrapping() || event.GetColumnsPerAction() == 0 : event.GetLinesPerAction() == 0) return;
+        int& remainder = horizontalAxis ? horizontalWheel_ : verticalWheel_;
         remainder += event.GetWheelRotation();
         const int delta = event.GetWheelDelta();
         if (!delta) return;
         const int steps = remainder / delta;
         remainder %= delta;
+        if (!steps) return;
         if (horizontal) {
-            const int direction = event.GetWheelAxis() == wxMOUSE_WHEEL_HORIZONTAL ? 1 : -1;
-            const int distance = std::max(1, static_cast<int>(vs.spaceWidth)) * event.GetColumnsPerAction();
-            HorizontalScrollTo(std::clamp(xOffset + direction * steps * distance, 0,
-                                          std::max(0, scrollWidth - window_.GetClientSize().x)));
+            const int direction = horizontalAxis ? 1 : -1;
+            const auto distance =
+                static_cast<int>(std::lround(direction * steps * event.GetColumnsPerAction() * vs.aveCharWidth));
+            const int pageWidth = static_cast<int>(GetTextRectangle().Width());
+            const int maximum = horizontalScrollBarVisible ? std::max(scrollWidth - pageWidth + 1, 0) : 0;
+            HorizontalScrollTo(std::clamp(xOffset + distance, 0, maximum));
+        } else if (event.ControlDown()) {
+            // One core zoom action per accumulated event, independent of the
+            // system's lines per action and the number of notches in the batch.
+            window_.Send(steps > 0 ? Message::ZoomIn : Message::ZoomOut);
         } else {
-            const auto distance = event.IsPageScroll() ? LinesOnScreen() : event.GetLinesPerAction();
+            const auto distance =
+                std::max<Sci::Line>(event.IsPageScroll() ? LinesOnScreen() - 1 : event.GetLinesPerAction(), 1);
             ScrollTo(topLine - steps * distance);
         }
     }
@@ -557,6 +732,7 @@ private:
     void NotifyChange() const noexcept override {}
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override {
         SelectionRevision();
+        if (notification.nmhdr.code == Scintilla::Notification::Zoom) window_.lineNumberWidthDirty_ = true;
         if (notification.nmhdr.code == Scintilla::Notification::Modified &&
             (static_cast<int>(notification.modificationType) &
              static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {
@@ -569,7 +745,8 @@ private:
         }
         if (notification.nmhdr.code == Scintilla::Notification::UpdateUI ||
             notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
-            notification.nmhdr.code == Scintilla::Notification::SavePointLeft) {
+            notification.nmhdr.code == Scintilla::Notification::SavePointLeft ||
+            notification.nmhdr.code == Scintilla::Notification::Zoom) {
             auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());
             event->SetEventObject(&window_);
             wxQueueEvent(&window_, event);
@@ -718,49 +895,32 @@ EditorControl::EditorControl(wxWindow* parent)
     Bind(wxEVT_SCROLLWIN_THUMBTRACK, scroll);
     Bind(wxEVT_SCROLLWIN_THUMBRELEASE, scroll);
     Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {
-        if (!event.AltDown() && core_->Navigation(event.GetKeyCode(), event.ControlDown(), event.ShiftDown())) return;
+        if (core_->Navigation(event)) return;
+        if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
+            (event.GetKeyCode() == WXK_BACK || event.GetKeyCode() == WXK_DELETE)) {
+            // Notepad4.cpp CMD_CTRLBACK/CMD_CTRLDEL run before the core key map.
+            const auto caret = Send(Message::GetCurrentPos);
+            if (caret != Send(Message::GetAnchor)) {
+                Send(Message::SetSel, caret, caret);
+            } else {
+                const auto line = Send(Message::LineFromPosition, caret);
+                const auto start = Send(Message::PositionFromLine, line);
+                if (event.GetKeyCode() == WXK_BACK)
+                    Send(caret == start                                        ? Message::DeleteBack
+                         : caret <= Send(Message::GetLineIndentPosition, line) ? Message::DelLineLeft
+                                                                               : Message::DelWordLeft);
+                else
+                    Send(start == Send(Message::GetLineEndPosition, line) ? Message::LineDelete
+                                                                          : Message::DelWordRight);
+            }
+            return;
+        }
         if (event.GetKeyCode() == WXK_TAB && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
             !event.MetaDown()) {
             IndentLines(false);
             return;
         }
-        Message command{};
-        if (event.ControlDown() && !event.AltDown()) {
-            if (event.GetKeyCode() == 'Z')
-                command = event.ShiftDown() ? Message::Redo : Message::Undo;
-            else if (event.GetKeyCode() == 'Y')
-                command = Message::Redo;
-            else if (event.GetKeyCode() == 'A')
-                command = Message::SelectAll;
-            else if (event.GetKeyCode() == 'C')
-                command = Message::Copy;
-            else if (event.GetKeyCode() == 'X')
-                command = Message::Cut;
-            else if (event.GetKeyCode() == 'V')
-                command = Message::Paste;
-        } else if (!event.AltDown() && !event.ShiftDown()) {
-            switch (event.GetKeyCode()) {
-            case WXK_RETURN:
-            case WXK_NUMPAD_ENTER:
-                command = Message::NewLine;
-                break;
-            case WXK_TAB:
-                command = Message::Tab;
-                break;
-            case WXK_BACK:
-                command = Message::DeleteBack;
-                break;
-            case WXK_DELETE:
-                command = Message::Clear;
-                break;
-            default:
-                break;
-            }
-        }
-        if (command != Message{})
-            Send(command);
-        else
-            event.Skip();
+        if (!core_->EditingKey(event)) event.Skip();
     });
     Bind(wxEVT_CHAR, [this](wxKeyEvent& event) {
         const int character = event.GetUnicodeKey();
@@ -784,7 +944,8 @@ EditorControl::~EditorControl() {
 
 void EditorControl::IndentLines(bool forwards) {
     if (Send(Message::GetReadOnly)) return;
-    if (Send(Message::GetSelectionEmpty)) {
+    if (Send(Message::GetSelectionEmpty) && Send(Message::GetSelections) == 1 &&
+        Send(Message::GetSelectionMode) == static_cast<intptr_t>(Scintilla::SelectionMode::Stream)) {
         // The core excludes an endpoint at a line start. Move an empty
         // selection to its line end so the explicit line command includes it.
         const auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));

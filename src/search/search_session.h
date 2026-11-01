@@ -27,7 +27,7 @@ struct ReplaceOneResult {
     bool changed = false;
     std::optional<FindResult> next;
 };
-enum class ReplaceAllStatus : uint8_t { Completed, InvalidPattern, ExpansionFailed };
+enum class ReplaceAllStatus : uint8_t { Completed, InvalidPattern, ExpansionFailed, RectangularSelection };
 struct ReplaceAllResult {
     ReplaceAllStatus status;
     size_t count = 0;
@@ -40,26 +40,15 @@ public:
     explicit SearchSession(EditorControl& editor) : editor_(editor) {}
     const SearchRequest& Request() const { return request_; }
     void Configure(SearchRequest request);
-    void ResetMatch();
     FindResult Find(SearchDirection direction);
     ReplaceOneResult ReplaceOne();
     ReplaceAllResult ReplaceAll();
+    ReplaceAllResult ReplaceInSelection();
 
 private:
     EditorControl& editor_;
     SearchRequest request_;
-    struct EmptyMatch {
-        intptr_t position;
-        uint64_t documentRevision;
-        uint64_t selectionRevision;
-    };
-    struct RegexMatch {
-        intptr_t start;
-        intptr_t end;
-        uint64_t documentRevision;
-        uint64_t selectionRevision;
-    };
-    std::optional<EmptyMatch> lastEmptyMatch_;
-    std::optional<RegexMatch> regexMatch_;
     Scintilla::FindOption SearchFlags() const;
+    FindResult SelectTarget(bool wrapped);
+    ReplaceAllResult ReplaceRange(bool inSelection);
 };

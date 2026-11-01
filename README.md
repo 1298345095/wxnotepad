@@ -16,9 +16,21 @@ events retain their UTF-8 conversion storage through insertion.
 Windows binaries declare Per-Monitor V2 DPI awareness, and offscreen text buffers
 inherit the window's display scale. See the [font validation record](docs/observations/windows-font-README.md).
 
+View → Zoom offers Zoom In (Ctrl++ / Ctrl+= and keypad +), Zoom Out (Ctrl+- and
+keypad -), Zoom Level and Reset Zoom (Ctrl+\\). The original core uses 10%–500%
+zoom, with 10-point steps below 200% and 25-point steps above it; reset restores
+100%. Ctrl+wheel changes zoom; horizontal wheel and Shift+wheel scroll
+horizontally first, including when Ctrl is held. The `ZoomLevel` preference uses
+the shared [settings lifecycle](docs/settings.md).
+
 The editor supports keyboard navigation, Shift selection, mouse selection and
 scrolling, plus native system clipboard Cut/Copy/Paste and their Ctrl+X/C/V
 shortcuts. Clipboard edits participate in the same Undo/Redo history.
+
+Home/End first visit a wrapped row's start/end, then the logical line boundary;
+Home retains the original indentation/start toggle. Shift extends the selection
+with the same rules. Ctrl+PageUp/PageDown move between paragraphs separated by
+blank or whitespace-only lines; adding Shift extends the selection.
 
 Edit → Go To Line / Ctrl+G navigates to an absolute, 1-based document line and
 reveals its folded ancestors. The dialog validates the current line range;
@@ -67,12 +79,20 @@ selected match before editing; Replace All searches the complete current
 document and reports its count in the dialog. Each text-changing single
 replacement or Replace All operation can be undone once. Byte-identical
 single replacements and Replace All preserve the save point and redo history.
+In Selection uses the current stream range, reports its replacement count, and
+groups edits into one Undo operation. It retains the original search context and
+stops before a match crossing the selection end. Rectangular selections show the
+original unsupported-operation warning. See the
+[selection replacement record](docs/observations/replace-selection-README.md).
 
 Regular expressions use the pinned original core's Boost engine and capture
 formatter, including numeric `$1` / `\1` references and `$&` / `$0` for the whole
 match. Whole word is disabled in regex mode; use explicit regex word boundaries
-instead. Zero-length matches advance on character boundaries, including at
-document ends. Invalid patterns report an error without editing the document.
+instead. Find resumes at the selection endpoint, including repeated zero-length
+matches. Forward assertions use target-local context; backward regex search is
+line by line. Replace All uses the original character/line progress and EOF
+stopping rules. See the [original regex behavior record](docs/observations/original-regex-README.md).
+Invalid patterns report an error without editing the document.
 
 File → New / Ctrl+N and Open / Ctrl+O replace the current document after any
 unsaved changes are saved or discarded. Close uses the same Save/Discard/Cancel
@@ -81,6 +101,10 @@ reuses the current path thereafter; Save As / Ctrl+Shift+S chooses a new target
 and confirms overwrite. Cancellation or failure retains the current document,
 identity and history. A successful save safely replaces the target and updates
 the title and save point.
+
+New/Open/Close skip this confirmation for untitled documents shorter than 2048
+UTF-8 bytes containing only ASCII space or bytes `0x09` through `0x0d` (including
+the empty document). Explicit Save and Save As still save these documents.
 
 New documents save as UTF-8 without a BOM. Open accepts UTF-8 with or without a
 BOM and recognizes BOM-marked UTF-16LE; Open As UTF-16LE also handles files
@@ -99,9 +123,19 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 | Python | `.py`, `.pyw`, `.pyi` |
 | JSON | `.json` |
 
-Unknown extensions and unnamed documents use Plain Text. The Language menu offers
+For unmatched filenames, Automatic also recognizes the original Python interpreter
+line forms, including direct paths, `env` and `winpty` wrappers, and `py*`/`ipy*`
+names. Known filename associations take precedence; languages whose lexer has not
+been delivered retain the Plain Text fallback. The original `[Styles] AutoSelect`
+and `[Settings2] NoCGIGuess` settings control this selection. It runs on Open and
+explicit Automatic selection, without changing text or history; ordinary edits
+retain the selected language. Other unmatched content uses Plain Text. The Language menu offers
 Automatic, Plain Text and each supported language. A manual choice applies to the
-current document. Successful New/Open restore Automatic. First Save and Save As
+current document. New and opening a different supplied path restore Automatic.
+Reopening the current path retains its effective scheme, caret/anchor and view,
+using the original line/column fallback when changed bytes move the caret far from
+its saved line. Windows recognizes case variants before load-path normalization;
+other native path spellings follow ordinary Open. First Save and Save As
 offer the current scheme first, the other supported types, and All Files last.
 A specific type chooses that language even when the filename differs; All Files
 restores Automatic and resolves from the filename. For an untitled document whose

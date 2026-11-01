@@ -89,11 +89,11 @@ public:
                 };
                 collapse();
                 Click(dialog, wxID_BACKWARD);
-                Selection(editor, 17, 88, "Previous must wrap to the same complete multiline regex");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "Previous must report wrap");
-                for (int line = 1; line <= 7; ++line)
-                    Require(editor->Send(Message::GetLineVisible, line),
-                            "Previous must reveal the complete multiline match");
+                Selection(editor, 0, 0, "original backward line search cannot find the multiline regex");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+                        "original backward multiline failure remains distinct from wrap success");
+                Require(!editor->Send(Message::GetLineVisible, 2) && !editor->Send(Message::GetLineVisible, 5),
+                        "unsuccessful original backward search preserves collapsed folds");
                 for (const bool regularExpression : {false, true}) {
                     Toggle(regex, regularExpression);
                     query->SetValue(regularExpression ? "(needle)" : "needle");
@@ -127,17 +127,19 @@ public:
                 Selection(editor, 33, 33, "zero-width hidden match must retain its byte position");
                 Require(editor->Send(Message::GetLineVisible, 2), "zero-width match line must be visible");
                 Click(dialog, wxID_FORWARD);
-                Selection(editor, 139, 139, "zero-width Next must progress after unfolding");
+                Selection(editor, 33, 33, "original zero-width Next repeats its selection after unfolding");
+                editor->Send(Message::GotoPos, 34);
                 Click(dialog, wxID_FORWARD);
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "zero-width search must exhaust");
+                Selection(editor, 139, 139, "moving the caret resumes at the next hidden empty match");
                 Click(dialog, wxID_BACKWARD);
-                Selection(editor, 33, 33, "zero-width Previous must retain revision/progress bookkeeping");
+                Selection(editor, 33, 33,
+                          "original backward target clips the current lookahead and finds the prior one");
                 Toggle(wrap, true);
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 139, 139, "zero-width Previous must wrap to the final match");
                 Require(Text(editor) == nested && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
-                        "all search directions and zero-width progress must preserve editing history");
-                std::puts("PASS: hidden zero-width matches preserve progress, direction changes and wrap");
+                        "all search directions and empty matches must preserve editing history");
+                std::puts("PASS: hidden empty matches follow original target resumption and backward context");
                 std::string distant;
                 for (int line = 0; line < 80; ++line)
                     distant += "// pad\n";

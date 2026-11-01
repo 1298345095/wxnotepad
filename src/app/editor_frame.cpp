@@ -2,11 +2,17 @@
 #include "editor/editor_control.h"
 #include "app/find_replace_dialog.h"
 #include "app/go_to_line_dialog.h"
+#include "settings/settings_store.h"
 #include <wx/menu.h>
 #include <wx/filedlg.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
+#include <wx/combobox.h>
+#include <wx/dialog.h>
+#include <wx/sizer.h>
+#include <wx/stattext.h>
+#include <cstdlib>
 #include <vector>
 
 namespace {
@@ -14,6 +20,40 @@ struct ChosenSaveFile {
     wxString path;
     SaveFileType type;
 };
+
+void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
+    using Scintilla::Message;
+    // Original Dialogs.cpp::ZoomLevelDlgProc and InitZoomLevelComboBox.
+    wxDialog dialog(parent, wxID_ANY, "Zoom Level");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Zoom level (10% to 500%):"), 0, wxALL, dialog.FromDIP(10));
+    auto* input =
+        new wxComboBox(&dialog, wxID_ANY, wxString::Format("%d%%", static_cast<int>(editor.Send(Message::GetZoom))));
+    input->SetName("Zoom level");
+    input->SetMaxLength(8);
+    for (int level : {500, 450, 400, 350, 300, 250, 200, 175, 150, 125, 100, 75, 50, 25})
+        input->Append(wxString::Format("%d%%", level));
+    contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL | wxAPPLY), 0, wxEXPAND | wxALL,
+                  dialog.FromDIP(10));
+    const auto apply = [&](wxCommandEvent& event) {
+        const auto value = input->GetValue().ToStdString(wxConvUTF8);
+        char* end = nullptr;
+        const long level = std::strtol(value.c_str(), &end, 10);
+        if (end != value.c_str() && level >= 10 && level <= 500) editor.Send(Message::SetZoom, level);
+        // As in the original, invalid OK closes without changing zoom; Apply
+        // keeps the dialog open, and Cancel retains any already applied zoom.
+        if (event.GetId() == wxID_OK) dialog.EndModal(wxID_OK);
+    };
+    dialog.Bind(wxEVT_BUTTON, apply, wxID_OK);
+    dialog.Bind(wxEVT_BUTTON, apply, wxID_APPLY);
+    dialog.SetSizerAndFit(contents);
+    input->SetSelection(-1, -1);
+    input->SetFocus();
+    dialog.CentreOnParent();
+    dialog.ShowModal();
+    editor.SetFocus();
+}
 
 std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
                                              const wxString& path) {
@@ -45,9 +85,20 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 }
 } // namespace
 
-EditorFrame::EditorFrame()
+EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
-      editor_(new EditorControl(this)), document_(*editor_), search_(*editor_) {
+      editor_(new EditorControl(this)), settings_(settings),
+      document_(*editor_, settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
+                                   : SyntaxDetectionOptions{}),
+      search_(*editor_) {
+    if (settings) {
+        editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
+        editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
+        if (settings->values.wordWrap) editor_->ToggleWordWrap();
+        editor_->Send(Scintilla::Message::SetViewWS,
+                      static_cast<uintptr_t>(settings->values.viewWhiteSpace ? Scintilla::WhiteSpace::VisibleAlways
+                                                                             : Scintilla::WhiteSpace::Invisible));
+    }
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
     file->Append(wxID_OPEN, "&Open...\tCtrl+O");
@@ -164,6 +215,19 @@ EditorFrame::EditorFrame()
         addLanguage("&" + wxString(definition.name), definition.language);
     menus->Append(languages, "&Language");
     auto* view = new wxMenu;
+    auto* zoom = new wxMenu;
+    const auto addZoom = [this, zoom](const wxString& label, Scintilla::Message message, uintptr_t value = 0) {
+        const int id = wxWindow::NewControlId();
+        zoom->Append(id, label);
+        Bind(wxEVT_MENU, [this, message, value](wxCommandEvent&) { editor_->Send(message, value); }, id);
+    };
+    addZoom("Zoom &In\tCtrl++", Scintilla::Message::ZoomIn);
+    addZoom("Zoom &Out\tCtrl+-", Scintilla::Message::ZoomOut);
+    const int zoomLevel = wxWindow::NewControlId();
+    zoom->Append(zoomLevel, "Zoom &Level...");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowZoomLevelDialog(this, *editor_); }, zoomLevel);
+    addZoom("&Reset Zoom\tCtrl+\\", Scintilla::Message::SetZoom, 100);
+    view->AppendSubMenu(zoom, "&Zoom");
     const int wordWrap = wxWindow::NewControlId();
     view->AppendCheckItem(wordWrap, "&Word Wrap\tCtrl+Shift+W");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleWordWrap(); }, wordWrap);
@@ -217,6 +281,29 @@ EditorFrame::EditorFrame()
     addFoldCommand("&Collapse All", static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
                                         static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
     addFoldCommand("&Expand All", static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
+    if (settings_) {
+        view->AppendSeparator();
+        const int saveOnExit = wxWindow::NewControlId();
+        view->AppendCheckItem(saveOnExit, "Save Settings On E&xit");
+        Bind(
+            wxEVT_MENU, [this](wxCommandEvent&) { settings_->values.saveSettings = !settings_->values.saveSettings; },
+            saveOnExit);
+        Bind(
+            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveSettings); },
+            saveOnExit);
+        const int saveNow = wxWindow::NewControlId();
+        view->Append(saveNow, "Save Settings &Now");
+        Bind(
+            wxEVT_MENU,
+            [this](wxCommandEvent&) {
+                if (SaveSettings(true))
+                    SetStatusText("Settings saved");
+                else
+                    wxMessageBox("Could not write " + settings_->Path(), "Could not save settings", wxOK | wxICON_ERROR,
+                                 this);
+            },
+            saveNow);
+    }
     menus->Append(view, "&View");
     SetMenuBar(menus);
     CreateStatusBar(3);
@@ -306,10 +393,20 @@ EditorFrame::EditorFrame()
             event.Veto();
             return;
         }
+        SaveSettings(false);
         Destroy();
     });
     UpdateDocumentState();
     editor_->SetFocus();
+}
+
+bool EditorFrame::SaveSettings(bool explicitSave) {
+    if (!settings_) return true;
+    settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+    settings_->values.showLineNumbers = editor_->LineNumbersVisible();
+    settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    return settings_->Save(explicitSave);
 }
 
 void EditorFrame::ShowFind(bool replace) {
@@ -447,8 +544,7 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
-        GetMenuBar()->Check(automaticLanguageId_, true);
-        search_.ResetMatch();
+        UpdateWindowUI(wxUPDATE_UI_RECURSE);
     }
     UpdateDocumentState();
     return result;
@@ -472,13 +568,30 @@ bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
     GetMenuBar()->Check(automaticLanguageId_, true);
-    search_.ResetMatch();
     UpdateDocumentState();
     return true;
 }
 
 bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (!editor_->Send(Scintilla::Message::GetModify)) return true;
+    // Pinned Notepad4 FileSave/IsASpace: only short ASCII-whitespace Untitled
+    // documents bypass the lifecycle prompt; explicit Save still writes them.
+    if (document_.Path().empty()) {
+        const auto length = editor_->Send(Scintilla::Message::GetLength);
+        if (length < 2048) {
+            const auto* bytes =
+                reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));
+            bool whitespaceOnly = true;
+            for (intptr_t index = 0; bytes && index < length; ++index) {
+                const char ch = bytes[index];
+                if (!(ch == ' ' || (ch >= 0x09 && ch <= 0x0d))) {
+                    whitespaceOnly = false;
+                    break;
+                }
+            }
+            if (whitespaceOnly) return true;
+        }
+    }
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);

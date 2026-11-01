@@ -6,10 +6,11 @@
 
 class EditorControl;
 class FindReplaceDialog;
+class SettingsStore;
 
 class EditorFrame final : public wxFrame {
 public:
-    EditorFrame();
+    explicit EditorFrame(SettingsStore* settings = nullptr);
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
     SaveResult Save(const GbkLossDecision& decideLoss = {});
@@ -28,6 +29,7 @@ public:
 
 private:
     EditorControl* editor_;
+    SettingsStore* settings_;
     DocumentSession document_;
     int automaticLanguageId_;
     SearchSession search_;
@@ -43,4 +45,5 @@ private:
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
     GbkLossChoice ConfirmGbkLoss();
+    bool SaveSettings(bool explicitSave);
 };

@@ -53,11 +53,12 @@ public:
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 8, 15, "Next must find the second cross-line regex");
                 Click(dialog, wxID_BACKWARD);
-                Selection(editor, 0, 7, "Previous must navigate to the same cross-line match as Next");
+                Selection(editor, 8, 15, "original backward line search cannot select a cross-line match");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+                        "original Previous reports no cross-line match");
                 Click(dialog, wxID_BACKWARD);
-                Selection(editor, 8, 15, "Previous must wrap to the final cross-line match");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "Previous must report wrapping");
-                std::puts("PASS: cross-line Previous/Next and backward wrap");
+                Selection(editor, 8, 15, "backward wrap still uses the original line-by-line matcher");
+                std::puts("PASS: cross-line Next and original line-by-line Previous");
                 query->SetValue("[");
                 editor->Send(Message::SetSel, 15, 8);
                 Click(dialog, wxID_FORWARD);
@@ -79,35 +80,26 @@ public:
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文ab"));
                 editor->Send(Message::GotoPos, 0);
                 query->SetValue("a*");
-                const std::pair<intptr_t, intptr_t> zeroRanges[] = {{0, 0}, {3, 3}, {6, 7}, {7, 7}, {8, 8}};
-                for (const auto& [start, end] : zeroRanges) {
+                for (int repeat = 0; repeat != 3; ++repeat) {
                     Click(dialog, wxID_FORWARD);
-                    Selection(editor, start, end, "repeated zero-length Next must follow frozen UTF-8 ranges");
+                    Selection(editor, 0, 0, "original Next resumes at the same empty selection");
                 }
-                Click(dialog, wxID_FORWARD);
-                Selection(editor, 8, 8, "exhausted zero-length Next must preserve the end caret");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
-                        "end caret must exhaust without wrap");
+                editor->Send(Message::GotoPos, 8);
                 Click(dialog, wxID_BACKWARD);
-                Selection(editor, 7, 7, "direction change after an empty match must advance to the previous match");
+                Selection(editor, 8, 8, "original Previous includes the empty match at its target end");
                 Click(dialog, wxID_BACKWARD);
-                Selection(editor, 6, 7, "Previous must retain the consuming match adjacent to an empty match");
+                Selection(editor, 8, 8, "original Previous repeats the same empty boundary");
+                editor->Send(Message::GotoPos, 3);
                 Click(dialog, wxID_BACKWARD);
-                Selection(editor, 3, 3, "Previous must progress over a complete Chinese character");
-                Click(dialog, wxID_BACKWARD);
-                Selection(editor, 0, 0, "Previous must include the zero-length match at document start");
-                Click(dialog, wxID_BACKWARD);
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
-                        "start caret must exhaust without wrap");
+                Selection(editor, 3, 3, "original backward target preserves a UTF-8 boundary");
                 Toggle(wrap, true);
-                Click(dialog, wxID_BACKWARD);
-                Selection(editor, 8, 8, "empty-match backward wrap must select the final boundary once");
                 Click(dialog, wxID_FORWARD);
-                Selection(editor, 0, 0, "empty-match forward wrap must select the first boundary once");
-                std::puts("PASS: frozen empty and consuming ranges, direction changes, UTF-8 and bounded wrap");
+                Selection(editor, 3, 3, "a successful empty match does not trigger wrapping");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "Match found", "empty success is not wrap");
+                std::puts("PASS: original empty selection resumption in both directions");
                 Toggle(wrap, false);
-                // Explicit expectations from prototype issue4-search.json,
-                // baseline[case]["cxx11-requested"], frozen at 2f44bb9.
+                // Pinned MatchOnLines, Boost ECMAScript, no DotAll. Backward
+                // candidates exclude newlines; see original-regex-README.md.
                 struct Case {
                     const char* name;
                     const char* text;
@@ -120,11 +112,6 @@ public:
                     {"unicode-dot", "中😀文", ".", {{0, 3}, {3, 7}, {7, 10}}},
                     {"pattern-backreference", "中中 中文 文文", "(中)\\1", {{0, 6}}},
                     {"alternation", "中文 测试 其他", "中文|测试", {{0, 6}, {7, 13}}},
-                    {"cross-line", "中\n文", "中\n文", {{0, 7}}},
-                    {"zero-lookahead", "中文中文", "(?=中)", {{0, 0}, {6, 6}}},
-                    {"line-end-CRLF", "中文\r\n测试\r\n", "$", {{6, 6}, {14, 14}, {16, 16}}},
-                    {"empty-lines", "a\n\nb\n", "^$", {{2, 2}, {5, 5}}},
-                    {"empty-document", "", "^", {{0, 0}}},
                 };
                 for (const auto& example : cases) {
                     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(example.text));
@@ -220,17 +207,24 @@ public:
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 2, "alternation must first consume aa");
                 Click(dialog, wxID_FORWARD);
-                Selection(editor, 2, 3, "a later lookbehind match must retain context before the previous match end");
+                Selection(editor, 0, 2, "original continuation leaves aa selected when lookbehind loses its base");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+                        "target-local continuation exhausts");
                 query->SetValue("(?<=aa)b");
                 editor->Send(Message::GotoPos, 2);
                 Click(dialog, wxID_FORWARD);
-                Selection(editor, 2, 3, "lookbehind must see context before an arbitrary caret");
-                std::puts("PASS: sequential and caret lookbehind retain full document context");
+                Selection(editor, 2, 2, "original lookbehind cannot inspect before an arbitrary target start");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "caret lookbehind exhausts");
+                editor->Send(Message::GotoPos, 0);
+                Click(dialog, wxID_FORWARD);
+                Selection(editor, 2, 3, "the same lookbehind succeeds when target context starts at zero");
+                std::puts("PASS: original target-local continuation and caret lookbehind");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("ab"));
                 editor->Send(Message::GotoPos, 1);
                 query->SetValue("a(?=b)");
                 Click(dialog, wxID_BACKWARD);
-                Selection(editor, 0, 1, "Previous must retain lookahead context after the caret");
+                Selection(editor, 1, 1, "original Previous clips lookahead at the caret");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "clipped lookahead exhausts");
                 editor->Send(Message::GotoPos, 1);
                 Toggle(wrap, true);
                 Click(dialog, wxID_FORWARD);
@@ -241,14 +235,12 @@ public:
                 editor->Send(Message::GotoPos, 1);
                 query->SetValue("a\\z");
                 Click(dialog, wxID_BACKWARD);
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
-                        "caret bound must not become physical EOF");
-                std::puts("PASS: Previous and wrap keep lookahead and physical document-end context");
+                Selection(editor, 0, 1, "original backward target end is the regex buffer end");
+                std::puts("PASS: original backward target end and full-range forward wrap");
                 query->SetValue("\\A.");
-                editor->Send(Message::GotoPos, 2);
+                editor->Send(Message::GotoPos, 1);
                 Click(dialog, wxID_FORWARD);
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
-                        "buffer-start anchor must not match at a caret");
+                Selection(editor, 1, 2, "original buffer-start anchor is relative to the target start");
                 Toggle(wrap, true);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 1, "buffer-start anchor must wrap to the actual document start");
@@ -257,11 +249,12 @@ public:
                 editor->Send(Message::GotoPos, 0);
                 query->SetValue("^");
                 for (const intptr_t boundary : {0, 4, 8}) {
+                    editor->Send(Message::GotoPos, boundary);
                     Click(dialog, wxID_FORWARD);
                     Selection(editor, boundary, boundary, "line-start navigation must include the final empty line");
                 }
                 Click(dialog, wxID_FORWARD);
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "final line-start must exhaust");
+                Selection(editor, 8, 8, "original final empty line can be found repeatedly");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文中文"));
                 editor->Send(Message::GotoPos, 0);
                 query->SetValue(wxString::FromUTF8("(?=中)"));
@@ -304,8 +297,8 @@ public:
                 Selection(editor, 0, 0, "New must search the current empty document");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 0, "single empty match must finish a wrapped pass");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped",
-                        "single empty match must report wrap");
+                Require(frame->GetStatusBar()->GetStatusText(2) == "Match found",
+                        "original repeated empty match succeeds without wrap");
                 std::puts(
                     "PASS: document anchors, final newline, edit/undo invalidation, invalid-pattern history and New");
                 result_ = 0;

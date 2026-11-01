@@ -73,8 +73,9 @@ public:
                 Load(*editor, "中文");
                 search.Configure({wxString::FromUTF8("(?=文)"), "X", {false, false, true}, false});
                 Require(search.Find(SearchDirection::Forward).start == 3, "regex positions are UTF-8 byte offsets");
-                Require(search.Find(SearchDirection::Forward).status == FindStatus::NotFound,
-                        "zero-width progress prevents the same result from repeating");
+                const auto repeated = search.Find(SearchDirection::Forward);
+                Require(repeated.status == FindStatus::Found && repeated.start == 3 && repeated.end == 3,
+                        "pinned Find resumes at the selection end, including the same zero-width match");
                 auto request = search.Request();
                 request.query = "other";
                 search.Configure(request);
@@ -82,7 +83,40 @@ public:
                 search.Configure(request);
                 const auto reset = search.Find(SearchDirection::Forward);
                 Require(reset.status == FindStatus::Found && reset.start == 3,
-                        "changing the query and restoring it invalidates zero-width progress");
+                        "restoring the query resumes at the current empty selection");
+                Load(*editor, "aab");
+                search.Configure({"aa|(?<=aa)b", "", {false, false, true}, false});
+                Require(search.Find(SearchDirection::Forward).end == 2, "original alternation first selects aa");
+                Require(search.Find(SearchDirection::Forward).status == FindStatus::NotFound,
+                        "original forward resumption does not retain lookbehind before target start");
+                Load(*editor, "a\nb a\nb");
+                editor->Send(Message::GotoPos, 7);
+                search.Configure({"a\\nb", "", {false, false, true}, false});
+                Require(search.Find(SearchDirection::Backward).status == FindStatus::NotFound,
+                        "original backward regex searches separate lines without cross-line matches");
+                Load(*editor, "");
+                search.Configure({"^", "X", {false, false, true}, false});
+                Require(search.ReplaceOne().changed && Text(*editor) == "X",
+                        "original Replace accepts matching empty selection without separate confirmation");
+                Load(*editor, "a a");
+                editor->Send(Message::SetSel, 0, 3);
+                search.Configure({"(a)", "X", {false, false, true}, false});
+                const auto selectedMatch = search.ReplaceOne();
+                Require(!selectedMatch.changed && selectedMatch.next &&
+                            selectedMatch.next->status == FindStatus::Found && selectedMatch.next->start == 0 &&
+                            selectedMatch.next->end == 1 && Text(*editor) == "a a",
+                        "original Replace selects the first revalidation match inside a larger selection");
+                Load(*editor, "a");
+                search.Configure({"a*", "_", {false, false, true}, false});
+                const auto consumingAll = search.ReplaceAll();
+                Require(consumingAll.count == 1 && Text(*editor) == "_",
+                        "original Replace All stops at document end after a consuming replacement");
+                Load(*editor, "a\nb\n");
+                search.Configure({"^", "", {false, false, true}, false});
+                Require(
+                    search.ReplaceAll().count == 2 && Text(*editor) == "a\nb\n" && !editor->Send(Message::CanUndo),
+                    "original pattern-leading caret skips the final empty line when replacement ends at line start");
+                Load(*editor, "中文");
                 request.query = "(";
                 search.Configure(request);
                 Require(search.Find(SearchDirection::Forward).status == FindStatus::InvalidPattern &&
@@ -115,7 +149,6 @@ public:
                 Require(disk == bytes, "language changes preserve independently read saved bytes");
                 saved.close();
                 document.New();
-                search.ResetMatch();
                 Require(document.Language() == SyntaxLanguage::PlainText && !document.LanguageOverride() &&
                             !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
                             Text(*editor).empty() && search.Request().query == "(",
