@@ -110,9 +110,110 @@ public:
         ChangeSize();
     }
     void Character(std::string_view text) { InsertCharacter(text, Scintilla::CharacterSource::DirectInput); }
-    bool Navigation(int key, bool control, bool shift) {
+    bool EditingKey(const wxKeyEvent& event) {
+        if (event.MetaDown()) return false;
+        if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers()) {
+            // CMD_ESCAPE cancels completion UI, not the core's selection modes.
+            if (window_.Send(Message::AutoCActive))
+                window_.Send(Message::AutoCCancel);
+            else if (window_.Send(Message::CallTipActive))
+                window_.Send(Message::CallTipCancel);
+            return true;
+        }
+        // IDR_MAINWND accelerators in pinned Notepad4.rc precede KeyMap.cxx.
+        // Keep application commands on their original keys, rather than exposing
+        // unrelated core defaults such as Ctrl+L (LineCut) or Ctrl+T (transpose).
+        Message applicationCommand{};
+        if (event.ControlDown() && !event.AltDown()) {
+            switch (event.GetKeyCode()) {
+            case WXK_TAB:
+                if (!event.ShiftDown()) {
+                    const auto useTabs = window_.Send(Message::GetUseTabs);
+                    const auto tabIndents = window_.Send(Message::GetTabIndents);
+                    window_.Send(Message::SetTabIndents, 0);
+                    window_.Send(Message::SetUseTabs, 1);
+                    window_.Send(Message::Tab);
+                    window_.Send(Message::SetUseTabs, useTabs);
+                    window_.Send(Message::SetTabIndents, tabIndents);
+                    return true;
+                }
+                break;
+            case 'C':
+            case 'X':
+                if (event.ShiftDown()) {
+                    window_.Send(event.GetKeyCode() == 'C' ? Message::LineCopy : Message::LineCut, 1);
+                    return true;
+                }
+                break;
+            case 'D':
+                applicationCommand = event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
+                break;
+            case 'Y':
+                applicationCommand = event.ShiftDown() ? Message::Undo : Message::Redo;
+                break;
+            case 'Z':
+                applicationCommand = event.ShiftDown() ? Message::Redo : Message::Undo;
+                break;
+            case 'U':
+                window_.Send(Message::CustomCaseMapping,
+                             static_cast<uintptr_t>(event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower));
+                return true;
+            default:
+                break;
+            }
+        } else if (event.AltDown() && !event.ControlDown() && !event.ShiftDown()) {
+            if (event.GetKeyCode() == 'D') applicationCommand = Message::SelectionDuplicate;
+            if (event.GetKeyCode() == 'S') applicationCommand = Message::LineTranspose;
+        }
+        if (applicationCommand != Message{}) {
+            window_.Send(applicationCommand);
+            return true;
+        }
+        Scintilla::Keys key;
+        switch (event.GetKeyCode()) {
+        case WXK_RETURN:
+        case WXK_NUMPAD_ENTER:
+            key = Scintilla::Keys::Return;
+            break;
+        case WXK_TAB:
+            key = Scintilla::Keys::Tab;
+            break;
+        case WXK_BACK:
+            key = Scintilla::Keys::Back;
+            break;
+        case WXK_DELETE:
+            key = Scintilla::Keys::Delete;
+            break;
+        case WXK_INSERT:
+            key = Scintilla::Keys::Insert;
+            break;
+        case WXK_ESCAPE:
+            key = Scintilla::Keys::Escape;
+            break;
+        case 'A':
+        case 'C':
+        case 'V':
+        case 'X':
+        case 'Y':
+        case 'Z':
+        case '[':
+        case ']':
+            key = static_cast<Scintilla::Keys>(event.GetKeyCode());
+            break;
+        default:
+            return false;
+        }
+        bool consumed = false;
+        KeyDownWithModifiers(key,
+                             static_cast<Scintilla::KeyMod>((event.ControlDown() ? 2 : 0) |
+                                                            (event.ShiftDown() ? 1 : 0) | (event.AltDown() ? 4 : 0)),
+                             &consumed);
+        return consumed;
+    }
+    bool Navigation(const wxKeyEvent& event) {
+        if (event.MetaDown()) return false;
         Scintilla::Keys coreKey;
-        switch (key) {
+        switch (event.GetKeyCode()) {
         case WXK_LEFT:
             coreKey = Scintilla::Keys::Left;
             break;
@@ -141,7 +242,10 @@ public:
             return false;
         }
         bool consumed = false;
-        KeyDownWithModifiers(coreKey, static_cast<Scintilla::KeyMod>((control ? 2 : 0) | (shift ? 1 : 0)), &consumed);
+        KeyDownWithModifiers(coreKey,
+                             static_cast<Scintilla::KeyMod>((event.ControlDown() ? 2 : 0) |
+                                                            (event.ShiftDown() ? 1 : 0) | (event.AltDown() ? 4 : 0)),
+                             &consumed);
         return consumed;
     }
     void TickCaret() { TickFor(TickReason::caret); }
@@ -482,49 +586,32 @@ EditorControl::EditorControl(wxWindow* parent)
     Bind(wxEVT_SCROLLWIN_THUMBTRACK, scroll);
     Bind(wxEVT_SCROLLWIN_THUMBRELEASE, scroll);
     Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {
-        if (!event.AltDown() && core_->Navigation(event.GetKeyCode(), event.ControlDown(), event.ShiftDown())) return;
+        if (core_->Navigation(event)) return;
+        if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
+            (event.GetKeyCode() == WXK_BACK || event.GetKeyCode() == WXK_DELETE)) {
+            // Notepad4.cpp CMD_CTRLBACK/CMD_CTRLDEL run before the core key map.
+            const auto caret = Send(Message::GetCurrentPos);
+            if (caret != Send(Message::GetAnchor)) {
+                Send(Message::SetSel, caret, caret);
+            } else {
+                const auto line = Send(Message::LineFromPosition, caret);
+                const auto start = Send(Message::PositionFromLine, line);
+                if (event.GetKeyCode() == WXK_BACK)
+                    Send(caret == start                                        ? Message::DeleteBack
+                         : caret <= Send(Message::GetLineIndentPosition, line) ? Message::DelLineLeft
+                                                                               : Message::DelWordLeft);
+                else
+                    Send(start == Send(Message::GetLineEndPosition, line) ? Message::LineDelete
+                                                                          : Message::DelWordRight);
+            }
+            return;
+        }
         if (event.GetKeyCode() == WXK_TAB && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
             !event.MetaDown()) {
             IndentLines(false);
             return;
         }
-        Message command{};
-        if (event.ControlDown() && !event.AltDown()) {
-            if (event.GetKeyCode() == 'Z')
-                command = event.ShiftDown() ? Message::Redo : Message::Undo;
-            else if (event.GetKeyCode() == 'Y')
-                command = Message::Redo;
-            else if (event.GetKeyCode() == 'A')
-                command = Message::SelectAll;
-            else if (event.GetKeyCode() == 'C')
-                command = Message::Copy;
-            else if (event.GetKeyCode() == 'X')
-                command = Message::Cut;
-            else if (event.GetKeyCode() == 'V')
-                command = Message::Paste;
-        } else if (!event.AltDown() && !event.ShiftDown()) {
-            switch (event.GetKeyCode()) {
-            case WXK_RETURN:
-            case WXK_NUMPAD_ENTER:
-                command = Message::NewLine;
-                break;
-            case WXK_TAB:
-                command = Message::Tab;
-                break;
-            case WXK_BACK:
-                command = Message::DeleteBack;
-                break;
-            case WXK_DELETE:
-                command = Message::Clear;
-                break;
-            default:
-                break;
-            }
-        }
-        if (command != Message{})
-            Send(command);
-        else
-            event.Skip();
+        if (!core_->EditingKey(event)) event.Skip();
     });
     Bind(wxEVT_CHAR, [this](wxKeyEvent& event) {
         const int character = event.GetUnicodeKey();
