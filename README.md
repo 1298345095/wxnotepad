@@ -82,6 +82,10 @@ and confirms overwrite. Cancellation or failure retains the current document,
 identity and history. A successful save safely replaces the target and updates
 the title and save point.
 
+New/Open/Close skip this confirmation for untitled documents shorter than 2048
+UTF-8 bytes containing only ASCII space or bytes `0x09` through `0x0d` (including
+the empty document). Explicit Save and Save As still save these documents.
+
 New documents save as UTF-8 without a BOM. Open accepts UTF-8 with or without a
 BOM and recognizes BOM-marked UTF-16LE; Open As UTF-16LE also handles files
 without a BOM. Open As GBK explicitly decodes CP936. Save and Save As preserve
