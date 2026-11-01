@@ -3,6 +3,7 @@
 #include <wx/frame.h>
 #include "document/document_session.h"
 #include "search/search_session.h"
+#include "editor/indentation_settings.h"
 
 class EditorControl;
 class FindReplaceDialog;
@@ -30,6 +31,8 @@ public:
 private:
     EditorControl* editor_;
     SettingsStore* settings_;
+    OriginalSettings defaults_;
+    IndentationSettings indentation_;
     DocumentSession document_;
     int automaticLanguageId_;
     SearchSession search_;

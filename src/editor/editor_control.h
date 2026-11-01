@@ -22,7 +22,7 @@ public:
     intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
     void IndentLines(bool forwards);
-    void SetIndentationWidth(int width);
+    void SetIndentationWidths(int tabWidth, int indentWidth);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
