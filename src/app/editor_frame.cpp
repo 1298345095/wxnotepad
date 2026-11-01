@@ -519,6 +519,24 @@ bool EditorFrame::New() {
 
 bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (!editor_->Send(Scintilla::Message::GetModify)) return true;
+    // Pinned Notepad4 FileSave/IsASpace: only short ASCII-whitespace Untitled
+    // documents bypass the lifecycle prompt; explicit Save still writes them.
+    if (document_.Path().empty()) {
+        const auto length = editor_->Send(Scintilla::Message::GetLength);
+        if (length < 2048) {
+            const auto* bytes =
+                reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));
+            bool whitespaceOnly = true;
+            for (intptr_t index = 0; bytes && index < length; ++index) {
+                const char ch = bytes[index];
+                if (!(ch == ' ' || (ch >= 0x09 && ch <= 0x0d))) {
+                    whitespaceOnly = false;
+                    break;
+                }
+            }
+            if (whitespaceOnly) return true;
+        }
+    }
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);
@@ -535,13 +553,8 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
 GbkLossChoice EditorFrame::ConfirmGbkLoss() {
     wxMessageDialog dialog(
         this,
-        "GBK cannot preserve every character in this document. Save as UTF-8 without a BOM to keep all text, "
-        "or confirm GBK replacement. Replace in GBK changes unsupported characters to ? in both the file "
-        "and document after saving; Undo restores the original text.",
-        "GBK character loss", wxYES_NO | wxCANCEL | wxCANCEL_DEFAULT | wxICON_WARNING);
-    dialog.SetYesNoCancelLabels("Save as &UTF-8", "&Replace in GBK", "&Cancel");
-    const auto choice = dialog.ShowModal();
-    if (choice == wxID_YES) return GbkLossChoice::Utf8;
-    if (choice == wxID_NO) return GbkLossChoice::Replace;
-    return GbkLossChoice::Cancel;
+        "Certain characters in the current text are not supported by the selected encoding, and may be replaced "
+        "by default placeholders when saving. It's recommended to choose another file encoding. Continue?",
+        "GBK character loss", wxOK | wxCANCEL | wxICON_WARNING);
+    return dialog.ShowModal() == wxID_OK ? GbkLossChoice::Replace : GbkLossChoice::Cancel;
 }
