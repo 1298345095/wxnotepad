@@ -9,7 +9,7 @@
 
 class EditorControl;
 enum class FileEncoding { Utf8, Utf16Le, Gbk };
-enum class GbkLossChoice { Cancel, Utf8, Replace };
+enum class GbkLossChoice { Cancel, Replace };
 using GbkLossDecision = std::function<GbkLossChoice()>;
 // The dialog adapter translates its native filter index into this semantic choice.
 enum class SaveType : uint8_t { CurrentScheme, AllFiles };

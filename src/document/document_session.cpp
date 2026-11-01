@@ -123,24 +123,11 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
     std::string bytes(length + 1, '\0');
     editor_.Send(Scintilla::Message::GetText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     bytes.resize(length);
-    std::optional<std::string> savedText;
-    auto savedEncoding = encoding_;
-    bool savedBom = hasBom_;
     if (encoding_ == FileEncoding::Gbk) {
         if (!IsUtf8(bytes)) return {SaveStatus::Failed, "The document contains invalid UTF-8."};
         const auto encoded = EncodeGbk(bytes);
-        if (encoded.loss) {
-            const auto choice = decideLoss ? decideLoss() : GbkLossChoice::Cancel;
-            if (choice == GbkLossChoice::Cancel) return {SaveStatus::Cancelled, {}};
-            if (choice == GbkLossChoice::Utf8) {
-                savedEncoding = FileEncoding::Utf8;
-                savedBom = false;
-            } else {
-                bytes = encoded.bytes;
-                savedText = DecodeGbk(bytes);
-            }
-        } else
-            bytes = encoded.bytes;
+        if (encoded.loss && (!decideLoss || decideLoss() != GbkLossChoice::Replace)) return {SaveStatus::Cancelled, {}};
+        bytes = encoded.bytes;
     } else if (encoding_ == FileEncoding::Utf16Le) {
         auto encoded = EncodeUtf16Le(bytes);
         if (!encoded) return {SaveStatus::Failed, "The document could not be encoded as UTF-16LE."};
@@ -150,14 +137,6 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
         bytes.insert(0, "\xef\xbb\xbf");
     const auto error = WriteSafely(destination, bytes);
     if (!error.empty()) return {SaveStatus::Failed, error};
-    if (savedText) {
-        editor_.Send(Scintilla::Message::BeginUndoAction);
-        editor_.Send(Scintilla::Message::SetTargetStart, 0);
-        editor_.Send(Scintilla::Message::SetTargetEnd, length);
-        editor_.Send(Scintilla::Message::ReplaceTarget, savedText->size(),
-                     reinterpret_cast<intptr_t>(savedText->data()));
-        editor_.Send(Scintilla::Message::EndUndoAction);
-    }
     const auto previousLanguage = Language();
     if (fileType) {
         const auto* selected = std::get_if<SyntaxLanguage>(&*fileType);
@@ -174,8 +153,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
             languageOverride_.reset();
     }
     path_ = destination;
-    encoding_ = savedEncoding;
-    hasBom_ = savedBom;
+    // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
     if (previousLanguage != Language()) ApplySyntaxLanguage(editor_, Language());
     return {SaveStatus::Saved, {}};
