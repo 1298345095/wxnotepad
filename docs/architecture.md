@@ -229,18 +229,29 @@ code-generation framework is not needed for this catalog.
 | Themes and configurable fonts | Separate lexer selection from appearance application. One appearance operation should update text styles, selection/caret/fold colors and font-dependent geometry consistently. Keep point-size and DPI behavior established by the existing tests. |
 | Completion and calltips | Use original completion/word data selectively. Complete and test the native popup/list/calltip implementation before exposing the feature; current platform stubs are not a finished capability. |
 | Large-file behavior | Make a measured load/styling decision in the document-opening flow, then apply it through syntax/editor operations. Keep the user's language choice distinct from any reduced-styling mode. |
-| File association, external changes, drag/drop and shell integration | Add narrowly scoped native implementations when needed. Keep their policy and UI out of the core/platform drawing code. |
+| File association, external changes and shell integration | Add narrowly scoped native implementations when needed. Keep their policy and UI out of the core/platform drawing code. |
 
 For settings, the proposed precedence is explicit document choice, then user or
 imported defaults, then built-in defaults. The actual fields, storage format and
 portable-mode selection still need design. Configuration should be loaded once
 and applied deliberately, rather than consulted during each paint or key event.
 
-The current platform implementation contains incomplete capabilities:
-`WxSurface::Layout` returns null, `StartDrag`/`CreateCallTipWindow` are empty, and
-popup-menu methods are stubs. Future work should complete the relevant existing
-interface instead of inferring support from the compiled core. Linux IME remains
-deferred; this structure proposal does not change that decision.
+Stream-text drag/drop uses the existing native text transfer protocols: wx/OLE
+on Windows and GTK text targets on Linux. The pinned original core owns drag
+thresholds, insertion feedback and scrolling, self-drop rules, EOL conversion,
+source position adjustment and undo grouping. An external source deletion commits
+only after the native transfer reports a completed move. The GTK host keeps its
+source alive through native completion rather than wxGTK's early pointer-event
+exit, and records the operation at drop time before later modifier changes.
+
+Additional payloads remain an explicit follow-up: rectangular/line selection tags,
+files, shell objects and application-specific formats are not migrated by the
+stream-text slice. Linux IME also remains deferred.
+
+The current platform implementation still contains incomplete capabilities:
+`WxSurface::Layout` returns null, `CreateCallTipWindow` is empty, and popup-menu
+methods are stubs. Future work should complete the relevant existing interface
+instead of inferring support from the compiled core.
 
 ## Portability, build and lightweight constraints
 
