@@ -4,6 +4,7 @@
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <chrono>
+#include <cstring>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
@@ -18,6 +19,28 @@ namespace core = Scintilla::Internal;
 wxDEFINE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 
 namespace {
+#ifdef __WXMSW__
+// Original ScintillaWin clipboard ownership and bounded retry rule.
+class NativeClipboard {
+public:
+    explicit NativeClipboard(HWND window) {
+        for (int attempt = 0; attempt < 8; ++attempt) {
+            if (attempt) ::Sleep(1 << (attempt - 1));
+            if (::OpenClipboard(window)) {
+                opened_ = true;
+                break;
+            }
+        }
+    }
+    ~NativeClipboard() {
+        if (opened_) ::CloseClipboard();
+    }
+    explicit operator bool() const { return opened_; }
+
+private:
+    bool opened_ = false;
+};
+#endif
 unsigned MouseTime() {
     return static_cast<unsigned>(
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
@@ -425,22 +448,75 @@ private:
     }
     bool WriteClipboard(const core::SelectionText& text) const {
         if (wxTheClipboard->IsOpened()) return false;
+#ifdef __WXMSW__
+        const NativeClipboard clipboard(static_cast<HWND>(window_.GetHandle()));
+        if (!clipboard) return false;
+        const auto value = wxString::FromUTF8(text.Data(), text.Length()).ToStdWstring();
+        const auto memory = ::GlobalAlloc(GMEM_MOVEABLE, (value.size() + 1) * sizeof(wchar_t));
+        if (!memory) return false;
+        auto* bytes = ::GlobalLock(memory);
+        if (!bytes) {
+            ::GlobalFree(memory);
+            return false;
+        }
+        std::memcpy(bytes, value.c_str(), (value.size() + 1) * sizeof(wchar_t));
+        ::GlobalUnlock(memory);
+        if (!::EmptyClipboard() || !::SetClipboardData(CF_UNICODETEXT, memory)) {
+            ::GlobalFree(memory);
+            return false;
+        }
+        if (text.rectangular) {
+            ::SetClipboardData(::RegisterClipboardFormatW(L"MSDEVColumnSelect"), nullptr);
+            const auto block = ::GlobalAlloc(GMEM_MOVEABLE, 1);
+            if (block) {
+                auto* marker = static_cast<unsigned char*>(::GlobalLock(block));
+                if (marker) {
+                    *marker = 2;
+                    ::GlobalUnlock(block);
+                    if (!::SetClipboardData(::RegisterClipboardFormatW(L"Borland IDE Block Type"), block))
+                        ::GlobalFree(block);
+                } else {
+                    ::GlobalFree(block);
+                }
+            }
+        }
+        if (text.lineCopy) {
+            ::SetClipboardData(::RegisterClipboardFormatW(L"MSDEVLineSelect"), nullptr);
+            ::SetClipboardData(::RegisterClipboardFormatW(L"VisualStudioEditorOperationsLineCutCopyClipboardTag"),
+                               nullptr);
+        }
+        return true;
+#else
         wxTheClipboard->UsePrimarySelection(false);
         wxClipboardLocker lock;
         if (!lock) return false;
 #ifdef __WXGTK__
         // Retain each publication with GTK's owner lifecycle. The legacy wx
         // selection path returned empty text after repeat Wayland publications.
+        // ScintillaGTK transfers rectangles as LF-terminated UTF-8 with the
+        // terminating NUL included in the target length.
         auto* value = new std::string(text.AsView());
+        if (text.rectangular) {
+            if (value->empty() || value->back() != '\n') value->push_back('\n');
+            value->push_back('\0');
+        }
         auto* list = gtk_target_list_new(nullptr, 0);
         gtk_target_list_add_text_targets(list, 0);
+        if (text.lineCopy) {
+            gtk_target_list_add(list, gdk_atom_intern_static_string("MSDEVLineSelect"), 0, 1);
+            gtk_target_list_add(
+                list, gdk_atom_intern_static_string("VisualStudioEditorOperationsLineCutCopyClipboardTag"), 0, 1);
+        }
         gint count = 0;
         auto* targets = gtk_target_table_new_from_list(list, &count);
         const bool copied = gtk_clipboard_set_with_data(
             gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), targets, count,
-            [](GtkClipboard*, GtkSelectionData* data, guint, gpointer owner) {
+            [](GtkClipboard*, GtkSelectionData* data, guint info, gpointer owner) {
                 const auto* value = static_cast<const std::string*>(owner);
-                gtk_selection_data_set_text(data, value->c_str(), -1);
+                if (info == 1)
+                    gtk_selection_data_set(data, gtk_selection_data_get_target(data), 8, nullptr, 0);
+                else
+                    gtk_selection_data_set_text(data, value->c_str(), static_cast<int>(value->size()));
             },
             [](GtkClipboard*, gpointer owner) { delete static_cast<std::string*>(owner); }, value);
         gtk_target_table_free(targets, count);
@@ -450,6 +526,7 @@ private:
 #else
         return wxTheClipboard->SetData(new wxTextDataObject(wxString::FromUTF8(text.Data(), text.Length())));
 #endif
+#endif
     }
     void Copy(bool) const override {
         if (sel.Empty()) return;
@@ -458,11 +535,15 @@ private:
         WriteClipboard(text);
     }
     void CopyToClipboard(const core::SelectionText& text) const override { WriteClipboard(text); }
-    void Cut(bool, bool = false) override {
+    void Cut(bool, bool lineCopy = false) override {
         pdoc->CheckReadOnly();
         if (sel.Empty() || pdoc->IsReadOnly() || SelectionContainsProtected()) return;
         core::SelectionText text;
-        CopySelectionRange(text);
+        if (lineCopy)
+            text.Copy(RangeText(sel.RangeMain().Start().Position(), sel.RangeMain().End().Position()),
+                      pdoc->dbcsCodePage, false, true);
+        else
+            CopySelectionRange(text);
         if (WriteClipboard(text)) ClearSelection();
     }
     bool CanPaste() const noexcept override {
@@ -480,6 +561,64 @@ private:
     }
     void Paste(bool) override {
         if (!core::Editor::CanPaste() || wxTheClipboard->IsOpened()) return;
+        bool rectangular = false;
+        bool line = false;
+        std::string utf8;
+#ifdef __WXGTK__
+        // Read the raw UTF-8 target: wxTextDataObject discards the rectangle NUL.
+        auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+        line = sel.Empty() &&
+               (gtk_clipboard_wait_is_target_available(clipboard, gdk_atom_intern_static_string("MSDEVLineSelect")) ||
+                gtk_clipboard_wait_is_target_available(
+                    clipboard, gdk_atom_intern_static_string("VisualStudioEditorOperationsLineCutCopyClipboardTag")));
+        auto* data = gtk_clipboard_wait_for_contents(clipboard, gdk_atom_intern_static_string("UTF8_STRING"));
+        if (!data || gtk_selection_data_get_length(data) < 0) {
+            if (data) gtk_selection_data_free(data);
+            data =
+                gtk_clipboard_wait_for_contents(clipboard, gdk_atom_intern_static_string("text/plain;charset=utf-8"));
+        }
+        if (data && gtk_selection_data_get_length(data) >= 0) {
+            const int length = gtk_selection_data_get_length(data);
+            const auto* bytes = reinterpret_cast<const char*>(gtk_selection_data_get_data(data));
+            rectangular = length > 2 && bytes[length - 1] == '\0' && bytes[length - 2] == '\n';
+            if (length) utf8.assign(bytes, length - (rectangular ? 1 : 0));
+            gtk_selection_data_free(data);
+        } else {
+            if (data) gtk_selection_data_free(data);
+            // Retain GTK's conversion for text offered only in legacy targets.
+            auto* value = gtk_clipboard_wait_for_text(clipboard);
+            if (!value) return;
+            utf8 = value;
+            g_free(value);
+        }
+#elif defined(__WXMSW__)
+        {
+            const NativeClipboard clipboard(static_cast<HWND>(window_.GetHandle()));
+            if (!clipboard) return;
+            const auto memory = ::GetClipboardData(CF_UNICODETEXT);
+            if (!memory) return;
+            const auto* bytes = static_cast<const wchar_t*>(::GlobalLock(memory));
+            if (!bytes) return;
+            const wxString value(bytes);
+            const auto buffer = value.ToUTF8();
+            utf8.assign(buffer.data(), buffer.length());
+            ::GlobalUnlock(memory);
+            line = sel.Empty() && (::IsClipboardFormatAvailable(::RegisterClipboardFormatW(L"MSDEVLineSelect")) ||
+                                   ::IsClipboardFormatAvailable(::RegisterClipboardFormatW(
+                                       L"VisualStudioEditorOperationsLineCutCopyClipboardTag")));
+            rectangular = ::IsClipboardFormatAvailable(::RegisterClipboardFormatW(L"MSDEVColumnSelect")) != 0;
+            if (!rectangular) {
+                const auto block = ::GetClipboardData(::RegisterClipboardFormatW(L"Borland IDE Block Type"));
+                if (block) {
+                    const auto* marker = static_cast<const unsigned char*>(::GlobalLock(block));
+                    if (marker) {
+                        rectangular = ::GlobalSize(block) == 1 && *marker == 2;
+                        ::GlobalUnlock(block);
+                    }
+                }
+            }
+        }
+#else
         wxTextDataObject text;
         {
             wxTheClipboard->UsePrimarySelection(false);
@@ -489,10 +628,12 @@ private:
         // Keep both owners alive through insertion. On UTF-8-native wx builds
         // ToUTF8() may borrow the source wxString's storage.
         const wxString value = text.GetText();
-        const auto utf8 = value.ToUTF8();
+        const auto buffer = value.ToUTF8();
+        utf8.assign(buffer.data(), buffer.length());
+#endif
         const core::UndoGroup undo(pdoc);
-        ClearSelection();
-        InsertPasteShape(std::string_view(utf8.data(), utf8.length()), PasteShape::stream);
+        ClearSelection(multiPasteMode == Scintilla::MultiPaste::Each);
+        InsertPasteShape(utf8, rectangular ? PasteShape::rectangular : (line ? PasteShape::line : PasteShape::stream));
     }
     void NotifyChange() const noexcept override {}
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override {
