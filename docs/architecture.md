@@ -225,16 +225,18 @@ code-generation framework is not needed for this catalog.
 | --- | --- |
 | More languages | Add a catalog descriptor, pinned data/provenance, compiled lexer/registration and representative behavior checks. Keep window code unchanged. |
 | Editing commands such as indentation, line transforms, case conversion | Add cohesive operations near the editor features; reuse original core/Notepad4 routines where suitable. Menus invoke operations that own selection and undo semantics. |
-| Settings and Notepad4 import | Add a `settings` module when implementing the accepted settings scope. Separate stored values, one-time import and effective editor settings; resolve portable/user paths there. Apply settings to existing modules rather than let each read INI files. |
+| Settings and Notepad4 import | `settings/settings_store.*` owns original INI discovery and the shared load/save lifecycle. The first slice applies Line Numbers, Word Wrap and Show Whitespace; later fields extend this store and apply through their responsible modules. Complete import and appearance migration remain future work. |
 | Themes and configurable fonts | Separate lexer selection from appearance application. One appearance operation should update text styles, selection/caret/fold colors and font-dependent geometry consistently. Keep point-size and DPI behavior established by the existing tests. |
 | Completion and calltips | Use original completion/word data selectively. Complete and test the native popup/list/calltip implementation before exposing the feature; current platform stubs are not a finished capability. |
 | Large-file behavior | Make a measured load/styling decision in the document-opening flow, then apply it through syntax/editor operations. Keep the user's language choice distinct from any reduced-styling mode. |
 | File association, external changes, drag/drop and shell integration | Add narrowly scoped native implementations when needed. Keep their policy and UI out of the core/platform drawing code. |
 
-For settings, the proposed precedence is explicit document choice, then user or
-imported defaults, then built-in defaults. The actual fields, storage format and
-portable-mode selection still need design. Configuration should be loaded once
-and applied deliberately, rather than consulted during each paint or key event.
+Settings load once before frame creation from the original `Notepad4.ini`, using
+the original Windows installed/portable discovery and a documented Linux native
+directory mapping. A missing file can be seeded by `Notepad4.ini-default`; missing
+fields use original built-in defaults. Save Settings Now and Save Settings On
+Exit share this lifecycle and preserve unrelated fields. See
+[the limited settings slice](settings.md) for names and platform mapping.
 
 The current platform implementation contains incomplete capabilities:
 `WxSurface::Layout` returns null, `StartDrag`/`CreateCallTipWindow` are empty, and
