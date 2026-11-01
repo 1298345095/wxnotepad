@@ -9,29 +9,37 @@
 #include <wx/log.h>
 #include <wx/utils.h>
 #include <cstdio>
+#include <algorithm>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
 
 namespace {
-Scintilla::EndOfLine DetectEol(std::string_view bytes) {
-    size_t crlf = 0;
-    size_t cr = 0;
-    size_t lf = 0;
+LineEndingCounts CountLineEndings(std::string_view bytes) {
+    LineEndingCounts counts;
     for (size_t i = 0; i < bytes.size(); ++i) {
         if (bytes[i] == '\r') {
             if (i + 1 < bytes.size() && bytes[i + 1] == '\n') {
-                ++crlf;
+                ++counts.crlf;
                 ++i;
             } else
-                ++cr;
+                ++counts.cr;
         } else if (bytes[i] == '\n')
-            ++lf;
+            ++counts.lf;
     }
-    // Original EditDetectEOLMode policy with the current default CRLF:
-    // retain CRLF when tied for most common; otherwise prefer LF over CR.
-    if (crlf >= cr && crlf >= lf) return Scintilla::EndOfLine::CrLf;
-    return lf >= cr ? Scintilla::EndOfLine::Lf : Scintilla::EndOfLine::Cr;
+    return counts;
+}
+
+Scintilla::EndOfLine SelectEol(const LineEndingCounts& counts, Scintilla::EndOfLine configured) {
+    // Notepad4 89b8b36 EditDetectEOLMode: retain the configured mode when tied,
+    // otherwise choose the largest count, preferring CRLF and then LF.
+    const size_t maximum = std::max({counts.crlf, counts.cr, counts.lf});
+    const size_t preferred = configured == Scintilla::EndOfLine::CrLf ? counts.crlf
+                             : configured == Scintilla::EndOfLine::Lf ? counts.lf
+                                                                      : counts.cr;
+    if (preferred == maximum) return configured;
+    if (counts.crlf == maximum) return Scintilla::EndOfLine::CrLf;
+    return counts.lf == maximum ? Scintilla::EndOfLine::Lf : Scintilla::EndOfLine::Cr;
 }
 
 bool IsUtf8(std::string_view bytes) {
@@ -221,7 +229,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         result = read();
         if (result.status != OpenStatus::Opened) return result;
     }
-    Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
+    const auto lineEndings = Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
     if (samePath) {
         editor_.Send(Message::SetSel, anchor, caret);
         // Original FileLoad (Notepad4 89b8b36): compare the saved one-based line
@@ -248,15 +256,16 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
             editor_.Send(Message::SetXOffset, xOffset);
         }
     }
-    return {OpenStatus::Opened, {}};
+    return {OpenStatus::Opened, {}, lineEndings};
 }
 
-void DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
-                              bool keepLanguage) {
+LineEndingCounts DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding,
+                                          bool bom, bool keepLanguage) {
+    const auto lineEndings = CountLineEndings(bytes);
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
     editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
-    editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(DetectEol(bytes)));
+    editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(SelectEol(lineEndings, defaultEolMode_)));
     editor_.Send(Scintilla::Message::SetUndoCollection, 1);
     editor_.Send(Scintilla::Message::EmptyUndoBuffer);
     editor_.Send(Scintilla::Message::GotoPos, 0);
@@ -269,6 +278,7 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, Fi
         languageOverride_.reset();
         ApplySyntaxLanguage(editor_, Language());
     }
+    return lineEndings;
 }
 
 void DocumentSession::New() {

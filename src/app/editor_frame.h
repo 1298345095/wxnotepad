@@ -34,6 +34,7 @@ private:
     int automaticLanguageId_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
+    bool warnLineEndings_ = true;
     void ReportFind(const FindResult& result);
     void ShowFind(bool replace = false);
     void FindNext();
@@ -45,5 +46,6 @@ private:
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
     GbkLossChoice ConfirmGbkLoss();
+    void ConfirmLineEndingConversion(const LineEndingCounts& counts);
     bool SaveSettings(bool explicitSave);
 };

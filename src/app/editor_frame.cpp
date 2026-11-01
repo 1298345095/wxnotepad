@@ -7,6 +7,11 @@
 #include <wx/filedlg.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
+#include <wx/button.h>
+#include <wx/checkbox.h>
+#include <wx/choice.h>
+#include <wx/sizer.h>
+#include <wx/stattext.h>
 #include <wx/statusbr.h>
 #include <vector>
 
@@ -50,6 +55,12 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
       editor_(new EditorControl(this)), settings_(settings), document_(*editor_), search_(*editor_) {
     if (settings) {
+        const auto mode = settings->values.defaultEOLMode == 0   ? Scintilla::EndOfLine::CrLf
+                          : settings->values.defaultEOLMode == 1 ? Scintilla::EndOfLine::Lf
+                                                                 : Scintilla::EndOfLine::Cr;
+        document_.SetDefaultEolMode(mode);
+        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
+        warnLineEndings_ = settings->values.warnLineEndings;
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
         editor_->Send(Scintilla::Message::SetViewWS,
@@ -349,6 +360,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    settings_->values.warnLineEndings = warnLineEndings_;
     return settings_->Save(explicitSave);
 }
 
@@ -487,6 +499,7 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
+        if (result.lineEndings.Mixed() && warnLineEndings_) ConfirmLineEndingConversion(result.lineEndings);
         UpdateWindowUI(wxUPDATE_UI_RECURSE);
     }
     UpdateDocumentState();
@@ -555,4 +568,46 @@ GbkLossChoice EditorFrame::ConfirmGbkLoss() {
         "by default placeholders when saving. It's recommended to choose another file encoding. Continue?",
         "GBK character loss", wxOK | wxCANCEL | wxICON_WARNING);
     return dialog.ShowModal() == wxID_OK ? GbkLossChoice::Replace : GbkLossChoice::Cancel;
+}
+
+void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts) {
+    wxDialog dialog(this, wxID_ANY, "Inconsistent Line Endings");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "The line endings in this file are not consistent:"), 0, wxALL,
+                  dialog.FromDIP(10));
+    contents->Add(new wxStaticText(&dialog, wxID_ANY,
+                                   wxString::Format("CR+LF: %llu line(s).\nLF: %llu line(s).\nCR: %llu line(s).",
+                                                    static_cast<unsigned long long>(counts.crlf),
+                                                    static_cast<unsigned long long>(counts.lf),
+                                                    static_cast<unsigned long long>(counts.cr))),
+                  0, wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Do you want to normalize the line endings?"), 0, wxALL,
+                  dialog.FromDIP(10));
+    const wxString names[] = {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)"};
+    auto* mode = new wxChoice(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize, 3, names);
+    mode->SetName("Line ending conversion");
+    const auto current = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
+    mode->SetSelection(current == Scintilla::EndOfLine::CrLf ? 0 : current == Scintilla::EndOfLine::Lf ? 1 : 2);
+    contents->Add(mode, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    auto* always = new wxCheckBox(&dialog, wxID_ANY, "&Always show this dialog.");
+    always->SetValue(warnLineEndings_);
+    contents->Add(always, 0, wxALL, dialog.FromDIP(10));
+    auto* buttons = new wxBoxSizer(wxHORIZONTAL);
+    auto* yes = new wxButton(&dialog, wxID_OK, "&Yes");
+    auto* no = new wxButton(&dialog, wxID_CANCEL, "&No");
+    buttons->Add(yes, 0, wxRIGHT, dialog.FromDIP(5));
+    buttons->Add(no);
+    contents->Add(buttons, 0, wxALIGN_RIGHT | wxALL, dialog.FromDIP(10));
+    yes->SetDefault();
+    dialog.SetSizerAndFit(contents);
+    dialog.CentreOnParent();
+    const bool convert = dialog.ShowModal() == wxID_OK;
+    warnLineEndings_ = always->GetValue();
+    if (convert) {
+        const auto selected = mode->GetSelection() == 0   ? Scintilla::EndOfLine::CrLf
+                              : mode->GetSelection() == 1 ? Scintilla::EndOfLine::Lf
+                                                          : Scintilla::EndOfLine::Cr;
+        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(selected));
+        editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(selected));
+    }
 }

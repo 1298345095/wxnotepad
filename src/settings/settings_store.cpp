@@ -6,6 +6,9 @@
 #include <wx/tokenzr.h>
 #include <wx/utils.h>
 #include <string>
+#include <algorithm>
+#include <cwchar>
+#include <climits>
 #ifdef __WXMSW__
 #include <shlobj.h>
 #include <filesystem>
@@ -62,6 +65,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.wordWrap = ReadBool("WordWrap", true);
     values.showLineNumbers = ReadBool("ShowLineNumbers", true);
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
+    values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", 0), 0, 2);
+    values.warnLineEndings = ReadBool("WarnLineEndings", true);
 }
 
 void SettingsStore::LoadLines() {
@@ -108,6 +113,46 @@ bool SettingsStore::ReadBool(const wxString& key, bool fallback) const {
     return fallback;
 }
 
+int SettingsStore::ReadInt(const wxString& key, int fallback) const {
+    bool settings = false;
+    for (const auto& raw : lines_) {
+        wxString line = raw;
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            settings = line.CmpNoCase("[Settings]") == 0;
+        } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
+            const auto value = line.AfterFirst('=').Trim().Trim(false);
+            wchar_t* end = nullptr;
+            const long number = std::wcstol(value.wc_str(), &end, 10);
+            return end == value.wc_str()
+                       ? fallback
+                       : static_cast<int>(std::clamp(number, static_cast<long>(INT_MIN), static_cast<long>(INT_MAX)));
+        }
+    }
+    return fallback;
+}
+
+void SettingsStore::WriteInt(const wxString& key, int value, int fallback) {
+    // Use the same merge/removal rule as boolean fields.
+    WriteBool(key, false, false);
+    if (value == fallback) return;
+    size_t insertion = lines_.size();
+    bool found = false;
+    for (size_t index = 0; index < lines_.size(); ++index) {
+        wxString line = lines_[index];
+        if (line.Trim().Trim(false).CmpNoCase("[Settings]") == 0) {
+            insertion = index + 1;
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        lines_.push_back("[Settings]");
+        insertion = lines_.size();
+    }
+    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + wxString::Format("=%d", value));
+}
+
 void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback) {
     bool settings = false;
     bool foundSection = false;
@@ -145,6 +190,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("WordWrap", values.wordWrap, true);
         WriteBool("ShowLineNumbers", values.showLineNumbers, true);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
+        WriteInt("DefaultEOLMode", values.defaultEOLMode, 0);
+        WriteBool("WarnLineEndings", values.warnLineEndings, true);
     }
     wxString text(wxUniChar(0xFEFF));
     for (const auto& line : lines_)

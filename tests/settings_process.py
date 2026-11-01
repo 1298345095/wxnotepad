@@ -63,23 +63,27 @@ def main():
         shutil.copy2(source, executable)
         seed = executable_folder / "Notepad4.ini-default"
         seed.write_text("[Settings]\nWordWrap=invalid\nShowLineNumbers=1\nViewWhiteSpace=0\n"
+                        "DefaultEOLMode=1\nWarnLineEndings=0\n"
                         "UnrelatedSetting=keep\n[Styles]\nUnrelatedStyle=保留\n", encoding="utf-16")
         startup = folder / "startup.txt"
-        startup.write_bytes(b"settings survive startup file loading\n")
+        startup.write_bytes(b"settings survive\r\nstartup file loading\nlast")
         app = Application(executable, folder, environment)
         try:
             view(app.state, True, True, False)
+            assert app.state["eol_mode"] == "2", app.state
             for item in ("Word Wrap", "Line Numbers", "Show Whitespace"):
                 app.menu(item)
             view(app.state, False, False, True)
             app.close()
             saved = (config_folder / "Notepad4.ini").read_bytes().decode("utf-16")
             assert "WordWrap=0" in saved and "ShowLineNumbers=0" in saved and "ViewWhiteSpace=1" in saved, repr(saved)
+            assert "DefaultEOLMode=1" in saved and "WarnLineEndings=0" in saved, repr(saved)
         finally:
             app.stop()
         app = Application(executable, folder, environment, startup)
         try:
             view(app.state, False, False, True)
+            assert app.state["eol_mode"] == "2", app.state
             app.menu("Save Settings On Exit")
             for item in ("Word Wrap", "Line Numbers", "Show Whitespace"):
                 app.menu(item)
@@ -90,6 +94,7 @@ def main():
         saved = (config_folder / "Notepad4.ini").read_text(encoding="utf-16")
         assert "SaveSettings=0" in saved and "WordWrap=0" in saved, saved
         assert "UnrelatedSetting=keep" in saved and "UnrelatedStyle=保留" in saved, saved
+        assert "DefaultEOLMode=1" in saved and "WarnLineEndings=0" in saved, saved
         app = Application(executable, folder, environment)
         try:
             view(app.state, False, False, True)
@@ -111,6 +116,17 @@ def main():
         assert "SaveSettings=0" in saved, saved
         assert "WordWrap=" not in saved and "ShowLineNumbers=" not in saved and "ViewWhiteSpace=" not in saved, saved
         assert "UnrelatedSetting=keep" in saved and "UnrelatedStyle=保留" in saved, saved
+        assert "DefaultEOLMode=1" in saved and "WarnLineEndings=0" in saved, saved
+        for value, mode in (("0", "0"), ("1", "2"), ("2", "1"), ("-1", "0"), ("99", "1"), ("invalid", "0"),
+                            ("4294967296", "1"), ("-4294967297", "0"), ("1suffix", "2")):
+            (config_folder / "Notepad4.ini").write_text(
+                "[Settings]\nSaveSettings=0\nWarnLineEndings=0\nDefaultEOLMode=" + value + "\n", encoding="utf-16")
+            app = Application(executable, folder, environment)
+            try:
+                assert app.state["eol_mode"] == mode, (value, app.state)
+                app.close()
+            finally:
+                app.stop()
     print("Original defaults, seed, restoration, disabled exit save, explicit save and unrelated settings passed")
 
 

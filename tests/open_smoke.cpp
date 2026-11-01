@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include "settings/settings_store.h"
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
@@ -28,7 +30,10 @@ std::string Text(EditorFrame* frame) {
 class OpenApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values.warnLineEndings = false;
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory =
                 std::filesystem::temp_directory_path() / ("wxnotepad-open-" + std::to_string(wxGetProcessId()));
@@ -132,6 +137,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
