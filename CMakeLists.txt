@@ -42,6 +42,7 @@ target_link_libraries(editor_runtime PUBLIC notepad4_core)
 
 add_library(editor_features STATIC
     src/editor/line_navigation.cpp
+    src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/encoding/gbk_codec.cpp
     src/document/encoding/utf16_codec.cpp
@@ -55,6 +56,7 @@ target_link_libraries(editor_features PUBLIC editor_runtime)
 add_library(app_shell STATIC
     src/settings/settings_store.cpp
     src/app/go_to_line_dialog.cpp
+    src/app/tab_settings_dialog.cpp
     src/app/editor_frame.cpp
     src/app/find_replace_dialog.cpp
     src/app/process_observer.cpp)
