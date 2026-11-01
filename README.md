@@ -67,6 +67,11 @@ selected match before editing; Replace All searches the complete current
 document and reports its count in the dialog. Each text-changing single
 replacement or Replace All operation can be undone once. Byte-identical
 single replacements and Replace All preserve the save point and redo history.
+In Selection uses the current stream range, reports its replacement count, and
+groups edits into one Undo operation. It retains the original search context and
+stops before a match crossing the selection end. Rectangular selections show the
+original unsupported-operation warning. See the
+[selection replacement record](docs/observations/replace-selection-README.md).
 
 Regular expressions use the pinned original core's Boost engine and capture
 formatter, including numeric `$1` / `\1` references and `$&` / `$0` for the whole

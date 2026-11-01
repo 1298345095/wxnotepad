@@ -28,8 +28,9 @@ private:
     wxStaticText* replacementLabel_;
     wxButton* replaceButton_;
     wxButton* replaceAllButton_;
+    wxButton* replaceSelectionButton_;
     wxStaticText* replacementResult_;
     void ConfigureSearch();
     void ReplaceOne();
-    void ReplaceAll();
+    void ReplaceAll(bool inSelection = false);
 };
