@@ -479,6 +479,24 @@ bool EditorFrame::New() {
 
 bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (!editor_->Send(Scintilla::Message::GetModify)) return true;
+    // Pinned Notepad4 FileSave/IsASpace: only short ASCII-whitespace Untitled
+    // documents bypass the lifecycle prompt; explicit Save still writes them.
+    if (document_.Path().empty()) {
+        const auto length = editor_->Send(Scintilla::Message::GetLength);
+        if (length < 2048) {
+            const auto* bytes =
+                reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));
+            bool whitespaceOnly = true;
+            for (intptr_t index = 0; bytes && index < length; ++index) {
+                const char ch = bytes[index];
+                if (!(ch == ' ' || (ch >= 0x09 && ch <= 0x0d))) {
+                    whitespaceOnly = false;
+                    break;
+                }
+            }
+            if (whitespaceOnly) return true;
+        }
+    }
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);
