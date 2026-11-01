@@ -161,6 +161,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
             languageOverride_.reset();
     }
     path_ = destination;
+    if (fileType && !languageOverride_) DetectAutomaticLanguage();
     // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
     if (previousLanguage != Language()) ApplySyntaxLanguage(editor_, Language());
@@ -276,6 +277,7 @@ LineEndingCounts DocumentSession::Replace(const std::string& bytes, const wxStri
     hasBom_ = bom;
     if (!keepLanguage) {
         languageOverride_.reset();
+        DetectAutomaticLanguage();
         ApplySyntaxLanguage(editor_, Language());
     }
     return lineEndings;
@@ -288,5 +290,14 @@ void DocumentSession::New() {
 void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     const auto previous = Language();
     languageOverride_ = language;
+    if (!language) DetectAutomaticLanguage();
     if (previous != Language()) ApplySyntaxLanguage(editor_, Language());
+}
+
+void DocumentSession::DetectAutomaticLanguage() {
+    // The pinned core's GetText count excludes its terminating NUL.
+    // Match original SciCall_GetText(255) with the original 256-byte buffer.
+    char prefix[256]{};
+    editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
+    automaticLanguage_ = DetectLanguage(path_, prefix, detection_);
 }
