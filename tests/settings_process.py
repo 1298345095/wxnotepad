@@ -21,8 +21,8 @@ class Application:
         self.process = subprocess.Popen(arguments, env=environment)
         self.state = wait_state(folder, self.process, lambda s: s["sequence"] == "0")
 
-    def menu(self, item):
-        self.named_menu("View", item)
+    def menu(self, item, menu="View"):
+        self.named_menu(menu, item)
 
     def named_menu(self, menu, item):
         self.sequence += 1

@@ -4,6 +4,7 @@
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/dnd.h>
+#include <wx/settings.h>
 #include <chrono>
 #include <cstring>
 #include <cmath>
@@ -98,6 +99,13 @@ public:
         WndProc(Message::StyleSetSize, 32, 12);
         WndProc(Message::StyleSetBack, 32, 0xFFFFFF);
         WndProc(Message::StyleClearAll, 0, 0);
+        // Original Mark Occurrences indicator and default bookmark background.
+        WndProc(Message::IndicSetStyle, 8, static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox));
+        WndProc(Message::IndicSetFore, 8, wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT).GetRGB());
+        WndProc(Message::IndicSetAlpha, 8, 25);
+        WndProc(Message::MarkerDefine, 0, static_cast<intptr_t>(Scintilla::MarkerSymbol::Background));
+        WndProc(Message::MarkerSetBackTranslucent, 0, 0x2800FF00);
+        WndProc(Message::MarkerSetLayer, 0, static_cast<intptr_t>(Scintilla::Layer::OverText));
         WndProc(Message::SetCaretStyle, 1, 0);
         WndProc(Message::SetMarginWidthN, 1, 0);
         WndProc(Message::SetScrollWidthTracking, 1, 0);
@@ -194,6 +202,14 @@ public:
     }
     bool EditingKey(const wxKeyEvent& event) {
         if (event.MetaDown()) return false;
+        if (!event.AltDown() && ((event.GetKeyCode() == WXK_INSERT && event.ControlDown() && !event.ShiftDown()) ||
+                                 (event.GetKeyCode() == WXK_DELETE && event.ShiftDown() && !event.ControlDown()))) {
+            if (event.GetKeyCode() == WXK_INSERT)
+                window_.Copy();
+            else
+                window_.Cut();
+            return true;
+        }
         if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers()) {
             // CMD_ESCAPE cancels completion UI, not the core's selection modes.
             if (window_.Send(Message::AutoCActive))
@@ -238,10 +254,13 @@ public:
             case 'C':
             case 'X':
                 if (event.ShiftDown()) {
-                    window_.Send(event.GetKeyCode() == 'C' ? Message::LineCopy : Message::LineCut, 1);
-                    return true;
-                }
-                break;
+                    window_.Send(event.GetKeyCode() == 'C' ? Message::LineCopy : Message::LineCut,
+                                 static_cast<uintptr_t>(window_.GetLineSelectionMode()) & 1);
+                } else if (event.GetKeyCode() == 'C')
+                    window_.Copy();
+                else
+                    window_.Cut();
+                return true;
             case 'D':
                 applicationCommand = event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
                 break;
@@ -1087,6 +1106,46 @@ EditorControl::~EditorControl() {
     SetDropTarget(nullptr);
 }
 
+void EditorControl::SetLineSelectionMode(LineSelectionMode mode) {
+    lineSelectionMode_ = mode;
+    if (mode == LineSelectionMode::None)
+        Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
+}
+
+void EditorControl::Copy() {
+    // Notepad4.cpp::IDM_EDIT_COPY at 89b8b36; see licenses/Notepad4.txt.
+    if (Send(Message::GetSelectionEmpty) && lineSelectionMode_ != LineSelectionMode::None)
+        Send(Message::LineCopy, static_cast<uintptr_t>(lineSelectionMode_) & 1);
+    else
+        Send(Message::Copy);
+}
+
+void EditorControl::Cut() {
+    // Original IDM_EDIT_CUT and EditJumpTo (1-based line/column).
+    if (!Send(Message::GetSelectionEmpty) || lineSelectionMode_ == LineSelectionMode::None) {
+        Send(Message::Cut);
+        return;
+    }
+    const auto column = Send(Message::GetColumn, Send(Message::GetCurrentPos), -1);
+    Send(Message::LineCut, static_cast<uintptr_t>(lineSelectionMode_) & 1);
+    auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));
+    if (lineSelectionMode_ == LineSelectionMode::OldVisualStudio && line > 0) --line;
+    const Scintilla::CharacterRangeFull range{line, column};
+    const auto position = Send(Message::FindColumnEx, static_cast<uintptr_t>(Scintilla::ColumnType::Default),
+                               reinterpret_cast<intptr_t>(&range));
+    using Scintilla::CaretPolicy;
+    const auto even = static_cast<uintptr_t>(CaretPolicy::Even);
+    const auto slop = static_cast<uintptr_t>(CaretPolicy::Slop);
+    const auto strictPolicy = slop | static_cast<uintptr_t>(CaretPolicy::Strict) | even;
+    Send(Message::SetXCaretPolicy, strictPolicy, 50);
+    Send(Message::SetYCaretPolicy, strictPolicy, 5);
+    Send(Message::EnsureVisibleEnforcePolicy, line);
+    Send(Message::GotoPos, position);
+    Send(Message::SetXCaretPolicy, slop | even, 50);
+    Send(Message::SetYCaretPolicy, even, 0);
+    Send(Message::ChooseCaretX);
+}
+
 void EditorControl::IndentLines(bool forwards) {
     if (Send(Message::GetReadOnly)) return;
     if (Send(Message::GetSelectionEmpty) && Send(Message::GetSelections) == 1 &&
@@ -1116,6 +1175,14 @@ void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
     core_->SelectionRevision();
     const auto result = core_->WndProc(message, wParam, lParam);
+    if (message == Message::ClearAll) {
+        // A document replacement also invalidates search state when both the
+        // old and new document are empty, so no text notification was emitted.
+        ++documentRevision_;
+        auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, GetId());
+        event->SetEventObject(this);
+        wxQueueEvent(this, event);
+    }
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
         message == Message::StyleSetItalic || message == Message::SetZoom)
