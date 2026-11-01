@@ -22,6 +22,18 @@ and store lifecycle. Save Settings Now and enabled exit saving persist AutoSelec
 in `[Styles]`; NoCGIGuess remains an original load-only flag, preserved in place.
 `NoAutoDetection` does not disable original shebang guessing.
 
+`FixLineEndings` and `FixTrailingBlanks` both default to `0`. Their original
+options are in Default Line Ending: Ensure consistent line endings when saving,
+then Strip trailing blanks when saving. A normal writable Save/Save As first
+normalizes to the current EOL mode, then removes only trailing spaces and tabs
+throughout the document, ignoring the selection. The operations retain the EOL
+mode and final-newline structure and remain separate undo actions. Read-only
+documents bypass cleanup. A cancelled filename dialog or failed destination
+preparation does not edit text; cancellation at the encoding warning or a later
+write failure retains the cleanup edits and undo history. Safe replacement still
+protects existing destination bytes. The same settings lifecycle loads and saves
+both fields and omits their default values.
+
 `ZoomLevel` uses the original percentage default of `100`, clamped to `10` through
 `500` when loaded. Decimal prefixes (for example `175%`) follow the original
 integer parser. Zoom extends this same settings lifecycle: disabled exit saving

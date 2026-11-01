@@ -12,6 +12,8 @@
 #include <wx/dialog.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
+#include <wx/choice.h>
+#include <wx/checkbox.h>
 #include <cstdlib>
 #include <vector>
 
@@ -92,6 +94,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                                    : SyntaxDetectionOptions{}),
       search_(*editor_) {
     if (settings) {
+        document_.SetSaveCleanup({settings->values.fixLineEndings, settings->values.fixTrailingBlanks});
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
@@ -159,6 +162,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     addEol("CRLF", Scintilla::EndOfLine::CrLf);
     addEol("LF", Scintilla::EndOfLine::Lf);
     addEol("CR", Scintilla::EndOfLine::Cr);
+    const int lineEndingOptions = wxWindow::NewControlId();
+    edit->Append(lineEndingOptions, "Default Line Ending...");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowLineEndingOptions(); }, lineEndingOptions);
     edit->AppendSeparator();
     auto* indentation = new wxMenu;
     for (const bool tabs : {true, false}) {
@@ -406,7 +412,39 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
+    settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
     return settings_->Save(explicitSave);
+}
+
+void EditorFrame::ShowLineEndingOptions() {
+    // Original Dialogs.cpp::SelectDefLineEndingDlgProc and IDD_DEFEOLMODE.
+    wxDialog dialog(this, wxID_ANY, "Line Endings");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Default line ending mode:"), 0, wxALL, dialog.FromDIP(10));
+    auto* mode = new wxChoice(&dialog, wxID_ANY);
+    mode->SetName("Default line ending mode");
+    mode->Append("Windows (CR+LF)");
+    mode->Append("Unix/macOS (LF)");
+    mode->Append("Classic Mac OS (CR)");
+    mode->SetSelection(defaultEolMode_);
+    contents->Add(mode, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    const auto option = [&](const char* label, bool value) {
+        auto* check = new wxCheckBox(&dialog, wxID_ANY, label);
+        check->SetValue(value);
+        contents->Add(check, 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
+        return check;
+    };
+    auto* warn = option("Show inconsistent line endings warning on loading.", warnLineEndings_);
+    auto* fix = option("&Ensure consistent line endings when saving.", document_.SaveCleanup().fixLineEndings);
+    auto* strip = option("&Strip trailing blanks when saving.", document_.SaveCleanup().fixTrailingBlanks);
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
+    dialog.SetSizerAndFit(contents);
+    dialog.CentreOnParent();
+    if (dialog.ShowModal() != wxID_OK) return;
+    defaultEolMode_ = mode->GetSelection();
+    warnLineEndings_ = warn->GetValue();
+    document_.SetSaveCleanup({fix->GetValue(), strip->GetValue()});
 }
 
 void EditorFrame::ShowFind(bool replace) {

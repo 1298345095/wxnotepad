@@ -67,6 +67,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
     values.autoSelect = ReadBool("AutoSelect", true, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", false, "Settings2");
+    values.fixLineEndings = ReadBool("FixLineEndings", false);
+    values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", false);
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
 }
 
@@ -177,6 +179,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
         WriteBool("AutoSelect", values.autoSelect, true, "Styles");
         WriteInt("ZoomLevel", values.zoomLevel, 100);
+        WriteBool("FixLineEndings", values.fixLineEndings, false);
+        WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, false);
     }
     wxString text(wxUniChar(0xFEFF));
     for (const auto& line : lines_)

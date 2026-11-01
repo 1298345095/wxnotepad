@@ -111,6 +111,10 @@ if(BUILD_TESTING)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+    add_editor_test(save_cleanup original_save_cleanup 60)
+    add_test(NAME original_cleanup_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/cleanup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_cleanup_settings PROPERTIES TIMEOUT 60)
 
     # This test reaches feature interfaces without linking the frame or its dialogs.
     add_gui_program(feature_sessions tests/feature_sessions.cpp editor_features)

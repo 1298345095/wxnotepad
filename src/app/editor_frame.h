@@ -34,6 +34,9 @@ private:
     int automaticLanguageId_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
+    int defaultEolMode_ = 0;
+    bool warnLineEndings_ = true;
+    void ShowLineEndingOptions();
     void ReportFind(const FindResult& result);
     void ShowFind(bool replace = false);
     void FindNext();

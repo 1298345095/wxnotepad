@@ -14,6 +14,10 @@ using GbkLossDecision = std::function<GbkLossChoice()>;
 // The dialog adapter translates its native filter index into this semantic choice.
 enum class SaveType : uint8_t { CurrentScheme, AllFiles };
 using SaveFileType = std::variant<SaveType, SyntaxLanguage>;
+struct SaveCleanupOptions {
+    bool fixLineEndings = false;
+    bool fixTrailingBlanks = false;
+};
 
 enum class SaveStatus { Saved, Cancelled, Failed };
 struct SaveResult {
@@ -41,6 +45,8 @@ public:
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt);
     void New();
+    SaveCleanupOptions SaveCleanup() const { return saveCleanup_; }
+    void SetSaveCleanup(SaveCleanupOptions options) { saveCleanup_ = options; }
     bool HasUtf8Bom() const { return encoding_ == FileEncoding::Utf8 && hasBom_; }
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
@@ -53,10 +59,12 @@ private:
     wxString path_;
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
+    SaveCleanupOptions saveCleanup_;
     std::optional<SyntaxLanguage> languageOverride_;
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
     void DetectAutomaticLanguage();
+    void ApplySaveCleanup();
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt);
     void Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
