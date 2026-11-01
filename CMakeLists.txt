@@ -127,6 +127,7 @@ if(BUILD_TESTING)
     add_editor_test(block_indentation block_indentation_commands 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
+    add_editor_test(navigation_bindings original_navigation_bindings 60)
     target_include_directories(font_smoke PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     add_gui_program(display_smoke tests/display_smoke.cpp app_shell)
