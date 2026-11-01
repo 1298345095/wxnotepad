@@ -128,21 +128,24 @@ private:
             wxString shape = "stream";
             wxString text;
 #ifdef __WXMSW__
-            wxClipboardLocker lock;
-            if (!lock) {
-                Respond("failed");
-                return;
-            }
-            wxTextDataObject object;
-            if (!wxTheClipboard->GetData(object)) {
-                Respond("failed");
-                return;
-            }
-            text = object.GetText();
             if (!::OpenClipboard(static_cast<HWND>(frame_->GetHandle()))) {
                 Respond("failed");
                 return;
             }
+            // Observe the native payload before wxTextDataObject normalizes EOLs.
+            const auto memory = ::GetClipboardData(CF_UNICODETEXT);
+            const auto* bytes = static_cast<const wchar_t*>(::GlobalLock(memory));
+            if (!bytes) {
+                ::CloseClipboard();
+                Respond("failed");
+                return;
+            }
+            const auto capacity = ::GlobalSize(memory) / sizeof(wchar_t);
+            size_t length = 0;
+            while (length < capacity && bytes[length] != L'\0')
+                ++length;
+            text = wxString(bytes, length);
+            ::GlobalUnlock(memory);
             if (::IsClipboardFormatAvailable(::RegisterClipboardFormatW(L"MSDEVLineSelect")) &&
                 ::IsClipboardFormatAvailable(
                     ::RegisterClipboardFormatW(L"VisualStudioEditorOperationsLineCutCopyClipboardTag")))
