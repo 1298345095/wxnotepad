@@ -17,6 +17,10 @@ using GbkLossDecision = std::function<GbkLossChoice()>;
 // The dialog adapter translates its native filter index into this semantic choice.
 enum class SaveType : uint8_t { CurrentScheme, AllFiles };
 using SaveFileType = std::variant<SaveType, SyntaxLanguage>;
+struct SaveCleanupOptions {
+    bool fixLineEndings = false;
+    bool fixTrailingBlanks = false;
+};
 
 enum class SaveStatus { Saved, Cancelled, Failed };
 struct SaveResult {
@@ -53,6 +57,8 @@ public:
                     std::optional<FileEncoding> encoding = std::nullopt,
                     std::optional<EncodingChoice> weakEncoding = std::nullopt);
     void New();
+    SaveCleanupOptions SaveCleanup() const { return saveCleanup_; }
+    void SetSaveCleanup(SaveCleanupOptions options) { saveCleanup_ = options; }
     void SetDefaultEolMode(Scintilla::EndOfLine mode) { defaultEolMode_ = mode; }
     bool HasUtf8Bom() const { return encoding_ == FileEncoding::Utf8 && hasBom_; }
     FileEncoding Encoding() const { return encoding_; }
@@ -68,6 +74,7 @@ private:
     wxString path_;
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
+    SaveCleanupOptions saveCleanup_;
     Scintilla::EndOfLine defaultEolMode_ = Scintilla::EndOfLine::CrLf;
     EncodingOptions encodingOptions_;
     bool systemDefaultEncoding_ = false;
@@ -76,6 +83,7 @@ private:
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
     bool DetectAutomaticLanguage();
+    void ApplySaveCleanup();
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt);
     OpenResult Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,

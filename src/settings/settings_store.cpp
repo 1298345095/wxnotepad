@@ -68,6 +68,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
     values.autoSelect = ReadBool("AutoSelect", true, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", false, "Settings2");
+    values.fixLineEndings = ReadBool("FixLineEndings", false);
+    values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", false);
     values.encoding.defaultEncoding = NormalizeEncodingSetting(ReadInt("DefaultEncoding", -1));
     values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", true);
     values.encoding.loadANSIasUTF8 = ReadBool("LoadANSIasUTF8", true);
@@ -208,6 +210,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, true);
         WriteBool("NoEncodingTags", values.encoding.noEncodingTags, false);
         WriteInt("ZoomLevel", values.zoomLevel, 100);
+        WriteBool("FixLineEndings", values.fixLineEndings, false);
+        WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, false);
         WriteInt("LineSelection", values.lineSelection, 1);
         WriteInt("DefaultEOLMode", values.defaultEOLMode, 0);
         WriteBool("WarnLineEndings", values.warnLineEndings, true);

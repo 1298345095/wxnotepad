@@ -21,6 +21,8 @@ struct OriginalSettings {
     bool viewWhiteSpace = false;
     bool autoSelect = true;
     bool noCgiGuess = false;
+    bool fixLineEndings = false;
+    bool fixTrailingBlanks = false;
     EncodingOptions encoding;
     int zoomLevel = 100;
     int lineSelection = 1;
