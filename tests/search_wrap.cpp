@@ -22,7 +22,7 @@ void SelectTo(wxWindow* window, bool backward) {
             window, VK_F2, {{VK_CONTROL, 0x80}, {VK_MENU, 0x80}, {VK_SHIFT, static_cast<BYTE>(backward ? 0x80 : 0)}}),
         "owned native window translates the original Select to shortcut");
 #elif defined(__WXGTK__)
-    auto* widget = GTK_WIDGET(window->GetHandle());
+    auto* widget = window->GetConnectWidget();
     auto* event = gdk_event_new(GDK_KEY_PRESS);
     event->key.window = static_cast<GdkWindow*>(g_object_ref(gtk_widget_get_window(widget)));
     event->key.send_event = TRUE;
