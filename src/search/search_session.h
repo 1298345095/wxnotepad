@@ -5,6 +5,7 @@
 #include <ScintillaTypes.h>
 #include <wx/string.h>
 #include <optional>
+#include <string>
 #include <vector>
 
 class EditorControl;
@@ -64,6 +65,8 @@ public:
 private:
     EditorControl& editor_;
     SearchRequest request_;
+    std::string QueryBytes() const;
+    std::string ReplacementBytes() const;
     std::vector<wxString> recentFind_;
     std::vector<wxString> recentReplace_;
     bool lastReplaceEmpty_ = false;

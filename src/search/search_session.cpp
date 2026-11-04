@@ -3,8 +3,105 @@
 #include "editor/editor_control.h"
 #include <array>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <algorithm>
+
+namespace {
+// Adapted from Notepad4 89b8b36, src/EditEncoding.cpp TransformBackslashes
+// (BSD-3-Clause; see licenses/Notepad4.txt). The editor uses UTF-8 on every host.
+int HexDigit(char ch) {
+    if (ch >= '0' && ch <= '9') return ch - '0';
+    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+    return -1;
+}
+void AppendUtf8(std::string& output, unsigned value) {
+    if (value >= 0xd800 && value <= 0xdfff) value = 0xfffd;
+    if (value < 0x80) {
+        output.push_back(static_cast<char>(value));
+    } else if (value < 0x800) {
+        output.push_back(static_cast<char>(0xc0 | (value >> 6)));
+        output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+    } else if (value < 0x10000) {
+        output.push_back(static_cast<char>(0xe0 | (value >> 12)));
+        output.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
+        output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+    } else {
+        output.push_back(static_cast<char>(0xf0 | (value >> 18)));
+        output.push_back(static_cast<char>(0x80 | ((value >> 12) & 0x3f)));
+        output.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
+        output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+    }
+}
+std::string TransformBackslashes(const wxString& text, bool transform) {
+    const auto utf8 = text.utf8_str();
+    std::string input(utf8.data(), utf8.length());
+    if (!transform) return input;
+    std::string output;
+    const auto hex = [&](size_t start, size_t count) {
+        int value = 0;
+        if (start + count > input.size()) return -1;
+        for (size_t index = start; index < start + count; ++index) {
+            const auto digit = HexDigit(input[index]);
+            if (digit < 0) return -1;
+            value = (value << 4) | digit;
+        }
+        return value;
+    };
+    for (size_t index = 0; index < input.size() && input[index]; ++index) {
+        const char ch = input[index];
+        if (ch == '\\' && index + 1 < input.size()) {
+            const char next = input[index + 1];
+            const char* escapes = "\\abefnrtv";
+            const char* values = "\\\a\b\x1b\f\n\r\t\v";
+            const auto found = std::string_view(escapes).find(next);
+            if (found != std::string_view::npos) {
+                output.push_back(values[found]);
+                ++index;
+                continue;
+            }
+            if (next == 'x' || next == 'u') {
+                const size_t digits = next == 'x' ? 2 : 4;
+                const int value = hex(index + 2, digits);
+                if (value >= 0) {
+                    index += digits + 1;
+                    if (next == 'x') {
+                        output.push_back(static_cast<char>(value));
+                    } else if (value >= 0xd800 && value <= 0xdbff && index + 2 < input.size() &&
+                               input[index + 1] == '\\' && input[index + 2] == 'u') {
+                        const int second = hex(index + 3, 4);
+                        if (second >= 0 && !(second >= 0xd800 && second <= 0xdbff)) {
+                            index += 6;
+                            if (second >= 0xdc00 && second <= 0xdfff) {
+                                AppendUtf8(output, 0x10000 + ((value - 0xd800) << 10) + second - 0xdc00);
+                            } else {
+                                AppendUtf8(output, value);
+                                AppendUtf8(output, second);
+                            }
+                        } else {
+                            AppendUtf8(output, value);
+                        }
+                    } else {
+                        AppendUtf8(output, value);
+                    }
+                    continue;
+                }
+            }
+        }
+        output.push_back(ch);
+    }
+    return output;
+}
+} // namespace
+
+std::string SearchSession::QueryBytes() const {
+    return TransformBackslashes(request_.query, request_.options.transformBackslashes);
+}
+
+std::string SearchSession::ReplacementBytes() const {
+    return TransformBackslashes(request_.replacement, request_.options.transformBackslashes);
+}
 
 SearchSession::SearchSession(EditorControl& editor) : editor_(editor) {
     editor_.Bind(wxEVT_EDITOR_STATE_CHANGED, &SearchSession::OnEditorState, this);
@@ -72,7 +169,7 @@ FindAllResult SearchSession::FindAll() {
     // EditMarkAll::Reset retains Find All bookmarks on ordinary invalidation,
     // and replaces them when another Find All operation starts.
     if (bookmarkForFindAll_) editor_.Send(Message::MarkerDeleteAll, 0);
-    const auto query = request_.query.utf8_str();
+    const auto query = QueryBytes();
     if (!query.length()) return {FindStatus::EmptyQuery};
     markedRevision_ = editor_.DocumentRevision();
     matchCount_ = 0;
@@ -88,7 +185,7 @@ FindAllResult SearchSession::FindAll() {
     editor_.Send(Message::SetIndicatorCurrent, 8);
     const auto limit = editor_.Send(Message::GetLength);
     intptr_t start = 0;
-    const bool multiline = request_.query.find_first_of("\r\n") != wxString::npos;
+    const bool multiline = request_.options.transformBackslashes && query.find_first_of("\r\n") != std::string::npos;
     const bool searchForLineEnd = request_.options.regularExpression && query.length() > 1 &&
                                   query.data()[query.length() - 1] == '$' && query.data()[query.length() - 2] != '\\';
     // Keep EditMarkAll's 240-range cache and adjacent-range aggregation. This
@@ -144,8 +241,7 @@ FindAllResult SearchSession::FindAll() {
 
 FindResult SearchSession::Find(SearchDirection direction) {
     const bool forward = direction == SearchDirection::Forward;
-    const wxString queryText = request_.query;
-    const auto query = queryText.utf8_str();
+    const auto query = QueryBytes();
     if (!query.length()) return {FindStatus::EmptyQuery};
     using Scintilla::Message;
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
@@ -200,8 +296,7 @@ Scintilla::FindOption SearchSession::SearchFlags() const {
 }
 
 ReplaceOneResult SearchSession::ReplaceOne() {
-    const wxString queryText = request_.query;
-    const auto query = queryText.utf8_str();
+    const auto query = QueryBytes();
     if (!query.length()) return {false, FindResult{FindStatus::EmptyQuery}};
     using Scintilla::Message;
     const auto start = editor_.Send(Message::GetSelectionStart);
@@ -223,10 +318,8 @@ ReplaceOneResult SearchSession::ReplaceOne() {
     if (found != start || editor_.Send(Message::GetTargetEnd) != end) {
         return {false, Find(SearchDirection::Forward)};
     }
-    const wxString replacementText = request_.replacement;
-    const auto replacementUtf8 = replacementText.utf8_str();
     // The original formatter reads the byte after a trailing dollar/backslash.
-    const std::string replacement(replacementUtf8.data(), replacementUtf8.length());
+    const auto replacement = ReplacementBytes();
     auto after = end;
     std::string selected(static_cast<size_t>(end - start) + 1, '\0');
     editor_.Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(selected.data()));
@@ -256,10 +349,8 @@ ReplaceAllResult SearchSession::ReplaceInSelection() {
 }
 
 ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
-    const wxString queryText = request_.query;
-    const auto query = queryText.utf8_str();
-    const wxString replacementText = request_.replacement;
-    const auto replacement = replacementText.utf8_str();
+    const auto query = QueryBytes();
+    const auto replacement = ReplacementBytes();
     using Scintilla::Message;
     size_t count = 0;
     bool editing = false;

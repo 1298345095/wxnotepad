@@ -106,6 +106,12 @@ line by line. Replace All uses the original character/line progress and EOF
 stopping rules. See the [original regex behavior record](docs/observations/original-regex-README.md).
 Invalid patterns report an error without editing the document.
 
+Transform Backslashes converts literal Find/Replace input using the original
+control escapes, `\\`, raw-byte `\xHH` and Unicode `\uHHHH` forms. It starts off
+and selecting it clears Regular Expression. Literal replacements keep capture
+spellings such as `$1` and `\1` as text. See the
+[backslash transform behavior record](docs/observations/search-backslashes.md).
+
 File → New / Ctrl+N and Open / Ctrl+O replace the current document after any
 unsaved changes are saved or discarded. Close uses the same Save/Discard/Cancel
 confirmation. Save / Ctrl+S opens a native chooser for an unnamed document and
