@@ -195,7 +195,10 @@ if(BUILD_TESTING)
     add_editor_test(replace_smoke replace_literal_one 30)
     add_editor_test(replace_all_smoke replace_literal_all 30)
     add_editor_test(search_navigation find_literal_navigation 30)
-    add_editor_test(search_wrap original_search_wrap_feedback 60)
+    add_gui_program(search_wrap tests/search_wrap.cpp app_shell)
+    add_test(NAME original_search_wrap_feedback COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_wrap_process.py" "$<TARGET_FILE:search_wrap>" --feedback)
+    set_tests_properties(original_search_wrap_feedback PROPERTIES TIMEOUT 60)
     add_test(NAME original_search_message_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_wrap_process.py" "$<TARGET_FILE:search_wrap>")
     set_tests_properties(original_search_message_settings PROPERTIES TIMEOUT 60)

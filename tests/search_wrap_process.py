@@ -22,7 +22,11 @@ def main():
         shutil.copy2(source, executable)
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         config = folder / "Notepad4.ini"
-        config.write_text("[Settings]\nSaveSettings=0\nUnrelated=keep\n", encoding="utf-16")
+        config.write_text("[Settings]\nSelectOption=2\nSaveSettings=0\nUnrelated=keep\n", encoding="utf-16")
+        if len(sys.argv) > 2 and sys.argv[2] == "--feedback":
+            environment.pop("WXNOTEPAD_SEARCH_SETTINGS", None)
+            run(executable, environment)
+            return
         environment["WXNOTEPAD_SEARCH_SETTINGS"] = "write"
         run(executable, environment)
         saved = config.read_text(encoding="utf-16")
@@ -33,7 +37,7 @@ def main():
         run(executable, environment)
         saved = config.read_text(encoding="utf-16")
         assert "MsgFindWrap2=2" in saved and "Unrelated=keep" in saved, saved
-        config.write_text("[Settings]\nFindReplaceOption=66\n", encoding="utf-16")
+        config.write_text("[Settings]\nSelectOption=2\nFindReplaceOption=66\n", encoding="utf-16")
         environment["WXNOTEPAD_SEARCH_SETTINGS"] = "nowrap"
         run(executable, environment)
     print("PASS: immediate original suppression writes with SaveSettings off and next-process restoration")

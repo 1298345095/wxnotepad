@@ -100,7 +100,7 @@ class WrapApp final : public wxApp {
 public:
     bool OnInit() override {
         const wxString scenario = wxGetenv("WXNOTEPAD_SEARCH_SETTINGS");
-        if (!scenario.empty()) settings_ = std::make_unique<SettingsStore>();
+        settings_ = std::make_unique<SettingsStore>();
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame, scenario] {
@@ -186,6 +186,33 @@ public:
                 NativeSearch::Selection(editor, 0, 3, "only match wraps back to itself after confirmation");
                 NativeSearch::Click(query->GetParent(), wxID_BACKWARD);
                 NativeSearch::Selection(editor, 0, 3, "only match wraps backward back to itself");
+                NativeSearch::Command(frame, wxID_REPLACE);
+                auto* cancelReplacement =
+                    wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
+                Require(cancelReplacement, "Replace controls must be available");
+                cancelReplacement->SetValue("two");
+                feedback.response = wxID_CANCEL;
+                const int beforeReplaceCancel = feedback.count;
+                NativeSearch::Click(query->GetParent(), wxID_REPLACE);
+                Require(feedback.count == beforeReplaceCancel + 1 && feedback.messages.back() == "MsgFindWrap1",
+                        "Replace after editing offers forward wrap and Cancel suppresses not-found feedback");
+                Require(NativeSearch::Text(editor) == "two", "cancelling subsequent search retains replacement");
+                NativeSearch::Selection(editor, 3, 3, "cancelled search after Replace retains replacement-end caret");
+                editor->Send(Message::SetSel, 2, 1);
+                NativeSearch::Click(query->GetParent(), wxID_REPLACE);
+                Require(editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 1,
+                        "cancelling Replace initial search retains its original selection");
+                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one tail"));
+                editor->Send(Message::SetSel, 8, 5);
+                feedback.response = wxID_OK;
+                NativeSearch::Click(query->GetParent(), wxID_REPLACE);
+                NativeSearch::Selection(editor, 0, 3, "Replace initial search can confirm a wrap to the first match");
+                Require(NativeSearch::Text(editor) == "one tail", "wrapped candidate is selected before replacing");
+                std::puts("PASS: Replace initial/subsequent confirmations and cancellation results");
+                NativeSearch::Command(frame, wxID_FIND);
+                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one"));
+                editor->Send(Message::SetSel, 0, 3);
+                query->SetValue("one");
                 feedback.suppress = true;
                 feedback.response = wxID_CANCEL;
                 NativeSearch::Click(query->GetParent(), wxID_FORWARD);
@@ -250,42 +277,6 @@ public:
                 Require(NativeSearch::Text(editor) == "two two", "Replace searches after the replaced bytes");
                 NativeSearch::Selection(editor, 7, 7, "no following match collapses at replacement end");
                 std::puts("PASS: Replace candidate selection, replacement and no-match caret retention");
-                auto* replaceFrame = new EditorFrame;
-                replaceFrame->Show();
-                auto* replaceEditor = replaceFrame->Editor();
-                replaceEditor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one"));
-                NativeSearch::Command(replaceFrame, wxID_REPLACE);
-                auto* replaceQuery = wxDynamicCast(wxWindow::FindWindowByName("Find query", replaceFrame), wxTextCtrl);
-                auto* replaceText =
-                    wxDynamicCast(wxWindow::FindWindowByName("Replacement text", replaceFrame), wxTextCtrl);
-                Require(replaceQuery && replaceText, "Replace controls must be available");
-                replaceQuery->SetValue("one");
-                replaceText->SetValue("two");
-                replaceEditor->Send(Message::SetSel, 0, 3);
-                feedback.response = wxID_CANCEL;
-                const int beforeReplaceCancel = feedback.count;
-                NativeSearch::Click(replaceQuery->GetParent(), wxID_REPLACE);
-                Require(feedback.count == beforeReplaceCancel + 1 && feedback.messages.back() == "MsgFindWrap1",
-                        "Replace after editing offers forward wrap and Cancel suppresses not-found feedback");
-                Require(NativeSearch::Text(replaceEditor) == "two", "cancelling subsequent search retains replacement");
-                NativeSearch::Selection(replaceEditor, 3, 3,
-                                        "cancelled search after Replace retains replacement-end caret");
-                replaceEditor->Send(Message::SetSel, 2, 1);
-                NativeSearch::Click(replaceQuery->GetParent(), wxID_REPLACE);
-                Require(replaceEditor->Send(Message::GetAnchor) == 2 &&
-                            replaceEditor->Send(Message::GetCurrentPos) == 1,
-                        "cancelling Replace initial search retains its original selection");
-                replaceEditor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one tail"));
-                replaceEditor->Send(Message::SetSel, 8, 5);
-                feedback.response = wxID_OK;
-                NativeSearch::Click(replaceQuery->GetParent(), wxID_REPLACE);
-                NativeSearch::Selection(replaceEditor, 0, 3,
-                                        "Replace initial search can confirm a wrap to the first match");
-                Require(NativeSearch::Text(replaceEditor) == "one tail",
-                        "wrapped candidate is selected before replacing");
-                replaceFrame->Destroy();
-                std::puts(
-                    "PASS: Replace confirms both initial and subsequent searches and preserves cancellation results");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
