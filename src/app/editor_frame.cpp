@@ -11,6 +11,9 @@
 #include <wx/statusbr.h>
 #include <wx/combobox.h>
 #include <wx/dialog.h>
+#include <wx/checkbox.h>
+#include <wx/artprov.h>
+#include <wx/statbmp.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <cstdlib>
@@ -135,6 +138,12 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     edit->Append(wxID_REPLACE, "&Replace...\tCtrl+H");
     edit->Append(wxID_FORWARD, "Find &Next\tF3");
     edit->Append(wxID_BACKWARD, "Find &Previous\tShift+F3");
+    const int selectNext = wxWindow::NewControlId();
+    const int selectPrevious = wxWindow::NewControlId();
+    edit->Append(selectNext, "Select to Ne&xt\tCtrl+Alt+F2");
+    edit->Append(selectPrevious, "Select to Previou&s\tCtrl+Alt+Shift+F2");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Search(true, true); }, selectNext);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Search(false, true); }, selectPrevious);
     const int goToLine = wxWindow::NewControlId();
     edit->Append(goToLine, "&Go To Line...\tCtrl+G");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowGoToLineDialog(this, *editor_); }, goToLine);
@@ -312,6 +321,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     menus->Append(view, "&View");
     SetMenuBar(menus);
     CreateStatusBar(3);
+    search_.SetWrapConfirmation([this](SearchDirection direction) { return SearchMessage(direction); });
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         UpdatePositionStatus();
         event.Skip();
@@ -428,6 +438,8 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
         ShowFind();
     else if (event.GetKeyCode() == 'H' && event.ControlDown() && !event.AltDown() && !event.ShiftDown())
         ShowFind(true);
+    else if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown())
+        Search(!event.ShiftDown(), true);
     else if (event.GetKeyCode() == WXK_F3 && !event.HasAnyModifiers())
         FindNext();
     else if (event.GetKeyCode() == WXK_F3 && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
@@ -445,12 +457,12 @@ void EditorFrame::FindPrevious() {
     Search(false);
 }
 
-void EditorFrame::Search(bool forward) {
+void EditorFrame::Search(bool forward, bool extendSelection) {
     if (!findDialog_) {
         ShowFind();
         return;
     }
-    findDialog_->Find(forward ? SearchDirection::Forward : SearchDirection::Backward);
+    findDialog_->Find(forward ? SearchDirection::Forward : SearchDirection::Backward, extendSelection);
 }
 
 void EditorFrame::ReportFind(const FindResult& result) {
@@ -460,13 +472,62 @@ void EditorFrame::ReportFind(const FindResult& result) {
         break;
     case FindStatus::NotFound:
         SetStatusText("No match found", 2);
+        ShowSearchMessage("MsgNotFound", "The specified text was not found.", false);
         break;
     case FindStatus::InvalidPattern:
         SetStatusText("Invalid regular expression", 2);
         break;
     case FindStatus::EmptyQuery:
+        ShowSearchMessage("MsgNotFound", "The specified text was not found.", false);
+        break;
+    case FindStatus::Cancelled:
         break;
     }
+}
+
+bool EditorFrame::SearchMessage(SearchDirection direction) {
+    return direction == SearchDirection::Forward
+               ? ShowSearchMessage("MsgFindWrap1",
+                                   "Reached the end of the document, restarting search at the beginning.", true)
+               : ShowSearchMessage("MsgFindWrap2",
+                                   "Reached the beginning of the document, restarting search at the end.", true);
+}
+
+bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message, bool confirm) {
+    // Pinned Dialogs.cpp::InfoBox: 0 shows the choice, 1 returns OK without
+    // showing it, and 2 shows it with message suppression disabled.
+    const size_t index = key == "MsgFindWrap1" ? 0 : key == "MsgFindWrap2" ? 1 : 2;
+    int& mode = suppressedSearchMessages_[index];
+    if (settings_) mode = settings_->MessageSuppression(key);
+    if (mode == 1) return true;
+    auto* focused = wxWindow::FindFocus();
+    wxWindow* owner = findDialog_ && findDialog_->IsShown() ? static_cast<wxWindow*>(findDialog_) : this;
+    wxDialog dialog(owner, wxID_ANY, "wxnotepad");
+    dialog.SetName("Search feedback");
+    auto* layout = new wxBoxSizer(wxVERTICAL);
+    auto* contents = new wxBoxSizer(wxHORIZONTAL);
+    contents->Add(
+        new wxStaticBitmap(&dialog, wxID_ANY,
+                           wxArtProvider::GetBitmap(confirm ? wxART_INFORMATION : wxART_WARNING, wxART_MESSAGE_BOX)),
+        0, wxALL, 16);
+    auto* text = new wxStaticText(&dialog, wxID_ANY, message);
+    text->SetName(key);
+    contents->Add(text, 0, wxALL | wxALIGN_CENTER_VERTICAL, 16);
+    layout->Add(contents);
+    auto* suppress = new wxCheckBox(&dialog, wxID_ANY, "&Don't show this message again.");
+    suppress->SetName("Suppress search message");
+    suppress->Enable(mode != 2);
+    layout->Add(suppress, 0, wxLEFT | wxRIGHT | wxBOTTOM, 16);
+    layout->Add(dialog.CreateStdDialogButtonSizer(confirm ? wxOK | wxCANCEL : wxOK), 0, wxALL | wxALIGN_RIGHT, 8);
+    dialog.SetSizerAndFit(layout);
+    dialog.CentreOnParent();
+    const int response = dialog.ShowModal();
+    if (suppress->GetValue()) {
+        mode = 1;
+        if (settings_) settings_->SuppressMessage(key);
+    }
+    if (focused && focused->IsShownOnScreen()) focused->SetFocus();
+    return response == wxID_OK;
 }
 
 void EditorFrame::UpdateDocumentState() {

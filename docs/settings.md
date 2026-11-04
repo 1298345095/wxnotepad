@@ -94,6 +94,13 @@ The behavior and field names come from pinned Notepad4 revision
 those rules without pulling Windows profile APIs into the editor runtime. The
 upstream license remains in `licenses/Notepad4.txt`.
 
+Search feedback reads the original `[Suppressed Messages]` keys `MsgFindWrap1`,
+`MsgFindWrap2` and `MsgNotFound` when presenting a message. Their default is `0`:
+show the message with its suppression checkbox enabled. Value `1` returns OK
+without showing it; `2` shows it with the checkbox disabled. Choosing suppression
+writes `1` immediately, including when Cancel is selected or exit saving is
+disabled. These writes preserve the other settings and sections.
+
 Encoding selection adds the original `[Settings]` fields `DefaultEncoding`
 (built-in UTF-8, omitted on Save), `SkipUnicodeDetection=1`, `LoadANSIasUTF8=1`,
 `LoadASCIIasUTF8=1`, `LoadNFOasOEM=1` and `NoEncodingTags=0`. The original INI

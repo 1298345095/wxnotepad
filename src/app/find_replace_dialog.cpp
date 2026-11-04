@@ -6,6 +6,7 @@
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/msgdlg.h>
+#include <wx/utils.h>
 #include <utility>
 
 FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchSession& search,
@@ -95,8 +96,12 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward); }, wxID_FORWARD);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
     Bind(wxEVT_CHAR_HOOK, [onKey = std::move(onKey)](wxKeyEvent& event) { onKey(event); });
-    Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Forward); }, wxID_FORWARD);
-    Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
+    Bind(
+        wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Forward, wxGetKeyState(WXK_SHIFT)); },
+        wxID_FORWARD);
+    Bind(
+        wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Backward, wxGetKeyState(WXK_SHIFT)); },
+        wxID_BACKWARD);
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { FindAll(); }, findAllButton_->GetId());
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceOne(); }, wxID_REPLACE);
     Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { ReplaceAll(); }, wxID_REPLACE_ALL);
@@ -153,9 +158,9 @@ void FindReplaceDialog::ConfigureSearch() {
     if (!search_.MatchCount()) findAllResult_->SetLabel("");
 }
 
-void FindReplaceDialog::Find(SearchDirection direction) {
+void FindReplaceDialog::Find(SearchDirection direction, bool extendSelection) {
     ConfigureSearch();
-    reportFind_(search_.Find(direction));
+    reportFind_(search_.Find(direction, extendSelection));
 }
 
 void FindReplaceDialog::ReplaceOne() {

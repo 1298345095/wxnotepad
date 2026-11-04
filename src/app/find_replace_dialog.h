@@ -15,7 +15,7 @@ public:
                       std::function<void(const FindResult&)> reportFind, std::function<void(wxKeyEvent&)> onKey);
     ~FindReplaceDialog() override;
     void Present(bool replace);
-    void Find(SearchDirection direction);
+    void Find(SearchDirection direction, bool extendSelection = false);
 
 private:
     SearchSession& search_;

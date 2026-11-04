@@ -37,6 +37,8 @@ public:
     const wxString& Path() const { return path_; }
     bool Save(bool explicitSave);
     bool SaveSchemeTabs(SyntaxLanguage language);
+    int MessageSuppression(const wxString& key);
+    bool SuppressMessage(const wxString& key);
 
 private:
     wxString path_;
