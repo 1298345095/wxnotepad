@@ -63,7 +63,7 @@ public:
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             const auto folder =
-                std::filesystem::temp_directory_path() / ("wxnotepad-shebang-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-shebang-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(folder);
                 const auto path = folder / "script";

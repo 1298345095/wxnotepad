@@ -1,6 +1,7 @@
 #include "document/document_session.h"
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <wx/file.h>
@@ -30,7 +31,9 @@ public:
         auto* editor = frame->Editor();
         frame->ShowWithoutActivating();
         CallAfter([this, frame, editor] {
-            const wxString path = wxFileName::CreateTempFileName("wxnotepad-reopen-") + ".cpp";
+            const wxString path = wxFileName::CreateTempFileName(
+                                      TestFiles::Filename(TestFiles::TemporaryDirectory() / "wxnotepad-reopen-")) +
+                                  ".cpp";
             try {
                 std::string bytes;
                 for (int line = 0; line < 100; ++line)

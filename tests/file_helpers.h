@@ -9,6 +9,10 @@
 #include <string>
 
 namespace TestFiles {
+inline std::filesystem::path TemporaryDirectory() {
+    // Document Open and native dialogs expand Windows TEMP's 8.3 aliases.
+    return std::filesystem::canonical(std::filesystem::temp_directory_path());
+}
 inline wxString Filename(const std::filesystem::path& path) {
 #ifdef __WXMSW__
     return wxString(path.wstring());

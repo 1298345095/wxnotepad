@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <wx/wx.h>
 #include <cstdio>
 #include <filesystem>
@@ -36,7 +37,7 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-open-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-open-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 const auto path = directory / u8"中文.txt";
