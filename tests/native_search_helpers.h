@@ -6,6 +6,7 @@
 #include <wx/wx.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
+#include <wx/modalhook.h>
 #include <algorithm>
 #include <cstdio>
 #include <initializer_list>
@@ -16,6 +17,17 @@
 // Native operations target only widgets owned by each independent search test.
 // Test cases and expected document bytes remain in their own GUI processes.
 namespace NativeSearch {
+inline void Click(wxWindow* dialog, int id);
+// Document-result fixtures accept feedback at the native modal boundary. The
+// search_wrap fixture separately drives the real choices and suppression state.
+class AcceptFeedback final : public wxModalDialogHook {
+public:
+    AcceptFeedback() { Register(); }
+    int Enter(wxDialog* dialog) override {
+        if (dialog->GetName() == "Search feedback") wxTheApp->CallAfter([dialog] { Click(dialog, wxID_OK); });
+        return wxID_NONE;
+    }
+};
 #ifdef __WXMSW__
 inline bool WindowsShortcut(wxWindow* window, int key, std::initializer_list<std::pair<int, BYTE>> modifiers) {
     BYTE previous[256];

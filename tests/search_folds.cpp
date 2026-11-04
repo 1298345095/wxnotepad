@@ -24,6 +24,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                NativeSearch::AcceptFeedback feedback;
                 auto* editor = frame->Editor();
                 const std::string fixture = "void outer() {\n  if (true) {\n    needle();\n  }\n}\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(fixture.c_str()));

@@ -61,6 +61,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                NativeSearch::AcceptFeedback feedback;
                 auto* editor = frame->Editor();
                 NativeSearch::Command(frame, wxID_REPLACE);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);

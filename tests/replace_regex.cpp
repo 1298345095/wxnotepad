@@ -31,6 +31,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                NativeSearch::AcceptFeedback feedback;
                 using Scintilla::Message;
                 auto* editor = frame->Editor();
                 Command(frame, wxID_REPLACE);
