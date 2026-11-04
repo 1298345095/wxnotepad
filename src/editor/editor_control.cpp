@@ -3,6 +3,7 @@
 #include <wx/dcclient.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#include <wx/dnd.h>
 #include <wx/settings.h>
 #include <chrono>
 #include <cstring>
@@ -119,11 +120,21 @@ public:
                 static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
                     static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll),
                 0);
-        dragDropEnabled = false;
+#ifdef __WXGTK__
+        InstallGtkTextDropTarget();
+#else
+        window_.SetDropTarget(new TextDropTarget(*this));
+#endif
         WndProc(Message::EmptyUndoBuffer, 0, 0);
         WndProc(Message::SetSavePoint, 0, 0);
     }
-    ~Core() override { Finalise(); }
+    ~Core() override {
+#ifdef __WXGTK__
+        g_signal_handlers_disconnect_by_data(window_.GetConnectWidget(), this);
+        gtk_drag_dest_unset(window_.GetConnectWidget());
+#endif
+        Finalise();
+    }
 
     uint64_t SelectionRevision() const noexcept {
         const auto anchor = sel.MainAnchor();
@@ -412,6 +423,8 @@ public:
     }
     void Mouse(wxMouseEvent& event) {
         const core::Point point(event.GetX(), event.GetY());
+        // Additional selection-shape payloads remain a separate migration slice.
+        dragDropEnabled = sel.selType == core::Selection::SelTypes::stream && sel.Count() == 1;
         if (event.GetEventType() == wxEVT_LEFT_DOWN) {
             window_.SetFocus();
             ButtonDownWithModifiers(point, MouseTime(), MouseModifiers(event));
@@ -445,6 +458,200 @@ public:
     }
 
 private:
+    class TextDropTarget final : public wxDropTarget {
+    public:
+        explicit TextDropTarget(Core& editor) : wxDropTarget(new wxTextDataObject), editor_(editor) {
+            SetDefaultAction(wxDragMove);
+        }
+        wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult result) override {
+            if (editor_.pdoc->IsReadOnly() || (result != wxDragCopy && result != wxDragMove)) {
+                editor_.ClearDropFeedback();
+                return wxDragNone;
+            }
+#ifdef __WXGTK__
+            // wxGTK's DefaultMove preference suppresses GTK's Ctrl suggestion.
+            // The original host uses Ctrl for copy, including Ctrl+Shift.
+            if (wxGetKeyState(WXK_CONTROL)) result = wxDragCopy;
+#endif
+            editor_.ShowDropFeedback(x, y);
+            return result;
+        }
+        void OnLeave() override { editor_.ClearDropFeedback(); }
+        bool OnDrop(wxCoord, wxCoord) override { return !editor_.pdoc->IsReadOnly(); }
+        wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult result) override {
+            const auto action = OnDragOver(x, y, result);
+            editor_.ClearDropFeedback();
+            if (action == wxDragNone || !GetData()) return wxDragNone;
+            const auto& value = static_cast<wxTextDataObject*>(GetDataObject())->GetText();
+            const auto utf8 = value.ToUTF8();
+            if (utf8.length() == 0) return wxDragNone;
+            const auto position =
+                editor_.SPositionFromLocation(core::Point(x, y), false, false, editor_.UserVirtualSpace());
+            editor_.DropAt(position, std::string_view(utf8.data(), utf8.length()), action == wxDragMove, false);
+            return action;
+        }
+
+    private:
+        Core& editor_;
+    };
+    void ShowDropFeedback(int x, int y) {
+#ifdef __WXMSW__
+        if (!dropFeedback_) {
+            // The ordinary Windows caret is native; an unfocused drop target
+            // still needs the original core's insertion marker.
+            window_.GetCaret()->Hide();
+            WndProc(Message::SetCaretStyle, 1, 0);
+        }
+#endif
+        dropFeedback_ = true;
+        SetDragPosition(SPositionFromLocation(core::Point(x, y), false, false, UserVirtualSpace()));
+    }
+    void ClearDropFeedback() {
+        SetDragPosition(core::SelectionPosition(Sci::invalidPosition));
+#ifdef __WXMSW__
+        if (dropFeedback_) {
+            WndProc(Message::SetCaretStyle, 0, 0);
+            window_.GetCaret()->Show();
+            UpdateSystemCaret();
+        }
+#endif
+        dropFeedback_ = false;
+    }
+    bool dropFeedback_ = false;
+#ifdef __WXGTK__
+    GdkDragAction GtkDragAction(GdkDragContext* context) const {
+        if (pdoc->IsReadOnly()) return static_cast<GdkDragAction>(0);
+        const auto allowed = gdk_drag_context_get_actions(context);
+        if (wxGetKeyState(WXK_CONTROL) && (allowed & GDK_ACTION_COPY)) return GDK_ACTION_COPY;
+        if (allowed & GDK_ACTION_MOVE) return GDK_ACTION_MOVE;
+        return static_cast<GdkDragAction>(allowed & GDK_ACTION_COPY);
+    }
+    void InstallGtkTextDropTarget() {
+        auto* widget = window_.GetConnectWidget();
+        gtk_drag_dest_set(widget, static_cast<GtkDestDefaults>(0), nullptr, 0,
+                          static_cast<GdkDragAction>(GDK_ACTION_COPY | GDK_ACTION_MOVE));
+        auto* targets = gtk_target_list_new(nullptr, 0);
+        gtk_target_list_add_text_targets(targets, 0);
+        gtk_drag_dest_set_target_list(widget, targets);
+        gtk_target_list_unref(targets);
+        g_signal_connect(widget, "drag-motion",
+                         G_CALLBACK(+[](GtkWidget* widget, GdkDragContext* context, gint x, gint y, guint time,
+                                        gpointer value) -> gboolean {
+                             auto& editor = *static_cast<Core*>(value);
+                             auto action = editor.GtkDragAction(context);
+                             if (gtk_drag_dest_find_target(widget, context, nullptr) == GDK_NONE)
+                                 action = static_cast<GdkDragAction>(0);
+                             gdk_drag_status(context, action, time);
+                             if (action)
+                                 editor.ShowDropFeedback(x, y);
+                             else
+                                 editor.ClearDropFeedback();
+                             return TRUE;
+                         }),
+                         this);
+        g_signal_connect(widget, "drag-leave", G_CALLBACK(+[](GtkWidget*, GdkDragContext*, guint, gpointer value) {
+                             static_cast<Core*>(value)->ClearDropFeedback();
+                         }),
+                         this);
+        g_signal_connect(widget, "drag-drop",
+                         G_CALLBACK(+[](GtkWidget* widget, GdkDragContext* context, gint, gint, guint time,
+                                        gpointer value) -> gboolean {
+                             auto& editor = *static_cast<Core*>(value);
+                             const auto target = gtk_drag_dest_find_target(widget, context, nullptr);
+                             if (!editor.GtkDragAction(context) || target == GDK_NONE) {
+                                 editor.ClearDropFeedback();
+                                 gtk_drag_finish(context, FALSE, FALSE, time);
+                                 return TRUE;
+                             }
+                             gtk_drag_get_data(widget, context, target, time);
+                             return TRUE;
+                         }),
+                         this);
+        g_signal_connect(
+            widget, "drag-data-received",
+            G_CALLBACK(+[](GtkWidget*, GdkDragContext* context, gint x, gint y, GtkSelectionData* data, guint,
+                           guint time, gpointer value) {
+                auto& editor = *static_cast<Core*>(value);
+                editor.ClearDropFeedback();
+                auto* text = gtk_selection_data_get_text(data);
+                const auto action = gdk_drag_context_get_selected_action(context);
+                const bool accepted = text && *text && !editor.pdoc->IsReadOnly() &&
+                                      (action == GDK_ACTION_COPY || action == GDK_ACTION_MOVE);
+                if (accepted) {
+                    const auto position =
+                        editor.SPositionFromLocation(core::Point(x, y), false, false, editor.UserVirtualSpace());
+                    editor.DropAt(position, reinterpret_cast<const char*>(text), action == GDK_ACTION_MOVE, false);
+                }
+                g_free(text);
+                // Native GTK peers rely on the delete request after a successful
+                // move; the original core handles deletion for our own source.
+                gtk_drag_finish(context, accepted, accepted && action == GDK_ACTION_MOVE, time);
+            }),
+            this);
+    }
+    wxDragResult GtkStartTextDrag() {
+        struct Transfer {
+            std::string_view text;
+            bool finished = false;
+            bool failed = false;
+            GdkDragAction operation = static_cast<GdkDragAction>(0);
+            wxDragResult result = wxDragNone;
+        } transfer{drag.AsView()};
+        auto* widget = window_.GetConnectWidget();
+        const auto dataHandler = g_signal_connect(
+            widget, "drag-data-get",
+            G_CALLBACK(+[](GtkWidget*, GdkDragContext*, GtkSelectionData* data, guint, guint, gpointer value) {
+                const auto& transfer = *static_cast<Transfer*>(value);
+                gtk_selection_data_set_text(data, transfer.text.data(), static_cast<gint>(transfer.text.size()));
+            }),
+            &transfer);
+        const auto endHandler =
+            g_signal_connect(widget, "drag-end", G_CALLBACK(+[](GtkWidget*, GdkDragContext* context, gpointer value) {
+                                 auto& transfer = *static_cast<Transfer*>(value);
+                                 if (!transfer.failed) {
+                                     const auto action = transfer.operation
+                                                             ? transfer.operation
+                                                             : gdk_drag_context_get_selected_action(context);
+                                     if (action == GDK_ACTION_MOVE)
+                                         transfer.result = wxDragMove;
+                                     else if (action == GDK_ACTION_COPY)
+                                         transfer.result = wxDragCopy;
+                                 }
+                                 transfer.finished = true;
+                             }),
+                             &transfer);
+        const auto failedHandler =
+            g_signal_connect(widget, "drag-failed",
+                             G_CALLBACK(+[](GtkWidget*, GdkDragContext*, GtkDragResult, gpointer value) -> gboolean {
+                                 static_cast<Transfer*>(value)->failed = true;
+                                 return FALSE;
+                             }),
+                             &transfer);
+        auto* targets = gtk_target_list_new(nullptr, 0);
+        gtk_target_list_add_text_targets(targets, 0);
+        auto* event = gtk_get_current_event();
+        const auto context = gtk_drag_begin_with_coordinates(
+            widget, targets, static_cast<GdkDragAction>(GDK_ACTION_COPY | GDK_ACTION_MOVE), 1, event, -1, -1);
+        if (event) gdk_event_free(event);
+        gtk_target_list_unref(targets);
+        if (context) {
+            g_object_ref(context);
+            const auto dropHandler = g_signal_connect(
+                context, "drop-performed", G_CALLBACK(+[](GdkDragContext* context, guint, gpointer value) {
+                    static_cast<Transfer*>(value)->operation = gdk_drag_context_get_selected_action(context);
+                }),
+                &transfer);
+            while (!transfer.finished)
+                gtk_main_iteration();
+            g_signal_handler_disconnect(context, dropHandler);
+            g_object_unref(context);
+        }
+        g_signal_handler_disconnect(widget, dataHandler);
+        g_signal_handler_disconnect(widget, endHandler);
+        g_signal_handler_disconnect(widget, failedHandler);
+        return transfer.result;
+    }
+#endif
     EditorControl& window_;
     int verticalWheel_ = 0;
     int horizontalWheel_ = 0;
@@ -727,7 +934,36 @@ private:
             text.MakeLower();
         return text.ToStdString(wxConvUTF8);
     }
-    void StartDrag() override {}
+    bool SCICALL DragThreshold(core::Point start, core::Point now) const noexcept override {
+#ifdef __WXMSW__
+        const auto dpi = GetDpiForWindow(static_cast<HWND>(window_.GetHandle()));
+        return std::abs(start.x - now.x) > GetSystemMetricsForDpi(SM_CXDRAG, dpi) ||
+               std::abs(start.y - now.y) > GetSystemMetricsForDpi(SM_CYDRAG, dpi);
+#else
+        return core::Editor::DragThreshold(start, now);
+#endif
+    }
+    void StartDrag() override {
+        // DropAt owns internal deletion/position adjustment and its undo group.
+        // Only a completed native move outside this control deletes the source.
+        inDragDrop = DragDrop::dragging;
+        dropWentOutside = true;
+#ifdef __WXGTK__
+        // wxGTK 3.3.3 exits its source loop on pointer events before Wayland
+        // acknowledges asynchronous transfers. Retain native GTK ownership
+        // through drag-end, including failed and cancelled drops.
+        const auto result = GtkStartTextDrag();
+#else
+        wxTextDataObject data(wxString::FromUTF8(drag.Data(), drag.Length()));
+        wxDropSource source(&window_);
+        source.SetData(data);
+        const auto result = source.DoDragDrop(wxDrag_DefaultMove);
+#endif
+        if (result == wxDragMove && dropWentOutside) ClearSelection();
+        inDragDrop = DragDrop::none;
+        ClearDropFeedback();
+        drag.Clear();
+    }
     bool FineTickerRunning(TickReason reason) const noexcept override {
         if (reason == TickReason::scroll) return window_.scrollTimer_.IsRunning();
         if (reason == TickReason::widen) return window_.widenTimer_.IsRunning();
@@ -872,7 +1108,9 @@ EditorControl::EditorControl(wxWindow* parent)
     Bind(wxEVT_SIZE, &EditorControl::OnSize, this);
 }
 
-EditorControl::~EditorControl() = default;
+EditorControl::~EditorControl() {
+    SetDropTarget(nullptr);
+}
 
 void EditorControl::SetLineSelectionMode(LineSelectionMode mode) {
     lineSelectionMode_ = mode;
