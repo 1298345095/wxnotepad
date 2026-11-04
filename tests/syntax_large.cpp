@@ -1,5 +1,7 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "settings/settings_store.h"
+#include <memory>
 #include "file_helpers.h"
 #include <SciLexer.h>
 #include <wx/wx.h>
@@ -29,7 +31,12 @@ void Paint(EditorControl* editor) {
 class LargeSyntaxApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        settings_->values.wordWrap = false;
+        // Mixed-EOL warning choices are covered by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             const auto directory =
@@ -94,6 +101,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace

@@ -1,4 +1,6 @@
 #include "native_search_helpers.h"
+#include "settings/settings_store.h"
+#include <memory>
 #include "native_fold_helpers.h"
 #include <SciLexer.h>
 #include <algorithm>
@@ -43,7 +45,12 @@ std::string Bytes(const std::filesystem::path& path) {
 class WhitespaceApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        settings_->values.wordWrap = false;
+        // Mixed-EOL warning choices are covered by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
             const auto directory =
@@ -135,7 +142,7 @@ public:
                         "Save As and its automatic scheme change must preserve the view and document metadata");
                 Require(frame->New() && editor->Send(Message::GetViewWS) == 1 && item->IsChecked(),
                         "New must keep the current window's whitespace preference");
-                auto* fresh = new EditorFrame;
+                auto* fresh = new EditorFrame(settings_.get());
                 Require(fresh->Editor()->Send(Message::GetViewWS) == 0,
                         "another fresh window must start with ordinary whitespace rendering");
                 fresh->Destroy();
@@ -157,6 +164,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 0;
 };
 } // namespace

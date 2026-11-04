@@ -1,4 +1,6 @@
 #include "app/editor_frame.h"
+#include "settings/settings_store.h"
+#include <memory>
 #include "editor/editor_control.h"
 #include "tab_settings_helpers.h"
 #include <wx/app.h>
@@ -232,7 +234,13 @@ void SavedBytes(EditorFrame* frame) {
 class BlockIndentationApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        settings_->values.wordWrap = false;
+        // Mixed-EOL warning choices are covered by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        settings_->values.selectOption &= ~4;
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
             try {
@@ -394,6 +402,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace

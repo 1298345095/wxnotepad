@@ -1,5 +1,7 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "settings/settings_store.h"
+#include <memory>
 #include <wx/wx.h>
 #include <wx/timer.h>
 #include <wx/statusbr.h>
@@ -142,7 +144,12 @@ class GbkNativeApp final : public wxApp {
 public:
     bool OnInit() override {
         SetExitOnFrameDelete(false);
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        settings_->values.wordWrap = false;
+        // Mixed-EOL warning choices are covered by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
             const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
@@ -225,7 +232,7 @@ public:
                         "native malformed GBK must show error and retain current document and format");
                 std::puts("PASS: native GBK menu/picker/status, loss OK/Cancel Save/Save As and Undo/Redo");
                 {
-                    auto* failure = new EditorFrame;
+                    auto* failure = new EditorFrame(settings_.get());
                     failure->Show();
                     Require(failure->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
                             "failure fixture must open");
@@ -274,6 +281,7 @@ public:
     int OnExit() override { return result_; }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace

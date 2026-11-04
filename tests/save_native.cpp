@@ -1,5 +1,7 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "settings/settings_store.h"
+#include <memory>
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <wx/timer.h>
@@ -138,7 +140,12 @@ void Command(EditorFrame* frame, int id) {
 class SaveNativeApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        settings_->values.wordWrap = false;
+        // Mixed-EOL warning choices are covered by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
                                    ("wxnotepad-save-native-" + std::to_string(wxGetProcessId()));
@@ -293,6 +300,7 @@ public:
     int OnExit() override { return result_; }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
