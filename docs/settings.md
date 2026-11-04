@@ -62,12 +62,54 @@ Last Replace Empty flag and suppresses replacement-history fallback. MRUs merge
 on application exit when SaveFindReplace is enabled, independently of SaveSettings;
 Save Settings Now writes flags/options but leaves MRU saving to that exit path.
 
+`LineSelection` restores the original four modes: `0` None, `1` Visual Studio
+(the built-in default), `2` Normal and `3` Old Visual Studio. It uses the original
+integer-prefix parser without an added range clamp. The Edit menu changes the
+same value, and Save Settings Now/enabled exit saving persist it while omitting
+the default. None keeps empty-selection Copy/Cut as no-ops. The enabled modes
+copy or cut the current line; Visual Studio modes tag it for insertion at the
+destination line start, while Normal publishes stream text. Cut keeps the
+expanded caret column on the next line, or the previous line in Old Visual
+Studio mode. Explicit Ctrl+Shift+C/X line commands use the same tag option.
+
 Save Settings On Exit is enabled by default. A disabled exit save writes only
 `SaveSettings=0`, retaining the previously stored view choices. Save Settings Now
 writes current choices even while exit saving is disabled. Default-valued fields
 are omitted, as in the original. Other keys, sections and comments survive. Writes
 use the original Unicode INI format (UTF-16LE with BOM); the reader also accepts
 existing text INI files through the platform text converter.
+
+Tab settings use this same store. `[Settings]` defaults are `TabWidth=4`,
+`IndentWidth=4`, `TabsAsSpaces=0`, `TabIndents=1`, and `BackspaceUnindents=2`.
+Tab widths range from 1 to 256; indentation widths range from 0 to 256, with 0
+using the tab width. Backspace's original bit 1 unindents the line; bit 2 deletes
+spaces to the previous indentation stop. Both choices are exposed in Tab Settings.
+
+The original scheme sections are `[Text File]`, `[C/C++ Source]`,
+`[Python Script]`, and `[JSON Document]`. All support `TabWidth`, `IndentWidth`,
+`TabsAsSpaces`, and `UseGlobalTabSettings`. The first three default to 4/4, tabs,
+and global inheritance. JSON defaults to 2/2, spaces, and independent settings.
+Tab Settings edits global, current scheme and current file settings. Scheme
+inheritance takes precedence over stored scheme widths; current file overrides
+take precedence over the effective scheme. The Tabs as Spaces command overrides
+only that file option, so later language changes still apply scheme widths.
+New and successful Open reset file overrides. Language changes, first Save and
+Save As apply the effective scheme while retaining file overrides. Preferences
+do not rewrite whitespace or change selection, modification state or Undo/Redo.
+Accepting Tab Settings immediately saves the current scheme section, as the
+original dialog does, including when Save Settings On Exit is disabled. Global
+preferences still follow the normal explicit/exit save rule. Cancelling the
+dialog retains all prior values; disabling inheritance restores the values from
+before the dialog opened.
+Indentation detection and file-variable parsing are separate work.
+
+`[Settings] AutoIndent` defaults to `1` and follows the same explicit/exit save
+rules. View > Auto Indent toggles the option. Enter preserves the original
+leading whitespace and applies the pinned delimiter, colon and block-comment
+opener rules using the active file tab settings. These rules are shared by the
+delivered schemes; they do not add Python keyword completion or comment-prefix
+continuation. The port adapts `EditAutoC.cpp::EditAutoIndent` and the
+`Notepad4.cpp::SCN_CHARADDED` gate from the pinned original revision.
 
 Windows keeps the pinned original discovery rule: a resolved executable path beginning
 with `C:\Program Files`, or containing `WinGet` or `hocolatey`, uses
@@ -92,3 +134,32 @@ The behavior and field names come from pinned Notepad4 revision
 `IniSectionParser::GetBoolImpl` in `src/Helpers.cpp`. The portable parser adapts
 those rules without pulling Windows profile APIs into the editor runtime. The
 upstream license remains in `licenses/Notepad4.txt`.
+
+`DefaultEOLMode` defaults to `0` (CRLF); `1` selects LF and `2` selects CR.
+Values are clamped to that range, matching the original settings order, which
+differs from Scintilla's numeric EOL order. Open counts CRLF pairs separately
+from standalone CR and LF. It retains the configured default when that mode
+ties for the largest count, including files with no line endings. Otherwise it
+chooses the largest count, preferring CRLF and then LF on a tie.
+
+`WarnLineEndings` defaults to `1`. Mixed endings show the original counts,
+CRLF/LF/CR selector, Yes/No choices and Always Show preference after the file has
+opened. No retains the mixed bytes and loaded save point. Yes converts through
+the original core, retaining the selected insertion mode while making one
+undoable edit. Save writes the current bytes; it does not normalize them again.
+These fields use the same settings load/save lifecycle described above.
+
+The warning defaults to No for a newly loaded unknown language when the encoding
+detector classified the file as native ANSI. Recognized Plain Text and same-path
+reopens retain the original Yes default. The original actual-Diff-lexer branch
+remains outside the delivered language catalog.
+
+Encoding selection adds the original `[Settings]` fields `DefaultEncoding`
+(built-in UTF-8, omitted on Save), `SkipUnicodeDetection=1`, `LoadANSIasUTF8=1`,
+`LoadASCIIasUTF8=1`, `LoadNFOasOEM=1` and `NoEncodingTags=0`. The original INI
+encoding-number mapping is retained, including `936` for CP936 and the special
+0–8 values; an explicit UTF-8 default is normalized to the omitted built-in
+default. `[Settings2] NoFileVariables=0` controls the file-variable gate and is
+retained in place. The same SettingsStore loads these options before the frame
+creates its document session. See [encoding selection](encoding.md) for the
+precedence and remaining codec catalog.

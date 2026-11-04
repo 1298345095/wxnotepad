@@ -9,61 +9,37 @@
 #include <wx/log.h>
 #include <wx/utils.h>
 #include <cstdio>
+#include <algorithm>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
 
 namespace {
-Scintilla::EndOfLine DetectEol(std::string_view bytes) {
-    size_t crlf = 0;
-    size_t cr = 0;
-    size_t lf = 0;
+LineEndingCounts CountLineEndings(std::string_view bytes) {
+    LineEndingCounts counts;
     for (size_t i = 0; i < bytes.size(); ++i) {
         if (bytes[i] == '\r') {
             if (i + 1 < bytes.size() && bytes[i + 1] == '\n') {
-                ++crlf;
+                ++counts.crlf;
                 ++i;
             } else
-                ++cr;
+                ++counts.cr;
         } else if (bytes[i] == '\n')
-            ++lf;
+            ++counts.lf;
     }
-    // Original EditDetectEOLMode policy with the current default CRLF:
-    // retain CRLF when tied for most common; otherwise prefer LF over CR.
-    if (crlf >= cr && crlf >= lf) return Scintilla::EndOfLine::CrLf;
-    return lf >= cr ? Scintilla::EndOfLine::Lf : Scintilla::EndOfLine::Cr;
+    return counts;
 }
 
-bool IsUtf8(std::string_view bytes) {
-    for (size_t i = 0; i < bytes.size();) {
-        const auto lead = static_cast<unsigned char>(bytes[i++]);
-        if (lead < 0x80) continue;
-        unsigned int value;
-        size_t remaining;
-        unsigned int minimum;
-        if (lead >= 0xc2 && lead <= 0xdf) {
-            value = lead & 0x1f;
-            remaining = 1;
-            minimum = 0x80;
-        } else if (lead >= 0xe0 && lead <= 0xef) {
-            value = lead & 0x0f;
-            remaining = 2;
-            minimum = 0x800;
-        } else if (lead >= 0xf0 && lead <= 0xf4) {
-            value = lead & 7;
-            remaining = 3;
-            minimum = 0x10000;
-        } else
-            return false;
-        if (remaining > bytes.size() - i) return false;
-        while (remaining--) {
-            const auto next = static_cast<unsigned char>(bytes[i++]);
-            if ((next & 0xc0) != 0x80) return false;
-            value = (value << 6) | (next & 0x3f);
-        }
-        if (value < minimum || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff)) return false;
-    }
-    return true;
+Scintilla::EndOfLine SelectEol(const LineEndingCounts& counts, Scintilla::EndOfLine configured) {
+    // Notepad4 89b8b36 EditDetectEOLMode: retain the configured mode when tied,
+    // otherwise choose the largest count, preferring CRLF and then LF.
+    const size_t maximum = std::max({counts.crlf, counts.cr, counts.lf});
+    const size_t preferred = configured == Scintilla::EndOfLine::CrLf ? counts.crlf
+                             : configured == Scintilla::EndOfLine::Lf ? counts.lf
+                                                                      : counts.cr;
+    if (preferred == maximum) return configured;
+    if (counts.crlf == maximum) return Scintilla::EndOfLine::CrLf;
+    return counts.lf == maximum ? Scintilla::EndOfLine::Lf : Scintilla::EndOfLine::Cr;
 }
 
 struct PendingSave {
@@ -161,7 +137,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
 }
 
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                                 std::optional<FileEncoding> encoding) {
+                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding) {
     if (!source) return {OpenStatus::Cancelled, {}};
     using Scintilla::Message;
     // Notepad4 FileLoad compares the supplied spelling before canonicalizing the
@@ -186,6 +162,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     std::string bytes;
     FileEncoding format;
     bool bom;
+    bool systemDefault;
     const auto read = [&]() -> OpenResult {
         if (!loadPath.FileExists()) return {OpenStatus::Failed, "Choose an existing file to open."};
         wxFile file(loadPath.GetFullPath(), wxFile::read);
@@ -195,9 +172,11 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         bytes.assign(static_cast<size_t>(length), '\0');
         if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
             return {OpenStatus::Failed, "Could not read the complete file."};
-        format = encoding.value_or(bytes.starts_with("\xff\xfe") ? FileEncoding::Utf16Le : FileEncoding::Utf8);
-        bom = format == FileEncoding::Utf16Le ? bytes.starts_with("\xff\xfe")
-                                              : format == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf");
+        const auto detected = DetectEncoding(loadPath.GetFullPath(), bytes, encoding, encodingOptions_, weakEncoding);
+        if (!detected.encoding) return {OpenStatus::Failed, detected.error};
+        format = *detected.encoding;
+        bom = detected.bom;
+        systemDefault = detected.systemDefault;
         if (bom) bytes.erase(0, format == FileEncoding::Utf16Le ? 2 : 3);
         if (format == FileEncoding::Gbk) {
             const auto decoded = DecodeGbk(bytes);
@@ -222,7 +201,8 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         result = read();
         if (result.status != OpenStatus::Opened) return result;
     }
-    Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
+    const auto loaded = Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
+    systemDefaultEncoding_ = systemDefault;
     if (samePath) {
         editor_.Send(Message::SetSel, anchor, caret);
         // Original FileLoad (Notepad4 89b8b36): compare the saved one-based line
@@ -249,15 +229,17 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
             editor_.Send(Message::SetXOffset, xOffset);
         }
     }
-    return {OpenStatus::Opened, {}};
+    return loaded;
 }
 
-void DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
-                              bool keepLanguage) {
+OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+                                    bool keepLanguage) {
+    const auto lineEndings = CountLineEndings(bytes);
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
+    editor_.Send(Scintilla::Message::MarkerDeleteAll, 0);
     editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
-    editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(DetectEol(bytes)));
+    editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(SelectEol(lineEndings, defaultEolMode_)));
     editor_.Send(Scintilla::Message::SetUndoCollection, 1);
     editor_.Send(Scintilla::Message::EmptyUndoBuffer);
     editor_.Send(Scintilla::Message::GotoPos, 0);
@@ -266,15 +248,18 @@ void DocumentSession::Replace(const std::string& bytes, const wxString& path, Fi
     path_ = path;
     encoding_ = encoding;
     hasBom_ = bom;
+    bool unknownLanguage = false;
     if (!keepLanguage) {
         languageOverride_.reset();
-        DetectAutomaticLanguage();
+        unknownLanguage = !DetectAutomaticLanguage();
         ApplySyntaxLanguage(editor_, Language());
     }
+    return {OpenStatus::Opened, {}, lineEndings, unknownLanguage};
 }
 
 void DocumentSession::New() {
     Replace({}, {}, FileEncoding::Utf8, false);
+    systemDefaultEncoding_ = false;
 }
 
 void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
@@ -284,10 +269,12 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     if (previous != Language()) ApplySyntaxLanguage(editor_, Language());
 }
 
-void DocumentSession::DetectAutomaticLanguage() {
+bool DocumentSession::DetectAutomaticLanguage() {
     // The pinned core's GetText count excludes its terminating NUL.
     // Match original SciCall_GetText(255) with the original 256-byte buffer.
     char prefix[256]{};
     editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
-    automaticLanguage_ = DetectLanguage(path_, prefix, detection_);
+    const auto detected = DetectLanguage(path_, prefix, detection_);
+    automaticLanguage_ = detected.value_or(SyntaxLanguage::PlainText);
+    return detected.has_value();
 }

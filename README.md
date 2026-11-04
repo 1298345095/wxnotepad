@@ -79,6 +79,13 @@ selection. Closing discards unsubmitted edits. View's Save Find/Replace option
 enables original search-history/flag persistence through the shared
 [settings lifecycle](docs/settings.md).
 
+Find All counts and marks matches across the whole document, including folded
+content, while preserving the selection and folds. Bookmark matched line is off
+by default. Empty regex matches count without visible marks or bookmarks; the
+original single-anchor `^` and `$` line-count rules are retained. Query/options
+changes and edits clear the count and indicators. Find All bookmarks remain until
+the next Find All operation; New/Open clear them with the replaced document.
+
 Edit → Replace / Ctrl+H opens the replacement view. Replace revalidates the
 selected match before editing; Replace All searches the complete current
 document and reports its count in the dialog. Each text-changing single

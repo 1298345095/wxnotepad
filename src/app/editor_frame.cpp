@@ -2,11 +2,17 @@
 #include "editor/editor_control.h"
 #include "app/find_replace_dialog.h"
 #include "app/go_to_line_dialog.h"
+#include "app/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/menu.h>
 #include <wx/filedlg.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
+#include <wx/button.h>
+#include <wx/checkbox.h>
+#include <wx/choice.h>
+#include <wx/sizer.h>
+#include <wx/stattext.h>
 #include <wx/statusbr.h>
 #include <wx/combobox.h>
 #include <wx/dialog.h>
@@ -87,10 +93,12 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
-      editor_(new EditorControl(this)), settings_(settings),
-      document_(*editor_, settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
-                                   : SyntaxDetectionOptions{}),
+      editor_(new EditorControl(this)), settings_(settings), indentation_(settings ? settings->values : defaults_),
+      document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
+                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
+                         : SyntaxDetectionOptions{}),
       search_(*editor_) {
+    indentation_.Apply(*editor_, document_.Language());
     if (settings) {
         SearchRequest request;
         const int flags = settings->values.findReplaceFlag;
@@ -99,8 +107,16 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         request.options.regularExpression = (flags & 0x20) != 0;
         request.options.transformBackslashes = (flags & (8 << 10)) != 0;
         request.wrapAround = (settings->values.findReplaceOption & (4 << 4)) == 0;
+        request.bookmarkMatchedLines = (settings->values.findReplaceOption & 8) != 0;
         search_.Configure(std::move(request));
         search_.RestoreHistory(settings->values.recentFind, settings->values.recentReplace, (flags & (32 << 10)) != 0);
+        editor_->SetLineSelectionMode(static_cast<LineSelectionMode>(settings->values.lineSelection));
+        const auto mode = settings->values.defaultEOLMode == 0   ? Scintilla::EndOfLine::CrLf
+                          : settings->values.defaultEOLMode == 1 ? Scintilla::EndOfLine::Lf
+                                                                 : Scintilla::EndOfLine::Cr;
+        document_.SetDefaultEolMode(mode);
+        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
+        warnLineEndings_ = settings->values.warnLineEndings;
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
@@ -168,38 +184,49 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     addEol("CRLF", Scintilla::EndOfLine::CrLf);
     addEol("LF", Scintilla::EndOfLine::Lf);
     addEol("CR", Scintilla::EndOfLine::Cr);
-    edit->AppendSeparator();
-    auto* indentation = new wxMenu;
-    for (const bool tabs : {true, false}) {
-        const int id = wxWindow::NewControlId();
-        indentation->AppendRadioItem(id, tabs ? "&Tabs" : "&Spaces");
-        Bind(wxEVT_MENU, [this, tabs](wxCommandEvent&) { editor_->Send(Scintilla::Message::SetUseTabs, tabs); }, id);
-        Bind(
-            wxEVT_UPDATE_UI,
-            [this, tabs](wxUpdateUIEvent& event) {
-                event.Check((editor_->Send(Scintilla::Message::GetUseTabs) != 0) == tabs);
-            },
-            id);
-    }
-    indentation->AppendSeparator();
-    for (const int width : {2, 4, 8}) {
-        const int id = wxWindow::NewControlId();
-        indentation->AppendRadioItem(id, wxString::Format("&%d Columns", width));
-        Bind(
-            wxEVT_MENU,
-            [this, width](wxCommandEvent&) {
-                editor_->SetIndentationWidth(width);
+    auto* view = new wxMenu;
+    const int autoIndent = wxWindow::NewControlId();
+    view->AppendCheckItem(autoIndent, "Auto &Indent");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            preferences.autoIndent = !preferences.autoIndent;
+            editor_->SetAutoIndent(preferences.autoIndent);
+        },
+        autoIndent);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoIndentEnabled()); }, autoIndent);
+    const int spaces = wxWindow::NewControlId();
+    view->AppendCheckItem(spaces, "Tabs as &Spaces");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { indentation_.ToggleSpaces(*editor_, document_.Language()); }, spaces);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(!editor_->Send(Scintilla::Message::GetUseTabs)); }, spaces);
+    const int tabSettings = wxWindow::NewControlId();
+    view->Append(tabSettings, "&Tab Settings...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            if (ShowTabSettingsDialog(this, preferences, document_.Language(), indentation_)) {
+                if (settings_) settings_->SaveSchemeTabs(document_.Language());
+                indentation_.Apply(*editor_, document_.Language());
                 UpdatePositionStatus();
-            },
-            id);
+            }
+        },
+        tabSettings);
+    auto* lineSelection = new wxMenu;
+    const char* lineModes[] = {"&None", "&Visual Studio", "&Normal", "&Old Visual Studio"};
+    for (int value = 0; value < 4; ++value) {
+        const auto mode = static_cast<LineSelectionMode>(value);
+        const int id = wxWindow::NewControlId();
+        lineSelection->AppendRadioItem(id, lineModes[value]);
+        Bind(wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->SetLineSelectionMode(mode); }, id);
         Bind(
             wxEVT_UPDATE_UI,
-            [this, width](wxUpdateUIEvent& event) {
-                event.Check(editor_->Send(Scintilla::Message::GetTabWidth) == width);
-            },
-            id);
+            [this, mode](wxUpdateUIEvent& event) { event.Check(editor_->GetLineSelectionMode() == mode); }, id);
     }
-    edit->AppendSubMenu(indentation, "&Indentation");
+    edit->AppendSubMenu(lineSelection, "Line Selection &Mode");
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
@@ -223,7 +250,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     for (const auto& definition : SyntaxCatalog())
         addLanguage("&" + wxString(definition.name), definition.language);
     menus->Append(languages, "&Language");
-    auto* view = new wxMenu;
+    view->AppendSeparator();
     auto* zoom = new wxMenu;
     const auto addZoom = [this, zoom](const wxString& label, Scintilla::Message message, uintptr_t value = 0) {
         const int id = wxWindow::NewControlId();
@@ -237,6 +264,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowZoomLevelDialog(this, *editor_); }, zoomLevel);
     addZoom("&Reset Zoom\tCtrl+\\", Scintilla::Message::SetZoom, 100);
     view->AppendSubMenu(zoom, "&Zoom");
+    view->AppendSeparator();
     const int wordWrap = wxWindow::NewControlId();
     view->AppendCheckItem(wordWrap, "&Word Wrap\tCtrl+Shift+W");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleWordWrap(); }, wordWrap);
@@ -393,22 +421,17 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanRedo)); },
         wxID_REDO);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Copy); }, wxID_COPY);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Cut); }, wxID_CUT);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Copy(); }, wxID_COPY);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Cut(); }, wxID_CUT);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Paste); }, wxID_PASTE);
     Bind(
         wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) {
-            event.Enable(editor_->Send(Scintilla::Message::GetSelectionStart) !=
-                         editor_->Send(Scintilla::Message::GetSelectionEnd));
-        },
-        wxID_COPY);
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, wxID_COPY);
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) {
             event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
-                         editor_->Send(Scintilla::Message::GetSelectionStart) !=
-                             editor_->Send(Scintilla::Message::GetSelectionEnd));
+                         editor_->Send(Scintilla::Message::GetLength) != 0);
         },
         wxID_CUT);
     Bind(
@@ -432,6 +455,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    settings_->values.warnLineEndings = warnLineEndings_;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
     const auto& request = search_.Request();
     // Preserve settings bits owned by other original options while updating
@@ -442,10 +466,11 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
         (request.options.matchCase ? 4 : 0) | (request.options.wholeWord ? 2 : 0) |
         (request.options.regularExpression ? (0x20 | ((settings_->values.findReplaceOption & 1) ? 0x80 : 0x40)) : 0) |
         (request.options.transformBackslashes ? (8 << 10) : 0) | (search_.LastReplaceEmpty() ? (32 << 10) : 0);
-    settings_->values.findReplaceOption =
-        (settings_->values.findReplaceOption & ~(4 << 4)) | (request.wrapAround ? 0 : (4 << 4));
+    settings_->values.findReplaceOption = (settings_->values.findReplaceOption & ~((4 << 4) | 8)) |
+                                          (request.wrapAround ? 0 : (4 << 4)) | (request.bookmarkMatchedLines ? 8 : 0);
     settings_->values.recentFind = search_.RecentFind();
     settings_->values.recentReplace = search_.RecentReplace();
+    settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
     return settings_->Save(explicitSave);
 }
 
@@ -542,6 +567,7 @@ void EditorFrame::UpdatePositionStatus() {
 
 void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
     document_.SelectLanguage(language);
+    indentation_.Apply(*editor_, document_.Language());
     UpdateDocumentState();
 }
 
@@ -549,6 +575,7 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
                                   SaveFileType fileType) {
     const auto result =
         document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -569,6 +596,7 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
                                SaveFileType fileType) {
     const auto result =
         document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -584,6 +612,9 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
+        indentation_.Reset(*editor_, document_.Language());
+        if (result.lineEndings.Mixed() && warnLineEndings_)
+            ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
         UpdateWindowUI(wxUPDATE_UI_RECURSE);
     }
     UpdateDocumentState();
@@ -607,6 +638,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    indentation_.Reset(*editor_, document_.Language());
     GetMenuBar()->Check(automaticLanguageId_, true);
     UpdateDocumentState();
     return true;
@@ -652,4 +684,46 @@ GbkLossChoice EditorFrame::ConfirmGbkLoss() {
         "by default placeholders when saving. It's recommended to choose another file encoding. Continue?",
         "GBK character loss", wxOK | wxCANCEL | wxICON_WARNING);
     return dialog.ShowModal() == wxID_OK ? GbkLossChoice::Replace : GbkLossChoice::Cancel;
+}
+
+void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo) {
+    wxDialog dialog(this, wxID_ANY, "Inconsistent Line Endings");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "The line endings in this file are not consistent:"), 0, wxALL,
+                  dialog.FromDIP(10));
+    contents->Add(new wxStaticText(&dialog, wxID_ANY,
+                                   wxString::Format("CR+LF: %llu line(s).\nLF: %llu line(s).\nCR: %llu line(s).",
+                                                    static_cast<unsigned long long>(counts.crlf),
+                                                    static_cast<unsigned long long>(counts.lf),
+                                                    static_cast<unsigned long long>(counts.cr))),
+                  0, wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Do you want to normalize the line endings?"), 0, wxALL,
+                  dialog.FromDIP(10));
+    const wxString names[] = {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)"};
+    auto* mode = new wxChoice(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize, 3, names);
+    mode->SetName("Line ending conversion");
+    const auto current = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
+    mode->SetSelection(current == Scintilla::EndOfLine::CrLf ? 0 : current == Scintilla::EndOfLine::Lf ? 1 : 2);
+    contents->Add(mode, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    auto* always = new wxCheckBox(&dialog, wxID_ANY, "&Always show this dialog.");
+    always->SetValue(warnLineEndings_);
+    contents->Add(always, 0, wxALL, dialog.FromDIP(10));
+    auto* buttons = new wxBoxSizer(wxHORIZONTAL);
+    auto* yes = new wxButton(&dialog, wxID_OK, "&Yes");
+    auto* no = new wxButton(&dialog, wxID_CANCEL, "&No");
+    buttons->Add(yes, 0, wxRIGHT, dialog.FromDIP(5));
+    buttons->Add(no);
+    contents->Add(buttons, 0, wxALIGN_RIGHT | wxALL, dialog.FromDIP(10));
+    (defaultNo ? no : yes)->SetDefault();
+    dialog.SetSizerAndFit(contents);
+    dialog.CentreOnParent();
+    const bool convert = dialog.ShowModal() == wxID_OK;
+    warnLineEndings_ = always->GetValue();
+    if (convert) {
+        const auto selected = mode->GetSelection() == 0   ? Scintilla::EndOfLine::CrLf
+                              : mode->GetSelection() == 1 ? Scintilla::EndOfLine::Lf
+                                                          : Scintilla::EndOfLine::Cr;
+        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(selected));
+        editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(selected));
+    }
 }

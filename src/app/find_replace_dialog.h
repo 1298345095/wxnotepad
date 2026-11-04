@@ -17,6 +17,7 @@ public:
                       std::function<void(const FindResult&)> reportFind, std::function<void(wxKeyEvent&)> onKey,
                       int selectionOptions = 15);
     void Present(bool replace, int selectionOptions = 15, bool toggle = false);
+    ~FindReplaceDialog() override;
     void Find(SearchDirection direction);
 
 private:
@@ -30,6 +31,9 @@ private:
     wxCheckBox* regularExpression_;
     wxCheckBox* transformBackslashes_;
     wxCheckBox* wrapAround_;
+    wxCheckBox* bookmarkMatchedLines_;
+    wxButton* findAllButton_;
+    wxStaticText* findAllResult_;
     wxStaticText* replacementLabel_;
     wxButton* replaceButton_;
     wxButton* replaceAllButton_;
@@ -41,6 +45,8 @@ private:
     bool SeedQuery(bool firstTime);
     void UpdateButtons();
     void ConfigureSearch();
+    void FindAll();
+    void OnEditorState(wxCommandEvent& event);
     void ReplaceOne();
     void ReplaceAll(bool inSelection = false);
 };

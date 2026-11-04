@@ -3,6 +3,7 @@
 #include <wx/frame.h>
 #include "document/document_session.h"
 #include "search/search_session.h"
+#include "editor/indentation_settings.h"
 
 class EditorControl;
 class FindReplaceDialog;
@@ -30,10 +31,13 @@ public:
 private:
     EditorControl* editor_;
     SettingsStore* settings_;
+    OriginalSettings defaults_;
+    IndentationSettings indentation_;
     DocumentSession document_;
     int automaticLanguageId_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
+    bool warnLineEndings_ = true;
     void ReportFind(const FindResult& result);
     void ShowFind(bool replace = false);
     void FindNext();
@@ -45,5 +49,6 @@ private:
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
     GbkLossChoice ConfirmGbkLoss();
+    void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);
     bool SaveSettings(bool explicitSave);
 };

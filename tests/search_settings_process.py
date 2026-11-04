@@ -22,6 +22,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-find-settings-") as name:
     saved = config.read_text(encoding="utf-16")
     assert '01="next"' in saved and '01="replacement"' in saved, saved
     assert 'discarded draft' not in saved and 'FindReplaceFlag=8196' in saved, saved
+    assert 'FindReplaceOption=74' in saved, saved
     assert 'UnrelatedSetting=keep' in saved and '"older"' in saved, saved
     subprocess.run([str(executable), "restored"], env=environment, check=True, timeout=30)
     config.write_text(seed.replace('[Settings]', '[Settings]\nSaveSettings=0'), encoding="utf-16")

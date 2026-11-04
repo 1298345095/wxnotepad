@@ -35,6 +35,9 @@ public:
                 auto* wholeWord = wxDynamicCast(wxWindow::FindWindowByName("Whole word", frame), wxCheckBox);
                 auto* transform = wxDynamicCast(wxWindow::FindWindowByName("Transform backslashes", frame), wxCheckBox);
                 auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
+                auto* bookmark = wxDynamicCast(wxWindow::FindWindowByName("Bookmark matched line", frame), wxCheckBox);
+                Require(bookmark && bookmark->GetValue() == (mode == "restored"),
+                        "original FindReplaceOption bookmark bit must survive the shared settings lifecycle");
                 Require(query && query->GetValue() == (disabled   ? ""
                                                        : restored ? "next"
                                                                   : "stored"),
@@ -56,6 +59,7 @@ public:
                     NativeSearch::Click(dialog, wxID_FORWARD);
                     query->SetValue("discarded draft");
                     NativeSearch::Toggle(matchCase, false);
+                    if (mode == "change") NativeSearch::Toggle(bookmark, true);
                     NativeSearch::Click(dialog, wxID_CANCEL);
                     if (mode == "change") {
                         const int save = frame->GetMenuBar()->FindMenuItem("View", "Save Settings Now");

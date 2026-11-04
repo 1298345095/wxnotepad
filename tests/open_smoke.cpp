@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include "settings/settings_store.h"
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
@@ -28,7 +30,10 @@ std::string Text(EditorFrame* frame) {
 class OpenApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values.warnLineEndings = false;
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory =
                 std::filesystem::temp_directory_path() / ("wxnotepad-open-" + std::to_string(wxGetProcessId()));
@@ -106,7 +111,7 @@ public:
                         std::ofstream output(invalidPath, std::ios::binary);
                         output << "valid prefix\r\n" << suffix;
                     }
-                    const auto result = frame->Open(Filename(invalidPath));
+                    const auto result = frame->Open(Filename(invalidPath), FileEncoding::Utf8);
                     Require(result.status == OpenStatus::Failed && result.error.Contains("UTF-8"),
                             "malformed UTF-8 must report an explicit decoding error");
                     unchanged();
@@ -132,6 +137,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
