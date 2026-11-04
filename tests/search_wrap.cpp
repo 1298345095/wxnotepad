@@ -82,6 +82,8 @@ void SettingsCase(EditorFrame* frame, Feedback& feedback, const wxString& scenar
         Require(feedback.count == 1, "default suppression mode presents the wrap confirmation");
         NativeSearch::Selection(editor, 0, 3, "Cancel plus suppression keeps the match selected");
     } else {
+        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one"));
+        editor->Send(Message::SetSel, 4, 7);
         NativeSearch::Click(query->GetParent(), wxID_FORWARD);
         Require(feedback.count == 0, "loaded forward suppression accepts wrap without a dialog");
         NativeSearch::Selection(editor, 0, 3, "suppressed wrap finds the only match");
@@ -218,16 +220,21 @@ public:
                 NativeSearch::Click(query->GetParent(), wxID_FORWARD);
                 const int suppressedForward = feedback.count;
                 feedback.suppress = false;
+                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one"));
+                editor->Send(Message::SetSel, 4, 7);
                 NativeSearch::Click(query->GetParent(), wxID_FORWARD);
                 Require(feedback.count == suppressedForward,
                         "suppressed forward wrap automatically returns OK after Cancel");
+                NativeSearch::Selection(editor, 0, 3, "suppressed forward confirmation accepts the boundary crossing");
                 feedback.response = wxID_OK;
                 feedback.suppress = true;
                 NativeSearch::Click(query->GetParent(), wxID_BACKWARD);
                 const int suppressedBoth = feedback.count;
                 feedback.suppress = false;
+                editor->Send(Message::SetSel, 0, 3);
                 NativeSearch::Click(query->GetParent(), wxID_BACKWARD);
                 Require(feedback.count == suppressedBoth, "backward suppression is independent and accepts wrapping");
+                NativeSearch::Selection(editor, 4, 7, "suppressed backward confirmation accepts the boundary crossing");
                 std::puts("PASS: both directions, No Wrap, no match, only match and independent suppression");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one one"));
                 editor->Send(Message::SetSel, 5, 1);
