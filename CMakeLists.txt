@@ -205,6 +205,7 @@ if(BUILD_TESTING)
     add_editor_test(save_smoke save_existing 30)
     add_editor_test(save_native save_as_native 60)
     add_editor_test(search_smoke find_literal_next 30)
+    add_editor_test(search_wildcards original_wildcard_search 30)
     add_editor_test(search_seeding original_find_query_seeding 60)
     add_gui_program(search_settings tests/search_settings.cpp app_shell)
     add_test(NAME original_search_settings COMMAND "${Python3_EXECUTABLE}"

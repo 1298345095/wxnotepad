@@ -50,6 +50,11 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
     transformBackslashes_->SetName("Transform backslashes");
     transformBackslashes_->SetValue(request.options.transformBackslashes);
     layout->Add(transformBackslashes_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
+    wildcardSearch_ = new wxCheckBox(this, wxID_ANY, "&Wildcard search");
+    wildcardSearch_->SetName("Wildcard search");
+    wildcardSearch_->SetValue(request.options.wildcardSearch);
+    wildcardSearch_->SetToolTip("* matches zero or more characters; ? matches exactly one character.");
+    layout->Add(wildcardSearch_, 0, wxLEFT | wxRIGHT | wxTOP, 8);
     replacementLabel_ = new wxStaticText(this, wxID_ANY, "Replace &with:");
     layout->Add(replacementLabel_, 0, wxALL, 8);
     replacement_ = new wxTextCtrl(this, wxID_ANY, request.replacement, wxDefaultPosition, wxSize(320, -1), textStyle);
@@ -101,12 +106,19 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
         event.Skip();
     });
     regularExpression_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
-        if (regularExpression_->GetValue()) transformBackslashes_->SetValue(false);
+        if (regularExpression_->GetValue()) {
+            transformBackslashes_->SetValue(false);
+            wildcardSearch_->SetValue(false);
+        }
         wholeWord_->Enable(!regularExpression_->GetValue());
     });
     transformBackslashes_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
         if (transformBackslashes_->GetValue()) regularExpression_->SetValue(false);
         wholeWord_->Enable(!regularExpression_->GetValue());
+    });
+    wildcardSearch_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+        regularExpression_->SetValue(false);
+        wholeWord_->Enable();
     });
     bookmarkMatchedLines_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
         auto request = search_.Request();
@@ -183,6 +195,7 @@ void FindReplaceDialog::Present(bool replace, int selectionOptions, bool toggle)
         wholeWord_->SetValue(request.options.wholeWord);
         regularExpression_->SetValue(request.options.regularExpression);
         transformBackslashes_->SetValue(request.options.transformBackslashes);
+        wildcardSearch_->SetValue(request.options.wildcardSearch);
         wrapAround_->SetValue(request.wrapAround);
         bookmarkMatchedLines_->SetValue(request.bookmarkMatchedLines);
         wholeWord_->Enable(!request.options.regularExpression);
@@ -252,7 +265,7 @@ void FindReplaceDialog::ConfigureSearch() {
     request.query = query_->GetValue();
     if (replace_) request.replacement = replacement_->GetValue();
     request.options = {matchCase_->GetValue(), wholeWord_->GetValue(), regularExpression_->GetValue(),
-                       transformBackslashes_->GetValue()};
+                       transformBackslashes_->GetValue(), wildcardSearch_->GetValue()};
     request.wrapAround = wrapAround_->GetValue();
     request.bookmarkMatchedLines = bookmarkMatchedLines_->GetValue();
     search_.Configure(std::move(request));

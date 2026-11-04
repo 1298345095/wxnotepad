@@ -30,6 +30,7 @@ private:
     wxCheckBox* wholeWord_;
     wxCheckBox* regularExpression_;
     wxCheckBox* transformBackslashes_;
+    wxCheckBox* wildcardSearch_;
     wxCheckBox* wrapAround_;
     wxCheckBox* bookmarkMatchedLines_;
     wxButton* findAllButton_;
