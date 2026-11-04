@@ -1,6 +1,8 @@
 #include "native_search_helpers.h"
+#include "app/find_replace_dialog.h"
 #include <wx/textctrl.h>
 #include <wx/stattext.h>
+#include <memory>
 
 namespace {
 using Scintilla::Message;
@@ -11,14 +13,17 @@ void Require(bool condition, const char* message) {
 class WildcardApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad wildcard search");
+        auto* editor = new EditorControl(frame);
         frame->Show();
-        CallAfter([this, frame] {
+        CallAfter([this, frame, editor] {
             try {
-                auto* editor = frame->Editor();
+                SearchSession search(*editor);
+                auto dialog = std::make_unique<FindReplaceDialog>(
+                    frame, *editor, search, [](const FindResult&) {}, [](wxKeyEvent& event) { event.Skip(); }, 0);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("a.c abc a+c"));
                 editor->Send(Message::SetSel, 0, 0);
-                Command(frame, wxID_FIND);
+                dialog->Present(false, 0);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 auto* wildcard = wxDynamicCast(wxWindow::FindWindowByName("Wildcard search", frame), wxCheckBox);
                 Require(query && wildcard, "native Find exposes original wildcard search mode");
@@ -91,7 +96,7 @@ public:
                             editor->Send(Message::IndicatorValueAt, 8, 8) &&
                             (editor->Send(Message::MarkerGet, 0) & 1) && (editor->Send(Message::MarkerGet, 1) & 1),
                         "Find All shares wildcard matches, occurrence indicators and bookmarks");
-                Command(frame, wxID_REPLACE);
+                dialog->Present(true, 0);
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
                 Require(replacement, "Replace exposes replacement text");
                 replacement->SetValue("$0:\\0");

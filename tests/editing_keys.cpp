@@ -226,7 +226,8 @@ public:
                 NativeKey(editor, 'C', "ctrl+shift+c", true, true);
                 editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
                 NativeKey(editor, WXK_INSERT, "shift+Insert", false, true);
-                Require(Text(editor) == "line\r\nnextline\r\n", "Ctrl+Shift+C copies a whole original line");
+                Require(Text(editor) == "line\r\nline\r\nnext",
+                        "Ctrl+Shift+C preserves line-paste meaning at the destination line start");
                 Reset(editor, "first\r\nsecond", 2);
                 NativeKey(editor, 'X', "ctrl+shift+x", true, true);
                 Require(Text(editor) == "second", "Ctrl+Shift+X cuts a whole original line");

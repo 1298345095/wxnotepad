@@ -6,6 +6,7 @@
 #include <wx/string.h>
 #include <optional>
 #include <string>
+#include <vector>
 
 class EditorControl;
 class wxCommandEvent;
@@ -48,6 +49,12 @@ public:
     ~SearchSession();
     const SearchRequest& Request() const { return request_; }
     void Configure(SearchRequest request);
+    void RestoreHistory(std::vector<wxString> find, std::vector<wxString> replace, bool lastReplaceEmpty);
+    void Remember(bool replacement);
+    const std::vector<wxString>& RecentFind() const { return recentFind_; }
+    const std::vector<wxString>& RecentReplace() const { return recentReplace_; }
+    bool LastReplaceEmpty() const { return lastReplaceEmpty_; }
+    bool HasFindText() const { return hasFindText_; }
     FindResult Find(SearchDirection direction);
     FindAllResult FindAll();
     std::optional<size_t> MatchCount();
@@ -58,6 +65,12 @@ public:
 private:
     EditorControl& editor_;
     SearchRequest request_;
+    std::string QueryBytes() const;
+    std::string ReplacementBytes() const;
+    std::vector<wxString> recentFind_;
+    std::vector<wxString> recentReplace_;
+    bool lastReplaceEmpty_ = false;
+    bool hasFindText_ = false;
     std::optional<size_t> matchCount_;
     uint64_t markedRevision_ = 0;
     bool bookmarkForFindAll_ = false;
@@ -65,7 +78,6 @@ private:
     void OnEditorState(wxCommandEvent& event);
     Scintilla::FindOption SearchFlags() const;
     bool UsesRegex() const;
-    std::string QueryBytes() const;
     FindResult SelectTarget(bool wrapped);
     ReplaceAllResult ReplaceRange(bool inSelection);
 };

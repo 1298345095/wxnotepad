@@ -73,6 +73,11 @@ Edit → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
 Shift+F3 finds the previous match. Wrap around is enabled by default, while
 Match case, Whole word and Regular expression are initially off. Find and
 Replace share the query and options for the current application session.
+Opening imports selected text up to 1 MiB, or the clipboard under the original
+selection options; Replace then focuses replacement text for an imported
+selection. Closing discards unsubmitted edits. View's Save Find/Replace option
+enables original search-history/flag persistence through the shared
+[settings lifecycle](docs/settings.md).
 
 Find All counts and marks matches across the whole document, including folded
 content, while preserving the selection and folds. Bookmark matched line is off
@@ -100,6 +105,12 @@ matches. Forward assertions use target-local context; backward regex search is
 line by line. Replace All uses the original character/line progress and EOF
 stopping rules. See the [original regex behavior record](docs/observations/original-regex-README.md).
 Invalid patterns report an error without editing the document.
+
+Transform Backslashes converts literal Find/Replace input using the original
+control escapes, `\\`, raw-byte `\xHH` and Unicode `\uHHHH` forms. It starts off
+and selecting it clears Regular Expression. Literal replacements keep capture
+spellings such as `$1` and `\1` as text. See the
+[backslash transform behavior record](docs/observations/search-backslashes.md).
 
 File → New / Ctrl+N and Open / Ctrl+O replace the current document after any
 unsaved changes are saved or discarded. Close uses the same Save/Discard/Cancel

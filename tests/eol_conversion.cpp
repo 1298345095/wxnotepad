@@ -4,6 +4,8 @@
 #include <wx/statusbr.h>
 #include <filesystem>
 #include <fstream>
+#include "settings/settings_store.h"
+#include <memory>
 
 namespace {
 using Scintilla::Message;
@@ -171,7 +173,7 @@ void Files(EditorFrame* frame, const std::filesystem::path& directory) {
             "successful New must restore the existing CRLF default and status");
     std::puts("PASS: cancelled/failed file operations retain mode; New restores the original default");
 }
-void SearchInvalidation(EditorFrame* frame) {
+void SearchRevalidation(EditorFrame* frame) {
     auto* editor = frame->Editor();
     Load(editor, "a\r\nb\r\nc");
     editor->Send(Message::GotoPos, 0);
@@ -184,20 +186,26 @@ void SearchInvalidation(EditorFrame* frame) {
     Require(search.Find(SearchDirection::Forward).status == FindStatus::Found,
             "the real matcher must select an initial regex capture");
     Convert(frame, "LF");
-    Require(!search.ReplaceOne().changed && NativeSearch::Text(editor) == "a\nb\nc",
-            "conversion must invalidate a previously selected regex capture before Replace");
+    Require(NativeSearch::Text(editor) == "a\nb\nc", "conversion must normalize bytes before regex revalidation");
+    // Pinned EditReplace re-runs the matcher at the current selection. The
+    // selection still matches after EOL conversion, so Replace acts immediately.
     Require(search.ReplaceOne().changed && NativeSearch::Text(editor) == "a\n<b>\nc",
-            "a fresh match after conversion must replace using current capture bytes");
-    std::puts("PASS: text-changing conversion invalidates search captures and permits a fresh replacement");
+            "Replace after conversion must revalidate the current selection and refresh captures");
+    NativeSearch::Command(frame, wxID_UNDO);
+    Require(NativeSearch::Text(editor) == "a\nb\nc", "Undo must retain the separate converted EOL edit");
+    std::puts("PASS: conversion preserves exact EOL bytes and Replace revalidates selected captures");
 }
 class EolConversionApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values.warnLineEndings = false;
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory = std::filesystem::temp_directory_path() /
-                                   ("wxnotepad-eol-conversion-" + std::to_string(wxGetProcessId()));
+            const auto directory =
+                TestFiles::TemporaryDirectory() / ("wxnotepad-eol-conversion-" + std::to_string(wxGetProcessId()));
             try {
                 auto* editor = frame->Editor();
                 struct Mode {
@@ -245,7 +253,7 @@ public:
                 History(frame);
                 FoldedSelection(frame);
                 Files(frame, directory);
-                SearchInvalidation(frame);
+                SearchRevalidation(frame);
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 result_ = 1;
@@ -263,6 +271,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 0;
 };
 } // namespace

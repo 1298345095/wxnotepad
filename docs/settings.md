@@ -22,12 +22,67 @@ and store lifecycle. Save Settings Now and enabled exit saving persist AutoSelec
 in `[Styles]`; NoCGIGuess remains an original load-only flag, preserved in place.
 `NoAutoDetection` does not disable original shebang guessing.
 
+`FixLineEndings` and `FixTrailingBlanks` both default to `0`. Their original
+options are in Default Line Ending: Ensure consistent line endings when saving,
+then Strip trailing blanks when saving. A normal writable Save/Save As first
+normalizes to the current EOL mode, then removes only trailing spaces and tabs
+throughout the document, ignoring the selection. The operations retain the EOL
+mode, do not append a final newline and remain separate undo actions. Read-only
+documents bypass cleanup. A cancelled filename dialog or failed destination
+preparation does not edit text; cancellation at the encoding warning or a later
+write failure retains the cleanup edits and undo history. Safe replacement still
+protects existing destination bytes. The same settings lifecycle loads and saves
+both fields and omits their default values.
+
 `ZoomLevel` uses the original percentage default of `100`, clamped to `10` through
 `500` when loaded. Decimal prefixes (for example `175%`) follow the original
 integer parser. Zoom extends this same settings lifecycle: disabled exit saving
 retains the stored value, Save Settings Now writes the current value, and the
 default `100` is omitted. It scales the existing native point-size font through
 the original core and does not replace the base font size or DPI handling.
+
+Find/Replace extends this store with the original `[Settings]` fields:
+
+| Field | Built-in default | Behavior |
+| --- | --- | --- |
+| `SelectOption` | `15` | Bit `2` enables selection seeding; bit `4` enables clipboard fallback. Other bits are retained. |
+| `SaveFindReplace` | `0` | Loads/saves submitted query and replacement histories and packed search flags. |
+| `FindReplaceOption` | `2` | Original low option bits and upper dialog-behavior bits, including No Find Wrap. |
+| `FindReplaceFlag` | `0` | Original search flags and search-option bits; used only with SaveFindReplace enabled. |
+
+The View menu exposes Save Find/Replace, Copy Selection As Find Text and Copy
+Paste Buffer As Find Text. Submitted searches retain their query/options through
+New and Open. Closing the dialog discards unsubmitted edits; Ctrl+F/Ctrl+H switches
+retain edited text, restore submitted options, and apply original seeding again.
+Repeating the command for an already-open dialog retains its query control.
+The explicit Switch to Find/Replace link retains edited text without selection
+or clipboard seeding and focuses the query, including when switching to Replace.
+
+Selection seeding accepts at most 1 MiB of selected document bytes and preserves
+regex punctuation. Original `AddBackslashW` control escaping enables Transform
+Backslashes for a non-regex query; a plain backslash stays unchanged when no
+control character is present. A new dialog or Ctrl+F/Ctrl+H switch may use the
+clipboard only when no usable selected text was imported and its option is on.
+Clipboard line endings first follow the document's insertion EOL mode. Replace
+focuses the replacement field when selected text was imported; clipboard and
+stored-query fallback focus the query.
+
+`[Recent Find]` and `[Recent Replace]` retain original quoted, numbered entries,
+with exact comparison and at most 32 entries. A submitted nonempty value enters
+history only below 2048 UTF-16 code units. Empty replacement retains the original
+Last Replace Empty flag and suppresses replacement-history fallback. MRUs merge
+on application exit when SaveFindReplace is enabled, independently of SaveSettings;
+Save Settings Now writes flags/options but leaves MRU saving to that exit path.
+
+`LineSelection` restores the original four modes: `0` None, `1` Visual Studio
+(the built-in default), `2` Normal and `3` Old Visual Studio. It uses the original
+integer-prefix parser without an added range clamp. The Edit menu changes the
+same value, and Save Settings Now/enabled exit saving persist it while omitting
+the default. None keeps empty-selection Copy/Cut as no-ops. The enabled modes
+copy or cut the current line; Visual Studio modes tag it for insertion at the
+destination line start, while Normal publishes stream text. Cut keeps the
+expanded caret column on the next line, or the previous line in Old Visual
+Studio mode. Explicit Ctrl+Shift+C/X line commands use the same tag option.
 
 Save Settings On Exit is enabled by default. A disabled exit save writes only
 `SaveSettings=0`, retaining the previously stored view choices. Save Settings Now
@@ -37,7 +92,8 @@ use the original Unicode INI format (UTF-16LE with BOM); the reader also accepts
 existing text INI files through the platform text converter.
 
 Tab settings use this same store. `[Settings]` defaults are `TabWidth=4`,
-`IndentWidth=4`, `TabsAsSpaces=0`, `TabIndents=1`, and `BackspaceUnindents=2`.
+`IndentWidth=4`, `TabsAsSpaces=0`, `TabIndents=1`, `BackspaceUnindents=2`, and
+`DetectIndentation=1`.
 Tab widths range from 1 to 256; indentation widths range from 0 to 256, with 0
 using the tab width. Backspace's original bit 1 unindents the line; bit 2 deletes
 spaces to the previous indentation stop. Both choices are exposed in Tab Settings.
@@ -50,7 +106,8 @@ Tab Settings edits global, current scheme and current file settings. Scheme
 inheritance takes precedence over stored scheme widths; current file overrides
 take precedence over the effective scheme. The Tabs as Spaces command overrides
 only that file option, so later language changes still apply scheme widths.
-New and successful Open reset file overrides. Language changes, first Save and
+New resets file overrides. Successful Open initializes them from original file
+variables and indentation detection. Language changes, first Save and
 Save As apply the effective scheme while retaining file overrides. Preferences
 do not rewrite whitespace or change selection, modification state or Undo/Redo.
 Accepting Tab Settings immediately saves the current scheme section, as the
@@ -58,7 +115,31 @@ original dialog does, including when Save Settings On Exit is disabled. Global
 preferences still follow the normal explicit/exit save rule. Cancelling the
 dialog retains all prior values; disabling inheritance restores the values from
 before the dialog opened.
-Indentation detection and file-variable parsing are separate work.
+Detect Indentation is exposed in Tab Settings and follows the same global
+explicit/exit-save lifecycle. It applies on the next Open. The original first/last
+512-byte file-variable windows, case-sensitive names, Emacs boolean/numeric
+grammar, `enable-local-variables`, `NoFileVariables` and `NoEncodingTags` gates
+are shared with encoding detection. Supported tab variables are `tab-width`,
+`*basic-indent`/`*basic-offset`, `indent-tabs-mode` and `*tab-always-indent`.
+One width supplies the other. Any recognized beginning variable prevents tail
+fallback, including original non-tab variables and enabled encoding tags.
+
+A complete tab/indent width and tabs/spaces set bypasses detection. Otherwise
+the original detector samples up to 1 MiB, counts indentation deltas of 1–8 spaces
+and leading tabs, and corrects the alignment space before Javadoc stars. The
+lowest category wins ties; an ambiguous winner retains the original fallback.
+A space winner overrides both widths and tab choice, including partial variables;
+a tab winner overrides only the choice. Unset fields fall back to the effective
+global/scheme settings. Language switches preserve file overrides; unrelated
+Open and New do not inherit them. Detection changes neither text nor history.
+
+`[Settings] AutoIndent` defaults to `1` and follows the same explicit/exit save
+rules. View > Auto Indent toggles the option. Enter preserves the original
+leading whitespace and applies the pinned delimiter, colon and block-comment
+opener rules using the active file tab settings. These rules are shared by the
+delivered schemes; they do not add Python keyword completion or comment-prefix
+continuation. The port adapts `EditAutoC.cpp::EditAutoIndent` and the
+`Notepad4.cpp::SCN_CHARADDED` gate from the pinned original revision.
 
 Windows keeps the pinned original discovery rule: a resolved executable path beginning
 with `C:\Program Files`, or containing `WinGet` or `hocolatey`, uses
@@ -83,6 +164,25 @@ The behavior and field names come from pinned Notepad4 revision
 `IniSectionParser::GetBoolImpl` in `src/Helpers.cpp`. The portable parser adapts
 those rules without pulling Windows profile APIs into the editor runtime. The
 upstream license remains in `licenses/Notepad4.txt`.
+
+`DefaultEOLMode` defaults to `0` (CRLF); `1` selects LF and `2` selects CR.
+Values are clamped to that range, matching the original settings order, which
+differs from Scintilla's numeric EOL order. Open counts CRLF pairs separately
+from standalone CR and LF. It retains the configured default when that mode
+ties for the largest count, including files with no line endings. Otherwise it
+chooses the largest count, preferring CRLF and then LF on a tie.
+
+`WarnLineEndings` defaults to `1`. Mixed endings show the original counts,
+CRLF/LF/CR selector, Yes/No choices and Always Show preference after the file has
+opened. No retains the mixed bytes and loaded save point. Yes converts through
+the original core, retaining the selected insertion mode while making one
+undoable edit. Save writes the current bytes; it does not normalize them again.
+These fields use the same settings load/save lifecycle described above.
+
+The warning defaults to No for a newly loaded unknown language when the encoding
+detector classified the file as native ANSI. Recognized Plain Text and same-path
+reopens retain the original Yes default. The original actual-Diff-lexer branch
+remains outside the delivered language catalog.
 
 Encoding selection adds the original `[Settings]` fields `DefaultEncoding`
 (built-in UTF-8, omitted on Save), `SkipUnicodeDetection=1`, `LoadANSIasUTF8=1`,

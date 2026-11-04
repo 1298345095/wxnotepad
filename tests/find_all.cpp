@@ -61,9 +61,13 @@ public:
                 run();
                 Require((editor->Send(Message::MarkerGet, 0) & 1) && (editor->Send(Message::MarkerGet, 1) & 1),
                         "Find All bookmarks each matched line");
-                query->SetValue("absent");
+                query->SetValue("one ");
+                Require(marked(0) && result->GetLabel() == "3 matches",
+                        "editing the query retains submitted Find All state until a dialog action");
+                editor->Send(Message::GotoPos, 0);
+                Click(query->GetParent(), wxID_FORWARD);
                 Require(!marked(0) && result->GetLabel().empty() && (editor->Send(Message::MarkerGet, 0) & 1),
-                        "query change clears count and marks while retaining Find All bookmarks");
+                        "submitting a changed query clears count and marks while retaining Find All bookmarks");
                 Toggle(bookmark, false);
                 query->SetValue("one");
                 run();

@@ -8,6 +8,11 @@
 #include <wx/filedlg.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
+#include <wx/button.h>
+#include <wx/checkbox.h>
+#include <wx/choice.h>
+#include <wx/sizer.h>
+#include <wx/stattext.h>
 #include <wx/statusbr.h>
 #include <wx/combobox.h>
 #include <wx/dialog.h>
@@ -95,6 +100,25 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       search_(*editor_) {
     indentation_.Apply(*editor_, document_.Language());
     if (settings) {
+        document_.SetSaveCleanup({settings->values.fixLineEndings, settings->values.fixTrailingBlanks});
+        defaultEolMode_ = settings->values.defaultEOLMode;
+        SearchRequest request;
+        const int flags = settings->values.findReplaceFlag;
+        request.options.matchCase = (flags & 4) != 0;
+        request.options.wholeWord = (flags & 2) != 0;
+        request.options.regularExpression = (flags & 0x20) != 0;
+        request.options.transformBackslashes = (flags & (8 << 10)) != 0;
+        request.wrapAround = (settings->values.findReplaceOption & (4 << 4)) == 0;
+        request.bookmarkMatchedLines = (settings->values.findReplaceOption & 8) != 0;
+        search_.Configure(std::move(request));
+        search_.RestoreHistory(settings->values.recentFind, settings->values.recentReplace, (flags & (32 << 10)) != 0);
+        editor_->SetLineSelectionMode(static_cast<LineSelectionMode>(settings->values.lineSelection));
+        const auto mode = settings->values.defaultEOLMode == 0   ? Scintilla::EndOfLine::CrLf
+                          : settings->values.defaultEOLMode == 1 ? Scintilla::EndOfLine::Lf
+                                                                 : Scintilla::EndOfLine::Cr;
+        document_.SetDefaultEolMode(mode);
+        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
+        warnLineEndings_ = settings->values.warnLineEndings;
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
@@ -162,7 +186,21 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     addEol("CRLF", Scintilla::EndOfLine::CrLf);
     addEol("LF", Scintilla::EndOfLine::Lf);
     addEol("CR", Scintilla::EndOfLine::Cr);
+    const int lineEndingOptions = wxWindow::NewControlId();
+    edit->Append(lineEndingOptions, "Default Line Ending...");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowLineEndingOptions(); }, lineEndingOptions);
     auto* view = new wxMenu;
+    const int autoIndent = wxWindow::NewControlId();
+    view->AppendCheckItem(autoIndent, "Auto &Indent");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            preferences.autoIndent = !preferences.autoIndent;
+            editor_->SetAutoIndent(preferences.autoIndent);
+        },
+        autoIndent);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoIndentEnabled()); }, autoIndent);
     const int spaces = wxWindow::NewControlId();
     view->AppendCheckItem(spaces, "Tabs as &Spaces");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { indentation_.ToggleSpaces(*editor_, document_.Language()); }, spaces);
@@ -182,6 +220,18 @@ EditorFrame::EditorFrame(SettingsStore* settings)
             }
         },
         tabSettings);
+    auto* lineSelection = new wxMenu;
+    const char* lineModes[] = {"&None", "&Visual Studio", "&Normal", "&Old Visual Studio"};
+    for (int value = 0; value < 4; ++value) {
+        const auto mode = static_cast<LineSelectionMode>(value);
+        const int id = wxWindow::NewControlId();
+        lineSelection->AppendRadioItem(id, lineModes[value]);
+        Bind(wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->SetLineSelectionMode(mode); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) { event.Check(editor_->GetLineSelectionMode() == mode); }, id);
+    }
+    edit->AppendSubMenu(lineSelection, "Line Selection &Mode");
     auto* menus = new wxMenuBar;
     menus->Append(file, "&File");
     menus->Append(edit, "&Edit");
@@ -295,6 +345,24 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                                  this);
             },
             saveNow);
+        const int saveFind = wxWindow::NewControlId();
+        view->AppendCheckItem(saveFind, "Save Find/Replace");
+        Bind(
+            wxEVT_MENU,
+            [this](wxCommandEvent&) { settings_->values.saveFindReplace = !settings_->values.saveFindReplace; },
+            saveFind);
+        Bind(
+            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
+            saveFind);
+        for (const auto& [label, bit] :
+             {std::pair{"Copy Selection As Find Text", 2}, std::pair{"Copy Paste Buffer As Find Text", 4}}) {
+            const int id = wxWindow::NewControlId();
+            view->AppendCheckItem(id, label);
+            Bind(wxEVT_MENU, [this, bit](wxCommandEvent&) { settings_->values.selectOption ^= bit; }, id);
+            Bind(
+                wxEVT_UPDATE_UI,
+                [this, bit](wxUpdateUIEvent& event) { event.Check((settings_->values.selectOption & bit) != 0); }, id);
+        }
     }
     menus->Append(view, "&View");
     SetMenuBar(menus);
@@ -358,22 +426,17 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanRedo)); },
         wxID_REDO);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Copy); }, wxID_COPY);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Cut); }, wxID_CUT);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Copy(); }, wxID_COPY);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Cut(); }, wxID_CUT);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Paste); }, wxID_PASTE);
     Bind(
         wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) {
-            event.Enable(editor_->Send(Scintilla::Message::GetSelectionStart) !=
-                         editor_->Send(Scintilla::Message::GetSelectionEnd));
-        },
-        wxID_COPY);
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, wxID_COPY);
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) {
             event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
-                         editor_->Send(Scintilla::Message::GetSelectionStart) !=
-                             editor_->Send(Scintilla::Message::GetSelectionEnd));
+                         editor_->Send(Scintilla::Message::GetLength) != 0);
         },
         wxID_CUT);
     Bind(
@@ -397,16 +460,68 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    settings_->values.warnLineEndings = warnLineEndings_;
+    settings_->values.defaultEOLMode = defaultEolMode_;
+    settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
+    settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    const auto& request = search_.Request();
+    // Preserve settings bits owned by other original options while updating
+    // this dialog's implemented flags. Regex is SCFIND_REGEXP (0x20).
+    auto& flags = settings_->values.findReplaceFlag;
+    flags &= ~(4 | 2 | 0x20 | 0x40 | 0x80 | (8 << 10) | (32 << 10));
+    flags |=
+        (request.options.matchCase ? 4 : 0) | (request.options.wholeWord ? 2 : 0) |
+        (request.options.regularExpression ? (0x20 | ((settings_->values.findReplaceOption & 1) ? 0x80 : 0x40)) : 0) |
+        (request.options.transformBackslashes ? (8 << 10) : 0) | (search_.LastReplaceEmpty() ? (32 << 10) : 0);
+    settings_->values.findReplaceOption = (settings_->values.findReplaceOption & ~((4 << 4) | 8)) |
+                                          (request.wrapAround ? 0 : (4 << 4)) | (request.bookmarkMatchedLines ? 8 : 0);
+    settings_->values.recentFind = search_.RecentFind();
+    settings_->values.recentReplace = search_.RecentReplace();
+    settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
     return settings_->Save(explicitSave);
+}
+
+void EditorFrame::ShowLineEndingOptions() {
+    // Original Dialogs.cpp::SelectDefLineEndingDlgProc and IDD_DEFEOLMODE.
+    wxDialog dialog(this, wxID_ANY, "Line Endings");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Default line ending mode:"), 0, wxALL, dialog.FromDIP(10));
+    auto* mode = new wxChoice(&dialog, wxID_ANY);
+    mode->SetName("Default line ending mode");
+    mode->Append("Windows (CR+LF)");
+    mode->Append("Unix/macOS (LF)");
+    mode->Append("Classic Mac OS (CR)");
+    mode->SetSelection(defaultEolMode_);
+    contents->Add(mode, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    const auto option = [&](const char* label, bool value) {
+        auto* check = new wxCheckBox(&dialog, wxID_ANY, label);
+        check->SetValue(value);
+        contents->Add(check, 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
+        return check;
+    };
+    auto* warn = option("Show inconsistent line endings warning on loading.", warnLineEndings_);
+    auto* fix = option("&Ensure consistent line endings when saving.", document_.SaveCleanup().fixLineEndings);
+    auto* strip = option("&Strip trailing blanks when saving.", document_.SaveCleanup().fixTrailingBlanks);
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
+    dialog.SetSizerAndFit(contents);
+    dialog.CentreOnParent();
+    if (dialog.ShowModal() != wxID_OK) return;
+    defaultEolMode_ = mode->GetSelection();
+    const auto defaultMode = defaultEolMode_ == 0   ? Scintilla::EndOfLine::CrLf
+                             : defaultEolMode_ == 1 ? Scintilla::EndOfLine::Lf
+                                                    : Scintilla::EndOfLine::Cr;
+    document_.SetDefaultEolMode(defaultMode);
+    warnLineEndings_ = warn->GetValue();
+    document_.SetSaveCleanup({fix->GetValue(), strip->GetValue()});
 }
 
 void EditorFrame::ShowFind(bool replace) {
     if (!findDialog_)
         findDialog_ = new FindReplaceDialog(
             this, *editor_, search_, [this](const FindResult& result) { ReportFind(result); },
-            [this](wxKeyEvent& event) { OnSearchKey(event); });
-    findDialog_->Present(replace);
+            [this](wxKeyEvent& event) { OnSearchKey(event); }, settings_ ? settings_->values.selectOption : 15);
+    findDialog_->Present(replace, settings_ ? settings_->values.selectOption : 15);
 }
 
 void EditorFrame::OnSearchKey(wxKeyEvent& event) {
@@ -437,11 +552,11 @@ void EditorFrame::FindPrevious() {
 }
 
 void EditorFrame::Search(bool forward) {
-    if (!findDialog_) {
+    if (!search_.HasFindText()) {
         ShowFind();
         return;
     }
-    findDialog_->Find(forward ? SearchDirection::Forward : SearchDirection::Backward);
+    ReportFind(search_.Find(forward ? SearchDirection::Forward : SearchDirection::Backward));
 }
 
 void EditorFrame::ReportFind(const FindResult& result) {
@@ -539,7 +654,9 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
-        indentation_.Reset(*editor_, document_.Language());
+        indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+        if (result.lineEndings.Mixed() && warnLineEndings_)
+            ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
         UpdateWindowUI(wxUPDATE_UI_RECURSE);
     }
     UpdateDocumentState();
@@ -609,4 +726,46 @@ GbkLossChoice EditorFrame::ConfirmGbkLoss() {
         "by default placeholders when saving. It's recommended to choose another file encoding. Continue?",
         "GBK character loss", wxOK | wxCANCEL | wxICON_WARNING);
     return dialog.ShowModal() == wxID_OK ? GbkLossChoice::Replace : GbkLossChoice::Cancel;
+}
+
+void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo) {
+    wxDialog dialog(this, wxID_ANY, "Inconsistent Line Endings");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "The line endings in this file are not consistent:"), 0, wxALL,
+                  dialog.FromDIP(10));
+    contents->Add(new wxStaticText(&dialog, wxID_ANY,
+                                   wxString::Format("CR+LF: %llu line(s).\nLF: %llu line(s).\nCR: %llu line(s).",
+                                                    static_cast<unsigned long long>(counts.crlf),
+                                                    static_cast<unsigned long long>(counts.lf),
+                                                    static_cast<unsigned long long>(counts.cr))),
+                  0, wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Do you want to normalize the line endings?"), 0, wxALL,
+                  dialog.FromDIP(10));
+    const wxString names[] = {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)"};
+    auto* mode = new wxChoice(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize, 3, names);
+    mode->SetName("Line ending conversion");
+    const auto current = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
+    mode->SetSelection(current == Scintilla::EndOfLine::CrLf ? 0 : current == Scintilla::EndOfLine::Lf ? 1 : 2);
+    contents->Add(mode, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    auto* always = new wxCheckBox(&dialog, wxID_ANY, "&Always show this dialog.");
+    always->SetValue(warnLineEndings_);
+    contents->Add(always, 0, wxALL, dialog.FromDIP(10));
+    auto* buttons = new wxBoxSizer(wxHORIZONTAL);
+    auto* yes = new wxButton(&dialog, wxID_OK, "&Yes");
+    auto* no = new wxButton(&dialog, wxID_CANCEL, "&No");
+    buttons->Add(yes, 0, wxRIGHT, dialog.FromDIP(5));
+    buttons->Add(no);
+    contents->Add(buttons, 0, wxALIGN_RIGHT | wxALL, dialog.FromDIP(10));
+    (defaultNo ? no : yes)->SetDefault();
+    dialog.SetSizerAndFit(contents);
+    dialog.CentreOnParent();
+    const bool convert = dialog.ShowModal() == wxID_OK;
+    warnLineEndings_ = always->GetValue();
+    if (convert) {
+        const auto selected = mode->GetSelection() == 0   ? Scintilla::EndOfLine::CrLf
+                              : mode->GetSelection() == 1 ? Scintilla::EndOfLine::Lf
+                                                          : Scintilla::EndOfLine::Cr;
+        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(selected));
+        editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(selected));
+    }
 }

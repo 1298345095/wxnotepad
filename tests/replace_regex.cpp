@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <wx/checkbox.h>
 #include <wx/button.h>
@@ -12,6 +13,7 @@
 #include <vector>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <wx/statusbr.h>
 
 namespace {
@@ -27,7 +29,12 @@ using NativeSearch::Toggle;
 class RegexReplaceApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        // Mixed-EOL warning choices are covered by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        settings_->values.selectOption &= ~4;
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
             try {
@@ -40,13 +47,14 @@ public:
                 Require(query && replacement && regex, "native Replace menu must expose regex replacement controls");
                 auto* dialog = query->GetParent();
                 Toggle(regex, true);
-                Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled(), "single regex Replace must be enabled");
-                Require(dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(), "regex Replace All must be enabled");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文12 中文34"));
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
                 editor->Send(Message::GotoPos, 0);
                 query->SetValue(wxString::FromUTF8("(中文)([0-9]+)"));
+                Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled(), "nonempty regex Replace must be enabled");
+                Require(dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(),
+                        "nonempty regex Replace All must be enabled");
                 replacement->SetValue("$2:$1:$$:$&:$0:\\0");
                 NativeF3(query);
                 Selection(editor, 0, 8, "native F3 must confirm the first regex match");
@@ -285,6 +293,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
