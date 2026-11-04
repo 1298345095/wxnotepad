@@ -5,6 +5,7 @@
 #include <ScintillaTypes.h>
 #include <wx/string.h>
 #include <optional>
+#include <vector>
 
 class EditorControl;
 
@@ -40,6 +41,12 @@ public:
     explicit SearchSession(EditorControl& editor) : editor_(editor) {}
     const SearchRequest& Request() const { return request_; }
     void Configure(SearchRequest request);
+    void RestoreHistory(std::vector<wxString> find, std::vector<wxString> replace, bool lastReplaceEmpty);
+    void Remember(bool replacement);
+    const std::vector<wxString>& RecentFind() const { return recentFind_; }
+    const std::vector<wxString>& RecentReplace() const { return recentReplace_; }
+    bool LastReplaceEmpty() const { return lastReplaceEmpty_; }
+    bool HasFindText() const { return hasFindText_; }
     FindResult Find(SearchDirection direction);
     ReplaceOneResult ReplaceOne();
     ReplaceAllResult ReplaceAll();
@@ -48,6 +55,10 @@ public:
 private:
     EditorControl& editor_;
     SearchRequest request_;
+    std::vector<wxString> recentFind_;
+    std::vector<wxString> recentReplace_;
+    bool lastReplaceEmpty_ = false;
+    bool hasFindText_ = false;
     Scintilla::FindOption SearchFlags() const;
     FindResult SelectTarget(bool wrapped);
     ReplaceAllResult ReplaceRange(bool inSelection);

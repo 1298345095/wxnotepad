@@ -92,6 +92,15 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                                    : SyntaxDetectionOptions{}),
       search_(*editor_) {
     if (settings) {
+        SearchRequest request;
+        const int flags = settings->values.findReplaceFlag;
+        request.options.matchCase = (flags & 4) != 0;
+        request.options.wholeWord = (flags & 2) != 0;
+        request.options.regularExpression = (flags & 0x20) != 0;
+        request.options.transformBackslashes = (flags & (8 << 10)) != 0;
+        request.wrapAround = (settings->values.findReplaceOption & (4 << 4)) == 0;
+        search_.Configure(std::move(request));
+        search_.RestoreHistory(settings->values.recentFind, settings->values.recentReplace, (flags & (32 << 10)) != 0);
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
@@ -303,6 +312,24 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                                  this);
             },
             saveNow);
+        const int saveFind = wxWindow::NewControlId();
+        view->AppendCheckItem(saveFind, "Save Find/Replace");
+        Bind(
+            wxEVT_MENU,
+            [this](wxCommandEvent&) { settings_->values.saveFindReplace = !settings_->values.saveFindReplace; },
+            saveFind);
+        Bind(
+            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
+            saveFind);
+        for (const auto& [label, bit] :
+             {std::pair{"Copy Selection As Find Text", 2}, std::pair{"Copy Paste Buffer As Find Text", 4}}) {
+            const int id = wxWindow::NewControlId();
+            view->AppendCheckItem(id, label);
+            Bind(wxEVT_MENU, [this, bit](wxCommandEvent&) { settings_->values.selectOption ^= bit; }, id);
+            Bind(
+                wxEVT_UPDATE_UI,
+                [this, bit](wxUpdateUIEvent& event) { event.Check((settings_->values.selectOption & bit) != 0); }, id);
+        }
     }
     menus->Append(view, "&View");
     SetMenuBar(menus);
@@ -406,6 +433,19 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    const auto& request = search_.Request();
+    // Preserve settings bits owned by other original options while updating
+    // this dialog's implemented flags. Regex is SCFIND_REGEXP (0x20).
+    auto& flags = settings_->values.findReplaceFlag;
+    flags &= ~(4 | 2 | 0x20 | 0x40 | 0x80 | (8 << 10) | (32 << 10));
+    flags |=
+        (request.options.matchCase ? 4 : 0) | (request.options.wholeWord ? 2 : 0) |
+        (request.options.regularExpression ? (0x20 | ((settings_->values.findReplaceOption & 1) ? 0x80 : 0x40)) : 0) |
+        (request.options.transformBackslashes ? (8 << 10) : 0) | (search_.LastReplaceEmpty() ? (32 << 10) : 0);
+    settings_->values.findReplaceOption =
+        (settings_->values.findReplaceOption & ~(4 << 4)) | (request.wrapAround ? 0 : (4 << 4));
+    settings_->values.recentFind = search_.RecentFind();
+    settings_->values.recentReplace = search_.RecentReplace();
     return settings_->Save(explicitSave);
 }
 
@@ -413,8 +453,8 @@ void EditorFrame::ShowFind(bool replace) {
     if (!findDialog_)
         findDialog_ = new FindReplaceDialog(
             this, *editor_, search_, [this](const FindResult& result) { ReportFind(result); },
-            [this](wxKeyEvent& event) { OnSearchKey(event); });
-    findDialog_->Present(replace);
+            [this](wxKeyEvent& event) { OnSearchKey(event); }, settings_ ? settings_->values.selectOption : 15);
+    findDialog_->Present(replace, settings_ ? settings_->values.selectOption : 15);
 }
 
 void EditorFrame::OnSearchKey(wxKeyEvent& event) {
@@ -445,7 +485,7 @@ void EditorFrame::FindPrevious() {
 }
 
 void EditorFrame::Search(bool forward) {
-    if (search_.Request().query.empty()) {
+    if (!search_.HasFindText()) {
         ShowFind();
         return;
     }

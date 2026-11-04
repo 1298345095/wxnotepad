@@ -68,6 +68,14 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.autoSelect = ReadBool("AutoSelect", true, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", false, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
+    values.selectOption = ReadInt("SelectOption", 15);
+    values.saveFindReplace = ReadBool("SaveFindReplace", false);
+    values.findReplaceOption = ReadInt("FindReplaceOption", 2);
+    if (values.saveFindReplace) {
+        values.findReplaceFlag = ReadInt("FindReplaceFlag", 0);
+        values.recentFind = ReadHistory("Recent Find");
+        values.recentReplace = ReadHistory("Recent Replace");
+    }
 }
 
 void SettingsStore::LoadLines() {
@@ -138,6 +146,50 @@ void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback, co
     WriteInt(key, value, fallback, sectionName);
 }
 
+std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName) const {
+    std::vector<wxString> history;
+    bool section = false;
+    for (const auto& raw : lines_) {
+        wxString line = raw;
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            section = line.CmpNoCase("[" + sectionName + "]") == 0;
+        } else if (section && !line.StartsWith(";") && !line.StartsWith("#") && line.Contains('=')) {
+            wxString value = line.AfterFirst('=').Trim().Trim(false);
+            if (value.StartsWith("\"") && value.EndsWith("\"") && value.length() >= 2)
+                value = value.Mid(1, value.length() - 2);
+            if (!value.empty()) history.push_back(value);
+            if (history.size() == 32) break;
+        }
+    }
+    return history;
+}
+
+void SettingsStore::WriteHistory(const wxString& sectionName, const std::vector<wxString>& history) {
+    if (history.empty()) return;
+    auto merged = ReadHistory(sectionName);
+    for (auto item = history.rbegin(); item != history.rend(); ++item) {
+        std::erase(merged, *item);
+        merged.insert(merged.begin(), *item);
+    }
+    if (merged.size() > 32) merged.resize(32);
+    bool section = false;
+    for (size_t index = 0; index < lines_.size();) {
+        wxString line = lines_[index];
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            section = line.CmpNoCase("[" + sectionName + "]") == 0;
+        }
+        if (section)
+            lines_.erase(lines_.begin() + static_cast<std::ptrdiff_t>(index));
+        else
+            ++index;
+    }
+    lines_.push_back("[" + sectionName + "]");
+    for (size_t index = 0; index < merged.size(); ++index)
+        lines_.push_back(wxString::Format("%02zu=\"", index + 1) + merged[index] + "\"");
+}
+
 void SettingsStore::WriteInt(const wxString& key, int value, int fallback, const wxString& sectionName) {
     bool settings = false;
     bool foundSection = false;
@@ -177,6 +229,16 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
         WriteBool("AutoSelect", values.autoSelect, true, "Styles");
         WriteInt("ZoomLevel", values.zoomLevel, 100);
+        WriteInt("SelectOption", values.selectOption, 15);
+        WriteBool("SaveFindReplace", values.saveFindReplace, false);
+        WriteInt("FindReplaceOption", values.findReplaceOption, 2);
+        WriteInt("FindReplaceFlag", values.saveFindReplace ? values.findReplaceFlag : 0, 0);
+    }
+    // Original SaveAllSettings merges the MRUs on exit independently of
+    // SaveSettings. Save Settings Now writes flags but not MRU sections.
+    if (!explicitSave && values.saveFindReplace) {
+        WriteHistory("Recent Find", values.recentFind);
+        WriteHistory("Recent Replace", values.recentReplace);
     }
     wxString text(wxUniChar(0xFEFF));
     for (const auto& line : lines_)

@@ -1,10 +1,41 @@
 #include "search/search_session.h"
+#include "search/find_text.h"
 #include "editor/editor_control.h"
 #include <string>
 #include <utility>
+#include <algorithm>
 
 void SearchSession::Configure(SearchRequest request) {
     request_ = std::move(request);
+}
+
+void SearchSession::RestoreHistory(std::vector<wxString> find, std::vector<wxString> replace, bool lastReplaceEmpty) {
+    recentFind_ = std::move(find);
+    recentReplace_ = std::move(replace);
+    lastReplaceEmpty_ = lastReplaceEmpty;
+}
+
+void SearchSession::Remember(bool replacement) {
+    // Original SaveFindReplaceText/MRUList::Add: submitted nonempty values,
+    // fewer than 2048 UTF-16 code units, exact comparison, 32 entries.
+    const auto add = [](std::vector<wxString>& history, const wxString& text) {
+        size_t length = 0;
+        for (const auto ch : text)
+            length += ch.GetValue() > 0xffff ? 2 : 1;
+        if (text.empty() || length >= 2048) return;
+        const auto escaped = EscapeFindText(text).text;
+        std::erase(history, escaped);
+        history.insert(history.begin(), escaped);
+        if (history.size() > 32) history.resize(32);
+    };
+    if (!request_.query.empty()) {
+        hasFindText_ = true;
+        add(recentFind_, request_.query);
+        if (replacement) {
+            add(recentReplace_, request_.replacement);
+            lastReplaceEmpty_ = request_.replacement.empty();
+        }
+    }
 }
 
 FindResult SearchSession::Find(SearchDirection direction) {

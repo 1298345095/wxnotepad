@@ -29,6 +29,39 @@ retains the stored value, Save Settings Now writes the current value, and the
 default `100` is omitted. It scales the existing native point-size font through
 the original core and does not replace the base font size or DPI handling.
 
+Find/Replace extends this store with the original `[Settings]` fields:
+
+| Field | Built-in default | Behavior |
+| --- | --- | --- |
+| `SelectOption` | `15` | Bit `2` enables selection seeding; bit `4` enables clipboard fallback. Other bits are retained. |
+| `SaveFindReplace` | `0` | Loads/saves submitted query and replacement histories and packed search flags. |
+| `FindReplaceOption` | `2` | Original low option bits and upper dialog-behavior bits, including No Find Wrap. |
+| `FindReplaceFlag` | `0` | Original search flags and search-option bits; used only with SaveFindReplace enabled. |
+
+The View menu exposes Save Find/Replace, Copy Selection As Find Text and Copy
+Paste Buffer As Find Text. Submitted searches retain their query/options through
+New and Open. Closing the dialog discards unsubmitted edits; Ctrl+F/Ctrl+H switches
+retain edited text, restore submitted options, and apply original seeding again.
+Repeating the command for an already-open dialog retains its query control.
+The explicit Switch to Find/Replace link retains edited text without selection
+or clipboard seeding and focuses the query, including when switching to Replace.
+
+Selection seeding accepts at most 1 MiB of selected document bytes and preserves
+regex punctuation. Original `AddBackslashW` control escaping enables Transform
+Backslashes for a non-regex query; a plain backslash stays unchanged when no
+control character is present. A new dialog or Ctrl+F/Ctrl+H switch may use the
+clipboard only when no usable selected text was imported and its option is on.
+Clipboard line endings first follow the document's insertion EOL mode. Replace
+focuses the replacement field when selected text was imported; clipboard and
+stored-query fallback focus the query.
+
+`[Recent Find]` and `[Recent Replace]` retain original quoted, numbered entries,
+with exact comparison and at most 32 entries. A submitted nonempty value enters
+history only below 2048 UTF-16 code units. Empty replacement retains the original
+Last Replace Empty flag and suppresses replacement-history fallback. MRUs merge
+on application exit when SaveFindReplace is enabled, independently of SaveSettings;
+Save Settings Now writes flags/options but leaves MRU saving to that exit path.
+
 Save Settings On Exit is enabled by default. A disabled exit save writes only
 `SaveSettings=0`, retaining the previously stored view choices. Save Settings Now
 writes current choices even while exit saving is disabled. Default-valued fields

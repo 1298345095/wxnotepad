@@ -9,13 +9,14 @@ class wxStaticText;
 class wxButton;
 class wxCheckBox;
 class EditorControl;
+class wxHyperlinkCtrl;
 
 class FindReplaceDialog final : public wxDialog {
 public:
     FindReplaceDialog(wxWindow* parent, EditorControl& editor, SearchSession& search,
                       std::function<void(const FindResult&)> reportFind, std::function<void(wxKeyEvent&)> onKey,
                       int selectionOptions = 15);
-    void Present(bool replace);
+    void Present(bool replace, int selectionOptions = 15, bool toggle = false);
     void Find(SearchDirection direction);
 
 private:
@@ -34,9 +35,11 @@ private:
     wxButton* replaceAllButton_;
     wxButton* replaceSelectionButton_;
     wxStaticText* replacementResult_;
+    wxHyperlinkCtrl* modeLink_;
     bool replace_ = false;
     int selectionOptions_;
     bool SeedQuery(bool firstTime);
+    void UpdateButtons();
     void ConfigureSearch();
     void ReplaceOne();
     void ReplaceAll(bool inSelection = false);

@@ -73,6 +73,11 @@ Edit → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
 Shift+F3 finds the previous match. Wrap around is enabled by default, while
 Match case, Whole word and Regular expression are initially off. Find and
 Replace share the query and options for the current application session.
+Opening imports selected text up to 1 MiB, or the clipboard under the original
+selection options; Replace then focuses replacement text for an imported
+selection. Closing discards unsubmitted edits. View's Save Find/Replace option
+enables original search-history/flag persistence through the shared
+[settings lifecycle](docs/settings.md).
 
 Edit → Replace / Ctrl+H opens the replacement view. Replace revalidates the
 selected match before editing; Replace All searches the complete current
