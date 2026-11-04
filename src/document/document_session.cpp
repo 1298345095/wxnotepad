@@ -211,7 +211,8 @@ void DocumentSession::ApplySaveCleanup() {
 }
 
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding) {
+                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
+                                 const std::function<void()>& configureLoadedDocument) {
     if (!source) return {OpenStatus::Cancelled, {}};
     using Scintilla::Message;
     // Notepad4 FileLoad compares the supplied spelling before canonicalizing the
@@ -284,6 +285,9 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     const auto loaded = Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
     systemDefaultEncoding_ = systemDefault;
     fileVariables_ = std::move(variables);
+    // FileLoad applies the loaded file's indentation before restoring its view
+    // or resolving a saved visual column against the new tab width.
+    if (configureLoadedDocument) configureLoadedDocument();
     if (samePath) {
         editor_.Send(Message::SetSel, anchor, caret);
         // Original FileLoad (Notepad4 89b8b36): compare the saved one-based line
@@ -294,16 +298,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
             const auto position = line >= editor_.Send(Message::GetLineCount)
                                       ? editor_.Send(Message::GetLength)
                                       : editor_.Send(Message::FindColumn, line, column);
-            constexpr auto slop = static_cast<uintptr_t>(Scintilla::CaretPolicy::Slop);
-            constexpr auto strict = static_cast<uintptr_t>(Scintilla::CaretPolicy::Strict);
-            constexpr auto even = static_cast<uintptr_t>(Scintilla::CaretPolicy::Even);
-            editor_.Send(Message::SetXCaretPolicy, slop | strict | even, 50);
-            editor_.Send(Message::SetYCaretPolicy, slop | strict | even, 5);
-            editor_.Send(Message::EnsureVisibleEnforcePolicy, editor_.Send(Message::LineFromPosition, position));
-            editor_.Send(Message::GotoPos, position);
-            editor_.Send(Message::SetXCaretPolicy, slop | even, 50);
-            editor_.Send(Message::SetYCaretPolicy, even, 0);
-            editor_.Send(Message::ChooseCaretX);
+            editor_.JumpToPosition(position);
         } else {
             editor_.Send(Message::EnsureVisible, documentTop);
             editor_.Send(Message::LineScroll, 0, visibleTop - editor_.Send(Message::GetFirstVisibleLine));
@@ -316,6 +311,8 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
 OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
                                     bool keepLanguage) {
     const auto lineEndings = CountLineEndings(bytes);
+    const auto selectionHistory = editor_.Send(Scintilla::Message::GetUndoSelectionHistory);
+    editor_.Send(Scintilla::Message::SetUndoSelectionHistory, 0);
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
     editor_.Send(Scintilla::Message::ClearAll);
     editor_.Send(Scintilla::Message::MarkerDeleteAll, 0);
@@ -326,6 +323,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     editor_.Send(Scintilla::Message::GotoPos, 0);
     editor_.Send(Scintilla::Message::SetXOffset, 0);
     editor_.Send(Scintilla::Message::SetSavePoint);
+    editor_.Send(Scintilla::Message::SetUndoSelectionHistory, selectionHistory);
     path_ = path;
     encoding_ = encoding;
     hasBom_ = bom;

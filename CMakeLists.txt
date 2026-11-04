@@ -106,6 +106,14 @@ if(BUILD_TESTING)
     add_test(NAME original_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_settings_lifecycle PROPERTIES TIMEOUT 60)
+    add_gui_program(settings_read_failure tests/settings_read_failure.cpp app_shell)
+    add_test(NAME settings_read_failure_preserves_file COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_read_failure_process.py" "$<TARGET_FILE:settings_read_failure>")
+    set_tests_properties(settings_read_failure_preserves_file PROPERTIES TIMEOUT 30)
+    add_gui_program(selection_options tests/selection_options.cpp app_shell)
+    add_test(NAME original_selection_option_gates COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_options_process.py" "$<TARGET_FILE:selection_options>")
+    set_tests_properties(original_selection_option_gates PROPERTIES TIMEOUT 60)
     add_test(NAME original_shebang_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/shebang_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_shebang_settings PROPERTIES TIMEOUT 60)

@@ -45,19 +45,7 @@ GoToResult GoToLocation(EditorControl& editor, const wxString& line, const wxStr
         position = editor.Send(Message::FindColumnEx, static_cast<uintptr_t>(type), reinterpret_cast<intptr_t>(&range));
     }
 
-    // EditSelectEx reveals folded ancestors before moving and centers a target
-    // outside the viewport, then restores the original normal caret policies.
-    using Scintilla::CaretPolicy;
-    const auto even = static_cast<uintptr_t>(CaretPolicy::Even);
-    const auto slop = static_cast<uintptr_t>(CaretPolicy::Slop);
-    const auto strictPolicy = slop | static_cast<uintptr_t>(CaretPolicy::Strict) | even;
-    editor.Send(Message::SetXCaretPolicy, strictPolicy, 50);
-    editor.Send(Message::SetYCaretPolicy, strictPolicy, 5);
-    editor.Send(Message::EnsureVisibleEnforcePolicy, editor.Send(Message::LineFromPosition, position));
-    editor.Send(Message::GotoPos, position);
-    editor.Send(Message::SetXCaretPolicy, slop | even, 50);
-    editor.Send(Message::SetYCaretPolicy, even, 0);
-    editor.Send(Message::ChooseCaretX);
+    editor.JumpToPosition(position);
     return GoToResult::Moved;
 }
 

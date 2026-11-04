@@ -96,7 +96,8 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
-      editor_(new EditorControl(this)), settings_(settings), indentation_(settings ? settings->values : defaults_),
+      editor_(new EditorControl(this, settings ? settings->values.selectOption : OriginalSettings{}.selectOption)),
+      settings_(settings), indentation_(settings ? settings->values : defaults_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
                          : SyntaxDetectionOptions{}),
@@ -712,10 +713,10 @@ SaveResult EditorFrame::SaveAs() {
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
-    const auto result =
-        document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
+    const auto result = document_.Open(
+        source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding, std::nullopt,
+        [this] { indentation_.Load(*editor_, document_.Language(), document_.FileVariables()); });
     if (result.status == OpenStatus::Opened) {
-        indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
         if (result.lineEndings.Mixed() && warnLineEndings_)
             ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
         UpdateWindowUI(wxUPDATE_UI_RECURSE);

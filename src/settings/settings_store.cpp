@@ -105,22 +105,22 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     }
 }
 
-void SettingsStore::LoadLines() {
+bool SettingsStore::LoadLines() {
     lines_.clear();
     wxString text;
     if (wxFileExists(path_)) {
         wxFFile input(path_, "rb");
-        if (input.IsOpened()) {
-            std::string bytes(static_cast<size_t>(input.Length()), '\0');
-            if (input.Read(bytes.data(), bytes.size()) == bytes.size()) {
+        if (!input.IsOpened()) return false;
+        const auto length = input.Length();
+        if (length < 0) return false;
+        std::string bytes(static_cast<size_t>(length), '\0');
+        if (input.Read(bytes.data(), bytes.size()) != bytes.size() || input.Error() || !input.Close()) return false;
 #ifdef __WXMSW__
-                if (wxConvAuto::DetectBOM(bytes.data(), bytes.size()) == wxBOM_None)
-                    text = wxString(bytes.data(), wxConvLocal, bytes.size());
-                else
+        if (wxConvAuto::DetectBOM(bytes.data(), bytes.size()) == wxBOM_None)
+            text = wxString(bytes.data(), wxConvLocal, bytes.size());
+        else
 #endif
-                    text = wxString(bytes.data(), wxConvAuto(wxFONTENCODING_SYSTEM), bytes.size());
-            }
-        }
+            text = wxString(bytes.data(), wxConvAuto(wxFONTENCODING_SYSTEM), bytes.size());
     }
     wxStringTokenizer lines(text, "\n", wxTOKEN_RET_EMPTY_ALL);
     while (lines.HasMoreTokens()) {
@@ -129,6 +129,7 @@ void SettingsStore::LoadLines() {
         lines_.push_back(line);
     }
     if (!lines_.empty() && lines_.back().empty()) lines_.pop_back();
+    return true;
 }
 
 bool SettingsStore::ReadBool(const wxString& key, bool fallback, const wxString& sectionName) const {
@@ -248,7 +249,7 @@ bool SettingsStore::Save(bool explicitSave) {
     if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
     // Merge the implemented fields into the current file, retaining other fields
     // and sections, including settings added by subsequent parity slices.
-    LoadLines();
+    if (!LoadLines()) return false;
     WriteBool("SaveSettings", values.saveSettings, true);
     if (values.saveSettings || explicitSave) {
         WriteBool("WordWrap", values.wordWrap, true);
@@ -292,12 +293,12 @@ bool SettingsStore::Save(bool explicitSave) {
 }
 
 int SettingsStore::MessageSuppression(const wxString& key) {
-    LoadLines();
+    if (!LoadLines()) return 0;
     return ReadInt(key, 0, "Suppressed Messages");
 }
 
 bool SettingsStore::SuppressMessage(const wxString& key) {
-    LoadLines();
+    if (!LoadLines()) return false;
     WriteInt(key, 1, 0, "Suppressed Messages");
     return SaveLines();
 }
@@ -316,7 +317,7 @@ void SettingsStore::WriteSchemeTabs(size_t index) {
 
 bool SettingsStore::SaveSchemeTabs(SyntaxLanguage language) {
     if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
-    LoadLines();
+    if (!LoadLines()) return false;
     WriteSchemeTabs(static_cast<size_t>(language));
     return SaveLines();
 }

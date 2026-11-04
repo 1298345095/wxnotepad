@@ -55,7 +55,8 @@ public:
                       SaveFileType fileType = SaveType::CurrentScheme);
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt,
-                    std::optional<EncodingChoice> weakEncoding = std::nullopt);
+                    std::optional<EncodingChoice> weakEncoding = std::nullopt,
+                    const std::function<void()>& configureLoadedDocument = {});
     void New();
     SaveCleanupOptions SaveCleanup() const { return saveCleanup_; }
     void SetSaveCleanup(SaveCleanupOptions options) { saveCleanup_ = options; }
