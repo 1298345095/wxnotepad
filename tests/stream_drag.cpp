@@ -7,6 +7,7 @@
 #include <wx/process.h>
 #include <wx/stopwatch.h>
 #include <cstdio>
+#include <atomic>
 #include <stdexcept>
 #include <thread>
 #include <functional>
@@ -231,6 +232,7 @@ void Drag(wxFrame* frame, wxPoint from, wxPoint to, const wxString& modifier = {
         native(from);
         mouse(MOUSEEVENTF_LEFTDOWN);
         // Native input continues while the UI thread runs the OLE modal loop.
+        std::atomic<bool> released = false;
         std::jthread driver([&] {
             Sleep(150);
             native(from + wxPoint(10, 0));
@@ -248,9 +250,22 @@ void Drag(wxFrame* frame, wxPoint from, wxPoint to, const wxString& modifier = {
                 key(VK_ESCAPE, true);
             }
             mouse(MOUSEEVENTF_LEFTUP);
-            if (code) key(code, true);
+            released = true;
         });
-        Wait(pause + 1000);
+        do {
+            wxYield();
+            if (!released) wxMilliSleep(10);
+        } while (!released);
+        driver.join();
+        wxYield();
+        // OLE chooses the action from the modifier state at Drop, after it
+        // observes the button release. wxYield cannot return from the source's
+        // synchronous mouse handler until DoDragDrop exits. Drain the released
+        // input on this UI thread before releasing the modifier.
+        if (code) {
+            key(code, true);
+            wxYield();
+        }
     }
 #else
     else {
@@ -435,6 +450,8 @@ public:
                 std::puts("PASS: native stream move and one-step undo");
                 editor->Send(Message::SetSel, 0, 3);
                 Drag(frame, At(editor, 1), At(editor, 13), "ctrl");
+                if (Text(editor) != "one two threeone")
+                    std::fprintf(stderr, "Observed Ctrl drag text: <%s>\n", Text(editor).c_str());
                 Require(Text(editor) == "one two threeone", "Ctrl native drag must copy stream text");
                 editor->Send(Message::Undo);
                 Require(Text(editor) == "one two three", "copy must undo in one action");
