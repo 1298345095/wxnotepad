@@ -49,7 +49,16 @@ void SettingsCase(EditorFrame* frame, Feedback& feedback, const wxString& scenar
     Require(query, "Find must expose the query");
     query->SetValue("one");
     editor->Send(Message::SetSel, 0, 3);
-    if (scenario == "write") {
+    if (scenario == "nowrap") {
+        feedback.response = wxID_OK;
+        NativeSearch::Click(query->GetParent(), wxID_FORWARD);
+        Require(feedback.count == 1 && feedback.messages.back() == "MsgNotFound",
+                "original FindReplaceOption bit 64 disables forward wrap before native search");
+        NativeSearch::Click(query->GetParent(), wxID_BACKWARD);
+        Require(feedback.count == 2 && feedback.messages.back() == "MsgNotFound",
+                "original No Wrap disables backward wrap before native search");
+        NativeSearch::Selection(editor, 0, 3, "loaded No Wrap retains the only match selection");
+    } else if (scenario == "write") {
         feedback.suppress = true;
         NativeSearch::Click(query->GetParent(), wxID_FORWARD);
         Require(feedback.count == 1, "default suppression mode presents the wrap confirmation");
