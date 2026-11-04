@@ -163,6 +163,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     FileEncoding format;
     bool bom;
     bool systemDefault;
+    OriginalFileVariables variables;
     const auto read = [&]() -> OpenResult {
         if (!loadPath.FileExists()) return {OpenStatus::Failed, "Choose an existing file to open."};
         wxFile file(loadPath.GetFullPath(), wxFile::read);
@@ -177,6 +178,9 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         format = *detected.encoding;
         bom = detected.bom;
         systemDefault = detected.systemDefault;
+        if (format != FileEncoding::Utf16Le)
+            variables =
+                ReadOriginalFileVariables(bytes, encodingOptions_.noFileVariables, encodingOptions_.noEncodingTags);
         if (bom) bytes.erase(0, format == FileEncoding::Utf16Le ? 2 : 3);
         if (format == FileEncoding::Gbk) {
             const auto decoded = DecodeGbk(bytes);
@@ -187,6 +191,8 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
             auto decoded = DecodeUtf16Le(bytes);
             if (!decoded) return {OpenStatus::Failed, "The file is not valid UTF-16LE."};
             bytes = std::move(*decoded);
+            variables =
+                ReadOriginalFileVariables(bytes, encodingOptions_.noFileVariables, encodingOptions_.noEncodingTags);
         } else if (!IsUtf8(bytes))
             return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
         return {OpenStatus::Opened, {}};
@@ -203,6 +209,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     }
     const auto loaded = Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
     systemDefaultEncoding_ = systemDefault;
+    fileVariables_ = std::move(variables);
     if (samePath) {
         editor_.Send(Message::SetSel, anchor, caret);
         // Original FileLoad (Notepad4 89b8b36): compare the saved one-based line
@@ -260,6 +267,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
 void DocumentSession::New() {
     Replace({}, {}, FileEncoding::Utf8, false);
     systemDefaultEncoding_ = false;
+    fileVariables_ = {};
 }
 
 void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {

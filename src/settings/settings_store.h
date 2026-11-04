@@ -30,6 +30,7 @@ struct OriginalSettings {
     std::array<OriginalTabs, 4> schemeTabs{{{}, {}, {}, {2, 2, true, false}}};
     bool tabIndents = true;
     bool autoIndent = true;
+    bool detectIndentation = true;
     int backspaceUnindents = 2;
 };
 

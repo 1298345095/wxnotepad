@@ -45,6 +45,7 @@ add_library(editor_features STATIC
     src/editor/line_navigation.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
+    src/document/file_variables.cpp
     src/document/encoding/gbk_codec.cpp
     src/document/encoding/utf16_codec.cpp
     src/document/encoding/encoding_detection.cpp
@@ -111,6 +112,9 @@ if(BUILD_TESTING)
     add_test(NAME original_encoding_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/encoding_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_encoding_settings PROPERTIES TIMEOUT 60)
+    add_test(NAME original_indentation_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/indentation_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_indentation_settings PROPERTIES TIMEOUT 60)
     add_test(NAME original_zoom_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/zoom_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_zoom_preference PROPERTIES TIMEOUT 60)
@@ -185,6 +189,7 @@ if(BUILD_TESTING)
     add_editor_test(whitespace_view visible_whitespace 30)
     add_editor_test(indentation_options indentation_options 60)
     add_editor_test(autoindent original_newline_autoindent 60)
+    add_editor_test(file_indentation original_file_indentation 60)
     add_editor_test(fold_python python_fold_margin 60)
     add_editor_test(fold_json json_fold_margin 60)
     add_editor_test(eol_smoke loaded_eol_input 30)

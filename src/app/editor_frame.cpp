@@ -571,7 +571,7 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     const auto result =
         document_.Open(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
     if (result.status == OpenStatus::Opened) {
-        indentation_.Reset(*editor_, document_.Language());
+        indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
         if (result.lineEndings.Mixed() && warnLineEndings_)
             ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
         UpdateWindowUI(wxUPDATE_UI_RECURSE);
