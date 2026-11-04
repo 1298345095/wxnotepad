@@ -26,6 +26,8 @@ public:
     void ToggleWordWrap();
     void IndentLines(bool forwards);
     void SetIndentationWidths(int tabWidth, int indentWidth);
+    bool AutoIndentEnabled() const { return autoIndent_; }
+    void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     void Copy();
     void Cut();
     LineSelectionMode GetLineSelectionMode() const { return lineSelectionMode_; }
@@ -44,6 +46,8 @@ private:
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;
     bool lineNumberWidthDirty_ = true;
+    bool autoIndent_ = true;
+    void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     void UpdateLineNumberMargin();
     void OnPaint(wxPaintEvent& event);

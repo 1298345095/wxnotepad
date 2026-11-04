@@ -56,7 +56,8 @@ void ProcessObserver::Publish() {
         "handle\t%llu\nwrap_mode\t%lld\nwrap_rows\t%lld\nclient_width\t%d\nline_numbers\t%d\nwhitespace\t%lld\neol_"
         "mode\t%lld\nzoom\t%lld\n"
         "encoding\t%s\nbom\t%d\n"
-        "tab_width\t%lld\nindent_width\t%lld\nuse_tabs\t%lld\ntab_indents\t%lld\nbackspace_unindents\t%lld\n",
+        "tab_width\t%lld\nindent_width\t%lld\nuse_tabs\t%lld\ntab_indents\t%lld\nbackspace_unindents\t%lld\nauto_"
+        "indent\t%d\n",
         sequence_, result_, static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetLength)), lastDirty_,
         frame_->IsShown() && !frame_->IsIconized(), wxWindow::FindFocus() == frame_->Editor(), lastActive_, backend,
         static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->Editor()->GetHandle())),
@@ -70,7 +71,8 @@ void ProcessObserver::Publish() {
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetIndent)),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetUseTabs)),
         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetTabIndents)),
-        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetBackSpaceUnIndents))));
+        static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetBackSpaceUnIndents)),
+        frame_->Editor()->AutoIndentEnabled()));
     state.Write("document_status\t" + frame_->GetStatusBar()->GetStatusText() + "\n");
     state.Write(wxString::Format("line_selection\t%d\n", static_cast<int>(frame_->Editor()->GetLineSelectionMode())));
     state.Close();
