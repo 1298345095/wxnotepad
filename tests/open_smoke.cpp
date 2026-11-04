@@ -1,9 +1,12 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <wx/wx.h>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include "settings/settings_store.h"
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
@@ -28,10 +31,13 @@ std::string Text(EditorFrame* frame) {
 class OpenApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values.warnLineEndings = false;
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-open-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-open-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 const auto path = directory / u8"中文.txt";
@@ -132,6 +138,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace

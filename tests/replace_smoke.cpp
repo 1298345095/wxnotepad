@@ -77,6 +77,8 @@ public:
                 Require(dialog->GetTitle() == "Find" && !replacement->IsShown() && query->GetValue() == "one",
                         "Find must share the current query and hide replacement controls");
                 query->SetValue(wxString::FromUTF8("中文😀"));
+                editor->Send(Message::SetSel, editor->Send(Message::GetCurrentPos),
+                             editor->Send(Message::GetCurrentPos));
                 Command(frame, wxID_REPLACE);
                 Require(dialog->GetTitle() == "Replace" && query->GetValue() == wxString::FromUTF8("中文😀") &&
                             replacement->GetValue() == "$1\\tail",

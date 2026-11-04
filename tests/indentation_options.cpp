@@ -131,11 +131,11 @@ public:
                         "Save As preserves bytes and file overrides");
                 Check(editor, 8, 3, true);
                 Require(frame->Open(TestFiles::Filename(savedAs)).status == OpenStatus::Opened, "reopen succeeds");
-                Check(editor, 2, 2, true);
+                Check(editor, 1, 1, true);
                 Require(frame->Open(TestFiles::Filename(directory / "missing.py")).status == OpenStatus::Failed &&
                             frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled,
                         "failed and cancelled operations retain settings");
-                Check(editor, 2, 2, true);
+                Check(editor, 1, 1, true);
                 std::puts("PASS: per-scheme and file precedence, cancel, Open, first Save and Save As");
 
                 TabDialog::File(frame, 8, 3, true);

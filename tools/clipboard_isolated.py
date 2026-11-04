@@ -52,7 +52,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
     try:
         weston_window = None
         if backend == "wayland":
-            weston = subprocess.Popen(["weston", "--backend=x11", "--renderer=pixman",
+            weston = subprocess.Popen(["weston", "--debug", "--backend=x11", "--renderer=pixman",
                 "--no-config", "--socket=wxnotepad-issue12", "--idle-time=0",
                 "--width=1600", "--height=1000"], env=environment, stdout=log,
                 stderr=subprocess.STDOUT, start_new_session=True)
@@ -75,8 +75,86 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
         while test.poll() is None:
             focus = runtime / "focus"
             request = focus.read_text(encoding="utf-8") if focus.exists() else ""
-            if (request in ("editor", "peer", "gesture") or request.startswith(("key:", "focus:"))) and time.monotonic() - last_switch > .25:
-                if request.startswith("focus:"):
+            if (request in ("editor", "peer", "gesture") or request.startswith(("key:", "focus:", "drag:", "front:", "geometry:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+                def front(title):
+                    if backend == "x11":
+                        windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
+                        if not windows: raise RuntimeError("Owned drag window missing: " + title)
+                        xdo("windowraise", windows[0])
+                        xdo("windowfocus", "--sync", windows[0])
+                    else:
+                        xdo("key", "--clearmodifiers", "super+Tab")
+                    time.sleep(.3)
+                if request.startswith("geometry:"):
+                    focus.write_text("", encoding="utf-8")
+                    # Read only the two owned drag fixture surfaces. Wayland
+                    # clients cannot query their global compositor positions.
+                    mapping_deadline = time.monotonic() + 3
+                    while True:
+                        scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
+                                               capture_output=True, text=True, timeout=2, check=True).stdout
+                        positions = {name: (int(x), int(y)) for name, x, y in re.findall(
+                            r"top-level window 'wxnotepad stream drag (main|peer)'[^\n]*\n\s*position: \((-?\d+), (-?\d+)\)", scene)}
+                        if set(positions) == {"main", "peer"}: break
+                        if time.monotonic() > mapping_deadline:
+                            raise RuntimeError("Private compositor must map both owned drag surfaces")
+                        time.sleep(.05)
+                    response = Path(request[9:])
+                    pending = response.with_suffix(".tmp")
+                    pending.write_text(",".join(map(str, (*positions["main"], *positions["peer"]))), encoding="utf-8")
+                    pending.replace(response)
+                elif request.startswith("move-peer:"):
+                    x1, y1, x2, y2 = map(int, request[10:].split(","))
+                    geometry = xdo("getwindowgeometry", "--shell", weston_window)
+                    values = dict(line.split("=", 1) for line in geometry.splitlines())
+                    ox, oy = int(values["X"]), int(values["Y"])
+                    xdo("mousemove", str(x1 + ox), str(y1 + oy))
+                    xdo("keydown", "Super_L")
+                    xdo("mousedown", "1")
+                    time.sleep(.15)
+                    xdo("mousemove", str(x2 + ox), str(y2 + oy))
+                    time.sleep(.2)
+                    xdo("mouseup", "1")
+                    xdo("keyup", "Super_L")
+                    focus.write_text("", encoding="utf-8")
+                elif request.startswith("front:"):
+                    front(request[6:])
+                    focus.write_text("", encoding="utf-8")
+                elif request.startswith("drag:"):
+                    # A fullscreen owned fixture uses output-local coordinates
+                    # on both X11 and the nested Weston output.
+                    parts = request[5:].split(",")
+                    x1, y1, x2, y2, modifier, cancel, pause = parts[:7]
+                    switch = parts[7] if len(parts) > 7 else ""
+                    origin = (0, 0)
+                    if backend == "wayland":
+                        geometry = xdo("getwindowgeometry", "--shell", weston_window)
+                        values = dict(line.split("=", 1) for line in geometry.splitlines())
+                        origin = (int(values["X"]), int(values["Y"]))
+                    def move(x, y):
+                        xdo("mousemove", str(int(x) + origin[0]), str(int(y) + origin[1]))
+                    key = {"ctrl": "Control_L", "shift": "Shift_L"}.get(modifier)
+                    move(x1, y1)
+                    xdo("mousedown", "1")
+                    time.sleep(.15)
+                    move(int(x1) + 10, y1)
+                    time.sleep(.2)
+                    if key: xdo("keydown", key)
+                    if switch: front("wxnotepad stream drag " + switch)
+                    move(x2, y2)
+                    time.sleep(int(pause) / 1000)
+                    if int(cancel):
+                        xdo("key", "Escape")
+                        time.sleep(.3)
+                        if backend == "wayland":
+                            # Nested Weston withdraws keyboard focus throughout
+                            # DnD. Cancel through a native rejected drop instead.
+                            move(1500, 950)
+                            time.sleep(.2)
+                    xdo("mouseup", "1")
+                    if key: xdo("keyup", key)
+                    focus.write_text("", encoding="utf-8")
+                elif request.startswith("focus:"):
                     if backend == "x11":
                         windows = xdo("search", "--onlyvisible", "--name", request[6:]).splitlines()
                         if not windows: time.sleep(.03); continue

@@ -185,8 +185,10 @@ public:
                 Click(dialog, wxID_FORWARD);
                 Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
                         "restored literal Whole word must reject scatter");
-                Toggle(regex, true);
                 Command(frame, wxID_REPLACE);
+                // Original Ctrl+H seeds selection and restores committed flags.
+                query->SetValue("cat");
+                Toggle(regex, true);
                 Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled() &&
                             dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(),
                         "both regex replacement commands must be available");

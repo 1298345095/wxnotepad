@@ -34,6 +34,7 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/autoindent.cpp
     src/editor/editor_control.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
@@ -44,6 +45,7 @@ add_library(editor_features STATIC
     src/editor/line_navigation.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
+    src/document/file_variables.cpp
     src/document/encoding/gbk_codec.cpp
     src/document/encoding/utf16_codec.cpp
     src/document/encoding/encoding_detection.cpp
@@ -110,6 +112,9 @@ if(BUILD_TESTING)
     add_test(NAME original_encoding_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/encoding_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_encoding_settings PROPERTIES TIMEOUT 60)
+    add_test(NAME original_indentation_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/indentation_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_indentation_settings PROPERTIES TIMEOUT 60)
     add_test(NAME original_zoom_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/zoom_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_zoom_preference PROPERTIES TIMEOUT 60)
@@ -121,6 +126,10 @@ if(BUILD_TESTING)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+    add_editor_test(save_cleanup original_save_cleanup 60)
+    add_test(NAME original_cleanup_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/cleanup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_cleanup_settings PROPERTIES TIMEOUT 60)
 
     # This test reaches feature interfaces without linking the frame or its dialogs.
     add_gui_program(feature_sessions tests/feature_sessions.cpp editor_features)
@@ -142,11 +151,15 @@ if(BUILD_TESTING)
     set_tests_properties(original_current_line_clipboard PROPERTIES TIMEOUT 90 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=lines")
     add_dependencies(clipboard_smoke clipboard_peer)
     add_editor_test(gbk_smoke gbk_roundtrip 30)
+    add_editor_test(eol_open mixed_line_ending_open 30)
     add_editor_test(gbk_native gbk_native_choices 60)
     add_editor_test(utf16_smoke utf16_roundtrip 30)
     add_editor_test(encoding_auto automatic_encoding_decisions 30)
     add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
     add_editor_test(editor_smoke editor_input_undo 30)
+    add_gui_program(stream_drag tests/stream_drag.cpp editor_runtime)
+    add_test(NAME native_stream_drag COMMAND stream_drag)
+    set_tests_properties(native_stream_drag PROPERTIES TIMEOUT 90)
     add_editor_test(selection_modifiers selection_modifiers 60)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
@@ -182,6 +195,8 @@ if(BUILD_TESTING)
     add_editor_test(line_numbers line_number_view 60)
     add_editor_test(whitespace_view visible_whitespace 30)
     add_editor_test(indentation_options indentation_options 60)
+    add_editor_test(autoindent original_newline_autoindent 60)
+    add_editor_test(file_indentation original_file_indentation 60)
     add_editor_test(fold_python python_fold_margin 60)
     add_editor_test(fold_json json_fold_margin 60)
     add_editor_test(eol_smoke loaded_eol_input 30)
@@ -190,6 +205,11 @@ if(BUILD_TESTING)
     add_editor_test(save_smoke save_existing 30)
     add_editor_test(save_native save_as_native 60)
     add_editor_test(search_smoke find_literal_next 30)
+    add_editor_test(search_seeding original_find_query_seeding 60)
+    add_gui_program(search_settings tests/search_settings.cpp app_shell)
+    add_test(NAME original_search_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_settings_process.py" "$<TARGET_FILE:search_settings>")
+    set_tests_properties(original_search_settings PROPERTIES TIMEOUT 90)
     add_editor_test(find_all original_find_all 30)
     add_editor_test(search_options_smoke find_literal_options 30)
     add_editor_test(replace_smoke replace_literal_one 30)
@@ -208,4 +228,5 @@ if(BUILD_TESTING)
     add_editor_test(replace_regex replace_regular_expression 30)
     add_editor_test(replace_all_regex replace_all_regular_expression 30)
     add_editor_test(replace_selection replace_in_selection 30)
+    add_editor_test(search_backslashes original_search_backslashes 30)
 endif()

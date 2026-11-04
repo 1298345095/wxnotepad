@@ -68,6 +68,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
     values.autoSelect = ReadBool("AutoSelect", true, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", false, "Settings2");
+    values.fixLineEndings = ReadBool("FixLineEndings", false);
+    values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", false);
     values.encoding.defaultEncoding = NormalizeEncodingSetting(ReadInt("DefaultEncoding", -1));
     values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", true);
     values.encoding.loadANSIasUTF8 = ReadBool("LoadANSIasUTF8", true);
@@ -76,11 +78,23 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.noEncodingTags = ReadBool("NoEncodingTags", false);
     values.encoding.noFileVariables = ReadBool("NoFileVariables", false, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
+    values.selectOption = ReadInt("SelectOption", 15);
+    values.saveFindReplace = ReadBool("SaveFindReplace", false);
+    values.findReplaceOption = ReadInt("FindReplaceOption", 2);
+    if (values.saveFindReplace) {
+        values.findReplaceFlag = ReadInt("FindReplaceFlag", 0);
+        values.recentFind = ReadHistory("Recent Find");
+        values.recentReplace = ReadHistory("Recent Replace");
+    }
     values.lineSelection = ReadInt("LineSelection", 1);
+    values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", 0), 0, 2);
+    values.warnLineEndings = ReadBool("WarnLineEndings", true);
     values.globalTabs.tabWidth = std::clamp(ReadInt("TabWidth", 4), 1, 256);
     values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", 4), 0, 256);
     values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", false);
     values.tabIndents = ReadBool("TabIndents", true);
+    values.autoIndent = ReadBool("AutoIndent", true);
+    values.detectIndentation = ReadBool("DetectIndentation", true);
     values.backspaceUnindents = static_cast<uint8_t>(ReadInt("BackspaceUnindents", 2));
     for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
         auto& tabs = values.schemeTabs[index];
@@ -159,6 +173,50 @@ void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback, co
     WriteInt(key, value, fallback, sectionName);
 }
 
+std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName) const {
+    std::vector<wxString> history;
+    bool section = false;
+    for (const auto& raw : lines_) {
+        wxString line = raw;
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            section = line.CmpNoCase("[" + sectionName + "]") == 0;
+        } else if (section && !line.StartsWith(";") && !line.StartsWith("#") && line.Contains('=')) {
+            wxString value = line.AfterFirst('=').Trim().Trim(false);
+            if (value.StartsWith("\"") && value.EndsWith("\"") && value.length() >= 2)
+                value = value.Mid(1, value.length() - 2);
+            if (!value.empty()) history.push_back(value);
+            if (history.size() == 32) break;
+        }
+    }
+    return history;
+}
+
+void SettingsStore::WriteHistory(const wxString& sectionName, const std::vector<wxString>& history) {
+    if (history.empty()) return;
+    auto merged = ReadHistory(sectionName);
+    for (auto item = history.rbegin(); item != history.rend(); ++item) {
+        std::erase(merged, *item);
+        merged.insert(merged.begin(), *item);
+    }
+    if (merged.size() > 32) merged.resize(32);
+    bool section = false;
+    for (size_t index = 0; index < lines_.size();) {
+        wxString line = lines_[index];
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            section = line.CmpNoCase("[" + sectionName + "]") == 0;
+        }
+        if (section)
+            lines_.erase(lines_.begin() + static_cast<std::ptrdiff_t>(index));
+        else
+            ++index;
+    }
+    lines_.push_back("[" + sectionName + "]");
+    for (size_t index = 0; index < merged.size(); ++index)
+        lines_.push_back(wxString::Format("%02zu=\"", index + 1) + merged[index] + "\"");
+}
+
 void SettingsStore::WriteInt(const wxString& key, int value, int fallback, const wxString& sectionName) {
     bool settings = false;
     bool foundSection = false;
@@ -204,15 +262,31 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, true);
         WriteBool("NoEncodingTags", values.encoding.noEncodingTags, false);
         WriteInt("ZoomLevel", values.zoomLevel, 100);
+        WriteBool("FixLineEndings", values.fixLineEndings, false);
+        WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, false);
+        WriteInt("SelectOption", values.selectOption, 15);
+        WriteBool("SaveFindReplace", values.saveFindReplace, false);
+        WriteInt("FindReplaceOption", values.findReplaceOption, 2);
+        WriteInt("FindReplaceFlag", values.saveFindReplace ? values.findReplaceFlag : 0, 0);
         WriteInt("LineSelection", values.lineSelection, 1);
+        WriteInt("DefaultEOLMode", values.defaultEOLMode, 0);
+        WriteBool("WarnLineEndings", values.warnLineEndings, true);
         WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, false);
         WriteBool("TabIndents", values.tabIndents, true);
+        WriteBool("AutoIndent", values.autoIndent, true);
+        WriteBool("DetectIndentation", values.detectIndentation, true);
         WriteInt("TabWidth", values.globalTabs.tabWidth, 4);
         WriteInt("IndentWidth", values.globalTabs.indentWidth, 4);
         WriteInt("BackspaceUnindents", values.backspaceUnindents, 2);
         for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
             WriteSchemeTabs(index);
         }
+    }
+    // Original SaveAllSettings merges the MRUs on exit independently of
+    // SaveSettings. Save Settings Now writes flags but not MRU sections.
+    if (!explicitSave && values.saveFindReplace) {
+        WriteHistory("Recent Find", values.recentFind);
+        WriteHistory("Recent Replace", values.recentReplace);
     }
     return SaveLines();
 }

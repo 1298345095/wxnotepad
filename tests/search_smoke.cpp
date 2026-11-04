@@ -60,17 +60,17 @@ public:
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 Require(query && query->IsShownOnScreen(), "Find command must open a modeless query field");
+                auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
                 auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
                 Require(wrap, "Find must expose the Wrap around option");
                 wrap->SetValue(false);
                 query->SetValue("one");
-                Command(frame, wxID_FORWARD);
+                Click(dialog, wxID_FORWARD);
                 Selection(editor, 4, 7, "Find Next must select the next case-insensitive literal from the caret");
                 std::puts("PASS: Find dialog and forward literal search from caret");
                 NativeF3(query);
                 Require(editor->Send(Message::GetSelectionStart) == 8 && editor->Send(Message::GetSelectionEnd) == 11,
                         "F3 in the modeless dialog must advance from the current selection end");
-                auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
                 dialog->Close();
                 wxYield();
                 Require(!dialog->IsShown() && Focused(editor), "closing Find must restore editor focus");

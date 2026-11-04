@@ -1,8 +1,11 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <wx/wx.h>
 #include <filesystem>
 #include <fstream>
+#include "settings/settings_store.h"
+#include <memory>
 #include <cstdio>
 #include <stdexcept>
 
@@ -35,10 +38,13 @@ std::string Text(EditorFrame* frame) {
 class Utf16App final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values.warnLineEndings = false;
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-utf16-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-utf16-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";
@@ -127,6 +133,7 @@ public:
     int OnExit() override { return result_; }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace

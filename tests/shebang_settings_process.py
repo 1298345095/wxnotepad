@@ -33,7 +33,7 @@ def main():
             ("[Settings]\nAutoSelect=0\nNoCGIGuess=1\n", "Python"),
         )
         for settings, expected in cases:
-            config.write_text("[Settings]\nSaveSettings=0\n" + settings, encoding="utf-16")
+            config.write_text("[Settings]\nSaveSettings=0\nWarnLineEndings=0\n" + settings, encoding="utf-16")
             app = Application(executable, folder, environment, startup)
             try:
                 assert app.state["document_status"] == f"UTF-8 | {expected} | EOL: CRLF", app.state

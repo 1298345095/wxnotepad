@@ -6,6 +6,8 @@
 #include <wx/string.h>
 #include <optional>
 #include <functional>
+#include <string>
+#include <vector>
 
 class EditorControl;
 class wxCommandEvent;
@@ -50,6 +52,12 @@ public:
     void Configure(SearchRequest request);
     FindResult Find(SearchDirection direction, bool extendSelection = false);
     void SetWrapConfirmation(std::function<bool(SearchDirection)> confirm);
+    void RestoreHistory(std::vector<wxString> find, std::vector<wxString> replace, bool lastReplaceEmpty);
+    void Remember(bool replacement);
+    const std::vector<wxString>& RecentFind() const { return recentFind_; }
+    const std::vector<wxString>& RecentReplace() const { return recentReplace_; }
+    bool LastReplaceEmpty() const { return lastReplaceEmpty_; }
+    bool HasFindText() const { return hasFindText_; }
     FindAllResult FindAll();
     std::optional<size_t> MatchCount();
     ReplaceOneResult ReplaceOne();
@@ -59,6 +67,12 @@ public:
 private:
     EditorControl& editor_;
     SearchRequest request_;
+    std::string QueryBytes() const;
+    std::string ReplacementBytes() const;
+    std::vector<wxString> recentFind_;
+    std::vector<wxString> recentReplace_;
+    bool lastReplaceEmpty_ = false;
+    bool hasFindText_ = false;
     std::optional<size_t> matchCount_;
     uint64_t markedRevision_ = 0;
     bool bookmarkForFindAll_ = false;
