@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <thread>
 #include <functional>
+#include <string_view>
 #ifdef __WXMSW__
 #include <windows.h>
 #elif defined(__WXGTK__)
@@ -20,6 +21,12 @@
 namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
+}
+void PrintBytes(const char* name, std::string_view value) {
+    std::fprintf(stderr, "%s (%zu bytes):", name, value.size());
+    for (const unsigned char byte : value)
+        std::fprintf(stderr, " %02x", static_cast<unsigned int>(byte));
+    std::fputc('\n', stderr);
 }
 std::string Text(EditorControl* editor) {
     using Scintilla::Message;
@@ -84,6 +91,8 @@ public:
         g_signal_connect(GetConnectWidget(), "drag-begin",
                          G_CALLBACK(+[](GtkWidget*, GdkDragContext* context, gpointer value) {
                              auto& peer = *static_cast<NativePeer*>(value);
+                             ++peer.sourceAttempts_;
+                             peer.sourceStage_ = "begin";
                              peer.dragging_ = true;
                              peer.failed_ = false;
                              peer.deleted_ = false;
@@ -91,21 +100,26 @@ public:
                              peer.GetSelection(&peer.sourceStart_, &peer.sourceEnd_);
                              g_signal_connect(context, "drop-performed",
                                               G_CALLBACK(+[](GdkDragContext* context, guint, gpointer value) {
-                                                  static_cast<NativePeer*>(value)->operation_ =
-                                                      gdk_drag_context_get_selected_action(context);
+                                                  auto& peer = *static_cast<NativePeer*>(value);
+                                                  peer.operation_ = gdk_drag_context_get_selected_action(context);
+                                                  peer.sourceStage_ = "drop-performed";
                                               }),
                                               value);
                          }),
                          this);
         g_signal_connect(GetConnectWidget(), "drag-failed",
                          G_CALLBACK(+[](GtkWidget*, GdkDragContext*, GtkDragResult, gpointer value) -> gboolean {
-                             static_cast<NativePeer*>(value)->failed_ = true;
+                             auto& peer = *static_cast<NativePeer*>(value);
+                             peer.failed_ = true;
+                             peer.sourceStage_ = "failed";
                              return FALSE;
                          }),
                          this);
         g_signal_connect(GetConnectWidget(), "drag-data-delete",
                          G_CALLBACK(+[](GtkWidget*, GdkDragContext*, gpointer value) {
-                             static_cast<NativePeer*>(value)->deleted_ = true;
+                             auto& peer = *static_cast<NativePeer*>(value);
+                             peer.deleted_ = true;
+                             peer.sourceStage_ = "delete";
                          }),
                          this);
         g_signal_connect(GetConnectWidget(), "drag-end", G_CALLBACK(+[](GtkWidget*, GdkDragContext*, gpointer value) {
@@ -116,6 +130,7 @@ public:
                              if (!peer.failed_ && !peer.deleted_ && peer.operation_ == GDK_ACTION_MOVE)
                                  peer.Remove(peer.sourceStart_, peer.sourceEnd_);
                              peer.dragging_ = false;
+                             peer.sourceStage_ = "end";
                          }),
                          this);
 #else
@@ -132,6 +147,8 @@ public:
                 return;
             armed_ = false;
             dragging_ = true;
+            ++sourceAttempts_;
+            sourceStage_ = "begin";
             wxTextDataObject data(value);
             wxDropSource source(this);
             source.SetData(data);
@@ -139,6 +156,7 @@ public:
             if (result == wxDragMove) value.clear();
             if (changed) changed();
             dragging_ = false;
+            sourceStage_ = "end";
         });
 #endif
     }
@@ -146,6 +164,17 @@ public:
     wxDragResult result = wxDragNone;
     std::function<void()> changed;
     bool IsDragging() const { return dragging_; }
+    void PrintSourceState() const {
+        std::fprintf(stderr, "Peer source stage=%s attempts=%u dragging=%d", sourceStage_, sourceAttempts_, dragging_);
+#ifdef __WXGTK__
+        std::fprintf(stderr, " failed=%d deleted=%d native-action-mask=%u selection=%ld,%ld", failed_, deleted_,
+                     static_cast<unsigned int>(operation_), sourceStart_, sourceEnd_);
+#else
+        std::fprintf(stderr, " native-result=%d", static_cast<int>(result));
+#endif
+        const auto bounds = GetScreenRect();
+        std::fprintf(stderr, " screen-bounds=%d,%d,%d,%d\n", bounds.x, bounds.y, bounds.width, bounds.height);
+    }
     void WaitForSource() const {
         // Failed native GTK drags can animate after pointer release. Observe
         // completion before starting another transfer from the same control.
@@ -171,6 +200,8 @@ public:
 
 private:
     bool dragging_ = false;
+    unsigned int sourceAttempts_ = 0;
+    const char* sourceStage_ = "idle";
 #ifdef __WXGTK__
     bool failed_ = false;
     bool deleted_ = false;
@@ -245,10 +276,7 @@ void Drag(wxFrame* frame, wxPoint from, wxPoint to, const wxString& modifier = {
             }
             native(to);
             Sleep(pause);
-            if (cancel) {
-                key(VK_ESCAPE, false);
-                key(VK_ESCAPE, true);
-            }
+            if (cancel) key(VK_ESCAPE, false);
             mouse(MOUSEEVENTF_LEFTUP);
             released = true;
         });
@@ -264,6 +292,12 @@ void Drag(wxFrame* frame, wxPoint from, wxPoint to, const wxString& modifier = {
         // input on this UI thread before releasing the modifier.
         if (code) {
             key(code, true);
+            wxYield();
+        }
+        // Escape must also remain observable until QueryContinueDrag has
+        // cancelled the native loop, including across the peer process.
+        if (cancel) {
+            key(VK_ESCAPE, true);
             wxYield();
         }
     }
@@ -481,6 +515,12 @@ public:
                 peer->Assign(wxString::FromUTF8("中😀\nline"));
                 Drag(frame, wxPoint(810, 10), At(editor, 5));
                 peer->WaitForSource();
+                if (Text(editor) != "left 中😀\r\nlineright" || !peer->value.empty()) {
+                    peer->PrintSourceState();
+                    PrintBytes("Incoming peer target", Text(editor));
+                    PrintBytes("Incoming peer recorded source", peer->value.ToStdString(wxConvUTF8));
+                    PrintBytes("Incoming peer native source", peer->CurrentValue().ToStdString(wxConvUTF8));
+                }
                 Require(Text(editor) == "left 中😀\r\nlineright" && peer->value.empty(),
                         "native peer move must transfer Unicode and normalize multiline text");
                 editor->Send(Message::Undo);
@@ -586,7 +626,19 @@ public:
                 editor->Send(Message::SetSel, 0, 13);
                 Drag(frame, At(editor, 3) + editorOrigin, peerOrigin + wxPoint(100, 100), {}, true, 300,
                      wayland ? "" : "peer");
-                Require(Text(editor) == "中😀\r\nline tail" && independent.Value().empty() &&
+                const auto cancelledPeer = independent.Value();
+                if (Text(editor) != "中😀\r\nline tail" || !cancelledPeer.empty() || editor->Send(Message::CanUndo) ||
+                    editor->Send(Message::GetModify) || editor->Send(Message::GetSelectionStart) != 0 ||
+                    editor->Send(Message::GetSelectionEnd) != 13) {
+                    PrintBytes("Cancelled external drag source", Text(editor));
+                    PrintBytes("Cancelled external drag target", cancelledPeer.ToStdString(wxConvUTF8));
+                    std::fprintf(stderr, "Cancelled source undo=%lld modified=%lld selection=%lld,%lld\n",
+                                 static_cast<long long>(editor->Send(Message::CanUndo)),
+                                 static_cast<long long>(editor->Send(Message::GetModify)),
+                                 static_cast<long long>(editor->Send(Message::GetSelectionStart)),
+                                 static_cast<long long>(editor->Send(Message::GetSelectionEnd)));
+                }
+                Require(Text(editor) == "中😀\r\nline tail" && cancelledPeer.empty() &&
                             !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify) &&
                             editor->Send(Message::GetSelectionStart) == 0 &&
                             editor->Send(Message::GetSelectionEnd) == 13,
