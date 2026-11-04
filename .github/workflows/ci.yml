@@ -92,6 +92,8 @@ jobs:
             .ci/build/cmake/CMakeFiles/CMakeConfigureLog.yaml
             .ci/build/cmake/clipboard_smoke
             .ci/build/cmake/clipboard_peer
+            .ci/build/cmake/stream_drag
+            .ci/artifact/lib/
             .ci/build/original-core/wxnotepad-source.json
             .ci/build/notepad4-source.tar
             .ci/vcpkg/buildtrees/**/*.log
