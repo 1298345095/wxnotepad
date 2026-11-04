@@ -155,6 +155,50 @@ public:
                         "combined wildcard replacement transforms first and then uses original regex formatting");
                 editor->Send(Message::Undo);
                 Require(Text(editor) == ".A AA .B", "combined transform replacement undoes as one edit");
+                Toggle(regex, true);
+                Require(regex->GetValue() && !wildcard->GetValue() && !transform->GetValue(),
+                        "checking regex clears both wildcard and transform options");
+                Toggle(wildcard, true);
+                Require(!regex->GetValue() && !transform->GetValue(),
+                        "checking wildcard clears regex without enabling transform");
+                Toggle(transform, true);
+                Require(wildcard->GetValue() && transform->GetValue() && !regex->GetValue(),
+                        "checking transform retains wildcard mode");
+                load("中a文 中b文");
+                query->SetValue("\\u4e2d?\\u6587");
+                replacement->SetValue("\\u6587\\t$0");
+                next();
+                Selection(editor, 0, 7, "combined Unicode transform finds the first wildcard match");
+                next();
+                Selection(editor, 8, 15, "combined Find Next shares preparation");
+                Click(query->GetParent(), wxID_BACKWARD);
+                Selection(editor, 0, 7, "combined Previous shares preparation");
+                Click(query->GetParent(), wxID_REPLACE);
+                Require(Text(editor) == "文\t中a文 中b文", "combined Replace One transforms before capture formatting");
+                editor->Send(Message::Undo);
+                Require(Text(editor) == "中a文 中b文", "combined Replace One restores exact Unicode bytes");
+                editor->Send(Message::SetSel, 8, 15);
+                replacement->SetValue("\\u4e2d");
+                Click(query->GetParent(), inSelection->GetId());
+                Require(Text(editor) == "中a文 中",
+                        "combined selection replacement shares query and replacement preparation");
+                editor->Send(Message::Undo);
+                Require(Text(editor) == "中a文 中b文", "combined selection replacement undoes once");
+                dialog->Present(false, 0, true);
+                Require(wildcard->GetValue() && transform->GetValue(),
+                        "Find/Replace switch restores combined submitted options");
+                dialog->Present(true, 0, true);
+                load("abc a");
+                query->SetValue("a\\x00?c");
+                Click(query->GetParent(), findAll->GetId());
+                Require(count->GetLabel() == "2 matches",
+                        "original wildcard translation stops at a transformed NUL byte");
+                query->SetValue("\\x00a");
+                Click(query->GetParent(), findAll->GetId());
+                Require(search.Find(SearchDirection::Forward).status == FindStatus::EmptyQuery &&
+                            Text(editor) == "abc a",
+                        "a leading transformed NUL produces the original empty prepared wildcard query");
+                std::puts("PASS: native combined mode transitions, transformed Unicode operations and NUL truncation");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
