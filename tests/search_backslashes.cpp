@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
@@ -33,6 +34,7 @@ void Load(EditorControl& editor, const std::string& text) {
 class BackslashApp final : public wxApp {
 public:
     bool OnInit() override {
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
         auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad backslash transforms");
         auto* editor = new EditorControl(frame);
         frame->Show();
@@ -141,9 +143,10 @@ public:
                 std::puts("PASS: independent UTF-16LE disk bytes and UTF-8 search positions");
                 SearchSession nativeSearch(*editor);
                 FindResult nativeResult{FindStatus::NotFound};
-                auto* dialog = new FindReplaceDialog(
+                auto ownedDialog = std::make_unique<FindReplaceDialog>(
                     frame, *editor, nativeSearch, [&](const FindResult& result) { nativeResult = result; },
                     [](wxKeyEvent& event) { event.Skip(); }, 0);
+                auto* dialog = ownedDialog.get();
                 dialog->Present(false, 0);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", dialog), wxTextCtrl);
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", dialog), wxTextCtrl);
@@ -190,9 +193,10 @@ public:
                 editor->Send(Message::SetSel, 0, 7);
                 SearchSession seededSearch(*editor);
                 FindResult seededResult{FindStatus::NotFound};
-                auto* seededDialog = new FindReplaceDialog(
+                auto ownedSeededDialog = std::make_unique<FindReplaceDialog>(
                     frame, *editor, seededSearch, [&](const FindResult& result) { seededResult = result; },
                     [](wxKeyEvent& event) { event.Skip(); }, 2);
+                auto* seededDialog = ownedSeededDialog.get();
                 seededDialog->Present(false, 2);
                 auto* seededQuery = wxDynamicCast(wxWindow::FindWindowByName("Find query", seededDialog), wxTextCtrl);
                 auto* seededTransform =

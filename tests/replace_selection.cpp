@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "settings/settings_store.h"
 #include "native_search_helpers.h"
 #include <wx/wx.h>
 #include <wx/stattext.h>
@@ -6,6 +7,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 
 namespace {
 using Scintilla::Message;
@@ -57,7 +59,12 @@ public:
 class SelectionReplaceApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        // Mixed-EOL warning choices are covered by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        settings_->values.selectOption &= ~4;
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
             try {
@@ -247,6 +254,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
