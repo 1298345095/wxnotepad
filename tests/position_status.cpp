@@ -1,5 +1,6 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
+#include "settings/settings_store.h"
 #include "tab_settings_helpers.h"
 #include "native_fold_helpers.h"
 #include <wx/statusbr.h>
@@ -9,6 +10,7 @@
 #include <wx/filename.h>
 #include <cstdio>
 #include <stdexcept>
+#include <memory>
 
 namespace {
 using Scintilla::Message;
@@ -86,7 +88,11 @@ void Mouse(EditorControl* editor, intptr_t position, bool shift = false) {
 class PositionStatusApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        settings_->values.selectOption = 11; // Status actions submit their own query rather than reading the clipboard.
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
             try {
@@ -126,7 +132,8 @@ public:
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 Require(query, "Find must expose its native query input");
                 query->SetValue(wxString::FromUTF8("\xE4\xB8\xAD\xE6\x96\x87"));
-                NativeSearch::Command(frame, wxID_FORWARD);
+                NativeSearch::Click(query->GetParent(), wxID_FORWARD);
+                NativeSearch::Selection(editor, 4, 10, "native Find must select the expected UTF-8 byte range");
                 Status(frame, "Ln 2, Col 3 | Sel 2");
                 Require(frame->GetStatusBar()->GetStatusText().Contains("UTF-8") &&
                             frame->GetStatusBar()->GetFieldsCount() == 3 &&
@@ -290,6 +297,7 @@ public:
     int OnExit() override { return result_; }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace

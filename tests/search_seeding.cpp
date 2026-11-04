@@ -138,7 +138,12 @@ public:
                 NativeSearch::Click(dialog, wxID_CANCEL);
                 editor->Send(Message::SetSel, 0, 0);
                 if (!selectionOnly_) {
+                    ClipboardGesture(editor);
                     Require(wxTheClipboard->Open(), "test must own native clipboard");
+                    // wxMSW Clear() only removes data published by this process.
+                    // Own the fixture first so an earlier CI process cannot seed the dialog.
+                    Require(wxTheClipboard->SetData(new wxTextDataObject("owned query reset")),
+                            "test must publish its clipboard reset fixture");
                     wxTheClipboard->Clear();
                     wxTheClipboard->Close();
                 }

@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "settings/settings_store.h"
 #include "app/editor_frame.h"
 #include "native_search_helpers.h"
 #include <wx/wx.h>
@@ -8,6 +9,7 @@
 #include <wx/textctrl.h>
 #include <cstdio>
 #include <stdexcept>
+#include <memory>
 
 namespace {
 using NativeSearch::Command;
@@ -24,7 +26,11 @@ void Click(wxWindow* parent, int id) {
 class ReplaceApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        settings_->values.selectOption = 11; // Original defaults without clipboard query seeding.
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
             try {
@@ -63,6 +69,7 @@ public:
                 Require(Text(editor) == "$1\\tail ONE one" && editor->Send(Message::GetModify),
                         "Redo must restore the single replacement");
                 std::puts("PASS: native Replace selects first, replaces literally, advances and undoes once");
+                editor->Send(Message::SetSel, 8, 11);
                 dialog->Close();
                 wxYield();
                 wxKeyEvent replaceKey(wxEVT_CHAR_HOOK);
@@ -71,11 +78,16 @@ public:
                 replaceKey.SetEventObject(editor);
                 editor->GetEventHandler()->ProcessEvent(replaceKey);
                 wxYield();
-                Require(dialog->IsShown() && replacement->IsShown() && replacement->GetValue() == "$1\\tail",
-                        "Ctrl+H must reopen the retained modeless Replace view");
+                Require(dialog->IsShown() && replacement->IsShown() && replacement->GetValue() == "$1\\tail" &&
+                            query->GetValue() == "ONE",
+                        "Ctrl+H must import the selected query and retain replacement text");
                 Command(frame, wxID_FIND);
-                Require(dialog->GetTitle() == "Find" && !replacement->IsShown() && query->GetValue() == "one",
-                        "Find must share the current query and hide replacement controls");
+                Require(dialog->GetTitle() == "Find" && !replacement->IsShown() && query->GetValue() == "ONE",
+                        "Find must import the selected query and hide replacement controls");
+                Selection(editor, 8, 11, "opening and switching Find/Replace must retain the source byte selection");
+                Require(Text(editor) == "$1\\tail ONE one" && editor->Send(Message::GetModify) &&
+                            editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+                        "opening and switching Find/Replace must preserve bytes and replacement history");
                 query->SetValue(wxString::FromUTF8("中文😀"));
                 editor->Send(Message::SetSel, editor->Send(Message::GetCurrentPos),
                              editor->Send(Message::GetCurrentPos));
@@ -172,6 +184,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
