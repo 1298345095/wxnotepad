@@ -1,4 +1,6 @@
 #include "native_search_helpers.h"
+#include "settings/settings_store.h"
+#include <memory>
 #include "editor/line_navigation.h"
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -37,7 +39,12 @@ void Shortcut(wxWindow* window) {
 class LineNumbersApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        settings_->values.wordWrap = false;
+        // Mixed-EOL warning choices are covered by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             try {
@@ -207,7 +214,7 @@ public:
                             editor->Send(Message::GetMarginWidthN, 0) > 0,
                         "New must retain the shown choice and shrink to the empty document's digit count");
                 NativeSearch::Command(frame, command);
-                auto* fresh = new EditorFrame;
+                auto* fresh = new EditorFrame(settings_.get());
                 fresh->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 const int freshCommand = fresh->GetMenuBar()->FindMenuItem("View", "Line Numbers");
                 Require(fresh->GetMenuBar()->IsChecked(freshCommand) &&
@@ -231,6 +238,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
