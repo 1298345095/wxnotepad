@@ -260,14 +260,23 @@ FindAllResult SearchSession::FindAll() {
     return {FindStatus::Found, *matchCount_};
 }
 
-FindResult SearchSession::Find(SearchDirection direction) {
+void SearchSession::SetWrapConfirmation(std::function<bool(SearchDirection)> confirm) {
+    confirmWrap_ = std::move(confirm);
+}
+
+FindResult SearchSession::Find(SearchDirection direction, bool extendSelection) {
+    const auto start = editor_.Send(direction == SearchDirection::Forward ? Scintilla::Message::GetSelectionEnd
+                                                                          : Scintilla::Message::GetSelectionStart);
+    return FindFrom(start, direction, extendSelection);
+}
+
+FindResult SearchSession::FindFrom(intptr_t start, SearchDirection direction, bool extendSelection) {
     const bool forward = direction == SearchDirection::Forward;
     const auto query = QueryBytes();
     if (!query.length()) return {FindStatus::EmptyQuery};
     using Scintilla::Message;
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
-    const auto start = editor_.Send(forward ? Message::GetSelectionEnd : Message::GetSelectionStart);
     const auto length = editor_.Send(Message::GetLength);
     const auto search = [&](intptr_t from, intptr_t to) {
         editor_.Send(Message::SetTargetStart, from);
@@ -278,7 +287,8 @@ FindResult SearchSession::Find(SearchDirection direction) {
     // EditFindNext/EditFindPrev use the selection endpoint directly, even
     // after an empty match. Let the pinned matcher choose the backward path.
     bool found = search(start, forward ? length : 0);
-    if (!found && request_.wrapAround && (forward ? start > 0 : start < length)) {
+    if (!found && request_.wrapAround && !extendSelection && (forward ? start > 0 : start < length)) {
+        if (confirmWrap_ && !confirmWrap_(direction)) return {FindStatus::Cancelled};
         wrapped = true;
         found = search(forward ? 0 : length, forward ? length : 0);
     }
@@ -287,6 +297,15 @@ FindResult SearchSession::Find(SearchDirection direction) {
     }
     if (!found) {
         return {FindStatus::NotFound};
+    }
+    if (extendSelection) {
+        const auto anchor = editor_.Send(forward ? Message::GetSelectionStart : Message::GetSelectionEnd);
+        const auto end = editor_.Send(forward ? Message::GetTargetEnd : Message::GetTargetStart);
+        const auto result = SelectTarget(wrapped);
+        editor_.Send(Message::EnsureVisible, editor_.Send(Message::LineFromPosition, anchor));
+        editor_.Send(Message::SetSel, anchor, end);
+        editor_.Send(Message::ScrollCaret);
+        return result;
     }
     return SelectTarget(wrapped);
 }
@@ -327,18 +346,17 @@ ReplaceOneResult SearchSession::ReplaceOne() {
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
     editor_.Send(Message::SetTargetStart, start);
-    editor_.Send(Message::SetTargetEnd, UsesRegex() ? editor_.Send(Message::GetLength) : end);
-    // EditReplace re-runs the original forward matcher from selection start to
-    // document end, then uses those captures only if both endpoints match.
-    if (!UsesRegex() && start == end) return {false, Find(SearchDirection::Forward)};
+    editor_.Send(Message::SetTargetEnd, editor_.Send(Message::GetLength));
+    // Pinned Edit.cpp::EditReplace searches from selection start to document
+    // end before deciding whether to select a candidate or replace it.
     const auto found = editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data()));
-    if (UsesRegex() && found >= 0 && (found != start || editor_.Send(Message::GetTargetEnd) != end)) {
+    if (found >= 0 && (found != start || editor_.Send(Message::GetTargetEnd) != end)) {
         // EditReplace selects this candidate without replacing it; restarting
         // at selection end would skip matches within the original selection.
         return {false, SelectTarget(false)};
     }
     if (found != start || editor_.Send(Message::GetTargetEnd) != end) {
-        return {false, Find(SearchDirection::Forward)};
+        return {false, FindFrom(start, SearchDirection::Forward)};
     }
     // The original formatter reads the byte after a trailing dollar/backslash.
     const auto replacement = ReplacementBytes();

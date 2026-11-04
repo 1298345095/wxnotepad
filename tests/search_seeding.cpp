@@ -101,6 +101,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                NativeSearch::AcceptFeedback feedback;
                 using Scintilla::Message;
                 auto* editor = frame->Editor();
                 editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));

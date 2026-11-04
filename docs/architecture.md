@@ -140,7 +140,7 @@ The interface has a small set of operations:
 | Operation | Caller supplies | Caller receives |
 | --- | --- | --- |
 | Configure search | Query, replacement, options, wrap setting | Updated session; relevant match state invalidated |
-| Find | Direction | Found/no match/invalid pattern/empty query, matched byte range and wrap status |
+| Find | Direction and optional extended selection | Found/no match/invalid pattern/empty query/cancelled, matched byte range and wrap status |
 | Find all | Current configured search and bookmark option | Whole-document match count or error; original occurrence indicators and optional line bookmarks |
 | Replace one | Current configured search | Whether a replacement occurred and the following search outcome |
 | Replace all | Current configured search | Replacement count, whether bytes changed, or an error |
@@ -150,6 +150,13 @@ The module performs match selection and fold reveal as part of Find. Callers
 should not repeat the sequence of setting core targets, validating a match,
 expanding folds and scrolling the caret. Byte offsets remain UTF-8 offsets; GUI
 string indices do not become document positions.
+
+The frame supplies the native wrap-confirmation callback. The session invokes it
+only after the original directional boundary conditions are met; Cancel retains
+the selection/view and returns a distinct outcome without not-found feedback.
+Extended-selection searches never wrap. The frame owns native not-found messages
+and the original suppression choices; `SettingsStore` reads and immediately writes
+their `[Suppressed Messages]` fields.
 
 Find All uses the original forward matcher and `EditMarkAll` count/progress rules.
 Its indicator/count state is tied to the editor document revision and cleared on
@@ -172,7 +179,7 @@ outcome is presented as a native warning by the dialog.
 
 `FindReplaceDialog` owns its widgets and forwards requests to this same session.
 F3, Shift+F3, menu items and dialog buttons share the operations. The frame formats
-outcomes for the status bar; the dialog formats replacement counts. Do not build
+outcomes for the status bar and presents search feedback; the dialog formats replacement counts. Do not build
 a second search engine or copy the document into a searchable application model.
 
 ### DocumentSession as the document transition owner

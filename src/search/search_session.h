@@ -5,6 +5,7 @@
 #include <ScintillaTypes.h>
 #include <wx/string.h>
 #include <optional>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -20,7 +21,7 @@ struct SearchRequest {
 };
 
 enum class SearchDirection : uint8_t { Forward, Backward };
-enum class FindStatus : uint8_t { Found, NotFound, InvalidPattern, EmptyQuery };
+enum class FindStatus : uint8_t { Found, NotFound, InvalidPattern, EmptyQuery, Cancelled };
 struct FindResult {
     FindStatus status;
     bool wrapped = false;
@@ -49,13 +50,14 @@ public:
     ~SearchSession();
     const SearchRequest& Request() const { return request_; }
     void Configure(SearchRequest request);
+    FindResult Find(SearchDirection direction, bool extendSelection = false);
+    void SetWrapConfirmation(std::function<bool(SearchDirection)> confirm);
     void RestoreHistory(std::vector<wxString> find, std::vector<wxString> replace, bool lastReplaceEmpty);
     void Remember(bool replacement);
     const std::vector<wxString>& RecentFind() const { return recentFind_; }
     const std::vector<wxString>& RecentReplace() const { return recentReplace_; }
     bool LastReplaceEmpty() const { return lastReplaceEmpty_; }
     bool HasFindText() const { return hasFindText_; }
-    FindResult Find(SearchDirection direction);
     FindAllResult FindAll();
     std::optional<size_t> MatchCount();
     ReplaceOneResult ReplaceOne();
@@ -74,10 +76,12 @@ private:
     std::optional<size_t> matchCount_;
     uint64_t markedRevision_ = 0;
     bool bookmarkForFindAll_ = false;
+    std::function<bool(SearchDirection)> confirmWrap_;
     void ClearFindAll();
     void OnEditorState(wxCommandEvent& event);
     Scintilla::FindOption SearchFlags() const;
     bool UsesRegex() const;
     FindResult SelectTarget(bool wrapped);
+    FindResult FindFrom(intptr_t start, SearchDirection direction, bool extendSelection = false);
     ReplaceAllResult ReplaceRange(bool inSelection);
 };

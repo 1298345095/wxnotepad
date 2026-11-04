@@ -1,6 +1,7 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "native_search_helpers.h"
+#include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
@@ -12,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <memory>
 
 namespace {
 using NativeSearch::Command;
@@ -40,10 +42,16 @@ wxString Filename(const std::filesystem::path& path) {
 class ReplaceAllApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        // Mixed-EOL warning choices are covered by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        settings_->values.selectOption &= ~4;
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
             try {
+                NativeSearch::AcceptFeedback feedback;
                 using Scintilla::Message;
                 auto* editor = frame->Editor();
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one ONE one"));
@@ -195,6 +203,7 @@ public:
 
 private:
     int result_ = 1;
+    std::unique_ptr<SettingsStore> settings_;
 };
 } // namespace
 wxIMPLEMENT_APP(ReplaceAllApp);

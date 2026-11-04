@@ -55,6 +55,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                NativeSearch::AcceptFeedback feedback;
                 using Scintilla::Message;
                 auto* editor = frame->Editor();
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("oneone one"));

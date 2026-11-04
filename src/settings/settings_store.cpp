@@ -291,6 +291,17 @@ bool SettingsStore::Save(bool explicitSave) {
     return SaveLines();
 }
 
+int SettingsStore::MessageSuppression(const wxString& key) {
+    LoadLines();
+    return ReadInt(key, 0, "Suppressed Messages");
+}
+
+bool SettingsStore::SuppressMessage(const wxString& key) {
+    LoadLines();
+    WriteInt(key, 1, 0, "Suppressed Messages");
+    return SaveLines();
+}
+
 void SettingsStore::WriteSchemeTabs(size_t index) {
     const auto& tabs = values.schemeTabs[index];
     const auto fallback = OriginalSettings{}.schemeTabs[index];

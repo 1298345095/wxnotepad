@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wx/frame.h>
+#include <array>
 #include "document/document_session.h"
 #include "search/search_session.h"
 #include "editor/indentation_settings.h"
@@ -41,10 +42,13 @@ private:
     bool warnLineEndings_ = true;
     void ShowLineEndingOptions();
     void ReportFind(const FindResult& result);
+    bool SearchMessage(SearchDirection direction);
+    bool ShowSearchMessage(const wxString& key, const wxString& message, bool confirm);
+    std::array<int, 3> suppressedSearchMessages_{};
     void ShowFind(bool replace = false);
     void FindNext();
     void FindPrevious();
-    void Search(bool forward);
+    void Search(bool forward, bool extendSelection = false);
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     void UpdatePositionStatus();

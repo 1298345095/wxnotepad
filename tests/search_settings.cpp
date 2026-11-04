@@ -21,6 +21,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                NativeSearch::AcceptFeedback feedback;
                 const wxString mode = argc > 1 ? wxString(argv[1]) : wxString("change");
                 const bool restored = mode.StartsWith("restored");
                 const bool disabled = mode == "disabled";

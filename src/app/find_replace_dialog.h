@@ -18,7 +18,7 @@ public:
                       int selectionOptions = 15);
     void Present(bool replace, int selectionOptions = 15, bool toggle = false);
     ~FindReplaceDialog() override;
-    void Find(SearchDirection direction);
+    void Find(SearchDirection direction, bool extendSelection = false);
 
 private:
     EditorControl& editor_;
