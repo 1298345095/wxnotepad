@@ -41,12 +41,13 @@ public:
                 Require(query && replacement && regex, "native Replace menu exposes regex controls");
                 auto* dialog = query->GetParent();
                 Toggle(regex, true);
-                Require(dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(), "regex Replace All must be enabled");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文12 中文34"));
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
                 editor->Send(Message::SetSel, 17, 0);
                 query->SetValue(wxString::FromUTF8("(中文)([0-9]+)"));
+                Require(dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(),
+                        "nonempty regex Replace All must be enabled");
                 replacement->SetValue("$2-$1");
                 editor->Send(Message::GotoPos, 0);
                 NativeF3(query);
@@ -149,7 +150,7 @@ public:
                 unchanged("(.)", "$&", "4 replacements");
                 unchanged("(?=中)", "", "1 replacements");
                 unchanged("[", "X", "Invalid regular expression");
-                unchanged("", "X", "0 replacements");
+                unchanged("", "X", "Invalid regular expression");
                 unchanged("a", "$0", "1 replacements");
                 Require(frame->New(), "New must use the live document after no-op replacements");
                 query->SetValue("[");

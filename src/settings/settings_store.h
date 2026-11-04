@@ -25,6 +25,12 @@ struct OriginalSettings {
     bool fixTrailingBlanks = false;
     EncodingOptions encoding;
     int zoomLevel = 100;
+    int selectOption = 15;
+    bool saveFindReplace = false;
+    int findReplaceOption = 2;
+    int findReplaceFlag = 0;
+    std::vector<wxString> recentFind;
+    std::vector<wxString> recentReplace;
     int lineSelection = 1;
     int defaultEOLMode = 0;
     bool warnLineEndings = true;
@@ -50,6 +56,8 @@ private:
     void LoadLines();
     bool ReadBool(const wxString& key, bool fallback, const wxString& sectionName = "Settings") const;
     int ReadInt(const wxString& key, int fallback, const wxString& sectionName = "Settings") const;
+    std::vector<wxString> ReadHistory(const wxString& sectionName) const;
+    void WriteHistory(const wxString& sectionName, const std::vector<wxString>& history);
     void WriteBool(const wxString& key, bool value, bool fallback, const wxString& sectionName = "Settings");
     void WriteInt(const wxString& key, int value, int fallback, const wxString& sectionName = "Settings");
     void WriteSchemeTabs(size_t index);

@@ -37,7 +37,7 @@ void ShiftF3(wxWindow* window) {
     SetKeyboardState(previous);
     Require(handled, "the native owned window must translate Shift+F3");
 #elif defined(__WXGTK__)
-    auto* widget = GTK_WIDGET(window->GetHandle());
+    auto* widget = window->GetConnectWidget();
     auto* event = gdk_event_new(GDK_KEY_PRESS);
     event->key.window = static_cast<GdkWindow*>(g_object_ref(gtk_widget_get_window(widget)));
     event->key.send_event = TRUE;
@@ -62,29 +62,29 @@ public:
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 Require(query, "Find must expose the query");
+                auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
                 query->SetValue("one");
-                Command(frame, wxID_BACKWARD);
+                Click(dialog, wxID_BACKWARD);
                 Selection(editor, 7, 10, "Previous from document end must select the last match");
-                Command(frame, wxID_BACKWARD);
+                Click(dialog, wxID_BACKWARD);
                 Selection(editor, 3, 6, "Previous must advance before the selected match");
-                Command(frame, wxID_BACKWARD);
+                Click(dialog, wxID_BACKWARD);
                 Selection(editor, 0, 3, "Previous must include an adjacent match at the start");
-                std::puts("PASS: native previous menu, adjacent matches and document start");
+                std::puts("PASS: native previous action, adjacent matches and document start");
                 auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
                 Require(wrap && wrap->GetValue(), "Wrap around must be enabled by default");
-                Command(frame, wxID_BACKWARD);
+                Click(dialog, wxID_BACKWARD);
                 Selection(editor, 7, 10, "Previous at the start must wrap to the final match");
                 Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped",
                         "a wrapped search must report crossing the boundary");
-                Command(frame, wxID_FORWARD);
+                Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 3, "Next at the end must wrap to the first match");
                 Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "Next must report wrapping");
-                Command(frame, wxID_FORWARD);
+                Click(dialog, wxID_FORWARD);
                 Selection(editor, 3, 6, "direction changes must not skip an adjacent match");
                 Require(frame->GetStatusBar()->GetStatusText(2) == "Match found",
                         "a normal match must clear a stale wrapped result");
                 std::puts("PASS: default wrap in both directions and direction changes");
-                auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 0, 3, "native dialog Previous must select the adjacent previous match");
                 ShiftF3(query);
