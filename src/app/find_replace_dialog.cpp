@@ -90,12 +90,23 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, wxWindow& editor, SearchS
     wrapAround_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { ConfigureSearch(); });
     bookmarkMatchedLines_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) { ConfigureSearch(); });
     parent->Bind(wxEVT_EDITOR_STATE_CHANGED, &FindReplaceDialog::OnEditorState, this);
+    const int selectNext = wxWindow::NewControlId();
+    const int selectPrevious = wxWindow::NewControlId();
     const wxAcceleratorEntry searchKeys[] = {{wxACCEL_NORMAL, WXK_F3, wxID_FORWARD},
-                                             {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD}};
-    SetAcceleratorTable(wxAcceleratorTable(2, searchKeys));
+                                             {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD},
+                                             {wxACCEL_CTRL | wxACCEL_ALT, WXK_F2, selectNext},
+                                             {wxACCEL_CTRL | wxACCEL_ALT | wxACCEL_SHIFT, WXK_F2, selectPrevious}};
+    SetAcceleratorTable(wxAcceleratorTable(4, searchKeys));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward); }, wxID_FORWARD);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
-    Bind(wxEVT_CHAR_HOOK, [onKey = std::move(onKey)](wxKeyEvent& event) { onKey(event); });
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward, true); }, selectNext);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward, true); }, selectPrevious);
+    Bind(wxEVT_CHAR_HOOK, [this, onKey = std::move(onKey)](wxKeyEvent& event) {
+        if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown())
+            Find(event.ShiftDown() ? SearchDirection::Backward : SearchDirection::Forward, true);
+        else
+            onKey(event);
+    });
     Bind(
         wxEVT_BUTTON, [this](wxCommandEvent&) { Find(SearchDirection::Forward, wxGetKeyState(WXK_SHIFT)); },
         wxID_FORWARD);

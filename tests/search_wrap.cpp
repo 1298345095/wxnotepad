@@ -15,6 +15,24 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
+void SelectTo(wxWindow* window, bool backward) {
+#ifdef __WXMSW__
+    Require(
+        NativeSearch::WindowsShortcut(
+            window, VK_F2, {{VK_CONTROL, 0x80}, {VK_MENU, 0x80}, {VK_SHIFT, static_cast<BYTE>(backward ? 0x80 : 0)}}),
+        "owned native window translates the original Select to shortcut");
+#elif defined(__WXGTK__)
+    auto* widget = GTK_WIDGET(window->GetHandle());
+    auto* event = gdk_event_new(GDK_KEY_PRESS);
+    event->key.window = static_cast<GdkWindow*>(g_object_ref(gtk_widget_get_window(widget)));
+    event->key.send_event = TRUE;
+    event->key.keyval = GDK_KEY_F2;
+    event->key.state = static_cast<GdkModifierType>(GDK_CONTROL_MASK | GDK_MOD1_MASK | (backward ? GDK_SHIFT_MASK : 0));
+    gtk_widget_event(widget, event);
+    gdk_event_free(event);
+#endif
+    wxYield();
+}
 class Feedback final : public wxModalDialogHook {
 public:
     Feedback() { Register(); }
@@ -203,6 +221,16 @@ public:
                 NativeSearch::Command(frame, selectPrevious);
                 Require(editor->Send(Message::GetAnchor) == 10 && editor->Send(Message::GetCurrentPos) == 0,
                         "extended Previous retains the larger original endpoint as anchor");
+                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one tail one tail"));
+                editor->Send(Message::SetSel, 0, 3);
+                query->SetValue("tail");
+                SelectTo(query, false);
+                Require(editor->Send(Message::GetAnchor) == 0 && editor->Send(Message::GetCurrentPos) == 8,
+                        "dialog Select to Next shortcut submits the current draft before extending");
+                editor->Send(Message::SetSel, 16, 9);
+                SelectTo(query, true);
+                Require(editor->Send(Message::GetAnchor) == 16 && editor->Send(Message::GetCurrentPos) == 4,
+                        "dialog Select to Previous shortcut extends backward with the original anchor");
                 std::puts("PASS: original extended-selection anchors and no-wrap behavior");
                 NativeSearch::Command(frame, wxID_REPLACE);
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
