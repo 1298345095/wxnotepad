@@ -1,10 +1,12 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
 #include <stdexcept>
+#include <memory>
 
 namespace {
 void Require(bool condition, const char* message) {
@@ -30,7 +32,12 @@ void Add(EditorFrame* frame, const std::string& text) {
 class SaveApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        // This fixture verifies unchanged mixed bytes; native warning choices
+        // are exercised by mixed_line_ending_open.
+        settings_->values.warnLineEndings = false;
+        auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory =
                 std::filesystem::temp_directory_path() / ("wxnotepad-save-" + std::to_string(wxGetProcessId()));
@@ -136,7 +143,7 @@ public:
                         std::ofstream file(input, std::ios::binary);
                         file.write(samples[index].data(), samples[index].size());
                     }
-                    auto* sample = new EditorFrame;
+                    auto* sample = new EditorFrame(settings_.get());
                     Require(sample->Open(Filename(input)).status == OpenStatus::Opened, "format sample must open");
                     Require(sample->SaveAs(Filename(output)).status == SaveStatus::Saved,
                             "format sample Save As must succeed");
@@ -162,6 +169,7 @@ public:
     int OnExit() override { return result_; }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
