@@ -57,7 +57,7 @@ Scintilla::KeyMod MouseModifiers(const wxMouseEvent& event) {
 
 class EditorControl::Core final : public core::ScintillaBase {
 public:
-    explicit Core(EditorControl& window) : window_(window) {
+    Core(EditorControl& window, int selectionOptions) : window_(window) {
         wMain = static_cast<wxWindow*>(&window_);
         Initialise();
         // Original Notepad4.cpp: wrapped Home/End visit visual then logical boundaries.
@@ -109,17 +109,18 @@ public:
         WndProc(Message::SetCaretStyle, 1, 0);
         WndProc(Message::SetMarginWidthN, 1, 0);
         WndProc(Message::SetScrollWidthTracking, 1, 0);
-        // Notepad4 CreateEditor: SelectOption_Default enables multiple selection.
-        WndProc(Message::SetMultipleSelection, 1, 0);
+        // Notepad4 CreateEditor: SelectOption_EnableMultipleSelection is bit 1.
+        WndProc(Message::SetMultipleSelection, selectionOptions & 1, 0);
         WndProc(Message::SetAdditionalSelectionTyping, 1, 0);
         WndProc(Message::SetMultiPaste, static_cast<uintptr_t>(Scintilla::MultiPaste::Each), 0);
         WndProc(Message::SetVirtualSpaceOptions, static_cast<uintptr_t>(Scintilla::VirtualSpace::RectangularSelection),
                 0);
-        // EditNewText enables selection restoration and viewport restoration by default.
-        WndProc(Message::SetUndoSelectionHistory,
-                static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
-                    static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll),
-                0);
+        // EditNewText: SelectOption_UndoRedoRememberSelection is bit 8.
+        const auto history = (selectionOptions & 8)
+                                 ? static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
+                                       static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll)
+                                 : 0;
+        WndProc(Message::SetUndoSelectionHistory, history, 0);
 #ifdef __WXGTK__
         InstallGtkTextDropTarget();
 #else
@@ -1008,7 +1009,7 @@ private:
     mutable bool selectionCountDirty_ = true;
 };
 
-EditorControl::EditorControl(wxWindow* parent)
+EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                 wxBORDER_SIMPLE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
       caretTimer_(this), scrollTimer_(this), widenTimer_(this) {
@@ -1023,7 +1024,7 @@ EditorControl::EditorControl(wxWindow* parent)
     SetCaret(new wxCaret(this, 1, 1));
     GetCaret()->Show();
 #endif
-    core_ = std::make_unique<Core>(*this);
+    core_ = std::make_unique<Core>(*this, selectionOptions);
     Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
     Send(Message::SetMarginMaskN, 0, 0);
     SetLineNumbersVisible(true);
@@ -1139,13 +1140,19 @@ void EditorControl::Cut() {
     const Scintilla::CharacterRangeFull range{line, column};
     const auto position = Send(Message::FindColumnEx, static_cast<uintptr_t>(Scintilla::ColumnType::Default),
                                reinterpret_cast<intptr_t>(&range));
+    JumpToPosition(position);
+}
+
+void EditorControl::JumpToPosition(intptr_t position) {
+    // Original EditSelectEx: unfold and center the destination, then restore
+    // the normal policies and the preferred column for subsequent navigation.
     using Scintilla::CaretPolicy;
     const auto even = static_cast<uintptr_t>(CaretPolicy::Even);
     const auto slop = static_cast<uintptr_t>(CaretPolicy::Slop);
     const auto strictPolicy = slop | static_cast<uintptr_t>(CaretPolicy::Strict) | even;
     Send(Message::SetXCaretPolicy, strictPolicy, 50);
     Send(Message::SetYCaretPolicy, strictPolicy, 5);
-    Send(Message::EnsureVisibleEnforcePolicy, line);
+    Send(Message::EnsureVisibleEnforcePolicy, Send(Message::LineFromPosition, position));
     Send(Message::GotoPos, position);
     Send(Message::SetXCaretPolicy, slop | even, 50);
     Send(Message::SetYCaretPolicy, even, 0);

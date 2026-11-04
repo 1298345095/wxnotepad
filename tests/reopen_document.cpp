@@ -177,6 +177,40 @@ public:
                 Require(frame->Open(path).status == OpenStatus::Opened && frame->GetMenuBar()->IsChecked(python),
                         "the application reopen must retain the manual language menu choice");
                 std::puts("PASS: application reopen keeps its language menu synchronized");
+                Write(path, bytes);
+                Require(frame->Open(path).status == OpenStatus::Opened, "frame viewport fixture must load");
+                editor->Send(Message::SetSel, 2, 7);
+                editor->Send(Message::SetFirstVisibleLine, 25);
+                editor->Send(Message::SetXOffset, 120);
+                Require(frame->Open(path).status == OpenStatus::Opened && editor->Send(Message::GetAnchor) == 2 &&
+                            editor->Send(Message::GetCurrentPos) == 7 &&
+                            editor->Send(Message::GetFirstVisibleLine) == 25 &&
+                            editor->Send(Message::GetXOffset) == 120 && frame->GetMenuBar()->IsChecked(python) &&
+                            !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
+                            editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf),
+                        "frame reopen must preserve an offscreen selection and both viewport offsets");
+                std::puts("PASS: frame reopen preserves offscreen caret, anchor, view and document state");
+                const std::string header = "# tab-width: 8; indent-tabs-mode: true\n";
+                std::string tabbed = header;
+                for (int index = 0; index < 100; ++index)
+                    tabbed += "\t" + std::string(200, 'x') + "\n";
+                Write(path, tabbed);
+                Require(frame->Open(path).status == OpenStatus::Opened && editor->Send(Message::GetTabWidth) == 8,
+                        "frame must apply initial file tab settings");
+                const auto tabCaret = static_cast<intptr_t>(header.size() + size_t{29} * 202 + 3);
+                editor->Send(Message::SetSel, tabCaret - 1, tabCaret);
+                std::string changed = "# tab-width: 2; indent-tabs-mode: true\n";
+                for (int index = 0; index < 100; ++index)
+                    changed += "\t" + std::string(2000, 'y') + "\n";
+                Write(path, changed);
+                const auto expected = static_cast<intptr_t>(header.size() + size_t{29} * 2002 + 9);
+                const auto changedResult = frame->Open(path);
+                Require(changedResult.status == OpenStatus::Opened && editor->Send(Message::GetTabWidth) == 2 &&
+                            editor->Send(Message::GetCurrentPos) == expected &&
+                            editor->Send(Message::GetAnchor) == expected &&
+                            editor->Send(Message::GetColumn, expected, 30) == 10,
+                        "frame fallback must resolve the original saved column using the reloaded file tab width");
+                std::puts("PASS: frame reopen uses new file tab width for the saved-column fallback");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

@@ -45,7 +45,7 @@ Find/Replace extends this store with the original `[Settings]` fields:
 
 | Field | Built-in default | Behavior |
 | --- | --- | --- |
-| `SelectOption` | `15` | Bit `2` enables selection seeding; bit `4` enables clipboard fallback. Other bits are retained. |
+| `SelectOption` | `15` | Bit `1` enables multiple selection; bit `2` enables selection seeding; bit `4` enables clipboard fallback; bit `8` enables selection and viewport restoration on Undo/Redo. Raw bits are retained. |
 | `SaveFindReplace` | `0` | Loads/saves submitted query and replacement histories and packed search flags. |
 | `FindReplaceOption` | `2` | Original low option bits and upper dialog-behavior bits, including No Find Wrap. |
 | `FindReplaceFlag` | `0` | Original search flags and search-option bits; used only with SaveFindReplace enabled. |
@@ -90,6 +90,7 @@ writes current choices even while exit saving is disabled. Default-valued fields
 are omitted, as in the original. Other keys, sections and comments survive. Writes
 use the original Unicode INI format (UTF-16LE with BOM); the reader also accepts
 existing text INI files through the platform text converter.
+If an existing INI cannot be read completely, settings writes fail without replacing it.
 
 Tab settings use this same store. `[Settings]` defaults are `TabWidth=4`,
 `IndentWidth=4`, `TabsAsSpaces=0`, `TabIndents=1`, `BackspaceUnindents=2`, and

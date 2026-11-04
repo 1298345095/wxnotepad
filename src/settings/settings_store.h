@@ -55,7 +55,7 @@ public:
 private:
     wxString path_;
     std::vector<wxString> lines_;
-    void LoadLines();
+    bool LoadLines();
     bool ReadBool(const wxString& key, bool fallback, const wxString& sectionName = "Settings") const;
     int ReadInt(const wxString& key, int fallback, const wxString& sectionName = "Settings") const;
     std::vector<wxString> ReadHistory(const wxString& sectionName) const;

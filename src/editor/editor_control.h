@@ -17,7 +17,7 @@ enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
 // Commands use the pinned core's public message API; no mirrored wx text exists.
 class EditorControl final : public wxControl {
 public:
-    explicit EditorControl(wxWindow* parent);
+    explicit EditorControl(wxWindow* parent, int selectionOptions = 15);
     ~EditorControl() override;
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
     uint64_t DocumentRevision() const { return documentRevision_; }
@@ -30,6 +30,7 @@ public:
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     void Copy();
     void Cut();
+    void JumpToPosition(intptr_t position);
     LineSelectionMode GetLineSelectionMode() const { return lineSelectionMode_; }
     void SetLineSelectionMode(LineSelectionMode mode);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
