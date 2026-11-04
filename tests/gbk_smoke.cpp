@@ -1,8 +1,11 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <wx/wx.h>
 #include <filesystem>
 #include <fstream>
+#include "settings/settings_store.h"
+#include <memory>
 #include <cstdio>
 #include <stdexcept>
 
@@ -40,10 +43,13 @@ void Add(EditorFrame* frame, const std::string& text) {
 class GbkApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values.warnLineEndings = false;
+        settings_->values.wordWrap = false;
+        auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
             const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-gbk-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-gbk-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";
@@ -87,7 +93,7 @@ public:
                 const std::string pua = "\xa1\x40\xa2\xe3\xaa\xa1\xfe\xa0";
                 const auto puaPath = directory / "pua.txt";
                 Write(puaPath, pua);
-                auto* repertoire = new EditorFrame;
+                auto* repertoire = new EditorFrame(settings_.get());
                 Require(repertoire->Open(Filename(puaPath), FileEncoding::Gbk).status == OpenStatus::Opened,
                         "Windows CP936 PUA repertoire must open on each platform");
                 Require(Text(repertoire) == "\xee\x93\x86\xee\x9d\xac\xee\x80\x80\xee\xa1\xa4",
@@ -127,7 +133,7 @@ public:
                 const auto nulPath = directory / "nul.txt";
                 const std::string nulBytes("A\0\xd6\xd0", 4);
                 Write(nulPath, nulBytes);
-                auto* binary = new EditorFrame;
+                auto* binary = new EditorFrame(settings_.get());
                 Require(binary->Open(Filename(nulPath), FileEncoding::Utf8).status == OpenStatus::Failed,
                         "explicit UTF-8 must not fall back to GBK");
                 Require(binary->Open(Filename(nulPath), FileEncoding::Gbk).status == OpenStatus::Opened &&
@@ -141,7 +147,7 @@ public:
                 std::filesystem::create_directory(blocked);
                 Write(blocked / "sentinel", "keep");
                 for (const auto choice : {GbkLossChoice::Cancel, GbkLossChoice::Replace}) {
-                    auto* failure = new EditorFrame;
+                    auto* failure = new EditorFrame(settings_.get());
                     Require(failure->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
                             "failure source must open");
                     Add(failure, "¥☃😀");
@@ -172,7 +178,7 @@ public:
                     Require(entry.path().filename().u8string().find(u8".wxnotepad-") == std::u8string::npos,
                             "failed saves must clean temporary siblings");
                 std::puts("PASS: every loss choice cancellation/replacement failure preserves disk/session/history");
-                auto* lossyAs = new EditorFrame;
+                auto* lossyAs = new EditorFrame(settings_.get());
                 Require(lossyAs->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
                         "lossy Save As source must open");
                 Add(lossyAs, "¥☃😀𝄞");
@@ -213,6 +219,7 @@ public:
     int OnExit() override { return result_; }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace

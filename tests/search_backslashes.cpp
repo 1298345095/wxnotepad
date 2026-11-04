@@ -144,7 +144,7 @@ public:
                 auto* dialog = new FindReplaceDialog(
                     frame, *editor, nativeSearch, [&](const FindResult& result) { nativeResult = result; },
                     [](wxKeyEvent& event) { event.Skip(); }, 0);
-                dialog->Present(false);
+                dialog->Present(false, 0);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", dialog), wxTextCtrl);
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", dialog), wxTextCtrl);
                 auto* transform =
@@ -163,7 +163,7 @@ public:
                 NativeSearch::Toggle(regex, true);
                 Require(regex->GetValue() && !transform->GetValue() && transform->IsEnabled(),
                         "checking regex unchecks transform while keeping it enabled");
-                dialog->Present(true);
+                dialog->Present(true, 0);
                 wxYield();
                 NativeSearch::Toggle(transform, true);
                 Require(transform->GetValue() && !regex->GetValue(), "replacement view enables transform exclusively");
@@ -193,7 +193,7 @@ public:
                 auto* seededDialog = new FindReplaceDialog(
                     frame, *editor, seededSearch, [&](const FindResult& result) { seededResult = result; },
                     [](wxKeyEvent& event) { event.Skip(); }, 2);
-                seededDialog->Present(false);
+                seededDialog->Present(false, 2);
                 auto* seededQuery = wxDynamicCast(wxWindow::FindWindowByName("Find query", seededDialog), wxTextCtrl);
                 auto* seededTransform =
                     wxDynamicCast(wxWindow::FindWindowByName("Transform backslashes", seededDialog), wxCheckBox);
@@ -203,7 +203,7 @@ public:
                 NativeSearch::Click(seededDialog, wxID_FORWARD);
                 Require(seededResult.status == FindStatus::Found && seededResult.start == 8 && seededResult.end == 15,
                         "seeded escaped query finds the next actual multiline UTF-8 range");
-                seededDialog->Present(true);
+                seededDialog->Present(true, 2);
                 wxYield();
                 auto* seededReplacement =
                     wxDynamicCast(wxWindow::FindWindowByName("Replacement text", seededDialog), wxTextCtrl);

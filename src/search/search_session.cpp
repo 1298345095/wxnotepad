@@ -1,9 +1,11 @@
 #include "search/search_session.h"
+#include "search/find_text.h"
 #include "editor/editor_control.h"
 #include <array>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <algorithm>
 
 namespace {
 // Adapted from Notepad4 89b8b36, src/EditEncoding.cpp TransformBackslashes
@@ -112,6 +114,35 @@ SearchSession::~SearchSession() {
 void SearchSession::Configure(SearchRequest request) {
     if (request.query != request_.query || request.options != request_.options) ClearFindAll();
     request_ = std::move(request);
+}
+
+void SearchSession::RestoreHistory(std::vector<wxString> find, std::vector<wxString> replace, bool lastReplaceEmpty) {
+    recentFind_ = std::move(find);
+    recentReplace_ = std::move(replace);
+    lastReplaceEmpty_ = lastReplaceEmpty;
+}
+
+void SearchSession::Remember(bool replacement) {
+    // Original SaveFindReplaceText/MRUList::Add: submitted nonempty values,
+    // fewer than 2048 UTF-16 code units, exact comparison, 32 entries.
+    const auto add = [](std::vector<wxString>& history, const wxString& text) {
+        size_t length = 0;
+        for (const auto ch : text)
+            length += ch.GetValue() > 0xffff ? 2 : 1;
+        if (text.empty() || length >= 2048) return;
+        const auto escaped = EscapeFindText(text).text;
+        std::erase(history, escaped);
+        history.insert(history.begin(), escaped);
+        if (history.size() > 32) history.resize(32);
+    };
+    if (!request_.query.empty()) {
+        hasFindText_ = true;
+        add(recentFind_, request_.query);
+        if (replacement) {
+            add(recentReplace_, request_.replacement);
+            lastReplaceEmpty_ = request_.replacement.empty();
+        }
+    }
 }
 
 void SearchSession::ClearFindAll() {

@@ -95,7 +95,7 @@ inline void NativeF3(wxWindow* window) {
     PostMessageW(static_cast<HWND>(window->GetHandle()), WM_KEYDOWN, VK_F3, 0);
     PostMessageW(static_cast<HWND>(window->GetHandle()), WM_KEYUP, VK_F3, 0);
 #elif defined(__WXGTK__)
-    auto* widget = GTK_WIDGET(window->GetHandle());
+    auto* widget = window->GetConnectWidget();
     auto* event = gdk_event_new(GDK_KEY_PRESS);
     event->key.window = static_cast<GdkWindow*>(g_object_ref(gtk_widget_get_window(widget)));
     event->key.send_event = TRUE;

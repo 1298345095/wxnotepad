@@ -25,7 +25,7 @@ public:
         auto* editor = new EditorControl(frame);
         CallAfter([this, frame, editor] {
             const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-encoding-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-encoding-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 DocumentSession document(*editor);
@@ -127,7 +127,10 @@ public:
                       "中文 English\n", FileEncoding::Utf16Le, false);
                 EncodingOptions unicodeStatistics;
                 unicodeStatistics.skipUnicodeDetection = false;
-                check("statistics-utf16.txt", std::string("\xd0\x10\xd1\x10\xd2\x10\xd3\x10", 8), "აბგდ",
+                // Eight C0 bytes reach the original MaybeBinary gate even when
+                // the native code page accepts every byte (for example CP1252).
+                check("statistics-utf16.txt",
+                      std::string("\xd0\x10\xd1\x10\xd2\x10\xd3\x10\xd4\x10\xd5\x10\xd6\x10\xd7\x10", 16), "აბგდევზთ",
                       FileEncoding::Utf16Le, false, unicodeStatistics);
                 const std::string masked = "# tab-width: 8\n" + std::string(600, 'x') + "\n# coding: windows1252\n";
                 check("first-window.txt", masked, masked, FileEncoding::Utf8, false);

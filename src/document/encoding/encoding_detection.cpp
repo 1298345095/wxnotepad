@@ -1,6 +1,7 @@
 // Decision order, catalog and file-variable rules adapted from Notepad4
 // 89b8b36, src/EditEncoding.cpp and src/Edit.cpp. See licenses/Notepad4.txt.
 #include "document/encoding/encoding_detection.h"
+#include "document/file_variables.h"
 #include "document/encoding/gbk_codec.h"
 #include "document/encoding/utf16_codec.h"
 #include <wx/filename.h>
@@ -124,85 +125,15 @@ bool ValidLegacy(unsigned page, std::string_view bytes) {
 #endif
 }
 
-// Port of FileVars_Find / FileVars_ParseStr (Edit.cpp), including case-sensitive
-// keys, full-name boundaries, punctuation skipping and the 31-character token.
-std::optional<std::string> FileVariable(std::string_view text, std::string_view name) {
-    const bool suffix = name.front() == '*';
-    if (suffix) name.remove_prefix(1);
-    size_t offset = 0;
-    while ((offset = text.find(name, offset)) != std::string_view::npos) {
-        const auto previous = offset ? static_cast<unsigned char>(text[offset - 1]) : 0;
-        offset += name.size();
-        if ((std::isalnum(previous) || previous == '-' || previous == '_' || previous == '.') &&
-            !(suffix && previous == '-'))
-            continue;
-        while (offset < text.size() && (text[offset] == ' ' || text[offset] == '\t'))
-            ++offset;
-        if (offset == text.size() || (text[offset] != ':' && text[offset] != '=' && name.back() != ' ')) continue;
-        bool quoted = false;
-        while (offset < text.size() && std::string_view(":=\"' \t").find(text[offset]) != std::string_view::npos) {
-            quoted |= text[offset] == '\'' || text[offset] == '"';
-            ++offset;
-        }
-        std::string value;
-        while (offset < text.size() && value.size() < 31) {
-            const auto ch = static_cast<unsigned char>(text[offset++]);
-            if (!(std::isalnum(ch) || std::string_view("+-/_#").find(static_cast<char>(ch)) != std::string_view::npos ||
-                  (quoted && ch == ' ')))
-                break;
-            value += static_cast<char>(ch);
-        }
-        while (!value.empty() && value.back() == ' ')
-            value.pop_back();
-        if (!value.empty()) return value;
-        return std::nullopt;
-    }
-    return std::nullopt;
-}
-
-std::optional<int> IntegerVariable(std::string_view text, std::string_view key) {
-    const auto value = FileVariable(text, key);
-    if (!value) return std::nullopt;
-    char* end = nullptr;
-    const auto number = std::strtol(value->c_str(), &end, 10);
-    if (end != value->c_str())
-        return static_cast<int>(std::clamp(number, static_cast<long>(INT_MIN), static_cast<long>(INT_MAX)));
-    if (value->front() == 't' || value->front() == 'y') return 1;
-    if (value->front() == 'f' || value->front() == 'n') return 0;
-    return std::nullopt;
-}
-
 struct FileVariables {
     int encoding = -1;
     bool any = false;
 };
 
 FileVariables ReadFileVariables(std::string_view bytes, const EncodingOptions& options) {
-    for (const auto text : {bytes.substr(0, 512), bytes.substr(bytes.size() > 512 ? bytes.size() - 512 : 0)}) {
-        const auto window = text.substr(0, text.find('\0'));
-        FileVariables variables;
-        if (!options.noFileVariables) {
-            if (IntegerVariable(window, "enable-local-variables") == 0) return {};
-            for (const auto key : {"tab-width", "*basic-indent", "*basic-offset", "indent-tabs-mode",
-                                   "*tab-always-indent", "truncate-lines", "fill-column"}) {
-                variables.any |= IntegerVariable(window, key).has_value();
-            }
-            variables.any |= FileVariable(window, "mode").has_value();
-        }
-        if (!options.noEncodingTags) {
-            for (const auto key : {"encoding", "charset", "coding", "fileencoding", "/*!40101 SET NAMES "}) {
-                if (const auto name = FileVariable(window, key)) {
-                    const int encoding = MatchEncoding(*name);
-                    variables.encoding = encoding >= 2 && encoding <= 5 ? -1 : encoding;
-                    variables.any = true;
-                    break;
-                }
-            }
-        }
-        if (variables.any) return variables;
-        if (bytes.size() <= 512) break;
-    }
-    return {};
+    const auto parsed = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
+    const int encoding = parsed.encodingName ? MatchEncoding(*parsed.encodingName) : -1;
+    return {encoding >= 2 && encoding <= 5 ? -1 : encoding, parsed.any};
 }
 
 DetectedEncoding Choice(int index, unsigned native, unsigned oem, bool systemDefault = false) {

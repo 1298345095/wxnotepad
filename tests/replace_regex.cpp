@@ -40,13 +40,14 @@ public:
                 Require(query && replacement && regex, "native Replace menu must expose regex replacement controls");
                 auto* dialog = query->GetParent();
                 Toggle(regex, true);
-                Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled(), "single regex Replace must be enabled");
-                Require(dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(), "regex Replace All must be enabled");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文12 中文34"));
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
                 editor->Send(Message::GotoPos, 0);
                 query->SetValue(wxString::FromUTF8("(中文)([0-9]+)"));
+                Require(dialog->FindWindow(wxID_REPLACE)->IsEnabled(), "nonempty regex Replace must be enabled");
+                Require(dialog->FindWindow(wxID_REPLACE_ALL)->IsEnabled(),
+                        "nonempty regex Replace All must be enabled");
                 replacement->SetValue("$2:$1:$$:$&:$0:\\0");
                 NativeF3(query);
                 Selection(editor, 0, 8, "native F3 must confirm the first regex match");
