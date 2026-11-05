@@ -159,9 +159,11 @@ EditorFrame::EditorFrame(SettingsStore* settings)
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
     const int lineComment = wxWindow::NewControlId();
-    auto* lineCommentItem = edit->Append(lineComment, "T&oggle Line Comment\tCtrl+/");
+    auto* lineCommentItem = new wxMenuItem(edit, lineComment, "T&oggle Line Comment\tCtrl+/");
     lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_DIVIDE, lineComment));
     lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_DIVIDE, lineComment));
+    // wxMSW collects the item's extra accelerators when it is appended.
+    edit->Append(lineCommentItem);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
