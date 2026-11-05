@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -49,6 +49,8 @@ jobs:
             2>&1 | tee .ci/reports/preparation-tests.log
       - name: Set up dependencies
         uses: ./.github/actions/dependencies
+        with:
+          profile: gui
       - name: Configure
         shell: bash
         run: python -X utf8 .github/scripts/ci.py configure
