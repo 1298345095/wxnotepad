@@ -11,6 +11,8 @@
 #include <cstdio>
 #include <stdexcept>
 #include <memory>
+#include <algorithm>
+#include <string>
 #ifdef __WXMSW__
 #include <commctrl.h>
 #endif
@@ -205,10 +207,20 @@ public:
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(boundary.c_str()));
                 editor->Send(Message::SetSel, 0, boundary.size());
                 NativeSearch::Command(frame, wxID_REPLACE);
-                std::fprintf(stderr, "Boundary selection bytes=%lld query bytes=%zu\n",
-                             static_cast<long long>(editor->Send(Message::GetSelText)),
-                             query->GetValue().utf8_str().length());
-                Require(query->GetValue().utf8_str().length() == 1024 * 1024 && query->GetValue().EndsWith("中"),
+                const auto boundaryQuery = query->GetValue();
+                const auto boundaryUtf8 = boundaryQuery.utf8_str();
+                const std::string queryBytes(boundaryUtf8.data(), boundaryUtf8.length());
+                const auto difference =
+                    std::mismatch(boundary.cbegin(), boundary.cend(), queryBytes.cbegin(), queryBytes.cend());
+                const auto firstDifference = static_cast<size_t>(std::distance(boundary.cbegin(), difference.first));
+                const bool utf8Suffix = boundaryQuery.EndsWith(wxString::FromUTF8("中"));
+                std::fprintf(stderr,
+                             "Boundary selection bytes=%lld query bytes=%zu exact=%d first_difference=%zu "
+                             "suffix_utf8=%d regex=%d transform=%d selection_only=%d\n",
+                             static_cast<long long>(editor->Send(Message::GetSelText)), queryBytes.size(),
+                             queryBytes == boundary, firstDifference, utf8Suffix, regex->GetValue(),
+                             transform->GetValue(), selectionOnly_);
+                Require(queryBytes.size() == 1024 * 1024 && utf8Suffix && queryBytes == boundary,
                         "selection limit must include exactly one MiB of UTF-8 bytes");
                 NativeSearch::Click(dialog, wxID_CANCEL);
                 const std::string tooLong = boundary + "!";
