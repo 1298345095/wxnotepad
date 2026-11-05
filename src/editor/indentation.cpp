@@ -2,6 +2,20 @@
 #include <ScintillaTypes.h>
 #include <string>
 
+using Scintilla::Message;
+
+void EditorControl::IndentLines(bool forwards) {
+    if (Send(Message::GetReadOnly)) return;
+    if (Send(Message::GetSelectionEmpty) && Send(Message::GetSelections) == 1 &&
+        Send(Message::GetSelectionMode) == static_cast<intptr_t>(Scintilla::SelectionMode::Stream)) {
+        // The core excludes an endpoint at a line start. Move an empty
+        // selection to its line end so the explicit line command includes it.
+        const auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));
+        Send(Message::GotoPos, Send(Message::GetLineEndPosition, line));
+    }
+    Send(forwards ? Message::LineIndent : Message::LineDedent);
+}
+
 // Adapted from Notepad4 EditAutoC.cpp::EditAutoIndent, pinned 89b8b36.
 // Copyright and license: licenses/Notepad4.txt. The delivered schemes have no
 // EditKeywordIndent cases; delimiter/colon/comment rules are scheme independent.
