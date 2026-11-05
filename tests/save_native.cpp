@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <algorithm>
 
 namespace {
 void Require(bool condition, const char* message) {
@@ -125,6 +126,46 @@ void Command(EditorFrame* frame, int id) {
     wxCommandEvent event(wxEVT_MENU, id);
     Require(frame->GetEventHandler()->ProcessEvent(event), "menu command must be handled");
 }
+void Shortcut(EditorFrame* frame, int key, bool control = false, bool shift = false, bool alt = false) {
+    auto* editor = frame->Editor();
+    editor->SetFocus();
+    Require(wxWindow::FindFocus() == editor, "native Save As shortcuts must start with the editor focused");
+#ifdef __WXMSW__
+    BYTE previous[256];
+    Require(GetKeyboardState(previous), "must read this test thread's keyboard state");
+    BYTE modified[256];
+    std::copy(std::begin(previous), std::end(previous), std::begin(modified));
+    modified[VK_CONTROL] = control ? 0x80 : 0;
+    modified[VK_SHIFT] = shift ? 0x80 : 0;
+    modified[VK_MENU] = alt ? 0x80 : 0;
+    modified[VK_LWIN] = modified[VK_RWIN] = 0;
+    Require(SetKeyboardState(modified), "must set this test thread's shortcut modifiers");
+    MSG message{};
+    message.hwnd = static_cast<HWND>(editor->GetHandle());
+    message.message = WM_KEYDOWN;
+    message.wParam = key == WXK_F6 ? VK_F6 : key;
+    frame->MSWTranslateMessage(&message);
+    SetKeyboardState(previous);
+#elif defined(__WXGTK__)
+    auto* widget = editor->GetConnectWidget();
+    auto* event = gdk_event_new(GDK_KEY_PRESS);
+    event->key.window = static_cast<GdkWindow*>(g_object_ref(gtk_widget_get_window(widget)));
+    event->key.send_event = TRUE;
+    event->key.keyval = key == WXK_F6 ? GDK_KEY_F6 : GDK_KEY_s;
+    event->key.state = (control ? GDK_CONTROL_MASK : 0U) | (shift ? GDK_SHIFT_MASK : 0U) | (alt ? GDK_MOD1_MASK : 0U);
+    GdkKeymapKey* keys = nullptr;
+    gint count = 0;
+    auto* keymap = gdk_keymap_get_for_display(gtk_widget_get_display(widget));
+    if (gdk_keymap_get_entries_for_keyval(keymap, event->key.keyval, &keys, &count) && count > 0) {
+        event->key.hardware_keycode = keys[0].keycode;
+        event->key.group = keys[0].group;
+    }
+    g_free(keys);
+    gtk_widget_event(GTK_WIDGET(frame->GetHandle()), event);
+    gdk_event_free(event);
+#endif
+    wxYield();
+}
 class SaveNativeApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -134,6 +175,7 @@ public:
         // Mixed-EOL warning choices are covered by mixed_line_ending_open.
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
+        frame->Show();
         CallAfter([this, frame] {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-save-native");
             try {
@@ -161,16 +203,35 @@ public:
                         "Save must bind Ctrl+S");
                 delete saveAccelerator;
                 const auto* accelerator = frame->GetMenuBar()->FindItem(wxID_SAVEAS)->GetAccel();
-                Require(accelerator && accelerator->GetKeyCode() == 'S' &&
-                            accelerator->GetFlags() == (wxACCEL_CTRL | wxACCEL_SHIFT),
-                        "Save As must bind Ctrl+Shift+S");
+                Require(accelerator && accelerator->GetKeyCode() == WXK_F6 && accelerator->GetFlags() == wxACCEL_NORMAL,
+                        "Save As must bind unmodified F6");
                 delete accelerator;
                 NativeDriver cancel;
-                Command(frame, wxID_SAVEAS);
+                Shortcut(frame, WXK_F6);
                 cancel.Stop();
                 Require(cancel.choosers == 1 && frame->DocumentPath() == Filename(source) &&
                             frame->Editor()->Send(Scintilla::Message::GetModify) && hasOverride("C/C++"),
                         "native cancellation must retain identity/dirty state");
+                const auto selection = frame->Editor()->Send(Scintilla::Message::GetCurrentPos);
+                for (const auto modifiers : {1, 2, 4, 3, 5, 6, 7}) {
+                    NativeDriver untouched;
+                    Shortcut(frame, WXK_F6, (modifiers & 1) != 0, (modifiers & 2) != 0, (modifiers & 4) != 0);
+                    untouched.Stop();
+                    if (untouched.choosers != 0) std::fprintf(stderr, "Unexpected Save As modifiers: %d\n", modifiers);
+                    Require(untouched.choosers == 0, "modified F6 must not invoke Save As");
+                }
+                NativeDriver formerBinding;
+                Shortcut(frame, 'S', true, true);
+                formerBinding.Stop();
+                Require(formerBinding.choosers == 0, "Ctrl+Shift+S must not invoke Save As");
+                Require(frame->DocumentPath() == Filename(source) && frame->DocumentHasUtf8Bom() &&
+                            frame->Editor()->Send(Scintilla::Message::GetModify) && hasOverride("C/C++") &&
+                            frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == selection &&
+                            TestEditor::Text(frame->Editor()) == "Native 中文\r\nsecond\nthird\rpending" &&
+                            Bytes(source) == "\xef\xbb\xbf"
+                                             "Native 中文\r\nsecond\nthird\r",
+                        "cancelled F6 and rejected modifiers must preserve document, selection and disk bytes");
+                std::puts("PASS: native F6 cancellation and exact modifiers retain document state");
                 NativeDriver accept(Filename(copy));
                 Command(frame, wxID_SAVEAS);
                 accept.Stop();

@@ -1159,6 +1159,86 @@ void EditorControl::JumpToPosition(intptr_t position) {
     Send(Message::ChooseCaretX);
 }
 
+void EditorControl::ToggleBookmark() {
+    // Original EditToggleBookmarkAt at 89b8b36; marker zero is shared with Find All.
+    const auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));
+    Send((Send(Message::MarkerGet, line) & 1) ? Message::MarkerDelete : Message::MarkerAdd, line, 0);
+}
+
+void EditorControl::GoToBookmark(bool forwards) {
+    // Original Notepad4.cpp::BME_EDIT_BOOKMARKNEXT/PREV, including its caret policy.
+    const auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));
+    const auto message = forwards ? Message::MarkerNext : Message::MarkerPrevious;
+    auto target = Send(message, forwards ? line + 1 : line - 1, 1);
+    if (target < 0) target = Send(message, forwards ? 0 : Send(Message::GetLineCount), 1);
+    if (target < 0) return;
+    Send(Message::EnsureVisible, target);
+    Send(Message::GotoLine, target);
+    Send(Message::SetYCaretPolicy,
+         static_cast<uintptr_t>(Scintilla::CaretPolicy::Slop) | static_cast<uintptr_t>(Scintilla::CaretPolicy::Strict) |
+             static_cast<uintptr_t>(Scintilla::CaretPolicy::Even),
+         10);
+    Send(Message::ScrollCaret);
+    Send(Message::SetYCaretPolicy, static_cast<uintptr_t>(Scintilla::CaretPolicy::Even), 0);
+}
+
+void EditorControl::SelectAllBookmarks() {
+    // Original EditBookmarkSelectAll: reverse whole-line ranges, earliest nearest tie.
+    auto line = Send(Message::MarkerNext, 0, 1);
+    if (line < 0) return;
+    const auto current = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));
+    Send(Message::SetSelection, Send(Message::PositionFromLine, line), Send(Message::PositionFromLine, line + 1));
+    uintptr_t main = 0;
+    uintptr_t selection = 0;
+    auto minimum = std::abs(line - current);
+    while ((line = Send(Message::MarkerNext, line + 1, 1)) >= 0) {
+        Send(Message::AddSelection, Send(Message::PositionFromLine, line), Send(Message::PositionFromLine, line + 1));
+        ++selection;
+        const auto difference = std::abs(line - current);
+        if (difference < minimum) {
+            minimum = difference;
+            main = selection;
+        }
+    }
+    Send(Message::SetMainSelection, main);
+}
+
+void EditorControl::MoveLines(bool upwards) {
+    if (Send(Message::GetReadOnly)) return;
+    // Notepad4 Edit.cpp::EditMoveUp/EditMoveDown at 89b8b36.
+    const auto caret = Send(Message::GetCurrentPos);
+    const auto anchor = Send(Message::GetAnchor);
+    const auto caretLine = Send(Message::LineFromPosition, caret);
+    const auto anchorLine = Send(Message::LineFromPosition, anchor);
+    if (caretLine == anchorLine) {
+        const auto destination = caretLine + (upwards ? -1 : 1);
+        if (destination < 0 || destination >= Send(Message::GetLineCount)) return;
+        const auto start = Send(Message::PositionFromLine, caretLine);
+        if (!upwards) Send(Message::GotoLine, destination);
+        Send(Message::LineTranspose);
+        const auto target = Send(Message::PositionFromLine, destination);
+        Send(Message::SetSel, target + anchor - start, target + caret - start);
+        Send(Message::ChooseCaretX);
+        return;
+    }
+    auto first = std::min(caretLine, anchorLine);
+    auto last = std::max(caretLine, anchorLine);
+    if (std::max(caret, anchor) <= Send(Message::PositionFromLine, last)) --last;
+    if (upwards) {
+        if (first == 0) return;
+        Send(Message::MoveSelectedLinesUp);
+        --first;
+    } else {
+        if (last + 1 >= Send(Message::GetLineCount)) return;
+        Send(Message::MoveSelectedLinesDown);
+        ++first;
+        last += 2;
+    }
+    const auto start = Send(Message::PositionFromLine, first);
+    const auto end = Send(Message::PositionFromLine, last);
+    Send(Message::SetSel, caret < anchor ? end : start, caret < anchor ? start : end);
+}
+
 void EditorControl::IndentLines(bool forwards) {
     if (Send(Message::GetReadOnly)) return;
     if (Send(Message::GetSelectionEmpty) && Send(Message::GetSelections) == 1 &&
@@ -1169,6 +1249,36 @@ void EditorControl::IndentLines(bool forwards) {
         Send(Message::GotoPos, Send(Message::GetLineEndPosition, line));
     }
     Send(forwards ? Message::LineIndent : Message::LineDedent);
+}
+
+void EditorControl::MatchBrace(bool select) {
+    // Notepad4.cpp::IDM_EDIT_FINDMATCHINGBRACE/IDM_EDIT_SELTOMATCHINGBRACE
+    // at 89b8b36; see licenses/Notepad4.txt.
+    const auto isBrace = [](intptr_t ch) {
+        return ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == '{' || ch == '}' || ch == '<' || ch == '>';
+    };
+    auto caret = Send(Message::GetCurrentPos);
+    auto position = caret;
+    if (!isBrace(Send(Message::GetCharAt, position))) position = Send(Message::PositionBefore, position);
+    if (!isBrace(Send(Message::GetCharAt, position))) return;
+    // The pinned core accepts a start position here; the original wrapper uses -1.
+    const auto match = Send(Message::BraceMatch, position, -1);
+    if (match < 0) return;
+    if (!select) {
+        Send(Message::GotoPos, match);
+        return;
+    }
+    auto anchor = Send(Message::GetAnchor);
+    const auto start = std::min(anchor, caret);
+    const auto end = std::max(anchor, caret);
+    if (match > position) {
+        anchor = std::min(position, start);
+        caret = std::max(match + 1, end);
+    } else {
+        anchor = std::max(position + 1, end);
+        caret = std::min(match, start);
+    }
+    Send(Message::SetSel, anchor, caret);
 }
 
 void EditorControl::ToggleWordWrap() {

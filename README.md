@@ -36,6 +36,19 @@ Edit → Go To Line / Ctrl+G navigates to an absolute, 1-based document line and
 reveals its folded ancestors. The dialog validates the current line range;
 Cancel retains the previous selection, viewport and folds.
 
+Edit → Bookmarks offers Toggle (Ctrl+F2), Goto Next (F2), Goto Previous
+(Shift+F2), Select All (Alt+F6) and Clear All (Alt+F2). Navigation wraps and
+reveals folded destinations. Select All selects each marked whole line with
+the nearest bookmark as the main selection, preferring the earlier line on a
+tie. These commands share the bookmark marker used by Find All.
+
+Edit → Toggle Line Comment / Ctrl+/ (also Ctrl+keypad Divide) uses `//` for
+C/C++ and JSON, and `#` for Python. It follows the original common indentation,
+mixed-line and selection rules, with one Undo step per edit. The command is
+available for these writable schemes; rectangular selections report the
+original unsupported-operation warning. `AutoInsertMask` controls optional
+spacing through the shared [settings lifecycle](docs/settings.md).
+
 View → Line Numbers / Ctrl+Shift+N toggles a margin sized for the current line
 count, font and display scale. View → Word Wrap / Ctrl+Shift+W wraps long lines
 to the window width without changing newline bytes. View → Show Whitespace /
@@ -115,7 +128,7 @@ spellings such as `$1` and `\1` as text. See the
 File → New / Ctrl+N and Open / Ctrl+O replace the current document after any
 unsaved changes are saved or discarded. Close uses the same Save/Discard/Cancel
 confirmation. Save / Ctrl+S opens a native chooser for an unnamed document and
-reuses the current path thereafter; Save As / Ctrl+Shift+S chooses a new target
+reuses the current path thereafter; Save As / F6 chooses a new target
 and confirms overwrite. Cancellation or failure retains the current document,
 identity and history. A successful save safely replaces the target and updates
 the title and save point.

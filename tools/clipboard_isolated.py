@@ -41,6 +41,13 @@ def xdo(*args):
         result.check_returncode()
     return result.stdout.strip()
 
+def acknowledge(focus):
+    # Readers may already have the request open. Replace it so their ReadAll
+    # observes a stable snapshot while new readers observe completion.
+    pending = focus.with_suffix(".ack")
+    pending.write_text("", encoding="utf-8")
+    pending.replace(focus)
+
 with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
     runtime = Path(folder)
     environment = dict(os.environ, XDG_RUNTIME_DIR=folder, GDK_BACKEND=backend,
@@ -86,7 +93,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         xdo("key", "--clearmodifiers", "super+Tab")
                     time.sleep(.3)
                 if request == "geometry":
-                    focus.write_text("", encoding="utf-8")
+                    acknowledge(focus)
                     # Read only the two owned drag fixture surfaces. Wayland
                     # clients cannot query their global compositor positions.
                     mapping_deadline = time.monotonic() + 3
@@ -116,10 +123,10 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     time.sleep(.2)
                     xdo("mouseup", "1")
                     xdo("keyup", "Super_L")
-                    focus.write_text("", encoding="utf-8")
+                    acknowledge(focus)
                 elif request.startswith("front:"):
                     front(request[6:])
-                    focus.write_text("", encoding="utf-8")
+                    acknowledge(focus)
                 elif request.startswith("drag:"):
                     # A fullscreen owned fixture uses output-local coordinates
                     # on both X11 and the nested Weston output.
@@ -153,23 +160,23 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                             time.sleep(.2)
                     xdo("mouseup", "1")
                     if key: xdo("keyup", key)
-                    focus.write_text("", encoding="utf-8")
+                    acknowledge(focus)
                 elif request.startswith("focus:"):
                     if backend == "x11":
                         windows = xdo("search", "--onlyvisible", "--name", request[6:]).splitlines()
                         if not windows: time.sleep(.03); continue
-                        focus.write_text("", encoding="utf-8")
+                        acknowledge(focus)
                         xdo("windowfocus", "--sync", windows[0])
                     else:
-                        focus.write_text("", encoding="utf-8")
+                        acknowledge(focus)
                         xdo("windowfocus", "--sync", weston_window)
                 elif request.startswith("key:"):
-                    focus.write_text("", encoding="utf-8")
+                    acknowledge(focus)
                     xdo("key", "--clearmodifiers", request[4:])
                 elif request == "gesture":
                     # Native events can make the receiver publish its next
                     # request before xdotool exits. Claim this one first.
-                    focus.write_text("", encoding="utf-8")
+                    acknowledge(focus)
                     xdo("key", "--clearmodifiers", "Shift_L")
                 elif backend == "x11":
                     windows = xdo("search", "--onlyvisible", "--name", "wxnotepad clipboard focus: " + request).splitlines()

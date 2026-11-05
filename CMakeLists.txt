@@ -35,6 +35,7 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
     src/editor/autoindent.cpp
+    src/editor/line_comments.cpp
     src/editor/editor_control.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
@@ -169,6 +170,8 @@ if(BUILD_TESTING)
     add_test(NAME native_stream_drag COMMAND stream_drag)
     set_tests_properties(native_stream_drag PROPERTIES TIMEOUT 90)
     if(UNIX AND NOT APPLE)
+        add_test(NAME native_input_request_snapshot COMMAND stream_drag --input-state-probe)
+        set_tests_properties(native_input_request_snapshot PROPERTIES TIMEOUT 20)
         add_test(NAME native_peer_geometry_ready COMMAND stream_drag --geometry-probe)
         set_tests_properties(native_peer_geometry_ready PROPERTIES TIMEOUT 20 SKIP_RETURN_CODE 77)
     endif()
@@ -176,9 +179,15 @@ if(BUILD_TESTING)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(block_indentation block_indentation_commands 60)
+    add_gui_program(line_comments tests/line_comments.cpp app_shell)
+    add_test(NAME original_toggle_line_comment COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_comments_process.py" "$<TARGET_FILE:line_comments>")
+    set_tests_properties(original_toggle_line_comment PROPERTIES TIMEOUT 90)
+    add_editor_test(move_lines original_move_lines 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
     add_editor_test(navigation_bindings original_navigation_bindings 60)
+    add_editor_test(matching_brace original_matching_brace_commands 60)
     target_include_directories(font_smoke PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     add_gui_program(display_smoke tests/display_smoke.cpp app_shell)
@@ -224,6 +233,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_settings_process.py" "$<TARGET_FILE:search_settings>")
     set_tests_properties(original_search_settings PROPERTIES TIMEOUT 90)
     add_editor_test(find_all original_find_all 30)
+    add_editor_test(bookmarks original_bookmark_commands 30)
     add_editor_test(search_options_smoke find_literal_options 30)
     add_editor_test(replace_smoke replace_literal_one 30)
     add_editor_test(replace_all_smoke replace_literal_all 30)

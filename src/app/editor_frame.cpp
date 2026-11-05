@@ -5,6 +5,7 @@
 #include "app/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/menu.h>
+#include <wx/accel.h>
 #include <wx/filedlg.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
@@ -138,7 +139,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const int openUtf16 = wxWindow::NewControlId();
     file->Append(openUtf16, "Open As UTF-16LE...");
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
-    file->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
+    file->Append(wxID_SAVEAS, "Save &As...\tF6");
     auto* edit = new wxMenu;
     edit->Append(wxID_UNDO, "&Undo\tCtrl+Z");
     edit->Append(wxID_REDO, "&Redo\tCtrl+Y");
@@ -157,6 +158,41 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+    const int lineComment = wxWindow::NewControlId();
+    auto* lineCommentItem = new wxMenuItem(edit, lineComment, "T&oggle Line Comment\tCtrl+/");
+    lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_DIVIDE, lineComment));
+    lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_DIVIDE, lineComment));
+    // wxMSW collects the item's extra accelerators when it is appended.
+    edit->Append(lineCommentItem);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto* prefix = SyntaxFor(document_.Language()).lineComment;
+            if (!prefix || editor_->Send(Scintilla::Message::GetReadOnly)) return;
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            if (!editor_->ToggleLineComments(prefix, (preferences.autoInsertMask & 256) != 0))
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        lineComment);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
+                         SyntaxFor(document_.Language()).lineComment != nullptr);
+        },
+        lineComment);
+    edit->AppendSeparator();
+    const int moveUp = wxWindow::NewControlId();
+    const int moveDown = wxWindow::NewControlId();
+    edit->Append(moveUp, "Move &Up\tAlt+Up");
+    edit->Append(moveDown, "Move &Down\tAlt+Down");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(true); }, moveUp);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(false); }, moveDown);
+    for (const int id : {moveUp, moveDown})
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
     edit->AppendSeparator();
     edit->Append(wxID_FIND, "&Find...\tCtrl+F");
     edit->Append(wxID_REPLACE, "&Replace...\tCtrl+H");
@@ -171,6 +207,31 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const int goToLine = wxWindow::NewControlId();
     edit->Append(goToLine, "&Go To Line...\tCtrl+G");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowGoToLineDialog(this, *editor_); }, goToLine);
+    const int matchingBrace = wxWindow::NewControlId();
+    edit->Append(matchingBrace, "Find Matching &Brace\tCtrl+B");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(); }, matchingBrace);
+    const int selectMatchingBrace = wxWindow::NewControlId();
+    edit->Append(selectMatchingBrace, "Select to Matching B&race\tCtrl+Shift+B");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(true); }, selectMatchingBrace);
+    auto* bookmarks = new wxMenu;
+    const int bookmarkToggle = wxWindow::NewControlId();
+    const int bookmarkNext = wxWindow::NewControlId();
+    const int bookmarkPrevious = wxWindow::NewControlId();
+    const int bookmarkSelect = wxWindow::NewControlId();
+    const int bookmarkClear = wxWindow::NewControlId();
+    bookmarks->Append(bookmarkToggle, "&Toggle\tCtrl+F2");
+    bookmarks->AppendSeparator();
+    bookmarks->Append(bookmarkNext, "Goto &Next\tF2");
+    bookmarks->Append(bookmarkPrevious, "Goto &Previous\tShift+F2");
+    bookmarks->AppendSeparator();
+    bookmarks->Append(bookmarkSelect, "&Select All\tAlt+F6");
+    bookmarks->Append(bookmarkClear, "&Clear All\tAlt+F2");
+    edit->AppendSubMenu(bookmarks, "Boo&kmarks");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleBookmark(); }, bookmarkToggle);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->GoToBookmark(true); }, bookmarkNext);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->GoToBookmark(false); }, bookmarkPrevious);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectAllBookmarks(); }, bookmarkSelect);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::MarkerDeleteAll, 0); }, bookmarkClear);
     edit->AppendSeparator();
     const auto addEol = [this, edit](const wxString& label, Scintilla::EndOfLine mode) {
         const int id = wxWindow::NewControlId();
@@ -536,7 +597,10 @@ void EditorFrame::ShowFind(bool replace) {
 }
 
 void EditorFrame::OnSearchKey(wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+    if (event.GetKeyCode() == 'B' && event.ControlDown() && !event.AltDown() && !event.MetaDown())
+        editor_->MatchBrace(event.ShiftDown());
+    else if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
         editor_->ToggleWordWrap();
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
@@ -547,12 +611,30 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
         ShowFind(true);
     else if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown())
         Search(!event.ShiftDown(), true);
+    else if (event.GetKeyCode() == WXK_F2 && !event.MetaDown()) {
+        if (event.ControlDown() && !event.ShiftDown() && !event.AltDown())
+            editor_->ToggleBookmark();
+        else if (event.AltDown() && !event.ControlDown() && !event.ShiftDown())
+            editor_->Send(Scintilla::Message::MarkerDeleteAll, 0);
+        else if (!event.ControlDown() && !event.AltDown())
+            editor_->GoToBookmark(!event.ShiftDown());
+        // Consume unmatched modifiers so native menu lookup cannot drop them.
+    } else if (event.GetKeyCode() == WXK_F6 && event.AltDown() && !event.ControlDown() && !event.ShiftDown() &&
+               !event.MetaDown())
+        editor_->SelectAllBookmarks();
     else if (event.GetKeyCode() == WXK_F3 && !event.HasAnyModifiers())
         FindNext();
     else if (event.GetKeyCode() == WXK_F3 && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
              !event.MetaDown())
         FindPrevious();
-    else
+    else if (event.GetKeyCode() == WXK_F6) {
+        // GTK Wayland can consume Ctrl while matching F6 accelerators. Route
+        // the original exact modifiers before native accelerator matching.
+        if (!event.HasAnyModifiers()) {
+            wxCommandEvent command(wxEVT_MENU, wxID_SAVEAS);
+            GetEventHandler()->ProcessEvent(command);
+        }
+    } else
         event.Skip();
 }
 

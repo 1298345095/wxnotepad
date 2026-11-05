@@ -25,12 +25,19 @@ public:
     intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
     void IndentLines(bool forwards);
+    // False reports the original unsupported rectangular-selection operation.
+    bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
+    void MoveLines(bool upwards);
     void SetIndentationWidths(int tabWidth, int indentWidth);
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     void Copy();
     void Cut();
     void JumpToPosition(intptr_t position);
+    void MatchBrace(bool select = false);
+    void ToggleBookmark();
+    void GoToBookmark(bool forwards);
+    void SelectAllBookmarks();
     LineSelectionMode GetLineSelectionMode() const { return lineSelectionMode_; }
     void SetLineSelectionMode(LineSelectionMode mode);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }

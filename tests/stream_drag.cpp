@@ -164,16 +164,16 @@ public:
     wxDragResult result = wxDragNone;
     std::function<void()> changed;
     bool IsDragging() const { return dragging_; }
-    void PrintSourceState() const {
-        std::fprintf(stderr, "Peer source stage=%s attempts=%u dragging=%d", sourceStage_, sourceAttempts_, dragging_);
+    void PrintSourceState(FILE* output = stderr) const {
+        std::fprintf(output, "Peer source stage=%s attempts=%u dragging=%d", sourceStage_, sourceAttempts_, dragging_);
 #ifdef __WXGTK__
-        std::fprintf(stderr, " failed=%d deleted=%d native-action-mask=%u selection=%ld,%ld", failed_, deleted_,
+        std::fprintf(output, " failed=%d deleted=%d native-action-mask=%u selection=%ld,%ld", failed_, deleted_,
                      static_cast<unsigned int>(operation_), sourceStart_, sourceEnd_);
 #else
-        std::fprintf(stderr, " native-result=%d", static_cast<int>(result));
+        std::fprintf(output, " native-result=%d", static_cast<int>(result));
 #endif
         const auto bounds = GetScreenRect();
-        std::fprintf(stderr, " screen-bounds=%d,%d,%d,%d\n", bounds.x, bounds.y, bounds.width, bounds.height);
+        std::fprintf(output, " screen-bounds=%d,%d,%d,%d\n", bounds.x, bounds.y, bounds.width, bounds.height);
     }
     void WaitForSource() const {
         // Failed native GTK drags can animate after pointer release. Observe
@@ -367,6 +367,11 @@ public:
         Require(file.IsOpened() && file.ReadAll(&value, wxConvUTF8), "read native peer's transferred bytes");
         return value;
     }
+    void PrintSourceState() const {
+        wxFFile file(directory + "/source-state", "rb");
+        wxString state;
+        if (file.IsOpened() && file.ReadAll(&state)) std::fprintf(stderr, "%s", state.utf8_str().data());
+    }
     void Seed(const wxString& text = wxString::FromUTF8("中😀\nline")) {
         wxFFile file(directory + "/seed", "wb");
         Require(file.Write(text, wxConvUTF8), "write native peer's next source text");
@@ -421,6 +426,7 @@ public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         delete wxLog::SetActiveTarget(new wxLogStderr);
+        if (argc == 2 && argv[1] == "--input-state-probe") return InitInputStateProbe();
         if (argc == 2 && argv[1] == "--geometry-probe") {
             wxString backend;
             if (!wxGetEnv("GDK_BACKEND", &backend) || backend != "wayland") {
@@ -650,7 +656,15 @@ public:
                 if (!wayland) Front(frame, "peer");
                 Drag(frame, peerOrigin + wxPoint(10, 10), At(editor, 5) + editorOrigin, {}, false, 300,
                      wayland ? "" : "main");
-                Require(Text(editor) == "left 中😀\r\nlineright" && independent.Value().empty(),
+                // The injected button release does not establish the other
+                // process's native drag completion. Observe its acknowledgement first.
+                const auto remainingSource = independent.Value();
+                if (Text(editor) != "left 中😀\r\nlineright" || !remainingSource.empty()) {
+                    independent.PrintSourceState();
+                    PrintBytes("External peer move target", Text(editor));
+                    PrintBytes("External peer remaining source", remainingSource.ToStdString(wxConvUTF8));
+                }
+                Require(Text(editor) == "left 中😀\r\nlineright" && remainingSource.empty(),
                         "separate native application's completed move must insert Unicode and remove its source");
                 std::puts("PASS: inter-application Unicode/multiline native moves in both directions");
             } catch (const std::exception& error) {
@@ -669,6 +683,38 @@ public:
     }
 
 private:
+    bool InitInputStateProbe() {
+        auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad stream drag main");
+        frame->Show();
+        CallAfter([this, frame] {
+            try {
+                wxString control;
+                Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control),
+                        "native request snapshot requires the private driver");
+                const wxString command = "front:wxnotepad stream drag main";
+                const wxString prepared = control + ".snapshot.tmp";
+                {
+                    wxFFile request(prepared, "wb");
+                    Require(request.Write(command) && request.Close(), "prepare native request snapshot probe");
+                }
+                wxFFile snapshot(prepared, "rb");
+                Require(snapshot.IsOpened(), "open pending native request snapshot");
+                Require(wxRenameFile(prepared, control, true), "publish native request snapshot probe");
+                WaitForDriver(control);
+                wxString observed;
+                Require(snapshot.ReadAll(&observed) && observed == command,
+                        "driver acknowledgement must preserve an already opened request snapshot");
+                std::puts("PASS: native input acknowledgement preserves an open request snapshot");
+            } catch (const std::exception& error) {
+                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                result_ = 1;
+            }
+            frame->Destroy();
+            ExitMainLoop();
+        });
+        return true;
+    }
+
     void UpdatePeer(wxFrame* frame, NativePeer* peer, const wxString& directory, bool delayOffset) {
 #ifdef __WXGTK__
         if (!delayOffset || offsetDelay_.Time() >= 1500) {
@@ -695,6 +741,11 @@ private:
             wxRemoveFile(directory + "/seed");
         } else if (wxFileExists(directory + "/read") && !peer->IsDragging()) {
             peer->changed();
+            {
+                wxFFile state(directory + "/source-state", "wb");
+                Require(state.IsOpened(), "open native peer source diagnostics");
+                peer->PrintSourceState(state.fp());
+            }
             wxRemoveFile(directory + "/read");
         }
     }
