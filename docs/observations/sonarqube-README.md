@@ -61,3 +61,19 @@ Two `std::print` suggestions affecting this change were reviewed against the
 supported Ubuntu 24.04/GCC 13 baseline. Its libstdc++ lacks `<print>`; a direct
 C++23 compilation records the missing-header error. The portable `fprintf`
 diagnostics remain, with finding-specific portability dispositions.
+
+## Native peer geometry readiness
+
+Hosted Wayland validation exposed a separate test-IPC race: the peer publishes
+`ready` before its 30 ms timer first writes its widget offset. A mapped compositor
+surface therefore does not imply that both geometry inputs are available. The
+consumer now waits for the compositor response and the peer offset, and the peer
+closes and atomically replaces coordinate snapshots before readers can observe
+them.
+
+`native_peer_geometry_ready` starts the real peer with delayed coordinate
+publication and reaches the same geometry consumer without running the preceding
+drag scenarios. It reproduced the missing-offset failure in three runs before the
+fix and passed three runs afterward. This Wayland-specific check explicitly skips
+on X11; the existing full drag test continues to run on both backends. Raw red/green
+logs and the original failed CI artifact are retained with the other evidence.

@@ -334,12 +334,13 @@ wxPoint ClientOffset(wxWindow* window) {
 #endif
 class PeerProcess {
 public:
-    PeerProcess() {
+    explicit PeerProcess(bool delayOffset = false) {
         directory = wxFileName::CreateTempFileName("wxnotepad-stream-peer-");
         wxRemoveFile(directory);
         Require(wxMkdir(directory), "create owned native peer IPC directory");
         const auto executable = wxStandardPaths::Get().GetExecutablePath();
-        process = wxExecute("\"" + executable + "\" --peer \"" + directory + "\"", wxEXEC_ASYNC);
+        const wxString mode = delayOffset ? "--peer-delayed-offset" : "--peer";
+        process = wxExecute("\"" + executable + "\" " + mode + " \"" + directory + "\"", wxEXEC_ASYNC);
         Require(process > 0, "start independent native drag peer process");
         wxStopWatch wait;
         while (!wxFileExists(directory + "/ready") && wait.Time() < 5000)
@@ -390,12 +391,13 @@ std::pair<wxPoint, wxPoint> WaylandOrigins(EditorControl* editor, const wxString
         request.Write("geometry");
     }
     wxStopWatch wait;
-    while (!wxFileExists(response) && wait.Time() < 5000)
+    const auto offsetPath = directory + "/offset";
+    while ((!wxFileExists(response) || !wxFileExists(offsetPath)) && wait.Time() < 5000)
         Wait(20);
     wxString positions;
     wxString offset;
     wxFFile geometry(response, "rb");
-    wxFFile peerOffset(directory + "/offset", "rb");
+    wxFFile peerOffset(offsetPath, "rb");
     Require(geometry.IsOpened() && geometry.ReadAll(&positions) && peerOffset.IsOpened() && peerOffset.ReadAll(&offset),
             "read owned compositor positions and native peer widget offset");
     int mx, my, px, py, dx, dy;
@@ -413,7 +415,18 @@ public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         delete wxLog::SetActiveTarget(new wxLogStderr);
-        if (argc == 3 && argv[1] == "--peer") {
+        if (argc == 2 && argv[1] == "--geometry-probe") {
+            wxString backend;
+            if (!wxGetEnv("GDK_BACKEND", &backend) || backend != "wayland") {
+                std::puts("SKIP: peer geometry readiness requires the private Wayland driver");
+                result_ = 77;
+                CallAfter([this] { ExitMainLoop(); });
+                return true;
+            }
+            return InitGeometryProbe();
+        }
+        const bool delayOffset = argc == 3 && argv[1] == "--peer-delayed-offset";
+        if (argc == 3 && (argv[1] == "--peer" || delayOffset)) {
             const wxString directory = argv[2];
             auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad stream drag peer");
             auto* peer = new NativePeer(frame);
@@ -428,11 +441,17 @@ public:
             } else
                 frame->ShowFullScreen(true);
             timer_.SetOwner(this);
-            Bind(wxEVT_TIMER, [this, frame, peer, directory](wxTimerEvent&) {
+            offsetDelay_.Start();
+            Bind(wxEVT_TIMER, [this, frame, peer, directory, delayOffset](wxTimerEvent&) {
 #ifdef __WXGTK__
-                const auto origin = ClientOffset(peer);
-                wxFFile offset(directory + "/offset", "wb");
-                offset.Write(wxString::Format("%d,%d", origin.x, origin.y));
+                if (!delayOffset || offsetDelay_.Time() >= 1500) {
+                    const auto origin = ClientOffset(peer);
+                    wxFFile offset(directory + "/offset.tmp", "wb");
+                    Require(offset.IsOpened() && offset.Write(wxString::Format("%d,%d", origin.x, origin.y)),
+                            "write native peer widget coordinates");
+                    Require(offset.Close() && wxRenameFile(directory + "/offset.tmp", directory + "/offset", true),
+                            "publish complete native peer widget coordinates");
+                }
 #endif
                 if (wxFileExists(directory + "/quit")) {
                     timer_.Stop();
@@ -670,7 +689,28 @@ public:
     }
 
 private:
+    bool InitGeometryProbe() {
+        auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad stream drag main");
+        auto* editor = new EditorControl(frame);
+        frame->SetClientSize(760, 700);
+        frame->Show();
+        CallAfter([this, frame, editor] {
+            try {
+                PeerProcess peer(true);
+                WaylandOrigins(editor, peer.directory);
+                std::puts("PASS: native peer geometry waits for delayed coordinate publication");
+            } catch (const std::exception& error) {
+                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                result_ = 1;
+            }
+            frame->Destroy();
+            ExitMainLoop();
+        });
+        return true;
+    }
+
     wxTimer timer_;
+    wxStopWatch offsetDelay_;
     int result_ = 0;
 };
 } // namespace
