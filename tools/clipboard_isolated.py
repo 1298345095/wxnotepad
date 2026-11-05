@@ -133,6 +133,17 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     parts = request[5:].split(",")
                     x1, y1, x2, y2, modifier, cancel, pause = parts[:7]
                     switch = parts[7] if len(parts) > 7 else ""
+                    gesture = parts[8]
+                    action = parts[9]
+                    def wait_drag_state(suffix, phase):
+                        response = Path(str(focus) + suffix)
+                        expected = f"{gesture}:{phase}"
+                        deadline = time.monotonic() + 5
+                        while not response.exists() or response.read_text(encoding="utf-8") != expected:
+                            if test.poll() is not None or time.monotonic() > deadline:
+                                raise RuntimeError(f"Native drag gesture={gesture} from={x1},{y1} to={x2},{y2} "
+                                                   f"must observe native phase {phase}")
+                            time.sleep(.01)
                     origin = (0, 0)
                     if backend == "wayland":
                         geometry = xdo("getwindowgeometry", "--shell", weston_window)
@@ -141,25 +152,37 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     def move(x, y):
                         xdo("mousemove", str(int(x) + origin[0]), str(int(y) + origin[1]))
                     key = {"ctrl": "Control_L", "shift": "Shift_L"}.get(modifier)
+                    phase = Path(str(focus) + ".drag-phase")
+                    pending = phase.with_suffix(".tmp")
                     move(x1, y1)
                     xdo("mousedown", "1")
-                    time.sleep(.15)
-                    move(int(x1) + 10, y1)
-                    time.sleep(.2)
-                    if key: xdo("keydown", key)
-                    if switch: front("wxnotepad stream drag " + switch)
-                    move(x2, y2)
-                    time.sleep(int(pause) / 1000)
-                    if int(cancel):
-                        xdo("key", "Escape")
-                        time.sleep(.3)
-                        if backend == "wayland":
-                            # Nested Weston withdraws keyboard focus throughout
-                            # DnD. Cancel through a native rejected drop instead.
-                            move(1500, 950)
-                            time.sleep(.2)
-                    xdo("mouseup", "1")
-                    if key: xdo("keyup", key)
+                    try:
+                        wait_drag_state(".drag-pressed", "start")
+                        move(int(x1) + 10, y1)
+                        wait_drag_state(".drag-started", "start")
+                        if key: xdo("keydown", key)
+                        if switch: front("wxnotepad stream drag " + switch)
+                        pending.write_text(f"{gesture}:target", encoding="utf-8")
+                        pending.replace(phase)
+                        move(x2, y2)
+                        wait_drag_state(".drag-motion", f"target:{action}")
+                        if action != "0":
+                            wait_drag_state(".drag-action", f"target:{action}")
+                        time.sleep(int(pause) / 1000)
+                        if int(cancel):
+                            xdo("key", "Escape")
+                            time.sleep(.3)
+                            if backend == "wayland":
+                                # Nested Weston withdraws keyboard focus throughout
+                                # DnD. Cancel through a native rejected drop instead.
+                                move(1500, 950)
+                                time.sleep(.2)
+                    finally:
+                        xdo("mouseup", "1")
+                        if key: xdo("keyup", key)
+                        pending.write_text(f"{gesture}:released", encoding="utf-8")
+                        pending.replace(phase)
+                    wait_drag_state(".drag-ended", "end")
                     acknowledge(focus)
                 elif request.startswith("focus:"):
                     if backend == "x11":
