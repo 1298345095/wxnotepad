@@ -87,8 +87,13 @@ void ProcessObserver::Publish() {
     const bool published =
         written && closed && wxRenameFile(observation_ + "/state.tmp", observation_ + "/state", true);
     if (!published && !publishPending_) {
-        std::fprintf(stderr, "Observation publication failed: sequence=%s result=%s directory=%s; retry pending\n",
-                     sequence_.utf8_str().data(), result_.utf8_str().data(), observation_.utf8_str().data());
+        const unsigned long error = wxSysErrorCode();
+        const char* stage = !written ? "write" : !closed ? "close" : "rename";
+        std::fprintf(stderr,
+                     "Observation publication failed: stage=%s error=%lu sequence=%s result=%s directory=%s; retry "
+                     "pending\n",
+                     stage, error, sequence_.utf8_str().data(), result_.utf8_str().data(),
+                     observation_.utf8_str().data());
         std::fflush(stderr);
     }
     publishPending_ = !published;
