@@ -180,10 +180,7 @@ void DialogTraversal(EditorFrame* frame) {
     std::puts("PASS: actual Tab/Shift+Tab traverse Find, Go To Line and native file dialogs");
 }
 #endif
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream file(path, std::ios::binary);
-    return {std::istreambuf_iterator<char>(file), {}};
-}
+using TestFiles::Bytes;
 void SavedBytes(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto directory =

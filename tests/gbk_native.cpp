@@ -16,18 +16,8 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream stream(path, std::ios::binary);
-    Require(stream.is_open(), "file must exist");
-    return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
-}
+using TestFiles::Bytes;
+using TestFiles::Filename;
 std::string Text(EditorFrame* frame) {
     const auto length = frame->Editor()->Send(Scintilla::Message::GetLength);
     std::string text(length + 1, '\0');

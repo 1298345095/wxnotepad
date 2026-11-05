@@ -17,6 +17,8 @@ Raw MCP responses and local validation logs are retained outside the checkout in
 - Put file fixtures beneath a shared, uniquely named private test root. Directory
   creation rejects existing paths; Unix permissions are 0700. Existing canonical
   Windows paths and per-test cleanup remain supported.
+- Reuse the existing filename conversion and saved-byte readers across fixtures,
+  removing repeated helper implementations while retaining independent test cases.
 - Give the private Wayland driver a fixed geometry response inside its own runtime
   directory. The fixture requests geometry without supplying a write destination.
 - Use explicit measurement checks that remain active with Python optimization.
@@ -25,14 +27,15 @@ Raw MCP responses and local validation logs are retained outside the checkout in
 
 ## Analysis scope
 
-Automatic analysis reads `.sonarcloud.properties`: application sources, developer
-tools and workflows are source code; `tests/` is test code. Tests remain available
-to the analyzers and to the native test suites. The three generated language
+Automatic analysis reads `.sonarcloud.properties`: application sources, tests,
+developer tools and workflows all remain in `sonar.sources`. CFamily disregards
+`sonar.tests`, so C++ fixtures must stay in source scope to retain analysis. The three generated language
 scheme tables are excluded from copy/paste metrics because their contents and
 ordering come from the pinned upstream schemes. Other code analysis remains
 enabled for those tables. Quality-gate thresholds and rule profiles are unchanged.
 
 Reference: [SonarQube Cloud automatic analysis configuration](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/automatic-analysis).
+See also [CFamily test-file analysis](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/customizing-the-analysis).
 
 ## CLI finding review
 

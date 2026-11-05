@@ -33,13 +33,7 @@ void Toggle(wxCheckBox* option, bool checked) {
     NativeSearch::Toggle(option, checked);
     Require(option->GetValue() == checked, "native checkbox must retain its requested value");
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
+using TestFiles::Filename;
 class ReplaceAllApp final : public wxApp {
 public:
     bool OnInit() override {

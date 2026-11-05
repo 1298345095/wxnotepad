@@ -31,18 +31,8 @@ void WhitespaceShortcut(EditorControl* window) {
 #endif
     wxYield();
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
+using TestFiles::Bytes;
+using TestFiles::Filename;
 class WhitespaceApp final : public wxApp {
 public:
     bool OnInit() override {

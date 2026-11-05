@@ -17,18 +17,8 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
+using TestFiles::Bytes;
+using TestFiles::Filename;
 std::string Text(EditorControl* editor) {
     const auto length = static_cast<size_t>(editor->Send(Scintilla::Message::GetLength));
     std::string text(length + 1, '\0');

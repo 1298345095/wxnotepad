@@ -17,18 +17,8 @@ using Scintilla::Message;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
+using TestFiles::Bytes;
+using TestFiles::Filename;
 void Paint(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto prefix = std::min(editor->Send(Message::GetLength), intptr_t{128});

@@ -14,13 +14,7 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
+using TestFiles::Filename;
 std::string Text(EditorFrame* frame) {
     const auto length = static_cast<size_t>(frame->Editor()->Send(Scintilla::Message::GetLength));
     std::string text(length + 1, '\0');

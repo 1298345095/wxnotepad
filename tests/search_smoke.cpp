@@ -38,13 +38,7 @@ void Key(wxWindow* window, int key, bool control = false) {
     window->GetEventHandler()->ProcessEvent(event);
     wxYield();
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
+using TestFiles::Filename;
 class SearchApp final : public wxApp {
 public:
     bool OnInit() override {

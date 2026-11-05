@@ -13,17 +13,8 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
+using TestFiles::Bytes;
+using TestFiles::Filename;
 void Write(const std::filesystem::path& path, const std::string& bytes) {
     std::ofstream output(path, std::ios::binary);
     output.write(bytes.data(), bytes.size());
