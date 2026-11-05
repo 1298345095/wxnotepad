@@ -8,7 +8,7 @@ and retain shareable results; they do not replace local verification.
 
 | Workflow | Trigger | Work |
 | --- | --- | --- |
-| CI | Pull requests, pushes to main/codex branches, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC 13 builds, all registered CTest tests, development build output |
+| CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC 13 builds, all registered CTest tests, development build output |
 | Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 18 |
 | CodeQL | Same | Traced C++ application build and Actions configuration analysis, with results in GitHub Security |
 
@@ -32,6 +32,17 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
 ## Dependencies and reproducibility
 
 - Actions are pinned to full commit SHAs, annotated with their major versions.
+- Linux provisioning has three profiles: `build` for CodeQL, `tidy` for native
+  clang-tidy, and `gui` for the build/test matrix. GUI display tools and fonts
+  are installed by the `gui` profile; the analyzer is installed by `tidy`.
+- Linux jobs use Ubuntu's official HTTPS archive in place of the Azure archive
+  mirror. APT uses finite connection/read timeouts and retries. Downloaded `.deb`
+  archives are cached with the existing official cache action, while APT installs
+  the packages and runs their configuration scripts on each fresh runner. The
+  cache excludes installed system files, package database state and partial downloads.
+  Package-download keys include the profile and the existing dependency cache key;
+  restore prefixes allow older compatible downloads to be reused. APT resolves
+  current package versions normally, including on an exact download-cache hit.
 - The vcpkg checkout uses the manifest's builtin baseline and wxWidgets override
   **3.3.3#1**. Only core features are requested, matching the prepared development
   dependencies; unused sound/SDL2 and debug-support features are not requested.
@@ -102,9 +113,10 @@ output includes non-system vcpkg shared libraries and a README describing its
 Ubuntu 24.04 desktop/runtime requirement. Distribution packaging remains a
 separate task.
 
-Newer runs cancel older runs for the same workflow/ref. Workflow files can run
-from a pushed integration branch before they reach main; the Actions manual-run
-UI is registered from the default branch after merge. No schedule is installed.
+Newer runs cancel older runs for the same workflow/ref. Open a draft pull request
+to validate an integration branch before merge. Branch pushes update the PR run;
+push validation runs on main, avoiding duplicate push/PR jobs for the same feature
+commit. Manual dispatch remains available. No schedule is installed.
 
 ## Local checks
 

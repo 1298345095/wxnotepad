@@ -2,7 +2,7 @@ name: Quality
 
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -67,10 +67,8 @@ jobs:
           python-version: '3.12'
       - name: Set up dependencies
         uses: ./.github/actions/dependencies
-      - name: Install analyzer
-        run: |
-          set -euo pipefail
-          sudo apt-get install -y --no-install-recommends clang-tidy-18
+        with:
+          profile: tidy
       - name: Configure compilation database
         run: python -X utf8 .github/scripts/ci.py configure
       - name: Analyze maintained C++ translation units
