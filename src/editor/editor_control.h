@@ -31,6 +31,9 @@ public:
     void Copy();
     void Cut();
     void JumpToPosition(intptr_t position);
+    void ToggleBookmark();
+    void GoToBookmark(bool forwards);
+    void SelectAllBookmarks();
     LineSelectionMode GetLineSelectionMode() const { return lineSelectionMode_; }
     void SetLineSelectionMode(LineSelectionMode mode);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
