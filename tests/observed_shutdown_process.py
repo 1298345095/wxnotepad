@@ -1,4 +1,5 @@
 """Exercise publication contention and clean shutdown in independent actual apps."""
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -8,52 +9,41 @@ import sys
 import tempfile
 import time
 
-from resource_process import command
+from resource_process import command, observation_context
 from settings_process import Application
 
 
-def windows(process):
-    if sys.platform != "win32":
-        return []
-    import ctypes
-    from ctypes import wintypes
-    user32 = ctypes.WinDLL("user32", use_last_error=True)
-    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
-    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
-    user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
-    user32.IsWindowVisible.argtypes = [wintypes.HWND]
-    user32.IsWindowEnabled.argtypes = [wintypes.HWND]
-    result = []
-    callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-
-    @callback_type
-    def visit(handle, _):
-        owner = wintypes.DWORD()
-        user32.GetWindowThreadProcessId(handle, ctypes.byref(owner))
-        if owner.value == process.pid:
-            title = ctypes.create_unicode_buffer(1024)
-            name = ctypes.create_unicode_buffer(256)
-            user32.GetWindowTextW(handle, title, len(title))
-            user32.GetClassNameW(handle, name, len(name))
-            result.append({"title": title.value, "class": name.value,
-                           "visible": bool(user32.IsWindowVisible(handle)),
-                           "enabled": bool(user32.IsWindowEnabled(handle))})
-        return True
-
-    user32.EnumWindows(visit, 0)
-    return result
-
-
-def context(app):
-    files = {}
-    for name in ("command", "state", "state.tmp"):
-        path = app.folder / name
-        if path.is_file():
-            files[name] = path.read_text(encoding="utf-8")
-        elif path.is_dir():
-            files[name] = "<directory>"
-    return {"pid": app.process.pid, "returncode": app.process.poll(),
-            "sequence": app.sequence, "files": files, "windows": windows(app.process)}
+@contextmanager
+def obstruct_publication(state, mode):
+    if mode == "crt-reader":
+        # Control: ordinary Python readers deny delete but permit write;
+        # wxRenameFile can still succeed through its CopyFile fallback.
+        with state.open("rb"):
+            yield
+    elif mode == "restricted-reader":
+        import ctypes
+        from ctypes import wintypes
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                                        wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+        kernel32.CreateFileW.restype = wintypes.HANDLE
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        # GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING. This external reader
+        # denies both replacement and the fallback overwrite while held.
+        handle = kernel32.CreateFileW(str(state), 0x80000000, 1, None, 3, 0, None)
+        if handle == ctypes.c_void_p(-1).value:
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            yield
+        finally:
+            kernel32.CloseHandle(handle)
+    elif mode == "directory":
+        state.unlink()
+        state.mkdir()
+        try:
+            yield
+        finally:
+            state.rmdir()
 
 
 def main():
@@ -63,38 +53,26 @@ def main():
         executable = folder / source.name
         shutil.copy2(source, executable)
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
-        for contention in (False, True):
+        modes = ("none", "crt-reader", "restricted-reader") if sys.platform == "win32" else ("none", "directory")
+        for mode in modes:
             app = Application(executable, folder, environment)
             try:
-                if contention:
-                    state = folder / "state"
-                    if sys.platform == "win32":
-                        # Same CRT sharing policy as wait_state's read_text, held
-                        # long enough to make the publication collision repeatable.
-                        reader = state.open("rb")
-                    else:
-                        state.unlink()
-                        state.mkdir()
-                    try:
+                if mode != "none":
+                    with obstruct_publication(folder / "state", mode):
                         command(folder, "1\nmenu\nView\tZoom In\n")
                         deadline = time.monotonic() + 5
                         while (folder / "command").exists() and time.monotonic() < deadline:
                             time.sleep(.01)
                         time.sleep(.25)
-                        print("CONTENDED " + json.dumps(context(app)), flush=True)
-                    finally:
-                        if sys.platform == "win32":
-                            reader.close()
-                        else:
-                            state.rmdir()
+                        print(f"CONTENDED {mode} " + json.dumps(observation_context(folder, app.process)), flush=True)
                     app.sequence = 1
-                print("BEFORE CLOSE " + json.dumps(context(app)), flush=True)
+                print("BEFORE CLOSE " + json.dumps(observation_context(folder, app.process)), flush=True)
                 try:
                     app.close()
                 except subprocess.TimeoutExpired:
-                    print("EXIT TIMEOUT " + json.dumps(context(app)), flush=True)
+                    print("EXIT TIMEOUT " + json.dumps(observation_context(folder, app.process)), flush=True)
                     raise
-                print(f"PASS: contention={contention}, clean exit={app.process.returncode}", flush=True)
+                print(f"PASS: mode={mode}, clean exit={app.process.returncode}", flush=True)
                 state = dict(line.split("\t", 1) for line in
                              (folder / "state").read_text(encoding="utf-8").splitlines())
                 assert state["sequence"] == str(app.sequence + 1) and state["result"] == "ok", state
