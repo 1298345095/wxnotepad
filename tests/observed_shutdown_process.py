@@ -95,6 +95,10 @@ def main():
                     print("EXIT TIMEOUT " + json.dumps(context(app)), flush=True)
                     raise
                 print(f"PASS: contention={contention}, clean exit={app.process.returncode}", flush=True)
+                state = dict(line.split("\t", 1) for line in
+                             (folder / "state").read_text(encoding="utf-8").splitlines())
+                assert state["sequence"] == str(app.sequence + 1) and state["result"] == "ok", state
+                assert state["dirty"] == "0" and not (folder / "command").exists(), state
             finally:
                 app.stop()
 

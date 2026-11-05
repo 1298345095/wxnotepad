@@ -31,8 +31,21 @@ class Application:
         assert self.state["result"] == "ok", item
 
     def close(self):
-        command(self.folder, f"{self.sequence + 1}\nclose\n")
-        assert self.process.wait(timeout=10) == 0
+        requested = f"{self.sequence + 1}\nclose\n"
+        command(self.folder, requested)
+        try:
+            result = self.process.wait(timeout=10)
+        except subprocess.TimeoutExpired as error:
+            files = {}
+            for name in ("command", "state", "state.tmp"):
+                try:
+                    files[name] = (self.folder / name).read_text(encoding="utf-8")
+                except OSError as failure:
+                    files[name] = str(failure)
+            error.add_note(f"Close transition: pid={self.process.pid}, requested={requested!r}, "
+                           f"last_ack={self.state!r}, observed={files!r}")
+            raise
+        assert result == 0, f"Close exited with {result}: requested={requested!r}, last_ack={self.state!r}"
 
     def stop(self):
         if self.process.poll() is None:
