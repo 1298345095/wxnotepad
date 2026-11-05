@@ -130,6 +130,9 @@ if(BUILD_TESTING)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME observed_process_shutdown COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/observed_shutdown_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(observed_process_shutdown PROPERTIES TIMEOUT 45)
     function(add_editor_test target test_name timeout)
         add_gui_program(${target} tests/${target}.cpp app_shell)
         add_test(NAME ${test_name} COMMAND ${target})
