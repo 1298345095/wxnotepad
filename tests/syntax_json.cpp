@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "native_dialog_helpers.h"
 #include <SciLexer.h>
@@ -50,13 +51,7 @@ void Delete(EditorControl* editor) {
     event.SetEventObject(editor);
     editor->GetEventHandler()->ProcessEvent(event);
 }
-std::string Text(EditorControl* editor) {
-    const auto length = static_cast<size_t>(editor->Send(Message::GetLength));
-    std::string text(length + 1, '\0');
-    editor->Send(Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
+using TestEditor::Text;
 class FileDriver final : public wxTimer {
 public:
     explicit FileDriver(wxString destination) : destination_(std::move(destination)) { Start(100); }
@@ -117,8 +112,7 @@ public:
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-json-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-json");
             try {
                 std::filesystem::create_directory(directory);
                 const std::string source = "{\r\n  \"name\": \"中文\\nvalue\", \"count\": -12.5e2,\r\n"

@@ -271,8 +271,7 @@ public:
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-cleanup-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-cleanup");
             try {
                 std::filesystem::create_directory(directory);
                 Policies(frame, directory);

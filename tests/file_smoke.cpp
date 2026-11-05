@@ -128,8 +128,7 @@ public:
             return true;
         }
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-file-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-file");
             try {
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "empty.txt";

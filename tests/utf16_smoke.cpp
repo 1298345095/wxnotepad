@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <filesystem>
@@ -19,13 +20,7 @@ void Write(const std::filesystem::path& path, const std::string& bytes) {
     std::ofstream output(path, std::ios::binary);
     output.write(bytes.data(), bytes.size());
 }
-std::string Text(EditorFrame* frame) {
-    const auto length = static_cast<size_t>(frame->Editor()->Send(Scintilla::Message::GetLength));
-    std::string text(length + 1, '\0');
-    frame->Editor()->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
+using TestEditor::Text;
 class Utf16App final : public wxApp {
 public:
     bool OnInit() override {
@@ -34,8 +29,7 @@ public:
         settings_->values.wordWrap = false;
         auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-utf16-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-utf16");
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";

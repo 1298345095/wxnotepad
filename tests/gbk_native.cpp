@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
@@ -16,19 +17,10 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
+using TestEditor::Append;
+using TestEditor::Text;
 using TestFiles::Bytes;
 using TestFiles::Filename;
-std::string Text(EditorFrame* frame) {
-    const auto length = frame->Editor()->Send(Scintilla::Message::GetLength);
-    std::string text(length + 1, '\0');
-    frame->Editor()->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
-void Add(EditorFrame* frame, const std::string& text) {
-    frame->Editor()->Send(Scintilla::Message::GotoPos, frame->Editor()->Send(Scintilla::Message::GetLength));
-    frame->Editor()->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-}
 #ifdef __WXGTK__
 using NativeDialogs::Respond;
 #endif
@@ -143,8 +135,7 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-gbk-native-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-gbk-native");
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";
@@ -161,7 +152,7 @@ public:
                 Require(opening.choosers == 1 && frame->DocumentEncoding() == FileEncoding::Gbk &&
                             frame->GetStatusBar()->GetStatusText().Contains("GBK"),
                         "native explicit open must record and display GBK");
-                Add(frame, "¥☃😀𝄞");
+                Append(frame, "¥☃😀𝄞");
                 const auto python = frame->GetMenuBar()->FindMenuItem("Language", "Python");
                 Command(frame, python);
                 const auto rich = Text(frame);
@@ -227,7 +218,7 @@ public:
                     failure->Show();
                     Require(failure->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
                             "failure fixture must open");
-                    Add(failure, "☃😀");
+                    Append(failure, "☃😀");
                     const auto before = Text(failure);
 #ifdef __WXMSW__
                     HANDLE lock = CreateFileW(source.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,

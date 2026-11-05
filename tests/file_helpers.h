@@ -9,6 +9,7 @@
 #include <iterator>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace TestFiles {
 class TemporaryRoot {
@@ -18,7 +19,8 @@ public:
         // Reject collisions when converting the reserved name to a directory.
         // wxMkdir creates it atomically; Unix access is restricted to the owner.
         if (name.empty() || !wxRemoveFile(name) || !wxMkdir(name, 0700))
-            throw std::runtime_error("create private test directory");
+            throw std::filesystem::filesystem_error("create private test directory",
+                                                    std::make_error_code(std::errc::io_error));
 #ifdef __WXMSW__
         path_ = std::filesystem::canonical(std::filesystem::path(name.ToStdWstring()));
 #else
@@ -37,10 +39,10 @@ private:
     std::filesystem::path path_;
 };
 
-inline std::filesystem::path TemporaryDirectory() {
+inline std::filesystem::path TemporaryDirectory(std::string_view fixture = {}) {
     // Document Open and native dialogs expand Windows TEMP's 8.3 aliases.
     static const TemporaryRoot root;
-    return root.Path();
+    return fixture.empty() ? root.Path() : root.Path() / fixture;
 }
 inline wxString Filename(const std::filesystem::path& path) {
 #ifdef __WXMSW__

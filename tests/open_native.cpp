@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <wx/timer.h>
@@ -17,19 +18,10 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+using TestEditor::Append;
+using TestEditor::Text;
 using TestFiles::Bytes;
 using TestFiles::Filename;
-std::string Text(EditorFrame* frame) {
-    const auto length = static_cast<size_t>(frame->Editor()->Send(Scintilla::Message::GetLength));
-    std::string text(length + 1, '\0');
-    frame->Editor()->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
-void Add(EditorFrame* frame, const std::string& text) {
-    frame->Editor()->Send(Scintilla::Message::GotoPos, frame->Editor()->Send(Scintilla::Message::GetLength));
-    frame->Editor()->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-}
 #ifdef __WXGTK__
 using NativeDialogs::Respond;
 #endif
@@ -116,15 +108,14 @@ public:
         SetExitOnFrameDelete(false);
         auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-switch-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-switch");
             try {
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "source.txt";
                 {
                     std::ofstream(path, std::ios::binary) << "opened 中文\n";
                 }
-                Add(frame, "pending");
+                Append(frame, "pending");
                 NativeDriver cancel(wxID_CANCEL);
                 Require(frame->Open(Filename(path)).status == OpenStatus::Cancelled,
                         "Cancel must prevent Open replacing dirty document");
@@ -165,7 +156,7 @@ public:
                 std::puts(
                     "PASS: cancelled Save prevents switching; successful first Save then New resets the document");
                 Require(frame->Open(Filename(savedPath)).status == OpenStatus::Opened, "saved source must open");
-                Add(frame, " changed");
+                Append(frame, " changed");
                 NativeDriver saveOpen(wxID_YES);
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened,
                         "successful named Save must allow Open");
@@ -174,7 +165,7 @@ public:
                         "Open Save must reuse the old path");
                 Require(Text(frame) == "opened 中文\n" && !frame->Editor()->Send(Scintilla::Message::CanUndo),
                         "successful Open must clear previous history");
-                Add(frame, " changed");
+                Append(frame, " changed");
                 const auto oldPath = frame->DocumentPath();
                 std::filesystem::remove(path);
                 std::filesystem::create_directory(path);
@@ -196,12 +187,12 @@ public:
                 frame->Editor()->Send(Scintilla::Message::Undo);
                 Require(Text(frame) == "opened 中文\n" && !frame->Editor()->Send(Scintilla::Message::GetModify),
                         "failed switches must preserve the original save point and Undo");
-                Add(frame, " discard");
+                Append(frame, " discard");
                 NativeDriver discardNew(wxID_NO);
                 Require(frame->New(), "Discard must allow New");
                 discardNew.Stop();
                 Require(discardNew.prompts == 1 && Bytes(path / "sentinel") == "keep", "Discard New must not save");
-                Add(frame, "discard me");
+                Append(frame, "discard me");
                 NativeDriver discardOpen(wxID_NO);
                 Require(frame->Open(Filename(savedPath)).status == OpenStatus::Opened, "Discard must allow Open");
                 discardOpen.Stop();
@@ -227,7 +218,7 @@ public:
                             NativeDialogs::PathEquals(frame->DocumentPath(), Filename(pickedPath)) &&
                             frame->DocumentHasUtf8Bom() && Text(frame) == "Picked\r\n",
                         "native Open command must use the chosen path");
-                Add(frame, "discard");
+                Append(frame, "discard");
                 NativeDriver menuNew(wxID_NO);
                 wxCommandEvent newCommand(wxEVT_MENU, wxID_NEW);
                 frame->GetEventHandler()->ProcessEvent(newCommand);
@@ -239,7 +230,7 @@ public:
                 std::puts("PASS: native Open chooser accept/cancel and New menu commands");
                 Require(frame->Open(Filename(pickedPath)).status == OpenStatus::Opened,
                         "same-path reopen setup must load");
-                Add(frame, "saved");
+                Append(frame, "saved");
                 NativeDriver samePathSave(wxID_YES);
                 Require(frame->Open(Filename(pickedPath)).status == OpenStatus::Opened,
                         "Save then reopen same path must succeed");
@@ -270,7 +261,7 @@ public:
                     const auto originalText = Text(roundtrip);
                     // The content is unchanged; an edit/delete moves away from the
                     // save point so the real close-Save path rewrites the bytes.
-                    Add(roundtrip, "!");
+                    Append(roundtrip, "!");
                     roundtrip->Editor()->Send(Scintilla::Message::DeleteBack);
                     Require(Text(roundtrip) == originalText && roundtrip->Editor()->Send(Scintilla::Message::GetModify),
                             "roundtrip must exercise close Save with unchanged content");

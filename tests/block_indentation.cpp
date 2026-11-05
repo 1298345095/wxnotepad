@@ -183,8 +183,7 @@ void DialogTraversal(EditorFrame* frame) {
 using TestFiles::Bytes;
 void SavedBytes(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const auto directory =
-        TestFiles::TemporaryDirectory() / ("wxnotepad-block-indent-" + std::to_string(wxGetProcessId()));
+    const auto directory = TestFiles::TemporaryDirectory("wxnotepad-block-indent");
     std::filesystem::create_directory(directory);
     struct Fixture {
         const char* name;

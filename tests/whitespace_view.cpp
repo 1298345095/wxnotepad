@@ -44,8 +44,7 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-whitespace-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-whitespace");
             try {
                 auto* editor = frame->Editor();
                 const int id = frame->GetMenuBar()->FindMenuItem("View", "Show Whitespace");

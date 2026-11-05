@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <wx/timer.h>
@@ -14,15 +15,9 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+using TestEditor::Text;
 using TestFiles::Bytes;
 using TestFiles::Filename;
-std::string Text(EditorFrame* frame) {
-    const auto length = static_cast<size_t>(frame->Editor()->Send(Scintilla::Message::GetLength));
-    std::string text(length + 1, '\0');
-    frame->Editor()->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
 void Add(EditorFrame* frame, const std::string& text) {
     frame->Editor()->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
 }
@@ -216,8 +211,7 @@ public:
                 Add(frame, "continued");
                 Require(Text(frame) == "Unsaved 中文\r\ncontinued", "Cancel must allow continued editing");
                 std::puts("PASS: close Cancel retains document and window");
-                const auto directory =
-                    TestFiles::TemporaryDirectory() / ("wxnotepad-close-" + std::to_string(wxGetProcessId()));
+                const auto directory = TestFiles::TemporaryDirectory("wxnotepad-close");
                 std::filesystem::create_directory(directory);
                 CheckWhitespacePrompts(directory);
                 auto* saved = new EditorFrame;

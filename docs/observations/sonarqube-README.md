@@ -17,8 +17,10 @@ Raw MCP responses and local validation logs are retained outside the checkout in
 - Put file fixtures beneath a shared, uniquely named private test root. Directory
   creation rejects existing paths; Unix permissions are 0700. Existing canonical
   Windows paths and per-test cleanup remain supported.
-- Reuse the existing filename conversion and saved-byte readers across fixtures,
-  removing repeated helper implementations while retaining independent test cases.
+- Reuse file readers, filename conversion, editor-text reads, append commands and
+  visible syntax-pass checks across fixtures. Independent test actions and expected
+  document bytes remain in their original test processes. Named fixture paths
+  share the private process root rather than composing redundant PID suffixes.
 - Give the private Wayland driver a fixed geometry response inside its own runtime
   directory. The fixture requests geometry without supplying a write destination.
 - Use explicit measurement checks that remain active with Python optimization.
@@ -50,3 +52,7 @@ directory, created before reading app state; observed state is serialized as dat
 These data flows must be considered when reviewing injection findings. Preserve
 the documented CLI contracts when resolving a false positive, and attach the
 specific source-to-sink explanation to each reviewed finding.
+
+The ten reported CLI findings received individual false-positive dispositions,
+each with its reviewed source-to-sink explanation. Mutation responses are retained
+with the raw MCP baseline.
