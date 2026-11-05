@@ -171,6 +171,12 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const int goToLine = wxWindow::NewControlId();
     edit->Append(goToLine, "&Go To Line...\tCtrl+G");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowGoToLineDialog(this, *editor_); }, goToLine);
+    const int matchingBrace = wxWindow::NewControlId();
+    edit->Append(matchingBrace, "Find Matching &Brace\tCtrl+B");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(); }, matchingBrace);
+    const int selectMatchingBrace = wxWindow::NewControlId();
+    edit->Append(selectMatchingBrace, "Select to Matching B&race\tCtrl+Shift+B");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(true); }, selectMatchingBrace);
     edit->AppendSeparator();
     const auto addEol = [this, edit](const wxString& label, Scintilla::EndOfLine mode) {
         const int id = wxWindow::NewControlId();
@@ -536,7 +542,10 @@ void EditorFrame::ShowFind(bool replace) {
 }
 
 void EditorFrame::OnSearchKey(wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+    if (event.GetKeyCode() == 'B' && event.ControlDown() && !event.AltDown() && !event.MetaDown())
+        editor_->MatchBrace(event.ShiftDown());
+    else if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
         editor_->ToggleWordWrap();
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())

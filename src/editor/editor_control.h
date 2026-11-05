@@ -31,6 +31,7 @@ public:
     void Copy();
     void Cut();
     void JumpToPosition(intptr_t position);
+    void MatchBrace(bool select = false);
     LineSelectionMode GetLineSelectionMode() const { return lineSelectionMode_; }
     void SetLineSelectionMode(LineSelectionMode mode);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
