@@ -158,6 +158,17 @@ EditorFrame::EditorFrame(SettingsStore* settings)
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
     edit->AppendSeparator();
+    const int moveUp = wxWindow::NewControlId();
+    const int moveDown = wxWindow::NewControlId();
+    edit->Append(moveUp, "Move &Up\tAlt+Up");
+    edit->Append(moveDown, "Move &Down\tAlt+Down");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(true); }, moveUp);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(false); }, moveDown);
+    for (const int id : {moveUp, moveDown})
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+    edit->AppendSeparator();
     edit->Append(wxID_FIND, "&Find...\tCtrl+F");
     edit->Append(wxID_REPLACE, "&Replace...\tCtrl+H");
     edit->Append(wxID_FORWARD, "Find &Next\tF3");
