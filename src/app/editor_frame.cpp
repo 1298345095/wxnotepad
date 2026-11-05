@@ -138,7 +138,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const int openUtf16 = wxWindow::NewControlId();
     file->Append(openUtf16, "Open As UTF-16LE...");
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
-    file->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
+    file->Append(wxID_SAVEAS, "Save &As...\tF6");
     auto* edit = new wxMenu;
     edit->Append(wxID_UNDO, "&Undo\tCtrl+Z");
     edit->Append(wxID_REDO, "&Redo\tCtrl+Y");
@@ -582,7 +582,14 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
     else if (event.GetKeyCode() == WXK_F3 && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
              !event.MetaDown())
         FindPrevious();
-    else
+    else if (event.GetKeyCode() == WXK_F6) {
+        // GTK Wayland can consume Ctrl while matching F6 accelerators. Route
+        // the original exact modifiers before native accelerator matching.
+        if (!event.HasAnyModifiers()) {
+            wxCommandEvent command(wxEVT_MENU, wxID_SAVEAS);
+            GetEventHandler()->ProcessEvent(command);
+        }
+    } else
         event.Skip();
 }
 
