@@ -383,17 +383,18 @@ public:
 std::pair<wxPoint, wxPoint> WaylandOrigins(EditorControl* editor, const wxString& directory) {
     wxString control;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control), "Wayland geometry requires the private driver");
-    if (wxFileExists(directory + "/geometry")) wxRemoveFile(directory + "/geometry");
+    const auto response = wxFileName(control).GetPathWithSep() + "geometry";
+    if (wxFileExists(response)) wxRemoveFile(response);
     {
         wxFFile request(control, "wb");
-        request.Write("geometry:" + directory + "/geometry");
+        request.Write("geometry");
     }
     wxStopWatch wait;
-    while (!wxFileExists(directory + "/geometry") && wait.Time() < 5000)
+    while (!wxFileExists(response) && wait.Time() < 5000)
         Wait(20);
     wxString positions;
     wxString offset;
-    wxFFile geometry(directory + "/geometry", "rb");
+    wxFFile geometry(response, "rb");
     wxFFile peerOffset(directory + "/offset", "rb");
     Require(geometry.IsOpened() && geometry.ReadAll(&positions) && peerOffset.IsOpened() && peerOffset.ReadAll(&offset),
             "read owned compositor positions and native peer widget offset");

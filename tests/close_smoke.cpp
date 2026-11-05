@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <wx/wx.h>
 #include <wx/timer.h>
 #include "native_dialog_helpers.h"
@@ -226,7 +227,7 @@ public:
                 Require(Text(frame) == "Unsaved 中文\r\ncontinued", "Cancel must allow continued editing");
                 std::puts("PASS: close Cancel retains document and window");
                 const auto directory =
-                    std::filesystem::temp_directory_path() / ("wxnotepad-close-" + std::to_string(wxGetProcessId()));
+                    TestFiles::TemporaryDirectory() / ("wxnotepad-close-" + std::to_string(wxGetProcessId()));
                 std::filesystem::create_directory(directory);
                 CheckWhitespacePrompts(directory);
                 auto* saved = new EditorFrame;

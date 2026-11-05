@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "native_search_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/wx.h>
@@ -138,7 +139,7 @@ public:
                             result->GetLabel() == "0 replacements",
                         "Replace All must use the live empty document after New");
                 std::puts("PASS: zero matches, byte-identical matches, empty query and New preserve editing history");
-                const auto path = std::filesystem::temp_directory_path() /
+                const auto path = TestFiles::TemporaryDirectory() /
                                   ("wxnotepad-replace-all-" + std::to_string(wxGetProcessId()) + ".txt");
                 const unsigned char before[] = {0xff, 0xfe, 'o',  0, 'n', 0, 'e', 0, '\r', 0, '\n', 0, 'o',  0, 'n', 0,
                                                 'e',  0,    '\n', 0, 'l', 0, 'a', 0, 's',  0, 't',  0, '\r', 0};

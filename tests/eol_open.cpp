@@ -273,7 +273,7 @@ public:
     bool OnInit() override {
         CallAfter([this] {
             const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-eol-open-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-eol-open-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 SettingsStore settings;

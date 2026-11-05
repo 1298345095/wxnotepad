@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "native_dialog_helpers.h"
 #include <SciLexer.h>
 #include <wx/app.h>
@@ -127,7 +128,7 @@ public:
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-json-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-json-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 const std::string source = "{\r\n  \"name\": \"中文\\nvalue\", \"count\": -12.5e2,\r\n"

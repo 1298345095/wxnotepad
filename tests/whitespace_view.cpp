@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
 #include "native_fold_helpers.h"
@@ -54,7 +55,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-whitespace-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-whitespace-" + std::to_string(wxGetProcessId()));
             try {
                 auto* editor = frame->Editor();
                 const int id = frame->GetMenuBar()->FindMenuItem("View", "Show Whitespace");

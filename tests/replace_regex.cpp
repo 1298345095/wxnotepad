@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <wx/checkbox.h>
@@ -225,8 +226,8 @@ public:
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "X", "corrected query must recover and replace normally");
                 std::puts("PASS: Previous captures, restored selections/carets and invalid-pattern history/retry");
-                const auto path = std::filesystem::temp_directory_path() /
-                                  ("wxnotepad-regex-" + std::to_string(wxGetProcessId()) + ".txt");
+                const auto path =
+                    TestFiles::TemporaryDirectory() / ("wxnotepad-regex-" + std::to_string(wxGetProcessId()) + ".txt");
                 {
                     std::ofstream file(path, std::ios::binary);
                     file << "\xef\xbb\xbf"

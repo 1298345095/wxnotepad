@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <SciLexer.h>
 #include <wx/wx.h>
 #include <wx/statusbr.h>
@@ -146,8 +147,8 @@ public:
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
-                                   ("wxnotepad-syntax-manual-" + std::to_string(wxGetProcessId()));
+            const auto directory =
+                TestFiles::TemporaryDirectory() / ("wxnotepad-syntax-manual-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 auto* editor = frame->Editor();

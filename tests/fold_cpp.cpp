@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include <ScintillaTypes.h>
@@ -179,7 +180,7 @@ public:
                             editor->Send(Message::GetLineVisible, 2),
                         "Undo of hidden-text edit must restore bytes and reachable state");
                 const auto directory =
-                    std::filesystem::temp_directory_path() / ("wxnotepad-fold-" + std::to_string(wxGetProcessId()));
+                    TestFiles::TemporaryDirectory() / ("wxnotepad-fold-" + std::to_string(wxGetProcessId()));
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "fold.cpp";
 #ifdef __WXMSW__

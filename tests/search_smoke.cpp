@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <wx/wx.h>
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
@@ -134,8 +135,8 @@ public:
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 4, 7, "edits while Find is open must be searchable immediately");
                 editor->Send(Message::Undo);
-                const auto path = std::filesystem::temp_directory_path() /
-                                  ("wxnotepad-find-" + std::to_string(wxGetProcessId()) + ".txt");
+                const auto path =
+                    TestFiles::TemporaryDirectory() / ("wxnotepad-find-" + std::to_string(wxGetProcessId()) + ".txt");
                 {
                     std::ofstream(path, std::ios::binary) << "opened one\n";
                 }

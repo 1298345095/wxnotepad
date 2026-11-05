@@ -23,8 +23,8 @@ public:
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory = std::filesystem::temp_directory_path() /
-                                   ("wxnotepad-file-indentation-" + std::to_string(wxGetProcessId()));
+            const auto directory =
+                TestFiles::TemporaryDirectory() / ("wxnotepad-file-indentation-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directories(directory);
                 const auto path = directory / "spaces.txt";

@@ -272,7 +272,7 @@ public:
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-cleanup-" + std::to_string(wxGetProcessId()));
+                TestFiles::TemporaryDirectory() / ("wxnotepad-cleanup-" + std::to_string(wxGetProcessId()));
             try {
                 std::filesystem::create_directory(directory);
                 Policies(frame, directory);

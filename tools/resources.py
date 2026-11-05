@@ -136,6 +136,19 @@ def prepare(directory):
     return paths
 
 
+def require(condition, detail):
+    if not condition:
+        raise ValueError(detail)
+
+
+def verify_saved_bytes(scratch, sample):
+    with scratch.open("rb") as actual, sample.open("rb") as original:
+        require(actual.read(1) == b"X", "Saved document must start with the native edit")
+        for block in iter(lambda: original.read(1024 * 1024), b""):
+            require(actual.read(len(block)) == block, "Saved document differs from the source sample")
+        require(actual.read(1) == b"", "Saved document contains unexpected trailing bytes")
+
+
 def observe(executable, work, kind, sample, run, topmost):
     folder = work / f"{kind}-{sample.stem if sample else 'empty'}-{run}"
     folder.mkdir()
@@ -158,7 +171,7 @@ def observe(executable, work, kind, sample, run, topmost):
             show_owned_topmost(process, state)
         stamp["ready_observed"] = time.perf_counter()
         row["initial_state"] = state
-        assert state["shown"] == "1" and state["dirty"] == "0", state
+        require(state["shown"] == "1" and state["dirty"] == "0", state)
         row["launch_to_update_observed_ms"] = (stamp["ready_observed"] - stamp["spawn_begin"]) * 1000
         if kind == "idle":
             time.sleep(QUIET)
@@ -170,7 +183,7 @@ def observe(executable, work, kind, sample, run, topmost):
                 command(folder, 1, "open", scratch)
                 state = wait_state(folder, process, lambda s: s["sequence"] == "1")
                 stamp["open_observed"] = time.perf_counter()
-                assert state["result"] == "ok" and int(state["length"]) == sample.stat().st_size, state
+                require(state["result"] == "ok" and int(state["length"]) == sample.stat().st_size, state)
                 row["open_observed_ms"] = (stamp["open_observed"] - stamp["open_begin"]) * 1000
                 time.sleep(QUIET)
                 row["memory"]["opened"] = memory(process.pid)
@@ -179,7 +192,7 @@ def observe(executable, work, kind, sample, run, topmost):
             native_edit(process, state)
             state = wait_state(folder, process, lambda s: s["dirty"] == "1")
             stamp["edit_observed"] = time.perf_counter()
-            assert int(state["length"]) == (sample.stat().st_size if sample else 0) + 1, state
+            require(int(state["length"]) == (sample.stat().st_size if sample else 0) + 1, state)
             row["edit_observed_ms"] = (stamp["edit_observed"] - stamp["edit_begin"]) * 1000
             if kind == "startup":
                 row["launch_to_native_edit_observed_ms"] = (stamp["edit_observed"] - stamp["spawn_begin"]) * 1000
@@ -191,20 +204,13 @@ def observe(executable, work, kind, sample, run, topmost):
                 command(folder, 2, "save")
                 state = wait_state(folder, process, lambda s: s["sequence"] == "2")
                 stamp["save_observed"] = time.perf_counter()
-                assert state["result"] == "ok" and state["dirty"] == "0", state
+                require(state["result"] == "ok" and state["dirty"] == "0", state)
                 row["save_observed_ms"] = (stamp["save_observed"] - stamp["save_begin"]) * 1000
                 time.sleep(QUIET)
                 row["memory"]["saved"] = memory(process.pid)
                 stamp["saved_memory"] = time.perf_counter()
                 # Independent full-content comparison only after all timing/memory.
-                with scratch.open("rb") as actual, sample.open("rb") as original:
-                    assert actual.read(1) == b"X"
-                    while True:
-                        block = original.read(1024 * 1024)
-                        assert actual.read(len(block)) == block
-                        if not block:
-                            assert actual.read(1) == b""
-                            break
+                verify_saved_bytes(scratch, sample)
                 row["output_sha256"] = digest(scratch)
                 row["output_bytes"] = scratch.stat().st_size
                 row["content_verified"] = True

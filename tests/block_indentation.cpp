@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
 #include "editor/editor_control.h"
@@ -186,7 +187,7 @@ std::string Bytes(const std::filesystem::path& path) {
 void SavedBytes(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto directory =
-        std::filesystem::temp_directory_path() / ("wxnotepad-block-indent-" + std::to_string(wxGetProcessId()));
+        TestFiles::TemporaryDirectory() / ("wxnotepad-block-indent-" + std::to_string(wxGetProcessId()));
     std::filesystem::create_directory(directory);
     struct Fixture {
         const char* name;

@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include <ScintillaTypes.h>
@@ -152,8 +153,8 @@ public:
                 Paint(editor);
                 std::puts("PASS: indent, dedent, header removal and Undo/Redo preserve pinned fold structure");
 
-                const auto directory = std::filesystem::temp_directory_path() /
-                                       ("wxnotepad-python-fold-" + std::to_string(wxGetProcessId()));
+                const auto directory =
+                    TestFiles::TemporaryDirectory() / ("wxnotepad-python-fold-" + std::to_string(wxGetProcessId()));
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "fold.py";
 #ifdef __WXMSW__
