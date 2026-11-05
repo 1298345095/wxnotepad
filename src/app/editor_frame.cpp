@@ -200,6 +200,25 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const int selectMatchingBrace = wxWindow::NewControlId();
     edit->Append(selectMatchingBrace, "Select to Matching B&race\tCtrl+Shift+B");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(true); }, selectMatchingBrace);
+    auto* bookmarks = new wxMenu;
+    const int bookmarkToggle = wxWindow::NewControlId();
+    const int bookmarkNext = wxWindow::NewControlId();
+    const int bookmarkPrevious = wxWindow::NewControlId();
+    const int bookmarkSelect = wxWindow::NewControlId();
+    const int bookmarkClear = wxWindow::NewControlId();
+    bookmarks->Append(bookmarkToggle, "&Toggle\tCtrl+F2");
+    bookmarks->AppendSeparator();
+    bookmarks->Append(bookmarkNext, "Goto &Next\tF2");
+    bookmarks->Append(bookmarkPrevious, "Goto &Previous\tShift+F2");
+    bookmarks->AppendSeparator();
+    bookmarks->Append(bookmarkSelect, "&Select All\tAlt+F6");
+    bookmarks->Append(bookmarkClear, "&Clear All\tAlt+F2");
+    edit->AppendSubMenu(bookmarks, "Boo&kmarks");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleBookmark(); }, bookmarkToggle);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->GoToBookmark(true); }, bookmarkNext);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->GoToBookmark(false); }, bookmarkPrevious);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectAllBookmarks(); }, bookmarkSelect);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::MarkerDeleteAll, 0); }, bookmarkClear);
     edit->AppendSeparator();
     const auto addEol = [this, edit](const wxString& label, Scintilla::EndOfLine mode) {
         const int id = wxWindow::NewControlId();
@@ -579,6 +598,17 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
         ShowFind(true);
     else if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown())
         Search(!event.ShiftDown(), true);
+    else if (event.GetKeyCode() == WXK_F2 && !event.MetaDown()) {
+        if (event.ControlDown() && !event.ShiftDown() && !event.AltDown())
+            editor_->ToggleBookmark();
+        else if (event.AltDown() && !event.ControlDown() && !event.ShiftDown())
+            editor_->Send(Scintilla::Message::MarkerDeleteAll, 0);
+        else if (!event.ControlDown() && !event.AltDown())
+            editor_->GoToBookmark(!event.ShiftDown());
+        // Consume unmatched modifiers so native menu lookup cannot drop them.
+    } else if (event.GetKeyCode() == WXK_F6 && event.AltDown() && !event.ControlDown() && !event.ShiftDown() &&
+               !event.MetaDown())
+        editor_->SelectAllBookmarks();
     else if (event.GetKeyCode() == WXK_F3 && !event.HasAnyModifiers())
         FindNext();
     else if (event.GetKeyCode() == WXK_F3 && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
