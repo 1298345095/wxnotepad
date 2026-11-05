@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include <ScintillaTypes.h>
@@ -98,15 +99,10 @@ public:
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
                 std::puts("PASS: array opener and hidden closing delimiter edits repair visibility through Undo/Redo");
-                const auto directory = std::filesystem::temp_directory_path() /
-                                       ("wxnotepad-json-fold-" + std::to_string(wxGetProcessId()));
+                const auto directory = TestFiles::TemporaryDirectory("wxnotepad-json-fold");
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "fold.json";
-#ifdef __WXMSW__
-                const wxString filename(path.wstring());
-#else
-                const auto filename = wxString::FromUTF8(path.string());
-#endif
+                const auto filename = TestFiles::Filename(path);
                 Require(frame->SaveAs(filename).status == SaveStatus::Saved, "JSON fold fixture must save");
                 editor->Send(Message::GotoPos, 0);
                 const auto canUndo = editor->Send(Message::CanUndo);

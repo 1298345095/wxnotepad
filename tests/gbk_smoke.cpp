@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <filesystem>
@@ -13,33 +14,14 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
+using TestFiles::Filename;
 void Write(const std::filesystem::path& path, const std::string& bytes) {
     std::ofstream stream(path, std::ios::binary);
     stream.write(bytes.data(), bytes.size());
 }
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream stream(path, std::ios::binary);
-    Require(stream.is_open(), "file must exist");
-    return {std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
-}
-std::string Text(EditorFrame* frame) {
-    const auto length = frame->Editor()->Send(Scintilla::Message::GetLength);
-    std::string text(length + 1, '\0');
-    frame->Editor()->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
-void Add(EditorFrame* frame, const std::string& text) {
-    frame->Editor()->Send(Scintilla::Message::GotoPos, frame->Editor()->Send(Scintilla::Message::GetLength));
-    frame->Editor()->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-}
+using TestEditor::Append;
+using TestEditor::Text;
+using TestFiles::Bytes;
 class GbkApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -48,8 +30,7 @@ public:
         settings_->values.wordWrap = false;
         auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-gbk-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-gbk");
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";
@@ -60,14 +41,14 @@ public:
                 Require(Text(frame) == "ASCII\r\n中文\n€\r", "GBK must decode CJK/Euro and retain EOL");
                 Require(frame->DocumentEncoding() == FileEncoding::Gbk && !frame->DocumentHasBom(),
                         "GBK must record encoding without BOM");
-                Add(frame, "中文");
+                Append(frame, "中文");
                 Require(frame->Save().status == SaveStatus::Saved && Bytes(source) == original + "\xd6\xd0\xce\xc4",
                         "Save must preserve GBK bytes and mixed EOL");
                 const auto copy = directory / "copy.txt";
                 Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved && Bytes(copy) == Bytes(source),
                         "Save As must retain GBK");
                 std::puts("PASS: explicit GBK CJK/Euro Save/Save As exact bytes and mixed EOL");
-                Add(frame, "¥☃😀𝄞");
+                Append(frame, "¥☃😀𝄞");
                 const auto rich = Text(frame);
                 const auto saved = Bytes(copy);
                 Require(frame->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled,
@@ -100,7 +81,7 @@ public:
                         "CP936 PUA values must match original Windows mapping");
                 Require(repertoire->Save().status == SaveStatus::Saved && Bytes(puaPath) == pua,
                         "CP936 PUA must roundtrip without replacement");
-                Add(repertoire, "\xef\xa3\xb5"); // U+F8F5 maps to invalid FF in the original Win32 encoder.
+                Append(repertoire, "\x{ef}\x{a3}\x{b5}"); // U+F8F5 maps to invalid FF in the original Win32 encoder.
                 Require(repertoire->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
                             Bytes(puaPath) == pua,
                         "asymmetric F8F5 must require explicit loss choice");
@@ -109,7 +90,7 @@ public:
                         "asymmetric F8F5 replacement must be strict-readable question mark");
                 repertoire->Destroy();
                 std::puts("PASS: original CP936 PUA mapping and strict-readable F8F5 loss choice");
-                Add(frame, "pending");
+                Append(frame, "pending");
                 const auto pending = Text(frame);
                 const auto identity = frame->DocumentPath();
                 const std::string malformed[] = {
@@ -150,7 +131,7 @@ public:
                     auto* failure = new EditorFrame(settings_.get());
                     Require(failure->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
                             "failure source must open");
-                    Add(failure, "¥☃😀");
+                    Append(failure, "¥☃😀");
                     const auto before = Text(failure);
                     Require(failure->SaveAs(std::nullopt, [choice] { return choice; }).status == SaveStatus::Cancelled,
                             "cancelled picker must not save");
@@ -175,13 +156,13 @@ public:
                     failure->Destroy();
                 }
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
-                    Require(entry.path().filename().u8string().find(u8".wxnotepad-") == std::u8string::npos,
+                    Require(!entry.path().filename().u8string().contains(u8".wxnotepad-"),
                             "failed saves must clean temporary siblings");
                 std::puts("PASS: every loss choice cancellation/replacement failure preserves disk/session/history");
                 auto* lossyAs = new EditorFrame(settings_.get());
                 Require(lossyAs->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
                         "lossy Save As source must open");
-                Add(lossyAs, "¥☃😀𝄞");
+                Append(lossyAs, "¥☃😀𝄞");
                 const auto richAs = Text(lossyAs);
                 const auto lossyTarget = directory / "lossy-as.txt";
                 Require(lossyAs->SaveAs(Filename(lossyTarget), [] { return GbkLossChoice::Replace; }).status ==

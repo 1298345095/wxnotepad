@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <wx/checkbox.h>
@@ -173,7 +174,7 @@ public:
                             result->GetLabel() == "1 replacements",
                         "empty no-op EOF match must terminate and count once");
                 std::puts("PASS: no-match, byte-identical, empty expansion/query and invalid input preserve history");
-                const auto path = std::filesystem::temp_directory_path() /
+                const auto path = TestFiles::TemporaryDirectory() /
                                   ("wxnotepad-regex-all-" + std::to_string(wxGetProcessId()) + ".txt");
                 const std::string beforeBytes = "\xef\xbb\xbf"
                                                 "中文12\r\n中文34\nend\r";

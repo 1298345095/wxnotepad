@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "native_search_helpers.h"
 #include <wx/wx.h>
 #include <wx/dialog.h>
@@ -160,7 +161,7 @@ public:
                 Require(replacement && result, "native Replace must expose replacement text and count");
                 {
                     load(nested);
-                    const auto path = std::filesystem::temp_directory_path() /
+                    const auto path = TestFiles::TemporaryDirectory() /
                                       ("wxnotepad-single-noop-" + std::to_string(wxGetProcessId()) + ".cpp");
 #ifdef __WXMSW__
                     const wxString filename(path.wstring());
@@ -330,7 +331,7 @@ public:
                 Require(editor->Send(Message::GetLineVisible,
                                      editor->Send(Message::LineFromPosition, editor->Send(Message::GetCurrentPos))),
                         "structural replacement must leave a visible valid caret");
-                const auto path = std::filesystem::temp_directory_path() /
+                const auto path = TestFiles::TemporaryDirectory() /
                                   ("wxnotepad-fold-search-" + std::to_string(wxGetProcessId()) + ".cpp");
 #ifdef __WXMSW__
                 const wxString filename(path.wstring());

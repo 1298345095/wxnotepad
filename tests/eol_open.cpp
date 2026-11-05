@@ -272,8 +272,7 @@ class EolOpenApp final : public wxApp {
 public:
     bool OnInit() override {
         CallAfter([this] {
-            const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-eol-open-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-eol-open");
             try {
                 std::filesystem::create_directory(directory);
                 SettingsStore settings;

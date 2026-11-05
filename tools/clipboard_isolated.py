@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
         while test.poll() is None:
             focus = runtime / "focus"
             request = focus.read_text(encoding="utf-8") if focus.exists() else ""
-            if (request in ("editor", "peer", "gesture") or request.startswith(("key:", "focus:", "drag:", "front:", "geometry:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "gesture", "geometry") or request.startswith(("key:", "focus:", "drag:", "front:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 def front(title):
                     if backend == "x11":
                         windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
@@ -85,7 +85,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     else:
                         xdo("key", "--clearmodifiers", "super+Tab")
                     time.sleep(.3)
-                if request.startswith("geometry:"):
+                if request == "geometry":
                     focus.write_text("", encoding="utf-8")
                     # Read only the two owned drag fixture surfaces. Wayland
                     # clients cannot query their global compositor positions.
@@ -99,7 +99,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         if time.monotonic() > mapping_deadline:
                             raise RuntimeError("Private compositor must map both owned drag surfaces")
                         time.sleep(.05)
-                    response = Path(request[9:])
+                    response = runtime / "geometry"
                     pending = response.with_suffix(".tmp")
                     pending.write_text(",".join(map(str, (*positions["main"], *positions["peer"]))), encoding="utf-8")
                     pending.replace(response)

@@ -43,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .ci/bin
-          curl --fail --show-error --location --retry 3 \
+          curl --fail --show-error --location --proto '=https' --proto-redir '=https' --retry 3 \
             https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
             --output .ci/actionlint.tar.gz
           printf '%s  %s\n' "$ACTIONLINT_SHA256" .ci/actionlint.tar.gz | sha256sum --check -

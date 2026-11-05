@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <cstdio>
@@ -14,20 +15,8 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Text(EditorFrame* frame) {
-    const auto length = static_cast<size_t>(frame->Editor()->Send(Scintilla::Message::GetLength));
-    std::string text(length + 1, '\0');
-    frame->Editor()->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
+using TestEditor::Text;
+using TestFiles::Filename;
 class OpenApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -36,8 +25,7 @@ public:
         settings_->values.wordWrap = false;
         auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-open-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-open");
             try {
                 std::filesystem::create_directory(directory);
                 const auto path = directory / u8"中文.txt";

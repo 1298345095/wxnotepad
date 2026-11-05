@@ -1,6 +1,7 @@
 #pragma once
 
 #include "editor/editor_control.h"
+#include "editor_test_helpers.h"
 #include "app/editor_frame.h"
 #include "native_dialog_helpers.h"
 #include <wx/wx.h>
@@ -96,12 +97,7 @@ inline void Selection(EditorControl* editor, intptr_t start, intptr_t end, const
                      static_cast<long long>(actualEnd), static_cast<long long>(start), static_cast<long long>(end));
     if (actualStart != start || actualEnd != end) throw std::runtime_error(message);
 }
-inline std::string Text(EditorControl* editor) {
-    std::string text(static_cast<size_t>(editor->Send(Scintilla::Message::GetLength)) + 1, '\0');
-    editor->Send(Scintilla::Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.pop_back();
-    return text;
-}
+using TestEditor::Text;
 inline void NativeF3(wxWindow* window) {
 #ifdef __WXMSW__
     PostMessageW(static_cast<HWND>(window->GetHandle()), WM_KEYDOWN, VK_F3, 0);

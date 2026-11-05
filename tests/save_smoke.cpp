@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "editor_test_helpers.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
@@ -13,23 +14,9 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
-void Add(EditorFrame* frame, const std::string& text) {
-    auto* editor = frame->Editor();
-    editor->Send(Scintilla::Message::GotoPos, editor->Send(Scintilla::Message::GetLength));
-    editor->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-}
+using TestEditor::Append;
+using TestFiles::Bytes;
+using TestFiles::Filename;
 class SaveApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -40,8 +27,7 @@ public:
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-save-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-save");
             try {
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "existing.txt";
@@ -50,7 +36,7 @@ public:
                                                              "one\r\ntwo\nthree\r";
                 }
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "source must open");
-                Add(frame, "中文😀");
+                Append(frame, "中文😀");
                 wxUpdateUIEvent state(wxID_SAVE);
                 frame->GetEventHandler()->ProcessEvent(state);
                 Require(state.GetEnabled(), "Save menu must be enabled for an existing path");
@@ -63,7 +49,7 @@ public:
                             !frame->Editor()->Send(Scintilla::Message::GetModify),
                         "Save must retain identity and establish a save point");
                 std::puts("PASS: existing-path Save menu preserves BOM/EOL and identity");
-                Add(frame, "!");
+                Append(frame, "!");
                 const auto copy = directory / u8"另存为.txt";
                 Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved,
                         "Save As to a new path must succeed");
@@ -82,7 +68,7 @@ public:
                 frame->Editor()->Send(Scintilla::Message::Redo);
                 Require(!frame->Editor()->Send(Scintilla::Message::GetModify),
                         "Redo to Save As save point must be clean");
-                Add(frame, "?");
+                Append(frame, "?");
                 frame->Editor()->Send(Scintilla::Message::Undo);
                 Require(!frame->Editor()->Send(Scintilla::Message::GetModify), "Undo to save point must be clean");
                 frame->Editor()->Send(Scintilla::Message::Redo);
@@ -92,7 +78,7 @@ public:
                                                                                     "one\r\ntwo\nthree\r中文😀!?",
                         "next Save must use the Save As identity");
                 std::puts("PASS: Save As new path, original isolation and Undo/Redo save points");
-                Add(frame, "pending");
+                Append(frame, "pending");
                 const auto identity = frame->DocumentPath();
                 const auto unchanged = [&] {
                     Require(frame->DocumentPath() == identity && frame->DocumentHasUtf8Bom(),
@@ -130,7 +116,7 @@ public:
                                            "one\r\ntwo\nthree\r中文😀!?pending",
                         "approved same-path Save As must preserve full pending text");
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
-                    Require(entry.path().filename().u8string().find(u8".wxnotepad-") == std::u8string::npos,
+                    Require(!entry.path().filename().u8string().contains(u8".wxnotepad-"),
                             "failed saves must clean temporary siblings");
                 std::puts("PASS: Save As cancellation and creation/replacement failures preserve session and disk");
                 const std::string samples[] = {"", "\xef\xbb\xbf", "ASCII\r\n",

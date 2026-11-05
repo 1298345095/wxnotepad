@@ -1,5 +1,7 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "syntax_test_helpers.h"
+#include "file_helpers.h"
 #include <SciLexer.h>
 #include <wx/wx.h>
 #include <wx/statusbr.h>
@@ -16,35 +18,10 @@ using Scintilla::Message;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
-void Paint(EditorFrame* frame) {
-    auto* editor = frame->Editor();
-    const auto prefix = std::min(editor->Send(Message::GetLength), intptr_t{128});
-    for (int attempt = 0; attempt < 100; ++attempt) {
-        wxYield();
-        editor->Refresh();
-        editor->Update();
-        wxYield();
-        if (editor->Send(Message::GetEndStyled) >= prefix) return;
-        wxMilliSleep(10);
-    }
-}
-void Command(EditorFrame* frame, int id) {
-    wxCommandEvent event(wxEVT_MENU, id);
-    Require(frame->GetEventHandler()->ProcessEvent(event), "native menu command must be handled");
-    Paint(frame);
-}
+using TestFiles::Bytes;
+using TestFiles::Filename;
+using TestSyntax::Command;
+using TestSyntax::Paint;
 void Choose(EditorFrame* frame, const wxString& label) {
     const int id = frame->GetMenuBar()->FindMenuItem("Language", label);
     Require(id != wxNOT_FOUND, "Language menu must offer Automatic, Plain Text and C/C++");
@@ -146,8 +123,7 @@ public:
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
-                                   ("wxnotepad-syntax-manual-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-syntax-manual");
             try {
                 std::filesystem::create_directory(directory);
                 auto* editor = frame->Editor();

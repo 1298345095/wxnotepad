@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "syntax_test_helpers.h"
 #include "editor/editor_control.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -17,18 +18,7 @@ using Scintilla::Message;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-void Paint(EditorFrame* frame) {
-    auto* editor = frame->Editor();
-    const auto prefix = std::min(editor->Send(Message::GetLength), intptr_t{128});
-    for (int attempt = 0; attempt < 100; ++attempt) {
-        wxYield();
-        editor->Refresh();
-        editor->Update();
-        wxYield();
-        if (editor->Send(Message::GetEndStyled) >= prefix) return;
-        wxMilliSleep(10);
-    }
-}
+using TestSyntax::Paint;
 std::string Text(EditorControl* editor) {
     std::string text(static_cast<size_t>(editor->Send(Message::GetLength)) + 1, '\0');
     editor->Send(Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
@@ -62,8 +52,7 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto folder =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-shebang-" + std::to_string(wxGetProcessId()));
+            const auto folder = TestFiles::TemporaryDirectory("wxnotepad-shebang");
             try {
                 std::filesystem::create_directory(folder);
                 const auto path = folder / "script";

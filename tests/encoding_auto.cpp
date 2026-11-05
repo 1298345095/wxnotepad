@@ -24,8 +24,7 @@ public:
         auto* frame = new wxFrame(nullptr, wxID_ANY, "Automatic encoding");
         auto* editor = new EditorControl(frame);
         CallAfter([this, frame, editor] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-encoding-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-encoding");
             try {
                 std::filesystem::create_directory(directory);
                 DocumentSession document(*editor);

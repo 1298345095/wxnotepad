@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
 #include "native_fold_helpers.h"
@@ -30,18 +31,8 @@ void WhitespaceShortcut(EditorControl* window) {
 #endif
     wxYield();
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
+using TestFiles::Bytes;
+using TestFiles::Filename;
 class WhitespaceApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -53,8 +44,7 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
-            const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-whitespace-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-whitespace");
             try {
                 auto* editor = frame->Editor();
                 const int id = frame->GetMenuBar()->FindMenuItem("View", "Show Whitespace");

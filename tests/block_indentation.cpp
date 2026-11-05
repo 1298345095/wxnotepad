@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
 #include "editor/editor_control.h"
@@ -179,14 +180,10 @@ void DialogTraversal(EditorFrame* frame) {
     std::puts("PASS: actual Tab/Shift+Tab traverse Find, Go To Line and native file dialogs");
 }
 #endif
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream file(path, std::ios::binary);
-    return {std::istreambuf_iterator<char>(file), {}};
-}
+using TestFiles::Bytes;
 void SavedBytes(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const auto directory =
-        std::filesystem::temp_directory_path() / ("wxnotepad-block-indent-" + std::to_string(wxGetProcessId()));
+    const auto directory = TestFiles::TemporaryDirectory("wxnotepad-block-indent");
     std::filesystem::create_directory(directory);
     struct Fixture {
         const char* name;

@@ -168,7 +168,7 @@ void SearchSession::Remember(bool replacement) {
 }
 
 void SearchSession::ClearFindAll() {
-    if (matchCount_) {
+    if (matchCount_.has_value()) {
         editor_.Send(Scintilla::Message::SetIndicatorCurrent, 8);
         editor_.Send(Scintilla::Message::IndicatorClearRange, 0, editor_.Send(Scintilla::Message::GetLength));
         matchCount_.reset();
@@ -197,7 +197,7 @@ FindAllResult SearchSession::FindAll() {
     matchCount_ = 0;
     if (UsesRegex() && query.length() == 1 && (query.data()[0] == '^' || query.data()[0] == '$')) {
         // Pinned EditMarkAll::Start counts these anchors without indicators or bookmarks.
-        *matchCount_ = static_cast<size_t>(editor_.Send(Message::GetLineCount) - (query.data()[0] == '^'));
+        matchCount_ = static_cast<size_t>(editor_.Send(Message::GetLineCount) - (query.data()[0] == '^'));
         return {FindStatus::Found, *matchCount_};
     }
     bookmarkForFindAll_ = request_.bookmarkMatchedLines;

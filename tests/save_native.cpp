@@ -1,5 +1,7 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "editor_test_helpers.h"
+#include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
 #include <wx/wx.h>
@@ -15,23 +17,9 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
-void Add(EditorFrame* frame, const std::string& text) {
-    auto* editor = frame->Editor();
-    editor->Send(Scintilla::Message::GotoPos, editor->Send(Scintilla::Message::GetLength));
-    editor->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-}
+using TestEditor::Append;
+using TestFiles::Bytes;
+using TestFiles::Filename;
 #ifdef __WXGTK__
 using NativeDialogs::Respond;
 bool Click(GtkWidget* widget, const char* label) {
@@ -147,8 +135,7 @@ public:
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
         CallAfter([this, frame] {
-            const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
-                                   ("wxnotepad-save-native-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-save-native");
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";
@@ -166,7 +153,7 @@ public:
                            frame->GetStatusBar()->GetStatusText().Contains("override");
                 };
                 choose("C/C++");
-                Add(frame, "pending");
+                Append(frame, "pending");
                 Require(frame->GetMenuBar()->FindItem(wxID_SAVEAS), "File menu must expose Save As");
                 const auto* saveAccelerator = frame->GetMenuBar()->FindItem(wxID_SAVE)->GetAccel();
                 Require(saveAccelerator && saveAccelerator->GetKeyCode() == 'S' &&
@@ -198,7 +185,7 @@ public:
                                              "Native 中文\r\nsecond\nthird\r",
                         "native Save As must retain exact bytes and original source");
                 std::puts("PASS: native Save As menu/accelerator, picker Cancel and new target");
-                Add(frame, " overwrite");
+                Append(frame, " overwrite");
                 choose("Python");
                 const auto target = directory / "overwrite.txt";
                 {
@@ -230,7 +217,7 @@ public:
                 Require(samePath.choosers == 1 && samePath.confirmations == 1 && hasOverride("Plain Text"),
                         "explicit native Save As to the same pathname must retain the selected current Plain type");
                 choose("JSON");
-                Add(frame, " failure");
+                Append(frame, " failure");
 #ifdef __WXMSW__
                 HANDLE sourceLock = CreateFileW(source.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
                                                 FILE_ATTRIBUTE_NORMAL, nullptr);

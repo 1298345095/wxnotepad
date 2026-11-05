@@ -39,8 +39,7 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-syntax-large-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-syntax-large");
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "large.CPP";

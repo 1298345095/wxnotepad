@@ -204,8 +204,7 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory =
-                TestFiles::TemporaryDirectory() / ("wxnotepad-eol-conversion-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-eol-conversion");
             try {
                 auto* editor = frame->Editor();
                 struct Mode {

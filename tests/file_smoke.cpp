@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <cstdio>
@@ -16,18 +17,8 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-std::string Bytes(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    Require(input.is_open(), "saved file must exist");
-    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-}
-wxString Filename(const std::filesystem::path& path) {
-#ifdef __WXMSW__
-    return wxString(path.wstring());
-#else
-    return wxString::FromUTF8(path.string());
-#endif
-}
+using TestFiles::Bytes;
+using TestFiles::Filename;
 std::string Text(EditorControl* editor) {
     const auto length = static_cast<size_t>(editor->Send(Scintilla::Message::GetLength));
     std::string text(length + 1, '\0');
@@ -137,8 +128,7 @@ public:
             return true;
         }
         CallAfter([this, frame] {
-            const auto directory =
-                std::filesystem::temp_directory_path() / ("wxnotepad-file-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-file");
             try {
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "empty.txt";
@@ -229,7 +219,7 @@ public:
                 Require(Bytes(protectedPath) == "original bytes", "failed save must not truncate original file");
                 unchanged();
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
-                    Require(entry.path().filename().u8string().find(u8".wxnotepad-") == std::u8string::npos,
+                    Require(!entry.path().filename().u8string().contains(u8".wxnotepad-"),
                             "failure must clean sibling temporary files");
                 Require(pending->SaveFirst(Filename(protectedPath)).status == SaveStatus::Saved,
                         "approved overwrite must succeed after failure");

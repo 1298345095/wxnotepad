@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "syntax_test_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
 #include <SciLexer.h>
@@ -19,33 +20,11 @@ using Scintilla::Message;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
+using TestEditor::Text;
 using TestFiles::Bytes;
 using TestFiles::Filename;
-std::string Text(EditorControl* editor) {
-    const auto length = static_cast<size_t>(editor->Send(Message::GetLength));
-    std::string text(length + 1, '\0');
-    editor->Send(Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    text.resize(length);
-    return text;
-}
-void Paint(EditorFrame* frame) {
-    auto* editor = frame->Editor();
-    const auto visiblePrefix = std::min(editor->Send(Message::GetLength), intptr_t{128});
-    // Observe the normal style pass, including asynchronous Wayland frames.
-    for (int attempt = 0; attempt < 100; ++attempt) {
-        wxYield();
-        editor->Refresh();
-        editor->Update();
-        wxYield();
-        if (editor->Send(Message::GetEndStyled) >= visiblePrefix) return;
-        wxMilliSleep(10);
-    }
-}
-void Command(EditorFrame* frame, int id) {
-    wxCommandEvent event(wxEVT_MENU, id);
-    Require(frame->GetEventHandler()->ProcessEvent(event), "real editor command must be handled");
-    Paint(frame);
-}
+using TestSyntax::Command;
+using TestSyntax::Paint;
 // Drive only modal widgets owned by this test, without global input or focus.
 class SaveChooser final : public wxTimer {
 public:
@@ -164,8 +143,7 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
-            const auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
-                                   ("wxnotepad-syntax-save-" + std::to_string(wxGetProcessId()));
+            const auto directory = TestFiles::TemporaryDirectory("wxnotepad-syntax-save");
             try {
                 std::filesystem::create_directory(directory);
                 const auto cpp = directory / "first.CpP";

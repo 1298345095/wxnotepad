@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "file_helpers.h"
 #include "settings/settings_store.h"
 #include "native_search_helpers.h"
 #include <wx/wx.h>
@@ -197,7 +198,7 @@ public:
                 editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
                 std::puts("PASS: native rectangular-selection warning without edits");
 
-                const auto path = std::filesystem::temp_directory_path() /
+                const auto path = TestFiles::TemporaryDirectory() /
                                   ("wxnotepad-selection-" + std::to_string(wxGetProcessId()) + ".txt");
                 {
                     std::ofstream file(path, std::ios::binary);
