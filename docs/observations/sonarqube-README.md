@@ -56,3 +56,8 @@ specific source-to-sink explanation to each reviewed finding.
 The ten reported CLI findings received individual false-positive dispositions,
 each with its reviewed source-to-sink explanation. Mutation responses are retained
 with the raw MCP baseline.
+
+Two `std::print` suggestions affecting this change were reviewed against the
+supported Ubuntu 24.04/GCC 13 baseline. Its libstdc++ lacks `<print>`; a direct
+C++23 compilation records the missing-header error. The portable `fprintf`
+diagnostics remain, with finding-specific portability dispositions.

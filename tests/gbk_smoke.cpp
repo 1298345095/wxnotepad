@@ -81,7 +81,7 @@ public:
                         "CP936 PUA values must match original Windows mapping");
                 Require(repertoire->Save().status == SaveStatus::Saved && Bytes(puaPath) == pua,
                         "CP936 PUA must roundtrip without replacement");
-                Append(repertoire, "\xef\xa3\xb5"); // U+F8F5 maps to invalid FF in the original Win32 encoder.
+                Append(repertoire, "\x{ef}\x{a3}\x{b5}"); // U+F8F5 maps to invalid FF in the original Win32 encoder.
                 Require(repertoire->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
                             Bytes(puaPath) == pua,
                         "asymmetric F8F5 must require explicit loss choice");
@@ -156,7 +156,7 @@ public:
                     failure->Destroy();
                 }
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
-                    Require(entry.path().filename().u8string().find(u8".wxnotepad-") == std::u8string::npos,
+                    Require(!entry.path().filename().u8string().contains(u8".wxnotepad-"),
                             "failed saves must clean temporary siblings");
                 std::puts("PASS: every loss choice cancellation/replacement failure preserves disk/session/history");
                 auto* lossyAs = new EditorFrame(settings_.get());
