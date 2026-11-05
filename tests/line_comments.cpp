@@ -55,8 +55,10 @@ void NativeKey(EditorControl* editor, bool divide, bool shift = false, bool alt 
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys use private display helper");
     bool received = false;
     wxEvtHandler observer;
-    observer.Bind(wxEVT_KEY_UP, [&received](wxKeyEvent& event) {
-        received = true;
+    observer.Bind(wxEVT_KEY_UP, [&received, divide](wxKeyEvent& event) {
+        // Previous native input can still release modifiers after this request.
+        const int key = event.GetKeyCode();
+        if (divide ? key == WXK_NUMPAD_DIVIDE || key == WXK_DIVIDE : key == '/' || key == '?') received = true;
         event.Skip();
     });
     editor->PushEventHandler(&observer);
@@ -71,7 +73,8 @@ void NativeKey(EditorControl* editor, bool divide, bool shift = false, bool alt 
         wxMilliSleep(10);
     }
     editor->PopEventHandler(false);
-    Require(received, "native private-display comment key reaches editor");
+    Require(received, divide ? "native private-display Divide release reaches editor"
+                             : "native private-display slash release reaches editor");
 #endif
     wxYield();
 }
@@ -234,8 +237,12 @@ public:
                     const std::string expected = std::string(language) == "Python"
                                                      ? (spaced ? "  # value\nnext" : "  #value\nnext")
                                                      : (spaced ? "  // value\nnext" : "  //value\nnext");
-                    Require(TestEditor::Text(editor) == expected,
-                            "actual Ctrl+/ uses scheme prefix and settings spacing");
+                    const auto actual = TestEditor::Text(editor);
+                    if (actual != expected)
+                        std::fprintf(stderr, "Ctrl+/ language=%s status=%s expected=<%s> actual=<%s> focusEditor=%d\n",
+                                     language, frame->GetStatusBar()->GetStatusText().utf8_str().data(),
+                                     expected.c_str(), actual.c_str(), wxWindow::FindFocus() == editor);
+                    Require(actual == expected, "actual Ctrl+/ uses scheme prefix and settings spacing");
                     NativeKey(editor, true);
                     Require(TestEditor::Text(editor) == "  value\nnext",
                             "actual Ctrl+Divide toggles same shared command");
