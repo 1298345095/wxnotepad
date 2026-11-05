@@ -79,6 +79,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.noFileVariables = ReadBool("NoFileVariables", false, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
     values.selectOption = ReadInt("SelectOption", 15);
+    values.autoInsertMask = ReadInt("AutoInsertMask", 511);
     values.saveFindReplace = ReadBool("SaveFindReplace", false);
     values.findReplaceOption = ReadInt("FindReplaceOption", 2);
     if (values.saveFindReplace) {
@@ -266,6 +267,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("FixLineEndings", values.fixLineEndings, false);
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, false);
         WriteInt("SelectOption", values.selectOption, 15);
+        WriteInt("AutoInsertMask", values.autoInsertMask, 511);
         WriteBool("SaveFindReplace", values.saveFindReplace, false);
         WriteInt("FindReplaceOption", values.findReplaceOption, 2);
         WriteInt("FindReplaceFlag", values.saveFindReplace ? values.findReplaceFlag : 0, 0);

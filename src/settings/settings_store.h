@@ -26,6 +26,7 @@ struct OriginalSettings {
     EncodingOptions encoding;
     int zoomLevel = 100;
     int selectOption = 15;
+    int autoInsertMask = 511;
     bool saveFindReplace = false;
     int findReplaceOption = 2;
     int findReplaceFlag = 0;
