@@ -59,7 +59,7 @@ jobs:
       - name: Test Windows
         if: runner.os == 'Windows'
         shell: bash
-        run: python -X utf8 .github/scripts/ci.py test --backend windows --tests original_toggle_line_comment
+        run: python -X utf8 .github/scripts/ci.py test --backend windows
       - name: Test private X11
         if: runner.os == 'Linux'
         shell: bash

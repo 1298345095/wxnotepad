@@ -48,7 +48,8 @@ void NativeKey(EditorControl* editor, bool divide, bool shift = false, bool alt 
     const bool handled =
         NativeSearch::WindowsShortcut(editor, divide ? VK_DIVIDE : VK_OEM_2,
                                       {{VK_CONTROL, 0x80}, {VK_SHIFT, shift ? 0x80 : 0}, {VK_MENU, alt ? 0x80 : 0}});
-    Require(handled || shift || alt, "native Ctrl+/ and Ctrl+Divide accelerators are handled");
+    Require(handled || shift || alt,
+            divide ? "native Ctrl+Divide accelerator is handled" : "native Ctrl+/ accelerator is handled");
 #else
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys use private display helper");
