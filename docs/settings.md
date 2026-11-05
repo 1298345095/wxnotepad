@@ -92,6 +92,11 @@ use the original Unicode INI format (UTF-16LE with BOM); the reader also accepts
 existing text INI files through the platform text converter.
 If an existing INI cannot be read completely, settings writes fail without replacing it.
 
+`[Settings] AutoInsertMask` defaults to `511` and uses the original integer-prefix
+parser. Toggle Line Comment reads bit `256` to insert or remove one optional
+space after the scheme prefix. The complete mask is retained through reloads,
+Save Settings Now and enabled exit saving; the default `511` is omitted on Save.
+
 Tab settings use this same store. `[Settings]` defaults are `TabWidth=4`,
 `IndentWidth=4`, `TabsAsSpaces=0`, `TabIndents=1`, `BackspaceUnindents=2`, and
 `DetectIndentation=1`.
