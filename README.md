@@ -36,6 +36,12 @@ Edit → Go To Line / Ctrl+G navigates to an absolute, 1-based document line and
 reveals its folded ancestors. The dialog validates the current line range;
 Cancel retains the previous selection, viewport and folds.
 
+Edit → Bookmarks offers Toggle (Ctrl+F2), Goto Next (F2), Goto Previous
+(Shift+F2), Select All (Alt+F6) and Clear All (Alt+F2). Navigation wraps and
+reveals folded destinations. Select All selects each marked whole line with
+the nearest bookmark as the main selection, preferring the earlier line on a
+tie. These commands share the bookmark marker used by Find All.
+
 View → Line Numbers / Ctrl+Shift+N toggles a margin sized for the current line
 count, font and display scale. View → Word Wrap / Ctrl+Shift+W wraps long lines
 to the window width without changing newline bytes. View → Show Whitespace /
