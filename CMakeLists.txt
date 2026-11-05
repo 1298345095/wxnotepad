@@ -35,6 +35,7 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
     src/editor/autoindent.cpp
+    src/editor/line_comments.cpp
     src/editor/editor_control.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
@@ -176,6 +177,10 @@ if(BUILD_TESTING)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(block_indentation block_indentation_commands 60)
+    add_gui_program(line_comments tests/line_comments.cpp app_shell)
+    add_test(NAME original_toggle_line_comment COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_comments_process.py" "$<TARGET_FILE:line_comments>")
+    set_tests_properties(original_toggle_line_comment PROPERTIES TIMEOUT 90)
     add_editor_test(move_lines original_move_lines 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)

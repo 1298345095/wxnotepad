@@ -34,6 +34,7 @@ struct SyntaxDefinition {
     int lexer;
     SyntaxLanguage language;
     bool canFold;
+    const char* lineComment;
 };
 
 std::span<const SyntaxDefinition> SyntaxCatalog();

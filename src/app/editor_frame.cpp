@@ -5,6 +5,7 @@
 #include "app/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/menu.h>
+#include <wx/accel.h>
 #include <wx/filedlg.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
@@ -157,6 +158,28 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+    const int lineComment = wxWindow::NewControlId();
+    auto* lineCommentItem = edit->Append(lineComment, "T&oggle Line Comment\tCtrl+/");
+    lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_DIVIDE, lineComment));
+    lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_DIVIDE, lineComment));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto* prefix = SyntaxFor(document_.Language()).lineComment;
+            if (!prefix || editor_->Send(Scintilla::Message::GetReadOnly)) return;
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            if (!editor_->ToggleLineComments(prefix, (preferences.autoInsertMask & 256) != 0))
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        lineComment);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
+                         SyntaxFor(document_.Language()).lineComment != nullptr);
+        },
+        lineComment);
     edit->AppendSeparator();
     const int moveUp = wxWindow::NewControlId();
     const int moveDown = wxWindow::NewControlId();

@@ -42,6 +42,13 @@ reveals folded destinations. Select All selects each marked whole line with
 the nearest bookmark as the main selection, preferring the earlier line on a
 tie. These commands share the bookmark marker used by Find All.
 
+Edit → Toggle Line Comment / Ctrl+/ (also Ctrl+keypad Divide) uses `//` for
+C/C++ and JSON, and `#` for Python. It follows the original common indentation,
+mixed-line and selection rules, with one Undo step per edit. The command is
+available for these writable schemes; rectangular selections report the
+original unsupported-operation warning. `AutoInsertMask` controls optional
+spacing through the shared [settings lifecycle](docs/settings.md).
+
 View → Line Numbers / Ctrl+Shift+N toggles a margin sized for the current line
 count, font and display scale. View → Word Wrap / Ctrl+Shift+W wraps long lines
 to the window width without changing newline bytes. View → Show Whitespace /

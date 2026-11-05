@@ -25,6 +25,8 @@ public:
     intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
     void IndentLines(bool forwards);
+    // False reports the original unsupported rectangular-selection operation.
+    bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     void MoveLines(bool upwards);
     void SetIndentationWidths(int tabWidth, int indentWidth);
     bool AutoIndentEnabled() const { return autoIndent_; }
