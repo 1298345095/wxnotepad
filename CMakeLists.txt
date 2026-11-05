@@ -65,6 +65,7 @@ add_library(app_shell STATIC
     src/app/go_to_line_dialog.cpp
     src/app/tab_settings_dialog.cpp
     src/app/editor_frame.cpp
+    src/app/editor_frame_commands.cpp
     src/app/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)

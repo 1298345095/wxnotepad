@@ -9,6 +9,7 @@
 class EditorControl;
 class FindReplaceDialog;
 class SettingsStore;
+class wxMenu;
 
 class EditorFrame final : public wxFrame {
 public:
@@ -40,6 +41,27 @@ private:
     FindReplaceDialog* findDialog_ = nullptr;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
+    void CreateMenus();
+    wxMenu* CreateFileMenu();
+    wxMenu* CreateEditMenu();
+    wxMenu* CreateLanguageMenu();
+    wxMenu* CreateViewMenu();
+    void AppendEditingCommands(wxMenu* edit);
+    void AppendSearchCommands(wxMenu* edit);
+    void AppendNavigationCommands(wxMenu* edit);
+    void AppendLineEndingCommands(wxMenu* edit);
+    void AppendLineSelectionCommands(wxMenu* edit);
+    void AppendIndentationOptions(wxMenu* view);
+    void AppendZoomCommands(wxMenu* view);
+    void AppendDisplayCommands(wxMenu* view);
+    void AppendFoldCommands(wxMenu* view);
+    void AppendSettingsCommands(wxMenu* view);
+    bool HandleCommandKey(const wxKeyEvent& event);
+    bool HandleSearchKey(const wxKeyEvent& event);
+    bool HandleNavigationKey(const wxKeyEvent& event);
+    bool HandleViewKey(const wxKeyEvent& event);
+    bool HandleWhitespaceKey(const wxKeyEvent& event, int commandId);
+    bool HandleDocumentKey(const wxKeyEvent& event);
     void ShowLineEndingOptions();
     void ReportFind(const FindResult& result);
     bool SearchMessage(SearchDirection direction);
