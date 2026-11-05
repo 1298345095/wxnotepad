@@ -18,8 +18,10 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-line-comments-") as name:
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"],
                            WXNOTEPAD_COMMENT_SPACED=str(int(spaced)))
         for _ in range(2):
-            result = subprocess.run([str(executable)], env=environment, timeout=25, check=False)
-            assert result.returncode == 0, result.returncode
+            result = subprocess.run([str(executable)], env=environment, timeout=25, check=False,
+                                    capture_output=True, text=True, encoding="utf-8", errors="replace")
+            assert result.returncode == 0, (f"AutoInsertMask={value!r}, spaced={spaced}, "
+                                            f"exit={result.returncode}\n{result.stdout}{result.stderr}")
             saved = config.read_text(encoding="utf-16")
             expected = None if value is None else int(value.removesuffix("suffix"))
             assert ("AutoInsertMask=" not in saved if expected is None else f"AutoInsertMask={expected}\n" in saved), saved
