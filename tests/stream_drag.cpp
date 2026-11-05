@@ -692,12 +692,14 @@ private:
                 Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control),
                         "native request snapshot requires the private driver");
                 const wxString command = "front:wxnotepad stream drag main";
+                const wxString prepared = control + ".snapshot.tmp";
                 {
-                    wxFFile request(control, "wb");
-                    Require(request.Write(command) && request.Close(), "publish native request snapshot probe");
+                    wxFFile request(prepared, "wb");
+                    Require(request.Write(command) && request.Close(), "prepare native request snapshot probe");
                 }
-                wxFFile snapshot(control, "rb");
+                wxFFile snapshot(prepared, "rb");
                 Require(snapshot.IsOpened(), "open pending native request snapshot");
+                Require(wxRenameFile(prepared, control, true), "publish native request snapshot probe");
                 WaitForDriver(control);
                 wxString observed;
                 Require(snapshot.ReadAll(&observed) && observed == command,
