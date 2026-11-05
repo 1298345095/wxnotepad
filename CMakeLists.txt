@@ -34,8 +34,11 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
-    src/editor/autoindent.cpp
+    src/editor/bookmarks.cpp
+    src/editor/indentation.cpp
     src/editor/line_comments.cpp
+    src/editor/matching_brace.cpp
+    src/editor/move_lines.cpp
     src/editor/editor_control.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
