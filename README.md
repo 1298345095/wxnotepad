@@ -115,7 +115,7 @@ spellings such as `$1` and `\1` as text. See the
 File → New / Ctrl+N and Open / Ctrl+O replace the current document after any
 unsaved changes are saved or discarded. Close uses the same Save/Discard/Cancel
 confirmation. Save / Ctrl+S opens a native chooser for an unnamed document and
-reuses the current path thereafter; Save As / Ctrl+Shift+S chooses a new target
+reuses the current path thereafter; Save As / F6 chooses a new target
 and confirms overwrite. Cancellation or failure retains the current document,
 identity and history. A successful save safely replaces the target and updates
 the title and save point.

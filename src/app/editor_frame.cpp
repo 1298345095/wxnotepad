@@ -139,7 +139,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const int openUtf16 = wxWindow::NewControlId();
     file->Append(openUtf16, "Open As UTF-16LE...");
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
-    file->Append(wxID_SAVEAS, "Save &As...\tCtrl+Shift+S");
+    file->Append(wxID_SAVEAS, "Save &As...\tF6");
     auto* edit = new wxMenu;
     edit->Append(wxID_UNDO, "&Undo\tCtrl+Z");
     edit->Append(wxID_REDO, "&Redo\tCtrl+Y");
@@ -194,6 +194,12 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const int goToLine = wxWindow::NewControlId();
     edit->Append(goToLine, "&Go To Line...\tCtrl+G");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowGoToLineDialog(this, *editor_); }, goToLine);
+    const int matchingBrace = wxWindow::NewControlId();
+    edit->Append(matchingBrace, "Find Matching &Brace\tCtrl+B");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(); }, matchingBrace);
+    const int selectMatchingBrace = wxWindow::NewControlId();
+    edit->Append(selectMatchingBrace, "Select to Matching B&race\tCtrl+Shift+B");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(true); }, selectMatchingBrace);
     edit->AppendSeparator();
     const auto addEol = [this, edit](const wxString& label, Scintilla::EndOfLine mode) {
         const int id = wxWindow::NewControlId();
@@ -559,7 +565,10 @@ void EditorFrame::ShowFind(bool replace) {
 }
 
 void EditorFrame::OnSearchKey(wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+    if (event.GetKeyCode() == 'B' && event.ControlDown() && !event.AltDown() && !event.MetaDown())
+        editor_->MatchBrace(event.ShiftDown());
+    else if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
         editor_->ToggleWordWrap();
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
@@ -575,7 +584,14 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
     else if (event.GetKeyCode() == WXK_F3 && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
              !event.MetaDown())
         FindPrevious();
-    else
+    else if (event.GetKeyCode() == WXK_F6) {
+        // GTK Wayland can consume Ctrl while matching F6 accelerators. Route
+        // the original exact modifiers before native accelerator matching.
+        if (!event.HasAnyModifiers()) {
+            wxCommandEvent command(wxEVT_MENU, wxID_SAVEAS);
+            GetEventHandler()->ProcessEvent(command);
+        }
+    } else
         event.Skip();
 }
 
