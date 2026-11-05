@@ -20,6 +20,7 @@ private:
     wxTimer observer_;
     bool lastDirty_ = false;
     bool lastActive_ = false;
+    bool publishPending_ = false;
     void Publish();
     void Observe();
     void OnFrameDestroyed(wxWindowDestroyEvent& event);

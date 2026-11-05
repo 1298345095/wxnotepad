@@ -10,6 +10,65 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from resources import native_edit
 
 
+def process_windows(process):
+    """Read only the target process's native window metadata on Windows."""
+    if sys.platform != "win32":
+        return []
+    import ctypes
+    from ctypes import wintypes
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowEnabled.argtypes = [wintypes.HWND]
+    callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
+    user32.EnumChildWindows.argtypes = [wintypes.HWND, callback_type, wintypes.LPARAM]
+    result = []
+
+    def metadata(handle):
+        title = ctypes.create_unicode_buffer(2048)
+        name = ctypes.create_unicode_buffer(256)
+        user32.GetWindowTextW(handle, title, len(title))
+        user32.GetClassNameW(handle, name, len(name))
+        return {"title": title.value, "class": name.value,
+                "visible": bool(user32.IsWindowVisible(handle)),
+                "enabled": bool(user32.IsWindowEnabled(handle))}
+
+    @callback_type
+    def visit(handle, _):
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(handle, ctypes.byref(owner))
+        if owner.value == process.pid:
+            window = metadata(handle)
+            children = []
+
+            @callback_type
+            def child(child_handle, _):
+                children.append(metadata(child_handle))
+                return True
+
+            user32.EnumChildWindows(handle, child, 0)
+            window["children"] = children
+            result.append(window)
+        return True
+
+    user32.EnumWindows(visit, 0)
+    return result
+
+
+def observation_context(folder, process):
+    files = {}
+    for name in ("command", "state", "state.tmp"):
+        try:
+            files[name] = (folder / name).read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as error:
+            files[name] = str(error)
+    return {"pid": process.pid, "returncode": process.poll(),
+            "files": files, "windows": process_windows(process)}
+
+
 def wait_state(folder, process, predicate, timeout=15):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:

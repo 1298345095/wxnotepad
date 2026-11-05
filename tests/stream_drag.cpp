@@ -54,6 +54,146 @@ void WaitForDriver(const wxString& control) {
     }
     throw std::runtime_error("private native input driver must complete the owned gesture");
 }
+#ifdef __WXGTK__
+wxString ReadDragState(const wxString& path) {
+    if (!wxFileExists(path)) return {};
+    wxFFile file(path, "rb");
+    wxString phase;
+    if (file.IsOpened()) file.ReadAll(&phase);
+    return phase;
+}
+void PublishDragState(const wxString& path, const wxString& state) {
+    wxFFile file(path + ".tmp", "wb");
+    Require(file.IsOpened() && file.Write(state) && file.Close() && wxRenameFile(path + ".tmp", path, true),
+            "publish owned native drag readiness");
+}
+void ObserveNativeDrags(wxString* control) {
+    // A handled drag-motion stops signal emission before connect_after handlers.
+    // The idle runs after the native handler has returned and sent its status,
+    // including action zero for a rejected read-only target.
+    struct Observation {
+        wxString path;
+        wxString phase;
+        GdkDragContext* target;
+        const char* event;
+    };
+    static const auto queue = +[](const Observation& observation) {
+        g_idle_add_full(
+            G_PRIORITY_DEFAULT_IDLE,
+            +[](gpointer value) -> gboolean {
+                const auto& observation = *static_cast<Observation*>(value);
+                // Commit the native start/status/grab cleanup before the
+                // independent input process can advance on this observation.
+                gdk_display_sync(gdk_display_get_default());
+                auto state = observation.phase;
+                if (observation.target)
+                    state += wxString::Format(":%u", gdk_drag_context_get_selected_action(observation.target));
+                PublishDragState(observation.path, state);
+                std::fprintf(stderr, "Native drag gesture=%s observed=%s\n", state.utf8_str().data(),
+                             observation.event);
+                return G_SOURCE_REMOVE;
+            },
+            new Observation{observation.path, observation.phase,
+                            observation.target ? static_cast<GdkDragContext*>(g_object_ref(observation.target))
+                                               : nullptr,
+                            observation.event},
+            +[](gpointer value) {
+                auto* observation = static_cast<Observation*>(value);
+                if (observation->target) g_object_unref(observation->target);
+                delete observation;
+            });
+    };
+    // GtkWidget registers these signals during class initialization.
+    auto* widgetClass = g_type_class_ref(GTK_TYPE_WIDGET);
+    g_signal_add_emission_hook(
+        g_signal_lookup("button-press-event", GTK_TYPE_WIDGET), 0,
+        +[](GSignalInvocationHint*, guint, const GValue* arguments, gpointer value) -> gboolean {
+            const auto& control = *static_cast<wxString*>(value);
+            const auto phase = ReadDragState(control + ".drag-phase");
+            const auto* event = static_cast<GdkEventButton*>(g_value_get_boxed(arguments + 1));
+            if (phase.EndsWith(":start") && event->button == 1) {
+                std::fprintf(stderr, "Native drag gesture=%s press-type=%d at=%.0f,%.0f\n", phase.utf8_str().data(),
+                             static_cast<int>(event->type), event->x, event->y);
+                queue({control + ".drag-pressed", phase, nullptr, "button-press-processed"});
+            }
+            return TRUE;
+        },
+        control, nullptr);
+    g_signal_add_emission_hook(
+        g_signal_lookup("drag-begin", GTK_TYPE_WIDGET), 0,
+        +[](GSignalInvocationHint*, guint, const GValue* arguments, gpointer value) -> gboolean {
+            const auto& control = *static_cast<wxString*>(value);
+            const auto phase = ReadDragState(control + ".drag-phase");
+            if (!phase.EndsWith(":start")) return TRUE;
+            queue({control + ".drag-started", phase, nullptr, "source-started"});
+            struct SourceStatus {
+                wxString control;
+                wxString identity;
+                GdkDragContext* context;
+            };
+            auto* context = static_cast<GdkDragContext*>(g_value_get_object(arguments + 1));
+            g_timeout_add_full(
+                G_PRIORITY_DEFAULT, 10,
+                +[](gpointer value) -> gboolean {
+                    const auto& source = *static_cast<SourceStatus*>(value);
+                    const auto phase = ReadDragState(source.control + ".drag-phase");
+                    if (phase != source.identity + ":start" && phase != source.identity + ":target")
+                        return G_SOURCE_REMOVE;
+                    const auto target = ReadDragState(source.control + ".drag-motion");
+                    if (target.StartsWith(source.identity + ":target:")) {
+                        const auto action =
+                            static_cast<unsigned int>(gdk_drag_context_get_selected_action(source.context));
+                        const auto status = source.identity + wxString::Format(":target:%u", action);
+                        if (action != 0 && target == status) {
+                            PublishDragState(source.control + ".drag-action", status);
+                            std::fprintf(stderr, "Native drag gesture=%s observed=source-selected-action\n",
+                                         status.utf8_str().data());
+                            return G_SOURCE_REMOVE;
+                        }
+                    }
+                    return G_SOURCE_CONTINUE;
+                },
+                new SourceStatus{control, phase.BeforeLast(':'), static_cast<GdkDragContext*>(g_object_ref(context))},
+                +[](gpointer value) {
+                    auto* source = static_cast<SourceStatus*>(value);
+                    g_object_unref(source->context);
+                    delete source;
+                });
+            return TRUE;
+        },
+        control, nullptr);
+    g_signal_add_emission_hook(
+        g_signal_lookup("drag-motion", GTK_TYPE_WIDGET), 0,
+        +[](GSignalInvocationHint*, guint, const GValue* arguments, gpointer value) -> gboolean {
+            const auto& control = *static_cast<wxString*>(value);
+            const auto phase = ReadDragState(control + ".drag-phase");
+            if (phase.EndsWith(":target"))
+                queue({control + ".drag-motion", phase, static_cast<GdkDragContext*>(g_value_get_object(arguments + 1)),
+                       "target-motion-processed"});
+            return TRUE;
+        },
+        control, nullptr);
+    g_signal_add_emission_hook(
+        g_signal_lookup("drag-failed", GTK_TYPE_WIDGET), 0,
+        +[](GSignalInvocationHint*, guint, const GValue* arguments, gpointer value) -> gboolean {
+            const auto phase = ReadDragState(*static_cast<wxString*>(value) + ".drag-phase");
+            std::fprintf(stderr, "Native drag gesture=%s result=%d\n", phase.utf8_str().data(),
+                         g_value_get_enum(arguments + 2));
+            return TRUE;
+        },
+        control, nullptr);
+    g_signal_add_emission_hook(
+        g_signal_lookup("drag-end", GTK_TYPE_WIDGET), 0,
+        +[](GSignalInvocationHint*, guint, const GValue*, gpointer value) -> gboolean {
+            const auto& control = *static_cast<wxString*>(value);
+            const auto phase = ReadDragState(control + ".drag-phase");
+            queue({control + ".drag-ended", phase.BeforeLast(':') + ":end", nullptr, "source-ended"});
+            return TRUE;
+        },
+        control, nullptr);
+    g_type_class_unref(widgetClass);
+}
+#endif
 wxPoint At(EditorControl* editor, intptr_t position) {
     using Scintilla::Message;
     return editor->GetPosition() +
@@ -95,6 +235,7 @@ public:
                              peer.sourceStage_ = "begin";
                              peer.dragging_ = true;
                              peer.failed_ = false;
+                             peer.failedResult_ = GTK_DRAG_RESULT_SUCCESS;
                              peer.deleted_ = false;
                              peer.operation_ = static_cast<GdkDragAction>(0);
                              peer.GetSelection(&peer.sourceStart_, &peer.sourceEnd_);
@@ -108,9 +249,10 @@ public:
                          }),
                          this);
         g_signal_connect(GetConnectWidget(), "drag-failed",
-                         G_CALLBACK(+[](GtkWidget*, GdkDragContext*, GtkDragResult, gpointer value) -> gboolean {
+                         G_CALLBACK(+[](GtkWidget*, GdkDragContext*, GtkDragResult result, gpointer value) -> gboolean {
                              auto& peer = *static_cast<NativePeer*>(value);
                              peer.failed_ = true;
+                             peer.failedResult_ = result;
                              peer.sourceStage_ = "failed";
                              return FALSE;
                          }),
@@ -167,8 +309,9 @@ public:
     void PrintSourceState(FILE* output = stderr) const {
         std::fprintf(output, "Peer source stage=%s attempts=%u dragging=%d", sourceStage_, sourceAttempts_, dragging_);
 #ifdef __WXGTK__
-        std::fprintf(output, " failed=%d deleted=%d native-action-mask=%u selection=%ld,%ld", failed_, deleted_,
-                     static_cast<unsigned int>(operation_), sourceStart_, sourceEnd_);
+        std::fprintf(output, " failed=%d failed-result=%d deleted=%d native-action-mask=%u selection=%ld,%ld", failed_,
+                     static_cast<int>(failedResult_), deleted_, static_cast<unsigned int>(operation_), sourceStart_,
+                     sourceEnd_);
 #else
         std::fprintf(output, " native-result=%d", static_cast<int>(result));
 #endif
@@ -204,6 +347,7 @@ private:
     const char* sourceStage_ = "idle";
 #ifdef __WXGTK__
     bool failed_ = false;
+    GtkDragResult failedResult_ = GTK_DRAG_RESULT_SUCCESS;
     bool deleted_ = false;
     GdkDragAction operation_ = static_cast<GdkDragAction>(0);
     long sourceStart_ = 0;
@@ -230,16 +374,23 @@ private:
 // The Linux driver injects only into the private Xvfb/Weston output. Windows
 // runs this native-input fixture on CI's desktop, never the shared local desktop.
 void Drag(wxFrame* frame, wxPoint from, wxPoint to, const wxString& modifier = {}, bool cancel = false, int pause = 200,
-          const wxString& switchTo = {}) {
+          const wxString& switchTo = {}, bool reject = false) {
     wxString control;
     if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control)) {
+        static unsigned int gesture = 0;
+        const auto identity = wxString::Format("%u", ++gesture);
+#ifdef __WXGTK__
+        PublishDragState(control + ".drag-phase", identity + ":start");
+#endif
+        std::fprintf(stderr, "Native drag gesture=%s from=%d,%d to=%d,%d modifier=%s cancel=%d\n",
+                     identity.utf8_str().data(), from.x, from.y, to.x, to.y, modifier.utf8_str().data(), cancel);
         wxFFile request(control, "wb");
-        Require(request.Write(wxString::Format("drag:%d,%d,%d,%d,%s,%d,%d,%s", from.x, from.y, to.x, to.y, modifier,
-                                               cancel, pause, switchTo)),
+        const unsigned int action = reject ? 0 : modifier == "ctrl" ? 2 : 4;
+        Require(request.Write(wxString::Format("drag:%d,%d,%d,%d,%s,%d,%d,%s,%s,%u", from.x, from.y, to.x, to.y,
+                                               modifier, cancel, pause, switchTo, identity, action)),
                 "publish private drag input");
         request.Close();
         WaitForDriver(control);
-        Wait(300);
     }
 #ifdef __WXMSW__
     else {
@@ -426,6 +577,9 @@ public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         delete wxLog::SetActiveTarget(new wxLogStderr);
+#ifdef __WXGTK__
+        if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &privateControl_)) ObserveNativeDrags(&privateControl_);
+#endif
         if (argc == 2 && argv[1] == "--input-state-probe") return InitInputStateProbe();
         if (argc == 2 && argv[1] == "--geometry-probe") {
             wxString backend;
@@ -512,15 +666,37 @@ public:
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
                 editor->Send(Message::SetReadOnly, 1);
-                Drag(frame, wxPoint(810, 10), At(editor, 5));
+                Drag(frame, wxPoint(810, 10), At(editor, 5), {}, false, 200, {}, true);
                 peer->WaitForSource();
+                peer->PrintSourceState();
                 Require(Text(editor) == "left right" && peer->value == wxString::FromUTF8("中😀\nline") &&
                             !editor->Send(Message::GetModify),
                         "read-only drop must reject transfer and preserve native peer source");
                 editor->Send(Message::SetReadOnly, 0);
                 peer->Assign(wxString::FromUTF8("中😀\nline"));
+#ifdef __WXGTK__
+                // Process the threshold motion after the old driver's fixed
+                // release window, before GTK initializes this native source.
+                bool delayed = false;
+                const auto delayHandler =
+                    g_signal_connect(peer->GetConnectWidget(), "motion-notify-event",
+                                     G_CALLBACK(+[](GtkWidget*, GdkEventMotion* event, gpointer value) -> gboolean {
+                                         auto& delayed = *static_cast<bool*>(value);
+                                         if (!delayed && (event->state & GDK_BUTTON1_MASK)) {
+                                             delayed = true;
+                                             g_usleep(600000);
+                                         }
+                                         return FALSE;
+                                     }),
+                                     &delayed);
+#endif
                 Drag(frame, wxPoint(810, 10), At(editor, 5));
+#ifdef __WXGTK__
+                g_signal_handler_disconnect(peer->GetConnectWidget(), delayHandler);
+                Require(delayed, "incoming native move must exercise slow source initialization");
+#endif
                 peer->WaitForSource();
+                peer->PrintSourceState();
                 if (Text(editor) != "left 中😀\r\nlineright" || !peer->value.empty()) {
                     peer->PrintSourceState();
                     PrintBytes("Incoming peer target", Text(editor));
@@ -771,6 +947,7 @@ private:
     }
 
     wxTimer timer_;
+    wxString privateControl_;
     wxStopWatch offsetDelay_;
     int result_ = 0;
 };

@@ -34,8 +34,11 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
-    src/editor/autoindent.cpp
+    src/editor/bookmarks.cpp
+    src/editor/indentation.cpp
     src/editor/line_comments.cpp
+    src/editor/matching_brace.cpp
+    src/editor/move_lines.cpp
     src/editor/editor_control.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
@@ -62,6 +65,7 @@ add_library(app_shell STATIC
     src/app/go_to_line_dialog.cpp
     src/app/tab_settings_dialog.cpp
     src/app/editor_frame.cpp
+    src/app/editor_frame_commands.cpp
     src/app/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
@@ -130,6 +134,9 @@ if(BUILD_TESTING)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME observed_process_shutdown COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/observed_shutdown_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(observed_process_shutdown PROPERTIES TIMEOUT 45)
     function(add_editor_test target test_name timeout)
         add_gui_program(${target} tests/${target}.cpp app_shell)
         add_test(NAME ${test_name} COMMAND ${target})

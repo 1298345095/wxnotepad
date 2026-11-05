@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 from contextlib import ExitStack
 
-from resource_process import command, wait_state
+from resource_process import command, observation_context, wait_state
 
 
 class Application:
@@ -31,8 +31,15 @@ class Application:
         assert self.state["result"] == "ok", item
 
     def close(self):
-        command(self.folder, f"{self.sequence + 1}\nclose\n")
-        assert self.process.wait(timeout=10) == 0
+        requested = f"{self.sequence + 1}\nclose\n"
+        command(self.folder, requested)
+        try:
+            result = self.process.wait(timeout=10)
+        except subprocess.TimeoutExpired as error:
+            error.add_note(f"Close transition: pid={self.process.pid}, requested={requested!r}, "
+                           f"last_ack={self.state!r}, observed={observation_context(self.folder, self.process)!r}")
+            raise
+        assert result == 0, f"Close exited with {result}: requested={requested!r}, last_ack={self.state!r}"
 
     def stop(self):
         if self.process.poll() is None:
