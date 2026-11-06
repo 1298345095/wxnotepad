@@ -94,6 +94,20 @@ private:
     Core& editor_;
 };
 
+intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_t lParam) {
+    // Original ScintillaWin::WndProc reports message failures through GetStatus.
+    // Read-only enclosure can intentionally attempt a target beyond EOF after
+    // the preceding insertion was rejected, then continue selection repair.
+    try {
+        return ScintillaBase::WndProc(message, wParam, lParam);
+    } catch (const std::bad_alloc&) {
+        errorStatus = Scintilla::Status::BadAlloc;
+    } catch (const core::Failure& failure) {
+        errorStatus = failure.status;
+    }
+    return 0;
+}
+
 EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_(window) {
     wMain = static_cast<wxWindow*>(&window_);
     Initialise();
