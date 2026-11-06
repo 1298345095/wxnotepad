@@ -43,6 +43,7 @@ add_library(editor_runtime STATIC
     src/editor/duplicate_lines.cpp
     src/editor/indentation.cpp
     src/editor/join_lines.cpp
+    src/editor/line_wrap.cpp
     src/editor/line_comments.cpp
     src/editor/matching_brace.cpp
     src/editor/move_lines.cpp
@@ -76,6 +77,7 @@ target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
     src/settings/settings_store.cpp
     src/settings/search_settings.cpp
@@ -167,6 +169,10 @@ if(BUILD_TESTING)
     add_editor_test(pad_spaces original_pad_spaces 60)
     add_editor_test(align_lines original_align_lines 60)
     add_editor_test(modify_lines original_modify_lines 60)
+    add_editor_test(line_wrap original_line_wrap 60)
+    add_test(NAME original_wrap_boundary_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_wrap_process.py" "$<TARGET_FILE:line_wrap>")
+    set_tests_properties(original_wrap_boundary_settings PROPERTIES TIMEOUT 120)
     add_test(NAME original_cleanup_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/cleanup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_cleanup_settings PROPERTIES TIMEOUT 60)
