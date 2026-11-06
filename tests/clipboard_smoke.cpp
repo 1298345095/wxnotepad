@@ -369,23 +369,43 @@ void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 }
 void NativeLineShortcut(EditorControl* editor, int key, bool shift = true, bool alt = false) {
 #ifdef __WXMSW__
-    if (shift) {
-        const bool handled = NativeSearch::WindowsShortcut(
-            editor, key, {{VK_CONTROL, 0x80}, {VK_SHIFT, 0x80}, {VK_MENU, static_cast<BYTE>(alt ? 0x80 : 0)}});
-        Require(handled || alt, "native Windows accelerator translates the original line shortcut");
-    } else {
-        BYTE previous[256];
-        Require(GetKeyboardState(previous), "read native test thread modifiers");
-        BYTE modified[256];
-        std::copy(std::begin(previous), std::end(previous), std::begin(modified));
-        modified[VK_CONTROL] = 0x80;
-        modified[VK_SHIFT] = 0;
-        modified[VK_MENU] = 0;
-        Require(SetKeyboardState(modified), "set native test thread Ctrl modifier");
-        SendMessageW(static_cast<HWND>(editor->GetHandle()), WM_KEYDOWN, key, 0);
-        SendMessageW(static_cast<HWND>(editor->GetHandle()), WM_KEYUP, key, 0);
-        SetKeyboardState(previous);
-    }
+    BYTE previous[256];
+    Require(GetKeyboardState(previous), "read native test thread modifiers");
+    BYTE modified[256];
+    std::copy(std::begin(previous), std::end(previous), std::begin(modified));
+    modified[VK_CONTROL] = 0x80;
+    modified[VK_SHIFT] = shift ? 0x80 : 0;
+    modified[VK_MENU] = alt ? 0x80 : 0;
+    Require(SetKeyboardState(modified), "set native test thread shortcut modifiers");
+    int downs = 0;
+    int ups = 0;
+    bool modifiersCorrect = true;
+    wxEvtHandler observed;
+    const auto observe = [&](wxKeyEvent& event, int& count) {
+        if (event.GetKeyCode() == key) {
+            ++count;
+            modifiersCorrect =
+                modifiersCorrect && event.ControlDown() && event.ShiftDown() == shift && event.AltDown() == alt;
+        }
+        event.Skip();
+    };
+    observed.Bind(wxEVT_KEY_DOWN, [&](wxKeyEvent& event) { observe(event, downs); });
+    observed.Bind(wxEVT_KEY_UP, [&](wxKeyEvent& event) { observe(event, ups); });
+    editor->PushEventHandler(&observed);
+    MSG message{};
+    message.hwnd = static_cast<HWND>(editor->GetHandle());
+    message.message = alt ? WM_SYSKEYDOWN : WM_KEYDOWN;
+    message.wParam = key;
+    // wxMSW reads Alt from the native message context, not keyboard state alone.
+    message.lParam = alt ? (LPARAM{KF_ALTDOWN} << 16) : 0;
+    const bool handled = wxGetTopLevelParent(editor)->MSWTranslateMessage(&message);
+    if (!handled) SendMessageW(message.hwnd, message.message, key, message.lParam);
+    SendMessageW(message.hwnd, alt ? WM_SYSKEYUP : WM_KEYUP, key, message.lParam);
+    const bool restored = SetKeyboardState(previous);
+    editor->PopEventHandler(false);
+    Require(restored, "restore native test thread keyboard state");
+    Require(ups == 1 && modifiersCorrect, "native shortcut release preserves actual Ctrl/Shift/Alt modifiers");
+    Require((handled && !alt) || downs == 1, "unhandled and extra-Alt chords reach the actual editor key handler");
 #else
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys require the private display");
