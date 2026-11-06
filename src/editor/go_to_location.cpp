@@ -1,4 +1,4 @@
-#include "editor/line_navigation.h"
+#include "editor/go_to_location.h"
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <ScintillaStructures.h>

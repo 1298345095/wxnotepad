@@ -1,7 +1,7 @@
 #include "native_search_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
-#include "editor/line_navigation.h"
+#include "editor/go_to_location.h"
 #include <wx/file.h>
 #include <wx/filename.h>
 #include <wx/menu.h>
