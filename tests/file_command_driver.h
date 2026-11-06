@@ -3,9 +3,10 @@
 #include "native_dialog_helpers.h"
 #include <wx/timer.h>
 #include <utility>
+#include <cstdint>
 
 namespace NativeDialogs {
-enum class FileDialogProfile { Open, Save };
+enum class FileDialogProfile : std::uint8_t { Open, Save };
 
 // Drives only this test's native file commands. Each scenario retains its own
 // command sequence, expected dialog counts and document/disk assertions.

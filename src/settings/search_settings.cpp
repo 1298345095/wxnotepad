@@ -34,9 +34,9 @@ void CaptureSearchSettings(const SearchSession& search, OriginalSettings& settin
     // preference remains in FindReplaceOption even though the port uses its core matcher.
     auto& flags = settings.findReplaceFlag;
     flags &= ~(MatchCase | WholeWord | Regex | PosixRegex | Cxx11Regex | TransformBackslashes | LastReplaceEmpty);
+    const int regexFlags = Regex | ((settings.findReplaceOption & 1) ? Cxx11Regex : PosixRegex);
     flags |= (request.options.matchCase ? MatchCase : 0) | (request.options.wholeWord ? WholeWord : 0) |
-             (request.options.regularExpression ? (Regex | ((settings.findReplaceOption & 1) ? Cxx11Regex : PosixRegex))
-                                                : 0) |
+             (request.options.regularExpression ? regexFlags : 0) |
              (request.options.transformBackslashes ? TransformBackslashes : 0) |
              (search.LastReplaceEmpty() ? LastReplaceEmpty : 0);
     settings.findReplaceOption = (settings.findReplaceOption & ~(NoWrap | BookmarkMatches)) |

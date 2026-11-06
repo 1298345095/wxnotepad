@@ -259,36 +259,45 @@ int PreferredEncoding(const wxString& path, std::string_view bytes, const Encodi
     return -1;
 }
 
-int EmptyFileEncoding(int strong, int weak, int preferred, int fallback, bool loadAsciiAsUtf8) {
-    if (strong >= 0) return strong;
-    if (weak >= 0) return weak;
-    if (preferred >= 0) return preferred;
-    return loadAsciiAsUtf8 ? 6 : fallback;
+struct EncodingCandidates {
+    int strong;
+    int weak;
+    int fallback;
+    int preferred;
+    int declared = -1;
+};
+
+int EmptyFileEncoding(const EncodingCandidates& candidates, bool loadAsciiAsUtf8) {
+    if (candidates.strong >= 0) return candidates.strong;
+    if (candidates.weak >= 0) return candidates.weak;
+    if (candidates.preferred >= 0) return candidates.preferred;
+    return loadAsciiAsUtf8 ? 6 : candidates.fallback;
 }
 
-int AsciiFileEncoding(int weak, int preferred, int declared, int fallback, bool loadAsciiAsUtf8) {
+int AsciiFileEncoding(const EncodingCandidates& candidates, bool loadAsciiAsUtf8) {
     int index;
-    if (weak >= 0 && !(weak >= 2 && weak <= 5))
-        index = weak;
-    else if (preferred >= 0)
-        index = preferred;
-    else if (declared >= 0)
-        index = declared;
+    if (candidates.weak >= 0 && !(candidates.weak >= 2 && candidates.weak <= 5))
+        index = candidates.weak;
+    else if (candidates.preferred >= 0)
+        index = candidates.preferred;
+    else if (candidates.declared >= 0)
+        index = candidates.declared;
     else if (loadAsciiAsUtf8)
         index = 6;
     else
-        index = fallback >= 2 && fallback <= 5 ? 0 : fallback;
-    if (index == declared && index > 0 && (catalog[index].codePage == 28591 || catalog[index].codePage == 28599))
+        index = candidates.fallback >= 2 && candidates.fallback <= 5 ? 0 : candidates.fallback;
+    if (index == candidates.declared && index > 0 &&
+        (catalog[index].codePage == 28591 || catalog[index].codePage == 28599))
         index = CodePageIndex(catalog[index].codePage == 28591 ? 1252 : 1254);
     return index;
 }
 
-int LegacyFileEncoding(std::string_view bytes, int weak, int preferred, int declared, int fallback, unsigned oem) {
-    for (const int index : {weak, preferred, declared, fallback}) {
+int LegacyFileEncoding(std::string_view bytes, const EncodingCandidates& candidates, unsigned oem) {
+    for (const int index : {candidates.weak, candidates.preferred, candidates.declared, candidates.fallback}) {
         if (index > 0 && catalog[index].legacy && ValidLegacy(index == 1 ? oem : catalog[index].codePage, bytes)) {
             unsigned page = index == 1 ? oem : catalog[index].codePage;
             // Original prefers Windows aliases for sniffed ISO-8859 declarations.
-            if (index == declared && (page == 28591 || page == 28599)) page = page == 28591 ? 1252 : 1254;
+            if (index == candidates.declared && (page == 28591 || page == 28599)) page = page == 28591 ? 1252 : 1254;
             return index == 1 ? 1 : CodePageIndex(page);
         }
     }
@@ -344,10 +353,10 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
     const auto choose = [=](int index, bool systemDefault = false) {
         return Choice(index, legacy, oem, systemDefault);
     };
-    const int strong = explicitEncoding ? EncodingIndex(*explicitEncoding) : -1;
-    const int weak = weakEncoding ? EncodingIndex(*weakEncoding) : -1;
-    const int fallback = DefaultEncoding(options.defaultEncoding);
-    const int preferred = PreferredEncoding(path, bytes, options);
+    EncodingCandidates candidates{.strong = explicitEncoding ? EncodingIndex(*explicitEncoding) : -1,
+                                  .weak = weakEncoding ? EncodingIndex(*weakEncoding) : -1,
+                                  .fallback = DefaultEncoding(options.defaultEncoding),
+                                  .preferred = PreferredEncoding(path, bytes, options)};
 
     const auto asciiChoice = [&](int index, bool empty) {
         if (!empty && index == 7) index = 6;
@@ -355,8 +364,7 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
             index = CodePageIndex(native);
         return choose(index, index == 0);
     };
-    if (bytes.empty())
-        return asciiChoice(EmptyFileEncoding(strong, weak, preferred, fallback, options.loadASCIIasUTF8), true);
+    if (bytes.empty()) return asciiChoice(EmptyFileEncoding(candidates, options.loadASCIIasUTF8), true);
     constexpr size_t maxConvertedSize = (1U << 30) - 16;
     if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == FileEncoding::Utf8)) {
         return {explicitEncoding,
@@ -372,17 +380,17 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
     if (bytes.starts_with("\xef\xbb\xbf")) return choose(7);
     if (bytes.size() >= maxConvertedSize) return choose(IsUtf8(bytes) ? 6 : 0);
     const auto variables = ReadFileVariables(bytes, options);
-    const int declared = variables.encoding;
+    candidates.declared = variables.encoding;
     if (bytes.size() % 2 == 0 && !variables.any) {
         const int latin = LatinUtf16(bytes);
         if (latin) return choose(latin);
     }
     const bool ascii = std::all_of(bytes.begin(), bytes.end(), [](unsigned char ch) { return ch < 128; });
     if (ascii) {
-        return asciiChoice(AsciiFileEncoding(weak, preferred, declared, fallback, options.loadASCIIasUTF8), false);
+        return asciiChoice(AsciiFileEncoding(candidates, options.loadASCIIasUTF8), false);
     }
     if (IsUtf8(bytes)) return choose(6);
-    const int legacyChoice = LegacyFileEncoding(bytes, weak, preferred, declared, fallback, oem);
+    const int legacyChoice = LegacyFileEncoding(bytes, candidates, oem);
     if (legacyChoice >= 0) return choose(legacyChoice);
     const bool nativeValid = native != 65001 && ValidLegacy(native, bytes);
     bool binary = false;
@@ -391,5 +399,5 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
         const int unicode = UnicodeFallback(bytes, options.skipUnicodeDetection, native);
         if (unicode) return choose(unicode);
     }
-    return choose(0, !nativeValid || binary || !options.loadANSIasUTF8 || weak == 0);
+    return choose(0, !nativeValid || binary || !options.loadANSIasUTF8 || candidates.weak == 0);
 }
