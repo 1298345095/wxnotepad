@@ -22,6 +22,7 @@ search algorithm or own the document's language choice.
 | `src/syntax/*`, `src/syntax/generated/*` | Static catalog, extension detection, lexer/style installation and generated data | Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
 | `src/editor/editor_control.*` | wx window, core lifetime, input, selection/scrolling, clipboard, IME, notifications and fold selection repair | The existing host behavior is retained. Native implementation extraction can accompany future changes to those facilities. |
 | `src/editor/platform/*` | Original platform interface, rendering/fonts/windows and portability primitives | Tightly coupled to the pinned core, behind the editor host. |
+| `src/editor/platform/clipboard.*` | Native clipboard formats, transport and publication ownership | The host retains selection, paste shape and undo behavior. Native reads query live line-copy eligibility at the original platform-specific point. |
 | `patches/`, `tools/build.py`, `tools/update_*_scheme.py` | Pinned source preparation, portability patch, reproducible lexer data | Keep the offline path, revision/hash checks and selective upstream reuse. |
 | `tests/`, `tools/clipboard_*`, `tools/resources.py` | Real editor, native UI, disk-byte and independent-process checks | Existing native regressions remain. `feature_sessions.cpp` exercises the extracted interfaces without linking the app shell. |
 
@@ -106,8 +107,8 @@ tests/                          # gradual organization by tested behavior
 
 Directories describe responsibility, not one abstract base class or library per
 directory. Related file transaction mechanics remain in `document_session.cpp`;
-native IME/clipboard implementation remains in the host until work on those
-facilities gives a useful reason to extract it.
+clipboard transport and publication ownership live in the private platform
+module. Native IME and drag/drop coordination remain in the host.
 
 ## State ownership and lifetime
 
@@ -146,6 +147,13 @@ The interface has a small set of operations:
 | Replace one | Current configured search | Whether a replacement occurred and the following search outcome |
 | Replace all | Current configured search | Replacement count, whether bytes changed, or an error |
 | Replace in selection | Current configured search and live editor selection | Replacement count, whether bytes changed, or an error/rectangular-selection outcome |
+
+Replace One and batch replacement share the same target-replacement evaluator.
+A deferred undo scope starts at the first byte-changing replacement and ends
+before selection-end repair, including error returns. Match progression remains
+in the existing operation-specific loops. Find All retains its original
+240-range cache with named start/length pairs; range painting and bookmark
+coverage are a private operation.
 
 The module performs match selection and fold reveal as part of Find. Callers
 should not repeat the sequence of setting core targets, validating a match,

@@ -2,6 +2,8 @@
 #include "search/find_text.h"
 #include "editor/editor_control.h"
 #include <array>
+#include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -110,6 +112,98 @@ std::string EscapeWildcards(const char* input) {
     }
     return output;
 }
+
+// Target validation precedes both callers. Keep capture expansion against that
+// current target, and avoid creating an undo action for byte-identical results.
+enum class ReplacementEffect : std::uint8_t { Unchanged, Changed, ExpansionFailed };
+
+struct ReplacementCursor {
+    intptr_t position;
+    intptr_t limit;
+};
+struct MatchRange {
+    intptr_t start;
+    intptr_t end;
+};
+
+bool AdvanceReplacement(EditorControl& editor, ReplacementCursor& cursor, MatchRange match, bool regexStartOfLine) {
+    using Scintilla::Message;
+    if (cursor.position == cursor.limit) return false;
+    if (match.start == match.end && !regexStartOfLine)
+        cursor.position = editor.Send(Message::PositionAfter, cursor.position);
+    // Keep the original special handling for patterns whose first byte is '^'.
+    if (regexStartOfLine) {
+        const auto line = editor.Send(Message::LineFromPosition, cursor.position);
+        if (editor.Send(Message::PositionFromLine, line) == cursor.position)
+            cursor.position = editor.Send(Message::PositionFromLine, line + 1);
+        if (cursor.position == cursor.limit) return false;
+    }
+    return true;
+}
+
+void RepairReplacementSelection(EditorControl& editor, intptr_t replacementEnd) {
+    using Scintilla::Message;
+    if (editor.Send(Message::GetSelectionEnd) >= replacementEnd) return;
+    const auto anchor = editor.Send(Message::GetAnchor);
+    const auto caret = editor.Send(Message::GetCurrentPos);
+    editor.Send(Message::SetSel, anchor > caret ? replacementEnd : anchor, anchor > caret ? caret : replacementEnd);
+}
+
+ReplacementEffect EvaluateTargetReplacement(EditorControl& editor, const std::string& replacement, bool regex) {
+    using Scintilla::Message;
+    using enum ReplacementEffect;
+    const auto length = static_cast<size_t>(editor.Send(Message::GetTargetEnd) - editor.Send(Message::GetTargetStart));
+    std::string matched(length + 1, '\0');
+    editor.Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(matched.data()));
+    matched.resize(length);
+    if (!regex) return matched == replacement ? Unchanged : Changed;
+    const auto expanded = editor.ExpandRegexReplacement(replacement);
+    if (!expanded) return ExpansionFailed;
+    return matched == *expanded ? Unchanged : Changed;
+}
+
+class DeferredUndoAction {
+public:
+    explicit DeferredUndoAction(EditorControl& editor) : editor_(editor) {}
+    DeferredUndoAction(const DeferredUndoAction&) = delete;
+    DeferredUndoAction& operator=(const DeferredUndoAction&) = delete;
+    ~DeferredUndoAction() {
+        if (started_) editor_.Send(Scintilla::Message::EndUndoAction);
+    }
+    void Begin() {
+        if (!started_) {
+            editor_.Send(Scintilla::Message::BeginUndoAction);
+            started_ = true;
+        }
+    }
+    bool Started() const noexcept { return started_; }
+
+private:
+    EditorControl& editor_;
+    bool started_ = false;
+};
+
+struct IndicatorRange {
+    intptr_t start;
+    intptr_t length;
+};
+struct OccurrenceMarking {
+    bool multiline;
+    bool bookmarks;
+};
+
+void MarkOccurrenceRanges(EditorControl& editor, std::span<const IndicatorRange> ranges, OccurrenceMarking marking) {
+    using Scintilla::Message;
+    for (const auto& range : ranges) {
+        editor.Send(Message::IndicatorFillRange, range.start, range.length);
+        if (!marking.bookmarks) continue;
+        auto line = editor.Send(Message::LineFromPosition, range.start);
+        const auto last = marking.multiline ? editor.Send(Message::LineFromPosition, range.start + range.length) : line;
+        for (; line <= last; ++line) {
+            if (!(editor.Send(Message::MarkerGet, line) & 1)) editor.Send(Message::MarkerAdd, line, 0);
+        }
+    }
+}
 } // namespace
 
 std::string SearchSession::QueryBytes() const {
@@ -188,15 +282,13 @@ void SearchSession::OnEditorState(wxCommandEvent& event) {
 FindAllResult SearchSession::FindAll() {
     using Scintilla::Message;
     ClearFindAll();
-    // EditMarkAll::Reset retains Find All bookmarks on ordinary invalidation,
-    // and replaces them when another Find All operation starts.
+    // Ordinary invalidation retains Find All bookmarks; a new request replaces them.
     if (bookmarkForFindAll_) editor_.Send(Message::MarkerDeleteAll, 0);
     const auto query = QueryBytes();
     if (!query.length()) return {FindStatus::EmptyQuery};
     markedRevision_ = editor_.DocumentRevision();
     matchCount_ = 0;
     if (UsesRegex() && query.length() == 1 && (query.data()[0] == '^' || query.data()[0] == '$')) {
-        // Pinned EditMarkAll::Start counts these anchors without indicators or bookmarks.
         matchCount_ = static_cast<size_t>(editor_.Send(Message::GetLineCount) - (query.data()[0] == '^'));
         return {FindStatus::Found, *matchCount_};
     }
@@ -209,25 +301,14 @@ FindAllResult SearchSession::FindAll() {
     const bool multiline = request_.options.transformBackslashes && query.find_first_of("\r\n") != std::string::npos;
     const bool searchForLineEnd = UsesRegex() && query.length() > 1 && query.data()[query.length() - 1] == '$' &&
                                   query.data()[query.length() - 2] != '\\';
-    // Keep EditMarkAll's 240-range cache and adjacent-range aggregation. This
-    // also determines which lines receive bookmarks for multiline regex ranges.
-    std::array<intptr_t, 480> ranges{};
+    // Preserve EditMarkAll's 240-range cache, aggregation and bookmark coverage.
+    std::array<IndicatorRange, 240> ranges{};
     size_t index = 0;
     const auto markRanges = [&] {
-        for (size_t i = 0; i < index; i += 2) {
-            editor_.Send(Message::IndicatorFillRange, ranges[i], ranges[i + 1]);
-            if (request_.bookmarkMatchedLines) {
-                auto line = editor_.Send(Message::LineFromPosition, ranges[i]);
-                const auto last = multiline ? editor_.Send(Message::LineFromPosition, ranges[i] + ranges[i + 1]) : line;
-                for (; line <= last; ++line) {
-                    if (!(editor_.Send(Message::MarkerGet, line) & 1)) editor_.Send(Message::MarkerAdd, line, 0);
-                }
-            }
-        }
+        MarkOccurrenceRanges(editor_, std::span(ranges.data(), index),
+                             {.multiline = multiline, .bookmarks = request_.bookmarkMatchedLines});
         index = 0;
     };
-    // EditMarkAll::Continue excludes EOF and advances zero-width matches by a
-    // complete character; empty matches count but have no visible mark/bookmark.
     while (start < limit) {
         editor_.Send(Message::SetTargetStart, start);
         editor_.Send(Message::SetTargetEnd, limit);
@@ -242,16 +323,16 @@ FindAllResult SearchSession::FindAll() {
         }
         ++*matchCount_;
         const auto end = editor_.Send(Message::GetTargetEnd);
+        // Empty matches count but have no visible range/bookmark; advance UTF-8.
         if (end == found) {
             start = editor_.Send(Message::PositionAfter, found);
             if (start <= found) break;
             continue;
         }
         if (index && found == start && !searchForLineEnd) {
-            ranges[index - 1] += end - found;
+            ranges[index - 1].length += end - found;
         } else {
-            ranges[index++] = found;
-            ranges[index++] = end - found;
+            ranges[index++] = {.start = found, .length = end - found};
             if (index == ranges.size()) markRanges();
         }
         start = end;
@@ -347,29 +428,19 @@ ReplaceOneResult SearchSession::ReplaceOne() {
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
     editor_.Send(Message::SetTargetStart, start);
     editor_.Send(Message::SetTargetEnd, editor_.Send(Message::GetLength));
-    // Pinned Edit.cpp::EditReplace searches from selection start to document
-    // end before deciding whether to select a candidate or replace it.
+    // Pinned EditReplace revalidates captures from selection start to EOF.
     const auto found = editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data()));
     if (found >= 0 && (found != start || editor_.Send(Message::GetTargetEnd) != end)) {
-        // EditReplace selects this candidate without replacing it; restarting
-        // at selection end would skip matches within the original selection.
         return {false, SelectTarget(false)};
     }
     if (found != start || editor_.Send(Message::GetTargetEnd) != end) {
         return {false, FindFrom(start, SearchDirection::Forward)};
     }
-    // The original formatter reads the byte after a trailing dollar/backslash.
     const auto replacement = ReplacementBytes();
+    const auto effect = EvaluateTargetReplacement(editor_, replacement, UsesRegex());
+    if (effect == ReplacementEffect::ExpansionFailed) return {};
+    const bool changesBytes = effect == ReplacementEffect::Changed;
     auto after = end;
-    std::string selected(static_cast<size_t>(end - start) + 1, '\0');
-    editor_.Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(selected.data()));
-    selected.pop_back();
-    bool changesBytes = replacement != selected;
-    if (UsesRegex()) {
-        const auto expanded = editor_.ExpandRegexReplacement(replacement);
-        if (!expanded) return {};
-        changesBytes = *expanded != selected;
-    }
     if (changesBytes) {
         editor_.Send(UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget, replacement.length(),
                      reinterpret_cast<intptr_t>(replacement.c_str()));
@@ -395,74 +466,46 @@ ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
     size_t count = 0;
     bool editing = false;
     const bool regexStartOfLine = UsesRegex() && query.length() && query.data()[0] == '^';
-    intptr_t start = inSelection ? editor_.Send(Message::GetSelectionStart) : 0;
-    intptr_t replacementEnd = start;
-    auto limit = editor_.Send(Message::GetLength);
+    ReplacementCursor cursor{.position = inSelection ? editor_.Send(Message::GetSelectionStart) : 0,
+                             .limit = editor_.Send(Message::GetLength)};
+    intptr_t replacementEnd = cursor.position;
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
-    // An initial empty document is eligible; EditReplaceAll stops as soon as a
-    // replacement reaches the updated document end.
-    while (query.length() && (start < limit || (UsesRegex() && start == limit))) {
-        editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
-        editor_.Send(Message::SetTargetStart, start);
-        editor_.Send(Message::SetTargetEnd, limit);
-        if (editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) < 0) {
-            if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
-                if (editing) editor_.Send(Message::EndUndoAction);
-                return {ReplaceAllStatus::InvalidPattern, count, editing};
+    {
+        DeferredUndoAction undo(editor_);
+        // An initial empty document is eligible; original EditReplaceAll stops
+        // once a replacement reaches the updated document end.
+        while (query.length() && (cursor.position < cursor.limit || (UsesRegex() && cursor.position == cursor.limit))) {
+            editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
+            editor_.Send(Message::SetTargetStart, cursor.position);
+            editor_.Send(Message::SetTargetEnd, cursor.limit);
+            if (editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) < 0) {
+                if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx))
+                    return {ReplaceAllStatus::InvalidPattern, count, undo.Started()};
+                break;
             }
-            break;
-        }
-        const auto matchStart = editor_.Send(Message::GetTargetStart);
-        const auto matchEnd = editor_.Send(Message::GetTargetEnd);
-        // EditReplaceAllInSelection retains document-end search context and
-        // stops at the first match crossing the live, end-exclusive selection.
-        if (inSelection && matchEnd > editor_.Send(Message::GetSelectionEnd)) break;
-        const auto length = static_cast<size_t>(matchEnd - matchStart);
-        std::string matched(length + 1, '\0');
-        editor_.Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(matched.data()));
-        matched.resize(length);
-        const std::string replacementBytes(replacement.data(), replacement.length());
-        const auto expanded = UsesRegex() ? editor_.ExpandRegexReplacement(replacementBytes)
-                                          : std::optional<std::string>(replacementBytes);
-        if (!expanded) {
-            if (editing) editor_.Send(Message::EndUndoAction);
-            return {ReplaceAllStatus::ExpansionFailed, count, editing};
-        }
-        if (matched != *expanded) {
-            if (!editing) {
-                editor_.Send(Message::BeginUndoAction);
-                editing = true;
+            const MatchRange match{.start = editor_.Send(Message::GetTargetStart),
+                                   .end = editor_.Send(Message::GetTargetEnd)};
+            // Keep document-end matching context and the live selection limit.
+            if (inSelection && match.end > editor_.Send(Message::GetSelectionEnd)) break;
+            const auto effect = EvaluateTargetReplacement(editor_, replacement, UsesRegex());
+            if (effect == ReplacementEffect::ExpansionFailed)
+                return {ReplaceAllStatus::ExpansionFailed, count, undo.Started()};
+            if (effect == ReplacementEffect::Changed) {
+                undo.Begin();
+                const auto inserted = editor_.Send(UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget,
+                                                   replacement.size(), reinterpret_cast<intptr_t>(replacement.c_str()));
+                cursor.limit += inserted - (match.end - match.start);
+                cursor.position = match.start + inserted;
+            } else {
+                cursor.position = match.end;
             }
-            const auto inserted =
-                editor_.Send(UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget, replacementBytes.size(),
-                             reinterpret_cast<intptr_t>(replacementBytes.c_str()));
-            limit += inserted - (matchEnd - matchStart);
-            start = matchStart + inserted;
-        } else {
-            start = matchEnd;
+            ++count;
+            replacementEnd = cursor.position;
+            if (!AdvanceReplacement(editor_, cursor, match, regexStartOfLine)) break;
         }
-        ++count;
-        replacementEnd = start;
-        if (start == limit) break;
-        if (matchStart == matchEnd && !regexStartOfLine) {
-            start = editor_.Send(Message::PositionAfter, start);
-        }
-        // Preserve the original pattern-leading '^' progress rule when the
-        // replacement ends at a line start. Other anchor spellings use
-        // ordinary empty-match character progress (Edit.cpp:5828-5842).
-        if (regexStartOfLine) {
-            const auto line = editor_.Send(Message::LineFromPosition, start);
-            if (editor_.Send(Message::PositionFromLine, line) == start)
-                start = editor_.Send(Message::PositionFromLine, line + 1);
-            if (start == limit) break;
-        }
+        editing = undo.Started();
     }
-    if (editing) editor_.Send(Message::EndUndoAction);
-    if (inSelection && count && editor_.Send(Message::GetSelectionEnd) < replacementEnd) {
-        const auto anchor = editor_.Send(Message::GetAnchor);
-        const auto caret = editor_.Send(Message::GetCurrentPos);
-        editor_.Send(Message::SetSel, anchor > caret ? replacementEnd : anchor,
-                     anchor > caret ? caret : replacementEnd);
-    }
+    // End the original undo group BEFORE repairing selection endpoints.
+    if (inSelection && count) RepairReplacementSelection(editor_, replacementEnd);
     return {ReplaceAllStatus::Completed, count, editing};
 }

@@ -59,6 +59,7 @@ private:
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     void UpdateLineNumberMargin();
     void OnPaint(wxPaintEvent& event);
+    void OnKeyDown(wxKeyEvent& event);
     void OnSize(wxSizeEvent& event);
 #ifdef __WXMSW__
     WXLRESULT MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam) override;
