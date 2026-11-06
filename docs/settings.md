@@ -50,6 +50,13 @@ retains the stored value, Save Settings Now writes the current value, and the
 default `100` is omitted. It scales the existing native point-size font through
 the original core and does not replace the base font size or DPI handling.
 
+`[Settings] LongLinesLimit` defaults to `80` and is bounded to `0..4096` on load.
+It supplies Column Wrap's initial Boundary, with the original `fill-column`
+file-variable override. The accepted dialog value is bounded to `1..512` and
+recalled until New or a successful Open replaces the document. This recall is
+session state. The global setting follows explicit/exit saving and omits its
+default value.
+
 Find/Replace extends this store with the original `[Settings]` fields:
 
 | Field | Built-in default | Behavior |
