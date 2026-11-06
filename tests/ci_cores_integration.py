@@ -8,7 +8,6 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-@unittest.skipUnless(sys.platform == 'linux', 'Linux native core evidence')
 class NativeCoreEvidence(unittest.TestCase):
     def test_crashed_process_keeps_its_matching_binary_core_and_source_backtrace(self):
         with tempfile.TemporaryDirectory(prefix='wxnotepad core evidence ') as folder:
