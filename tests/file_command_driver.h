@@ -5,14 +5,14 @@
 #include <utility>
 
 namespace NativeDialogs {
-enum class FileCommand { Open, Close };
+enum class FileDialogProfile { Open, Save };
 
 // Drives only this test's native file commands. Each scenario retains its own
 // command sequence, expected dialog counts and document/disk assertions.
 class FileCommandDriver final : public wxTimer {
 public:
-    FileCommandDriver(FileCommand command, int choice, wxString destination = {})
-        : command_(command), choice_(choice), destination_(std::move(destination)) {
+    FileCommandDriver(FileDialogProfile profile, int choice, wxString destination = {})
+        : profile_(profile), choice_(choice), destination_(std::move(destination)) {
         Start(100);
     }
     int prompts = 0;
@@ -75,12 +75,13 @@ public:
 
 private:
     bool IsChooserTitle(const wxString& title) const {
-        return title == "Save file" || title == (command_ == FileCommand::Open ? "Open file" : "Save As");
+        return title == "Save file" || title == (profile_ == FileDialogProfile::Open ? "Open file" : "Save As");
     }
     bool IsErrorTitle(const wxString& title) const {
-        return title == "Could not save file" || (command_ == FileCommand::Open && title == "Could not open file");
+        return title == "Could not save file" ||
+               (profile_ == FileDialogProfile::Open && title == "Could not open file");
     }
-    FileCommand command_;
+    FileDialogProfile profile_;
     int choice_;
     wxString destination_;
     int chooserStage_ = 0;

@@ -21,8 +21,8 @@ using TestFiles::Filename;
 void Add(EditorFrame* frame, const std::string& text) {
     frame->Editor()->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
 }
-using NativeDialogs::FileCommand;
 using NativeDialogs::FileCommandDriver;
+using NativeDialogs::FileDialogProfile;
 
 void CheckWhitespacePrompts(const std::filesystem::path& directory) {
     const auto source = directory / "open-whitespace.txt";
@@ -61,7 +61,7 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
                 Add(candidate, sample.bytes);
             const auto path = candidate->DocumentPath();
             Require(candidate->Editor()->Send(Scintilla::Message::GetModify), "sample must be modified");
-            FileCommandDriver driver(FileCommand::Close, wxID_CANCEL);
+            FileCommandDriver driver(FileDialogProfile::Save, wxID_CANCEL);
             const bool closing = std::string_view(action) == "Close";
             const bool opening = std::string_view(action) == "Open";
             const bool completed = closing   ? candidate->Close()
@@ -93,7 +93,7 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
                 Text(explicitSave) == whitespace && explicitSave->DocumentPath().empty() &&
                 explicitSave->Editor()->Send(Scintilla::Message::GetModify),
             "cancelled and failed Open must preserve short whitespace-only Untitled");
-    FileCommandDriver cancelSave(FileCommand::Close, wxID_CANCEL);
+    FileCommandDriver cancelSave(FileDialogProfile::Save, wxID_CANCEL);
     Require(explicitSave->Save().status == SaveStatus::Cancelled, "explicit Save must still open its chooser");
     cancelSave.Stop();
     Require(cancelSave.choosers == 1 && cancelSave.prompts == 0 && Text(explicitSave) == whitespace &&
@@ -104,13 +104,13 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
                 explicitSave->Editor()->Send(Scintilla::Message::GetModify),
             "failed explicit Save must retain whitespace and dirty state");
     const auto firstPath = directory / "explicit-whitespace.txt";
-    FileCommandDriver saveDriver(FileCommand::Close, wxID_YES, Filename(firstPath));
+    FileCommandDriver saveDriver(FileDialogProfile::Save, wxID_YES, Filename(firstPath));
     Require(explicitSave->Save().status == SaveStatus::Saved, "explicit Save must write short whitespace Untitled");
     saveDriver.Stop();
     Require(saveDriver.choosers == 1 && Bytes(firstPath) == whitespace,
             "explicit Save must preserve exact whitespace bytes on disk");
     const auto secondPath = directory / "explicit-whitespace-copy.txt";
-    FileCommandDriver saveAsDriver(FileCommand::Close, wxID_YES, Filename(secondPath));
+    FileCommandDriver saveAsDriver(FileDialogProfile::Save, wxID_YES, Filename(secondPath));
     Require(explicitSave->SaveAs().status == SaveStatus::Saved, "explicit Save As must write short whitespace");
     saveAsDriver.Stop();
     Require(saveAsDriver.choosers == 1 && Bytes(secondPath) == whitespace &&
@@ -128,7 +128,7 @@ public:
         CallAfter([this, frame] {
             try {
                 Add(frame, "Unsaved 中文\r\n");
-                FileCommandDriver driver(FileCommand::Close, wxID_CANCEL);
+                FileCommandDriver driver(FileDialogProfile::Save, wxID_CANCEL);
                 Require(!frame->Close(), "Cancel must veto the actual close event");
                 driver.Stop();
                 Require(driver.prompts == 1, "dirty close must show the native confirmation");
@@ -147,7 +147,7 @@ public:
                 Add(saved, "first");
                 Require(saved->SaveFirst(Filename(path)).status == SaveStatus::Saved, "named-close setup must save");
                 Add(saved, " 中文\r\n");
-                FileCommandDriver saveDriver(FileCommand::Close, wxID_YES);
+                FileCommandDriver saveDriver(FileDialogProfile::Save, wxID_YES);
                 Require(saved->Close(), "successful Save must allow closing");
                 saveDriver.Stop();
                 Require(saveDriver.prompts == 1, "named dirty document must show native confirmation");
@@ -155,7 +155,7 @@ public:
                         "close Save must write changes to the known path");
                 std::puts("PASS: close Save writes changes to known path");
                 auto* clean = new EditorFrame;
-                FileCommandDriver cleanDriver(FileCommand::Close, wxID_CANCEL);
+                FileCommandDriver cleanDriver(FileDialogProfile::Save, wxID_CANCEL);
                 Require(clean->Close(), "unmodified document must close directly");
                 cleanDriver.Stop();
                 Require(cleanDriver.prompts == 0, "unmodified close must not show a confirmation");
@@ -166,7 +166,7 @@ public:
                 Require(discard->SaveFirst(Filename(discardPath)).status == SaveStatus::Saved,
                         "discard setup must save");
                 Add(discard, " changed");
-                FileCommandDriver discardDriver(FileCommand::Close, wxID_NO);
+                FileCommandDriver discardDriver(FileDialogProfile::Save, wxID_NO);
                 Require(discard->Close(), "Discard must allow closing");
                 discardDriver.Stop();
                 Require(discardDriver.prompts == 1 && Bytes(discardPath) == "original bytes",
@@ -174,7 +174,7 @@ public:
                 std::puts("PASS: close Discard does not write changes");
                 auto* cancelledSave = new EditorFrame;
                 Add(cancelledSave, "pending");
-                FileCommandDriver cancelledDriver(FileCommand::Close, wxID_YES);
+                FileCommandDriver cancelledDriver(FileDialogProfile::Save, wxID_YES);
                 Require(!cancelledSave->Close(), "cancelling the Save chooser must veto closing");
                 cancelledDriver.Stop();
                 Require(cancelledDriver.prompts == 1 && cancelledDriver.choosers == 1,
@@ -189,7 +189,7 @@ public:
                 auto* firstSave = new EditorFrame;
                 const auto firstPath = directory / "first-close.txt";
                 Add(firstSave, "First 中文😀\r\n");
-                FileCommandDriver firstDriver(FileCommand::Close, wxID_YES, Filename(firstPath));
+                FileCommandDriver firstDriver(FileDialogProfile::Save, wxID_YES, Filename(firstPath));
                 Require(firstSave->Close(), "successful first Save must allow closing");
                 firstDriver.Stop();
                 Require(firstDriver.prompts == 1 && firstDriver.choosers == 1,
@@ -208,7 +208,7 @@ public:
                 {
                     std::ofstream(failedPath / "sentinel", std::ios::binary) << "keep";
                 }
-                FileCommandDriver failedDriver(FileCommand::Close, wxID_YES);
+                FileCommandDriver failedDriver(FileDialogProfile::Save, wxID_YES);
                 Require(!failedSave->Close(), "failed Save must veto closing");
                 failedDriver.Stop();
                 Require(failedDriver.prompts == 1 && failedDriver.errors == 1 && failedDriver.choosers == 0,
