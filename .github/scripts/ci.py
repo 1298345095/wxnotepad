@@ -78,6 +78,7 @@ def configure(app_only):
                f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', '-DVCPKG_MANIFEST_MODE=OFF',
                f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
                '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON', '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
+               '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=OFF',
                '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON')])
     run(command, 'configure.log')
 
@@ -133,26 +134,27 @@ def test_shards(cmake_dir, expression, jobs, directory):
     return shards
 
 
-def test(backend, cmake_dir, expression, jobs):
+def test(backend, cmake_dir, expression, jobs, report_prefix=''):
     if (backend == 'windows') != WINDOWS:
         raise SystemExit('The requested test backend does not match this host')
     REPORTS.mkdir(parents=True, exist_ok=True)
+    report = report_prefix + backend
     command = ['ctest', '--test-dir', cmake_dir, '-C', 'Release', '--parallel', '1',
                '--output-on-failure', '--no-tests=error',
-               '--output-junit', REPORTS / f'{backend}-tests.xml']
+               '--output-junit', REPORTS / f'{report}-tests.xml']
     if expression:
         command += ['-R', expression]
     if WINDOWS:
         if jobs != 1:
             raise SystemExit('Windows native tests share one desktop and clipboard; use --jobs 1')
-        run(command, f'{backend}-ctest.log')
+        run(command, f'{report}-ctest.log')
         return
 
-    shards = test_shards(cmake_dir.resolve(), expression, jobs, REPORTS / backend)
+    shards = test_shards(cmake_dir.resolve(), expression, jobs, REPORTS / report)
     print(f'Private {backend}: {sum(len(names) for _, names in shards)} tests across '
           f'{len(shards)} concurrent sessions', flush=True)
     plan = [{'shard': index, 'tests': names} for index, (_, names) in enumerate(shards, 1)]
-    (REPORTS / f'{backend}-test-plan.json').write_text(json.dumps(plan, indent=2) + '\n', encoding='utf-8')
+    (REPORTS / f'{report}-test-plan.json').write_text(json.dumps(plan, indent=2) + '\n', encoding='utf-8')
 
     def run_shard(item):
         index, (workspace, names) = item
@@ -164,12 +166,25 @@ def test(backend, cmake_dir, expression, jobs):
         isolated = ['xvfb-run', '-a', '-s', '-screen 0 1600x1000x24 -nolisten tcp',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
                     backend, *selected]
-        return run(isolated, f'{backend}-shard-{index}-ctest.log', environment, check=False)
+        return run(isolated, f'{report}-shard-{index}-ctest.log', environment, check=False)
 
     with ThreadPoolExecutor(max_workers=len(shards)) as workers:
         results = list(workers.map(run_shard, enumerate(shards, 1)))
     if any(results):
         raise SystemExit(f'Private {backend} test shards failed; inspect the retained per-shard logs')
+
+
+def diagnostic_build(jobs):
+    directory = BUILD / 'diagnostic-cmake'
+    run(cmake_command(['-S', ROOT, '-B', directory, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
+                       f'-DNOTEPAD4_SOURCE={BUILD / "original-core"}',
+                       f'-DCMAKE_TOOLCHAIN_FILE={VCPKG / "scripts/buildsystems/vcpkg.cmake"}',
+                       f'-DVCPKG_INSTALLED_DIR={VCPKG / "installed"}',
+                       f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', '-DVCPKG_MANIFEST_MODE=OFF',
+                       f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
+                       '-DBUILD_TESTING=ON', '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=ON']), 'diagnostic-configure.log')
+    run(cmake_command(['--build', directory, '--config', 'Release', '--parallel', str(jobs),
+                       '--target', 'wxnotepad', 'editing_keys', 'close_smoke']), 'diagnostic-build.log')
 
 
 def bundle():
@@ -227,6 +242,10 @@ def main():
     tests.add_argument('--tests', help='Optional CTest regex for local verification; CI runs the complete suite')
     tests.add_argument('--jobs', type=int, default=1 if WINDOWS else os.cpu_count() or 1,
                        help='Concurrent private Linux display sessions; Windows uses one desktop')
+    diagnostic = commands.add_parser('diagnostic-build')
+    diagnostic.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
+    diagnostic = commands.add_parser('diagnostic-test')
+    diagnostic.add_argument('--backend', choices=('windows', 'x11', 'wayland'), required=True)
     arguments = parser.parse_args()
     if getattr(arguments, 'jobs', 1) < 1:
         parser.error('--jobs must be positive')
@@ -236,6 +255,10 @@ def main():
         build(arguments.app_only, arguments.jobs)
     elif arguments.command == 'test':
         test(arguments.backend, arguments.cmake_dir.resolve(), arguments.tests, arguments.jobs)
+    elif arguments.command == 'diagnostic-build':
+        diagnostic_build(arguments.jobs)
+    elif arguments.command == 'diagnostic-test':
+        test(arguments.backend, (BUILD / 'diagnostic-cmake').resolve(), '^native_diagnostic_', 1, 'diagnostic-')
     else:
         globals()[arguments.command]()
 

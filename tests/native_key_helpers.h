@@ -1,6 +1,7 @@
 #pragma once
 
 #include "native_search_helpers.h"
+#include "native_trace_helpers.h"
 #include <wx/eventfilter.h>
 #include <wx/ffile.h>
 #include <chrono>
@@ -115,6 +116,8 @@ private:
 #endif
 inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
                      bool* releaseSignal = nullptr) {
+    const NativeTrace::Gesture trace(frame->Editor(), key,
+                                     (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
 #ifdef __WXMSW__
     const int nativeKey = key >= WXK_F1 && key <= WXK_F24 ? VK_F1 + key - WXK_F1 : key;
     NativeSearch::WindowsShortcut(frame->Editor(), nativeKey,
@@ -131,7 +134,7 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         throw std::runtime_error("native shortcuts require a private display");
     {
         wxFFile file(focusFile, "wb");
-        file.Write(frame->IsActive() ? "focus:wxnotepad" : "front:wxnotepad");
+        file.Write(NativeTrace::Request(frame->IsActive() ? "focus:wxnotepad" : "front:wxnotepad"));
     }
     bool acknowledged = false;
     const auto focusDeadline = Clock::now() + std::chrono::seconds(3);
@@ -155,7 +158,8 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         const auto letter = static_cast<char>(key >= 'A' && key <= 'Z' ? key + 'a' - 'A' : key);
         const wxString name = key >= WXK_F1 && key <= WXK_F24 ? wxString::Format("F%d", key - WXK_F1 + 1)
                                                               : wxString::Format("%c", letter);
-        file.Write(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") + name);
+        file.Write(NativeTrace::Request(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") +
+                                        (shift ? "shift+" : "") + name));
     }
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
     while (!received && Clock::now() < keyDeadline) {

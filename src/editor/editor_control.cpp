@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "editor/editor_core.h"
+#include "diagnostics/trace.h"
 #include <wx/dcclient.h>
 #ifdef __WXMSW__
 #include <wx/caret.h>
@@ -25,6 +26,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     GetCaret()->Show();
 #endif
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    WXNOTE_TRACE("editor.create", "\ttarget=%p\thandle=%p", static_cast<void*>(this), GetHandle());
     Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
     Send(Message::SetMarginMaskN, 0, 0);
     SetLineNumbersVisible(true);
@@ -38,12 +40,16 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         event.Skip();
     });
     Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& event) {
+        WXNOTE_TRACE("editor.focus-in", "\ttarget=%p\tfocus=%p", static_cast<void*>(this),
+                     static_cast<void*>(wxWindow::FindFocus()));
         Send(Message::SetFocus, 1);
         core_->SyncSystemCaret();
         Refresh(false);
         event.Skip();
     });
     Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) {
+        WXNOTE_TRACE("editor.focus-out", "\ttarget=%p\tfocus=%p", static_cast<void*>(this),
+                     static_cast<void*>(wxWindow::FindFocus()));
         Send(Message::SetFocus, 0);
         Refresh(false);
         event.Skip();
@@ -66,6 +72,16 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     Bind(wxEVT_SCROLLWIN_THUMBTRACK, scroll);
     Bind(wxEVT_SCROLLWIN_THUMBRELEASE, scroll);
     Bind(wxEVT_KEY_DOWN, &EditorControl::OnKeyDown, this);
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    Bind(wxEVT_KEY_UP, [this](wxKeyEvent& event) {
+        WXNOTE_TRACE(
+            "editor.key-up", "\ttarget=%p\tfocus=%p\tkey=%d\tmodifiers=%d\tlength=%lld\tanchor=%lld\tcaret=%lld",
+            static_cast<void*>(this), static_cast<void*>(wxWindow::FindFocus()), event.GetKeyCode(),
+            event.GetModifiers(), static_cast<long long>(Send(Message::GetLength)),
+            static_cast<long long>(Send(Message::GetAnchor)), static_cast<long long>(Send(Message::GetCurrentPos)));
+        event.Skip();
+    });
+#endif
     Bind(wxEVT_CHAR, [this](wxKeyEvent& event) {
         const int character = event.GetUnicodeKey();
         if (character >= 32 && character != WXK_DELETE && !event.ControlDown() && !event.AltDown()) {
@@ -83,6 +99,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
 }
 
 EditorControl::~EditorControl() {
+    WXNOTE_TRACE("editor.destroy", "\ttarget=%p", static_cast<void*>(this));
     SetDropTarget(nullptr);
 }
 
@@ -223,6 +240,11 @@ std::optional<std::string> EditorControl::ExpandRegexReplacement(const std::stri
 }
 
 void EditorControl::OnKeyDown(wxKeyEvent& event) {
+    WXNOTE_TRACE("editor.key-down", "\ttarget=%p\tfocus=%p\tkey=%d\tmodifiers=%d\tlength=%lld\tanchor=%lld\tcaret=%lld",
+                 static_cast<void*>(this), static_cast<void*>(wxWindow::FindFocus()), event.GetKeyCode(),
+                 event.GetModifiers(), static_cast<long long>(Send(Message::GetLength)),
+                 static_cast<long long>(Send(Message::GetAnchor)),
+                 static_cast<long long>(Send(Message::GetCurrentPos)));
     if (core_->Navigation(event)) return;
     if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
         (event.GetKeyCode() == WXK_BACK || event.GetKeyCode() == WXK_DELETE)) {
@@ -263,6 +285,12 @@ void EditorControl::OnSize(wxSizeEvent& event) {
 
 #ifdef __WXMSW__
 WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam) {
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    if (message == WM_DESTROYCLIPBOARD) WXNOTE_TRACE("clipboard.cleared", "\ttarget=%p", static_cast<void*>(this));
+    if (message == WM_RENDERFORMAT || message == WM_RENDERALLFORMATS)
+        WXNOTE_TRACE("clipboard.transfer", "\ttarget=%p\tformat=%llu", static_cast<void*>(this),
+                     static_cast<unsigned long long>(wParam));
+#endif
     if (core_ && (message == WM_IME_STARTCOMPOSITION || message == WM_IME_COMPOSITION || message == WM_IME_SETCONTEXT ||
                   message == WM_INPUTLANGCHANGE)) {
         core_->SyncSystemCaret();

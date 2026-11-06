@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import threading
 
 backend, *command = sys.argv[1:]
 if backend not in ("x11", "wayland") or not command:
@@ -47,6 +48,40 @@ def acknowledge(focus):
     pending = focus.with_suffix(".ack")
     pending.write_text("", encoding="utf-8")
     pending.replace(focus)
+    driver_trace(focus, "driver.ack")
+
+
+trace_gesture = "0"
+trace_sequence = 0
+trace_started = 0
+trace_failed = False
+
+
+def driver_trace(focus, event, kind=""):
+    """Trace only explicitly tagged native requests; never retain request text."""
+    global trace_sequence, trace_started, trace_failed
+    if trace_gesture == "0" or trace_failed:
+        return
+    def row(name, fields):
+        global trace_sequence
+        trace_sequence += 1
+        return (f"us={(time.monotonic_ns() - trace_started) // 1000}\tpid={os.getpid()}"
+                f"\ttid={threading.get_native_id()}\tseq={trace_sequence}\tevent={name}\tgesture={trace_gesture}{fields}\n")
+    try:
+        path = Path(str(focus) + ".diagnostics")
+        first = not path.exists()
+        if first:
+            trace_sequence = 0
+            trace_started = time.monotonic_ns()
+        with path.open("a", encoding="utf-8") as output:
+            if first:
+                output.write(row("header", f"\tbuild=private-input-driver\tbackend={backend}"
+                                 f"\twx=not-loaded\tcore=not-loaded\tcompiler=Python-{sys.version.split()[0]}"))
+            output.write(row(event, f"\tkind={kind}" if kind else ""))
+            output.flush()
+    except OSError:
+        trace_failed = True
+        print("Could not write native driver diagnostic log", file=sys.stderr, flush=True)
 
 with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
     runtime = Path(folder)
@@ -82,7 +117,12 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
         while test.poll() is None:
             focus = runtime / "focus"
             request = focus.read_text(encoding="utf-8") if focus.exists() else ""
+            trace_gesture = "0"
+            if request.startswith("trace:"):
+                _, identity, request = request.split(":", 2)
+                trace_gesture = identity if identity.isdecimal() else "0"
             if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "focus:", "drag:", "front:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+                driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
                     # a receiver that replaces its focus request with a gesture.
@@ -200,7 +240,9 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         xdo("windowfocus", "--sync", weston_window)
                 elif request.startswith("key:"):
                     acknowledge(focus)
+                    driver_trace(focus, "driver.inject-begin", "key-press-release")
                     xdo("key", "--clearmodifiers", request[4:])
+                    driver_trace(focus, "driver.inject-complete", "key-press-release")
                 elif request == "gesture":
                     # Native events can make the receiver publish its next
                     # request before xdotool exits. Claim this one first.
