@@ -43,9 +43,11 @@ private:
     wxString enclosureBefore_;
     wxString enclosureAfter_;
     AlignmentMode alignmentMode_ = AlignmentMode::Left;
+    unsigned sortOptions_ = 0;
     wxString linePrefix_;
     wxString lineSuffix_;
     bool skipEmptyLines_ = false;
+    int wrapColumn_ = 0;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
     void CreateMenus();
@@ -54,6 +56,8 @@ private:
     wxMenu* CreateLanguageMenu();
     wxMenu* CreateViewMenu();
     void AppendEditingCommands(wxMenu* edit);
+    void AppendDateTimeCommands(wxMenu* edit);
+    void InsertDateTime(bool shortDate);
     void AppendSearchCommands(wxMenu* edit);
     void AppendNavigationCommands(wxMenu* edit);
     void AppendLineEndingCommands(wxMenu* edit);

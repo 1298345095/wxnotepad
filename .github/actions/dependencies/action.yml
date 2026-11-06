@@ -53,7 +53,7 @@ runs:
         )
         case "$DEPENDENCY_PROFILE" in
           build) ;;
-          gui) linux_packages+=(xvfb xauth dbus-x11 weston xdotool fonts-dejavu-core fonts-noto-cjk) ;;
+          gui) linux_packages+=(gdb xvfb xauth dbus-x11 weston xdotool fonts-dejavu-core fonts-noto-cjk) ;;
           tidy) linux_packages+=(clang-tidy-18) ;;
           *) printf 'Unknown dependency profile: %s\n' "$DEPENDENCY_PROFILE" >&2; exit 2 ;;
         esac

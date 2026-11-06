@@ -1,6 +1,8 @@
 #pragma once
 
 #include "editor/align_lines.h"
+#include "editor/sort_lines.h"
+#include "editor/date_time.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
 #include <wx/timer.h>
@@ -33,6 +35,7 @@ public:
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     bool ToggleBlockComments(const char* open, const char* close, int commentStyleLast);
     bool EncloseSelection(const wxString& before, const wxString& after);
+    void InsertDateTime(DateTimeInsertion command, const wxString& format = {});
     AlignmentResult AlignLines(AlignmentMode mode);
     bool ModifyLines(const wxString& prefix, const wxString& suffix, bool skipEmpty = false);
     bool CompressWhitespace();
@@ -46,10 +49,13 @@ public:
     // The original duplicate-line caller uses (true, true) inside its own undo action.
     void PadWithSpaces(bool skipEmpty = false, bool noUndoGroup = false);
     void JoinLines();
+    void SplitLines();
+    bool WrapToColumn(int column);
     // False reports the original unsupported rectangular-selection operation.
     bool JoinParagraphs();
     void MergeDuplicateLines();
     void RemoveDuplicateLines();
+    void SortLines(unsigned options = SortOption::Ascending);
     void SetIndentationWidths(int tabWidth, int indentWidth);
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
@@ -71,7 +77,6 @@ public:
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
 private:
-    void DuplicateLines(bool merge);
     class Core;
     wxTimer caretTimer_;
     wxTimer scrollTimer_;

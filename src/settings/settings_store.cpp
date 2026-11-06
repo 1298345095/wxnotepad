@@ -80,6 +80,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.noEncodingTags = ReadBool("NoEncodingTags", defaults.encoding.noEncodingTags);
     values.encoding.noFileVariables = ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), 10, 500);
+    values.longLinesLimit = std::clamp(ReadInt("LongLinesLimit", defaults.longLinesLimit), 0, 4096);
     values.selectOption = ReadInt("SelectOption", defaults.selectOption);
     values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
     values.saveFindReplace = ReadBool("SaveFindReplace", defaults.saveFindReplace);
@@ -99,6 +100,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.autoIndent = ReadBool("AutoIndent", defaults.autoIndent);
     values.detectIndentation = ReadBool("DetectIndentation", defaults.detectIndentation);
     values.backspaceUnindents = static_cast<uint8_t>(ReadInt("BackspaceUnindents", defaults.backspaceUnindents));
+    values.dateTimeShort = ReadDateTimeFormat("DateTimeShort");
+    values.dateTimeLong = ReadDateTimeFormat("DateTimeLong");
     for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
         auto& tabs = values.schemeTabs[index];
         tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, SchemeSections[index]), 1, 256);
@@ -151,6 +154,37 @@ bool SettingsStore::ReadBool(const wxString& key, bool fallback, const wxString&
         }
     }
     return fallback;
+}
+
+wxString SettingsStore::ReadDateTimeFormat(const wxString& key) const {
+    bool section = false;
+    for (const auto& raw : lines_) {
+        wxString line = raw;
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            section = line.CmpNoCase("[Settings2]") == 0;
+        } else if (section && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false).CmpNoCase(key) == 0) {
+            wxString value = line.AfterFirst('=').Trim().Trim(false);
+            if (value.length() >= 2 &&
+                ((value.StartsWith("\"") && value.EndsWith("\"")) || (value.StartsWith("'") && value.EndsWith("'"))))
+                value = value.Mid(1, value.length() - 2);
+            // IniGetString's original WCHAR[256] reserves one UTF-16 unit for NUL.
+            wxString truncated;
+            size_t units = 0;
+            for (const wxUniChar character : value) {
+                if (units == 255) break;
+                const size_t count = character.GetValue() >= 0x10000 ? 2 : 1;
+                if (units + count > 255) {
+                    truncated += wxUniChar(0xfffd);
+                    break;
+                }
+                truncated += character;
+                units += count;
+            }
+            return truncated;
+        }
+    }
+    return {};
 }
 
 int SettingsStore::ReadInt(const wxString& key, int fallback, const wxString& sectionName) const {
@@ -267,6 +301,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, defaults.encoding.loadNFOasOEM);
         WriteBool("NoEncodingTags", values.encoding.noEncodingTags, defaults.encoding.noEncodingTags);
         WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
+        WriteInt("LongLinesLimit", values.longLinesLimit, defaults.longLinesLimit);
         WriteBool("FixLineEndings", values.fixLineEndings, defaults.fixLineEndings);
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
         WriteInt("SelectOption", values.selectOption, defaults.selectOption);

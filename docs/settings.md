@@ -5,6 +5,15 @@ creating the frame and applies the stored values to the existing editor. Feature
 modules do not read configuration files. Later settings work adds original fields
 to this same store and applies them through the responsible feature module.
 
+`[Settings2] DateTimeShort` and `DateTimeLong` are original load-only `wcsftime`
+templates for Time/Date (Short Form) and Time/Date (Long Form). Missing or empty
+values use the host-local time without seconds, one space, and the host short or
+long date. Quoted values retain their contents. The original 256-WCHAR input
+buffer admits at most 255 UTF-16 code units, including on Linux; explicit and
+exit saves preserve the original fields in place. They do not create missing
+template keys. See [date/time insertion](observations/original-date-time.md) for
+the platform locale contract and verification.
+
 The first slice restores `[Settings]` fields `ShowLineNumbers` (default `1`),
 `WordWrap` (default `1`), `ViewWhiteSpace` (default `0`) and `SaveSettings`
 (default `1`). Missing or invalid boolean values use the built-in default;
@@ -40,6 +49,13 @@ integer parser. Zoom extends this same settings lifecycle: disabled exit saving
 retains the stored value, Save Settings Now writes the current value, and the
 default `100` is omitted. It scales the existing native point-size font through
 the original core and does not replace the base font size or DPI handling.
+
+`[Settings] LongLinesLimit` defaults to `80` and is bounded to `0..4096` on load.
+It supplies Column Wrap's initial Boundary, with the original `fill-column`
+file-variable override. The accepted dialog value is bounded to `1..512` and
+recalled until New or a successful Open replaces the document. This recall is
+session state. The global setting follows explicit/exit saving and omits its
+default value.
 
 Find/Replace extends this store with the original `[Settings]` fields:
 
