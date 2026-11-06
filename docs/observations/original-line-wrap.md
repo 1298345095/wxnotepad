@@ -41,3 +41,12 @@ protection, pending Redo, viewport changes and zoom. Application Open/Save tests
 independently read and reopen literal UTF-8 BOM, GBK and UTF-16LE BOM bytes,
 including saved Undo and Redo. X11 and Wayland use private displays through the
 repository CI test runner; Windows uses the same native test executable.
+
+The Windows physical Escape check requires the active input desktop. wxWidgets
+handles Escape through its native keyboard hook, beyond dialog preprocessing.
+The driver verifies the input desktop and the recognized modal's process,
+foreground window and focused child, then sends a real Escape key pair with
+released physical modifiers. Windows local runs execute `original_line_wrap` on
+that desktop; the independent boundary-settings processes can use a private
+desktop. Modal checks have an owned deadline that records a failure and closes
+the test dialog when an input path fails.

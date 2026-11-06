@@ -12,6 +12,10 @@ namespace NativeKeys {
 inline void DialogNavigation(wxDialog* dialog, int key) {
     BYTE previous[256];
     if (!GetKeyboardState(previous)) throw std::runtime_error("read test-thread keyboard state for dialog navigation");
+    struct RestoreKeyboardState {
+        BYTE* previous;
+        ~RestoreKeyboardState() { SetKeyboardState(previous); }
+    } restore{previous};
     BYTE released[256];
     std::copy(std::begin(previous), std::end(previous), std::begin(released));
     for (const int modifier : {VK_CONTROL, VK_MENU, VK_SHIFT})
@@ -23,8 +27,70 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
     message.message = WM_KEYDOWN;
     message.wParam = key;
     // Native dialog navigation has a separate path from accelerator translation.
-    dialog->MSWProcessMessage(&message);
-    SetKeyboardState(previous);
+    if (!dialog->MSWProcessMessage(&message)) {
+        if (key == VK_ESCAPE) {
+            // wx's Escape handler is a WH_KEYBOARD hook, which preprocessing,
+            // posted messages and Translate/DispatchMessage don't invoke.
+            const auto owned = static_cast<HWND>(dialog->GetHandle());
+            DWORD process = 0;
+            GetWindowThreadProcessId(owned, &process);
+            if (process != GetCurrentProcessId() || !dialog->IsModal())
+                throw std::runtime_error("native Escape must target the recognized owned modal dialog");
+            const auto inputDesktop = OpenInputDesktop(0, FALSE, DESKTOP_READOBJECTS);
+            wchar_t inputName[256]{}, threadName[256]{};
+            DWORD needed = 0;
+            const bool inputIsCurrent =
+                inputDesktop &&
+                GetUserObjectInformationW(inputDesktop, UOI_NAME, inputName, sizeof(inputName), &needed) &&
+                GetUserObjectInformationW(GetThreadDesktop(GetCurrentThreadId()), UOI_NAME, threadName,
+                                          sizeof(threadName), &needed) &&
+                std::wstring(inputName) == threadName;
+            if (inputDesktop) CloseDesktop(inputDesktop);
+            if (!inputIsCurrent)
+                throw std::runtime_error("physical native Escape requires the current Windows input desktop");
+            if (message.hwnd != owned && !IsChild(owned, message.hwnd))
+                throw std::runtime_error("native Escape focus must belong to the owned dialog");
+            const auto thread = GetCurrentThreadId();
+            const auto foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
+            const bool attached =
+                foregroundThread && foregroundThread != thread && AttachThreadInput(thread, foregroundThread, TRUE);
+            BringWindowToTop(owned);
+            SetForegroundWindow(owned);
+            SetActiveWindow(owned);
+            SetFocus(message.hwnd);
+            if (attached) AttachThreadInput(thread, foregroundThread, FALSE);
+            const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+            const auto ownsInput = [&] {
+                const auto focus = GetFocus();
+                return dialog->IsShown() && GetForegroundWindow() == owned && (focus == owned || IsChild(owned, focus));
+            };
+            while (!ownsInput() && std::chrono::steady_clock::now() < until) {
+                wxYield();
+                wxMilliSleep(10);
+            }
+            if (!ownsInput()) throw std::runtime_error("native Escape requires the owned dialog on the input desktop");
+            for (const int modifier : {VK_CONTROL, VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN, VK_ESCAPE})
+                if (GetAsyncKeyState(modifier) & 0x8000)
+                    throw std::runtime_error("native Escape requires released physical shortcut modifiers");
+            INPUT input[2]{};
+            for (auto& event : input) {
+                event.type = INPUT_KEYBOARD;
+                event.ki.wVk = VK_ESCAPE;
+            }
+            input[1].ki.dwFlags = KEYEVENTF_KEYUP;
+            if (!ownsInput() || SendInput(2, input, sizeof(INPUT)) != 2)
+                throw std::runtime_error("native Escape input must reach the verified owned dialog");
+            while (dialog->IsShown() && std::chrono::steady_clock::now() < until) {
+                if (!ownsInput()) throw std::runtime_error("owned dialog lost focus before native Escape completed");
+                wxYield();
+                wxMilliSleep(10);
+            }
+            if (dialog->IsShown()) throw std::runtime_error("native Escape must close the owned dialog");
+        } else {
+            TranslateMessage(&message);
+            DispatchMessageW(&message);
+        }
+    }
 }
 #else
 class KeyRelease final : public wxEventFilter {
