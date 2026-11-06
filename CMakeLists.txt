@@ -39,6 +39,7 @@ add_library(editor_runtime STATIC
     src/editor/line_comments.cpp
     src/editor/matching_brace.cpp
     src/editor/move_lines.cpp
+    src/editor/pad_spaces.cpp
     src/editor/editor_control.cpp
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
@@ -149,6 +150,7 @@ if(BUILD_TESTING)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
     add_editor_test(save_cleanup original_save_cleanup 60)
+    add_editor_test(pad_spaces original_pad_spaces 60)
     add_test(NAME original_cleanup_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/cleanup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_cleanup_settings PROPERTIES TIMEOUT 60)

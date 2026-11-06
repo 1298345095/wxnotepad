@@ -156,6 +156,10 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    const int padSpaces = wxWindow::NewControlId();
+    edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, padSpaces);
     const int indent = wxWindow::NewControlId();
     edit->Append(indent, "&Indent");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->IndentLines(true); }, indent);
