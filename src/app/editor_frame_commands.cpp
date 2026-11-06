@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
+#include "app/dialogs/align_lines_dialog.h"
 #include "app/dialogs/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/accel.h>
@@ -240,6 +241,24 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);
     Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, padSpaces);
+    const int alignLines = wxWindow::NewControlId();
+    edit->Append(alignLines, "Alig&n Lines...\tAlt+J");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (ShowAlignLinesDialog(this, alignmentMode_)) {
+                const auto result = editor_->AlignLines(alignmentMode_);
+                if (result == AlignmentResult::RectangularSelection)
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+                else if (result == AlignmentResult::LinesTooLong)
+                    wxMessageBox("This operation can't be performed (lines too long).", "wxnotepad",
+                                 wxOK | wxICON_INFORMATION, this);
+            }
+            editor_->SetFocus();
+        },
+        alignLines);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, alignLines);
     const int joinLines = wxWindow::NewControlId();
     const int joinParagraphs = wxWindow::NewControlId();
     edit->Append(joinLines, "&Join Lines\tCtrl+J");

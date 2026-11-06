@@ -1,5 +1,6 @@
 #pragma once
 
+#include "editor/align_lines.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
 #include <wx/timer.h>
@@ -32,6 +33,7 @@ public:
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     bool ToggleBlockComments(const char* open, const char* close, int commentStyleLast);
     bool EncloseSelection(const wxString& before, const wxString& after);
+    AlignmentResult AlignLines(AlignmentMode mode);
     bool CompressWhitespace();
     bool RemoveBlankLines(bool merge);
     void MoveLines(bool upwards);
