@@ -10,6 +10,7 @@ class EditorControl::Core final : public Scintilla::Internal::ScintillaBase {
 public:
     Core(EditorControl& window, int selectionOptions);
     ~Core() override;
+    intptr_t WndProc(Scintilla::Message message, uintptr_t wParam, intptr_t lParam) override;
 
     uint64_t SelectionRevision() const noexcept;
 
