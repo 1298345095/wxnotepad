@@ -51,3 +51,15 @@ The commands retain their original names and Ctrl+Shift+E / Ctrl+Shift+R
 accelerators. Selection enablement follows the original selection gate,
 including selected read-only text. Document encoding and EOL metadata are
 preserved by these editing commands.
+
+## Platform boundary
+
+Windows retains the original Shlwapi calls and flags. The Linux adapter
+implements the observed boundary using UTF-8 bytes and the same selection
+messages. The installed wxWidgets 3.3.3 URI facility was checked against these
+fixtures through its local source: `src/common/uri.cpp::AppendEscaped` emits
+lowercase hex, `ParseQuery` escapes query spaces, and `Unescape` returns through
+`wxString::FromUTF8` after constructing a NUL-terminated byte buffer. These
+behaviors differ from the original uppercase escapes, untouched query bytes,
+invalid UTF-8 replacement and decoded-NUL allocation results. A direct wxURI
+substitution would therefore change captured editing results.
