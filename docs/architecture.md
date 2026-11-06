@@ -71,9 +71,12 @@ controller would mostly relocate its current responsibilities. Native menu
 bindings can stay in the frame once feature algorithms and dialog construction
 have their own modules.
 
-The enclosure dialog applies the editor command during its native OK
-handler, preserving the original ordering where rectangle feedback appears
-while the custom dialog remains open. Its recalled text belongs to the frame.
+The enclosure and Modify Lines dialogs apply editor commands during their native
+OK handlers, preserving the original ordering where rectangle feedback appears
+while the custom dialog remains open. Recalled text and the Modify Lines
+Skip Empty Lines choice belong to the frame. Modify Lines keeps its original
+numbered-prefix/suffix parser and line/selection accounting in
+`src/editor/modify_lines.cpp`.
 
 Current source layout:
 

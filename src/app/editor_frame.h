@@ -41,6 +41,9 @@ private:
     FindReplaceDialog* findDialog_ = nullptr;
     wxString enclosureBefore_;
     wxString enclosureAfter_;
+    wxString linePrefix_;
+    wxString lineSuffix_;
+    bool skipEmptyLines_ = false;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
     void CreateMenus();

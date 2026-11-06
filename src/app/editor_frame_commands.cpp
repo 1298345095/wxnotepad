@@ -12,6 +12,7 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <cstdlib>
+#include "app/dialogs/modify_lines_dialog.h"
 
 namespace {
 void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
@@ -157,6 +158,13 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    const int modifyLines = wxWindow::NewControlId();
+    edit->Append(modifyLines, "&Modify Lines...\tAlt+M");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) { ShowModifyLinesDialog(this, *editor_, linePrefix_, lineSuffix_, skipEmptyLines_); },
+        modifyLines);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, modifyLines);
     auto* enclosure = new wxMenu;
     const int customEnclosure = wxWindow::NewControlId();
     enclosure->Append(customEnclosure, "&With...\tAlt+Q");
