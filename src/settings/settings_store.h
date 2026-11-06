@@ -19,6 +19,7 @@ private:
     bool LoadLines();
     bool ReadBool(const wxString& key, bool fallback, const wxString& sectionName = "Settings") const;
     int ReadInt(const wxString& key, int fallback, const wxString& sectionName = "Settings") const;
+    wxString ReadDateTimeFormat(const wxString& key) const;
     std::vector<wxString> ReadHistory(const wxString& sectionName) const;
     void WriteHistory(const wxString& sectionName, const std::vector<wxString>& history);
     void WriteBool(const wxString& key, bool value, bool fallback, const wxString& sectionName = "Settings");

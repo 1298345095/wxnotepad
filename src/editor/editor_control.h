@@ -1,6 +1,7 @@
 #pragma once
 
 #include "editor/align_lines.h"
+#include "editor/date_time.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
 #include <wx/timer.h>
@@ -33,6 +34,7 @@ public:
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     bool ToggleBlockComments(const char* open, const char* close, int commentStyleLast);
     bool EncloseSelection(const wxString& before, const wxString& after);
+    void InsertDateTime(DateTimeInsertion command, const wxString& format = {});
     AlignmentResult AlignLines(AlignmentMode mode);
     bool ModifyLines(const wxString& prefix, const wxString& suffix, bool skipEmpty = false);
     bool CompressWhitespace();
