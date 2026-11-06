@@ -5,6 +5,15 @@ creating the frame and applies the stored values to the existing editor. Feature
 modules do not read configuration files. Later settings work adds original fields
 to this same store and applies them through the responsible feature module.
 
+`[Settings2] DateTimeShort` and `DateTimeLong` are original load-only `wcsftime`
+templates for Time/Date (Short Form) and Time/Date (Long Form). Missing or empty
+values use the host-local time without seconds, one space, and the host short or
+long date. Quoted values retain their contents. The original 256-WCHAR input
+buffer admits at most 255 UTF-16 code units, including on Linux; explicit and
+exit saves preserve the original fields in place. They do not create missing
+template keys. See [date/time insertion](observations/original-date-time.md) for
+the platform locale contract and verification.
+
 The first slice restores `[Settings]` fields `ShowLineNumbers` (default `1`),
 `WordWrap` (default `1`), `ViewWhiteSpace` (default `0`) and `SaveSettings`
 (default `1`). Missing or invalid boolean values use the built-in default;

@@ -160,6 +160,7 @@ wxMenu* EditorFrame::CreateEditMenu() {
     for (const int id : {cutLine, copyLine, deleteLine})
         Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     AppendEditingCommands(edit);
+    AppendDateTimeCommands(edit);
     edit->AppendSeparator();
     AppendSearchCommands(edit);
     AppendNavigationCommands(edit);
@@ -719,6 +720,10 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F5 && event.ControlDown()) {
+        if (!event.AltDown() && !event.MetaDown()) InsertDateTime(!event.ShiftDown());
+        return true;
+    }
     if (HandleTabConversionKey(event)) return true;
     const int key = event.GetKeyCode();
     if (event.ControlDown() && event.AltDown() && (key == 'U' || key == 'I' || key == 'O')) {
@@ -731,6 +736,39 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         return true;
     }
     return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
+}
+
+void EditorFrame::InsertDateTime(bool shortDate) {
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+    editor_->InsertDateTime(shortDate ? DateTimeInsertion::Short : DateTimeInsertion::Long,
+                            shortDate ? preferences.dateTimeShort : preferences.dateTimeLong);
+}
+
+void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
+    auto* insert = new wxMenu;
+    auto* timestamps = new wxMenu;
+    const auto add = [this](wxMenu* menu, const char* label, DateTimeInsertion command) {
+        const int id = wxWindow::NewControlId();
+        menu->Append(id, label);
+        Bind(wxEVT_MENU, [this, command](wxCommandEvent&) { editor_->InsertDateTime(command); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    };
+    add(insert, "Current &Date", DateTimeInsertion::LocalDate);
+    add(insert, "Current Date &Time", DateTimeInsertion::LocalDateTime);
+    add(insert, "&UTC Date Time", DateTimeInsertion::UtcDateTime);
+    add(insert, "Unix Timesta&mp", DateTimeInsertion::UnixSeconds);
+    add(timestamps, "&Millisecond (ms)", DateTimeInsertion::UnixMilliseconds);
+    add(timestamps, "Micro&second (us)", DateTimeInsertion::UnixMicroseconds);
+    add(timestamps, "&Nanosecond (ns)", DateTimeInsertion::UnixNanoseconds);
+    insert->AppendSubMenu(timestamps, "&Other Timestamps");
+    for (const auto& [label, shortDate] : {std::pair{"Time/Date (&Short Form)\tCtrl+F5", true},
+                                           std::pair{"Time/Date (&Long Form)\tCtrl+Shift+F5", false}}) {
+        const int id = wxWindow::NewControlId();
+        insert->Append(id, label);
+        Bind(wxEVT_MENU, [this, shortDate](wxCommandEvent&) { InsertDateTime(shortDate); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    edit->AppendSubMenu(insert, "&Insert");
 }
 
 void EditorFrame::ConvertTabs(bool toTabs, bool onlyIndent) {

@@ -40,4 +40,6 @@ struct OriginalSettings {
     bool autoIndent = true;
     bool detectIndentation = true;
     int backspaceUnindents = 2;
+    wxString dateTimeShort;
+    wxString dateTimeLong;
 };

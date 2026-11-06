@@ -31,7 +31,8 @@ private:
 inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
                      bool* releaseSignal = nullptr) {
 #ifdef __WXMSW__
-    NativeSearch::WindowsShortcut(frame->Editor(), key,
+    const int nativeKey = key >= WXK_F1 && key <= WXK_F24 ? VK_F1 + key - WXK_F1 : key;
+    NativeSearch::WindowsShortcut(frame->Editor(), nativeKey,
                                   {{VK_CONTROL, static_cast<BYTE>(control ? 0x80 : 0)},
                                    {VK_MENU, static_cast<BYTE>(alt ? 0x80 : 0)},
                                    {VK_SHIFT, static_cast<BYTE>(shift ? 0x80 : 0)}});
@@ -67,8 +68,9 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     {
         wxFFile file(focusFile, "wb");
         const auto letter = static_cast<char>(key >= 'A' && key <= 'Z' ? key + 'a' - 'A' : key);
-        file.Write(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") +
-                   wxString::Format("%c", letter));
+        const wxString name = key >= WXK_F1 && key <= WXK_F24 ? wxString::Format("F%d", key - WXK_F1 + 1)
+                                                              : wxString::Format("%c", letter);
+        file.Write(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") + name);
     }
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
     while (!received && Clock::now() < keyDeadline) {
