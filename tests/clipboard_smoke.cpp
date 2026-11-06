@@ -207,7 +207,7 @@ void TextOffer(EditorControl* editor) {
     Require(editorText == nativeText, "editor CanPaste must agree with the new native text offer");
 #endif
 }
-void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer, bool readinessOnly = false) {
     using Scintilla::Message;
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("first\nmiddle\nlast"));
     editor->Send(Message::GotoPos, 2);
@@ -227,6 +227,7 @@ void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     Menu(frame, wxID_CUT);
     Require(Text(editor) == "first\nlast" && editor->Send(Message::GetCurrentPos) == 8,
             "default empty-selection Cut removes the middle line and retains the next line's column");
+    if (readinessOnly) return;
     editor->Send(Message::Undo);
     Require(Text(editor) == "first\nmiddle\nlast" && !editor->Send(Message::GetModify) &&
                 !editor->Send(Message::CanUndo),
@@ -989,7 +990,7 @@ public:
                     else if (shapes == "lines")
                         CurrentLines(frame, editor, peer);
                     else
-                        Shapes(frame, editor, peer);
+                        Shapes(frame, editor, peer, shapes == "readiness");
                     result_ = 0;
                 } else {
                     wxString offerOnly;
