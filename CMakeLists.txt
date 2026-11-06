@@ -39,6 +39,7 @@ add_library(editor_runtime STATIC
     src/editor/line_comments.cpp
     src/editor/matching_brace.cpp
     src/editor/move_lines.cpp
+    src/editor/strip_characters.cpp
     src/editor/editor_control.cpp
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
@@ -197,6 +198,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_comments_process.py" "$<TARGET_FILE:line_comments>")
     set_tests_properties(original_toggle_line_comment PROPERTIES TIMEOUT 90)
     add_editor_test(move_lines original_move_lines 60)
+    add_editor_test(strip_characters original_strip_characters 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
     add_editor_test(navigation_bindings original_navigation_bindings 60)

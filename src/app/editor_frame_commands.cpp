@@ -201,6 +201,40 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+    const int stripFirst = wxWindow::NewControlId();
+    edit->Append(stripFirst, "Strip &First Character\tAlt+Z");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!editor_->StripFirstCharacter())
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        stripFirst);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, stripFirst);
+    const int stripLast = wxWindow::NewControlId();
+    edit->Append(stripLast, "Strip &Last Character\tAlt+L");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!editor_->StripLastCharacter())
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        stripLast);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, stripLast);
+    Bind(wxEVT_CHAR_HOOK, [this, stripFirst, stripLast](wxKeyEvent& event) {
+        const int key = event.GetKeyCode();
+        if (!event.AltDown() || (key != 'Z' && key != 'L')) {
+            event.Skip();
+            return;
+        }
+        // Route Alt+L before the native Language-menu mnemonic and retain exact modifiers.
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) {
+            wxCommandEvent command(wxEVT_MENU, key == 'Z' ? stripFirst : stripLast);
+            GetEventHandler()->ProcessEvent(command);
+        }
+    });
 }
 
 void EditorFrame::AppendSearchCommands(wxMenu* edit) {
