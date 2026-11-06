@@ -1,6 +1,7 @@
 #include "app/process_observer.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
+#include "diagnostics/trace.h"
 #include <wx/ffile.h>
 #include <wx/textfile.h>
 #include <wx/menu.h>
@@ -10,6 +11,16 @@
 #include <utility>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
+#endif
+
+#ifdef WXNOTEPAD_DIAGNOSTICS
+namespace {
+unsigned long long DiagnosticRequest(const wxString& sequence) {
+    unsigned long long value = 0;
+    sequence.ToULongLong(&value);
+    return value;
+}
+} // namespace
 #endif
 
 ProcessObserver::ProcessObserver(EditorFrame& frame, wxString directory)
@@ -140,6 +151,8 @@ void ProcessObserver::Observe() {
         if (!command) return;
         commandPending_ = false;
         sequence_ = command->sequence;
+        WXNOTE_TRACE("observer.request", "\ttarget=%p\trequest=%llu", static_cast<void*>(frame_),
+                     DiagnosticRequest(sequence_));
         const auto& operation = command->operation;
         const auto& source = command->source;
         result_ = "failed";
@@ -156,6 +169,8 @@ void ProcessObserver::Observe() {
             }
         }
         Publish();
+        WXNOTE_TRACE("observer.ack", "\ttarget=%p\trequest=%llu\tok=%d", static_cast<void*>(frame_),
+                     DiagnosticRequest(sequence_), result_ == "ok");
         if (operation == "close") frame_->Close();
     } else {
         commandPending_ = false;

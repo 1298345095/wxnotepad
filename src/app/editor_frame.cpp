@@ -5,6 +5,7 @@
 #include "app/dialogs/search_feedback_dialog.h"
 #include "settings/settings_store.h"
 #include "settings/search_settings.h"
+#include "diagnostics/trace.h"
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
@@ -45,13 +46,23 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     });
     Bind(wxEVT_EDITOR_STATE_CHANGED, [this](wxCommandEvent&) { UpdateDocumentState(); });
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
+        WXNOTE_TRACE("close.request", "\ttarget=%p\tcan_veto=%d\tdirty=%d", static_cast<void*>(this), event.CanVeto(),
+                     editor_->Send(Scintilla::Message::GetModify) != 0);
         if (event.CanVeto() && !ConfirmDiscardChanges("closing")) {
             event.Veto();
+            WXNOTE_TRACE("close.veto", "\ttarget=%p", static_cast<void*>(this));
             return;
         }
         SaveSettings(false);
+        WXNOTE_TRACE("close.destroy-deferred", "\ttarget=%p", static_cast<void*>(this));
         Destroy();
     });
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    Bind(wxEVT_DESTROY, [this](wxWindowDestroyEvent& event) {
+        if (event.GetEventObject() == this) WXNOTE_TRACE("frame.destroy", "\ttarget=%p", static_cast<void*>(this));
+        event.Skip();
+    });
+#endif
     UpdateDocumentState();
     editor_->SetFocus();
 }
@@ -157,6 +168,8 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
 
 void EditorFrame::UpdateDocumentState() {
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
+    WXNOTE_TRACE("close.confirm", "\ttarget=%p\tlength=%lld", static_cast<void*>(this),
+                 static_cast<long long>(editor_->Send(Scintilla::Message::GetLength)));
     SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + " - wxnotepad");
     const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
                               : document_.Encoding() == FileEncoding::Gbk   ? "GBK (CP936)"
@@ -289,9 +302,15 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);
     dialog.SetYesNoCancelLabels("&Save", "&Discard", "&Cancel");
     const int choice = dialog.ShowModal();
+    WXNOTE_TRACE("close.choice", "\ttarget=%p\tchoice=%s", static_cast<void*>(this),
+                 choice == wxID_YES  ? "Save"
+                 : choice == wxID_NO ? "Discard"
+                                     : "Cancel");
     if (choice == wxID_NO) return true;
     if (choice != wxID_YES) return false;
     const auto result = Save();
+    WXNOTE_TRACE("close.save-result", "\ttarget=%p\tsaved=%d", static_cast<void*>(this),
+                 result.status == SaveStatus::Saved);
     if (result.status == SaveStatus::Failed)
         wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
     return result.status == SaveStatus::Saved;

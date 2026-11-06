@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "app/process_observer.h"
 #include "settings/settings_store.h"
+#include "diagnostics/trace.h"
 #include <wx/wx.h>
 #include <memory>
 
@@ -11,6 +12,7 @@ class NotepadApp final : public wxApp {
 
 public:
     bool OnInit() override {
+        WXNOTE_TRACE("process.start");
         wxString startup;
         wxString observation;
         for (int i = 1; i < argc; ++i) {
@@ -30,6 +32,13 @@ public:
         if (!observation.empty()) observer_ = std::make_unique<ProcessObserver>(*frame, observation);
         return true;
     }
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    int OnExit() override {
+        const int result = wxApp::OnExit();
+        WXNOTE_TRACE("application.exit", "\tstatus=%d", result);
+        return result;
+    }
+#endif
 };
 
 wxIMPLEMENT_APP(NotepadApp);

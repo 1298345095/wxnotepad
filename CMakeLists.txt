@@ -7,6 +7,7 @@ endif()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+option(WXNOTEPAD_ENABLE_DIAGNOSTICS "Include opt-in native diagnostic tracing" OFF)
 find_package(wxWidgets 3.3.3 EXACT CONFIG REQUIRED)
 
 set(NOTEPAD4_SOURCE "" CACHE PATH "Pinned, patched source produced by tools/build.py")
@@ -67,6 +68,14 @@ add_library(editor_runtime STATIC
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
     "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
 target_link_libraries(editor_runtime PUBLIC notepad4_core)
+if(WXNOTEPAD_ENABLE_DIAGNOSTICS)
+    target_sources(editor_runtime PRIVATE src/diagnostics/trace.cpp)
+    target_compile_definitions(editor_runtime PUBLIC WXNOTEPAD_DIAGNOSTICS)
+    target_compile_definitions(editor_runtime PRIVATE
+        "WXNOTEPAD_DIAGNOSTIC_BUILD=\"${PROJECT_VERSION}/$<CONFIG>\""
+        "WXNOTEPAD_DIAGNOSTIC_CORE=\"${core_revision}\""
+        "WXNOTEPAD_DIAGNOSTIC_COMPILER=\"${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}\"")
+endif()
 
 add_library(editor_features STATIC
     src/editor/go_to_location.cpp
@@ -148,6 +157,14 @@ if(BUILD_TESTING)
         set_tests_properties(original_date_time_literals PROPERTIES ENVIRONMENT "LC_ALL=C.UTF-8")
     endif()
     find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+    set(diagnostic_mode)
+    if(NOT WXNOTEPAD_ENABLE_DIAGNOSTICS)
+        set(diagnostic_mode --compiled-out)
+    endif()
+    add_test(NAME native_diagnostic_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/diagnostics_process.py" "$<TARGET_FILE:wxnotepad>" ${diagnostic_mode}
+        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/diagnostics/process")
+    set_tests_properties(native_diagnostic_process PROPERTIES TIMEOUT 60)
     add_test(NAME original_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_settings_lifecycle PROPERTIES TIMEOUT 60)
@@ -281,6 +298,11 @@ if(BUILD_TESTING)
     endif()
     add_editor_test(file_smoke first_utf8_save 30)
     add_editor_test(close_smoke close_unsaved 30)
+    add_test(NAME native_diagnostic_delivery COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/diagnostics_native_process.py"
+        "$<TARGET_FILE:editing_keys>" "$<TARGET_FILE:close_smoke>" ${diagnostic_mode}
+        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/diagnostics/native")
+    set_tests_properties(native_diagnostic_delivery PROPERTIES TIMEOUT 150)
     add_editor_test(open_smoke open_utf8 30)
     add_editor_test(syntax_cpp cpp_highlighting 30)
     add_editor_test(syntax_python python_highlighting 30)
