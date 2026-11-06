@@ -23,15 +23,15 @@ pairs to the document EOL and preserves lone CR/LF. Destination-line accounting
 skips newly inserted prefix/suffix lines; final selection repair intentionally
 uses the original participating line indices. The six native links replace
 the whole last-focused field, restore its focus and stay outside Tab traversal.
-Return without Shift, including Ctrl+Return, invokes OK from either field.
-Shift+Return inserts a line break. OK captures recalled values and applies while
-the dialog is still open; Escape and Cancel preserve accepted recall and document
-history.
+Main Return and keypad Enter without Shift, including their Ctrl variants, invoke
+OK from either field. Shift with either key inserts a line break. OK captures
+recalled values and applies while the dialog is still open; Escape and Cancel
+preserve accepted recall and document history.
 
 `tests/modify_lines.cpp` verifies public text, exact selection endpoints,
-undo/redo/save points, native Alt+M modifiers, Return/Ctrl+Return acceptance,
-Shift+Return multiline entry in both fields, native Cancel, all six
-links, Tab/focus behavior, accepted recall, empty/read-only/rectangular paths,
+undo/redo/save points, native Alt+M modifiers, main/keypad Return acceptance with
+and without Ctrl, Shift with either key for multiline entry in both fields, native
+Cancel, all six links, Tab/focus behavior, accepted recall, empty/read-only/rectangular paths,
 and independently reopened UTF-8, GBK and UTF-16LE saved bytes. The same native
 executable runs on Windows and private X11/Wayland displays. Linux native
 shortcut requests use `tests/native_key_helpers.h`, the existing isolated
