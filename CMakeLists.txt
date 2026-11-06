@@ -59,6 +59,7 @@ add_library(editor_runtime STATIC
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
     src/editor/platform/character_hex.cpp
+    src/editor/platform/escape_text.cpp
     src/editor/platform/sort_collation.cpp
     src/editor/platform/gtk_drag_drop.cpp
     src/editor/platform/wx_platform.cpp)
@@ -238,6 +239,7 @@ if(BUILD_TESTING)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(block_indentation block_indentation_commands 60)
     add_editor_test(tab_conversion original_tab_conversion 60)
+    add_editor_test(escape_text original_escape_text 90)
     add_editor_test(number_radix original_number_radix 60)
     add_gui_program(line_comments tests/line_comments.cpp app_shell)
     add_test(NAME original_toggle_line_comment COMMAND "${Python3_EXECUTABLE}"

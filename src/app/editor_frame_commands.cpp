@@ -182,7 +182,11 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
           std::pair{"Title &Case\tCtrl+Alt+I", CustomCaseCommand::Title},
           std::pair{"&Sentence Case\tCtrl+Alt+O", CustomCaseCommand::Sentence},
           std::pair{"C&haracter to Hex\tCtrl+Alt+X", CustomCaseCommand::CharacterToHex},
-          std::pair{"Hex to Cha&racter\tCtrl+Alt+C", CustomCaseCommand::HexToCharacter}}) {
+          std::pair{"Hex to Cha&racter\tCtrl+Alt+C", CustomCaseCommand::HexToCharacter},
+          std::pair{"Esca&pe C Chars\tCtrl+Alt+E", CustomCaseCommand::EscapeC},
+          std::pair{"&Unescape C Chars\tCtrl+Alt+R", CustomCaseCommand::UnescapeC},
+          std::pair{"Escape HT&ML/XML Chars\tAlt+Shift+X", CustomCaseCommand::EscapeHtml},
+          std::pair{"Unescape HTML/&XML Chars\tAlt+Shift+H", CustomCaseCommand::UnescapeHtml}}) {
         const int id = wxWindow::NewControlId();
         conversion->Append(id, label);
         Bind(
@@ -789,6 +793,18 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         return true;
     }
     const int key = event.GetKeyCode();
+    if (event.ControlDown() && event.AltDown() && (key == 'E' || key == 'R')) {
+        if (!event.ShiftDown() && !event.MetaDown())
+            editor_->Send(Scintilla::Message::CustomCaseMapping,
+                          key == 'E' ? CustomCaseCommand::EscapeC : CustomCaseCommand::UnescapeC);
+        return true;
+    }
+    if (event.AltDown() && event.ShiftDown() && (key == 'X' || key == 'H')) {
+        if (!event.ControlDown() && !event.MetaDown())
+            editor_->Send(Scintilla::Message::CustomCaseMapping,
+                          key == 'X' ? CustomCaseCommand::EscapeHtml : CustomCaseCommand::UnescapeHtml);
+        return true;
+    }
     if (event.ControlDown() && event.AltDown() && (key == 'U' || key == 'I' || key == 'O')) {
         if (!event.ShiftDown() && !event.MetaDown())
             editor_->Send(Scintilla::Message::CustomCaseMapping, key == 'U'   ? CustomCaseCommand::Invert

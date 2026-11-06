@@ -6,6 +6,10 @@
 namespace CustomCaseCommand {
 inline constexpr int CharacterToHex = 40202;
 inline constexpr int HexToCharacter = 40203;
+inline constexpr int EscapeC = 40204;
+inline constexpr int UnescapeC = 40205;
+inline constexpr int EscapeHtml = 40206;
+inline constexpr int UnescapeHtml = 40207;
 inline constexpr int Invert = 40208;
 inline constexpr int Sentence = 40209;
 inline constexpr int Title = 40210;
