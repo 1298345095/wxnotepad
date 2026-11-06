@@ -1,11 +1,12 @@
 // Literal Windows reference: Notepad4 89b8b36 EditMapTextCase, zh-SG, Windows 11 build 26200.
 #pragma once
+#include <array>
 struct CustomCaseFixture {
     const char* before;
     const char* command;
     const char* after;
 };
-inline constexpr CustomCaseFixture CustomCaseFixtures[] = {
+inline constexpr std::array<CustomCaseFixture, 36> CustomCaseFixtures{{
     {"aB Straße 𐐀", "Invert Case", "Ab sTRAßE 𐐀"},
     {"aB Straße 𐐀", "Title Case", "Ab Straße 𐐀"},
     {"aB Straße 𐐀", "Sentence Case", "Ab straße 𐐨"},
@@ -45,4 +46,4 @@ inline constexpr CustomCaseFixture CustomCaseFixtures[] = {
     {"a中B a😀B áB", "Invert Case", "A中b A😀b Áb"},
     {"a中B a😀B áB", "Title Case", "A中b A😀b Áb"},
     {"a中B a😀B áB", "Sentence Case", "A中b a😀b áb"},
-};
+}};
