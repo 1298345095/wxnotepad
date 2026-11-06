@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
+#include "editor/platform/custom_case.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
 #include "app/dialogs/align_lines_dialog.h"
@@ -175,10 +176,10 @@ wxMenu* EditorFrame::CreateEditMenu() {
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     auto* conversion = new wxMenu;
     // Pinned Notepad4's case commands use CustomCaseMapping values upper=1, lower=2.
-    for (const auto& [label, mapping] :
-         {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2},
-          std::pair{"In&vert Case\tCtrl+Alt+U", 40208}, std::pair{"Title &Case\tCtrl+Alt+I", 40210},
-          std::pair{"&Sentence Case\tCtrl+Alt+O", 40209}}) {
+    for (const auto& [label, mapping] : {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2},
+                                         std::pair{"In&vert Case\tCtrl+Alt+U", CustomCaseCommand::Invert},
+                                         std::pair{"Title &Case\tCtrl+Alt+I", CustomCaseCommand::Title},
+                                         std::pair{"&Sentence Case\tCtrl+Alt+O", CustomCaseCommand::Sentence}}) {
         const int id = wxWindow::NewControlId();
         conversion->Append(id, label);
         Bind(
@@ -761,7 +762,9 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
     const int key = event.GetKeyCode();
     if (event.ControlDown() && event.AltDown() && (key == 'U' || key == 'I' || key == 'O')) {
         if (!event.ShiftDown() && !event.MetaDown())
-            editor_->Send(Scintilla::Message::CustomCaseMapping, key == 'U' ? 40208 : key == 'I' ? 40210 : 40209);
+            editor_->Send(Scintilla::Message::CustomCaseMapping, key == 'U'   ? CustomCaseCommand::Invert
+                                                                 : key == 'I' ? CustomCaseCommand::Title
+                                                                              : CustomCaseCommand::Sentence);
         return true;
     }
     if (event.GetKeyCode() == 'T' && event.AltDown()) {

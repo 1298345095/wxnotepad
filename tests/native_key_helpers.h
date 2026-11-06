@@ -4,10 +4,29 @@
 #include <wx/eventfilter.h>
 #include <wx/ffile.h>
 #include <chrono>
+#include <algorithm>
 
 // Native shortcuts target the caller's editor on the existing private display.
 namespace NativeKeys {
-#ifndef __WXMSW__
+#ifdef __WXMSW__
+inline void DialogNavigation(wxDialog* dialog, int key) {
+    BYTE previous[256];
+    if (!GetKeyboardState(previous)) throw std::runtime_error("read test-thread keyboard state for dialog navigation");
+    BYTE released[256];
+    std::copy(std::begin(previous), std::end(previous), std::begin(released));
+    for (const int modifier : {VK_CONTROL, VK_MENU, VK_SHIFT})
+        released[modifier] = 0;
+    if (!SetKeyboardState(released)) throw std::runtime_error("release shortcut modifiers for dialog navigation");
+    MSG message{};
+    auto* focused = wxWindow::FindFocus();
+    message.hwnd = static_cast<HWND>((focused ? focused : dialog)->GetHandle());
+    message.message = WM_KEYDOWN;
+    message.wParam = key;
+    // Native dialog navigation has a separate path from accelerator translation.
+    dialog->MSWProcessMessage(&message);
+    SetKeyboardState(previous);
+}
+#else
 class KeyRelease final : public wxEventFilter {
 public:
     KeyRelease(int key, bool& received, bool* signal) : key_(key), received_(received), signal_(signal) {

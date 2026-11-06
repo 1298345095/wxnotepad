@@ -3,6 +3,12 @@
 #include <string_view>
 
 // Original resource IDs passed through Scintilla's CustomCaseMapping message.
+namespace CustomCaseCommand {
+inline constexpr int Invert = 40208;
+inline constexpr int Sentence = 40209;
+inline constexpr int Title = 40210;
+} // namespace CustomCaseCommand
+
 std::string MapCustomCase(std::string_view text, int command);
 
 // UTF-16 code units, including on platforms with 32-bit wchar_t. The pinned

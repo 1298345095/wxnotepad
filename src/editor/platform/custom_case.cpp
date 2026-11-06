@@ -2,6 +2,7 @@
 #include "editor/platform/windows_case_data.h"
 #include <wx/string.h>
 #include <algorithm>
+#include <cwchar>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
@@ -86,24 +87,33 @@ bool SentenceTerminator(uint32_t ch) {
 std::string MapCustomCase(std::string_view text, int command) {
     if (text.empty()) return {};
     auto input = wxString::FromUTF8(text.data(), text.size());
-    if (command == 40210) return LinguisticMap(LinguisticMap(input, false), true).ToStdString(wxConvUTF8);
-    if (command == 40209) input = LinguisticMap(input, false);
-    if (command != 40208 && command != 40209) return std::string(text);
+    const auto original = input;
     wxString output;
-    bool newSentence = true;
-    for (const auto character : input) {
-        const uint32_t ch = character.GetValue();
-        uint32_t mapped = ch;
-        if (command == 40208) {
-            mapped = Invert(ch);
-        } else if (SentenceTerminator(ch)) {
-            newSentence = true;
-        } else if (newSentence && AlphaNumeric(ch)) {
-            if (Lower(ch)) mapped = Invert(ch);
-            newSentence = false;
+    if (command == CustomCaseCommand::Title) {
+        output = LinguisticMap(LinguisticMap(input, false), true);
+    } else {
+        if (command == CustomCaseCommand::Sentence) input = LinguisticMap(input, false);
+        if (command != CustomCaseCommand::Invert && command != CustomCaseCommand::Sentence) return std::string(text);
+        bool newSentence = true;
+        for (const auto character : input) {
+            const uint32_t ch = character.GetValue();
+            uint32_t mapped = ch;
+            if (command == CustomCaseCommand::Invert) {
+                mapped = Invert(ch);
+            } else if (SentenceTerminator(ch)) {
+                newSentence = true;
+            } else if (newSentence && AlphaNumeric(ch)) {
+                if (Lower(ch)) mapped = Invert(ch);
+                newSentence = false;
+            }
+            output += wxUniChar(mapped);
         }
-        output += wxUniChar(mapped);
     }
+    // Edit.cpp:1596 uses StrIsEmpty and wcscmp after mapping the full selection.
+    // Invert's original WCHAR loop has no corresponding NUL-sensitive gate.
+    if (command != CustomCaseCommand::Invert &&
+        (output.empty() || output[0] == '\0' || std::wcscmp(original.wc_str(), output.wc_str()) == 0))
+        return std::string(text);
     return output.ToStdString(wxConvUTF8);
 }
 

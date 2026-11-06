@@ -70,21 +70,7 @@ void DialogKey(wxDialog* dialog, int key, const char* nativeName) {
     std::fprintf(stderr, "PHASE: modal native key %s\n", nativeName);
 #ifdef __WXMSW__
     static_cast<void>(nativeName);
-    BYTE previous[256];
-    Require(GetKeyboardState(previous), "read test-thread keyboard state for native dialog navigation");
-    BYTE released[256];
-    std::copy(std::begin(previous), std::end(previous), std::begin(released));
-    for (const int modifier : {VK_CONTROL, VK_MENU, VK_SHIFT})
-        released[modifier] = 0;
-    Require(SetKeyboardState(released), "release shortcut modifiers for native dialog navigation");
-    MSG message{};
-    auto* focused = wxWindow::FindFocus();
-    message.hwnd = static_cast<HWND>((focused ? focused : dialog)->GetHandle());
-    message.message = WM_KEYDOWN;
-    message.wParam = key;
-    // Reuse the native dialog-navigation seam established by modify_lines.
-    dialog->MSWProcessMessage(&message);
-    SetKeyboardState(previous);
+    NativeKeys::DialogNavigation(dialog, key);
 #else
     bool released = false;
     auto* previousFocus = wxWindow::FindFocus();
