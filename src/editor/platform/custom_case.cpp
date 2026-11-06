@@ -121,7 +121,7 @@ std::wstring OriginalNlsUppercase(std::wstring_view text) {
     for (size_t index = 0; index < text.size(); ++index) {
         uint32_t ch = static_cast<uint16_t>(text[index]);
         if (ch >= 0xd800 && ch <= 0xdbff && index + 1 < text.size()) {
-            const auto trail = static_cast<uint16_t>(text[index + 1]);
+            const uint32_t trail = static_cast<uint16_t>(text[index + 1]);
             if (trail >= 0xdc00 && trail <= 0xdfff) {
                 ch = 0x10000 + ((ch - 0xd800) << 10) + trail - 0xdc00;
                 ++index;
