@@ -84,6 +84,91 @@ wxString WriteSafely(const wxString& destination, const std::string& bytes, Pend
     temporary.path.clear();
     return {};
 }
+
+struct LoadedDocument {
+    std::string text;
+    FileEncoding encoding;
+    bool bom;
+    bool systemDefault;
+    OriginalFileVariables variables;
+};
+
+// Preparing a candidate never changes the live document. The caller can repeat
+// this read if the discard/save decision rewrites the selected source.
+std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std::optional<FileEncoding> encoding,
+                                                    const EncodingOptions& options,
+                                                    std::optional<EncodingChoice> weakEncoding) {
+    if (!path.FileExists()) return wxString("Choose an existing file to open.");
+    wxFile file(path.GetFullPath(), wxFile::read);
+    if (!file.IsOpened()) return wxString("Could not open the file for reading.");
+    const auto length = file.Length();
+    if (length < 0) return wxString("Could not determine the file size.");
+    LoadedDocument loaded;
+    auto& bytes = loaded.text;
+    bytes.assign(static_cast<size_t>(length), '\0');
+    if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
+        return wxString("Could not read the complete file.");
+    const auto detected = DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
+    if (!detected.encoding) return detected.error;
+    loaded.encoding = *detected.encoding;
+    loaded.bom = detected.bom;
+    loaded.systemDefault = detected.systemDefault;
+    if (loaded.encoding != FileEncoding::Utf16Le)
+        loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
+    if (loaded.bom) bytes.erase(0, loaded.encoding == FileEncoding::Utf16Le ? 2 : 3);
+    if (loaded.encoding == FileEncoding::Gbk) {
+        const auto decoded = DecodeGbk(bytes);
+        if (!decoded) return wxString("The file is not valid GBK (CP936). The document was not changed.");
+        bytes = *decoded;
+    } else if (loaded.encoding == FileEncoding::Utf16Le) {
+        auto decoded = DecodeUtf16Le(bytes);
+        if (!decoded) return wxString("The file is not valid UTF-16LE.");
+        bytes = std::move(*decoded);
+        loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
+    } else if (!IsUtf8(bytes))
+        return wxString("The file is not valid UTF-8. No other encoding was assumed.");
+    return loaded;
+}
+
+struct ReloadView {
+    intptr_t caret;
+    intptr_t anchor;
+    intptr_t line;
+    intptr_t column;
+    intptr_t visibleTop;
+    intptr_t documentTop;
+    intptr_t xOffset;
+};
+
+ReloadView CaptureReloadView(EditorControl& editor) {
+    using Scintilla::Message;
+    const auto caret = editor.Send(Message::GetCurrentPos);
+    const auto anchor = editor.Send(Message::GetAnchor);
+    const auto line = editor.Send(Message::LineFromPosition, caret);
+    const auto column = editor.Send(Message::GetColumn, caret, line);
+    const auto visibleTop = editor.Send(Message::GetFirstVisibleLine);
+    const auto documentTop = editor.Send(Message::DocLineFromVisible, visibleTop);
+    return {caret, anchor, line, column, visibleTop, documentTop, editor.Send(Message::GetXOffset)};
+}
+
+void RestoreReloadView(EditorControl& editor, const ReloadView& view) {
+    using Scintilla::Message;
+    editor.Send(Message::SetSel, view.anchor, view.caret);
+    // Original FileLoad compares the saved one-based line against the restored
+    // zero-based line, then uses EditJumpTo/EditSelectEx.
+    const auto displacement =
+        view.line + 1 - editor.Send(Message::LineFromPosition, editor.Send(Message::GetCurrentPos));
+    if (displacement > 5 || displacement < -5) {
+        const auto position = view.line >= editor.Send(Message::GetLineCount)
+                                  ? editor.Send(Message::GetLength)
+                                  : editor.Send(Message::FindColumn, view.line, view.column);
+        editor.JumpToPosition(position);
+    } else {
+        editor.Send(Message::EnsureVisible, view.documentTop);
+        editor.Send(Message::LineScroll, 0, view.visibleTop - editor.Send(Message::GetFirstVisibleLine));
+        editor.Send(Message::SetXOffset, view.xOffset);
+    }
+}
 } // namespace
 
 SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
@@ -214,7 +299,6 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
                                  std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
                                  const std::function<void()>& configureLoadedDocument) {
     if (!source) return {OpenStatus::Cancelled, {}};
-    using Scintilla::Message;
     // Notepad4 FileLoad compares the supplied spelling before canonicalizing the
     // load path. Do not turn distinct spellings or file-system aliases into reloads.
 #ifdef __WXMSW__
@@ -223,89 +307,32 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
 #else
     const bool samePath = !path_.empty() && *source == path_;
 #endif
-    const auto caret = editor_.Send(Message::GetCurrentPos);
-    const auto anchor = editor_.Send(Message::GetAnchor);
-    const auto line = editor_.Send(Message::LineFromPosition, caret);
-    const auto column = editor_.Send(Message::GetColumn, caret, line);
-    const auto visibleTop = editor_.Send(Message::GetFirstVisibleLine);
-    const auto documentTop = editor_.Send(Message::DocLineFromVisible, visibleTop);
-    const auto xOffset = editor_.Send(Message::GetXOffset);
+    const auto view = CaptureReloadView(editor_);
     wxFileName loadPath(*source);
     loadPath.Normalize(wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE | wxPATH_NORM_LONG |
                        wxPATH_NORM_SHORTCUT);
     wxLogNull quiet;
-    std::string bytes;
-    FileEncoding format;
-    bool bom;
-    bool systemDefault;
-    OriginalFileVariables variables;
-    const auto read = [&]() -> OpenResult {
-        if (!loadPath.FileExists()) return {OpenStatus::Failed, "Choose an existing file to open."};
-        wxFile file(loadPath.GetFullPath(), wxFile::read);
-        if (!file.IsOpened()) return {OpenStatus::Failed, "Could not open the file for reading."};
-        const auto length = file.Length();
-        if (length < 0) return {OpenStatus::Failed, "Could not determine the file size."};
-        bytes.assign(static_cast<size_t>(length), '\0');
-        if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
-            return {OpenStatus::Failed, "Could not read the complete file."};
-        const auto detected = DetectEncoding(loadPath.GetFullPath(), bytes, encoding, encodingOptions_, weakEncoding);
-        if (!detected.encoding) return {OpenStatus::Failed, detected.error};
-        format = *detected.encoding;
-        bom = detected.bom;
-        systemDefault = detected.systemDefault;
-        if (format != FileEncoding::Utf16Le)
-            variables =
-                ReadOriginalFileVariables(bytes, encodingOptions_.noFileVariables, encodingOptions_.noEncodingTags);
-        if (bom) bytes.erase(0, format == FileEncoding::Utf16Le ? 2 : 3);
-        if (format == FileEncoding::Gbk) {
-            const auto decoded = DecodeGbk(bytes);
-            if (!decoded)
-                return {OpenStatus::Failed, "The file is not valid GBK (CP936). The document was not changed."};
-            bytes = *decoded;
-        } else if (format == FileEncoding::Utf16Le) {
-            auto decoded = DecodeUtf16Le(bytes);
-            if (!decoded) return {OpenStatus::Failed, "The file is not valid UTF-16LE."};
-            bytes = std::move(*decoded);
-            variables =
-                ReadOriginalFileVariables(bytes, encodingOptions_.noFileVariables, encodingOptions_.noEncodingTags);
-        } else if (!IsUtf8(bytes))
-            return {OpenStatus::Failed, "The file is not valid UTF-8. No other encoding was assumed."};
-        return {OpenStatus::Opened, {}};
-    };
-    auto result = read();
-    if (result.status != OpenStatus::Opened) return result;
+    auto candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
+    if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     const bool wasModified = editor_.Send(Scintilla::Message::GetModify);
     if (!beforeReplace()) return {OpenStatus::Cancelled, {}};
     // Save may have rewritten the selected source (including a newly chosen
     // first-save destination). Read it again after that explicit Save succeeds.
     if (wasModified && !editor_.Send(Scintilla::Message::GetModify)) {
-        result = read();
-        if (result.status != OpenStatus::Opened) return result;
+        // Release the old decoded text before allocating another whole-file read.
+        candidate.emplace<wxString>();
+        candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
+        if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     }
-    const auto loaded = Replace(bytes, loadPath.GetFullPath(), format, bom, samePath);
-    systemDefaultEncoding_ = systemDefault;
-    fileVariables_ = std::move(variables);
+    auto& loaded = std::get<LoadedDocument>(candidate);
+    const auto result = Replace(loaded.text, loadPath.GetFullPath(), loaded.encoding, loaded.bom, samePath);
+    systemDefaultEncoding_ = loaded.systemDefault;
+    fileVariables_ = std::move(loaded.variables);
     // FileLoad applies the loaded file's indentation before restoring its view
     // or resolving a saved visual column against the new tab width.
     if (configureLoadedDocument) configureLoadedDocument();
-    if (samePath) {
-        editor_.Send(Message::SetSel, anchor, caret);
-        // Original FileLoad (Notepad4 89b8b36): compare the saved one-based line
-        // against the restored zero-based line, then use EditJumpTo/EditSelectEx.
-        const auto displacement =
-            line + 1 - editor_.Send(Message::LineFromPosition, editor_.Send(Message::GetCurrentPos));
-        if (displacement > 5 || displacement < -5) {
-            const auto position = line >= editor_.Send(Message::GetLineCount)
-                                      ? editor_.Send(Message::GetLength)
-                                      : editor_.Send(Message::FindColumn, line, column);
-            editor_.JumpToPosition(position);
-        } else {
-            editor_.Send(Message::EnsureVisible, documentTop);
-            editor_.Send(Message::LineScroll, 0, visibleTop - editor_.Send(Message::GetFirstVisibleLine));
-            editor_.Send(Message::SetXOffset, xOffset);
-        }
-    }
-    return loaded;
+    if (samePath) RestoreReloadView(editor_, view);
+    return result;
 }
 
 OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,

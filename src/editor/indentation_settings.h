@@ -1,6 +1,7 @@
 #pragma once
 
-#include "settings/settings_store.h"
+#include "settings/original_settings.h"
+#include "syntax/syntax_catalog.h"
 #include "document/file_variables.h"
 #include <optional>
 

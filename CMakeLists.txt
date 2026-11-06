@@ -62,6 +62,7 @@ target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
     src/settings/settings_store.cpp
+    src/settings/search_settings.cpp
     src/app/go_to_line_dialog.cpp
     src/app/tab_settings_dialog.cpp
     src/app/editor_frame.cpp

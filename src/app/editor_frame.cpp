@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "app/find_replace_dialog.h"
 #include "settings/settings_store.h"
+#include "settings/search_settings.h"
 #include <wx/menu.h>
 #include <wx/filedlg.h>
 #include <wx/filename.h>
@@ -68,16 +69,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     if (settings) {
         document_.SetSaveCleanup({settings->values.fixLineEndings, settings->values.fixTrailingBlanks});
         defaultEolMode_ = settings->values.defaultEOLMode;
-        SearchRequest request;
-        const int flags = settings->values.findReplaceFlag;
-        request.options.matchCase = (flags & 4) != 0;
-        request.options.wholeWord = (flags & 2) != 0;
-        request.options.regularExpression = (flags & 0x20) != 0;
-        request.options.transformBackslashes = (flags & (8 << 10)) != 0;
-        request.wrapAround = (settings->values.findReplaceOption & (4 << 4)) == 0;
-        request.bookmarkMatchedLines = (settings->values.findReplaceOption & 8) != 0;
-        search_.Configure(std::move(request));
-        search_.RestoreHistory(settings->values.recentFind, settings->values.recentReplace, (flags & (32 << 10)) != 0);
+        RestoreSearchSettings(search_, settings->values);
         editor_->SetLineSelectionMode(static_cast<LineSelectionMode>(settings->values.lineSelection));
         const auto mode = settings->values.defaultEOLMode == 0   ? Scintilla::EndOfLine::CrLf
                           : settings->values.defaultEOLMode == 1 ? Scintilla::EndOfLine::Lf
@@ -122,19 +114,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
     settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
-    const auto& request = search_.Request();
-    // Preserve settings bits owned by other original options while updating
-    // this dialog's implemented flags. Regex is SCFIND_REGEXP (0x20).
-    auto& flags = settings_->values.findReplaceFlag;
-    flags &= ~(4 | 2 | 0x20 | 0x40 | 0x80 | (8 << 10) | (32 << 10));
-    flags |=
-        (request.options.matchCase ? 4 : 0) | (request.options.wholeWord ? 2 : 0) |
-        (request.options.regularExpression ? (0x20 | ((settings_->values.findReplaceOption & 1) ? 0x80 : 0x40)) : 0) |
-        (request.options.transformBackslashes ? (8 << 10) : 0) | (search_.LastReplaceEmpty() ? (32 << 10) : 0);
-    settings_->values.findReplaceOption = (settings_->values.findReplaceOption & ~((4 << 4) | 8)) |
-                                          (request.wrapAround ? 0 : (4 << 4)) | (request.bookmarkMatchedLines ? 8 : 0);
-    settings_->values.recentFind = search_.RecentFind();
-    settings_->values.recentReplace = search_.RecentReplace();
+    CaptureSearchSettings(search_, settings_->values);
     settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
     return settings_->Save(explicitSave);
 }

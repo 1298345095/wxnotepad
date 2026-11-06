@@ -17,6 +17,7 @@ search algorithm or own the document's language choice.
 | `src/app/editor_frame.*`, `find_replace_dialog.*` | Menus, prompts, file-command coordination, title/status and modeless search UI | The frame formats search outcomes; the dialog synchronizes controls with a shared search session. |
 | `src/document/document_session.*` | Path, encoding/BOM, file transactions, save point and language choice | File metadata and language transitions commit after successful operations. File I/O mechanics remain private to this module. |
 | `src/document/encoding/*` | Encoding conversions, including CP936 compatibility | Tested conversions and provenance are retained; the implementations use wx conversion facilities. |
+| `src/settings/original_settings.h`, `settings_store.*`, `search_settings.*` | Original defaults, INI persistence and search-option conversion | Feature code consumes settings values without depending on the persistence class. Load and save use the same declared defaults; search bit preservation and history conversion stay together. |
 | `src/search/search_session.*` | Find/replace, match validity, zero-width progress, fold reveal and history grouping | The interface takes requests and returns structured outcomes; it creates no widgets. |
 | `src/syntax/*`, `src/syntax/generated/*` | Static catalog, extension detection, lexer/style installation and generated data | Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
 | `src/editor/editor_control.*` | wx window, core lifetime, input, selection/scrolling, clipboard, IME, notifications and fold selection repair | The existing host behavior is retained. Native implementation extraction can accompany future changes to those facilities. |
@@ -191,6 +192,15 @@ in the session. Extract file/codec mechanics into private functions only where
 this makes the transaction easier to read; real temporary files remain suitable
 test dependencies.
 
+The private `ReadDocument` operation returns a complete decoded candidate or a
+read/decode error. `Open` owns the discard/save decision, any necessary re-read,
+document replacement and loaded-settings callback. A separate reload-view value
+captures and restores the original selection/scroll protocol after indentation
+has been applied. Re-reading releases the first candidate's text before another
+whole-file read. Encoding preference, empty-file, ASCII and legacy-candidate
+selection are named private operations; their original priority remains explicit
+in `DetectEncoding`.
+
 The document-local language choice belongs to the session. It exposes a
 language selection operation and read-only effective-language/override state.
 Successful New and different-path Open reset to Automatic; reopening the current supplied path retains the effective scheme and document language choice. First Save and Save As carry a semantic
@@ -330,6 +340,11 @@ checks structured results, request invalidation, no-op history and document
 language transitions with an actual editor, without frame/dialog dependencies.
 Further algorithmic cases can use this interface while native cases retain UI
 wiring coverage. These tests still require wx initialization and a display.
+
+Open and close scenarios share `tests/file_command_driver.h` for native modal
+widget enumeration and file-picker progress. Each scenario retains its own
+commands, expected dialog counts and document/disk assertions. The specialized
+overwrite and encoding-loss drivers retain their distinct interactions.
 
 Keep the three agreed verification surfaces: public editor/command state, file
 operations plus independently read bytes, and independent application processes.
