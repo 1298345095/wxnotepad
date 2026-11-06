@@ -1,7 +1,7 @@
 #include "editor/editor_control.h"
 #include "search/search_session.h"
 #include "document/document_session.h"
-#include "app/find_replace_dialog.h"
+#include "app/dialogs/find_replace_dialog.h"
 #include "native_search_helpers.h"
 #include <wx/wx.h>
 #include <wx/filename.h>

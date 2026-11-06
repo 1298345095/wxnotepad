@@ -1,4 +1,4 @@
-#include "app/tab_settings_dialog.h"
+#include "app/dialogs/tab_settings_dialog.h"
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
 #include <wx/statbox.h>

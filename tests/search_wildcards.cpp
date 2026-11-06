@@ -1,5 +1,5 @@
 #include "native_search_helpers.h"
-#include "app/find_replace_dialog.h"
+#include "app/dialogs/find_replace_dialog.h"
 #include <wx/textctrl.h>
 #include <wx/stattext.h>
 #include <memory>

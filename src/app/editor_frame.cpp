@@ -1,61 +1,13 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
-#include "app/find_replace_dialog.h"
+#include "app/dialogs/document_dialogs.h"
+#include "app/dialogs/find_replace_dialog.h"
+#include "app/dialogs/search_feedback_dialog.h"
 #include "settings/settings_store.h"
 #include "settings/search_settings.h"
 #include <wx/menu.h>
-#include <wx/filedlg.h>
-#include <wx/filename.h>
 #include <wx/msgdlg.h>
-#include <wx/button.h>
-#include <wx/checkbox.h>
-#include <wx/choice.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
 #include <wx/statusbr.h>
-#include <wx/dialog.h>
-#include <wx/checkbox.h>
-#include <wx/artprov.h>
-#include <wx/statbmp.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
-#include <vector>
-
-namespace {
-struct ChosenSaveFile {
-    wxString path;
-    SaveFileType type;
-};
-
-std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
-                                             const wxString& path) {
-    wxString wildcard;
-    std::vector<SaveFileType> types;
-    const auto addLanguage = [&](const SyntaxDefinition& definition, bool current) {
-        wxArrayString patterns;
-        for (const auto* extension : definition.extensions)
-            patterns.Add("*." + wxString(extension));
-        const auto extension = wxFileName(path).GetExt();
-        if (current && !extension.empty() && patterns.Index("*." + extension, false) == wxNOT_FOUND)
-            patterns.Add("*." + extension);
-        const auto pattern = wxJoin(patterns, ';');
-        wildcard += wxString(definition.name) + " (" + pattern + ")|" + pattern + "|";
-        types.emplace_back(definition.language);
-    };
-    addLanguage(SyntaxFor(currentLanguage), true);
-    for (const auto& definition : SyntaxCatalog()) {
-        if (definition.language != currentLanguage) addLanguage(definition, false);
-    }
-    wildcard += "All Files (*)|*";
-    types.emplace_back(SaveType::AllFiles);
-    const wxFileName current(path);
-    wxFileDialog dialog(parent, title, current.GetPath(), current.GetFullName(), wildcard,
-                        wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-    dialog.SetFilterIndex(0);
-    if (dialog.ShowModal() != wxID_OK) return std::nullopt;
-    return ChosenSaveFile{dialog.GetPath(), types.at(static_cast<size_t>(dialog.GetFilterIndex()))};
-}
-} // namespace
 
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
@@ -120,37 +72,16 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
 }
 
 void EditorFrame::ShowLineEndingOptions() {
-    // Original Dialogs.cpp::SelectDefLineEndingDlgProc and IDD_DEFEOLMODE.
-    wxDialog dialog(this, wxID_ANY, "Line Endings");
-    auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Default line ending mode:"), 0, wxALL, dialog.FromDIP(10));
-    auto* mode = new wxChoice(&dialog, wxID_ANY);
-    mode->SetName("Default line ending mode");
-    mode->Append("Windows (CR+LF)");
-    mode->Append("Unix/macOS (LF)");
-    mode->Append("Classic Mac OS (CR)");
-    mode->SetSelection(defaultEolMode_);
-    contents->Add(mode, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
-    const auto option = [&](const char* label, bool value) {
-        auto* check = new wxCheckBox(&dialog, wxID_ANY, label);
-        check->SetValue(value);
-        contents->Add(check, 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
-        return check;
-    };
-    auto* warn = option("Show inconsistent line endings warning on loading.", warnLineEndings_);
-    auto* fix = option("&Ensure consistent line endings when saving.", document_.SaveCleanup().fixLineEndings);
-    auto* strip = option("&Strip trailing blanks when saving.", document_.SaveCleanup().fixTrailingBlanks);
-    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(contents);
-    dialog.CentreOnParent();
-    if (dialog.ShowModal() != wxID_OK) return;
-    defaultEolMode_ = mode->GetSelection();
+    LineEndingOptionsDialog dialog(this, {defaultEolMode_, warnLineEndings_, document_.SaveCleanup()});
+    const auto choice = dialog.Choose();
+    if (!choice) return;
+    defaultEolMode_ = choice->defaultMode;
     const auto defaultMode = defaultEolMode_ == 0   ? Scintilla::EndOfLine::CrLf
                              : defaultEolMode_ == 1 ? Scintilla::EndOfLine::Lf
                                                     : Scintilla::EndOfLine::Cr;
     document_.SetDefaultEolMode(defaultMode);
-    warnLineEndings_ = warn->GetValue();
-    document_.SetSaveCleanup({fix->GetValue(), strip->GetValue()});
+    warnLineEndings_ = choice->warn;
+    document_.SetSaveCleanup(choice->cleanup);
 }
 
 void EditorFrame::ShowFind(bool replace) {
@@ -214,32 +145,14 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
     if (mode == 1) return true;
     auto* focused = wxWindow::FindFocus();
     wxWindow* owner = findDialog_ && findDialog_->IsShown() ? static_cast<wxWindow*>(findDialog_) : this;
-    wxDialog dialog(owner, wxID_ANY, "wxnotepad");
-    dialog.SetName("Search feedback");
-    auto* layout = new wxBoxSizer(wxVERTICAL);
-    auto* contents = new wxBoxSizer(wxHORIZONTAL);
-    contents->Add(
-        new wxStaticBitmap(&dialog, wxID_ANY,
-                           wxArtProvider::GetBitmap(confirm ? wxART_INFORMATION : wxART_WARNING, wxART_MESSAGE_BOX)),
-        0, wxALL, 16);
-    auto* text = new wxStaticText(&dialog, wxID_ANY, message);
-    text->SetName(key);
-    contents->Add(text, 0, wxALL | wxALIGN_CENTER_VERTICAL, 16);
-    layout->Add(contents);
-    auto* suppress = new wxCheckBox(&dialog, wxID_ANY, "&Don't show this message again.");
-    suppress->SetName("Suppress search message");
-    suppress->Enable(mode != 2);
-    layout->Add(suppress, 0, wxLEFT | wxRIGHT | wxBOTTOM, 16);
-    layout->Add(dialog.CreateStdDialogButtonSizer(confirm ? wxOK | wxCANCEL : wxOK), 0, wxALL | wxALIGN_RIGHT, 8);
-    dialog.SetSizerAndFit(layout);
-    dialog.CentreOnParent();
-    const int response = dialog.ShowModal();
-    if (suppress->GetValue()) {
+    SearchFeedbackDialog dialog(owner, key, message, confirm, mode != 2);
+    const auto choice = dialog.Choose();
+    if (choice.suppress) {
         mode = 1;
         if (settings_) settings_->SuppressMessage(key);
     }
     if (focused && focused->IsShownOnScreen()) focused->SetFocus();
-    return response == wxID_OK;
+    return choice.accepted;
 }
 
 void EditorFrame::UpdateDocumentState() {
@@ -331,17 +244,13 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
 }
 
 OpenResult EditorFrame::Open() {
-    wxFileDialog dialog(this, "Open file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
-                        wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-    if (dialog.ShowModal() != wxID_OK) return Open(std::nullopt);
-    return Open(dialog.GetPath());
+    OpenFileDialog dialog(this);
+    return Open(dialog.Choose());
 }
 
 OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
-    wxFileDialog dialog(this, "Open file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
-                        wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-    if (dialog.ShowModal() != wxID_OK) return Open(std::nullopt, encoding);
-    return Open(dialog.GetPath(), encoding);
+    OpenFileDialog dialog(this);
+    return Open(dialog.Choose(), encoding);
 }
 
 bool EditorFrame::New() {
@@ -396,43 +305,12 @@ GbkLossChoice EditorFrame::ConfirmGbkLoss() {
 }
 
 void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo) {
-    wxDialog dialog(this, wxID_ANY, "Inconsistent Line Endings");
-    auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "The line endings in this file are not consistent:"), 0, wxALL,
-                  dialog.FromDIP(10));
-    contents->Add(new wxStaticText(&dialog, wxID_ANY,
-                                   wxString::Format("CR+LF: %llu line(s).\nLF: %llu line(s).\nCR: %llu line(s).",
-                                                    static_cast<unsigned long long>(counts.crlf),
-                                                    static_cast<unsigned long long>(counts.lf),
-                                                    static_cast<unsigned long long>(counts.cr))),
-                  0, wxLEFT | wxRIGHT, dialog.FromDIP(10));
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Do you want to normalize the line endings?"), 0, wxALL,
-                  dialog.FromDIP(10));
-    const wxString names[] = {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)"};
-    auto* mode = new wxChoice(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize, 3, names);
-    mode->SetName("Line ending conversion");
     const auto current = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
-    mode->SetSelection(current == Scintilla::EndOfLine::CrLf ? 0 : current == Scintilla::EndOfLine::Lf ? 1 : 2);
-    contents->Add(mode, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
-    auto* always = new wxCheckBox(&dialog, wxID_ANY, "&Always show this dialog.");
-    always->SetValue(warnLineEndings_);
-    contents->Add(always, 0, wxALL, dialog.FromDIP(10));
-    auto* buttons = new wxBoxSizer(wxHORIZONTAL);
-    auto* yes = new wxButton(&dialog, wxID_OK, "&Yes");
-    auto* no = new wxButton(&dialog, wxID_CANCEL, "&No");
-    buttons->Add(yes, 0, wxRIGHT, dialog.FromDIP(5));
-    buttons->Add(no);
-    contents->Add(buttons, 0, wxALIGN_RIGHT | wxALL, dialog.FromDIP(10));
-    (defaultNo ? no : yes)->SetDefault();
-    dialog.SetSizerAndFit(contents);
-    dialog.CentreOnParent();
-    const bool convert = dialog.ShowModal() == wxID_OK;
-    warnLineEndings_ = always->GetValue();
-    if (convert) {
-        const auto selected = mode->GetSelection() == 0   ? Scintilla::EndOfLine::CrLf
-                              : mode->GetSelection() == 1 ? Scintilla::EndOfLine::Lf
-                                                          : Scintilla::EndOfLine::Cr;
-        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(selected));
-        editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(selected));
+    LineEndingConversionDialog dialog(this, counts, current, warnLineEndings_, defaultNo);
+    const auto choice = dialog.Choose();
+    warnLineEndings_ = choice.warn;
+    if (choice.convert) {
+        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(choice.mode));
+        editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(choice.mode));
     }
 }
