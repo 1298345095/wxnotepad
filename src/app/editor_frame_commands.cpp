@@ -156,6 +156,14 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    const int stripLeading = wxWindow::NewControlId();
+    const int stripTrailing = wxWindow::NewControlId();
+    edit->Append(stripTrailing, "Strip &Trailing Blanks\tAlt+T");
+    edit->Append(stripLeading, "Strip Leading Blan&ks");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->StripLeadingBlanks(); }, stripLeading);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->StripTrailingBlanks(); }, stripTrailing);
+    for (const int id : {stripLeading, stripTrailing})
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     const int padSpaces = wxWindow::NewControlId();
     edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);
@@ -522,8 +530,12 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
-    return HandleTabConversionKey(event) || HandleSearchKey(event) || HandleNavigationKey(event) ||
-           HandleViewKey(event) || HandleDocumentKey(event);
+    if (HandleTabConversionKey(event)) return true;
+    if (event.GetKeyCode() == 'T' && event.AltDown()) {
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
+        return true;
+    }
+    return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
 }
 
 void EditorFrame::ConvertTabs(bool toTabs, bool onlyIndent) {
