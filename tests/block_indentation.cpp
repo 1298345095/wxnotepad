@@ -8,6 +8,7 @@
 #include <wx/ffile.h>
 #include <wx/menu.h>
 #include <wx/stopwatch.h>
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -44,6 +45,15 @@ void NativeTab(EditorControl* editor, bool shift = false) {
 #else
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys require private display helper");
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+#ifdef __WXGTK__
+    // Closing a GTK modal dialog restores native keyboard focus asynchronously.
+    while (!gtk_widget_has_focus(editor->GetConnectWidget()) && std::chrono::steady_clock::now() < deadline) {
+        wxYield();
+        wxMilliSleep(10);
+    }
+    Require(gtk_widget_has_focus(editor->GetConnectWidget()), "native editor focus must precede the Tab key");
+#endif
     bool received = false;
     wxEvtHandler observer;
     observer.Bind(wxEVT_KEY_UP, [&received](wxKeyEvent& event) {
@@ -55,8 +65,7 @@ void NativeTab(EditorControl* editor, bool shift = false) {
         wxFFile file(focusFile, "wb");
         file.Write(shift ? "key:shift+Tab" : "key:Tab");
     }
-    wxStopWatch wait;
-    while (!received && wait.Time() < 3000) {
+    while (!received && std::chrono::steady_clock::now() < deadline) {
         wxYield();
         wxMilliSleep(10);
     }
