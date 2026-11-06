@@ -1,4 +1,4 @@
-#include "app/go_to_line_dialog.h"
+#include "app/dialogs/go_to_line_dialog.h"
 #include "editor/editor_control.h"
 #include "editor/go_to_location.h"
 #include <wx/dialog.h>

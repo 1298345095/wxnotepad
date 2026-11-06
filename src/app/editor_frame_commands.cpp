@@ -1,7 +1,7 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
-#include "app/go_to_line_dialog.h"
-#include "app/tab_settings_dialog.h"
+#include "app/dialogs/go_to_line_dialog.h"
+#include "app/dialogs/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/accel.h>
 #include <wx/combobox.h>

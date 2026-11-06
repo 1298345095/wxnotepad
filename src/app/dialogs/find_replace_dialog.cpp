@@ -1,4 +1,4 @@
-#include "app/find_replace_dialog.h"
+#include "app/dialogs/find_replace_dialog.h"
 #include "editor/editor_control.h"
 #include "search/find_text.h"
 #include <wx/button.h>
