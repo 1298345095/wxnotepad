@@ -156,6 +156,22 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    const int mergeBlankLines = wxWindow::NewControlId();
+    const int removeBlankLines = wxWindow::NewControlId();
+    edit->Append(mergeBlankLines, "Merge Blank Lines\tAlt+B");
+    edit->Append(removeBlankLines, "Remove Blank Lines\tAlt+R");
+    for (const int id : {mergeBlankLines, removeBlankLines}) {
+        Bind(
+            wxEVT_MENU,
+            [this, id, mergeBlankLines](wxCommandEvent&) {
+                if (!editor_->RemoveBlankLines(id == mergeBlankLines))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    edit->AppendSeparator();
     const int indent = wxWindow::NewControlId();
     edit->Append(indent, "&Indent");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->IndentLines(true); }, indent);
