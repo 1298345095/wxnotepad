@@ -355,11 +355,13 @@ void NativeKey(EditorFrame* frame, int key, const char* gesture, bool control, b
     Require(SetKeyboardState(modified), "set native test thread shortcut modifiers");
     MSG message{};
     message.hwnd = static_cast<HWND>(editor->GetHandle());
-    message.message = WM_KEYDOWN;
+    message.message = alt ? WM_SYSKEYDOWN : WM_KEYDOWN;
     message.wParam = key;
+    // wxMSW reads Alt from the message context, including an unhandled accelerator.
+    message.lParam = alt ? (LPARAM{KF_ALTDOWN} << 16) : 0;
     if (!frame->MSWTranslateMessage(&message))
         SendMessageW(message.hwnd, message.message, message.wParam, message.lParam);
-    SendMessageW(message.hwnd, WM_KEYUP, key, 0);
+    SendMessageW(message.hwnd, alt ? WM_SYSKEYUP : WM_KEYUP, key, message.lParam);
     SetKeyboardState(previous);
 #else
     wxString focusFile;
@@ -425,6 +427,9 @@ void Shortcuts(EditorFrame* frame) {
         TestEditor::ResetStream(editor, "AB\nCD", 0, 4);
         NativeKey(frame, key, gesture, std::string(gesture) == "ctrl+alt+d", true,
                   std::string(gesture) != "ctrl+alt+d");
+        if (TestEditor::Text(editor) != "AB\nCD" || editor->Send(Message::CanUndo))
+            std::fprintf(stderr, "Native %s produced <%s>; CanUndo=%lld\n", gesture, TestEditor::Text(editor).c_str(),
+                         static_cast<long long>(editor->Send(Message::CanUndo)));
         Require(TestEditor::Text(editor) == "AB\nCD" && !editor->Send(Message::CanUndo),
                 "extra modifiers do not route duplication/transposition");
     }
