@@ -43,6 +43,9 @@ private:
     wxString enclosureBefore_;
     wxString enclosureAfter_;
     AlignmentMode alignmentMode_ = AlignmentMode::Left;
+    wxString linePrefix_;
+    wxString lineSuffix_;
+    bool skipEmptyLines_ = false;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
     void CreateMenus();

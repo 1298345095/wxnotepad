@@ -13,6 +13,7 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <cstdlib>
+#include "app/dialogs/modify_lines_dialog.h"
 
 namespace {
 void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
@@ -184,6 +185,13 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
             id);
     }
     edit->AppendSubMenu(conversion, "Con&vert");
+    const int modifyLines = wxWindow::NewControlId();
+    edit->Append(modifyLines, "&Modify Lines...\tAlt+M");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) { ShowModifyLinesDialog(this, *editor_, linePrefix_, lineSuffix_, skipEmptyLines_); },
+        modifyLines);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, modifyLines);
     const int duplicateSelection = wxWindow::NewControlId();
     edit->Append(duplicateSelection, "Duplicate Selection\tAlt+D");
     Bind(

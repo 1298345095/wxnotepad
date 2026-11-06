@@ -46,6 +46,7 @@ add_library(editor_runtime STATIC
     src/editor/line_comments.cpp
     src/editor/matching_brace.cpp
     src/editor/move_lines.cpp
+    src/editor/modify_lines.cpp
     src/editor/strip_blanks.cpp
     src/editor/pad_spaces.cpp
     src/editor/strip_characters.cpp
@@ -80,6 +81,7 @@ add_library(app_shell STATIC
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
+    src/app/dialogs/modify_lines_dialog.cpp
     src/app/dialogs/go_to_line_dialog.cpp
     src/app/dialogs/search_feedback_dialog.cpp
     src/app/dialogs/tab_settings_dialog.cpp
@@ -164,6 +166,7 @@ if(BUILD_TESTING)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(pad_spaces original_pad_spaces 60)
     add_editor_test(align_lines original_align_lines 60)
+    add_editor_test(modify_lines original_modify_lines 60)
     add_test(NAME original_cleanup_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/cleanup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_cleanup_settings PROPERTIES TIMEOUT 60)
