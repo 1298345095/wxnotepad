@@ -498,8 +498,10 @@ bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
         case 'C':
         case 'X':
             if (event.ShiftDown()) {
-                window_.Send(event.GetKeyCode() == 'C' ? Message::LineCopy : Message::LineCut,
-                             static_cast<uintptr_t>(window_.GetLineSelectionMode()) & 1);
+                if (event.GetKeyCode() == 'C')
+                    window_.CopyLine();
+                else
+                    window_.CutLine();
             } else if (event.GetKeyCode() == 'C')
                 window_.Copy();
             else
@@ -601,7 +603,12 @@ void EditorControl::Core::CopyToClipboard(const core::SelectionText& text) const
 
 void EditorControl::Core::Cut(bool, bool lineCopy) {
     pdoc->CheckReadOnly();
-    if (sel.Empty() || pdoc->IsReadOnly() || SelectionContainsProtected()) return;
+    if (pdoc->IsReadOnly() || SelectionContainsProtected()) return;
+    if (sel.Empty() && !lineCopy) {
+        // Original Cut skips Copy on an empty stream but still filters carets.
+        ClearSelection();
+        return;
+    }
     core::SelectionText text;
     if (lineCopy)
         text.Copy(RangeText(sel.RangeMain().Start().Position(), sel.RangeMain().End().Position()), pdoc->dbcsCodePage,

@@ -116,6 +116,20 @@ void EditorControl::Cut() {
     JumpToPosition(position);
 }
 
+void EditorControl::CopyLine() {
+    // Original IDM_EDIT_COPYLINE: the low mode bit controls line-copy metadata.
+    Send(Message::LineCopy, static_cast<uintptr_t>(lineSelectionMode_) & 1);
+}
+
+void EditorControl::CutLine() {
+    // Explicit Cut Line retains the core's position, unlike caret-only Cut.
+    Send(Message::LineCut, static_cast<uintptr_t>(lineSelectionMode_) & 1);
+}
+
+void EditorControl::DeleteLine() {
+    Send(Message::LineDelete);
+}
+
 void EditorControl::JumpToPosition(intptr_t position) {
     // Original EditSelectEx: unfold and center the destination, then restore
     // the normal policies and the preferred column for subsequent navigation.
