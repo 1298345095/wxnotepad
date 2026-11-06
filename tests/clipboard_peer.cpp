@@ -86,15 +86,26 @@ private:
         }
 #endif
         if (!pendingCommand_.empty()) {
-            if (!frame_->IsActive() || !text_->HasFocus()) {
+            wxString focusFile;
+            const bool privateFocus = wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile);
+            bool acknowledged = true;
+            if (privateFocus && !gestureRequested_) {
+                wxString pending;
+                wxFFile file(focusFile, "rb");
+                file.ReadAll(&pending);
+                acknowledged = pending.empty();
+            }
+            // Raising this window can deliver native focus before the driver
+            // claims its request. Keep that request until it is acknowledged so
+            // a late claim cannot replace the following gesture with an empty file.
+            if (!acknowledged || !frame_->IsActive() || !text_->HasFocus()) {
                 if (std::chrono::steady_clock::now() - activationStarted_ > std::chrono::seconds(3)) {
                     pendingCommand_.clear();
                     Respond("native focus unavailable");
                 }
                 return;
             }
-            wxString focusFile;
-            if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) {
+            if (privateFocus) {
                 // Focus can arrive before the compositor delivers a key serial.
                 // Match the editor fixture: receive a native gesture before
                 // changing Wayland clipboard ownership in this process too.
@@ -142,7 +153,9 @@ private:
             wxString focusFile;
             if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) {
                 wxFFile file(focusFile, "wb");
-                file.Write("peer");
+                wxString deferClaim;
+                file.Write(wxGetEnv("WXNOTEPAD_CLIPBOARD_DEFER_PEER_FOCUS_CLAIM", &deferClaim) ? "peer-deferred"
+                                                                                               : "peer");
             }
             frame_->Raise();
             text_->SetFocus();
