@@ -114,8 +114,10 @@ public:
                 } else if (action_ == DialogAction::Return) {
                     input->SetFocus();
                     DialogKey(dialog, WXK_RETURN, "Return");
+                    Require(!dialog->IsShown(), "native Return accepts and closes Column Wrap");
                 } else if (action_ == DialogAction::Escape) {
                     DialogKey(dialog, WXK_ESCAPE, "Escape");
+                    Require(!dialog->IsShown(), "native Escape cancels and closes Column Wrap");
                 } else if (action_ == DialogAction::Tab) {
                     input->SetFocus();
                     bool ok = false, cancel = false;
