@@ -86,6 +86,7 @@ Edit also provides the original text transformations:
 
 | Command | Shortcut |
 | --- | --- |
+| Convert → Upper Case / Lower Case | Ctrl+Shift+U / Ctrl+U |
 | Tabify Selection / Untabify Selection | Ctrl+Shift+T / Ctrl+Shift+S |
 | Tabify Indent / Untabify Indent | Ctrl+Alt+T / Ctrl+Alt+S |
 | Strip Leading Blanks / Strip Trailing Blanks | Menu / Alt+T |

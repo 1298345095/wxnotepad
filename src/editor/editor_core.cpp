@@ -668,12 +668,9 @@ std::unique_ptr<core::CaseFolder> EditorControl::Core::CaseFolderForEncoding() c
 }
 
 std::string EditorControl::Core::CaseMapString(const std::string& value, CaseMapping mapping) const {
-    wxString text = wxString::FromUTF8(value);
-    if (mapping == CaseMapping::upper)
-        text.MakeUpper();
-    else if (mapping == CaseMapping::lower)
-        text.MakeLower();
-    return text.ToStdString(wxConvUTF8);
+    if (mapping == CaseMapping::upper) return core::CaseConvertString(value, core::CaseConversion::upper);
+    if (mapping == CaseMapping::lower) return core::CaseConvertString(value, core::CaseConversion::lower);
+    return value;
 }
 
 bool SCICALL EditorControl::Core::DragThreshold(core::Point start, core::Point now) const noexcept {
