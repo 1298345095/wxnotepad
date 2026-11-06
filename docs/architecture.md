@@ -14,15 +14,18 @@ search algorithm or own the document's language choice.
 | Location | Current responsibility | Assessment |
 | --- | --- | --- |
 | `src/app/main.cpp`, `process_observer.*` | Startup/options and the opt-in process observation protocol | Observation uses the actual application's commands and exists only when requested. |
-| `src/app/editor_frame.*`, `find_replace_dialog.*` | Menus, prompts, file-command coordination, title/status and modeless search UI | The frame formats search outcomes; the dialog synchronizes controls with a shared search session. |
+| `src/app/editor_frame.*`, `editor_frame_commands.cpp` | Menus, file-command coordination, title/status and dialog decisions | The frame coordinates sessions and settings; native dialog construction lives under `app/dialogs`. |
+| `src/app/dialogs/*` | Native file choices, settings prompts, search feedback and modeless search UI | Dialogs collect choices; the frame commits document/settings decisions at the existing points. |
 | `src/document/document_session.*` | Path, encoding/BOM, file transactions, save point and language choice | File metadata and language transitions commit after successful operations. File I/O mechanics remain private to this module. |
 | `src/document/encoding/*` | Encoding conversions, including CP936 compatibility | Tested conversions and provenance are retained; the implementations use wx conversion facilities. |
 | `src/settings/original_settings.h`, `settings_store.*`, `search_settings.*` | Original defaults, INI persistence and search-option conversion | Feature code consumes settings values without depending on the persistence class. Load and save use the same declared defaults; search bit preservation and history conversion stay together. |
 | `src/search/search_session.*` | Find/replace, match validity, zero-width progress, fold reveal and history grouping | The interface takes requests and returns structured outcomes; it creates no widgets. |
 | `src/syntax/*`, `src/syntax/generated/*` | Static catalog, extension detection, lexer/style installation and generated data | Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
-| `src/editor/editor_control.*` | wx window, core lifetime, input, selection/scrolling, clipboard, IME, notifications and fold selection repair | The existing host behavior is retained. Native implementation extraction can accompany future changes to those facilities. |
+| `src/editor/editor_control.*`, `editor_core.*` | wx window lifetime/event binding and its private original-core adapter | The private nested core owns input, selection/scrolling, IME, notifications and fold repair; editing-command implementations remain separate. |
+| `src/editor/go_to_location.*` | Original line, column and byte-position parsing and navigation | Separate from the host's keyboard-navigation mapping. |
 | `src/editor/platform/*` | Original platform interface, rendering/fonts/windows and portability primitives | Tightly coupled to the pinned core, behind the editor host. |
 | `src/editor/platform/clipboard.*` | Native clipboard formats, transport and publication ownership | The host retains selection, paste shape and undo behavior. Native reads query live line-copy eligibility at the original platform-specific point. |
+| `src/editor/platform/gtk_drag_drop.*` | GTK drag/drop signals, asynchronous native transfer and ownership | The core retains selection, insertion/deletion, undo grouping and copy/move decisions. |
 | `patches/`, `tools/build.py`, `tools/update_*_scheme.py` | Pinned source preparation, portability patch, reproducible lexer data | Keep the offline path, revision/hash checks and selective upstream reuse. |
 | `tests/`, `tools/clipboard_*`, `tools/resources.py` | Real editor, native UI, disk-byte and independent-process checks | Existing native regressions remain. `feature_sessions.cpp` exercises the extracted interfaces without linking the app shell. |
 
@@ -74,9 +77,15 @@ src/
   app/
     main.cpp
     editor_frame.{h,cpp}
-    find_replace_dialog.{h,cpp}
+    editor_frame_commands.cpp
     process_observer.{h,cpp}
     windows.rc
+    dialogs/
+      document_dialogs.{h,cpp}
+      search_feedback_dialog.{h,cpp}
+      find_replace_dialog.{h,cpp}
+      go_to_line_dialog.{h,cpp}
+      tab_settings_dialog.{h,cpp}
   document/
     document_session.{h,cpp}
     encoding/
@@ -94,7 +103,11 @@ src/
       json_scheme_data.h
   editor/
     editor_control.{h,cpp}
+    editor_core.{h,cpp}         # private nested core implementation
+    go_to_location.{h,cpp}
     platform/
+      clipboard.{h,cpp}
+      gtk_drag_drop.{h,cpp}
       wx_platform.cpp
       core_headers.h
       conversion_port.h
@@ -107,8 +120,9 @@ tests/                          # gradual organization by tested behavior
 
 Directories describe responsibility, not one abstract base class or library per
 directory. Related file transaction mechanics remain in `document_session.cpp`;
-clipboard transport and publication ownership live in the private platform
-module. Native IME and drag/drop coordination remain in the host.
+clipboard transport, publication ownership and GTK drag/drop transfers live in
+private platform modules. Native IME and editing-side drag/drop decisions remain
+in the host's private core adapter.
 
 ## State ownership and lifetime
 
