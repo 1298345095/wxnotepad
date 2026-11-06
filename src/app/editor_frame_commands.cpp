@@ -156,6 +156,21 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    const int mergeDuplicates = wxWindow::NewControlId();
+    const int removeDuplicates = wxWindow::NewControlId();
+    edit->Append(mergeDuplicates, "Merge Duplicate Lines");
+    edit->Append(removeDuplicates, "Remove Duplicate Lines");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MergeDuplicateLines(); }, mergeDuplicates);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->RemoveDuplicateLines(); }, removeDuplicates);
+    for (const int id : {mergeDuplicates, removeDuplicates})
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) {
+                using Scintilla::Message;
+                event.Enable(editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionEnd)) >
+                             editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionStart)));
+            },
+            id);
     const int padSpaces = wxWindow::NewControlId();
     edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);

@@ -36,6 +36,8 @@ public:
     void JoinLines();
     // False reports the original unsupported rectangular-selection operation.
     bool JoinParagraphs();
+    void MergeDuplicateLines();
+    void RemoveDuplicateLines();
     void SetIndentationWidths(int tabWidth, int indentWidth);
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
@@ -54,6 +56,7 @@ public:
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
 private:
+    void DuplicateLines(bool merge);
     class Core;
     wxTimer caretTimer_;
     wxTimer scrollTimer_;
