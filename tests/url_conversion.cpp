@@ -1,7 +1,8 @@
 #include "native_key_helpers.h"
 #include "settings/settings_store.h"
-#include "url_reference_fixtures.h"
 #include "encoded_file_helpers.h"
+#include <fstream>
+#include <sstream>
 #include <string_view>
 
 namespace {
@@ -22,45 +23,92 @@ void Encoding(EditorFrame* frame) {
             "URL Encode uses original UTF-8 escapes");
 }
 std::string Unhex(std::string_view text) {
+    Require(text.size() % 2 == 0, "captured URL bytes contain complete hex pairs");
     std::string result;
     for (size_t index = 0; index < text.size(); index += 2) {
-        const auto digit = [](char ch) { return ch <= '9' ? ch - '0' : ch - 'a' + 10; };
-        result += static_cast<char>(digit(text[index]) * 16 + digit(text[index + 1]));
+        const auto digit = [](char ch) {
+            if (ch >= '0' && ch <= '9') return ch - '0';
+            if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+            return -1;
+        };
+        const int high = digit(text[index]), low = digit(text[index + 1]);
+        Require(high >= 0 && low >= 0, "captured URL bytes contain literal hex digits");
+        result += static_cast<char>(high * 16 + low);
     }
     return result;
 }
 void Fixtures(EditorFrame* frame) {
+    struct Fixture {
+        std::string name, input, expected;
+        unsigned commands;
+        int anchor, caret, undoAnchor, undoCaret, redoAnchor, redoCaret;
+        bool modified, canUndo, canRedo, undoModified, undoCanUndo, undoCanRedo, redoModified, redoCanUndo, redoCanRedo;
+    };
+    std::ifstream capture{std::filesystem::path(URL_REFERENCE_FIXTURES)};
+    Require(capture.is_open(), "open independently captured URL reference fixtures");
+    std::string line, countLabel;
+    std::getline(capture, line); // Original revision/platform provenance.
+    std::getline(capture, line); // Explicit command-bit meanings.
+    std::getline(capture, line);
+    unsigned capturedCaseCount = 0;
+    std::istringstream count(line);
+    Require(bool(count >> countLabel >> capturedCaseCount) && countLabel == "command_cases" && capturedCaseCount == 360,
+            "read original URL command-case count");
+    std::getline(capture, line); // Named tabular columns.
     auto* editor = frame->Editor();
+    const auto requireState = [editor](bool modified, bool undo, bool redo) {
+        Require(bool(editor->Send(Message::GetModify)) == modified && bool(editor->Send(Message::CanUndo)) == undo &&
+                    bool(editor->Send(Message::CanRedo)) == redo,
+                "URL conversion preserves captured original modification and Undo/Redo state");
+    };
     constexpr const char* labels[] = {"URL Encode", "URL Component Encode", "URL Decode"};
-    for (const auto& fixture : UrlReference::fixtures) {
+    unsigned commandCases = 0;
+    while (std::getline(capture, line)) {
+        Fixture fixture;
+        std::istringstream row(line);
+        Require(bool(row >> fixture.name >> fixture.input >> fixture.expected >> fixture.commands >> fixture.anchor >>
+                     fixture.caret >> fixture.undoAnchor >> fixture.undoCaret >> fixture.redoAnchor >>
+                     fixture.redoCaret >> fixture.modified >> fixture.canUndo >> fixture.canRedo >>
+                     fixture.undoModified >> fixture.undoCanUndo >> fixture.undoCanRedo >> fixture.redoModified >>
+                     fixture.redoCanUndo >> fixture.redoCanRedo),
+                "read literal URL fixture bytes and state");
+        row >> std::ws;
+        Require(row.eof() && fixture.commands > 0 && fixture.commands < 8,
+                "URL fixture has exact fields and command bits");
         const auto input = Unhex(fixture.input);
         const auto expected = Unhex(fixture.expected);
-        TestEditor::ResetStream(editor, "", 0, 0, Scintilla::EndOfLine::CrLf);
-        editor->Send(Message::AddText, input.size(), reinterpret_cast<intptr_t>(input.data()));
-        editor->Send(Message::SetSel, 0, static_cast<intptr_t>(input.size()));
-        editor->Send(Message::EmptyUndoBuffer);
-        editor->Send(Message::SetSavePoint);
-        Menu(frame, labels[fixture.command]);
-        if (TestEditor::Text(editor) != expected) {
-            std::fprintf(stderr, "URL fixture %s command %s: expected %zu bytes, got %zu\n", fixture.name,
-                         labels[fixture.command], expected.size(), TestEditor::Text(editor).size());
-            throw std::runtime_error("native URL command matches captured original bytes");
+        for (unsigned command = 0; command < 3; ++command) {
+            if (!(fixture.commands & (1U << command))) continue;
+            ++commandCases;
+            TestEditor::ResetStream(editor, "", 0, 0, Scintilla::EndOfLine::CrLf);
+            editor->Send(Message::AddText, input.size(), reinterpret_cast<intptr_t>(input.data()));
+            editor->Send(Message::SetSel, 0, static_cast<intptr_t>(input.size()));
+            editor->Send(Message::EmptyUndoBuffer);
+            editor->Send(Message::SetSavePoint);
+            Menu(frame, labels[command]);
+            if (TestEditor::Text(editor) != expected) {
+                std::fprintf(stderr, "URL fixture %s command %s: expected %zu bytes, got %zu\n", fixture.name.c_str(),
+                             labels[command], expected.size(), TestEditor::Text(editor).size());
+                throw std::runtime_error("native URL command matches captured original bytes");
+            }
+            TestEditor::RequireSelection(editor, fixture.anchor, fixture.caret, "captured original URL endpoints");
+            requireState(fixture.modified, fixture.canUndo, fixture.canRedo);
+            Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf),
+                    "URL conversion preserves document EOL metadata");
+            editor->Send(Message::Undo);
+            Require(TestEditor::Text(editor) == input, "one Undo restores every original byte");
+            requireState(fixture.undoModified, fixture.undoCanUndo, fixture.undoCanRedo);
+            TestEditor::RequireSelection(editor, fixture.undoAnchor, fixture.undoCaret,
+                                         "captured original Undo endpoints");
+            editor->Send(Message::Redo);
+            Require(TestEditor::Text(editor) == expected, "one Redo restores captured original URL bytes");
+            requireState(fixture.redoModified, fixture.redoCanUndo, fixture.redoCanRedo);
+            TestEditor::RequireSelection(editor, fixture.redoAnchor, fixture.redoCaret,
+                                         "captured original Redo endpoints");
         }
-        TestEditor::RequireSelection(editor, fixture.anchor, fixture.caret, "captured original URL endpoints");
-        Require(bool(editor->Send(Message::GetModify)) == fixture.modified &&
-                    bool(editor->Send(Message::CanUndo)) == fixture.modified,
-                "URL conversion preserves original unchanged-result Undo and save-point behavior");
-        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf),
-                "URL conversion preserves document EOL metadata");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == input && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo),
-                "one Undo restores every original byte and save point");
-        TestEditor::RequireSelection(editor, fixture.undoAnchor, fixture.undoCaret, "captured original Undo endpoints");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == expected, "one Redo restores captured original URL bytes");
-        TestEditor::RequireSelection(editor, fixture.redoAnchor, fixture.redoCaret, "captured original Redo endpoints");
     }
+    Require(capture.eof() && commandCases == capturedCaseCount, "all independently captured URL command cases ran");
+    std::printf("PASS: %u independently captured URL command cases\n", commandCases);
 }
 class RectangleFeedback final : public wxModalDialogHook {
 public:

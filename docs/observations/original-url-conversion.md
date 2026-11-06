@@ -7,7 +7,9 @@ and `EditReplaceMainSelection`. The editor buffer remains UTF-8.
 `tools/capture_url_fixtures.py` drives an owned original Windows editor process
 through its actual Scintilla messages and original command IDs. It reads raw
 document bytes and selection/history state, and checks that one Undo restores
-the exact input before generating `tests/url_reference_fixtures.h`. The
+the exact input before generating `tests/url_reference_fixtures.tsv`. This
+readable table groups byte/state-identical captured outcomes with explicit command
+bits; the test still invokes and counts every captured command/input case. The
 fixtures were captured on Windows 11 build 26200 using the retained baseline
 executable built from the pinned original checkout. The build log is retained
 at `E:/NewNotepad4/wxnotepad/build/notepad4-baseline.log`.
@@ -32,6 +34,11 @@ display logs and red/green runs are retained outside the repository at
 - Decoding is one pass. Plus signs remain plus signs. Malformed percent escapes
   stay literal; decoded invalid UTF-8 follows the original API's replacement
   rules, including incomplete sequences and invalid second bytes.
+- Raw malformed UTF-8 uses the original input-conversion boundary before all
+  three commands. Both raw `ED A0 80` and `E0 80 80` consume the invalid second
+  continuation byte with its prefix and become two U+FFFD characters: encoding
+  emits `%EF%BF%BD%EF%BF%BD`, while decoding emits six UTF-8 bytes. The fixtures
+  capture the corresponding selection endpoints and exact Undo/Redo bytes.
 - Scintilla's text-mode selection getter maps embedded NUL bytes to spaces.
   A decoded `%00` makes `UrlUnescapeW` return `E_INVALIDARG`; the original
   zero-initialized output allocation and unchanged count then replace the

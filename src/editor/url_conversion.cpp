@@ -37,9 +37,9 @@ std::string Convert(std::string_view text, UrlConversion command, size_t length)
     return result;
 }
 #else
-// The selection getter already maps NUL to space. Match the two original UTF-8
-// conversion boundaries: Win32 input conversion and UrlUnescapeW's byte scanner.
-std::string ValidUtf8(std::string_view text, bool unescape) {
+// The selection getter already maps NUL to space. Both original conversion
+// boundaries consume an invalid second continuation byte with its prefix.
+std::string ValidUtf8(std::string_view text) {
     std::string result;
     for (size_t index = 0; index < text.size();) {
         const auto first = static_cast<unsigned char>(text[index]);
@@ -62,7 +62,7 @@ std::string ValidUtf8(std::string_view text, bool unescape) {
             }
             if (consumed == 1 && ((first == 0xe0 && ch < 0xa0) || (first == 0xed && ch >= 0xa0) ||
                                   (first == 0xf0 && ch < 0x90) || (first == 0xf4 && ch >= 0x90))) {
-                if (unescape) ++consumed;
+                ++consumed;
                 valid = false;
                 break;
             }
@@ -147,7 +147,7 @@ int HexDigit(unsigned char ch) {
     return -1;
 }
 std::string Convert(std::string_view text, UrlConversion command, size_t length) {
-    const auto input = ValidUtf8(text, false);
+    const auto input = ValidUtf8(text);
     if (command != UrlConversion::Decode) return Encode(input, command == UrlConversion::ComponentEncode);
     std::string bytes;
     for (size_t index = 0; index < input.size(); ++index) {
@@ -164,7 +164,7 @@ std::string Convert(std::string_view text, UrlConversion command, size_t length)
         }
         bytes += input[index];
     }
-    return ValidUtf8(bytes, true);
+    return ValidUtf8(bytes);
 }
 #endif
 } // namespace
