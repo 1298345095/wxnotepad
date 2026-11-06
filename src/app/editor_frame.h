@@ -43,6 +43,7 @@ private:
     wxString enclosureBefore_;
     wxString enclosureAfter_;
     AlignmentMode alignmentMode_ = AlignmentMode::Left;
+    unsigned sortOptions_ = 0;
     wxString linePrefix_;
     wxString lineSuffix_;
     bool skipEmptyLines_ = false;

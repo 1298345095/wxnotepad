@@ -54,6 +54,8 @@ add_library(editor_runtime STATIC
     src/editor/editor_control.cpp
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
+    src/editor/platform/custom_case.cpp
+    src/editor/platform/sort_collation.cpp
     src/editor/platform/gtk_drag_drop.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
@@ -77,6 +79,7 @@ target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
     src/app/dialogs/align_lines_dialog.cpp
+    src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
@@ -92,7 +95,7 @@ add_library(app_shell STATIC
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
     target_link_libraries(editor_features PRIVATE advapi32)
-    target_link_libraries(editor_runtime PRIVATE imm32)
+    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi)
     target_link_libraries(app_shell PRIVATE shell32 ole32)
 endif()
 
@@ -226,6 +229,7 @@ if(BUILD_TESTING)
     add_editor_test(strip_characters original_strip_characters 60)
     add_editor_test(join_lines original_join_lines 60)
     add_editor_test(duplicate_lines original_duplicate_lines 60)
+    add_editor_test(sort_lines original_sort_lines 90)
     add_editor_test(case_conversion original_case_conversion 60)
     add_editor_test(duplicate_transpose original_duplicate_transpose 60)
     add_editor_test(font_smoke native_font_metrics 20)

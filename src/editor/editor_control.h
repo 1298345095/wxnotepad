@@ -1,6 +1,7 @@
 #pragma once
 
 #include "editor/align_lines.h"
+#include "editor/sort_lines.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
 #include <wx/timer.h>
@@ -50,6 +51,7 @@ public:
     bool JoinParagraphs();
     void MergeDuplicateLines();
     void RemoveDuplicateLines();
+    void SortLines(unsigned options = SortOption::Ascending);
     void SetIndentationWidths(int tabWidth, int indentWidth);
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
@@ -71,7 +73,6 @@ public:
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
 private:
-    void DuplicateLines(bool merge);
     class Core;
     wxTimer caretTimer_;
     wxTimer scrollTimer_;
