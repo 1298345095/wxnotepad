@@ -41,7 +41,7 @@ add_library(editor_runtime STATIC
     src/editor/block_comments.cpp
     src/editor/enclose_selection.cpp
     src/editor/compress_whitespace.cpp
-    src/editor/duplicate_lines.cpp
+    src/editor/sort_lines.cpp
     src/editor/indentation.cpp
     src/editor/join_lines.cpp
     src/editor/line_comments.cpp

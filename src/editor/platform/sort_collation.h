@@ -17,4 +17,4 @@ private:
 #endif
 };
 
-size_t OriginalExtensionOffset(std::wstring_view text);
+size_t OriginalExtensionOffset(const std::wstring& text);

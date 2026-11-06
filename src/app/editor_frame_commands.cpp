@@ -264,11 +264,14 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     const int removeDuplicates = wxWindow::NewControlId();
     const int sortLines = wxWindow::NewControlId();
     edit->Append(sortLines, "S&ort Lines...\tAlt+O");
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) {
-        if (ShowSortLinesDialog(this, sortOptions_, editor_->Send(Scintilla::Message::SelectionIsRectangle)))
-            editor_->SortLines(sortOptions_);
-        editor_->SetFocus();
-    }, sortLines);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (ShowSortLinesDialog(this, sortOptions_, editor_->Send(Scintilla::Message::SelectionIsRectangle)))
+                editor_->SortLines(sortOptions_);
+            editor_->SetFocus();
+        },
+        sortLines);
     edit->Append(mergeDuplicates, "Merge Duplicate Lines");
     edit->Append(removeDuplicates, "Remove Duplicate Lines");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MergeDuplicateLines(); }, mergeDuplicates);

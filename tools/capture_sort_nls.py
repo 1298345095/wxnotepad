@@ -55,11 +55,11 @@ def capture(destination: Path) -> None:
         file.write(f"// {platform.platform()}, user locale {locale.value}; LCMapStringEx(LCMAP_SORTKEY | NORM_IGNORECASE).\n")
         file.write("#pragma once\n#include <cstddef>\n\nnamespace OriginalNls {\n")
         file.write(f"inline constexpr size_t sortDataSize = {len(data)};\n")
-        file.write("inline constexpr char sortData[] =\n")
+        file.write("// clang-format off\ninline constexpr char sortData[] =\n")
         for start in range(0, len(packed), 32):
             literal = "".join(f"\\x{byte:02x}" for byte in packed[start:start + 32])
             file.write(f'    "{literal}"\n')
-        file.write(";\n}\n")
+        file.write(";\n// clang-format on\n} // namespace OriginalNls\n")
     print(f"Captured {len(records)} ranges, {len(packed)} compressed bytes, {destination.stat().st_size} source bytes, locale {locale.value}")
 
 

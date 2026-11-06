@@ -22,7 +22,8 @@ struct SortRange {
 };
 template <typename T> T ReadLittleEndian(const char*& cursor) {
     uint64_t value = 0;
-    for (size_t i = 0; i < sizeof(T); ++i) value |= uint64_t(static_cast<unsigned char>(*cursor++)) << (i * 8);
+    for (size_t i = 0; i < sizeof(T); ++i)
+        value |= uint64_t(static_cast<unsigned char>(*cursor++)) << (i * 8);
     return static_cast<T>(value);
 }
 class SortData {
@@ -48,12 +49,13 @@ public:
     }
     std::string Key(uint32_t codepoint) const {
         const auto found = std::lower_bound(ranges_.begin(), ranges_.end(), codepoint,
-                                           [](const SortRange& range, uint32_t value) { return range.last < value; });
+                                            [](const SortRange& range, uint32_t value) { return range.last < value; });
         if (found == ranges_.end() || codepoint < found->first) return Key(0xfffd);
         std::string key(found->key);
         if (found->stride != 0) {
             uint64_t primary = 0;
-            for (size_t i = 0; i < found->primaryLength; ++i) primary = (primary << 8) | static_cast<unsigned char>(key[i]);
+            for (size_t i = 0; i < found->primaryLength; ++i)
+                primary = (primary << 8) | static_cast<unsigned char>(key[i]);
             primary += static_cast<uint64_t>(found->stride * (codepoint - found->first));
             for (size_t i = found->primaryLength; i > 0; --i) {
                 key[i - 1] = static_cast<char>(primary);
@@ -62,6 +64,7 @@ public:
         }
         return key;
     }
+
 private:
     std::string bytes_;
     std::vector<SortRange> ranges_;
@@ -89,7 +92,7 @@ void AppendLevels(Levels& target, const Levels& source) {
         if (elements == 0 && !source[i].empty() && !target[i].empty()) {
             // Combining weights add to the previous collation element.
             target[i].back() = static_cast<char>(static_cast<unsigned char>(target[i].back()) +
-                                                static_cast<unsigned char>(source[i][0]) - 2);
+                                                 static_cast<unsigned char>(source[i][0]) - 2);
             target[i].append(source[i].substr(1));
         } else {
             target[i] += source[i].empty() ? std::string(elements, '\2') : source[i];
@@ -107,7 +110,8 @@ std::string LogicalKey(std::wstring_view text) {
     std::vector<Levels> characters;
     for (size_t i = 0; i < text.size(); ++i) {
         uint32_t codepoint = static_cast<uint32_t>(text[i]);
-        if (codepoint >= 0xd800 && codepoint <= 0xdbff && i + 1 < text.size() && text[i + 1] >= 0xdc00 && text[i + 1] <= 0xdfff)
+        if (codepoint >= 0xd800 && codepoint <= 0xdbff && i + 1 < text.size() && text[i + 1] >= 0xdc00 &&
+            text[i + 1] <= 0xdfff)
             codepoint = 0x10000 + ((codepoint - 0xd800) << 10) + (text[++i] - 0xdc00);
         characters.push_back(SplitKey(data.Key(codepoint)));
     }
@@ -118,19 +122,23 @@ std::string LogicalKey(std::wstring_view text) {
             const size_t start = i;
             while (i < characters.size() && i - start < 19 && Decimal(characters[i]) >= 0 &&
                    characters[i][1] == characters[start][1] && characters[i][2] == characters[start][2] &&
-                   characters[i][3] == characters[start][3]) ++i;
+                   characters[i][3] == characters[start][3])
+                ++i;
             size_t significant = start;
-            while (significant < i && Decimal(characters[significant]) == 0) ++significant;
+            while (significant < i && Decimal(characters[significant]) == 0)
+                ++significant;
             result[0] += "\x0d\x02";
             result[0].push_back(static_cast<char>(i - significant + 2));
             size_t digit = significant;
             if ((i - significant) % 2 != 0) result[0].push_back(static_cast<char>(0x22 + Decimal(characters[digit++])));
             while (digit < i) {
-                result[0].push_back(static_cast<char>(((Decimal(characters[digit]) + 2) << 4) + Decimal(characters[digit + 1]) + 2));
+                result[0].push_back(
+                    static_cast<char>(((Decimal(characters[digit]) + 2) << 4) + Decimal(characters[digit + 1]) + 2));
                 digit += 2;
             }
             result[0].push_back(static_cast<char>(254 - (significant - start)));
-            for (size_t index = start; index < i; ++index) AppendLevels(result, characters[index]);
+            for (size_t index = start; index < i; ++index)
+                AppendLevels(result, characters[index]);
         } else {
             AppendLevels(result, characters[i]);
             result[0] += characters[i][0];
@@ -139,7 +147,8 @@ std::string LogicalKey(std::wstring_view text) {
     }
     std::string key = std::move(result[0]);
     for (size_t i = 1; i < result.size(); ++i) {
-        while (!result[i].empty() && result[i].back() == '\2') result[i].pop_back();
+        while (!result[i].empty() && result[i].back() == '\2')
+            result[i].pop_back();
         key.push_back('\1');
         key += result[i];
     }
@@ -150,12 +159,13 @@ std::string LogicalKey(std::wstring_view text) {
 
 OriginalLogicalKey::OriginalLogicalKey(std::wstring_view text)
 #ifdef _WIN32
-    : text_(text) {}
+    : text_(text){}
 #else
-    : key_(LogicalKey(text)) {}
+    : key_(LogicalKey(text)) {
+}
 #endif
 
-int OriginalLogicalKey::Compare(const OriginalLogicalKey& other) const {
+      int OriginalLogicalKey::Compare(const OriginalLogicalKey& other) const {
 #ifdef _WIN32
     return StrCmpLogicalW(text_.c_str(), other.text_.c_str());
 #else
@@ -163,14 +173,16 @@ int OriginalLogicalKey::Compare(const OriginalLogicalKey& other) const {
 #endif
 }
 
-size_t OriginalExtensionOffset(std::wstring_view text) {
+size_t OriginalExtensionOffset(const std::wstring& text) {
 #ifdef _WIN32
-    return static_cast<size_t>(PathFindExtensionW(text.data()) - text.data());
+    return static_cast<size_t>(PathFindExtensionW(text.c_str()) - text.c_str());
 #else
     size_t extension = text.size();
     for (size_t i = 0; i < text.size(); ++i) {
-        if (text[i] == L'\\' || text[i] == L' ') extension = text.size();
-        else if (text[i] == L'.') extension = i;
+        if (text[i] == L'\\' || text[i] == L' ')
+            extension = text.size();
+        else if (text[i] == L'.')
+            extension = i;
     }
     return extension;
 #endif

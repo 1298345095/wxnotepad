@@ -239,4 +239,4 @@ b2.txt
 b10.txt
 z.TXT
 a.txt:stream)fixture";
-}
+} // namespace SortReference

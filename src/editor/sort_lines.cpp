@@ -98,8 +98,9 @@ void EditorControl::SortLines(unsigned options) {
         lines.push_back(std::move(entry));
     }
     if (options & SortOption::Shuffle) {
-        auto state = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                               std::chrono::steady_clock::now().time_since_epoch()).count());
+        auto state = static_cast<uint32_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
+                .count());
         for (size_t i = lines.size() - 1; i > 0; --i) {
             state = state * 1103515245 + 12345;
             const size_t index = ((state >> 16) & 0x7fff) % i;
@@ -114,8 +115,9 @@ void EditorControl::SortLines(unsigned options) {
                 if (compared == 0 && secondary) compared = left.lineKey->Compare(*right.lineKey);
             }
             if (compared == 0) {
-                compared = std::wstring_view(left.sortText).substr(left.entryOffset).compare(
-                    std::wstring_view(right.sortText).substr(right.entryOffset));
+                compared = std::wstring_view(left.sortText)
+                               .substr(left.entryOffset)
+                               .compare(std::wstring_view(right.sortText).substr(right.entryOffset));
                 if (compared == 0 && secondary) compared = left.sortText.compare(right.sortText);
                 if (compared == 0) {
                     compared = left.index < right.index ? -1 : left.index > right.index ? 1 : 0;
@@ -125,22 +127,23 @@ void EditorControl::SortLines(unsigned options) {
             if (options & SortOption::Descending) compared = -compared;
             return compared < 0;
         });
-      if (options > SortOption::Shuffle) {
-        bool lastDuplicate = false;
-        for (size_t i = 0; i < lines.size(); ++i) {
-            unsigned drop;
-            if (i + 1 < lines.size() && lines[i].sortText == lines[i + 1].sortText) {
-                lastDuplicate = true;
-                drop = SortOption::MergeDuplicate | SortOption::RemoveDuplicate;
-            } else {
-                drop = lastDuplicate ? SortOption::RemoveDuplicate : SortOption::RemoveUnique;
-                lastDuplicate = false;
+        if (options > SortOption::Shuffle) {
+            bool lastDuplicate = false;
+            for (size_t i = 0; i < lines.size(); ++i) {
+                unsigned drop;
+                if (i + 1 < lines.size() && lines[i].sortText == lines[i + 1].sortText) {
+                    lastDuplicate = true;
+                    drop = SortOption::MergeDuplicate | SortOption::RemoveDuplicate;
+                } else {
+                    drop = lastDuplicate ? SortOption::RemoveDuplicate : SortOption::RemoveUnique;
+                    lastDuplicate = false;
+                }
+                lines[i].dropped = (options & drop) != 0;
             }
-            lines[i].dropped = (options & drop) != 0;
         }
-      }
-      if (options & SortOption::DontSort)
-        std::sort(lines.begin(), lines.end(), [](const Line& left, const Line& right) { return left.index < right.index; });
+        if (options & SortOption::DontSort)
+            std::sort(lines.begin(), lines.end(),
+                      [](const Line& left, const Line& right) { return left.index < right.index; });
     }
     const auto mode = static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode));
     const std::string_view eol = mode == Scintilla::EndOfLine::CrLf ? "\r\n"
