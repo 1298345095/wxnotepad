@@ -32,12 +32,38 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
             // wx's Escape handler is a WH_KEYBOARD hook, which preprocessing,
             // posted messages and Translate/DispatchMessage don't invoke.
             const auto owned = static_cast<HWND>(dialog->GetHandle());
+            DWORD process = 0;
+            GetWindowThreadProcessId(owned, &process);
+            if (process != GetCurrentProcessId() || !dialog->IsModal())
+                throw std::runtime_error("native Escape must target the recognized owned modal dialog");
+            const auto inputDesktop = OpenInputDesktop(0, FALSE, DESKTOP_READOBJECTS);
+            wchar_t inputName[256]{}, threadName[256]{};
+            DWORD needed = 0;
+            const bool inputIsCurrent =
+                inputDesktop &&
+                GetUserObjectInformationW(inputDesktop, UOI_NAME, inputName, sizeof(inputName), &needed) &&
+                GetUserObjectInformationW(GetThreadDesktop(GetCurrentThreadId()), UOI_NAME, threadName,
+                                          sizeof(threadName), &needed) &&
+                std::wstring(inputName) == threadName;
+            if (inputDesktop) CloseDesktop(inputDesktop);
+            if (!inputIsCurrent)
+                throw std::runtime_error("physical native Escape requires the current Windows input desktop");
             if (message.hwnd != owned && !IsChild(owned, message.hwnd))
                 throw std::runtime_error("native Escape focus must belong to the owned dialog");
-            if (GetForegroundWindow() != owned) SetForegroundWindow(owned);
+            const auto thread = GetCurrentThreadId();
+            const auto foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
+            const bool attached =
+                foregroundThread && foregroundThread != thread && AttachThreadInput(thread, foregroundThread, TRUE);
+            BringWindowToTop(owned);
+            SetForegroundWindow(owned);
+            SetActiveWindow(owned);
             SetFocus(message.hwnd);
+            if (attached) AttachThreadInput(thread, foregroundThread, FALSE);
             const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-            const auto ownsInput = [&] { return GetForegroundWindow() == owned && GetFocus() == message.hwnd; };
+            const auto ownsInput = [&] {
+                const auto focus = GetFocus();
+                return dialog->IsShown() && GetForegroundWindow() == owned && (focus == owned || IsChild(owned, focus));
+            };
             while (!ownsInput() && std::chrono::steady_clock::now() < until) {
                 wxYield();
                 wxMilliSleep(10);
