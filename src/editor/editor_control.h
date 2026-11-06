@@ -28,6 +28,8 @@ public:
     // False reports the original unsupported rectangular-selection operation.
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     void MoveLines(bool upwards);
+    // The original duplicate-line caller uses (true, true) inside its own undo action.
+    void PadWithSpaces(bool skipEmpty = false, bool noUndoGroup = false);
     void SetIndentationWidths(int tabWidth, int indentWidth);
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
