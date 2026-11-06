@@ -52,11 +52,21 @@ jobs:
           profile: gui
       - name: Configure
         shell: bash
+        env:
+          CXXFLAGS: ${{ runner.os == 'Linux' && '-g1' || '' }}
         run: python -X utf8 .github/scripts/ci.py configure
       - name: Build application and tests
         id: build
         shell: bash
         run: python -X utf8 .github/scripts/ci.py build
+      - name: Enable Linux native core dumps
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v gdb
+          mkdir -p .ci/reports/cores
+          sudo sysctl -w "kernel.core_pattern=$PWD/.ci/reports/cores/core.%p.%E"
       - name: Test Windows
         if: runner.os == 'Windows'
         shell: bash
@@ -64,11 +74,19 @@ jobs:
       - name: Test private X11
         if: runner.os == 'Linux'
         shell: bash
-        run: python -X utf8 .github/scripts/ci.py test --backend x11
+        run: |
+          ulimit -c unlimited
+          python -X utf8 .github/scripts/ci.py test --backend x11
       - name: Test private Wayland
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' }}
         shell: bash
-        run: python -X utf8 .github/scripts/ci.py test --backend wayland
+        run: |
+          ulimit -c unlimited
+          python -X utf8 .github/scripts/ci.py test --backend wayland
+      - name: Collect Linux native crash evidence
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' }}
+        shell: bash
+        run: python -X utf8 .github/scripts/collect_cores.py
       - name: Collect tested build output
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         shell: bash
