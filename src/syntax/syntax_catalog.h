@@ -35,6 +35,9 @@ struct SyntaxDefinition {
     SyntaxLanguage language;
     bool canFold;
     const char* lineComment;
+    const char* blockCommentOpen = nullptr;
+    const char* blockCommentClose = nullptr;
+    int commentStyleLast = 0;
 };
 
 std::span<const SyntaxDefinition> SyntaxCatalog();

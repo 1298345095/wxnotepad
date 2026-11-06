@@ -318,6 +318,23 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         },
         lineComment);
     edit->AppendSeparator();
+    const int blockComment = wxWindow::NewControlId();
+    edit->Append(blockComment, "Toggle Block &Comment\tCtrl+Q");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto& syntax = SyntaxFor(document_.Language());
+            if (syntax.blockCommentOpen &&
+                !editor_->ToggleBlockComments(syntax.blockCommentOpen, syntax.blockCommentClose,
+                                              syntax.commentStyleLast))
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        blockComment);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(SyntaxFor(document_.Language()).blockCommentOpen != nullptr); },
+        blockComment);
     const int moveUp = wxWindow::NewControlId();
     const int moveDown = wxWindow::NewControlId();
     edit->Append(moveUp, "Move &Up\tAlt+Up");
