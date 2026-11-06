@@ -157,6 +157,21 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    auto* conversion = new wxMenu;
+    // Pinned Notepad4's case commands use CustomCaseMapping values upper=1, lower=2.
+    for (const auto& [label, mapping] :
+         {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2}}) {
+        const int id = wxWindow::NewControlId();
+        conversion->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, mapping](wxCommandEvent&) { editor_->Send(Scintilla::Message::CustomCaseMapping, mapping); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
+    edit->AppendSubMenu(conversion, "Con&vert");
     auto* enclosure = new wxMenu;
     const int customEnclosure = wxWindow::NewControlId();
     enclosure->Append(customEnclosure, "&With...\tAlt+Q");
