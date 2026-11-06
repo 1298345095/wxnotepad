@@ -36,6 +36,9 @@ public:
     void MoveLines(bool upwards);
     void StripLeadingBlanks();
     void StripTrailingBlanks();
+    // False reports the original unsupported rectangular-selection operation.
+    bool StripFirstCharacter();
+    bool StripLastCharacter();
     // The original duplicate-line caller uses (true, true) inside its own undo action.
     void PadWithSpaces(bool skipEmpty = false, bool noUndoGroup = false);
     void JoinLines();

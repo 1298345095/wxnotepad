@@ -46,6 +46,7 @@ add_library(editor_runtime STATIC
     src/editor/move_lines.cpp
     src/editor/strip_blanks.cpp
     src/editor/pad_spaces.cpp
+    src/editor/strip_characters.cpp
     src/editor/tab_conversion.cpp
     src/editor/editor_control.cpp
     src/editor/editor_core.cpp
@@ -212,6 +213,7 @@ if(BUILD_TESTING)
     add_editor_test(strip_blanks original_strip_blanks 60)
     add_editor_test(compress_whitespace original_compress_whitespace 60)
     add_editor_test(blank_lines original_blank_lines 60)
+    add_editor_test(strip_characters original_strip_characters 60)
     add_editor_test(join_lines original_join_lines 60)
     add_editor_test(duplicate_lines original_duplicate_lines 60)
     add_editor_test(font_smoke native_font_metrics 20)
