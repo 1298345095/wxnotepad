@@ -31,6 +31,8 @@ public:
     // False reports the original unsupported rectangular-selection operation.
     bool SpacesToTabs(bool onlyIndent = false);
     bool TabsToSpaces(bool onlyIndent = false);
+    // Original EditConvertNumRadix main-selection operation; false reports a rectangle.
+    bool ConvertNumberRadix(unsigned radix);
     // False reports the original unsupported rectangular-selection operation.
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     bool ToggleBlockComments(const char* open, const char* close, int commentStyleLast);
