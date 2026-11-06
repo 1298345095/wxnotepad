@@ -5,8 +5,8 @@
 #include "tab_settings_helpers.h"
 #include <wx/app.h>
 #include <wx/ffile.h>
-#include <wx/stopwatch.h>
 #include <wx/modalhook.h>
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -42,8 +42,9 @@ void NativeKey(EditorControl* editor, char key, bool shift, bool alt) {
         request.Write(wxString("key:ctrl+") + (shift ? "shift+" : "") + (alt ? "alt+" : "") +
                       wxString::Format("%c", key + ('a' - 'A')));
     }
-    wxStopWatch wait;
-    while (!received && wait.Time() < 3000) {
+    // Unix wxStopWatch uses UTC time, which can jump during native input.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (!received && std::chrono::steady_clock::now() < deadline) {
         wxYield();
         wxMilliSleep(10);
     }
