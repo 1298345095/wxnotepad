@@ -1,7 +1,7 @@
 #include "editor/editor_control.h"
 #include "editor/platform/core_headers.h"
+#include "editor/platform/clipboard.h"
 #include <wx/dcclient.h>
-#include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/dnd.h>
 #include <wx/settings.h>
@@ -22,28 +22,6 @@ namespace core = Scintilla::Internal;
 wxDEFINE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 
 namespace {
-#ifdef __WXMSW__
-// Original ScintillaWin clipboard ownership and bounded retry rule.
-class NativeClipboard {
-public:
-    explicit NativeClipboard(HWND window) {
-        for (int attempt = 0; attempt < 8; ++attempt) {
-            if (attempt) ::Sleep(1 << (attempt - 1));
-            if (::OpenClipboard(window)) {
-                opened_ = true;
-                break;
-            }
-        }
-    }
-    ~NativeClipboard() {
-        if (opened_) ::CloseClipboard();
-    }
-    explicit operator bool() const { return opened_; }
-
-private:
-    bool opened_ = false;
-};
-#endif
 unsigned MouseTime() {
     return static_cast<unsigned>(
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
@@ -409,7 +387,7 @@ public:
             const int direction = horizontalAxis ? 1 : -1;
             const auto distance =
                 static_cast<int>(std::lround(direction * steps * event.GetColumnsPerAction() * vs.aveCharWidth));
-            const int pageWidth = static_cast<int>(GetTextRectangle().Width());
+            const auto pageWidth = static_cast<int>(GetTextRectangle().Width());
             const int maximum = horizontalScrollBarVisible ? std::max(scrollWidth - pageWidth + 1, 0) : 0;
             HorizontalScrollTo(std::clamp(xOffset + distance, 0, maximum));
         } else if (event.ControlDown()) {
@@ -656,7 +634,10 @@ private:
     EditorControl& window_;
     int verticalWheel_ = 0;
     int horizontalWheel_ = 0;
-    void NotifyCaretMove() const noexcept override {}
+    void NotifyCaretMove() const noexcept override {
+        // Native caret placement is handled by UpdateSystemCaret; wx UI state
+        // notifications are forwarded through NotifyParent.
+    }
     void UpdateSystemCaret() override {
 #ifdef __WXMSW__
         if (!window_.HasFocus() || !window_.GetCaret()) return;
@@ -705,95 +686,13 @@ private:
         window_.SetScrollPos(wxVERTICAL, static_cast<int>(topLine));
         UpdateSystemCaret();
     }
-    bool WriteClipboard(const core::SelectionText& text) const {
-        if (wxTheClipboard->IsOpened()) return false;
-#ifdef __WXMSW__
-        const NativeClipboard clipboard(static_cast<HWND>(window_.GetHandle()));
-        if (!clipboard) return false;
-        const auto value = wxString::FromUTF8(text.Data(), text.Length()).ToStdWstring();
-        const auto memory = ::GlobalAlloc(GMEM_MOVEABLE, (value.size() + 1) * sizeof(wchar_t));
-        if (!memory) return false;
-        auto* bytes = ::GlobalLock(memory);
-        if (!bytes) {
-            ::GlobalFree(memory);
-            return false;
-        }
-        std::memcpy(bytes, value.c_str(), (value.size() + 1) * sizeof(wchar_t));
-        ::GlobalUnlock(memory);
-        if (!::EmptyClipboard() || !::SetClipboardData(CF_UNICODETEXT, memory)) {
-            ::GlobalFree(memory);
-            return false;
-        }
-        if (text.rectangular) {
-            ::SetClipboardData(::RegisterClipboardFormatW(L"MSDEVColumnSelect"), nullptr);
-            const auto block = ::GlobalAlloc(GMEM_MOVEABLE, 1);
-            if (block) {
-                auto* marker = static_cast<unsigned char*>(::GlobalLock(block));
-                if (marker) {
-                    *marker = 2;
-                    ::GlobalUnlock(block);
-                    if (!::SetClipboardData(::RegisterClipboardFormatW(L"Borland IDE Block Type"), block))
-                        ::GlobalFree(block);
-                } else {
-                    ::GlobalFree(block);
-                }
-            }
-        }
-        if (text.lineCopy) {
-            ::SetClipboardData(::RegisterClipboardFormatW(L"MSDEVLineSelect"), nullptr);
-            ::SetClipboardData(::RegisterClipboardFormatW(L"VisualStudioEditorOperationsLineCutCopyClipboardTag"),
-                               nullptr);
-        }
-        return true;
-#else
-        wxTheClipboard->UsePrimarySelection(false);
-        wxClipboardLocker lock;
-        if (!lock) return false;
-#ifdef __WXGTK__
-        // Retain each publication with GTK's owner lifecycle. The legacy wx
-        // selection path returned empty text after repeat Wayland publications.
-        // ScintillaGTK transfers rectangles as LF-terminated UTF-8 with the
-        // terminating NUL included in the target length.
-        auto* value = new std::string(text.AsView());
-        if (text.rectangular) {
-            if (value->empty() || value->back() != '\n') value->push_back('\n');
-            value->push_back('\0');
-        }
-        auto* list = gtk_target_list_new(nullptr, 0);
-        gtk_target_list_add_text_targets(list, 0);
-        if (text.lineCopy) {
-            gtk_target_list_add(list, gdk_atom_intern_static_string("MSDEVLineSelect"), 0, 1);
-            gtk_target_list_add(
-                list, gdk_atom_intern_static_string("VisualStudioEditorOperationsLineCutCopyClipboardTag"), 0, 1);
-        }
-        gint count = 0;
-        auto* targets = gtk_target_table_new_from_list(list, &count);
-        const bool copied = gtk_clipboard_set_with_data(
-            gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), targets, count,
-            [](GtkClipboard*, GtkSelectionData* data, guint info, gpointer owner) {
-                const auto* value = static_cast<const std::string*>(owner);
-                if (info == 1)
-                    gtk_selection_data_set(data, gtk_selection_data_get_target(data), 8, nullptr, 0);
-                else
-                    gtk_selection_data_set_text(data, value->c_str(), static_cast<int>(value->size()));
-            },
-            [](GtkClipboard*, gpointer owner) { delete static_cast<std::string*>(owner); }, value);
-        gtk_target_table_free(targets, count);
-        gtk_target_list_unref(list);
-        if (!copied) delete value;
-        return copied;
-#else
-        return wxTheClipboard->SetData(new wxTextDataObject(wxString::FromUTF8(text.Data(), text.Length())));
-#endif
-#endif
-    }
     void Copy(bool) const override {
         if (sel.Empty()) return;
         core::SelectionText text;
         CopySelectionRange(text);
-        WriteClipboard(text);
+        EditorClipboard::Write(window_, text);
     }
-    void CopyToClipboard(const core::SelectionText& text) const override { WriteClipboard(text); }
+    void CopyToClipboard(const core::SelectionText& text) const override { EditorClipboard::Write(window_, text); }
     void Cut(bool, bool lineCopy = false) override {
         pdoc->CheckReadOnly();
         if (sel.Empty() || pdoc->IsReadOnly() || SelectionContainsProtected()) return;
@@ -803,98 +702,25 @@ private:
                       pdoc->dbcsCodePage, false, true);
         else
             CopySelectionRange(text);
-        if (WriteClipboard(text)) ClearSelection();
+        if (EditorClipboard::Write(window_, text)) ClearSelection();
     }
-    bool CanPaste() const noexcept override {
-        if (!core::Editor::CanPaste()) return false;
-#ifdef __WXMSW__
-        return ::IsClipboardFormatAvailable(CF_UNICODETEXT) != 0;
-#else
-        // Native clipboard queries may pump UI events. An update-ui callback
-        // must not close the clipboard currently used by Copy/Paste.
-        if (wxTheClipboard->IsOpened()) return false;
-        wxTheClipboard->UsePrimarySelection(false);
-        wxClipboardLocker lock;
-        return !(!lock) && wxTheClipboard->IsSupported(wxDF_UNICODETEXT);
-#endif
-    }
+    bool CanPaste() const noexcept override { return core::Editor::CanPaste() && EditorClipboard::HasText(); }
     void Paste(bool) override {
-        if (!core::Editor::CanPaste() || wxTheClipboard->IsOpened()) return;
-        bool rectangular = false;
-        bool line = false;
-        std::string utf8;
-#ifdef __WXGTK__
-        // Read the raw UTF-8 target: wxTextDataObject discards the rectangle NUL.
-        auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-        line = sel.Empty() &&
-               (gtk_clipboard_wait_is_target_available(clipboard, gdk_atom_intern_static_string("MSDEVLineSelect")) ||
-                gtk_clipboard_wait_is_target_available(
-                    clipboard, gdk_atom_intern_static_string("VisualStudioEditorOperationsLineCutCopyClipboardTag")));
-        auto* data = gtk_clipboard_wait_for_contents(clipboard, gdk_atom_intern_static_string("UTF8_STRING"));
-        if (!data || gtk_selection_data_get_length(data) < 0) {
-            if (data) gtk_selection_data_free(data);
-            data =
-                gtk_clipboard_wait_for_contents(clipboard, gdk_atom_intern_static_string("text/plain;charset=utf-8"));
-        }
-        if (data && gtk_selection_data_get_length(data) >= 0) {
-            const int length = gtk_selection_data_get_length(data);
-            const auto* bytes = reinterpret_cast<const char*>(gtk_selection_data_get_data(data));
-            rectangular = length > 2 && bytes[length - 1] == '\0' && bytes[length - 2] == '\n';
-            if (length) utf8.assign(bytes, length - (rectangular ? 1 : 0));
-            gtk_selection_data_free(data);
-        } else {
-            if (data) gtk_selection_data_free(data);
-            // Retain GTK's conversion for text offered only in legacy targets.
-            auto* value = gtk_clipboard_wait_for_text(clipboard);
-            if (!value) return;
-            utf8 = value;
-            g_free(value);
-        }
-#elif defined(__WXMSW__)
-        {
-            const NativeClipboard clipboard(static_cast<HWND>(window_.GetHandle()));
-            if (!clipboard) return;
-            const auto memory = ::GetClipboardData(CF_UNICODETEXT);
-            if (!memory) return;
-            const auto* bytes = static_cast<const wchar_t*>(::GlobalLock(memory));
-            if (!bytes) return;
-            const wxString value(bytes);
-            const auto buffer = value.ToUTF8();
-            utf8.assign(buffer.data(), buffer.length());
-            ::GlobalUnlock(memory);
-            line = sel.Empty() && (::IsClipboardFormatAvailable(::RegisterClipboardFormatW(L"MSDEVLineSelect")) ||
-                                   ::IsClipboardFormatAvailable(::RegisterClipboardFormatW(
-                                       L"VisualStudioEditorOperationsLineCutCopyClipboardTag")));
-            rectangular = ::IsClipboardFormatAvailable(::RegisterClipboardFormatW(L"MSDEVColumnSelect")) != 0;
-            if (!rectangular) {
-                const auto block = ::GetClipboardData(::RegisterClipboardFormatW(L"Borland IDE Block Type"));
-                if (block) {
-                    const auto* marker = static_cast<const unsigned char*>(::GlobalLock(block));
-                    if (marker) {
-                        rectangular = ::GlobalSize(block) == 1 && *marker == 2;
-                        ::GlobalUnlock(block);
-                    }
-                }
-            }
-        }
-#else
-        wxTextDataObject text;
-        {
-            wxTheClipboard->UsePrimarySelection(false);
-            wxClipboardLocker lock;
-            if (!lock || !wxTheClipboard->GetData(text)) return;
-        }
-        // Keep both owners alive through insertion. On UTF-8-native wx builds
-        // ToUTF8() may borrow the source wxString's storage.
-        const wxString value = text.GetText();
-        const auto buffer = value.ToUTF8();
-        utf8.assign(buffer.data(), buffer.length());
-#endif
+        if (!core::Editor::CanPaste()) return;
+        const auto text = EditorClipboard::Read(window_, [this] { return sel.Empty(); });
+        if (!text) return;
         const core::UndoGroup undo(pdoc);
         ClearSelection(multiPasteMode == Scintilla::MultiPaste::Each);
-        InsertPasteShape(utf8, rectangular ? PasteShape::rectangular : (line ? PasteShape::line : PasteShape::stream));
+        auto shape = PasteShape::stream;
+        if (text->rectangular)
+            shape = PasteShape::rectangular;
+        else if (text->lineCopy)
+            shape = PasteShape::line;
+        InsertPasteShape(text->text, shape);
     }
-    void NotifyChange() const noexcept override {}
+    void NotifyChange() const noexcept override {
+        // NotifyParent handles document revisions and forwards wx state changes.
+    }
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override {
         // Notepad4.cpp SCN_CHARADDED: ignore tentative/multiple-selection typing.
         // The pinned CRLF condition handles CR, after the complete EOL is inserted.
@@ -1065,34 +891,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     Bind(wxEVT_SCROLLWIN_PAGEDOWN, scroll);
     Bind(wxEVT_SCROLLWIN_THUMBTRACK, scroll);
     Bind(wxEVT_SCROLLWIN_THUMBRELEASE, scroll);
-    Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {
-        if (core_->Navigation(event)) return;
-        if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
-            (event.GetKeyCode() == WXK_BACK || event.GetKeyCode() == WXK_DELETE)) {
-            // Notepad4.cpp CMD_CTRLBACK/CMD_CTRLDEL run before the core key map.
-            const auto caret = Send(Message::GetCurrentPos);
-            if (caret != Send(Message::GetAnchor)) {
-                Send(Message::SetSel, caret, caret);
-            } else {
-                const auto line = Send(Message::LineFromPosition, caret);
-                const auto start = Send(Message::PositionFromLine, line);
-                if (event.GetKeyCode() == WXK_BACK)
-                    Send(caret == start                                        ? Message::DeleteBack
-                         : caret <= Send(Message::GetLineIndentPosition, line) ? Message::DelLineLeft
-                                                                               : Message::DelWordLeft);
-                else
-                    Send(start == Send(Message::GetLineEndPosition, line) ? Message::LineDelete
-                                                                          : Message::DelWordRight);
-            }
-            return;
-        }
-        if (event.GetKeyCode() == WXK_TAB && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
-            !event.MetaDown()) {
-            IndentLines(false);
-            return;
-        }
-        if (!core_->EditingKey(event)) event.Skip();
-    });
+    Bind(wxEVT_KEY_DOWN, &EditorControl::OnKeyDown, this);
     Bind(wxEVT_CHAR, [this](wxKeyEvent& event) {
         const int character = event.GetUnicodeKey();
         if (character >= 32 && character != WXK_DELETE && !event.ControlDown() && !event.AltDown()) {
@@ -1233,6 +1032,34 @@ std::optional<std::string> EditorControl::ExpandRegexReplacement(const std::stri
     const char* expanded = core_->pdoc->SubstituteByPosition(replacement.c_str(), &length);
     if (!expanded) return std::nullopt;
     return std::string(expanded, static_cast<size_t>(length));
+}
+
+void EditorControl::OnKeyDown(wxKeyEvent& event) {
+    if (core_->Navigation(event)) return;
+    if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
+        (event.GetKeyCode() == WXK_BACK || event.GetKeyCode() == WXK_DELETE)) {
+        // Notepad4 CMD_CTRLBACK/CMD_CTRLDEL precede the core key map.
+        const auto caret = Send(Message::GetCurrentPos);
+        if (caret != Send(Message::GetAnchor)) {
+            Send(Message::SetSel, caret, caret);
+        } else {
+            const auto line = Send(Message::LineFromPosition, caret);
+            const auto start = Send(Message::PositionFromLine, line);
+            if (event.GetKeyCode() == WXK_BACK)
+                Send(caret == start                                        ? Message::DeleteBack
+                     : caret <= Send(Message::GetLineIndentPosition, line) ? Message::DelLineLeft
+                                                                           : Message::DelWordLeft);
+            else
+                Send(start == Send(Message::GetLineEndPosition, line) ? Message::LineDelete : Message::DelWordRight);
+        }
+        return;
+    }
+    if (event.GetKeyCode() == WXK_TAB && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
+        !event.MetaDown()) {
+        IndentLines(false);
+        return;
+    }
+    if (!core_->EditingKey(event)) event.Skip();
 }
 
 void EditorControl::OnPaint(wxPaintEvent&) {

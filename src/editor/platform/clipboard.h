@@ -1,0 +1,24 @@
+#pragma once
+
+#include <functional>
+#include <optional>
+#include <string>
+
+class wxWindow;
+namespace Scintilla::Internal {
+class SelectionText;
+}
+
+namespace EditorClipboard {
+struct ReadResult {
+    std::string text;
+    bool rectangular = false;
+    bool lineCopy = false;
+};
+
+bool Write(wxWindow& owner, const Scintilla::Internal::SelectionText& text);
+bool HasText() noexcept;
+// Native reads can dispatch events. Query the live selection at the same point
+// as the original platform host, before interpreting its line-copy format tags.
+std::optional<ReadResult> Read(wxWindow& owner, const std::function<bool()>& selectionEmpty);
+} // namespace EditorClipboard

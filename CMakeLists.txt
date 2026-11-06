@@ -40,6 +40,7 @@ add_library(editor_runtime STATIC
     src/editor/matching_brace.cpp
     src/editor/move_lines.cpp
     src/editor/editor_control.cpp
+    src/editor/platform/clipboard.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
     "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
