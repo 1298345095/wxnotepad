@@ -34,6 +34,7 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/align_lines.cpp
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
     src/editor/enclose_selection.cpp
@@ -73,6 +74,7 @@ target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/dialogs/align_lines_dialog.cpp
     src/settings/settings_store.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
@@ -160,6 +162,7 @@ if(BUILD_TESTING)
     endfunction()
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(pad_spaces original_pad_spaces 60)
+    add_editor_test(align_lines original_align_lines 60)
     add_test(NAME original_cleanup_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/cleanup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_cleanup_settings PROPERTIES TIMEOUT 60)

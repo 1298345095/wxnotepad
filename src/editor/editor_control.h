@@ -1,5 +1,6 @@
 #pragma once
 
+#include "editor/align_lines.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
 #include <wx/timer.h>
@@ -31,6 +32,7 @@ public:
     // False reports the original unsupported rectangular-selection operation.
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     bool EncloseSelection(const wxString& before, const wxString& after);
+    AlignmentResult AlignLines(AlignmentMode mode);
     bool CompressWhitespace();
     bool RemoveBlankLines(bool merge);
     void MoveLines(bool upwards);
