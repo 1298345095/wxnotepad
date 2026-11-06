@@ -56,6 +56,10 @@ inline std::string Bytes(const std::filesystem::path& path) {
     if (!input.is_open()) throw std::runtime_error("saved file must exist");
     return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 }
+inline void WriteBytes(const std::filesystem::path& path, std::string_view bytes) {
+    std::ofstream output(path, std::ios::binary);
+    output.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+}
 } // namespace TestFiles
 
 #endif // WXNOTEPAD_TESTS_FILE_HELPERS_H

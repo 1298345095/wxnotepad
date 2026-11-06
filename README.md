@@ -82,6 +82,26 @@ unindents the current or selected lines. A selection ending exactly at the next
 line's start excludes that line. Text-changing block commands undo in one step.
 See the [everyday editing validation record](docs/observations/everyday-editing-README.md).
 
+Edit also provides the original text transformations:
+
+| Command | Shortcut |
+| --- | --- |
+| Tabify Selection / Untabify Selection | Ctrl+Shift+T / Ctrl+Shift+S |
+| Tabify Indent / Untabify Indent | Ctrl+Alt+T / Ctrl+Alt+S |
+| Strip Leading Blanks / Strip Trailing Blanks | Menu / Alt+T |
+| Compress Whitespace | Alt+W |
+| Merge Blank Lines / Remove Blank Lines | Alt+B / Alt+R |
+| Strip First Character / Strip Last Character | Alt+Z / Alt+L |
+| Join Lines / Join Paragraphs | Ctrl+J / Ctrl+Shift+J |
+| Pad With Spaces | Alt+P |
+| Enclose Selection → With... | Alt+Q |
+| Triple Single Quotes / Triple Double Quotes / Triple Backticks | Ctrl+3 / Ctrl+6 / Ctrl+9 |
+| Merge Duplicate Lines / Remove Duplicate Lines | Menu |
+
+The same operations serve Plain Text, C/C++, Python and JSON. Each retains its
+original selection scope, rectangular-selection handling and history behavior.
+Save As remains F6; Ctrl+Shift+S converts selected tabs to spaces.
+
 Edit → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
 Shift+F3 finds the previous match. Wrap around is enabled by default, while
 Match case, Whole word and Regular expression are initially off. Find and

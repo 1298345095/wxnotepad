@@ -23,6 +23,7 @@ search algorithm or own the document's language choice.
 | `src/syntax/*`, `src/syntax/generated/*` | Static catalog, extension detection, lexer/style installation and generated data | Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
 | `src/editor/editor_control.*`, `editor_core.*` | wx window lifetime/event binding and its private original-core adapter | The private nested core owns input, selection/scrolling, IME, notifications and fold repair; editing-command implementations remain separate. |
 | `src/editor/go_to_location.*` | Original line, column and byte-position parsing and navigation | Separate from the host's keyboard-navigation mapping. |
+| `src/editor/tab_conversion.cpp`, `strip_blanks.cpp`, `compress_whitespace.cpp`, `blank_lines.cpp`, `strip_characters.cpp`, `join_lines.cpp`, `pad_spaces.cpp`, `duplicate_lines.cpp`, `enclose_selection.cpp` | Original text transformations behind public editor commands | Algorithms share the live core's text, column and history operations across languages. Each preserves its own original scope, rectangle and replacement rules. |
 | `src/editor/platform/*` | Original platform interface, rendering/fonts/windows and portability primitives | Tightly coupled to the pinned core, behind the editor host. |
 | `src/editor/platform/clipboard.*` | Native clipboard formats, transport and publication ownership | The host retains selection, paste shape and undo behavior. Native reads query live line-copy eligibility at the original platform-specific point. |
 | `src/editor/platform/gtk_drag_drop.*` | GTK drag/drop signals, asynchronous native transfer and ownership | The core retains selection, insertion/deletion, undo grouping and copy/move decisions. |
@@ -69,6 +70,10 @@ The frame remains the composition point. A separate all-purpose application
 controller would mostly relocate its current responsibilities. Native menu
 bindings can stay in the frame once feature algorithms and dialog construction
 have their own modules.
+
+The enclosure dialog applies the editor command during its native OK
+handler, preserving the original ordering where rectangle feedback appears
+while the custom dialog remains open. Its recalled text belongs to the frame.
 
 Current source layout:
 

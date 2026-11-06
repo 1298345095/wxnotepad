@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "app/dialogs/go_to_line_dialog.h"
+#include "app/dialogs/enclose_selection_dialog.h"
 #include "app/dialogs/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/accel.h>
@@ -156,6 +157,110 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    auto* enclosure = new wxMenu;
+    const int customEnclosure = wxWindow::NewControlId();
+    enclosure->Append(customEnclosure, "&With...\tAlt+Q");
+    enclosure->AppendSeparator();
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) { ShowEncloseSelectionDialog(this, *editor_, enclosureBefore_, enclosureAfter_); },
+        customEnclosure);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, customEnclosure);
+    const auto addEnclosure = [this, enclosure](const wxString& label, const wxString& delimiter) {
+        const int id = wxWindow::NewControlId();
+        enclosure->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, delimiter](wxCommandEvent&) {
+                if (!editor_->EncloseSelection(delimiter, delimiter))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    };
+    addEnclosure("Triple &Single Quotes\tCtrl+3", "'''");
+    addEnclosure("Triple &Double Quotes\tCtrl+6", "\"\"\"");
+    addEnclosure("Triple &Backticks\tCtrl+9", "```");
+    edit->AppendSubMenu(enclosure, "&Enclose Selection");
+    const int stripLeading = wxWindow::NewControlId();
+    const int stripTrailing = wxWindow::NewControlId();
+    edit->Append(stripTrailing, "Strip &Trailing Blanks\tAlt+T");
+    edit->Append(stripLeading, "Strip Leading Blan&ks");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->StripLeadingBlanks(); }, stripLeading);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->StripTrailingBlanks(); }, stripTrailing);
+    for (const int id : {stripLeading, stripTrailing})
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    const int mergeBlankLines = wxWindow::NewControlId();
+    const int removeBlankLines = wxWindow::NewControlId();
+    edit->Append(mergeBlankLines, "Merge Blank Lines\tAlt+B");
+    edit->Append(removeBlankLines, "Remove Blank Lines\tAlt+R");
+    for (const int id : {mergeBlankLines, removeBlankLines}) {
+        Bind(
+            wxEVT_MENU,
+            [this, id, mergeBlankLines](wxCommandEvent&) {
+                if (!editor_->RemoveBlankLines(id == mergeBlankLines))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    edit->AppendSeparator();
+    const int mergeDuplicates = wxWindow::NewControlId();
+    const int removeDuplicates = wxWindow::NewControlId();
+    edit->Append(mergeDuplicates, "Merge Duplicate Lines");
+    edit->Append(removeDuplicates, "Remove Duplicate Lines");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MergeDuplicateLines(); }, mergeDuplicates);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->RemoveDuplicateLines(); }, removeDuplicates);
+    for (const int id : {mergeDuplicates, removeDuplicates})
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) {
+                using Scintilla::Message;
+                event.Enable(editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionEnd)) >
+                             editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionStart)));
+            },
+            id);
+    const int padSpaces = wxWindow::NewControlId();
+    edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, padSpaces);
+    const int joinLines = wxWindow::NewControlId();
+    const int joinParagraphs = wxWindow::NewControlId();
+    edit->Append(joinLines, "&Join Lines\tCtrl+J");
+    edit->Append(joinParagraphs, "Join &Paragraphs\tCtrl+Shift+J");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->JoinLines(); }, joinLines);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!editor_->JoinParagraphs())
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        joinParagraphs);
+    for (const int id : {joinLines, joinParagraphs})
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    struct Conversion {
+        const char* label;
+        bool toTabs;
+        bool onlyIndent;
+    };
+    for (const auto& command : {Conversion{"Tabify Selection\tCtrl+Shift+T", true, false},
+                                Conversion{"Untabify Selection\tCtrl+Shift+S", false, false},
+                                Conversion{"Tabify Indent\tCtrl+Alt+T", true, true},
+                                Conversion{"Untabify Indent\tCtrl+Alt+S", false, true}}) {
+        const int id = wxWindow::NewControlId();
+        edit->Append(id, command.label);
+        Bind(wxEVT_MENU, [this, command](wxCommandEvent&) { ConvertTabs(command.toTabs, command.onlyIndent); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
     const int indent = wxWindow::NewControlId();
     edit->Append(indent, "&Indent");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->IndentLines(true); }, indent);
@@ -201,6 +306,51 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+    const int compressWhitespace = wxWindow::NewControlId();
+    edit->Append(compressWhitespace, "Compress &Whitespace\tAlt+W");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!editor_->CompressWhitespace())
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        compressWhitespace);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, compressWhitespace);
+    const int stripFirst = wxWindow::NewControlId();
+    edit->Append(stripFirst, "Strip &First Character\tAlt+Z");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!editor_->StripFirstCharacter())
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        stripFirst);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, stripFirst);
+    const int stripLast = wxWindow::NewControlId();
+    edit->Append(stripLast, "Strip &Last Character\tAlt+L");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!editor_->StripLastCharacter())
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        stripLast);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, stripLast);
+    Bind(wxEVT_CHAR_HOOK, [this, stripFirst, stripLast](wxKeyEvent& event) {
+        const int key = event.GetKeyCode();
+        if (!event.AltDown() || (key != 'Z' && key != 'L')) {
+            event.Skip();
+            return;
+        }
+        // Route Alt+L before the native Language-menu mnemonic and retain exact modifiers.
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) {
+            wxCommandEvent command(wxEVT_MENU, key == 'Z' ? stripFirst : stripLast);
+            GetEventHandler()->ProcessEvent(command);
+        }
+    });
 }
 
 void EditorFrame::AppendSearchCommands(wxMenu* edit) {
@@ -483,7 +633,28 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (HandleTabConversionKey(event)) return true;
+    if (event.GetKeyCode() == 'T' && event.AltDown()) {
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
+        return true;
+    }
     return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
+}
+
+void EditorFrame::ConvertTabs(bool toTabs, bool onlyIndent) {
+    if (!(toTabs ? editor_->SpacesToTabs(onlyIndent) : editor_->TabsToSpaces(onlyIndent)))
+        wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                     wxOK | wxICON_WARNING, this);
+}
+
+bool EditorFrame::HandleTabConversionKey(const wxKeyEvent& event) {
+    if ((event.GetKeyCode() != 'T' && event.GetKeyCode() != 'S') || !event.ControlDown() ||
+        (!event.ShiftDown() && !event.AltDown()))
+        return false;
+    if (event.ShiftDown() != event.AltDown() && !event.MetaDown())
+        ConvertTabs(event.GetKeyCode() == 'T', event.AltDown());
+    // Consume extra modifiers before native menu lookup can drop them.
+    return true;
 }
 
 bool EditorFrame::HandleSearchKey(const wxKeyEvent& event) {

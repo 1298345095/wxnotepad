@@ -5,7 +5,7 @@
 #include <wx/app.h>
 #include <wx/menu.h>
 #include <wx/ffile.h>
-#include <wx/stopwatch.h>
+#include <chrono>
 #include <wx/modalhook.h>
 #include <cstdio>
 #include <filesystem>
@@ -23,25 +23,12 @@ void Toggle(EditorFrame* frame) {
     Require(id != wxNOT_FOUND, "Edit menu exposes Toggle Line Comment");
     NativeSearch::Command(frame, id);
 }
-void Set(EditorControl* editor, const char* text, intptr_t anchor = 0, intptr_t caret = 0) {
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-}
 void Choose(EditorFrame* frame, const char* language) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
 }
 void Range(EditorControl* editor, intptr_t anchor, intptr_t caret) {
-    if (editor->Send(Message::GetAnchor) != anchor || editor->Send(Message::GetCurrentPos) != caret)
-        std::fprintf(stderr, "Selection anchor/caret: %lld/%lld; expected %lld/%lld\n",
-                     static_cast<long long>(editor->Send(Message::GetAnchor)),
-                     static_cast<long long>(editor->Send(Message::GetCurrentPos)), static_cast<long long>(anchor),
-                     static_cast<long long>(caret));
-    Require(editor->Send(Message::GetAnchor) == anchor && editor->Send(Message::GetCurrentPos) == caret,
-            "original anchor/caret adjustment preserves selection direction");
+    TestEditor::RequireSelection(editor, anchor, caret,
+                                 "original anchor/caret adjustment preserves selection direction");
 }
 void NativeKey(EditorControl* editor, bool divide, bool shift = false, bool alt = false) {
 #ifdef __WXMSW__
@@ -67,8 +54,8 @@ void NativeKey(EditorControl* editor, bool divide, bool shift = false, bool alt 
         request.Write(wxString("key:ctrl+") + (shift ? "shift+" : "") + (alt ? "alt+" : "") +
                       (divide ? "KP_Divide" : "slash"));
     }
-    wxStopWatch wait;
-    while (!received && wait.Time() < 3000) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (!received && std::chrono::steady_clock::now() < deadline) {
         wxYield();
         wxMilliSleep(10);
     }
@@ -90,7 +77,7 @@ public:
 void Protection(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment");
-    Set(editor, "alpha\nbeta", 0, 5);
+    TestEditor::ResetStream(editor, "alpha\nbeta", 0, 5);
     Choose(frame, "Plain Text");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(!frame->GetMenuBar()->IsEnabled(id), "Plain Text has original no-line-comment capability");
@@ -172,7 +159,7 @@ void Selections(EditorFrame* frame) {
     editor->Send(Message::SetUseTabs, 0);
     const char* original = "    alpha\r\n  beta\n\n    // kept\rnext";
     const char* commented = "  //   alpha\r\n  // beta\n  //\n  //   // kept\rnext";
-    Set(editor, original);
+    TestEditor::ResetStream(editor, original);
     editor->Send(Message::SetSel, 3, editor->Send(Message::PositionFromLine, 4));
     Toggle(frame);
     Require(TestEditor::Text(editor) == commented, "common column, blank line and deeper comment match original");
@@ -187,22 +174,22 @@ void Selections(EditorFrame* frame) {
     Toggle(frame);
     Require(TestEditor::Text(editor) == original, "uncomment reverses whole original multiline edit");
     Range(editor, editor->Send(Message::PositionFromLine, 4), 0);
-    Set(editor, "  // alpha\n  plain\n    //  deep\n  //\nend");
+    TestEditor::ResetStream(editor, "  // alpha\n  plain\n    //  deep\n  //\nend");
     editor->Send(Message::SetSel, 0, editor->Send(Message::PositionFromLine, 4));
     Toggle(frame);
     Require(TestEditor::Text(editor) == "  alpha\n  plain\n     deep\n\nend",
             "first commented line deletes only comments and one pad");
-    Set(editor, "  plain\n  // existing\n");
+    TestEditor::ResetStream(editor, "  plain\n  // existing\n");
     editor->Send(Message::SelectAll);
     Toggle(frame);
     Require(TestEditor::Text(editor) == "  // plain\n  // existing\n",
             "add action leaves already-commented line at common column alone");
-    Set(editor, "\talpha\n    beta\n");
+    TestEditor::ResetStream(editor, "\talpha\n    beta\n");
     editor->Send(Message::SetTabWidth, 4);
     editor->Send(Message::SelectAll);
     Toggle(frame);
     Require(TestEditor::Text(editor) == "\t// alpha\n    // beta\n", "common column uses visual tab indentation");
-    Set(editor, "   ", 3, 3);
+    TestEditor::ResetStream(editor, "   ", 3, 3);
     Toggle(frame);
     Require(TestEditor::Text(editor) == "   //", "single blank line receives prefix without trailing pad");
     Range(editor, 3, 3);
@@ -232,7 +219,7 @@ public:
                 Protection(frame);
                 for (const auto* language : {"C/C++", "Python", "JSON"}) {
                     Choose(frame, language);
-                    Set(editor, "  value\nnext", 4, 4);
+                    TestEditor::ResetStream(editor, "  value\nnext", 4, 4);
                     NativeKey(editor, false);
                     const std::string expected = std::string(language) == "Python"
                                                      ? (spaced ? "  # value\nnext" : "  #value\nnext")
