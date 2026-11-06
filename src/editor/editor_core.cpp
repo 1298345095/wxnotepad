@@ -1,5 +1,6 @@
 #include "editor/editor_core.h"
 #include "editor/platform/clipboard.h"
+#include "editor/platform/custom_case.h"
 #include "editor/platform/gtk_drag_drop.h"
 #include <wx/dcclient.h>
 #include <wx/dataobj.h>
@@ -677,7 +678,7 @@ std::unique_ptr<core::CaseFolder> EditorControl::Core::CaseFolderForEncoding() c
 std::string EditorControl::Core::CaseMapString(const std::string& value, CaseMapping mapping) const {
     if (mapping == CaseMapping::upper) return core::CaseConvertString(value, core::CaseConversion::upper);
     if (mapping == CaseMapping::lower) return core::CaseConvertString(value, core::CaseConversion::lower);
-    return value;
+    return MapCustomCase(value, static_cast<int>(mapping));
 }
 
 bool SCICALL EditorControl::Core::DragThreshold(core::Point start, core::Point now) const noexcept {

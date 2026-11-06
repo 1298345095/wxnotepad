@@ -55,6 +55,8 @@ private:
     wxMenu* CreateLanguageMenu();
     wxMenu* CreateViewMenu();
     void AppendEditingCommands(wxMenu* edit);
+    void AppendDateTimeCommands(wxMenu* edit);
+    void InsertDateTime(bool shortDate);
     void AppendSearchCommands(wxMenu* edit);
     void AppendNavigationCommands(wxMenu* edit);
     void AppendLineEndingCommands(wxMenu* edit);
