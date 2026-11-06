@@ -94,6 +94,20 @@ private:
     Core& editor_;
 };
 
+intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_t lParam) {
+    // Original ScintillaWin::WndProc reports message failures through GetStatus.
+    // Read-only enclosure can intentionally attempt a target beyond EOF after
+    // the preceding insertion was rejected, then continue selection repair.
+    try {
+        return ScintillaBase::WndProc(message, wParam, lParam);
+    } catch (const std::bad_alloc&) {
+        errorStatus = Scintilla::Status::BadAlloc;
+    } catch (const core::Failure& failure) {
+        errorStatus = failure.status;
+    }
+    return 0;
+}
+
 EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_(window) {
     wMain = static_cast<wxWindow*>(&window_);
     Initialise();
@@ -484,8 +498,10 @@ bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
         case 'C':
         case 'X':
             if (event.ShiftDown()) {
-                window_.Send(event.GetKeyCode() == 'C' ? Message::LineCopy : Message::LineCut,
-                             static_cast<uintptr_t>(window_.GetLineSelectionMode()) & 1);
+                if (event.GetKeyCode() == 'C')
+                    window_.CopyLine();
+                else
+                    window_.CutLine();
             } else if (event.GetKeyCode() == 'C')
                 window_.Copy();
             else
@@ -587,7 +603,12 @@ void EditorControl::Core::CopyToClipboard(const core::SelectionText& text) const
 
 void EditorControl::Core::Cut(bool, bool lineCopy) {
     pdoc->CheckReadOnly();
-    if (sel.Empty() || pdoc->IsReadOnly() || SelectionContainsProtected()) return;
+    if (pdoc->IsReadOnly() || SelectionContainsProtected()) return;
+    if (sel.Empty() && !lineCopy) {
+        // Original Cut skips Copy on an empty stream but still filters carets.
+        ClearSelection();
+        return;
+    }
     core::SelectionText text;
     if (lineCopy)
         text.Copy(RangeText(sel.RangeMain().Start().Position(), sel.RangeMain().End().Position()), pdoc->dbcsCodePage,
@@ -654,12 +675,9 @@ std::unique_ptr<core::CaseFolder> EditorControl::Core::CaseFolderForEncoding() c
 }
 
 std::string EditorControl::Core::CaseMapString(const std::string& value, CaseMapping mapping) const {
-    wxString text = wxString::FromUTF8(value);
-    if (mapping == CaseMapping::upper)
-        text.MakeUpper();
-    else if (mapping == CaseMapping::lower)
-        text.MakeLower();
-    return text.ToStdString(wxConvUTF8);
+    if (mapping == CaseMapping::upper) return core::CaseConvertString(value, core::CaseConversion::upper);
+    if (mapping == CaseMapping::lower) return core::CaseConvertString(value, core::CaseConversion::lower);
+    return value;
 }
 
 bool SCICALL EditorControl::Core::DragThreshold(core::Point start, core::Point now) const noexcept {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "editor/align_lines.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
 #include <wx/timer.h>
@@ -30,7 +31,10 @@ public:
     bool TabsToSpaces(bool onlyIndent = false);
     // False reports the original unsupported rectangular-selection operation.
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
+    bool ToggleBlockComments(const char* open, const char* close, int commentStyleLast);
     bool EncloseSelection(const wxString& before, const wxString& after);
+    AlignmentResult AlignLines(AlignmentMode mode);
+    bool ModifyLines(const wxString& prefix, const wxString& suffix, bool skipEmpty = false);
     bool CompressWhitespace();
     bool RemoveBlankLines(bool merge);
     void MoveLines(bool upwards);
@@ -51,6 +55,9 @@ public:
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     void Copy();
     void Cut();
+    void CopyLine();
+    void CutLine();
+    void DeleteLine();
     void JumpToPosition(intptr_t position);
     void MatchBrace(bool select = false);
     void ToggleBookmark();

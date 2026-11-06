@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
+#include "app/dialogs/align_lines_dialog.h"
 #include "app/dialogs/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/accel.h>
@@ -12,6 +13,7 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <cstdlib>
+#include "app/dialogs/modify_lines_dialog.h"
 
 namespace {
 void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
@@ -146,6 +148,17 @@ wxMenu* EditorFrame::CreateEditMenu() {
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanPaste)); },
         wxID_PASTE);
+    const int cutLine = wxWindow::NewControlId();
+    const int copyLine = wxWindow::NewControlId();
+    const int deleteLine = wxWindow::NewControlId();
+    edit->Append(cutLine, "Cu&t Line\tCtrl+Shift+X");
+    edit->Append(copyLine, "&Copy Line\tCtrl+Shift+C");
+    edit->Append(deleteLine, "D&elete Line\tCtrl+Shift+D");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->CutLine(); }, cutLine);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->CopyLine(); }, copyLine);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->DeleteLine(); }, deleteLine);
+    for (const int id : {cutLine, copyLine, deleteLine})
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     AppendEditingCommands(edit);
     edit->AppendSeparator();
     AppendSearchCommands(edit);
@@ -157,6 +170,42 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    auto* conversion = new wxMenu;
+    // Pinned Notepad4's case commands use CustomCaseMapping values upper=1, lower=2.
+    for (const auto& [label, mapping] :
+         {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2}}) {
+        const int id = wxWindow::NewControlId();
+        conversion->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, mapping](wxCommandEvent&) { editor_->Send(Scintilla::Message::CustomCaseMapping, mapping); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
+    edit->AppendSubMenu(conversion, "Con&vert");
+    const int modifyLines = wxWindow::NewControlId();
+    edit->Append(modifyLines, "&Modify Lines...\tAlt+M");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) { ShowModifyLinesDialog(this, *editor_, linePrefix_, lineSuffix_, skipEmptyLines_); },
+        modifyLines);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, modifyLines);
+    const int duplicateSelection = wxWindow::NewControlId();
+    edit->Append(duplicateSelection, "Duplicate Selection\tAlt+D");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::SelectionDuplicate); },
+        duplicateSelection);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, duplicateSelection);
+    const int duplicateLine = wxWindow::NewControlId();
+    const int transposeLines = wxWindow::NewControlId();
+    edit->Append(duplicateLine, "Duplicate Line\tCtrl+D");
+    edit->Append(transposeLines, "Transpose Lines\tAlt+S");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::LineDuplicate); }, duplicateLine);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::LineTranspose); }, transposeLines);
+    for (const int id : {duplicateLine, transposeLines})
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     auto* enclosure = new wxMenu;
     const int customEnclosure = wxWindow::NewControlId();
     enclosure->Append(customEnclosure, "&With...\tAlt+Q");
@@ -226,6 +275,24 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);
     Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, padSpaces);
+    const int alignLines = wxWindow::NewControlId();
+    edit->Append(alignLines, "Alig&n Lines...\tAlt+J");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (ShowAlignLinesDialog(this, alignmentMode_)) {
+                const auto result = editor_->AlignLines(alignmentMode_);
+                if (result == AlignmentResult::RectangularSelection)
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+                else if (result == AlignmentResult::LinesTooLong)
+                    wxMessageBox("This operation can't be performed (lines too long).", "wxnotepad",
+                                 wxOK | wxICON_INFORMATION, this);
+            }
+            editor_->SetFocus();
+        },
+        alignLines);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, alignLines);
     const int joinLines = wxWindow::NewControlId();
     const int joinParagraphs = wxWindow::NewControlId();
     edit->Append(joinLines, "&Join Lines\tCtrl+J");
@@ -296,6 +363,23 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         },
         lineComment);
     edit->AppendSeparator();
+    const int blockComment = wxWindow::NewControlId();
+    edit->Append(blockComment, "Toggle Block &Comment\tCtrl+Q");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto& syntax = SyntaxFor(document_.Language());
+            if (syntax.blockCommentOpen &&
+                !editor_->ToggleBlockComments(syntax.blockCommentOpen, syntax.blockCommentClose,
+                                              syntax.commentStyleLast))
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        blockComment);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(SyntaxFor(document_.Language()).blockCommentOpen != nullptr); },
+        blockComment);
     const int moveUp = wxWindow::NewControlId();
     const int moveDown = wxWindow::NewControlId();
     edit->Append(moveUp, "Move &Up\tAlt+Up");
