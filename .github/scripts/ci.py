@@ -19,7 +19,7 @@ WINDOWS = sys.platform == 'win32'
 TRIPLET = 'x64-windows-ci' if WINDOWS else 'x64-linux-ci'
 
 
-def run(command, log, env=None):
+def run(command, log, env=None, check=True):
     REPORTS.mkdir(parents=True, exist_ok=True)
     print('+ ' + ' '.join(str(item) for item in command), flush=True)
     with (REPORTS / log).open('w', encoding='utf-8') as output:
@@ -30,8 +30,9 @@ def run(command, log, env=None):
             output.write(line)
             print(line, end='', flush=True)
         result = process.wait()
-    if result:
+    if result and check:
         raise SystemExit(result)
+    return result
 
 
 def metadata():
@@ -150,7 +151,7 @@ def test(backend, cmake_dir, expression, jobs):
     shards = test_shards(cmake_dir.resolve(), expression, jobs, REPORTS / backend)
     print(f'Private {backend}: {sum(len(names) for _, names in shards)} tests across '
           f'{len(shards)} concurrent sessions', flush=True)
-    plan = [dict(shard=index, tests=names) for index, (_, names) in enumerate(shards, 1)]
+    plan = [{'shard': index, 'tests': names} for index, (_, names) in enumerate(shards, 1)]
     (REPORTS / f'{backend}-test-plan.json').write_text(json.dumps(plan, indent=2) + '\n', encoding='utf-8')
 
     def run_shard(item):
@@ -163,11 +164,7 @@ def test(backend, cmake_dir, expression, jobs):
         isolated = ['xvfb-run', '-a', '-s', '-screen 0 1600x1000x24 -nolisten tcp',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
                     backend, *selected]
-        try:
-            run(isolated, f'{backend}-shard-{index}-ctest.log', environment)
-        except SystemExit as failure:
-            return failure.code
-        return 0
+        return run(isolated, f'{backend}-shard-{index}-ctest.log', environment, check=False)
 
     with ThreadPoolExecutor(max_workers=len(shards)) as workers:
         results = list(workers.map(run_shard, enumerate(shards, 1)))

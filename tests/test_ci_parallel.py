@@ -89,6 +89,23 @@ class ParallelCTest(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, 'No CTest tests match'):
             CI.test_shards(self.build, '^missing-test$', 4, self.directory / 'reports')
 
+    def test_child_failures_return_to_workers_and_default_commands_still_fail(self):
+        previous_reports = CI.REPORTS
+        CI.REPORTS = self.directory / 'command reports'
+        self.addCleanup(setattr, CI, 'REPORTS', previous_reports)
+
+        def child(code):
+            return CI.run([sys.executable, '-c', f'import sys; print("owned exit {code}"); sys.exit({code})'],
+                          f'child-{code}.log', check=False)
+
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            self.assertEqual(list(workers.map(child, [9, 0])), [9, 0])
+        self.assertIn('owned exit 9', (CI.REPORTS / 'child-9.log').read_text(encoding='utf-8'))
+        self.assertIn('owned exit 0', (CI.REPORTS / 'child-0.log').read_text(encoding='utf-8'))
+        with self.assertRaises(SystemExit) as failure:
+            CI.run([sys.executable, '-c', 'import sys; sys.exit(9)'], 'default-failure.log')
+        self.assertEqual(failure.exception.code, 9)
+
 
 if __name__ == '__main__':
     unittest.main()
