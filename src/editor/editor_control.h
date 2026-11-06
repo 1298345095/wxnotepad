@@ -34,6 +34,7 @@ public:
     bool ToggleBlockComments(const char* open, const char* close, int commentStyleLast);
     bool EncloseSelection(const wxString& before, const wxString& after);
     AlignmentResult AlignLines(AlignmentMode mode);
+    bool ModifyLines(const wxString& prefix, const wxString& suffix, bool skipEmpty = false);
     bool CompressWhitespace();
     bool RemoveBlankLines(bool merge);
     void MoveLines(bool upwards);
