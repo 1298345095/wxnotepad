@@ -12,11 +12,19 @@ and retain shareable results; they do not replace local verification.
 | Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 18 |
 | CodeQL | Same | Traced C++ application build and Actions configuration analysis, with results in GitHub Security |
 
-The Linux CI job builds once, then runs X11 and Wayland in separate private
-Xvfb/dbus sessions. The existing Weston focus helper supplies the Wayland session.
-Tests run serially because native dialogs and clipboard ownership are shared
-within a display session. Wayland still runs if X11 tests fail after a successful
-build. Windows runs its full registered suite on the hosted VM: the four tests
+Builds and native clang-tidy use the runner's available CPU count instead of a
+fixed two workers. Both entry points accept `--jobs N` for an explicit limit.
+
+The Linux CI job builds once, then partitions each backend's complete selected
+CTest list across private sessions, using the available CPU count by default.
+Each shard owns its Xvfb, D-Bus and Weston session, focus driver, CTest workspace,
+JUnit result and display logs. Tests inside a shard remain serial; shards run
+concurrently without sharing native dialogs or clipboard ownership. Registration,
+commands and original working directories come from the configured CTest tree.
+The per-backend test plan records every selected test and its shard. `test --jobs N`
+sets the Linux session count. Wayland still runs if X11 tests fail after a successful
+build. Standalone resource measurements remain serial. Windows uses one desktop
+and clipboard, and runs its full registered suite serially on the hosted VM: the four tests
 excluded on the development machine's shared desktop are not silently excluded.
 
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs

@@ -1,5 +1,6 @@
 """Small CI glue around the existing pinned-core preparation and CMake entry points."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -90,14 +91,48 @@ def cmake_command(arguments):
     return ['cmake', *arguments]
 
 
-def build(app_only):
-    command = ['--build', BUILD / 'cmake', '--config', 'Release', '--parallel', '2']
+def build(app_only, jobs):
+    print(f'Build workers: {jobs}', flush=True)
+    command = ['--build', BUILD / 'cmake', '--config', 'Release', '--parallel', str(jobs)]
     if app_only:
         command += ['--target', 'wxnotepad']
     run(cmake_command(command), 'build.log')
 
 
-def test(backend, cmake_dir, expression):
+def test_shards(cmake_dir, expression, jobs, directory):
+    listing = ['ctest', '--test-dir', str(cmake_dir), '-C', 'Release', '--show-only=json-v1']
+    if expression:
+        listing += ['-R', expression]
+    tests = json.loads(subprocess.check_output(listing, text=True, encoding='utf-8'))['tests']
+    if not tests:
+        raise SystemExit('No CTest tests match the requested selection')
+
+    def literal(value):
+        value = str(value)
+        delimiter = '='
+        while f']{delimiter}]' in value:
+            delimiter += '='
+        return f'[{delimiter}[{value}]{delimiter}]'
+
+    # Separate CTest workspaces keep cost data, LastTest logs and JUnit output
+    # independent, while the registered commands and working directories stay intact.
+    shards = []
+    for index in range(min(jobs, len(tests))):
+        selected = tests[index::min(jobs, len(tests))]
+        workspace = directory / f'shard-{index + 1}'
+        workspace.mkdir(parents=True, exist_ok=True)
+        registration = f'include({literal((cmake_dir / "CTestTestfile.cmake").as_posix())})\n'
+        for item in selected:
+            properties = {entry['name']: entry['value'] for entry in item.get('properties', [])}
+            working = properties.get('WORKING_DIRECTORY', str(cmake_dir))
+            registration += (f'set_tests_properties({literal(item["name"])} PROPERTIES '
+                             f'WORKING_DIRECTORY {literal(working)})\n')
+        (workspace / 'CTestTestfile.cmake').write_text(registration, encoding='utf-8')
+        shards.append((workspace, [item['name'] for item in selected]))
+    return shards
+
+
+def test(backend, cmake_dir, expression, jobs):
     if (backend == 'windows') != WINDOWS:
         raise SystemExit('The requested test backend does not match this host')
     REPORTS.mkdir(parents=True, exist_ok=True)
@@ -106,13 +141,38 @@ def test(backend, cmake_dir, expression):
                '--output-junit', REPORTS / f'{backend}-tests.xml']
     if expression:
         command += ['-R', expression]
-    environment = dict(os.environ)
-    if not WINDOWS:
-        environment['WXNOTEPAD_DISPLAY_LOG_DIR'] = str(REPORTS / 'display')
-        command = ['xvfb-run', '-a', '-s', '-screen 0 1600x1000x24 -nolisten tcp',
-                   'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
-                   backend, *command]
-    run(command, f'{backend}-ctest.log', environment)
+    if WINDOWS:
+        if jobs != 1:
+            raise SystemExit('Windows native tests share one desktop and clipboard; use --jobs 1')
+        run(command, f'{backend}-ctest.log')
+        return
+
+    shards = test_shards(cmake_dir.resolve(), expression, jobs, REPORTS / backend)
+    print(f'Private {backend}: {sum(len(names) for _, names in shards)} tests across '
+          f'{len(shards)} concurrent sessions', flush=True)
+    plan = [dict(shard=index, tests=names) for index, (_, names) in enumerate(shards, 1)]
+    (REPORTS / f'{backend}-test-plan.json').write_text(json.dumps(plan, indent=2) + '\n', encoding='utf-8')
+
+    def run_shard(item):
+        index, (workspace, names) = item
+        selection = '^(' + '|'.join(re.escape(name) for name in names) + ')$'
+        selected = ['ctest', '--test-dir', workspace, '-C', 'Release', '--parallel', '1',
+                    '--output-on-failure', '--no-tests=error', '-R', selection,
+                    '--output-junit', workspace / 'tests.xml']
+        environment = dict(os.environ, WXNOTEPAD_DISPLAY_LOG_DIR=str(workspace / 'display'))
+        isolated = ['xvfb-run', '-a', '-s', '-screen 0 1600x1000x24 -nolisten tcp',
+                    'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
+                    backend, *selected]
+        try:
+            run(isolated, f'{backend}-shard-{index}-ctest.log', environment)
+        except SystemExit as failure:
+            return failure.code
+        return 0
+
+    with ThreadPoolExecutor(max_workers=len(shards)) as workers:
+        results = list(workers.map(run_shard, enumerate(shards, 1)))
+    if any(results):
+        raise SystemExit(f'Private {backend} test shards failed; inspect the retained per-shard logs')
 
 
 def bundle():
@@ -160,16 +220,25 @@ def main():
     for name in ('metadata', 'dependencies', 'bundle'):
         commands.add_parser(name)
     for name in ('configure', 'build'):
-        commands.add_parser(name).add_argument('--app-only', action='store_true')
+        command = commands.add_parser(name)
+        command.add_argument('--app-only', action='store_true')
+        if name == 'build':
+            command.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
     tests = commands.add_parser('test')
     tests.add_argument('--backend', choices=('windows', 'x11', 'wayland'), required=True)
     tests.add_argument('--cmake-dir', type=Path, default=BUILD / 'cmake')
     tests.add_argument('--tests', help='Optional CTest regex for local verification; CI runs the complete suite')
+    tests.add_argument('--jobs', type=int, default=1 if WINDOWS else os.cpu_count() or 1,
+                       help='Concurrent private Linux display sessions; Windows uses one desktop')
     arguments = parser.parse_args()
-    if arguments.command in ('configure', 'build'):
-        globals()[arguments.command](arguments.app_only)
+    if getattr(arguments, 'jobs', 1) < 1:
+        parser.error('--jobs must be positive')
+    if arguments.command == 'configure':
+        configure(arguments.app_only)
+    elif arguments.command == 'build':
+        build(arguments.app_only, arguments.jobs)
     elif arguments.command == 'test':
-        test(arguments.backend, arguments.cmake_dir.resolve(), arguments.tests)
+        test(arguments.backend, arguments.cmake_dir.resolve(), arguments.tests, arguments.jobs)
     else:
         globals()[arguments.command]()
 
