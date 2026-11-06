@@ -57,6 +57,8 @@ private:
     void AppendFoldCommands(wxMenu* view);
     void AppendSettingsCommands(wxMenu* view);
     bool HandleCommandKey(const wxKeyEvent& event);
+    bool HandleTabConversionKey(const wxKeyEvent& event);
+    void ConvertTabs(bool toTabs, bool onlyIndent);
     bool HandleSearchKey(const wxKeyEvent& event);
     bool HandleNavigationKey(const wxKeyEvent& event);
     bool HandleViewKey(const wxKeyEvent& event);

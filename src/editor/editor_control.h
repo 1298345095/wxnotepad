@@ -26,6 +26,9 @@ public:
     void ToggleWordWrap();
     void IndentLines(bool forwards);
     // False reports the original unsupported rectangular-selection operation.
+    bool SpacesToTabs(bool onlyIndent = false);
+    bool TabsToSpaces(bool onlyIndent = false);
+    // False reports the original unsupported rectangular-selection operation.
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     void MoveLines(bool upwards);
     void SetIndentationWidths(int tabWidth, int indentWidth);
