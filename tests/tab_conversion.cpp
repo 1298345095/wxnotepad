@@ -227,10 +227,7 @@ void SavedBytes(EditorFrame* frame) {
     };
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".cpp");
-        {
-            std::ofstream file(path, std::ios::binary);
-            file.write(fixture.before.data(), static_cast<std::streamsize>(fixture.before.size()));
-        }
+        TestFiles::WriteBytes(path, fixture.before);
         editor->Send(Message::SetSavePoint);
         Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
                 "open encoded file through application");

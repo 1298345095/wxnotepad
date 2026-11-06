@@ -1,6 +1,6 @@
 #include "app/editor_frame.h"
 #include "native_search_helpers.h"
-#include "file_helpers.h"
+#include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/app.h>
 #include <wx/ffile.h>
@@ -182,12 +182,7 @@ void SearchState(EditorFrame* frame) {
 }
 void SavedBytes(EditorFrame* frame) {
     using namespace std::string_literals;
-    struct Fixture {
-        const char* name;
-        FileEncoding encoding;
-        std::string before;
-        std::string after;
-    };
+    using Fixture = TestFiles::EncodedFixture;
     const Fixture fixtures[] = {
         {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf \t中 \t\r\n \tx \t\n \ty\t", "\xef\xbb\xbf中\r\nx\ny"},
         {"gbk", FileEncoding::Gbk, " \t\xd6\xd0 \t\r\n \tx \t\n \ty\t", "\xd6\xd0\r\nx\ny"},
@@ -198,7 +193,7 @@ void SavedBytes(EditorFrame* frame) {
     for (const auto& fixture : fixtures) {
         editor->Send(Message::SetSavePoint);
         const auto path = TestFiles::TemporaryDirectory(std::string(fixture.name) + "-manual.txt");
-        std::ofstream(path, std::ios::binary) << fixture.before;
+        TestFiles::WriteBytes(path, fixture.before);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "independent encoded fixture opens");
         const auto encoding = frame->DocumentEncoding();

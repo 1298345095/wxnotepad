@@ -1,5 +1,5 @@
 #include "app/editor_frame.h"
-#include "file_helpers.h"
+#include "encoded_file_helpers.h"
 #include "native_search_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/app.h>
@@ -270,12 +270,7 @@ void SavedBytes(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-pad-spaces");
     std::filesystem::create_directory(directory);
-    struct Fixture {
-        const char* name;
-        FileEncoding encoding;
-        std::string before;
-        std::string after;
-    };
+    using Fixture = TestFiles::EncodedFixture;
     const Fixture fixtures[] = {
         {"utf8-bom", FileEncoding::Utf8, "\xef\xbb\xbf中文\r\nA\n😀\r", "\xef\xbb\xbf中文\r\nA \n😀 \r  "},
         {"gbk", FileEncoding::Gbk, "\xd6\xd0\xce\xc4\rA\r\nx\n", "\xd6\xd0\xce\xc4\rA \r\nx \n  "},
@@ -284,10 +279,7 @@ void SavedBytes(EditorFrame* frame) {
     };
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
-        {
-            std::ofstream file(path, std::ios::binary);
-            file.write(fixture.before.data(), static_cast<std::streamsize>(fixture.before.size()));
-        }
+        TestFiles::WriteBytes(path, fixture.before);
         editor->Send(Message::SetSavePoint);
         Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
                 "saved-byte fixture opens through application");

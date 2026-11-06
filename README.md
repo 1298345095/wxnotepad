@@ -86,8 +86,8 @@ Edit also provides the original text transformations:
 
 | Command | Shortcut |
 | --- | --- |
-| Spaces to Tabs / Tabs to Spaces | Ctrl+Shift+T / Ctrl+Shift+S |
-| Spaces to Tabs (Indent) / Tabs to Spaces (Indent) | Ctrl+Alt+T / Ctrl+Alt+S |
+| Tabify Selection / Untabify Selection | Ctrl+Shift+T / Ctrl+Shift+S |
+| Tabify Indent / Untabify Indent | Ctrl+Alt+T / Ctrl+Alt+S |
 | Strip Leading Blanks / Strip Trailing Blanks | Menu / Alt+T |
 | Compress Whitespace | Alt+W |
 | Merge Blank Lines / Remove Blank Lines | Alt+B / Alt+R |

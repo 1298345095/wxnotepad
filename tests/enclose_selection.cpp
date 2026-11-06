@@ -391,10 +391,7 @@ void SavedBytes(EditorFrame* frame) {
     const std::string before = "\xef\xbb\xbf中文\r\nnext\nlast\r";
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string("sample.") + fixture.extension);
-        {
-            std::ofstream file(path, std::ios::binary);
-            file.write(before.data(), before.size());
-        }
+        TestFiles::WriteBytes(path, before);
         editor->Send(Message::SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "open language disk fixture");
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", fixture.language));
@@ -422,10 +419,7 @@ void SavedBytes(EditorFrame* frame) {
     };
     for (const auto& fixture : encoded) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
-        {
-            std::ofstream file(path, std::ios::binary);
-            file.write(fixture.before.data(), fixture.before.size());
-        }
+        TestFiles::WriteBytes(path, fixture.before);
         editor->Send(Message::SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "open original encoded enclosure fixture");

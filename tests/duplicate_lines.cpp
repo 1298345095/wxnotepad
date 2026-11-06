@@ -242,10 +242,7 @@ void SavedBytes(EditorFrame* frame) {
     for (const auto& fixture : fixtures) {
         for (const bool merge : {true, false}) {
             const auto path = directory / (std::string(fixture.name) + (merge ? "-merge.txt" : "-remove.txt"));
-            {
-                std::ofstream file(path, std::ios::binary);
-                file.write(fixture.before.data(), fixture.before.size());
-            }
+            TestFiles::WriteBytes(path, fixture.before);
             frame->Editor()->Send(Message::SetSavePoint);
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                     "saved-byte fixture opens through application");

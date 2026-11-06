@@ -247,10 +247,7 @@ void SavedBytes(EditorFrame* frame) {
     for (const auto& fixture : fixtures) {
         for (const bool merge : {true, false}) {
             const auto path = directory / (std::string(fixture.name) + (merge ? "-merge.txt" : "-remove.txt"));
-            {
-                std::ofstream file(path, std::ios::binary);
-                file.write(fixture.before.data(), static_cast<std::streamsize>(fixture.before.size()));
-            }
+            TestFiles::WriteBytes(path, fixture.before);
             editor->Send(Message::SetSavePoint);
             Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
                     "open independent blank-line encoding fixture through application");

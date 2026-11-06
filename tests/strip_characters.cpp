@@ -266,10 +266,7 @@ void SavedBytes(EditorFrame* frame) {
     for (const auto& fixture : fixtures)
         for (const bool first : {true, false}) {
             const auto path = directory / (std::string(fixture.name) + (first ? "-first.cpp" : "-last.cpp"));
-            {
-                std::ofstream file(path, std::ios::binary);
-                file.write(fixture.before.data(), static_cast<std::streamsize>(fixture.before.size()));
-            }
+            TestFiles::WriteBytes(path, fixture.before);
             editor->Send(Message::SetSavePoint);
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                     "open encoded fixture through application");
