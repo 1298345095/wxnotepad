@@ -183,6 +183,7 @@ void Dialog(EditorFrame* frame) {
 }
 void NativeControls(EditorFrame* frame) {
     TestEditor::ResetStream(frame->Editor(), "x\n\nz", 0, 4, Scintilla::EndOfLine::Lf);
+    bool tabReachedSkip = false;
     Visit(
         frame,
         [&](wxDialog* dialog) {
@@ -228,7 +229,21 @@ void NativeControls(EditorFrame* frame) {
             suffix->SetFocus();
             wxYield();
 #ifdef __WXMSW__
-            NativeSearch::WindowsShortcut(suffix, VK_TAB, {{VK_CONTROL, 0}, {VK_MENU, 0}, {VK_SHIFT, 0}});
+            BYTE previous[256];
+            Require(GetKeyboardState(previous), "read owned test-thread keyboard state for Tab");
+            BYTE released[256];
+            std::copy(std::begin(previous), std::end(previous), std::begin(released));
+            for (const int key : {VK_CONTROL, VK_MENU, VK_SHIFT})
+                released[key] = 0;
+            Require(SetKeyboardState(released), "release opening shortcut modifiers during native Tab");
+            MSG message{};
+            message.hwnd = static_cast<HWND>(suffix->GetHandle());
+            message.message = WM_KEYDOWN;
+            message.wParam = VK_TAB;
+            // Tab uses native dialog navigation, rather than accelerator translation.
+            dialog->MSWProcessMessage(&message);
+            SetKeyboardState(previous);
+            wxYield();
 #else
             wxString focusFile;
             Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "Tab uses private native input");
@@ -242,13 +257,18 @@ void NativeControls(EditorFrame* frame) {
                 wxMilliSleep(10);
             }
 #endif
-            Require(Skip(dialog)->HasFocus(), "native Tab skips substitution links as in the original dialog");
+            tabReachedSkip = Skip(dialog)->HasFocus();
+            if (!tabReachedSkip) {
+                NativeSearch::Click(dialog, wxID_CANCEL);
+                return;
+            }
             prefix->SetValue(wxString::FromUTF8("中\n$(N):"));
             suffix->SetValue(wxString::FromUTF8(":$(I)\n文"));
             NativeSearch::Toggle(Skip(dialog), true);
             NativeSearch::Click(dialog, wxID_OK);
         },
         true);
+    Require(tabReachedSkip, "native Tab skips substitution links as in the original dialog");
     Require(TestEditor::Text(frame) == "中\n1:x:0\n文\n\n中\n2:z:1\n文",
             "native multiline fields preserve inserted-line accounting, skipped empties and independent counters");
     Require(frame->Editor()->HasFocus(), "closing Modify Lines returns focus to the editor");
