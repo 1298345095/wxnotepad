@@ -30,6 +30,7 @@ public:
     bool TabsToSpaces(bool onlyIndent = false);
     // False reports the original unsupported rectangular-selection operation.
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
+    bool EncloseSelection(const wxString& before, const wxString& after);
     bool CompressWhitespace();
     bool RemoveBlankLines(bool merge);
     void MoveLines(bool upwards);

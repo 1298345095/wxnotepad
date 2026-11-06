@@ -39,6 +39,8 @@ private:
     int automaticLanguageId_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
+    wxString enclosureBefore_;
+    wxString enclosureAfter_;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
     void CreateMenus();
