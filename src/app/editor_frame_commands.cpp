@@ -176,10 +176,13 @@ wxMenu* EditorFrame::CreateEditMenu() {
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     auto* conversion = new wxMenu;
     // Pinned Notepad4's case commands use CustomCaseMapping values upper=1, lower=2.
-    for (const auto& [label, mapping] : {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2},
-                                         std::pair{"In&vert Case\tCtrl+Alt+U", CustomCaseCommand::Invert},
-                                         std::pair{"Title &Case\tCtrl+Alt+I", CustomCaseCommand::Title},
-                                         std::pair{"&Sentence Case\tCtrl+Alt+O", CustomCaseCommand::Sentence}}) {
+    for (const auto& [label, mapping] :
+         {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2},
+          std::pair{"In&vert Case\tCtrl+Alt+U", CustomCaseCommand::Invert},
+          std::pair{"Title &Case\tCtrl+Alt+I", CustomCaseCommand::Title},
+          std::pair{"&Sentence Case\tCtrl+Alt+O", CustomCaseCommand::Sentence},
+          std::pair{"C&haracter to Hex\tCtrl+Alt+X", CustomCaseCommand::CharacterToHex},
+          std::pair{"Hex to Cha&racter\tCtrl+Alt+C", CustomCaseCommand::HexToCharacter}}) {
         const int id = wxWindow::NewControlId();
         conversion->Append(id, label);
         Bind(
@@ -759,6 +762,13 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         return true;
     }
     if (HandleTabConversionKey(event)) return true;
+    if ((event.GetKeyCode() == 'X' || event.GetKeyCode() == 'C') && event.ControlDown() && event.AltDown()) {
+        if (!event.ShiftDown() && !event.MetaDown())
+            editor_->Send(Scintilla::Message::CustomCaseMapping, event.GetKeyCode() == 'X'
+                                                                     ? CustomCaseCommand::CharacterToHex
+                                                                     : CustomCaseCommand::HexToCharacter);
+        return true;
+    }
     const int key = event.GetKeyCode();
     if (event.ControlDown() && event.AltDown() && (key == 'U' || key == 'I' || key == 'O')) {
         if (!event.ShiftDown() && !event.MetaDown())

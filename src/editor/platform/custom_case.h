@@ -4,6 +4,8 @@
 
 // Original resource IDs passed through Scintilla's CustomCaseMapping message.
 namespace CustomCaseCommand {
+inline constexpr int CharacterToHex = 40202;
+inline constexpr int HexToCharacter = 40203;
 inline constexpr int Invert = 40208;
 inline constexpr int Sentence = 40209;
 inline constexpr int Title = 40210;
