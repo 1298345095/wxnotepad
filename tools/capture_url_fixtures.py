@@ -1,5 +1,6 @@
 """Capture URL commands from the pinned original Windows editor (no desktop input)."""
 import argparse
+import csv
 import ctypes as c
 from ctypes import wintypes as w
 import json
@@ -88,6 +89,8 @@ def capture(executable: Path, output: Path) -> None:
         ("existing", b"a%20b+%2f%2520"),
         ("malformed", b"% %0 %G0 %0G %1z %zz %a %ABC %u0041"),
         ("invalid_utf8", b"%80%C0%AF%ED%A0%80%F4%90%80%80%E2%82"),
+        ("raw_utf8_surrogate", b"\xed\xa0\x80"),
+        ("raw_utf8_overlong3", b"\xe0\x80\x80"),
         ("trim", b" \x07\b\f\n\r\t\vA \tB\x07 \x07\b\f\n\r\t\v"),
         ("whitespace", b" \x07\b\f\n\r\t\v"),
         ("controls", bytes(range(1, 33)) + b"a" + bytes(range(1, 33))),
@@ -144,22 +147,30 @@ def capture(executable: Path, output: Path) -> None:
         kernel.VirtualFreeEx(handle, memory, 0, 0x8000)
         kernel.CloseHandle(handle)
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
-    header = Path(__file__).resolve().parents[1] / "tests/url_reference_fixtures.h"
-    lines = ["// Captured from Notepad4 89b8b36 on Windows 11 build 26200.",
-             "// Regenerate with tools/capture_url_fixtures.py; see docs/observations/original-url-conversion.md.",
-             "#pragma once", "namespace UrlReference {",
-             "struct Fixture { const char* name; const char* input; const char* expected; int command;",
-             "    int anchor; int caret; int undoAnchor; int undoCaret; int redoAnchor; int redoCaret; bool modified; };",
-             "inline constexpr Fixture fixtures[] = {"]
+    fixture_path = Path(__file__).resolve().parents[1] / "tests/url_reference_fixtures.tsv"
+    grouped = {}
     for row in result["fixtures"]:
         command = {"encode": 0, "component": 1, "decode": 2}[row["command"]]
-        after = row["after"]
-        lines.append(f'    {{"{row["name"]}", "{row["input"]}", "{after["hex"]}", {command}, '
-                     f'{after["anchor"]}, {after["caret"]}, '
-                     f'{row["undone"]["anchor"]}, {row["undone"]["caret"]}, '
-                     f'{row["redone"]["anchor"]}, {row["redone"]["caret"]}, {str(bool(after["modified"])).lower()}}},')
-    lines += ["};", "} // namespace UrlReference", ""]
-    header.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+        # Share records only when every independently captured result/state agrees.
+        key = (row["name"], row["input"], json.dumps([row["after"], row["undone"], row["redone"]], sort_keys=True))
+        if key not in grouped:
+            grouped[key] = [row, 0]
+        grouped[key][1] |= 1 << command
+    with fixture_path.open("w", encoding="utf-8", newline="") as fixture_file:
+        fixture_file.write("# Captured from Notepad4 89b8b36 on Windows 11 build 26200.\n")
+        fixture_file.write("# Command bits: URL Encode=1, URL Component Encode=2, URL Decode=4.\n")
+        writer = csv.writer(fixture_file, delimiter="\t", lineterminator="\n")
+        writer.writerow(["command_cases", len(result["fixtures"])])
+        writer.writerow(["name", "input_hex", "expected_hex", "commands", "anchor", "caret",
+                         "undo_anchor", "undo_caret", "redo_anchor", "redo_caret", "modified", "can_undo", "can_redo",
+                         "undo_modified", "undo_can_undo", "undo_can_redo", "redo_modified", "redo_can_undo", "redo_can_redo"])
+        for row, commands in grouped.values():
+            after = row["after"]
+            writer.writerow([row["name"], row["input"], after["hex"], commands, after["anchor"], after["caret"],
+                             row["undone"]["anchor"], row["undone"]["caret"],
+                             row["redone"]["anchor"], row["redone"]["caret"],
+                             *(row[state][flag] for state in ["after", "undone", "redone"]
+                               for flag in ["modified", "undo", "redo"])])
 
 
 if __name__ == "__main__":

@@ -385,17 +385,25 @@ void Shortcuts(EditorFrame* frame) {
     NativeKey(frame, 'D', true, false, true);
     Require(TestEditor::Text(editor) == "CD", "native Ctrl+Shift+D remains original whole-line deletion");
     History(editor, "AB\nCD", "CD");
+    TestEditor::ResetStream(editor, "0x10\nCD", 0, 4);
+    NativeKey(frame, 'D', true, true);
+    Require(TestEditor::Text(editor) == "16\nCD", "native Ctrl+Alt+D routes the original decimal conversion");
+    History(editor, "0x10\nCD", "16\nCD");
+    TestEditor::ResetStream(editor, "AB\nCD", 0, 4);
+    NativeKey(frame, 'D', true, true);
+    Require(TestEditor::Text(editor) == "AB\nCD", "Ctrl+Alt+D preserves nonnumeric bytes without duplication");
+    History(editor, "AB\nCD", "AB\nCD");
     for (const auto& [key, gesture] :
-         {std::pair{'D', "alt+shift+d"}, std::pair{'S', "alt+shift+s"}, std::pair{'D', "ctrl+alt+d"}}) {
+         {std::pair{'D', "alt+shift+d"}, std::pair{'S', "alt+shift+s"}, std::pair{'D', "ctrl+alt+shift+d"}}) {
         TestEditor::ResetStream(editor, "AB\nCD", 0, 4);
-        NativeKey(frame, key, std::string(gesture) == "ctrl+alt+d", true, std::string(gesture) != "ctrl+alt+d");
+        NativeKey(frame, key, std::string(gesture) == "ctrl+alt+shift+d", true, true);
         if (TestEditor::Text(editor) != "AB\nCD" || editor->Send(Message::CanUndo))
             std::fprintf(stderr, "Native %s produced <%s>; CanUndo=%lld\n", gesture, TestEditor::Text(editor).c_str(),
                          static_cast<long long>(editor->Send(Message::CanUndo)));
         Require(TestEditor::Text(editor) == "AB\nCD" && !editor->Send(Message::CanUndo),
                 "extra modifiers do not route duplication/transposition");
     }
-    std::puts("PASS: native Alt+D/Ctrl+D/Alt+S, distinct Ctrl+Shift+D and exact extra-modifier routing");
+    std::puts("PASS: native Alt+D/Ctrl+D/Alt+S, distinct Ctrl+Shift+D/Ctrl+Alt+D and exact extra-modifier routing");
 }
 class DuplicateTransposeApp final : public wxApp {
 public:

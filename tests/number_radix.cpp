@@ -1,6 +1,6 @@
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
-#include "file_helpers.h"
+#include "encoded_file_helpers.h"
 #include "native_key_helpers.h"
 #include "native_search_helpers.h"
 #include "number_radix_fixtures.h"
@@ -157,15 +157,9 @@ void NativeShortcuts(EditorFrame* frame) {
 }
 void SavedBytes(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const auto directory = TestFiles::TemporaryDirectory("wxnotepad-number-radix");
+    const auto directory = TestFiles::TemporaryDirectory() / std::filesystem::path(u8"wxnotepad-number-radix-中文");
     std::filesystem::create_directory(directory);
-    struct Fixture {
-        const char* name;
-        FileEncoding encoding;
-        std::string before;
-        std::string after;
-    };
-    const Fixture fixtures[] = {
+    const TestFiles::EncodedFixture fixtures[] = {
         {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中12\r\n", "\xef\xbb\xbf中0xc\r\n"},
         {"gbk", FileEncoding::Gbk,
          "\xd6\xd0"
@@ -185,21 +179,17 @@ void SavedBytes(EditorFrame* frame) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);
         editor->Send(Message::SetSavePoint);
-        Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
+        Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "open encoded fixture through application");
         const auto eol = editor->Send(Message::GetEOLMode);
         editor->Send(Message::SelectAll);
         Menu(frame, "To Hexadecimal");
         Require(frame->DocumentEncoding() == fixture.encoding && editor->Send(Message::GetEOLMode) == eol,
                 "conversion preserves encoding and EOL metadata");
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
-                "independent UTF-8 BOM, GBK and UTF-16LE BOM disk bytes match");
-        editor->Send(Message::Undo);
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
-                "Undo and Save restore independent original disk bytes");
-        editor->Send(Message::Redo);
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
-                "Redo and Save restore independent converted disk bytes");
+        TestFiles::RequireSavedUndoRedo(frame, path, fixture,
+                                        {"independent UTF-8 BOM, GBK and UTF-16LE BOM disk bytes match",
+                                         "Undo and Save restore independent original disk bytes",
+                                         "Redo and Save restore independent converted disk bytes"});
     }
     std::filesystem::remove_all(directory);
     std::puts("PASS: encoded disk bytes, BOM/EOL metadata and saved Undo/Redo");

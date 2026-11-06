@@ -184,6 +184,8 @@ if(BUILD_TESTING)
     endfunction()
     add_editor_test(date_time original_date_time_insertion 60)
     add_editor_test(url_conversion original_url_conversion 60)
+    target_compile_definitions(url_conversion PRIVATE
+        "URL_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/url_reference_fixtures.tsv\"")
     add_test(NAME original_date_time_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/date_time_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
