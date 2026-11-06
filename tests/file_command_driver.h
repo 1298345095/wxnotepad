@@ -12,14 +12,18 @@ enum class FileDialogProfile : std::uint8_t { Open, Save };
 // command sequence, expected dialog counts and document/disk assertions.
 class FileCommandDriver final : public wxTimer {
 public:
-    FileCommandDriver(FileDialogProfile profile, int choice, wxString destination = {})
-        : profile_(profile), choice_(choice), destination_(std::move(destination)) {
+    using Observer = void (*)(const char*);
+    FileCommandDriver(FileDialogProfile profile, int choice, wxString destination = {}, Observer observer = nullptr)
+        : profile_(profile), choice_(choice), destination_(std::move(destination)), observer_(observer) {
+        Observe("driver start");
         Start(100);
     }
+    ~FileCommandDriver() override { Observe("driver destructor"); }
     int prompts = 0;
     int choosers = 0;
     int errors = 0;
     void Notify() override {
+        Observe("driver callback enter");
 #ifdef __WXMSW__
         EnumThreadWindows(
             GetCurrentThreadId(),
@@ -29,13 +33,17 @@ public:
                 wchar_t title[256]{};
                 GetWindowTextW(window, title, 256);
                 if (wxString(title) == "Save changes?") {
+                    driver.Observe("confirmation response begin");
                     ++driver.prompts;
                     const int button = driver.choice_ == wxID_YES ? IDYES : driver.choice_ == wxID_NO ? IDNO : IDCANCEL;
                     SendMessageW(window, WM_USER + 102, button, 0); // TDM_CLICK_BUTTON
+                    driver.Observe("confirmation response end");
                 } else if (driver.IsChooserTitle(title)) {
                     if (!driver.chooserStage_++) {
                         ++driver.choosers;
+                        driver.Observe("chooser selection begin");
                         ChooseFile(window, driver.destination_);
+                        driver.Observe("chooser selection end");
                     }
                 } else if (driver.IsErrorTitle(title)) {
                     ++driver.errors;
@@ -52,19 +60,25 @@ public:
             if (GTK_IS_FILE_CHOOSER(widget)) {
                 if (!chooserStage_++) {
                     ++choosers;
+                    Observe("chooser selection begin");
                     ChooseFile(widget, destination_);
+                    Observe("chooser selection end");
                 } else if (chooserStage_ == 2 && !destination_.empty()) {
+                    Observe("chooser accept begin");
                     Respond(widget, GTK_RESPONSE_ACCEPT);
+                    Observe("chooser accept end");
                 }
                 continue;
             }
             if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
             const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
             if (title == "Save changes?") {
+                Observe("confirmation response begin");
                 ++prompts;
                 Respond(widget, choice_ == wxID_YES  ? GTK_RESPONSE_YES
                                 : choice_ == wxID_NO ? GTK_RESPONSE_NO
                                                      : GTK_RESPONSE_CANCEL);
+                Observe("confirmation response end");
             } else if (IsErrorTitle(title)) {
                 ++errors;
                 Respond(widget, GTK_RESPONSE_OK);
@@ -72,9 +86,13 @@ public:
         }
         g_list_free(windows);
 #endif
+        Observe("driver callback exit");
     }
 
 private:
+    void Observe(const char* transition) const {
+        if (observer_) observer_(transition);
+    }
     bool IsChooserTitle(const wxString& title) const {
         return title == "Save file" || title == (profile_ == FileDialogProfile::Open ? "Open file" : "Save As");
     }
@@ -86,5 +104,6 @@ private:
     int choice_;
     wxString destination_;
     int chooserStage_ = 0;
+    Observer observer_;
 };
 } // namespace NativeDialogs
