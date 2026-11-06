@@ -2,6 +2,7 @@
 
 #include <wx/event.h>
 #include <wx/timer.h>
+#include <optional>
 
 class EditorFrame;
 class wxWindowDestroyEvent;
@@ -13,6 +14,11 @@ public:
     ~ProcessObserver() override;
 
 private:
+    struct Command {
+        wxString sequence;
+        wxString operation;
+        wxString source;
+    };
     EditorFrame* frame_;
     wxString observation_;
     wxString sequence_ = "0";
@@ -24,6 +30,7 @@ private:
     bool commandPending_ = false;
     void Publish();
     void CommandFailure(const char* stage, unsigned long error);
+    std::optional<Command> ConsumeCommand(const wxString& path);
     void Observe();
     void OnFrameDestroyed(wxWindowDestroyEvent& event);
 };
