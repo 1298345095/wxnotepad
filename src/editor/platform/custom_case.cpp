@@ -1,4 +1,5 @@
 #include "editor/platform/custom_case.h"
+#include "editor/platform/character_hex.h"
 #include "editor/platform/windows_case_data.h"
 #include <wx/string.h>
 #include <algorithm>
@@ -85,6 +86,8 @@ bool SentenceTerminator(uint32_t ch) {
 } // namespace
 
 std::string MapCustomCase(std::string_view text, int command) {
+    if (command == CustomCaseCommand::CharacterToHex) return CharacterToHex(text);
+    if (command == CustomCaseCommand::HexToCharacter) return HexToCharacter(text);
     if (text.empty()) return {};
     auto input = wxString::FromUTF8(text.data(), text.size());
     const auto original = input;
