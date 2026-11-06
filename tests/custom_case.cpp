@@ -94,7 +94,7 @@ void EmbeddedNulChanges(EditorFrame* frame) {
         Require(TestEditor::Text(editor) == fixture.before, "length-aware setup retains NUL and supplementary bytes");
         editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
         editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 0, fixture.before.size());
+        editor->Send(Message::SetSel, 0, static_cast<intptr_t>(fixture.before.size()));
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", fixture.label));
         Require(TestEditor::Text(editor) == fixture.after, "embedded NUL mapping matches literal original bytes");
         TestEditor::RequireSelection(editor, 0, static_cast<intptr_t>(fixture.after.size()),
