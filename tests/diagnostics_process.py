@@ -49,6 +49,7 @@ def main():
             app = Application(executable, folder, environment)
             try:
                 app.menu("Zoom In")
+                app.named_menu("File", "New")
                 app.close()
             finally:
                 app.stop()
@@ -59,6 +60,7 @@ def main():
                                  "frame.destroy", "process.exit"):
                     assert expected in events, (expected, events)
                 assert events[-1] == "process.exit", events
+                assert "close.confirm" not in events, "ordinary refresh and clean close cannot claim a confirmation dialog"
             else:
                 assert not log.exists(), "disabled or compiled-out run must leave no diagnostic file"
             print(f"PASS: runtime={'on' if enabled else 'off'} compiled_out={args.compiled_out}", flush=True)
