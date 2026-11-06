@@ -7,6 +7,7 @@
 struct OriginalFileVariables {
     std::optional<int> tabWidth;
     std::optional<int> indentWidth;
+    std::optional<int> longLinesLimit;
     std::optional<bool> tabsAsSpaces;
     std::optional<bool> tabIndents;
     std::optional<std::string> encodingName;

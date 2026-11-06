@@ -47,6 +47,7 @@ private:
     wxString linePrefix_;
     wxString lineSuffix_;
     bool skipEmptyLines_ = false;
+    int wrapColumn_ = 0;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
     void CreateMenus();

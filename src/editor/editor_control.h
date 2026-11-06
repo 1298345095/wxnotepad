@@ -49,6 +49,8 @@ public:
     // The original duplicate-line caller uses (true, true) inside its own undo action.
     void PadWithSpaces(bool skipEmpty = false, bool noUndoGroup = false);
     void JoinLines();
+    void SplitLines();
+    bool WrapToColumn(int column);
     // False reports the original unsupported rectangular-selection operation.
     bool JoinParagraphs();
     void MergeDuplicateLines();
