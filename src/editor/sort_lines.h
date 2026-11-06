@@ -2,17 +2,15 @@
 
 // Original EditSortFlag values from Notepad4 89b8b36.
 namespace SortOption {
-enum : unsigned {
-    Ascending = 0,
-    Descending = 1,
-    IgnoreCase = 2,
-    LogicalNumber = 4,
-    Column = 8,
-    FileType = 16,
-    DontSort = 32,
-    Shuffle = 64,
-    MergeDuplicate = 128,
-    RemoveDuplicate = 256,
-    RemoveUnique = 512,
-};
-}
+inline constexpr unsigned Ascending = 0;
+inline constexpr unsigned Descending = 1;
+inline constexpr unsigned IgnoreCase = 2;
+inline constexpr unsigned LogicalNumber = 4;
+inline constexpr unsigned Column = 8;
+inline constexpr unsigned FileType = 16;
+inline constexpr unsigned DontSort = 32;
+inline constexpr unsigned Shuffle = 64;
+inline constexpr unsigned MergeDuplicate = 128;
+inline constexpr unsigned RemoveDuplicate = 256;
+inline constexpr unsigned RemoveUnique = 512;
+} // namespace SortOption

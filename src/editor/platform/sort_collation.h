@@ -2,6 +2,7 @@
 #include <string>
 #include <string_view>
 
+// Text contains UTF-16 code units on both platforms.
 // Windows keeps the original StrCmpLogicalW call. Linux uses captured NLS
 // weights, prepared once per line rather than on every comparator invocation.
 class OriginalLogicalKey {

@@ -31,6 +31,7 @@ def capture() -> None:
     logical += ["ß2", "ss2", "ﬃ2", "ffi2", "æ2", "ae2", "œ2", "oe2", "Å2", "Å2", "ä2", "ä2"]
     logical += ["한10", "한2", "한2", "한10", "กข2", "เก2", "แก2", "กเ2", "กแ2", "か2", "が2", "カ2", "ｶ2", "ب2", "بِ2", "بَ2"]
     logical += ["é10", "é10", "ạ́2", "ạ́10", "ạ́10", "ạ́2", "👩‍💻2", "👩‍💻10", "😀١", "😀２", "a1٢3", "a١2３", "a123"]
+    logical += ["ぁ2", "あ2", "ァ2", "ア2", "ｧ2", "ｱ2", "ぁ10", "あ10", "あ-2", "あ'2"]
     paths = ["b2.txt", "b10.txt", "a.cpp", "z.TXT", "file", "a.tar.gz", ".gitignore", "name.", "dir.ext/file", "dir.ext\\file", "a b.ext", "a.txt:stream", "file..ext", "x2.a02", "x1.a2", "x10.a2"]
     result = {
         "logicalInput": "\n".join(logical),

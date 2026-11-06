@@ -103,7 +103,17 @@ ạ́2
 😀２
 a1٢3
 a١2３
-a123)fixture";
+a123
+ぁ2
+あ2
+ァ2
+ア2
+ｧ2
+ｱ2
+ぁ10
+あ10
+あ-2
+あ'2)fixture";
 inline constexpr const char* logicalExpected = R"fixture(
 .2
 .10
@@ -179,6 +189,16 @@ oe2
 œ2
 ss2
 ß2
+ｧ2
+ァ2
+ぁ2
+ｱ2
+ア2
+あ2
+あ'2
+あ-2
+ぁ10
+あ10
 ｶ2
 カ2
 か2

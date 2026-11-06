@@ -109,7 +109,7 @@ std::string LogicalKey(std::wstring_view text) {
     static const SortData data;
     std::vector<Levels> characters;
     for (size_t i = 0; i < text.size(); ++i) {
-        uint32_t codepoint = static_cast<uint32_t>(text[i]);
+        uint32_t codepoint = static_cast<uint16_t>(text[i]);
         if (codepoint >= 0xd800 && codepoint <= 0xdbff && i + 1 < text.size() && text[i + 1] >= 0xdc00 &&
             text[i + 1] <= 0xdfff)
             codepoint = 0x10000 + ((codepoint - 0xd800) << 10) + (text[++i] - 0xdc00);

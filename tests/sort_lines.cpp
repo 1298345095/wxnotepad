@@ -249,7 +249,8 @@ void Fixtures(EditorControl* editor) {
             std::fprintf(stderr, "options=%u actual=<%s> expected=<%s>\n", fixture.options,
                          TestEditor::Text(editor).c_str(), fixture.after);
         Require(TestEditor::Text(editor) == fixture.after, "literal original sorting/filtering fixture");
-        TestEditor::RequireSelection(editor, 0, std::strlen(fixture.after), "sort selects full replacement");
+        TestEditor::RequireSelection(editor, 0, static_cast<intptr_t>(std::strlen(fixture.after)),
+                                     "sort selects full replacement");
         editor->Send(Scintilla::Message::Undo);
         Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Scintilla::Message::CanUndo),
                 "one Undo restores pre-sort bytes");
@@ -315,7 +316,7 @@ void SelectionAndHistory(EditorFrame* frame) {
     TestEditor::ResetStream(editor, "", 0, 0, Scintilla::EndOfLine::Lf);
     const std::string embedded("b\0x\na\0y\nb\0z", 11);
     editor->Send(Message::AddText, embedded.size(), reinterpret_cast<intptr_t>(embedded.data()));
-    editor->Send(Message::SetSel, 0, embedded.size());
+    editor->Send(Message::SetSel, 0, static_cast<intptr_t>(embedded.size()));
     editor->Send(Message::EmptyUndoBuffer);
     editor->SortLines(SortOption::MergeDuplicate);
     Require(TestEditor::Text(editor) == "a\nb",
