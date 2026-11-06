@@ -3,6 +3,7 @@
 #include "document/document_session.h"
 #include "file_helpers.h"
 #include "app/editor_frame.h"
+#include "editor/editor_control.h"
 #include <array>
 #include <string>
 
