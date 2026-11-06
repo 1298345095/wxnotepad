@@ -190,6 +190,25 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
             id);
     }
+    conversion->AppendSeparator();
+    for (const auto& [label, command] : {std::pair{"URL &Encode\tCtrl+Shift+E", UrlConversion::Encode},
+                                         std::pair{"URL Component Encode", UrlConversion::ComponentEncode},
+                                         std::pair{"URL &Decode\tCtrl+Shift+R", UrlConversion::Decode}}) {
+        const int id = wxWindow::NewControlId();
+        conversion->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, command](wxCommandEvent&) {
+                if (!editor_->ConvertUrl(command))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
     edit->AppendSubMenu(conversion, "Con&vert");
     const int modifyLines = wxWindow::NewControlId();
     edit->Append(modifyLines, "&Modify Lines...\tAlt+M");
