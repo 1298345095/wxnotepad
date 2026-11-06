@@ -108,40 +108,40 @@ void ProcessObserver::CommandFailure(const char* stage, unsigned long error) {
     commandPending_ = true;
 }
 
+std::optional<ProcessObserver::Command> ProcessObserver::ConsumeCommand(const wxString& path) {
+    // Keep the logging guard with file consumption; it ends before editor dispatch.
+    const wxLogNull noGuiLog;
+    wxTextFile command(path);
+    if (!command.Open()) {
+        CommandFailure("open", wxSysErrorCode());
+        return std::nullopt;
+    }
+    if (command.GetLineCount() < 2) {
+        CommandFailure("packet", 0);
+        return std::nullopt;
+    }
+    Command packet{command[0], command[1], command.GetLineCount() > 2 ? command[2] : wxString()};
+    if (!command.Close()) {
+        CommandFailure("close", wxSysErrorCode());
+        return std::nullopt;
+    }
+    if (!wxRemoveFile(path)) {
+        CommandFailure("remove", wxSysErrorCode());
+        return std::nullopt;
+    }
+    return packet;
+}
+
 void ProcessObserver::Observe() {
     if (!frame_) return;
     const wxString path = observation_ + "/command";
     if (wxFileExists(path)) {
-        wxString sequence;
-        wxString operation;
-        wxString source;
-        {
-            // Expected IPC contention must not queue a deferred wxLogGui dialog.
-            // Restore normal logging before dispatching real editor commands.
-            const wxLogNull noGuiLog;
-            wxTextFile command(path);
-            if (!command.Open()) {
-                CommandFailure("open", wxSysErrorCode());
-                return;
-            }
-            if (command.GetLineCount() < 2) {
-                CommandFailure("packet", 0);
-                return;
-            }
-            sequence = command[0];
-            operation = command[1];
-            source = command.GetLineCount() > 2 ? command[2] : wxString();
-            if (!command.Close()) {
-                CommandFailure("close", wxSysErrorCode());
-                return;
-            }
-            if (!wxRemoveFile(path)) {
-                CommandFailure("remove", wxSysErrorCode());
-                return;
-            }
-        }
+        const auto command = ConsumeCommand(path);
+        if (!command) return;
         commandPending_ = false;
-        sequence_ = sequence;
+        sequence_ = command->sequence;
+        const auto& operation = command->operation;
+        const auto& source = command->source;
         result_ = "failed";
         if (operation == "open" && !source.empty())
             result_ = frame_->Open(source).status == OpenStatus::Opened ? "ok" : "failed";

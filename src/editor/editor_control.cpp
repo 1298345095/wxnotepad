@@ -27,9 +27,38 @@ unsigned MouseTime() {
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
             .count());
 }
-Scintilla::KeyMod MouseModifiers(const wxMouseEvent& event) {
+Scintilla::KeyMod KeyModifiers(const wxKeyboardState& event) {
     return static_cast<Scintilla::KeyMod>((event.ShiftDown() ? 1 : 0) | (event.ControlDown() ? 2 : 0) |
                                           (event.AltDown() ? 4 : 0));
+}
+std::optional<Scintilla::Keys> CoreKeyCode(int code) {
+    using enum Scintilla::Keys;
+    switch (code) {
+    case WXK_RETURN:
+    case WXK_NUMPAD_ENTER:
+        return Return;
+    case WXK_TAB:
+        return Tab;
+    case WXK_BACK:
+        return Back;
+    case WXK_DELETE:
+        return Delete;
+    case WXK_INSERT:
+        return Insert;
+    case WXK_ESCAPE:
+        return Escape;
+    case 'A':
+    case 'C':
+    case 'V':
+    case 'X':
+    case 'Y':
+    case 'Z':
+    case '[':
+    case ']':
+        return static_cast<Scintilla::Keys>(code);
+    default:
+        return std::nullopt;
+    }
 }
 } // namespace
 
@@ -181,128 +210,11 @@ public:
     }
     bool EditingKey(const wxKeyEvent& event) {
         if (event.MetaDown()) return false;
-        if (!event.AltDown() && ((event.GetKeyCode() == WXK_INSERT && event.ControlDown() && !event.ShiftDown()) ||
-                                 (event.GetKeyCode() == WXK_DELETE && event.ShiftDown() && !event.ControlDown()))) {
-            if (event.GetKeyCode() == WXK_INSERT)
-                window_.Copy();
-            else
-                window_.Cut();
-            return true;
-        }
-        if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers()) {
-            // CMD_ESCAPE cancels completion UI, not the core's selection modes.
-            if (window_.Send(Message::AutoCActive))
-                window_.Send(Message::AutoCCancel);
-            else if (window_.Send(Message::CallTipActive))
-                window_.Send(Message::CallTipCancel);
-            return true;
-        }
-        // IDR_MAINWND accelerators in pinned Notepad4.rc precede KeyMap.cxx.
-        // Keep application commands on their original keys, rather than exposing
-        // unrelated core defaults such as Ctrl+L (LineCut) or Ctrl+T (transpose).
-        Message applicationCommand{};
-        if (event.ControlDown() && !event.AltDown()) {
-            switch (event.GetKeyCode()) {
-            case '+':
-            case '=':
-            case WXK_NUMPAD_ADD:
-                if (!event.ShiftDown()) applicationCommand = Message::ZoomIn;
-                break;
-            case '-':
-            case WXK_NUMPAD_SUBTRACT:
-                if (!event.ShiftDown()) applicationCommand = Message::ZoomOut;
-                break;
-            case '\\':
-                if (!event.ShiftDown()) {
-                    window_.Send(Message::SetZoom, 100);
-                    return true;
-                }
-                break;
-            case WXK_TAB:
-                if (!event.ShiftDown()) {
-                    const auto useTabs = window_.Send(Message::GetUseTabs);
-                    const auto tabIndents = window_.Send(Message::GetTabIndents);
-                    window_.Send(Message::SetTabIndents, 0);
-                    window_.Send(Message::SetUseTabs, 1);
-                    window_.Send(Message::Tab);
-                    window_.Send(Message::SetUseTabs, useTabs);
-                    window_.Send(Message::SetTabIndents, tabIndents);
-                    return true;
-                }
-                break;
-            case 'C':
-            case 'X':
-                if (event.ShiftDown()) {
-                    window_.Send(event.GetKeyCode() == 'C' ? Message::LineCopy : Message::LineCut,
-                                 static_cast<uintptr_t>(window_.GetLineSelectionMode()) & 1);
-                } else if (event.GetKeyCode() == 'C')
-                    window_.Copy();
-                else
-                    window_.Cut();
-                return true;
-            case 'D':
-                applicationCommand = event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
-                break;
-            case 'Y':
-                applicationCommand = event.ShiftDown() ? Message::Undo : Message::Redo;
-                break;
-            case 'Z':
-                applicationCommand = event.ShiftDown() ? Message::Redo : Message::Undo;
-                break;
-            case 'U':
-                window_.Send(Message::CustomCaseMapping,
-                             static_cast<uintptr_t>(event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower));
-                return true;
-            default:
-                break;
-            }
-        } else if (event.AltDown() && !event.ControlDown() && !event.ShiftDown()) {
-            if (event.GetKeyCode() == 'D') applicationCommand = Message::SelectionDuplicate;
-            if (event.GetKeyCode() == 'S') applicationCommand = Message::LineTranspose;
-        }
-        if (applicationCommand != Message{}) {
-            window_.Send(applicationCommand);
-            return true;
-        }
-        Scintilla::Keys key;
-        switch (event.GetKeyCode()) {
-        case WXK_RETURN:
-        case WXK_NUMPAD_ENTER:
-            key = Scintilla::Keys::Return;
-            break;
-        case WXK_TAB:
-            key = Scintilla::Keys::Tab;
-            break;
-        case WXK_BACK:
-            key = Scintilla::Keys::Back;
-            break;
-        case WXK_DELETE:
-            key = Scintilla::Keys::Delete;
-            break;
-        case WXK_INSERT:
-            key = Scintilla::Keys::Insert;
-            break;
-        case WXK_ESCAPE:
-            key = Scintilla::Keys::Escape;
-            break;
-        case 'A':
-        case 'C':
-        case 'V':
-        case 'X':
-        case 'Y':
-        case 'Z':
-        case '[':
-        case ']':
-            key = static_cast<Scintilla::Keys>(event.GetKeyCode());
-            break;
-        default:
-            return false;
-        }
+        if (HandleApplicationKey(event)) return true;
+        const auto key = CoreKeyCode(event.GetKeyCode());
+        if (!key) return false;
         bool consumed = false;
-        KeyDownWithModifiers(key,
-                             static_cast<Scintilla::KeyMod>((event.ControlDown() ? 2 : 0) |
-                                                            (event.ShiftDown() ? 1 : 0) | (event.AltDown() ? 4 : 0)),
-                             &consumed);
+        KeyDownWithModifiers(*key, KeyModifiers(event), &consumed);
         return consumed;
     }
     bool Navigation(const wxKeyEvent& event) {
@@ -406,12 +318,12 @@ public:
         dragDropEnabled = sel.selType == core::Selection::SelTypes::stream && sel.Count() == 1;
         if (event.GetEventType() == wxEVT_LEFT_DOWN) {
             window_.SetFocus();
-            ButtonDownWithModifiers(point, MouseTime(), MouseModifiers(event));
+            ButtonDownWithModifiers(point, MouseTime(), KeyModifiers(event));
             RepairFoldSelection();
         } else if (event.GetEventType() == wxEVT_LEFT_UP) {
-            ButtonUpWithModifiers(point, MouseTime(), MouseModifiers(event));
+            ButtonUpWithModifiers(point, MouseTime(), KeyModifiers(event));
         } else {
-            ButtonMoveWithModifiers(point, MouseTime(), MouseModifiers(event));
+            ButtonMoveWithModifiers(point, MouseTime(), KeyModifiers(event));
         }
     }
     void CaptureLost() { ChangeMouseCapture(false); }
@@ -631,6 +543,93 @@ private:
         return transfer.result;
     }
 #endif
+    bool HandleApplicationKey(const wxKeyEvent& event) {
+        if (!event.AltDown() && ((event.GetKeyCode() == WXK_INSERT && event.ControlDown() && !event.ShiftDown()) ||
+                                 (event.GetKeyCode() == WXK_DELETE && event.ShiftDown() && !event.ControlDown()))) {
+            if (event.GetKeyCode() == WXK_INSERT)
+                window_.Copy();
+            else
+                window_.Cut();
+            return true;
+        }
+        if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers()) {
+            // CMD_ESCAPE cancels completion UI, not the core's selection modes.
+            if (window_.Send(Message::AutoCActive))
+                window_.Send(Message::AutoCCancel);
+            else if (window_.Send(Message::CallTipActive))
+                window_.Send(Message::CallTipCancel);
+            return true;
+        }
+        // IDR_MAINWND accelerators in pinned Notepad4.rc precede KeyMap.cxx.
+        // Keep application commands on their original keys, rather than exposing
+        // unrelated core defaults such as Ctrl+L (LineCut) or Ctrl+T (transpose).
+        Message applicationCommand{};
+        if (event.ControlDown() && !event.AltDown()) {
+            switch (event.GetKeyCode()) {
+            case '+':
+            case '=':
+            case WXK_NUMPAD_ADD:
+                if (!event.ShiftDown()) applicationCommand = Message::ZoomIn;
+                break;
+            case '-':
+            case WXK_NUMPAD_SUBTRACT:
+                if (!event.ShiftDown()) applicationCommand = Message::ZoomOut;
+                break;
+            case '\\':
+                if (!event.ShiftDown()) {
+                    window_.Send(Message::SetZoom, 100);
+                    return true;
+                }
+                break;
+            case WXK_TAB:
+                if (!event.ShiftDown()) {
+                    const auto useTabs = window_.Send(Message::GetUseTabs);
+                    const auto tabIndents = window_.Send(Message::GetTabIndents);
+                    window_.Send(Message::SetTabIndents, 0);
+                    window_.Send(Message::SetUseTabs, 1);
+                    window_.Send(Message::Tab);
+                    window_.Send(Message::SetUseTabs, useTabs);
+                    window_.Send(Message::SetTabIndents, tabIndents);
+                    return true;
+                }
+                break;
+            case 'C':
+            case 'X':
+                if (event.ShiftDown()) {
+                    window_.Send(event.GetKeyCode() == 'C' ? Message::LineCopy : Message::LineCut,
+                                 static_cast<uintptr_t>(window_.GetLineSelectionMode()) & 1);
+                } else if (event.GetKeyCode() == 'C')
+                    window_.Copy();
+                else
+                    window_.Cut();
+                return true;
+            case 'D':
+                applicationCommand = event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
+                break;
+            case 'Y':
+                applicationCommand = event.ShiftDown() ? Message::Undo : Message::Redo;
+                break;
+            case 'Z':
+                applicationCommand = event.ShiftDown() ? Message::Redo : Message::Undo;
+                break;
+            case 'U':
+                window_.Send(Message::CustomCaseMapping,
+                             static_cast<uintptr_t>(event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower));
+                return true;
+            default:
+                break;
+            }
+        } else if (event.AltDown() && !event.ControlDown() && !event.ShiftDown()) {
+            if (event.GetKeyCode() == 'D') applicationCommand = Message::SelectionDuplicate;
+            if (event.GetKeyCode() == 'S') applicationCommand = Message::LineTranspose;
+        }
+        if (applicationCommand != Message{}) {
+            window_.Send(applicationCommand);
+            return true;
+        }
+        return false;
+    }
+
     EditorControl& window_;
     int verticalWheel_ = 0;
     int horizontalWheel_ = 0;
