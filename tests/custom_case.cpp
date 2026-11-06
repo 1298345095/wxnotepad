@@ -9,7 +9,7 @@
 namespace {
 using Scintilla::Message;
 void Require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
+    if (!condition) throw TestEditor::Failure(message);
 }
 void ReferenceFixtures(EditorFrame* frame) {
     auto* editor = frame->Editor();
@@ -21,7 +21,7 @@ void ReferenceFixtures(EditorFrame* frame) {
         if (TestEditor::Text(editor) != fixture.after) {
             std::fprintf(stderr, "%s: before=%s actual=%s expected=%s\n", fixture.command, fixture.before,
                          TestEditor::Text(editor).c_str(), fixture.after);
-            throw std::runtime_error("custom case matches original Windows fixture");
+            throw TestEditor::Failure("custom case matches original Windows fixture");
         }
         const bool changed = std::string_view(fixture.before) != fixture.after;
         Require(bool(editor->Send(Message::GetModify)) == changed && bool(editor->Send(Message::CanUndo)) == changed,
@@ -55,109 +55,116 @@ void Shortcuts(EditorFrame* frame) {
     }
     std::puts("PASS: native Ctrl+Alt+U/I/O and exact extra-Shift routing");
 }
-void SelectionAndHistory(EditorFrame* frame) {
+void UnchangedHistory(EditorFrame* frame, const char* label, int mapping) {
     auto* editor = frame->Editor();
+    const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
+    TestEditor::ResetStream(editor, "中😀\r\n", 0, 9);
+    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Message::Undo);
+    NativeSearch::Command(frame, id);
+    Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+            "unchanged custom mapping preserves clean pending redo");
+    TestEditor::RequireSelection(editor, 0, 9, "unchanged custom mapping retains range");
+    editor->Send(Message::SetSel, 3, 3);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(!frame->GetMenuBar()->IsEnabled(id), "empty selection disables original custom menu");
+    editor->Send(Message::CustomCaseMapping, mapping);
+    TestEditor::RequireSelection(editor, 3, 3, "empty custom mapping retains caret");
+    editor->Send(Message::Redo);
+    Require(TestEditor::Text(editor) == "中😀\r\n!", "unchanged and empty mapping retain executable redo");
+}
+void ReadOnlyHistory(EditorFrame* frame, const char* label, int mapping) {
+    auto* editor = frame->Editor();
+    const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
+    TestEditor::ResetStream(editor, "aB", 0, 2);
+    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Message::Undo);
+    editor->Send(Message::SetSel, 0, 2);
+    editor->Send(Message::SetReadOnly, 1);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(frame->GetMenuBar()->IsEnabled(id), "read-only selection retains original menu enablement");
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(editor) == "aB" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+            "read-only mapping retains text and save point");
+    // Both bytes differ in aB -> Ab, so the original trimmed replacement
+    // repairs the endpoint by -2 after the read-only insertion returns zero.
+    TestEditor::RequireSelection(editor, 0, 0, "read-only mapping retains original rejected-insertion repair");
+    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(Message::Redo);
+    Require(TestEditor::Text(editor) == "aB!", "read-only mapping retains pending redo");
+    TestEditor::ResetStream(editor, "ab", 0, 2);
+    editor->Send(Message::SetReadOnly, 1);
+    NativeSearch::Command(frame, id);
+    TestEditor::RequireSelection(editor, 0, mapping == 40208 ? 0 : 1,
+                                 "read-only endpoint follows each command's original trimmed replacement");
+    editor->Send(Message::SetReadOnly, 0);
+}
+void MultipleSelections(EditorFrame* frame, const char* label, int mapping) {
+    auto* editor = frame->Editor();
+    const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
+    TestEditor::ResetStream(editor, "İA", 3, 0);
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(editor) == (mapping == 40208 ? "İa" : "Ia"),
+            "reversed selection uses Windows custom mappings");
+    TestEditor::RequireSelection(editor, mapping == 40208 ? 3 : 2, 0, "reversed range follows contraction");
+    TestEditor::ResetStream(editor, "İA x İB", 0, 3);
+    editor->Send(Message::SetMultipleSelection, 1);
+    editor->Send(Message::AddSelection, 6, 9);
+    editor->Send(Message::AddSelection, 4, 4);
+    editor->Send(Message::SetMainSelection, 0);
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(editor) == (mapping == 40208 ? "İa x İb" : "Ia x Ib") &&
+                editor->Send(Message::GetSelections) == 3 && editor->Send(Message::GetMainSelection) == 0,
+            "custom mapping preserves multiple forward reversed and empty ranges");
+    Require(editor->Send(Message::GetSelectionNAnchor, 0) == 0 &&
+                editor->Send(Message::GetSelectionNCaret, 0) == (mapping == 40208 ? 3 : 2) &&
+                editor->Send(Message::GetSelectionNAnchor, 1) == (mapping == 40208 ? 9 : 7) &&
+                editor->Send(Message::GetSelectionNCaret, 1) == (mapping == 40208 ? 6 : 5) &&
+                editor->Send(Message::GetSelectionNAnchor, 2) == (mapping == 40208 ? 4 : 3) &&
+                editor->Send(Message::GetSelectionNCaret, 2) == (mapping == 40208 ? 4 : 3),
+            "multiple-selection endpoints preserve original core repair after contraction");
+    editor->Send(Message::Undo);
+    Require(TestEditor::Text(editor) == "İA x İB" && !editor->Send(Message::GetModify),
+            "multiple custom conversions share one Undo group");
+}
+void RectangularSelections(EditorFrame* frame, const char* label, int mapping) {
+    auto* editor = frame->Editor();
+    const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
+    for (const bool reversed : {false, true}) {
+        TestEditor::ResetStream(editor, "aß\nbé");
+        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(Message::SetRectangularSelectionAnchor, reversed ? 7 : 0);
+        editor->Send(Message::SetRectangularSelectionCaret, reversed ? 0 : 7);
+        NativeSearch::Command(frame, id);
+        Require(TestEditor::Text(editor) == (mapping == 40208 ? "Aß\nBÉ" : "Aß\nBé") &&
+                    editor->Send(Message::GetSelections) == 2,
+                "custom case maps original rectangle rows independently");
+        const int rectangleCaret = mapping == 40208 ? 4 : 7;
+        TestEditor::RequireSelection(editor, reversed ? rectangleCaret : 1, reversed ? 1 : rectangleCaret,
+                                     "rectangle retains original automatic endpoint movement");
+        editor->Send(Message::Undo);
+        Require(TestEditor::Text(editor) == "aß\nbé" && !editor->Send(Message::GetModify),
+                "rectangle custom conversion shares one Undo group");
+    }
+    TestEditor::RequireVirtualRectangleUnchanged(
+        editor, [frame, id] { NativeSearch::Command(frame, id); },
+        "virtual-only rectangle keeps original columns and history");
+}
+void SelectionAndHistory(EditorFrame* frame) {
     for (const auto& [label, mapping] :
          {std::pair{"Invert Case", 40208}, std::pair{"Title Case", 40210}, std::pair{"Sentence Case", 40209}}) {
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
-        const auto expectedLabel = mapping == 40208   ? "In&vert Case\tCtrl+Alt+U"
-                                   : mapping == 40210 ? "Title &Case\tCtrl+Alt+I"
-                                                      : "&Sentence Case\tCtrl+Alt+O";
+        const char* expectedLabel = "&Sentence Case\tCtrl+Alt+O";
+        if (mapping == 40208)
+            expectedLabel = "In&vert Case\tCtrl+Alt+U";
+        else if (mapping == 40210)
+            expectedLabel = "Title &Case\tCtrl+Alt+I";
         Require(frame->GetMenuBar()->FindItem(id)->GetItemLabel() == expectedLabel,
                 "custom menu retains original mnemonic and exact accelerator label");
-        TestEditor::ResetStream(editor, "中😀\r\n", 0, 9);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        NativeSearch::Command(frame, id);
-        Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
-                "unchanged custom mapping preserves clean pending redo");
-        TestEditor::RequireSelection(editor, 0, 9, "unchanged custom mapping retains range");
-        editor->Send(Message::SetSel, 3, 3);
-        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-        Require(!frame->GetMenuBar()->IsEnabled(id), "empty selection disables original custom menu");
-        editor->Send(Message::CustomCaseMapping, mapping);
-        TestEditor::RequireSelection(editor, 3, 3, "empty custom mapping retains caret");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == "中😀\r\n!", "unchanged and empty mapping retain executable redo");
-
-        TestEditor::ResetStream(editor, "aB", 0, 2);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 0, 2);
-        editor->Send(Message::SetReadOnly, 1);
-        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-        Require(frame->GetMenuBar()->IsEnabled(id), "read-only selection retains original menu enablement");
-        NativeSearch::Command(frame, id);
-        Require(TestEditor::Text(editor) == "aB" && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo),
-                "read-only mapping retains text and save point");
-        // Both bytes differ in aB -> Ab, so the original trimmed replacement
-        // repairs the endpoint by -2 after the read-only insertion returns zero.
-        TestEditor::RequireSelection(editor, 0, 0, "read-only mapping retains original rejected-insertion repair");
-        editor->Send(Message::SetReadOnly, 0);
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == "aB!", "read-only mapping retains pending redo");
-        TestEditor::ResetStream(editor, "ab", 0, 2);
-        editor->Send(Message::SetReadOnly, 1);
-        NativeSearch::Command(frame, id);
-        TestEditor::RequireSelection(editor, 0, mapping == 40208 ? 0 : 1,
-                                     "read-only endpoint follows each command's original trimmed replacement");
-        editor->Send(Message::SetReadOnly, 0);
-
-        TestEditor::ResetStream(editor, "İA", 3, 0);
-        NativeSearch::Command(frame, id);
-        Require(TestEditor::Text(editor) == (mapping == 40208 ? "İa" : "Ia"),
-                "reversed selection uses Windows custom mappings");
-        TestEditor::RequireSelection(editor, mapping == 40208 ? 3 : 2, 0, "reversed range follows contraction");
-        TestEditor::ResetStream(editor, "İA x İB", 0, 3);
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::AddSelection, 6, 9);
-        editor->Send(Message::AddSelection, 4, 4);
-        editor->Send(Message::SetMainSelection, 0);
-        NativeSearch::Command(frame, id);
-        Require(TestEditor::Text(editor) == (mapping == 40208 ? "İa x İb" : "Ia x Ib") &&
-                    editor->Send(Message::GetSelections) == 3 && editor->Send(Message::GetMainSelection) == 0,
-                "custom mapping preserves multiple forward reversed and empty ranges");
-        Require(editor->Send(Message::GetSelectionNAnchor, 0) == 0 &&
-                    editor->Send(Message::GetSelectionNCaret, 0) == (mapping == 40208 ? 3 : 2) &&
-                    editor->Send(Message::GetSelectionNAnchor, 1) == (mapping == 40208 ? 9 : 7) &&
-                    editor->Send(Message::GetSelectionNCaret, 1) == (mapping == 40208 ? 6 : 5) &&
-                    editor->Send(Message::GetSelectionNAnchor, 2) == (mapping == 40208 ? 4 : 3) &&
-                    editor->Send(Message::GetSelectionNCaret, 2) == (mapping == 40208 ? 4 : 3),
-                "multiple-selection endpoints preserve original core repair after contraction");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == "İA x İB" && !editor->Send(Message::GetModify),
-                "multiple custom conversions share one Undo group");
-        for (const bool reversed : {false, true}) {
-            TestEditor::ResetStream(editor, "aß\nbé");
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, reversed ? 7 : 0);
-            editor->Send(Message::SetRectangularSelectionCaret, reversed ? 0 : 7);
-            NativeSearch::Command(frame, id);
-            Require(TestEditor::Text(editor) == (mapping == 40208 ? "Aß\nBÉ" : "Aß\nBé") &&
-                        editor->Send(Message::GetSelections) == 2,
-                    "custom case maps original rectangle rows independently");
-            const int rectangleCaret = mapping == 40208 ? 4 : 7;
-            TestEditor::RequireSelection(editor, reversed ? rectangleCaret : 1, reversed ? 1 : rectangleCaret,
-                                         "rectangle retains original automatic endpoint movement");
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == "aß\nbé" && !editor->Send(Message::GetModify),
-                    "rectangle custom conversion shares one Undo group");
-        }
-        TestEditor::ResetStream(editor, "a\nx");
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 1);
-        editor->Send(Message::SetRectangularSelectionCaret, 3);
-        editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 1);
-        editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 3);
-        NativeSearch::Command(frame, id);
-        Require(TestEditor::Text(editor) == "a\nx" && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify) &&
-                    editor->Send(Message::GetRectangularSelectionAnchorVirtualSpace) == 1 &&
-                    editor->Send(Message::GetRectangularSelectionCaretVirtualSpace) == 3,
-                "virtual-only rectangle keeps original columns and history");
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-        editor->Send(Message::SetMultipleSelection, 0);
+        UnchangedHistory(frame, label, mapping);
+        ReadOnlyHistory(frame, label, mapping);
+        MultipleSelections(frame, label, mapping);
+        RectangularSelections(frame, label, mapping);
     }
     std::puts("PASS: empty, reversed, multiple, rectangular, virtual-space, read-only and unchanged history outcomes");
 }
@@ -167,17 +174,20 @@ void SavedBytes(EditorFrame* frame) {
     std::filesystem::create_directory(directory);
     for (const auto& [label, mapping] :
          {std::pair{"Invert Case", 40208}, std::pair{"Title Case", 40210}, std::pair{"Sentence Case", 40209}}) {
-        const TestFiles::EncodedFixture fixtures[] = {
-            {"utf8", FileEncoding::Utf8, "\xef\xbb\xbfé İ A\r\n",
-             mapping == 40208   ? "\xef\xbb\xbfÉ İ a\r\n"
-             : mapping == 40210 ? "\xef\xbb\xbfÉ I A\r\n"
-                                : "\xef\xbb\xbfÉ i a\r\n"},
+        std::string utf8After = "\xef\xbb\xbfÉ i a\r\n";
+        std::string utf16After("\xff\xfe\x41\0\x62\0 \0\x69\0\r\0\n\0", 14);
+        if (mapping == 40208) {
+            utf8After = "\xef\xbb\xbfÉ İ a\r\n";
+            utf16After = std::string("\xff\xfe\x41\0\x62\0 \0\x30\x01\r\0\n\0", 14);
+        } else if (mapping == 40210) {
+            utf8After = "\xef\xbb\xbfÉ I A\r\n";
+            utf16After = std::string("\xff\xfe\x41\0\x62\0 \0\x49\0\r\0\n\0", 14);
+        }
+        const std::array<TestFiles::EncodedFixture, 3> fixtures{{
+            {"utf8", FileEncoding::Utf8, "\xef\xbb\xbfé İ A\r\n", utf8After},
             {"gbk", FileEncoding::Gbk, "aB \xd6\xd0\r\n", "Ab \xd6\xd0\r\n"},
-            {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x61\0\x42\0 \0\x30\x01\r\0\n\0", 14),
-             mapping == 40208   ? std::string("\xff\xfe\x41\0\x62\0 \0\x30\x01\r\0\n\0", 14)
-             : mapping == 40210 ? std::string("\xff\xfe\x41\0\x62\0 \0\x49\0\r\0\n\0", 14)
-                                : std::string("\xff\xfe\x41\0\x62\0 \0\x69\0\r\0\n\0", 14)},
-        };
+            {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x61\0\x42\0 \0\x30\x01\r\0\n\0", 14), utf16After},
+        }};
         for (const auto& fixture : fixtures) {
             const auto path = directory / fixture.name;
             TestFiles::WriteBytes(path, fixture.before);
@@ -217,6 +227,27 @@ void SavedBytes(EditorFrame* frame) {
     }
     std::puts("PASS: each custom command saves exact UTF-8 GBK UTF-16 bytes, Undo/Redo and GBK loss decisions");
 }
+void Menus(EditorFrame* frame) {
+    const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Invert Case");
+    Require(id != wxNOT_FOUND, "Convert exposes original Invert Case");
+    auto* editor = frame->Editor();
+    TestEditor::ResetStream(editor, "aB Straße 𐐀", 0, 16);
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(editor) == "Ab sTRAßE 𐐀", "Invert follows original UTF-16 character casing");
+    const int title = frame->GetMenuBar()->FindMenuItem("Edit", "Title Case");
+    Require(title != wxNOT_FOUND, "Convert exposes original Title Case");
+    TestEditor::ResetStream(editor, "123ABC DON'T O’NEILL foo_bar FOO-BAR");
+    editor->Send(Message::SelectAll);
+    NativeSearch::Command(frame, title);
+    Require(TestEditor::Text(editor) == "123Abc Don't O’neill Foo_Bar Foo-Bar",
+            "Title follows original NLS word and apostrophe rules");
+    const int sentence = frame->GetMenuBar()->FindMenuItem("Edit", "Sentence Case");
+    Require(sentence != wxNOT_FOUND, "Convert exposes original Sentence Case");
+    TestEditor::ResetStream(editor, "a.b:a;b!b?b/b@b#b");
+    editor->Send(Message::SelectAll);
+    NativeSearch::Command(frame, sentence);
+    Require(TestEditor::Text(editor) == "A.B:a;B!B?B/b@b#b", "Sentence follows original terminators");
+}
 class CustomCaseApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -226,25 +257,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
-                const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Invert Case");
-                Require(id != wxNOT_FOUND, "Convert exposes original Invert Case");
-                auto* editor = frame->Editor();
-                TestEditor::ResetStream(editor, "aB Straße 𐐀", 0, 16);
-                NativeSearch::Command(frame, id);
-                Require(TestEditor::Text(editor) == "Ab sTRAßE 𐐀", "Invert follows original UTF-16 character casing");
-                const int title = frame->GetMenuBar()->FindMenuItem("Edit", "Title Case");
-                Require(title != wxNOT_FOUND, "Convert exposes original Title Case");
-                TestEditor::ResetStream(editor, "123ABC DON'T O’NEILL foo_bar FOO-BAR");
-                editor->Send(Message::SelectAll);
-                NativeSearch::Command(frame, title);
-                Require(TestEditor::Text(editor) == "123Abc Don't O’neill Foo_Bar Foo-Bar",
-                        "Title follows original NLS word and apostrophe rules");
-                const int sentence = frame->GetMenuBar()->FindMenuItem("Edit", "Sentence Case");
-                Require(sentence != wxNOT_FOUND, "Convert exposes original Sentence Case");
-                TestEditor::ResetStream(editor, "a.b:a;b!b?b/b@b#b");
-                editor->Send(Message::SelectAll);
-                NativeSearch::Command(frame, sentence);
-                Require(TestEditor::Text(editor) == "A.B:a;B!B?B/b@b#b", "Sentence follows original terminators");
+                Menus(frame);
                 ReferenceFixtures(frame);
                 Shortcuts(frame);
                 SelectionAndHistory(frame);

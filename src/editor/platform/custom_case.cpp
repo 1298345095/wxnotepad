@@ -8,10 +8,9 @@
 
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 namespace {
-template <size_t N> int Property(const WindowsCaseData::Range (&ranges)[N], uint32_t ch) {
-    const auto* found = std::upper_bound(std::begin(ranges), std::end(ranges), ch,
-                                         [](uint32_t value, const auto& range) { return value < range.first; });
-    if (found == std::begin(ranges)) return 0;
+template <size_t N> int Property(const std::array<WindowsCaseData::Range, N>& ranges, uint32_t ch) {
+    auto found = std::ranges::upper_bound(ranges, ch, {}, &WindowsCaseData::Range::first);
+    if (found == ranges.begin()) return 0;
     --found;
     return ch <= found->last ? found->value : 0;
 }
@@ -33,8 +32,11 @@ wxString LinguisticMap(const wxString& text, bool title) {
     bool newWord = true;
     for (const auto character : text) {
         const uint32_t ch = character.GetValue();
-        const auto mapped =
-            ch + (title ? (newWord ? Property(WindowsCaseData::Title, ch) : 0) : Property(WindowsCaseData::Lower, ch));
+        uint32_t mapped = ch;
+        if (!title)
+            mapped += Property(WindowsCaseData::Lower, ch);
+        else if (newWord)
+            mapped += Property(WindowsCaseData::Upper, ch) + Property(WindowsCaseData::TitleDelta, ch);
         output += wxUniChar(mapped);
         if (title) {
             const int state = Property(WindowsCaseData::TitleState, ch);
@@ -118,10 +120,11 @@ std::wstring OriginalNlsUppercase(std::wstring_view text) {
     return output;
 #else
     std::wstring output;
-    for (size_t index = 0; index < text.size(); ++index) {
-        uint32_t ch = static_cast<uint16_t>(text[index]);
-        if (ch >= 0xd800 && ch <= 0xdbff && index + 1 < text.size()) {
-            const uint32_t trail = static_cast<uint16_t>(text[index + 1]);
+    size_t index = 0;
+    while (index < text.size()) {
+        uint32_t ch = static_cast<uint16_t>(text[index++]);
+        if (ch >= 0xd800 && ch <= 0xdbff && index < text.size()) {
+            const uint32_t trail = static_cast<uint16_t>(text[index]);
             if (trail >= 0xdc00 && trail <= 0xdfff) {
                 ch = 0x10000 + ((ch - 0xd800) << 10) + trail - 0xdc00;
                 ++index;
