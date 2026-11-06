@@ -144,6 +144,45 @@ wxCheckBox* Skip(wxDialog* dialog) {
     Require(option, "native Skip Empty Lines option exists");
     return option;
 }
+void InputReturn(wxTextCtrl* field, bool shift = false, bool control = false) {
+    Require(field->IsShownOnScreen(), "Return starts in an open native multiline field");
+    field->SetFocus();
+    wxYield();
+#ifdef __WXMSW__
+    BYTE previous[256];
+    Require(GetKeyboardState(previous), "read owned test-thread keyboard state for multiline input");
+    BYTE modified[256];
+    std::copy(std::begin(previous), std::end(previous), std::begin(modified));
+    modified[VK_SHIFT] = shift ? 0x80 : 0;
+    modified[VK_CONTROL] = control ? 0x80 : 0;
+    modified[VK_MENU] = 0;
+    Require(SetKeyboardState(modified), "set owned multiline input modifiers");
+    const auto handle = static_cast<HWND>(field->GetHandle());
+    PostMessageW(handle, WM_KEYDOWN, VK_RETURN, 1);
+    PostMessageW(handle, WM_KEYUP, VK_RETURN, 0xc0000001);
+    wxYield();
+    SetKeyboardState(previous);
+#else
+    wxString focusFile;
+    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "multiline input uses private native keys");
+    bool received = false;
+    NativeKeys::KeyRelease observer(WXK_RETURN, received, nullptr);
+    {
+        wxFFile file(focusFile, "wb");
+        file.Write(wxString("key:") + (control ? "ctrl+" : "") + (shift ? "shift+" : "") + "Return");
+    }
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    // Unshifted Return closes this modal receiver before its parent is enabled
+    // again. Shift+Return keeps the field open and must deliver its release.
+    const auto closed = [&] { return !shift && !field->IsShownOnScreen(); };
+    while (!received && !closed() && std::chrono::steady_clock::now() < deadline) {
+        wxYield();
+        wxMilliSleep(10);
+    }
+    Require(received || closed(), "native Return releases or unshifted Return closes its dialog");
+#endif
+    wxYield();
+}
 void ClickSubstitution(wxDialog* dialog, const char* token) {
     auto* link = wxDynamicCast(wxWindow::FindWindowByName(token, dialog), wxHyperlinkCtrl);
     Require(link, "all six original substitution links exist");
@@ -197,23 +236,9 @@ void NativeControls(EditorFrame* frame) {
                 wxYield();
                 field->SetValue("line");
                 field->SetInsertionPointEnd();
-#ifdef __WXMSW__
-                SendMessageW(static_cast<HWND>(field->GetHandle()), WM_CHAR, VK_RETURN, 0);
-#else
-                wxString focusFile;
-                Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "Return uses private native input");
-                {
-                    wxFFile file(focusFile, "wb");
-                    file.Write("key:Return");
-                }
-                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-                while (field->GetValue() == "line" && std::chrono::steady_clock::now() < deadline) {
-                    wxYield();
-                    wxMilliSleep(10);
-                }
-#endif
+                InputReturn(field, true);
                 Require(field->GetValue() == "line\n" && dialog->IsShown(),
-                        "native Return inserts a line break in each field");
+                        "native Shift+Return inserts a line break in each field");
                 auto* other = field == prefix ? suffix : prefix;
                 for (const char* token : {"$(L)", "$(0L)", "$(N)", "$(0N)", "$(I)", "$(0I)"}) {
                     field->SetFocus();
@@ -281,7 +306,45 @@ void NativeControls(EditorFrame* frame) {
     NativeKeys::Shortcut(frame, 'M', false, true, true);
     NativeKeys::Shortcut(frame, 'M', true, true);
     Require(!opened, "Alt+Shift+M and Ctrl+Alt+M do not invoke Modify Lines");
-    std::puts("PASS: native Alt+M modifiers, Return in both fields, six links, field replacement and focus");
+    std::puts("PASS: native Alt+M modifiers, Shift+Return in both fields, six links, field replacement and focus");
+}
+void ReturnAndCancel(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    for (const char* name : {"Prefix text to lines", "Append text to lines"}) {
+        for (const bool control : {false, true}) {
+            TestEditor::ResetStream(editor, "x", 1, 1, Scintilla::EndOfLine::Lf);
+            bool closed = false;
+            Visit(frame, [&](wxDialog* dialog) {
+                Field(dialog, "Prefix text to lines")->SetValue("[");
+                Field(dialog, "Append text to lines")->SetValue("]");
+                NativeSearch::Toggle(Skip(dialog), false);
+                InputReturn(Field(dialog, name), false, control);
+                closed = !dialog->IsShown();
+                if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
+            });
+            Require(closed && TestEditor::Text(editor) == "[x]",
+                    "native Return without Shift applies and closes from either field");
+            TestEditor::RequireSelection(editor, 2, 2, "Return acceptance preserves original caret adjustment");
+            Require(editor->HasFocus(), "Return acceptance restores native editor focus");
+            editor->Send(Message::Undo);
+            Require(TestEditor::Text(editor) == "x" && !editor->Send(Message::CanUndo) &&
+                        !editor->Send(Message::GetModify),
+                    "Return acceptance is one undo action back to the save point");
+            Visit(frame, [&](wxDialog* dialog) {
+                Require(Field(dialog, "Prefix text to lines")->GetValue() == "[" &&
+                            Field(dialog, "Append text to lines")->GetValue() == "]" && !Skip(dialog)->GetValue(),
+                        "Return accepts prefix, suffix and checkbox recall");
+                Field(dialog, name)->SetValue("discard");
+                NativeSearch::Click(dialog, wxID_CANCEL);
+                closed = !dialog->IsShown();
+                if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
+            });
+            Require(closed && TestEditor::Text(editor) == "x" && editor->Send(Message::CanRedo) &&
+                        !editor->Send(Message::CanUndo),
+                    "native cancellation closes from either field and retains document and pending redo");
+        }
+    }
+    std::puts("PASS: native Return/Ctrl+Return apply and recall from both fields; cancellation preserves history");
 }
 void NativeEolAndRecall(EditorFrame* frame) {
     struct Fixture {
@@ -376,10 +439,10 @@ void Protection(EditorFrame* frame) {
         Visit(frame, [&](wxDialog* dialog) {
             Field(dialog, "Prefix text to lines")->Clear();
             Field(dialog, "Append text to lines")->Clear();
-            NativeSearch::Click(dialog, wxID_OK);
+            InputReturn(Field(dialog, "Prefix text to lines"));
         });
         Require(feedback.count == 1 && feedback.applyBeforeClose,
-                "OK applies and reports rectangle feedback before dialog closes");
+                "Return invokes OK and reports rectangle feedback before dialog closes");
     }
     Require(TestEditor::Text(editor) == "alpha\nbeta" && !editor->Send(Message::CanUndo) &&
                 editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify) &&
@@ -475,6 +538,7 @@ public:
                 Dialog(frame);
                 NativeControls(frame);
                 NativeEolAndRecall(frame);
+                ReturnAndCancel(frame);
                 Protection(frame);
                 SavedBytes(frame);
                 std::puts("PASS: original Modify Lines");

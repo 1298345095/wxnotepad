@@ -29,6 +29,15 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
         auto* input = new wxTextCtrl(&dialog, wxID_ANY, display, wxDefaultPosition, dialog.FromDIP(wxSize(400, 65)),
                                      wxTE_MULTILINE | wxTE_PROCESS_ENTER);
         input->SetName(name);
+        input->Bind(wxEVT_KEY_DOWN, [&](wxKeyEvent& event) {
+            // Original Helpers.cpp::MultilineEditProc accepts Return unless Shift is down.
+            if (event.GetKeyCode() == WXK_RETURN && !event.ShiftDown()) {
+                wxCommandEvent accept(wxEVT_BUTTON, wxID_OK);
+                dialog.GetEventHandler()->ProcessEvent(accept);
+            } else {
+                event.Skip();
+            }
+        });
         contents->Add(input, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
         return input;
     };

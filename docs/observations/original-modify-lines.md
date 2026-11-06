@@ -2,7 +2,8 @@
 
 Baseline: Notepad4 `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`,
 `src/Edit.cpp::EditModifyLines`, `EditModifyLinesText`,
-`EditModifyLinesDlgProc`, and `src/Notepad4.rc::IDD_MODIFYLINES`.
+`EditModifyLinesDlgProc`, `src/Notepad4.rc::IDD_MODIFYLINES`, and
+`src/Helpers.cpp::MultilineEditProc`.
 
 `EditorControl::ModifyLines(prefix, suffix, skipEmpty)` adapts the original
 algorithm against the live core. Its false result requests the original
@@ -22,11 +23,14 @@ pairs to the document EOL and preserves lone CR/LF. Destination-line accounting
 skips newly inserted prefix/suffix lines; final selection repair intentionally
 uses the original participating line indices. The six native links replace
 the whole last-focused field, restore its focus and stay outside Tab traversal.
-OK captures recalled values and applies while the dialog is still open;
-Cancel preserves accepted recall and document history.
+Return without Shift, including Ctrl+Return, invokes OK from either field.
+Shift+Return inserts a line break. OK captures recalled values and applies while
+the dialog is still open; Escape and Cancel preserve accepted recall and document
+history.
 
 `tests/modify_lines.cpp` verifies public text, exact selection endpoints,
-undo/redo/save points, native Alt+M modifiers, Return in both fields, all six
+undo/redo/save points, native Alt+M modifiers, Return/Ctrl+Return acceptance,
+Shift+Return multiline entry in both fields, native Cancel, all six
 links, Tab/focus behavior, accepted recall, empty/read-only/rectangular paths,
 and independently reopened UTF-8, GBK and UTF-16LE saved bytes. The same native
 executable runs on Windows and private X11/Wayland displays. Linux native
@@ -41,3 +45,5 @@ through the application test boundary.
 
 Development evidence is retained under
 `E:/NewNotepad4/wxnotepad-evidence/everyday-line-editing-2026-11-06/issue-116/`.
+Return compatibility and shared-shortcut follow-up evidence is retained beside it
+under `review-fixes/`, including Windows/X11/Wayland red and green runs.
