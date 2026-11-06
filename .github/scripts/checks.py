@@ -2,6 +2,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -26,7 +27,7 @@ def format_sources(executable):
     print(f'Canonical format passed: {len(files)} tracked files')
 
 
-def tidy_sources(executable, build):
+def tidy_sources(executable, build, jobs):
     REPORTS.mkdir(parents=True, exist_ok=True)
     records = json.loads((build / 'compile_commands.json').read_text(encoding='utf-8'))
     files = sorted({Path(item['file']).resolve() for item in records
@@ -38,6 +39,7 @@ def tidy_sources(executable, build):
     directory = REPORTS / 'tidy'
     directory.mkdir(exist_ok=True)
     header_filter = re.escape(str(ROOT / 'src')) + '|' + re.escape(str(ROOT / 'tests'))
+    print(f'Native clang-tidy workers: {jobs}', flush=True)
 
     def analyze(path):
         relative = path.relative_to(ROOT).as_posix()
@@ -51,7 +53,7 @@ def tidy_sources(executable, build):
         print(f'{relative}: exit {result.returncode}', flush=True)
         return dict(file=relative, exit_code=result.returncode, log=log.relative_to(ROOT).as_posix())
 
-    with ThreadPoolExecutor(max_workers=2) as workers:
+    with ThreadPoolExecutor(max_workers=jobs) as workers:
         results = list(workers.map(analyze, files))
     (REPORTS / 'tidy-summary.json').write_text(json.dumps(results, indent=2) + '\n', encoding='utf-8')
     print(f'Analyzed {len(results)} maintained translation units; full diagnostics and fix records retained.')
@@ -66,11 +68,14 @@ def main():
     tidy = commands.add_parser('tidy')
     tidy.add_argument('--executable', default='clang-tidy-18')
     tidy.add_argument('--build-dir', type=Path, default=ROOT / '.ci/build/cmake')
+    tidy.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
     arguments = parser.parse_args()
     if arguments.command == 'format':
         format_sources(arguments.executable)
     else:
-        tidy_sources(arguments.executable, arguments.build_dir.resolve())
+        if arguments.jobs < 1:
+            parser.error('--jobs must be positive')
+        tidy_sources(arguments.executable, arguments.build_dir.resolve(), arguments.jobs)
 
 
 if __name__ == '__main__':

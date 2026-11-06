@@ -9,6 +9,9 @@
 #include <cstring>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
+#ifdef GDK_WINDOWING_WAYLAND
+#include <gdk/gdkwayland.h>
+#endif
 #endif
 
 class PeerApp final : public wxApp {
@@ -23,6 +26,22 @@ public:
             if (event.GetKeyCode() == WXK_SHIFT) gestureReceived_ = true;
             event.Skip();
         });
+#ifdef __WXGTK__
+        wxString deferRender;
+        if (wxGetEnv("WXNOTEPAD_CLIPBOARD_DEFER_PEER_RENDER", &deferRender)) {
+            // Let the ready-request timer run before the first GTK paint/map.
+            // Native keyboard events and their original deadlines remain live.
+            renderReadyAt_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+            g_idle_add_full(
+                G_PRIORITY_DEFAULT,
+                +[](gpointer owner) -> gboolean {
+                    const auto* self = static_cast<PeerApp*>(owner);
+                    return std::chrono::steady_clock::now() < self->renderReadyAt_ ? G_SOURCE_CONTINUE
+                                                                                   : G_SOURCE_REMOVE;
+                },
+                this, nullptr);
+        }
+#endif
         frame_->Show();
         timer_.SetOwner(this);
         Bind(wxEVT_TIMER, [this](wxTimerEvent&) { Poll(); });
@@ -42,6 +61,9 @@ private:
     std::chrono::steady_clock::time_point activationStarted_;
     bool gestureRequested_ = false;
     bool gestureReceived_ = false;
+#ifdef __WXGTK__
+    std::chrono::steady_clock::time_point renderReadyAt_;
+#endif
     void Respond(const wxString& value) {
         {
             wxFFile file(directory_ + "/response.tmp", "wb");
@@ -55,6 +77,14 @@ private:
             ExitMainLoop();
             return;
         }
+#if defined(__WXGTK__) && defined(GDK_WINDOWING_WAYLAND)
+        if (pendingCommand_ == "ready") {
+            if (!gtk_widget_has_focus(text_->GetConnectWidget())) return;
+            pendingCommand_.clear();
+            Respond("ready");
+            return;
+        }
+#endif
         if (!pendingCommand_.empty()) {
             if (!frame_->IsActive() || !text_->HasFocus()) {
                 if (std::chrono::steady_clock::now() - activationStarted_ > std::chrono::seconds(3)) {
@@ -263,6 +293,15 @@ private:
 #endif
             Respond("ready");
         } else if (command == "ready") {
+#if defined(__WXGTK__) && defined(GDK_WINDOWING_WAYLAND)
+            // A Wayland peer can answer IPC before its first map takes focus.
+            // Finish that takeover before the parent activates the editor.
+            if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(text_->GetConnectWidget())) &&
+                !gtk_widget_has_focus(text_->GetConnectWidget())) {
+                pendingCommand_ = command;
+                return;
+            }
+#endif
             Respond("ready");
         } else if (command == "wxcopy") {
             wxClipboardLocker lock;
