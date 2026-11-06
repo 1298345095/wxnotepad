@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "app/dialogs/go_to_line_dialog.h"
+#include "app/dialogs/enclose_selection_dialog.h"
 #include "app/dialogs/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/accel.h>
@@ -156,6 +157,32 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    auto* enclosure = new wxMenu;
+    const int customEnclosure = wxWindow::NewControlId();
+    enclosure->Append(customEnclosure, "&With...\tAlt+Q");
+    enclosure->AppendSeparator();
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) { ShowEncloseSelectionDialog(this, *editor_, enclosureBefore_, enclosureAfter_); },
+        customEnclosure);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, customEnclosure);
+    const auto addEnclosure = [this, enclosure](const wxString& label, const wxString& delimiter) {
+        const int id = wxWindow::NewControlId();
+        enclosure->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, delimiter](wxCommandEvent&) {
+                if (!editor_->EncloseSelection(delimiter, delimiter))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    };
+    addEnclosure("Triple &Single Quotes\tCtrl+3", "'''");
+    addEnclosure("Triple &Double Quotes\tCtrl+6", "\"\"\"");
+    addEnclosure("Triple &Backticks\tCtrl+9", "```");
+    edit->AppendSubMenu(enclosure, "&Enclose Selection");
     const int indent = wxWindow::NewControlId();
     edit->Append(indent, "&Indent");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->IndentLines(true); }, indent);

@@ -27,6 +27,7 @@ public:
     void IndentLines(bool forwards);
     // False reports the original unsupported rectangular-selection operation.
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
+    bool EncloseSelection(const wxString& before, const wxString& after);
     void MoveLines(bool upwards);
     void SetIndentationWidths(int tabWidth, int indentWidth);
     bool AutoIndentEnabled() const { return autoIndent_; }
