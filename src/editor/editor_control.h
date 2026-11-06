@@ -31,6 +31,7 @@ public:
     // False reports the original unsupported rectangular-selection operation.
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     bool CompressWhitespace();
+    bool RemoveBlankLines(bool merge);
     void MoveLines(bool upwards);
     void StripLeadingBlanks();
     void StripTrailingBlanks();

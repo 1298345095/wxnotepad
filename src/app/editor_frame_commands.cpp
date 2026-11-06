@@ -164,6 +164,22 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->StripTrailingBlanks(); }, stripTrailing);
     for (const int id : {stripLeading, stripTrailing})
         Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    const int mergeBlankLines = wxWindow::NewControlId();
+    const int removeBlankLines = wxWindow::NewControlId();
+    edit->Append(mergeBlankLines, "Merge Blank Lines\tAlt+B");
+    edit->Append(removeBlankLines, "Remove Blank Lines\tAlt+R");
+    for (const int id : {mergeBlankLines, removeBlankLines}) {
+        Bind(
+            wxEVT_MENU,
+            [this, id, mergeBlankLines](wxCommandEvent&) {
+                if (!editor_->RemoveBlankLines(id == mergeBlankLines))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    edit->AppendSeparator();
     const int padSpaces = wxWindow::NewControlId();
     edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);
