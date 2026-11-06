@@ -168,8 +168,6 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
 
 void EditorFrame::UpdateDocumentState() {
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
-    WXNOTE_TRACE("close.confirm", "\ttarget=%p\tlength=%lld", static_cast<void*>(this),
-                 static_cast<long long>(editor_->Send(Scintilla::Message::GetLength)));
     SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + " - wxnotepad");
     const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
                               : document_.Encoding() == FileEncoding::Gbk   ? "GBK (CP936)"
@@ -301,6 +299,8 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);
     dialog.SetYesNoCancelLabels("&Save", "&Discard", "&Cancel");
+    WXNOTE_TRACE("close.confirm", "\ttarget=%p\tstage=show-request\tdirty=1\tlength=%lld", static_cast<void*>(this),
+                 static_cast<long long>(editor_->Send(Scintilla::Message::GetLength)));
     const int choice = dialog.ShowModal();
     WXNOTE_TRACE("close.choice", "\ttarget=%p\tchoice=%s", static_cast<void*>(this),
                  choice == wxID_YES  ? "Save"
