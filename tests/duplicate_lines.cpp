@@ -16,13 +16,7 @@ void Require(bool condition, const char* message) {
 }
 void Reset(EditorControl* editor, const char* text, intptr_t anchor, intptr_t caret,
            Scintilla::EndOfLine mode = Scintilla::EndOfLine::Lf) {
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(mode));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    TestEditor::ResetStream(editor, text, anchor, caret, mode);
 }
 int CommandId(EditorFrame* frame, bool merge) {
     const int id =
@@ -43,13 +37,7 @@ void NonadjacentGroups(EditorFrame* frame) {
     std::puts("PASS: native Merge/Remove nonadjacent duplicate groups retain original order");
 }
 void Range(EditorControl* editor, intptr_t anchor, intptr_t caret) {
-    if (editor->Send(Message::GetAnchor) != anchor || editor->Send(Message::GetCurrentPos) != caret)
-        std::fprintf(stderr, "anchor/caret %lld/%lld; expected %lld/%lld\n",
-                     static_cast<long long>(editor->Send(Message::GetAnchor)),
-                     static_cast<long long>(editor->Send(Message::GetCurrentPos)), static_cast<long long>(anchor),
-                     static_cast<long long>(caret));
-    Require(editor->Send(Message::GetAnchor) == anchor && editor->Send(Message::GetCurrentPos) == caret,
-            "original selection direction and replacement extent");
+    TestEditor::RequireSelection(editor, anchor, caret, "original selection direction and replacement extent");
 }
 void History(EditorControl* editor, const std::string& before, const std::string& after) {
     Require(editor->Send(Message::CanUndo) && editor->Send(Message::GetModify),

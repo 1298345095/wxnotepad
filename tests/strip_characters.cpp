@@ -17,14 +17,6 @@ void Strip(EditorFrame* frame, bool first) {
             "original strip menus remain available for every document and selection state");
     NativeSearch::Command(frame, id);
 }
-void Set(EditorControl* editor, const char* text, intptr_t anchor = 0, intptr_t caret = 0) {
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-}
 void NativeAlt(EditorFrame* frame, bool first, bool shift = false, bool control = false) {
     auto* editor = frame->Editor();
     editor->SetFocus();
@@ -80,12 +72,12 @@ void NativeAlt(EditorFrame* frame, bool first, bool shift = false, bool control 
 void Shortcuts(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const bool first : {true, false}) {
-        Set(editor, "abc\ndef", 1, 1);
+        TestEditor::ResetStream(editor, "abc\ndef", 1, 1);
         NativeAlt(frame, first);
         Require(TestEditor::Text(editor) == (first ? "bc\ndef" : "ab\ndef"),
                 "exact native Alt+Z/Alt+L strips character");
         for (const auto& modifiers : {std::pair{true, false}, std::pair{false, true}, std::pair{true, true}}) {
-            Set(editor, "abc\ndef", 1, 1);
+            TestEditor::ResetStream(editor, "abc\ndef", 1, 1);
             NativeAlt(frame, first, modifiers.first, modifiers.second);
             Require(TestEditor::Text(editor) == "abc\ndef" && !editor->Send(Message::CanUndo) &&
                         !editor->Send(Message::GetModify),
@@ -95,13 +87,8 @@ void Shortcuts(EditorFrame* frame) {
     std::puts("PASS: native Alt+Z/Alt+L and exact Shift/Control modifier routing");
 }
 void Range(EditorControl* editor, intptr_t anchor, intptr_t caret) {
-    if (editor->Send(Message::GetAnchor) != anchor || editor->Send(Message::GetCurrentPos) != caret)
-        std::fprintf(stderr, "Selection: %lld/%lld expected %lld/%lld\n",
-                     static_cast<long long>(editor->Send(Message::GetAnchor)),
-                     static_cast<long long>(editor->Send(Message::GetCurrentPos)), static_cast<long long>(anchor),
-                     static_cast<long long>(caret));
-    Require(editor->Send(Message::GetAnchor) == anchor && editor->Send(Message::GetCurrentPos) == caret,
-            "original core adjusts anchor/caret without explicit reselection");
+    TestEditor::RequireSelection(editor, anchor, caret,
+                                 "original core adjusts anchor/caret without explicit reselection");
 }
 void Fixtures(EditorFrame* frame) {
     auto* editor = frame->Editor();
@@ -144,7 +131,7 @@ void Fixtures(EditorFrame* frame) {
         {"last current line with supplementary caret", "x😀", 5, 5, false, "x", 1, 1},
     };
     for (const auto& fixture : fixtures) {
-        Set(editor, fixture.before, fixture.anchor, fixture.caret);
+        TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
         const auto eol = editor->Send(Message::GetEOLMode);
         const auto encoding = frame->DocumentEncoding();
         Strip(frame, fixture.first);
@@ -179,7 +166,7 @@ void Protection(EditorFrame* frame) {
         const int id =
             frame->GetMenuBar()->FindMenuItem("Edit", first ? "Strip First Character" : "Strip Last Character");
         for (const auto& fixture : {std::pair{"", 0}, std::pair{"\r\n\n\r", 0}, std::pair{"abc\ndef", 3}}) {
-            Set(editor, fixture.first, fixture.second, fixture.second == 3 ? 4 : fixture.second);
+            TestEditor::ResetStream(editor, fixture.first, fixture.second, fixture.second == 3 ? 4 : fixture.second);
             const auto anchor = editor->Send(Message::GetAnchor);
             const auto caret = editor->Send(Message::GetCurrentPos);
             editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("!"));
@@ -192,7 +179,7 @@ void Protection(EditorFrame* frame) {
                     "no eligible nonempty line preserves undo, pending redo and save point");
             Range(editor, anchor, caret);
         }
-        Set(editor, "abc\ndef", 1, 6);
+        TestEditor::ResetStream(editor, "abc\ndef", 1, 6);
         editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("!"));
         editor->Send(Message::Undo);
         editor->Send(Message::SetSel, 1, 6);

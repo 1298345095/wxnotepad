@@ -10,14 +10,6 @@ using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-void Reset(EditorControl* editor, const char* text, intptr_t anchor = 0, intptr_t caret = 0) {
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-}
 int CommandId(EditorFrame* frame) {
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Compress Whitespace");
     Require(id != wxNOT_FOUND, "native Edit menu exposes Compress Whitespace");
@@ -27,13 +19,8 @@ void Compress(EditorFrame* frame) {
     NativeSearch::Command(frame, CommandId(frame));
 }
 void Range(EditorControl* editor, intptr_t anchor, intptr_t caret) {
-    if (editor->Send(Message::GetAnchor) != anchor || editor->Send(Message::GetCurrentPos) != caret)
-        std::fprintf(stderr, "Selection: %lld/%lld; expected %lld/%lld\n",
-                     static_cast<long long>(editor->Send(Message::GetAnchor)),
-                     static_cast<long long>(editor->Send(Message::GetCurrentPos)), static_cast<long long>(anchor),
-                     static_cast<long long>(caret));
-    Require(editor->Send(Message::GetAnchor) == anchor && editor->Send(Message::GetCurrentPos) == caret,
-            "original replacement selection preserves ordered extent and direction");
+    TestEditor::RequireSelection(editor, anchor, caret,
+                                 "original replacement selection preserves ordered extent and direction");
 }
 void Fixtures(EditorFrame* frame) {
     auto* editor = frame->Editor();
@@ -75,7 +62,7 @@ void Fixtures(EditorFrame* frame) {
     };
     for (const auto& fixture : fixtures) {
         std::printf("Fixture: %s\n", fixture.name);
-        Reset(editor, fixture.before, fixture.anchor, fixture.caret);
+        TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
         Compress(frame);
         if (TestEditor::Text(editor) != fixture.after) std::fprintf(stderr, "Fixture: %s\n", fixture.name);
         Require(TestEditor::Text(editor) == fixture.after, "literal original compressed bytes");
@@ -111,7 +98,7 @@ public:
 };
 void State(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    Reset(editor, "A B", 1, 1);
+    TestEditor::ResetStream(editor, "A B", 1, 1);
     editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("x"));
     editor->Send(Message::Undo);
     editor->Send(Message::SetSel, 2, 1);
@@ -123,7 +110,7 @@ void State(EditorFrame* frame) {
     editor->Send(Message::Redo);
     Require(TestEditor::Text(editor) == "Ax B", "pending redo remains usable after no-op");
     for (bool empty : {false, true}) {
-        Reset(editor, "A  B\nC  D", 0, 0);
+        TestEditor::ResetStream(editor, "A  B\nC  D", 0, 0);
         editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("x"));
         editor->Send(Message::Undo);
         editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
@@ -142,7 +129,7 @@ void State(EditorFrame* frame) {
                 "unsupported rectangle retains bytes, selection, history, save point and redo");
     }
     for (bool backwards : {false, true}) {
-        Reset(editor, "A  B", backwards ? 4 : 2, backwards ? 0 : 2);
+        TestEditor::ResetStream(editor, "A  B", backwards ? 4 : 2, backwards ? 0 : 2);
         editor->Send(Message::SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(CommandId(frame)), "original read-only menu remains available");
@@ -153,7 +140,7 @@ void State(EditorFrame* frame) {
         Range(editor, backwards ? 3 : 0, backwards ? 0 : 3);
         editor->Send(Message::SetReadOnly, 0);
     }
-    Reset(editor, "");
+    TestEditor::ResetStream(editor, "");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(CommandId(frame)), "empty document retains original menu availability");
     std::puts("PASS: no-op pending redo, empty/nonempty rectangle feedback and original read-only selection repair");
@@ -207,16 +194,16 @@ void NativeAlt(EditorFrame* frame, bool shift = false, bool control = false) {
 }
 void Keys(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    Reset(editor, "A  B");
+    TestEditor::ResetStream(editor, "A  B");
     NativeAlt(frame);
     Require(TestEditor::Text(editor) == "A B", "actual native Alt+W routes to compression");
     for (const auto& modifiers : {std::pair{true, false}, std::pair{false, true}, std::pair{true, true}}) {
-        Reset(editor, "A  B");
+        TestEditor::ResetStream(editor, "A  B");
         NativeAlt(frame, modifiers.first, modifiers.second);
         Require(TestEditor::Text(editor) == "A  B" && !editor->Send(Message::CanUndo),
                 "extra Shift/Control modifiers do not compress whitespace");
     }
-    Reset(editor, "A  B");
+    TestEditor::ResetStream(editor, "A  B");
     editor->Send(Message::SetReadOnly, 1);
     NativeAlt(frame);
     Require(TestEditor::Text(editor) == "A  B" && !editor->Send(Message::CanUndo),
@@ -248,14 +235,10 @@ void SavedBytes(EditorFrame* frame) {
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "open encoded fixture through application");
         Compress(frame);
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
-                "Save independently preserves exact compressed encoding/BOM/EOL bytes");
-        editor->Send(Message::Undo);
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
-                "one Undo restores independently read original encoded bytes");
-        editor->Send(Message::Redo);
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
-                "one Redo restores independently read compressed encoded bytes");
+        TestFiles::RequireSavedUndoRedo(frame, path, fixture,
+                                        {"Save independently preserves exact compressed encoding/BOM/EOL bytes",
+                                         "one Undo restores independently read original encoded bytes",
+                                         "one Redo restores independently read compressed encoded bytes"});
     }
     std::filesystem::remove_all(directory);
     std::puts("PASS: independent UTF-8 BOM, GBK and UTF-16LE BOM disk bytes, mixed EOLs and Undo/Redo");
