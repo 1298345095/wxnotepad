@@ -1,4 +1,4 @@
-#include "app/find_replace_dialog.h"
+#include "app/dialogs/find_replace_dialog.h"
 #include "editor/editor_control.h"
 #include "search/find_text.h"
 #include <wx/button.h>
@@ -172,7 +172,10 @@ FindReplaceDialog::~FindReplaceDialog() {
 }
 
 void FindReplaceDialog::OnEditorState(wxCommandEvent& event) {
-    if (!search_.MatchCount()) findAllResult_->SetLabel("");
+    if (!search_.MatchCount() && (!findAllErrorRevision_ || *findAllErrorRevision_ != editor_.DocumentRevision())) {
+        findAllResult_->SetLabel("");
+        findAllErrorRevision_.reset();
+    }
     event.Skip();
 }
 
@@ -180,6 +183,8 @@ void FindReplaceDialog::FindAll() {
     if (query_->IsEmpty()) return;
     ConfigureSearch();
     const auto result = search_.FindAll();
+    findAllErrorRevision_ =
+        result.status == FindStatus::InvalidPattern ? std::optional(editor_.DocumentRevision()) : std::nullopt;
     findAllResult_->SetLabel(result.status == FindStatus::InvalidPattern
                                  ? wxString("Invalid regular expression")
                                  : wxString::Format("%zu matches", result.count));
@@ -283,7 +288,10 @@ void FindReplaceDialog::ConfigureSearch() {
     request.bookmarkMatchedLines = bookmarkMatchedLines_->GetValue();
     search_.Configure(std::move(request));
     search_.Remember(replace_);
-    if (!search_.MatchCount()) findAllResult_->SetLabel("");
+    if (!search_.MatchCount()) {
+        findAllResult_->SetLabel("");
+        findAllErrorRevision_.reset();
+    }
 }
 
 void FindReplaceDialog::UpdateButtons() {

@@ -100,8 +100,15 @@ public:
                 Require(result->GetLabel() == "2 matches" && !marked(3), "original dollar anchor line-count rule");
                 query->SetValue("(");
                 run();
+                editor->Send(Message::ZoomIn);
+                wxYield();
                 Require(result->GetLabel() == "Invalid regular expression" && !marked(0),
-                        "invalid patterns clear old markings and report an error");
+                        "invalid patterns clear markings and retain error feedback across editor UI updates");
+                editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("!"));
+                wxYield();
+                Require(result->GetLabel().empty(), "document edits clear stale invalid-pattern feedback");
+                editor->Send(Message::Undo);
+                wxYield();
                 query->SetValue("absent");
                 run();
                 Require(result->GetLabel() == "0 matches", "no matches reports zero");
