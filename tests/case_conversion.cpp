@@ -1,10 +1,9 @@
 #include "editor_test_helpers.h"
 #include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/wx.h>
-#include <wx/ffile.h>
-#include <chrono>
 #include <memory>
 #include <tuple>
 
@@ -35,63 +34,17 @@ void Menus(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "é i̇ k σω 𐐨 á中😀\r\n", "native lower uses pinned expansion and contraction");
     TestEditor::RequireSelection(editor, 31, 0, "reversed lower selection tracks changed UTF-8 byte length");
 }
-void NativeKey(EditorControl* editor, bool shift, bool alt = false) {
-#ifdef __WXMSW__
-    NativeSearch::WindowsShortcut(editor, 'U',
-                                  {{VK_CONTROL, 0x80},
-                                   {VK_SHIFT, static_cast<BYTE>(shift ? 0x80 : 0)},
-                                   {VK_MENU, static_cast<BYTE>(alt ? 0x80 : 0)}});
-#else
-    editor->SetFocus();
-    wxString focusFile;
-    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native shortcuts require private display");
-    {
-        wxFFile request(focusFile, "wb");
-        request.Write("focus:wxnotepad");
-    }
-    bool focused = false;
-    const auto focusDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-    while (!focused && std::chrono::steady_clock::now() < focusDeadline) {
-        wxYield();
-        wxFFile request(focusFile, "rb");
-        wxString pending;
-        if (request.IsOpened()) request.ReadAll(&pending);
-        focused = pending.empty();
-        if (!focused) wxMilliSleep(10);
-    }
-    Require(focused, "private display acknowledges native focus");
-    bool received = false;
-    wxEvtHandler observer;
-    observer.Bind(wxEVT_KEY_UP, [&received](wxKeyEvent& event) {
-        if (event.GetKeyCode() == 'U') received = true;
-        event.Skip();
-    });
-    editor->PushEventHandler(&observer);
-    {
-        wxFFile request(focusFile, "wb");
-        request.Write(wxString("key:ctrl+") + (shift ? "shift+" : "") + (alt ? "alt+" : "") + "u");
-    }
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-    while (!received && std::chrono::steady_clock::now() < deadline) {
-        wxYield();
-        wxMilliSleep(10);
-    }
-    editor->PopEventHandler(false);
-    Require(received, "native U release reaches owned editor");
-#endif
-    wxYield();
-}
 void Shortcuts(EditorFrame* frame) {
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "Straße ﬃ ΐ", 0, 14);
-    NativeKey(editor, true);
+    NativeKeys::Shortcut(frame, 'U', true, false, true);
     Require(TestEditor::Text(editor) == "STRASSE FFI Ϊ́", "native Ctrl+Shift+U invokes upper");
     TestEditor::ResetStream(editor, "É İ K ΣΩ 𐐀 Á中😀\r\n", 0, 32);
-    NativeKey(editor, false);
+    NativeKeys::Shortcut(frame, 'U', true);
     Require(TestEditor::Text(editor) == "é i̇ k σω 𐐨 á中😀\r\n", "native Ctrl+U invokes lower");
     for (const bool shift : {false, true}) {
         TestEditor::ResetStream(editor, "aB", 0, 2);
-        NativeKey(editor, shift, true);
+        NativeKeys::Shortcut(frame, 'U', true, true, shift);
         Require(TestEditor::Text(editor) == "aB" && !editor->Send(Message::CanUndo),
                 "additional Alt modifier does not invoke upper or lower");
     }

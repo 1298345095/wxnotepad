@@ -1,9 +1,8 @@
 #include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/app.h>
-#include <wx/ffile.h>
-#include <chrono>
 #include <memory>
 
 namespace {
@@ -340,11 +339,11 @@ void SavedBytes(EditorFrame* frame) {
     }
     std::filesystem::remove_all(directory);
 }
-void NativeKey(EditorFrame* frame, int key, const char* gesture, bool control, bool alt, bool shift = false) {
+void NativeKey(EditorFrame* frame, int key, bool control, bool alt, bool shift = false) {
+#ifdef __WXMSW__
     auto* editor = frame->Editor();
     editor->SetFocus();
     wxYield();
-#ifdef __WXMSW__
     BYTE previous[256];
     Require(GetKeyboardState(previous), "read native test thread keyboard state");
     BYTE modified[256];
@@ -364,69 +363,32 @@ void NativeKey(EditorFrame* frame, int key, const char* gesture, bool control, b
     SendMessageW(message.hwnd, alt ? WM_SYSKEYUP : WM_KEYUP, key, message.lParam);
     SetKeyboardState(previous);
 #else
-    wxString focusFile;
-    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys require isolated display");
-    {
-        wxFFile file(focusFile, "wb");
-        file.Write("focus:wxnotepad");
-    }
-    const auto focusDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-    bool focused = false;
-    while (!focused && std::chrono::steady_clock::now() < focusDeadline) {
-        wxString pending;
-        {
-            wxFFile file(focusFile, "rb");
-            file.ReadAll(&pending);
-        }
-        focused = pending.empty();
-        wxYield();
-        wxMilliSleep(10);
-    }
-    Require(focused, "private helper acknowledges actual focus request");
-    bool received = false;
-    wxEvtHandler observer;
-    observer.Bind(wxEVT_KEY_UP, [&received, key](wxKeyEvent& event) {
-        if (event.GetKeyCode() == key) received = true;
-        event.Skip();
-    });
-    editor->PushEventHandler(&observer);
-    {
-        wxFFile file(focusFile, "wb");
-        file.Write(wxString("key:") + gesture);
-    }
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-    while (!received && std::chrono::steady_clock::now() < deadline) {
-        wxYield();
-        wxMilliSleep(10);
-    }
-    editor->PopEventHandler(false);
-    Require(received, "actual private-display shortcut key arrives at editor");
+    NativeKeys::Shortcut(frame, key, control, alt, shift);
 #endif
     wxYield();
 }
 void Shortcuts(EditorFrame* frame) {
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "AB\nCD", 0, 1, Scintilla::EndOfLine::Lf);
-    NativeKey(frame, 'D', "alt+d", false, true);
+    NativeKey(frame, 'D', false, true);
     Require(TestEditor::Text(editor) == "AAB\nCD", "native Alt+D duplicates selected bytes exactly once");
     History(editor, "AB\nCD", "AAB\nCD");
     TestEditor::ResetStream(editor, "AB\nCD", 0, 1, Scintilla::EndOfLine::Lf);
-    NativeKey(frame, 'D', "ctrl+d", true, false);
+    NativeKey(frame, 'D', true, false);
     Require(TestEditor::Text(editor) == "AB\nAB\nCD", "native Ctrl+D duplicates complete caret line exactly once");
     History(editor, "AB\nCD", "AB\nAB\nCD");
     TestEditor::ResetStream(editor, "AB\nCD", 0, 4);
-    NativeKey(frame, 'S', "alt+s", false, true);
+    NativeKey(frame, 'S', false, true);
     Require(TestEditor::Text(editor) == "CD\nAB", "native Alt+S transposes main caret line exactly once");
     History(editor, "AB\nCD", "CD\nAB");
     TestEditor::ResetStream(editor, "AB\nCD", 0, 1);
-    NativeKey(frame, 'D', "ctrl+shift+d", true, false, true);
+    NativeKey(frame, 'D', true, false, true);
     Require(TestEditor::Text(editor) == "CD", "native Ctrl+Shift+D remains original whole-line deletion");
     History(editor, "AB\nCD", "CD");
     for (const auto& [key, gesture] :
          {std::pair{'D', "alt+shift+d"}, std::pair{'S', "alt+shift+s"}, std::pair{'D', "ctrl+alt+d"}}) {
         TestEditor::ResetStream(editor, "AB\nCD", 0, 4);
-        NativeKey(frame, key, gesture, std::string(gesture) == "ctrl+alt+d", true,
-                  std::string(gesture) != "ctrl+alt+d");
+        NativeKey(frame, key, std::string(gesture) == "ctrl+alt+d", true, std::string(gesture) != "ctrl+alt+d");
         if (TestEditor::Text(editor) != "AB\nCD" || editor->Send(Message::CanUndo))
             std::fprintf(stderr, "Native %s produced <%s>; CanUndo=%lld\n", gesture, TestEditor::Text(editor).c_str(),
                          static_cast<long long>(editor->Send(Message::CanUndo)));
