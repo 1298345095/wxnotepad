@@ -737,9 +737,8 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'I' && event.ControlDown()) {
-        if (!event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
-            !editor_->Send(Scintilla::Message::GetSelectionEmpty))
+    if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
+        if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
             editor_->SplitLines();
         return true;
     }
