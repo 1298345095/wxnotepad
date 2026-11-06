@@ -11,8 +11,8 @@
 #include <gtk/gtk.h>
 #endif
 
-namespace {
 #ifdef __WXMSW__
+namespace {
 // Original ScintillaWin clipboard ownership and bounded retry rule.
 class NativeClipboard {
 public:
@@ -33,8 +33,8 @@ public:
 private:
     bool opened_ = false;
 };
-#endif
 } // namespace
+#endif
 
 bool EditorClipboard::Write([[maybe_unused]] wxWindow& owner, const Scintilla::Internal::SelectionText& text) {
     if (wxTheClipboard->IsOpened()) return false;
@@ -111,7 +111,10 @@ bool EditorClipboard::Write([[maybe_unused]] wxWindow& owner, const Scintilla::I
         value.get());
     gtk_target_table_free(targets, count);
     gtk_target_list_unref(list);
-    if (copied) value.release();
+    if (copied) {
+        // GTK now owns the pointer already passed to set_with_data.
+        value.release(); // NOLINT(bugprone-unused-return-value)
+    }
     return copied;
 #else
     return wxTheClipboard->SetData(new wxTextDataObject(wxString::FromUTF8(text.Data(), text.Length())));

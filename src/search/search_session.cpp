@@ -151,14 +151,15 @@ void RepairReplacementSelection(EditorControl& editor, intptr_t replacementEnd) 
 
 ReplacementEffect EvaluateTargetReplacement(EditorControl& editor, const std::string& replacement, bool regex) {
     using Scintilla::Message;
+    using enum ReplacementEffect;
     const auto length = static_cast<size_t>(editor.Send(Message::GetTargetEnd) - editor.Send(Message::GetTargetStart));
     std::string matched(length + 1, '\0');
     editor.Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(matched.data()));
     matched.resize(length);
-    if (!regex) return matched == replacement ? ReplacementEffect::Unchanged : ReplacementEffect::Changed;
+    if (!regex) return matched == replacement ? Unchanged : Changed;
     const auto expanded = editor.ExpandRegexReplacement(replacement);
-    if (!expanded) return ReplacementEffect::ExpansionFailed;
-    return matched == *expanded ? ReplacementEffect::Unchanged : ReplacementEffect::Changed;
+    if (!expanded) return ExpansionFailed;
+    return matched == *expanded ? Unchanged : Changed;
 }
 
 class DeferredUndoAction {
