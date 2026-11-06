@@ -5,7 +5,7 @@
 #include <wx/app.h>
 #include <wx/menu.h>
 #include <wx/ffile.h>
-#include <wx/stopwatch.h>
+#include <chrono>
 #include <wx/modalhook.h>
 #include <cstdio>
 #include <filesystem>
@@ -54,8 +54,8 @@ void NativeKey(EditorControl* editor, bool divide, bool shift = false, bool alt 
         request.Write(wxString("key:ctrl+") + (shift ? "shift+" : "") + (alt ? "alt+" : "") +
                       (divide ? "KP_Divide" : "slash"));
     }
-    wxStopWatch wait;
-    while (!received && wait.Time() < 3000) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (!received && std::chrono::steady_clock::now() < deadline) {
         wxYield();
         wxMilliSleep(10);
     }
