@@ -34,8 +34,10 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/align_lines.cpp
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
+    src/editor/block_comments.cpp
     src/editor/enclose_selection.cpp
     src/editor/compress_whitespace.cpp
     src/editor/duplicate_lines.cpp
@@ -73,6 +75,7 @@ target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/dialogs/align_lines_dialog.cpp
     src/settings/settings_store.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
@@ -160,6 +163,7 @@ if(BUILD_TESTING)
     endfunction()
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(pad_spaces original_pad_spaces 60)
+    add_editor_test(align_lines original_align_lines 60)
     add_test(NAME original_cleanup_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/cleanup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_cleanup_settings PROPERTIES TIMEOUT 60)
@@ -211,6 +215,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_comments_process.py" "$<TARGET_FILE:line_comments>")
     set_tests_properties(original_toggle_line_comment PROPERTIES TIMEOUT 90)
     add_editor_test(move_lines original_move_lines 60)
+    add_editor_test(block_comments original_toggle_block_comment 60)
     add_editor_test(enclose_selection original_enclose_selection 60)
     add_editor_test(strip_blanks original_strip_blanks 60)
     add_editor_test(compress_whitespace original_compress_whitespace 60)
@@ -218,6 +223,8 @@ if(BUILD_TESTING)
     add_editor_test(strip_characters original_strip_characters 60)
     add_editor_test(join_lines original_join_lines 60)
     add_editor_test(duplicate_lines original_duplicate_lines 60)
+    add_editor_test(case_conversion original_case_conversion 60)
+    add_editor_test(duplicate_transpose original_duplicate_transpose 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
     add_editor_test(navigation_bindings original_navigation_bindings 60)

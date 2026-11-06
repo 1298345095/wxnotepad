@@ -5,6 +5,7 @@
 #include "document/document_session.h"
 #include "search/search_session.h"
 #include "editor/indentation_settings.h"
+#include "editor/align_lines.h"
 
 class EditorControl;
 class FindReplaceDialog;
@@ -41,6 +42,7 @@ private:
     FindReplaceDialog* findDialog_ = nullptr;
     wxString enclosureBefore_;
     wxString enclosureAfter_;
+    AlignmentMode alignmentMode_ = AlignmentMode::Left;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
     void CreateMenus();
