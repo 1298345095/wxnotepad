@@ -37,9 +37,12 @@ add_library(editor_runtime STATIC
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
     src/editor/indentation.cpp
+    src/editor/join_lines.cpp
     src/editor/line_comments.cpp
     src/editor/matching_brace.cpp
     src/editor/move_lines.cpp
+    src/editor/pad_spaces.cpp
+    src/editor/tab_conversion.cpp
     src/editor/editor_control.cpp
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
@@ -150,6 +153,7 @@ if(BUILD_TESTING)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
     add_editor_test(save_cleanup original_save_cleanup 60)
+    add_editor_test(pad_spaces original_pad_spaces 60)
     add_test(NAME original_cleanup_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/cleanup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_cleanup_settings PROPERTIES TIMEOUT 60)
@@ -193,12 +197,14 @@ if(BUILD_TESTING)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(block_indentation block_indentation_commands 60)
+    add_editor_test(tab_conversion original_tab_conversion 60)
     add_gui_program(line_comments tests/line_comments.cpp app_shell)
     add_test(NAME original_toggle_line_comment COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_comments_process.py" "$<TARGET_FILE:line_comments>")
     set_tests_properties(original_toggle_line_comment PROPERTIES TIMEOUT 90)
     add_editor_test(move_lines original_move_lines 60)
     add_editor_test(blank_lines original_blank_lines 60)
+    add_editor_test(join_lines original_join_lines 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
     add_editor_test(navigation_bindings original_navigation_bindings 60)
