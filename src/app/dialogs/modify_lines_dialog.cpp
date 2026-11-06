@@ -31,7 +31,7 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
         input->SetName(name);
         input->Bind(wxEVT_KEY_DOWN, [&](wxKeyEvent& event) {
             // Original Helpers.cpp::MultilineEditProc accepts Return unless Shift is down.
-            if (event.GetKeyCode() == WXK_RETURN && !event.ShiftDown()) {
+            if ((event.GetKeyCode() == WXK_RETURN || event.GetKeyCode() == WXK_NUMPAD_ENTER) && !event.ShiftDown()) {
                 wxCommandEvent accept(wxEVT_BUTTON, wxID_OK);
                 dialog.GetEventHandler()->ProcessEvent(accept);
             } else {

@@ -144,7 +144,7 @@ wxCheckBox* Skip(wxDialog* dialog) {
     Require(option, "native Skip Empty Lines option exists");
     return option;
 }
-void InputReturn(wxTextCtrl* field, bool shift = false, bool control = false) {
+void InputReturn(wxTextCtrl* field, bool shift = false, bool control = false, bool keypad = false) {
     Require(field->IsShownOnScreen(), "Return starts in an open native multiline field");
     field->SetFocus();
     wxYield();
@@ -158,18 +158,20 @@ void InputReturn(wxTextCtrl* field, bool shift = false, bool control = false) {
     modified[VK_MENU] = 0;
     Require(SetKeyboardState(modified), "set owned multiline input modifiers");
     const auto handle = static_cast<HWND>(field->GetHandle());
-    PostMessageW(handle, WM_KEYDOWN, VK_RETURN, 1);
-    PostMessageW(handle, WM_KEYUP, VK_RETURN, 0xc0000001);
+    const LPARAM extended = keypad ? (LPARAM{KF_EXTENDED} << 16) : 0;
+    PostMessageW(handle, WM_KEYDOWN, VK_RETURN, extended | 1);
+    PostMessageW(handle, WM_KEYUP, VK_RETURN, extended | 0xc0000001);
     wxYield();
     SetKeyboardState(previous);
 #else
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "multiline input uses private native keys");
     bool received = false;
-    NativeKeys::KeyRelease observer(WXK_RETURN, received, nullptr);
+    NativeKeys::KeyRelease observer(keypad ? WXK_NUMPAD_ENTER : WXK_RETURN, received, nullptr);
     {
         wxFFile file(focusFile, "wb");
-        file.Write(wxString("key:") + (control ? "ctrl+" : "") + (shift ? "shift+" : "") + "Return");
+        file.Write(wxString("key:") + (control ? "ctrl+" : "") + (shift ? "shift+" : "") +
+                   (keypad ? "KP_Enter" : "Return"));
     }
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
     // Unshifted Return closes this modal receiver before its parent is enabled
@@ -234,11 +236,13 @@ void NativeControls(EditorFrame* frame) {
             for (auto* field : {prefix, suffix}) {
                 field->SetFocus();
                 wxYield();
-                field->SetValue("line");
-                field->SetInsertionPointEnd();
-                InputReturn(field, true);
-                Require(field->GetValue() == "line\n" && dialog->IsShown(),
-                        "native Shift+Return inserts a line break in each field");
+                for (const bool keypad : {false, true}) {
+                    field->SetValue("line");
+                    field->SetInsertionPointEnd();
+                    InputReturn(field, true, false, keypad);
+                    Require(field->GetValue() == "line\n" && dialog->IsShown(),
+                            "native Shift+Return and Shift+keypad Enter insert a line break in each field");
+                }
                 auto* other = field == prefix ? suffix : prefix;
                 for (const char* token : {"$(L)", "$(0L)", "$(N)", "$(0N)", "$(I)", "$(0I)"}) {
                     field->SetFocus();
@@ -306,45 +310,47 @@ void NativeControls(EditorFrame* frame) {
     NativeKeys::Shortcut(frame, 'M', false, true, true);
     NativeKeys::Shortcut(frame, 'M', true, true);
     Require(!opened, "Alt+Shift+M and Ctrl+Alt+M do not invoke Modify Lines");
-    std::puts("PASS: native Alt+M modifiers, Shift+Return in both fields, six links, field replacement and focus");
+    std::puts("PASS: native Alt+M modifiers, Shift+Return/keypad Enter in both fields, six links and focus");
 }
 void ReturnAndCancel(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    for (const char* name : {"Prefix text to lines", "Append text to lines"}) {
-        for (const bool control : {false, true}) {
-            TestEditor::ResetStream(editor, "x", 1, 1, Scintilla::EndOfLine::Lf);
-            bool closed = false;
-            Visit(frame, [&](wxDialog* dialog) {
-                Field(dialog, "Prefix text to lines")->SetValue("[");
-                Field(dialog, "Append text to lines")->SetValue("]");
-                NativeSearch::Toggle(Skip(dialog), false);
-                InputReturn(Field(dialog, name), false, control);
-                closed = !dialog->IsShown();
-                if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
-            });
-            Require(closed && TestEditor::Text(editor) == "[x]",
-                    "native Return without Shift applies and closes from either field");
-            TestEditor::RequireSelection(editor, 2, 2, "Return acceptance preserves original caret adjustment");
-            Require(editor->HasFocus(), "Return acceptance restores native editor focus");
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == "x" && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::GetModify),
-                    "Return acceptance is one undo action back to the save point");
-            Visit(frame, [&](wxDialog* dialog) {
-                Require(Field(dialog, "Prefix text to lines")->GetValue() == "[" &&
-                            Field(dialog, "Append text to lines")->GetValue() == "]" && !Skip(dialog)->GetValue(),
-                        "Return accepts prefix, suffix and checkbox recall");
-                Field(dialog, name)->SetValue("discard");
-                NativeSearch::Click(dialog, wxID_CANCEL);
-                closed = !dialog->IsShown();
-                if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
-            });
-            Require(closed && TestEditor::Text(editor) == "x" && editor->Send(Message::CanRedo) &&
-                        !editor->Send(Message::CanUndo),
-                    "native cancellation closes from either field and retains document and pending redo");
+    for (const bool keypad : {false, true}) {
+        for (const char* name : {"Prefix text to lines", "Append text to lines"}) {
+            for (const bool control : {false, true}) {
+                TestEditor::ResetStream(editor, "x", 1, 1, Scintilla::EndOfLine::Lf);
+                bool closed = false;
+                Visit(frame, [&](wxDialog* dialog) {
+                    Field(dialog, "Prefix text to lines")->SetValue("[");
+                    Field(dialog, "Append text to lines")->SetValue("]");
+                    NativeSearch::Toggle(Skip(dialog), false);
+                    InputReturn(Field(dialog, name), false, control, keypad);
+                    closed = !dialog->IsShown();
+                    if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
+                });
+                Require(closed && TestEditor::Text(editor) == "[x]",
+                        "native Return or keypad Enter without Shift applies and closes from either field");
+                TestEditor::RequireSelection(editor, 2, 2, "Return acceptance preserves original caret adjustment");
+                Require(editor->HasFocus(), "Return acceptance restores native editor focus");
+                editor->Send(Message::Undo);
+                Require(TestEditor::Text(editor) == "x" && !editor->Send(Message::CanUndo) &&
+                            !editor->Send(Message::GetModify),
+                        "Return acceptance is one undo action back to the save point");
+                Visit(frame, [&](wxDialog* dialog) {
+                    Require(Field(dialog, "Prefix text to lines")->GetValue() == "[" &&
+                                Field(dialog, "Append text to lines")->GetValue() == "]" && !Skip(dialog)->GetValue(),
+                            "Return accepts prefix, suffix and checkbox recall");
+                    Field(dialog, name)->SetValue("discard");
+                    NativeSearch::Click(dialog, wxID_CANCEL);
+                    closed = !dialog->IsShown();
+                    if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
+                });
+                Require(closed && TestEditor::Text(editor) == "x" && editor->Send(Message::CanRedo) &&
+                            !editor->Send(Message::CanUndo),
+                        "native cancellation closes from either field and retains document and pending redo");
+            }
         }
     }
-    std::puts("PASS: native Return/Ctrl+Return apply and recall from both fields; cancellation preserves history");
+    std::puts("PASS: native Return/keypad Enter with or without Ctrl apply and recall; cancellation preserves history");
 }
 void NativeEolAndRecall(EditorFrame* frame) {
     struct Fixture {
