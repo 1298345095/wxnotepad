@@ -4,7 +4,7 @@
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <wx/timer.h>
-#include "native_dialog_helpers.h"
+#include "file_command_driver.h"
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -21,80 +21,8 @@ using TestFiles::Filename;
 void Add(EditorFrame* frame, const std::string& text) {
     frame->Editor()->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
 }
-#ifdef __WXGTK__
-using NativeDialogs::Respond;
-#endif
-
-// Drives actual native modal widgets belonging to this test process. It does
-// not inject keyboard/mouse input or require ownership of the foreground app.
-class NativeDriver final : public wxTimer {
-public:
-    explicit NativeDriver(int choice, wxString destination = {}) : choice_(choice), destination_(destination) {
-        Start(100);
-    }
-    int prompts = 0;
-    int choosers = 0;
-    int errors = 0;
-    void Notify() override {
-#ifdef __WXMSW__
-        EnumThreadWindows(
-            GetCurrentThreadId(),
-            [](HWND window, LPARAM data) -> BOOL {
-                auto& driver = *reinterpret_cast<NativeDriver*>(data);
-                wchar_t title[256]{};
-                GetWindowTextW(window, title, 256);
-                if (IsWindowVisible(window) && wxString(title) == "Save changes?") {
-                    ++driver.prompts;
-                    const int button = driver.choice_ == wxID_YES ? IDYES : driver.choice_ == wxID_NO ? IDNO : IDCANCEL;
-                    // wxMessageDialog uses the Windows native task dialog.
-                    SendMessageW(window, WM_USER + 102, button, 0); // TDM_CLICK_BUTTON
-                } else if (IsWindowVisible(window) &&
-                           (wxString(title) == "Save file" || wxString(title) == "Save As")) {
-                    if (!driver.chooserStage_++) {
-                        ++driver.choosers;
-                        NativeDialogs::ChooseFile(window, driver.destination_);
-                    }
-                } else if (IsWindowVisible(window) && wxString(title) == "Could not save file") {
-                    ++driver.errors;
-                    SendMessageW(window, WM_USER + 102, IDOK, 0);
-                }
-                return TRUE;
-            },
-            reinterpret_cast<LPARAM>(this));
-#elif defined(__WXGTK__)
-        GList* windows = gtk_window_list_toplevels();
-        for (GList* item = windows; item; item = item->next) {
-            auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget)) continue;
-            if (GTK_IS_FILE_CHOOSER(widget)) {
-                if (!chooserStage_++) {
-                    ++choosers;
-                    NativeDialogs::ChooseFile(widget, destination_);
-                } else if (chooserStage_ == 2 && !destination_.empty()) {
-                    Respond(widget, GTK_RESPONSE_ACCEPT);
-                }
-                continue;
-            }
-            if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
-            if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Save changes?") {
-                ++prompts;
-                Respond(widget, choice_ == wxID_YES  ? GTK_RESPONSE_YES
-                                : choice_ == wxID_NO ? GTK_RESPONSE_NO
-                                                     : GTK_RESPONSE_CANCEL);
-            } else if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not save file") {
-                ++errors;
-                Respond(widget, GTK_RESPONSE_OK);
-            }
-        }
-        g_list_free(windows);
-#endif
-    }
-
-private:
-    int choice_;
-    wxString destination_;
-    int chooserStage_ = 0;
-};
+using NativeDialogs::FileCommand;
+using NativeDialogs::FileCommandDriver;
 
 void CheckWhitespacePrompts(const std::filesystem::path& directory) {
     const auto source = directory / "open-whitespace.txt";
@@ -133,7 +61,7 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
                 Add(candidate, sample.bytes);
             const auto path = candidate->DocumentPath();
             Require(candidate->Editor()->Send(Scintilla::Message::GetModify), "sample must be modified");
-            NativeDriver driver(wxID_CANCEL);
+            FileCommandDriver driver(FileCommand::Close, wxID_CANCEL);
             const bool closing = std::string_view(action) == "Close";
             const bool opening = std::string_view(action) == "Open";
             const bool completed = closing   ? candidate->Close()
@@ -165,7 +93,7 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
                 Text(explicitSave) == whitespace && explicitSave->DocumentPath().empty() &&
                 explicitSave->Editor()->Send(Scintilla::Message::GetModify),
             "cancelled and failed Open must preserve short whitespace-only Untitled");
-    NativeDriver cancelSave(wxID_CANCEL);
+    FileCommandDriver cancelSave(FileCommand::Close, wxID_CANCEL);
     Require(explicitSave->Save().status == SaveStatus::Cancelled, "explicit Save must still open its chooser");
     cancelSave.Stop();
     Require(cancelSave.choosers == 1 && cancelSave.prompts == 0 && Text(explicitSave) == whitespace &&
@@ -176,13 +104,13 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
                 explicitSave->Editor()->Send(Scintilla::Message::GetModify),
             "failed explicit Save must retain whitespace and dirty state");
     const auto firstPath = directory / "explicit-whitespace.txt";
-    NativeDriver saveDriver(wxID_YES, Filename(firstPath));
+    FileCommandDriver saveDriver(FileCommand::Close, wxID_YES, Filename(firstPath));
     Require(explicitSave->Save().status == SaveStatus::Saved, "explicit Save must write short whitespace Untitled");
     saveDriver.Stop();
     Require(saveDriver.choosers == 1 && Bytes(firstPath) == whitespace,
             "explicit Save must preserve exact whitespace bytes on disk");
     const auto secondPath = directory / "explicit-whitespace-copy.txt";
-    NativeDriver saveAsDriver(wxID_YES, Filename(secondPath));
+    FileCommandDriver saveAsDriver(FileCommand::Close, wxID_YES, Filename(secondPath));
     Require(explicitSave->SaveAs().status == SaveStatus::Saved, "explicit Save As must write short whitespace");
     saveAsDriver.Stop();
     Require(saveAsDriver.choosers == 1 && Bytes(secondPath) == whitespace &&
@@ -200,7 +128,7 @@ public:
         CallAfter([this, frame] {
             try {
                 Add(frame, "Unsaved 中文\r\n");
-                NativeDriver driver(wxID_CANCEL);
+                FileCommandDriver driver(FileCommand::Close, wxID_CANCEL);
                 Require(!frame->Close(), "Cancel must veto the actual close event");
                 driver.Stop();
                 Require(driver.prompts == 1, "dirty close must show the native confirmation");
@@ -219,7 +147,7 @@ public:
                 Add(saved, "first");
                 Require(saved->SaveFirst(Filename(path)).status == SaveStatus::Saved, "named-close setup must save");
                 Add(saved, " 中文\r\n");
-                NativeDriver saveDriver(wxID_YES);
+                FileCommandDriver saveDriver(FileCommand::Close, wxID_YES);
                 Require(saved->Close(), "successful Save must allow closing");
                 saveDriver.Stop();
                 Require(saveDriver.prompts == 1, "named dirty document must show native confirmation");
@@ -227,7 +155,7 @@ public:
                         "close Save must write changes to the known path");
                 std::puts("PASS: close Save writes changes to known path");
                 auto* clean = new EditorFrame;
-                NativeDriver cleanDriver(wxID_CANCEL);
+                FileCommandDriver cleanDriver(FileCommand::Close, wxID_CANCEL);
                 Require(clean->Close(), "unmodified document must close directly");
                 cleanDriver.Stop();
                 Require(cleanDriver.prompts == 0, "unmodified close must not show a confirmation");
@@ -238,7 +166,7 @@ public:
                 Require(discard->SaveFirst(Filename(discardPath)).status == SaveStatus::Saved,
                         "discard setup must save");
                 Add(discard, " changed");
-                NativeDriver discardDriver(wxID_NO);
+                FileCommandDriver discardDriver(FileCommand::Close, wxID_NO);
                 Require(discard->Close(), "Discard must allow closing");
                 discardDriver.Stop();
                 Require(discardDriver.prompts == 1 && Bytes(discardPath) == "original bytes",
@@ -246,7 +174,7 @@ public:
                 std::puts("PASS: close Discard does not write changes");
                 auto* cancelledSave = new EditorFrame;
                 Add(cancelledSave, "pending");
-                NativeDriver cancelledDriver(wxID_YES);
+                FileCommandDriver cancelledDriver(FileCommand::Close, wxID_YES);
                 Require(!cancelledSave->Close(), "cancelling the Save chooser must veto closing");
                 cancelledDriver.Stop();
                 Require(cancelledDriver.prompts == 1 && cancelledDriver.choosers == 1,
@@ -261,7 +189,7 @@ public:
                 auto* firstSave = new EditorFrame;
                 const auto firstPath = directory / "first-close.txt";
                 Add(firstSave, "First 中文😀\r\n");
-                NativeDriver firstDriver(wxID_YES, Filename(firstPath));
+                FileCommandDriver firstDriver(FileCommand::Close, wxID_YES, Filename(firstPath));
                 Require(firstSave->Close(), "successful first Save must allow closing");
                 firstDriver.Stop();
                 Require(firstDriver.prompts == 1 && firstDriver.choosers == 1,
@@ -280,7 +208,7 @@ public:
                 {
                     std::ofstream(failedPath / "sentinel", std::ios::binary) << "keep";
                 }
-                NativeDriver failedDriver(wxID_YES);
+                FileCommandDriver failedDriver(FileCommand::Close, wxID_YES);
                 Require(!failedSave->Close(), "failed Save must veto closing");
                 failedDriver.Stop();
                 Require(failedDriver.prompts == 1 && failedDriver.errors == 1 && failedDriver.choosers == 0,

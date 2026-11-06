@@ -249,6 +249,51 @@ int UnicodeFallback(std::string_view bytes, bool skipWithoutNull, unsigned nativ
 #endif
     return 0;
 }
+int PreferredEncoding(const wxString& path, std::string_view bytes, const EncodingOptions& options) {
+    const auto extension = wxFileName(path).GetExt();
+    if (options.loadNFOasOEM && (extension.CmpNoCase("nfo") == 0 || extension.CmpNoCase("diz") == 0))
+        return CodePageIndex(437);
+    if (extension.CmpNoCase("bat") == 0 || extension.CmpNoCase("cmd") == 0) return 0;
+    if (extension == "sh" || bytes.starts_with("#!/")) return 6;
+    if (extension.CmpNoCase("vhd") == 0 || extension.CmpNoCase("vhdl") == 0) return CodePageIndex(1252);
+    return -1;
+}
+
+int EmptyFileEncoding(int strong, int weak, int preferred, int fallback, bool loadAsciiAsUtf8) {
+    if (strong >= 0) return strong;
+    if (weak >= 0) return weak;
+    if (preferred >= 0) return preferred;
+    return loadAsciiAsUtf8 ? 6 : fallback;
+}
+
+int AsciiFileEncoding(int weak, int preferred, int declared, int fallback, bool loadAsciiAsUtf8) {
+    int index;
+    if (weak >= 0 && !(weak >= 2 && weak <= 5))
+        index = weak;
+    else if (preferred >= 0)
+        index = preferred;
+    else if (declared >= 0)
+        index = declared;
+    else if (loadAsciiAsUtf8)
+        index = 6;
+    else
+        index = fallback >= 2 && fallback <= 5 ? 0 : fallback;
+    if (index == declared && index > 0 && (catalog[index].codePage == 28591 || catalog[index].codePage == 28599))
+        index = CodePageIndex(catalog[index].codePage == 28591 ? 1252 : 1254);
+    return index;
+}
+
+int LegacyFileEncoding(std::string_view bytes, int weak, int preferred, int declared, int fallback, unsigned oem) {
+    for (const int index : {weak, preferred, declared, fallback}) {
+        if (index > 0 && catalog[index].legacy && ValidLegacy(index == 1 ? oem : catalog[index].codePage, bytes)) {
+            unsigned page = index == 1 ? oem : catalog[index].codePage;
+            // Original prefers Windows aliases for sniffed ISO-8859 declarations.
+            if (index == declared && (page == 28591 || page == 28599)) page = page == 28591 ? 1252 : 1254;
+            return index == 1 ? 1 : CodePageIndex(page);
+        }
+    }
+    return -1;
+}
 } // namespace
 
 int NormalizeEncodingSetting(int value) {
@@ -302,16 +347,7 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
     const int strong = explicitEncoding ? EncodingIndex(*explicitEncoding) : -1;
     const int weak = weakEncoding ? EncodingIndex(*weakEncoding) : -1;
     const int fallback = DefaultEncoding(options.defaultEncoding);
-    int preferred = -1;
-    const auto extension = wxFileName(path).GetExt();
-    if (options.loadNFOasOEM && (extension.CmpNoCase("nfo") == 0 || extension.CmpNoCase("diz") == 0))
-        preferred = CodePageIndex(437);
-    else if (extension.CmpNoCase("bat") == 0 || extension.CmpNoCase("cmd") == 0)
-        preferred = 0;
-    else if (extension == "sh" || bytes.starts_with("#!/"))
-        preferred = 6;
-    else if (extension.CmpNoCase("vhd") == 0 || extension.CmpNoCase("vhdl") == 0)
-        preferred = CodePageIndex(1252);
+    const int preferred = PreferredEncoding(path, bytes, options);
 
     const auto asciiChoice = [&](int index, bool empty) {
         if (!empty && index == 7) index = 6;
@@ -320,12 +356,7 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
         return choose(index, index == 0);
     };
     if (bytes.empty())
-        return asciiChoice(strong >= 0               ? strong
-                           : weak >= 0               ? weak
-                           : preferred >= 0          ? preferred
-                           : options.loadASCIIasUTF8 ? 6
-                                                     : fallback,
-                           true);
+        return asciiChoice(EmptyFileEncoding(strong, weak, preferred, fallback, options.loadASCIIasUTF8), true);
     constexpr size_t maxConvertedSize = (1U << 30) - 16;
     if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == FileEncoding::Utf8)) {
         return {explicitEncoding,
@@ -348,25 +379,11 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
     }
     const bool ascii = std::all_of(bytes.begin(), bytes.end(), [](unsigned char ch) { return ch < 128; });
     if (ascii) {
-        int index = weak >= 0 && !(weak >= 2 && weak <= 5) ? weak
-                    : preferred >= 0                       ? preferred
-                    : declared >= 0                        ? declared
-                    : options.loadASCIIasUTF8              ? 6
-                    : fallback >= 2 && fallback <= 5       ? 0
-                                                           : fallback;
-        if (index == declared && index > 0 && (catalog[index].codePage == 28591 || catalog[index].codePage == 28599))
-            index = CodePageIndex(catalog[index].codePage == 28591 ? 1252 : 1254);
-        return asciiChoice(index, false);
+        return asciiChoice(AsciiFileEncoding(weak, preferred, declared, fallback, options.loadASCIIasUTF8), false);
     }
     if (IsUtf8(bytes)) return choose(6);
-    for (const int index : {weak, preferred, declared, fallback}) {
-        if (index > 0 && catalog[index].legacy && ValidLegacy(index == 1 ? oem : catalog[index].codePage, bytes)) {
-            unsigned page = index == 1 ? oem : catalog[index].codePage;
-            // Original prefers Windows aliases for sniffed ISO-8859 declarations.
-            if (index == declared && (page == 28591 || page == 28599)) page = page == 28591 ? 1252 : 1254;
-            return choose(index == 1 ? 1 : CodePageIndex(page));
-        }
-    }
+    const int legacyChoice = LegacyFileEncoding(bytes, weak, preferred, declared, fallback, oem);
+    if (legacyChoice >= 0) return choose(legacyChoice);
     const bool nativeValid = native != 65001 && ValidLegacy(native, bytes);
     bool binary = false;
     const bool maybeBinary = MaybeBinary(bytes, binary);

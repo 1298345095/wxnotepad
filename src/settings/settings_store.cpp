@@ -61,42 +61,44 @@ wxString ConfigurationPath() {
 } // namespace
 
 SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
+    const OriginalSettings defaults;
     LoadLines();
-    values.saveSettings = ReadBool("SaveSettings", true);
-    values.wordWrap = ReadBool("WordWrap", true);
-    values.showLineNumbers = ReadBool("ShowLineNumbers", true);
-    values.viewWhiteSpace = ReadBool("ViewWhiteSpace", false);
-    values.autoSelect = ReadBool("AutoSelect", true, "Styles");
-    values.noCgiGuess = ReadBool("NoCGIGuess", false, "Settings2");
-    values.fixLineEndings = ReadBool("FixLineEndings", false);
-    values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", false);
-    values.encoding.defaultEncoding = NormalizeEncodingSetting(ReadInt("DefaultEncoding", -1));
-    values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", true);
-    values.encoding.loadANSIasUTF8 = ReadBool("LoadANSIasUTF8", true);
-    values.encoding.loadASCIIasUTF8 = ReadBool("LoadASCIIasUTF8", true);
-    values.encoding.loadNFOasOEM = ReadBool("LoadNFOasOEM", true);
-    values.encoding.noEncodingTags = ReadBool("NoEncodingTags", false);
-    values.encoding.noFileVariables = ReadBool("NoFileVariables", false, "Settings2");
-    values.zoomLevel = std::clamp(ReadInt("ZoomLevel", 100), 10, 500);
-    values.selectOption = ReadInt("SelectOption", 15);
-    values.autoInsertMask = ReadInt("AutoInsertMask", 511);
-    values.saveFindReplace = ReadBool("SaveFindReplace", false);
-    values.findReplaceOption = ReadInt("FindReplaceOption", 2);
+    values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
+    values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
+    values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
+    values.viewWhiteSpace = ReadBool("ViewWhiteSpace", defaults.viewWhiteSpace);
+    values.autoSelect = ReadBool("AutoSelect", defaults.autoSelect, "Styles");
+    values.noCgiGuess = ReadBool("NoCGIGuess", defaults.noCgiGuess, "Settings2");
+    values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
+    values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", defaults.fixTrailingBlanks);
+    values.encoding.defaultEncoding =
+        NormalizeEncodingSetting(ReadInt("DefaultEncoding", defaults.encoding.defaultEncoding));
+    values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", defaults.encoding.skipUnicodeDetection);
+    values.encoding.loadANSIasUTF8 = ReadBool("LoadANSIasUTF8", defaults.encoding.loadANSIasUTF8);
+    values.encoding.loadASCIIasUTF8 = ReadBool("LoadASCIIasUTF8", defaults.encoding.loadASCIIasUTF8);
+    values.encoding.loadNFOasOEM = ReadBool("LoadNFOasOEM", defaults.encoding.loadNFOasOEM);
+    values.encoding.noEncodingTags = ReadBool("NoEncodingTags", defaults.encoding.noEncodingTags);
+    values.encoding.noFileVariables = ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
+    values.zoomLevel = std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), 10, 500);
+    values.selectOption = ReadInt("SelectOption", defaults.selectOption);
+    values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
+    values.saveFindReplace = ReadBool("SaveFindReplace", defaults.saveFindReplace);
+    values.findReplaceOption = ReadInt("FindReplaceOption", defaults.findReplaceOption);
     if (values.saveFindReplace) {
-        values.findReplaceFlag = ReadInt("FindReplaceFlag", 0);
+        values.findReplaceFlag = ReadInt("FindReplaceFlag", defaults.findReplaceFlag);
         values.recentFind = ReadHistory("Recent Find");
         values.recentReplace = ReadHistory("Recent Replace");
     }
-    values.lineSelection = ReadInt("LineSelection", 1);
-    values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", 0), 0, 2);
-    values.warnLineEndings = ReadBool("WarnLineEndings", true);
-    values.globalTabs.tabWidth = std::clamp(ReadInt("TabWidth", 4), 1, 256);
-    values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", 4), 0, 256);
-    values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", false);
-    values.tabIndents = ReadBool("TabIndents", true);
-    values.autoIndent = ReadBool("AutoIndent", true);
-    values.detectIndentation = ReadBool("DetectIndentation", true);
-    values.backspaceUnindents = static_cast<uint8_t>(ReadInt("BackspaceUnindents", 2));
+    values.lineSelection = ReadInt("LineSelection", defaults.lineSelection);
+    values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", defaults.defaultEOLMode), 0, 2);
+    values.warnLineEndings = ReadBool("WarnLineEndings", defaults.warnLineEndings);
+    values.globalTabs.tabWidth = std::clamp(ReadInt("TabWidth", defaults.globalTabs.tabWidth), 1, 256);
+    values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", defaults.globalTabs.indentWidth), 0, 256);
+    values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", defaults.globalTabs.tabsAsSpaces);
+    values.tabIndents = ReadBool("TabIndents", defaults.tabIndents);
+    values.autoIndent = ReadBool("AutoIndent", defaults.autoIndent);
+    values.detectIndentation = ReadBool("DetectIndentation", defaults.detectIndentation);
+    values.backspaceUnindents = static_cast<uint8_t>(ReadInt("BackspaceUnindents", defaults.backspaceUnindents));
     for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
         auto& tabs = values.schemeTabs[index];
         tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, SchemeSections[index]), 1, 256);
@@ -247,40 +249,42 @@ void SettingsStore::WriteInt(const wxString& key, int value, int fallback, const
 }
 
 bool SettingsStore::Save(bool explicitSave) {
+    const OriginalSettings defaults;
     if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
     // Merge the implemented fields into the current file, retaining other fields
     // and sections, including settings added by subsequent parity slices.
     if (!LoadLines()) return false;
-    WriteBool("SaveSettings", values.saveSettings, true);
+    WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
     if (values.saveSettings || explicitSave) {
-        WriteBool("WordWrap", values.wordWrap, true);
-        WriteBool("ShowLineNumbers", values.showLineNumbers, true);
-        WriteBool("ViewWhiteSpace", values.viewWhiteSpace, false);
-        WriteBool("AutoSelect", values.autoSelect, true, "Styles");
-        WriteInt("DefaultEncoding", values.encoding.defaultEncoding, -1);
-        WriteBool("SkipUnicodeDetection", values.encoding.skipUnicodeDetection, true);
-        WriteBool("LoadANSIasUTF8", values.encoding.loadANSIasUTF8, true);
-        WriteBool("LoadASCIIasUTF8", values.encoding.loadASCIIasUTF8, true);
-        WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, true);
-        WriteBool("NoEncodingTags", values.encoding.noEncodingTags, false);
-        WriteInt("ZoomLevel", values.zoomLevel, 100);
-        WriteBool("FixLineEndings", values.fixLineEndings, false);
-        WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, false);
-        WriteInt("SelectOption", values.selectOption, 15);
-        WriteInt("AutoInsertMask", values.autoInsertMask, 511);
-        WriteBool("SaveFindReplace", values.saveFindReplace, false);
-        WriteInt("FindReplaceOption", values.findReplaceOption, 2);
-        WriteInt("FindReplaceFlag", values.saveFindReplace ? values.findReplaceFlag : 0, 0);
-        WriteInt("LineSelection", values.lineSelection, 1);
-        WriteInt("DefaultEOLMode", values.defaultEOLMode, 0);
-        WriteBool("WarnLineEndings", values.warnLineEndings, true);
-        WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, false);
-        WriteBool("TabIndents", values.tabIndents, true);
-        WriteBool("AutoIndent", values.autoIndent, true);
-        WriteBool("DetectIndentation", values.detectIndentation, true);
-        WriteInt("TabWidth", values.globalTabs.tabWidth, 4);
-        WriteInt("IndentWidth", values.globalTabs.indentWidth, 4);
-        WriteInt("BackspaceUnindents", values.backspaceUnindents, 2);
+        WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
+        WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
+        WriteBool("ViewWhiteSpace", values.viewWhiteSpace, defaults.viewWhiteSpace);
+        WriteBool("AutoSelect", values.autoSelect, defaults.autoSelect, "Styles");
+        WriteInt("DefaultEncoding", values.encoding.defaultEncoding, defaults.encoding.defaultEncoding);
+        WriteBool("SkipUnicodeDetection", values.encoding.skipUnicodeDetection, defaults.encoding.skipUnicodeDetection);
+        WriteBool("LoadANSIasUTF8", values.encoding.loadANSIasUTF8, defaults.encoding.loadANSIasUTF8);
+        WriteBool("LoadASCIIasUTF8", values.encoding.loadASCIIasUTF8, defaults.encoding.loadASCIIasUTF8);
+        WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, defaults.encoding.loadNFOasOEM);
+        WriteBool("NoEncodingTags", values.encoding.noEncodingTags, defaults.encoding.noEncodingTags);
+        WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
+        WriteBool("FixLineEndings", values.fixLineEndings, defaults.fixLineEndings);
+        WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
+        WriteInt("SelectOption", values.selectOption, defaults.selectOption);
+        WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
+        WriteBool("SaveFindReplace", values.saveFindReplace, defaults.saveFindReplace);
+        WriteInt("FindReplaceOption", values.findReplaceOption, defaults.findReplaceOption);
+        WriteInt("FindReplaceFlag", values.saveFindReplace ? values.findReplaceFlag : defaults.findReplaceFlag,
+                 defaults.findReplaceFlag);
+        WriteInt("LineSelection", values.lineSelection, defaults.lineSelection);
+        WriteInt("DefaultEOLMode", values.defaultEOLMode, defaults.defaultEOLMode);
+        WriteBool("WarnLineEndings", values.warnLineEndings, defaults.warnLineEndings);
+        WriteBool("TabsAsSpaces", values.globalTabs.tabsAsSpaces, defaults.globalTabs.tabsAsSpaces);
+        WriteBool("TabIndents", values.tabIndents, defaults.tabIndents);
+        WriteBool("AutoIndent", values.autoIndent, defaults.autoIndent);
+        WriteBool("DetectIndentation", values.detectIndentation, defaults.detectIndentation);
+        WriteInt("TabWidth", values.globalTabs.tabWidth, defaults.globalTabs.tabWidth);
+        WriteInt("IndentWidth", values.globalTabs.indentWidth, defaults.globalTabs.indentWidth);
+        WriteInt("BackspaceUnindents", values.backspaceUnindents, defaults.backspaceUnindents);
         for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
             WriteSchemeTabs(index);
         }

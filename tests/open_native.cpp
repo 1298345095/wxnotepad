@@ -4,7 +4,7 @@
 #include "file_helpers.h"
 #include <wx/wx.h>
 #include <wx/timer.h>
-#include "native_dialog_helpers.h"
+#include "file_command_driver.h"
 #include <wx/statusbr.h>
 #include <cstdio>
 #include <filesystem>
@@ -18,86 +18,12 @@ namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+using NativeDialogs::FileCommand;
+using NativeDialogs::FileCommandDriver;
 using TestEditor::Append;
 using TestEditor::Text;
 using TestFiles::Bytes;
 using TestFiles::Filename;
-#ifdef __WXGTK__
-using NativeDialogs::Respond;
-#endif
-
-// Drives actual native modal widgets belonging to this test process. It does
-// not inject keyboard/mouse input or require ownership of the foreground app.
-class NativeDriver final : public wxTimer {
-public:
-    explicit NativeDriver(int choice, wxString destination = {}) : choice_(choice), destination_(destination) {
-        Start(100);
-    }
-    int prompts = 0;
-    int choosers = 0;
-    int errors = 0;
-    void Notify() override {
-#ifdef __WXMSW__
-        EnumThreadWindows(
-            GetCurrentThreadId(),
-            [](HWND window, LPARAM data) -> BOOL {
-                auto& driver = *reinterpret_cast<NativeDriver*>(data);
-                wchar_t title[256]{};
-                GetWindowTextW(window, title, 256);
-                if (IsWindowVisible(window) && wxString(title) == "Save changes?") {
-                    ++driver.prompts;
-                    const int button = driver.choice_ == wxID_YES ? IDYES : driver.choice_ == wxID_NO ? IDNO : IDCANCEL;
-                    // wxMessageDialog uses the Windows native task dialog.
-                    SendMessageW(window, WM_USER + 102, button, 0); // TDM_CLICK_BUTTON
-                } else if (IsWindowVisible(window) &&
-                           (wxString(title) == "Save file" || wxString(title) == "Open file")) {
-                    if (!driver.chooserStage_++) {
-                        ++driver.choosers;
-                        NativeDialogs::ChooseFile(window, driver.destination_);
-                    }
-                } else if (IsWindowVisible(window) &&
-                           (wxString(title) == "Could not save file" || wxString(title) == "Could not open file")) {
-                    ++driver.errors;
-                    SendMessageW(window, WM_USER + 102, IDOK, 0);
-                }
-                return TRUE;
-            },
-            reinterpret_cast<LPARAM>(this));
-#elif defined(__WXGTK__)
-        GList* windows = gtk_window_list_toplevels();
-        for (GList* item = windows; item; item = item->next) {
-            auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget)) continue;
-            if (GTK_IS_FILE_CHOOSER(widget)) {
-                if (!chooserStage_++) {
-                    ++choosers;
-                    NativeDialogs::ChooseFile(widget, destination_);
-                } else if (chooserStage_ == 2 && !destination_.empty()) {
-                    Respond(widget, GTK_RESPONSE_ACCEPT);
-                }
-                continue;
-            }
-            if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
-            if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Save changes?") {
-                ++prompts;
-                Respond(widget, choice_ == wxID_YES  ? GTK_RESPONSE_YES
-                                : choice_ == wxID_NO ? GTK_RESPONSE_NO
-                                                     : GTK_RESPONSE_CANCEL);
-            } else if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not save file" ||
-                       wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not open file") {
-                ++errors;
-                Respond(widget, GTK_RESPONSE_OK);
-            }
-        }
-        g_list_free(windows);
-#endif
-    }
-
-private:
-    int choice_;
-    wxString destination_;
-    int chooserStage_ = 0;
-};
 
 class OpenNativeApp final : public wxApp {
 public:
@@ -116,33 +42,33 @@ public:
                     std::ofstream(path, std::ios::binary) << "opened 中文\n";
                 }
                 Append(frame, "pending");
-                NativeDriver cancel(wxID_CANCEL);
+                FileCommandDriver cancel(FileCommand::Open, wxID_CANCEL);
                 Require(frame->Open(Filename(path)).status == OpenStatus::Cancelled,
                         "Cancel must prevent Open replacing dirty document");
                 cancel.Stop();
                 Require(cancel.prompts == 1 && Text(frame) == "pending" && frame->DocumentPath().empty(),
                         "Open Cancel must retain identity and content");
-                NativeDriver cancelNew(wxID_CANCEL);
+                FileCommandDriver cancelNew(FileCommand::Open, wxID_CANCEL);
                 Require(!frame->New(), "Cancel must prevent New replacing dirty document");
                 cancelNew.Stop();
                 Require(cancelNew.prompts == 1 && Text(frame) == "pending" &&
                             frame->Editor()->Send(Scintilla::Message::CanUndo),
                         "New Cancel must retain history");
                 std::puts("PASS: Open/New Cancel preserve the editable document");
-                NativeDriver cancelledSave(wxID_YES);
+                FileCommandDriver cancelledSave(FileCommand::Open, wxID_YES);
                 Require(frame->Open(Filename(path)).status == OpenStatus::Cancelled,
                         "cancelled first Save must prevent Open");
                 cancelledSave.Stop();
                 Require(cancelledSave.prompts == 1 && cancelledSave.choosers == 1 && Text(frame) == "pending",
                         "cancelled Save chooser must retain the current document");
-                NativeDriver cancelledNewSave(wxID_YES);
+                FileCommandDriver cancelledNewSave(FileCommand::Open, wxID_YES);
                 Require(!frame->New(), "cancelled first Save must prevent New");
                 cancelledNewSave.Stop();
                 Require(cancelledNewSave.prompts == 1 && cancelledNewSave.choosers == 1 &&
                             frame->Editor()->Send(Scintilla::Message::GetModify),
                         "cancelled New Save must retain dirty state");
                 const auto savedPath = directory / "saved.txt";
-                NativeDriver saveNew(wxID_YES, Filename(savedPath));
+                FileCommandDriver saveNew(FileCommand::Open, wxID_YES, Filename(savedPath));
                 Require(frame->New(), "successful first Save must allow New");
                 saveNew.Stop();
                 Require(saveNew.prompts == 1 && saveNew.choosers == 1 && Bytes(savedPath) == "pending",
@@ -157,7 +83,7 @@ public:
                     "PASS: cancelled Save prevents switching; successful first Save then New resets the document");
                 Require(frame->Open(Filename(savedPath)).status == OpenStatus::Opened, "saved source must open");
                 Append(frame, " changed");
-                NativeDriver saveOpen(wxID_YES);
+                FileCommandDriver saveOpen(FileCommand::Open, wxID_YES);
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened,
                         "successful named Save must allow Open");
                 saveOpen.Stop();
@@ -172,14 +98,14 @@ public:
                 {
                     std::ofstream(path / "sentinel", std::ios::binary) << "keep";
                 }
-                NativeDriver failedOpenSave(wxID_YES);
+                FileCommandDriver failedOpenSave(FileCommand::Open, wxID_YES);
                 Require(frame->Open(Filename(savedPath)).status == OpenStatus::Cancelled,
                         "failed old-document Save must prevent Open");
                 failedOpenSave.Stop();
                 Require(failedOpenSave.prompts == 1 && failedOpenSave.errors == 1 && frame->DocumentPath() == oldPath &&
                             Text(frame) == "opened 中文\n changed",
                         "failed Open Save must retain identity and text");
-                NativeDriver failedNewSave(wxID_YES);
+                FileCommandDriver failedNewSave(FileCommand::Open, wxID_YES);
                 Require(!frame->New(), "failed old-document Save must prevent New");
                 failedNewSave.Stop();
                 Require(failedNewSave.errors == 1 && Bytes(path / "sentinel") == "keep",
@@ -188,19 +114,19 @@ public:
                 Require(Text(frame) == "opened 中文\n" && !frame->Editor()->Send(Scintilla::Message::GetModify),
                         "failed switches must preserve the original save point and Undo");
                 Append(frame, " discard");
-                NativeDriver discardNew(wxID_NO);
+                FileCommandDriver discardNew(FileCommand::Open, wxID_NO);
                 Require(frame->New(), "Discard must allow New");
                 discardNew.Stop();
                 Require(discardNew.prompts == 1 && Bytes(path / "sentinel") == "keep", "Discard New must not save");
                 Append(frame, "discard me");
-                NativeDriver discardOpen(wxID_NO);
+                FileCommandDriver discardOpen(FileCommand::Open, wxID_NO);
                 Require(frame->Open(Filename(savedPath)).status == OpenStatus::Opened, "Discard must allow Open");
                 discardOpen.Stop();
                 Require(discardOpen.prompts == 1 && Text(frame) == "pending changed" &&
                             !frame->Editor()->Send(Scintilla::Message::CanUndo),
                         "Discard Open must replace and isolate history");
                 std::puts("PASS: named Save/Discard/failure protection shared by Open and New");
-                NativeDriver pickerCancel(wxID_CANCEL);
+                FileCommandDriver pickerCancel(FileCommand::Open, wxID_CANCEL);
                 wxCommandEvent openCancel(wxEVT_MENU, wxID_OPEN);
                 frame->GetEventHandler()->ProcessEvent(openCancel);
                 pickerCancel.Stop();
@@ -210,7 +136,7 @@ public:
                 {
                     std::ofstream(pickedPath, std::ios::binary) << "\xef\xbb\xbfPicked\r\n";
                 }
-                NativeDriver pickerAccept(wxID_NO, Filename(pickedPath));
+                FileCommandDriver pickerAccept(FileCommand::Open, wxID_NO, Filename(pickedPath));
                 wxCommandEvent openAccept(wxEVT_MENU, wxID_OPEN);
                 frame->GetEventHandler()->ProcessEvent(openAccept);
                 pickerAccept.Stop();
@@ -219,7 +145,7 @@ public:
                             frame->DocumentHasUtf8Bom() && Text(frame) == "Picked\r\n",
                         "native Open command must use the chosen path");
                 Append(frame, "discard");
-                NativeDriver menuNew(wxID_NO);
+                FileCommandDriver menuNew(FileCommand::Open, wxID_NO);
                 wxCommandEvent newCommand(wxEVT_MENU, wxID_NEW);
                 frame->GetEventHandler()->ProcessEvent(newCommand);
                 menuNew.Stop();
@@ -231,7 +157,7 @@ public:
                 Require(frame->Open(Filename(pickedPath)).status == OpenStatus::Opened,
                         "same-path reopen setup must load");
                 Append(frame, "saved");
-                NativeDriver samePathSave(wxID_YES);
+                FileCommandDriver samePathSave(FileCommand::Open, wxID_YES);
                 Require(frame->Open(Filename(pickedPath)).status == OpenStatus::Opened,
                         "Save then reopen same path must succeed");
                 samePathSave.Stop();
@@ -265,7 +191,7 @@ public:
                     roundtrip->Editor()->Send(Scintilla::Message::DeleteBack);
                     Require(Text(roundtrip) == originalText && roundtrip->Editor()->Send(Scintilla::Message::GetModify),
                             "roundtrip must exercise close Save with unchanged content");
-                    NativeDriver closeSave(wxID_YES);
+                    FileCommandDriver closeSave(FileCommand::Open, wxID_YES);
                     Require(roundtrip->Close(), "roundtrip close Save must succeed");
                     closeSave.Stop();
                     Require(closeSave.prompts == 1 && closeSave.choosers == 0 && Bytes(roundtripPath) == samples[index],
@@ -282,7 +208,7 @@ public:
                     const std::string bytes("\x41\0\x2d\x4e\x3d\xd8\0\xde\r\0\n\0", 12);
                     output.write(bytes.data(), bytes.size());
                 }
-                NativeDriver utf16Pick(wxID_NO, Filename(utf16Path));
+                FileCommandDriver utf16Pick(FileCommand::Open, wxID_NO, Filename(utf16Path));
                 wxCommandEvent utf16Open(wxEVT_MENU, utf16Menu);
                 frame->GetEventHandler()->ProcessEvent(utf16Open);
                 utf16Pick.Stop();
@@ -291,7 +217,7 @@ public:
                         "native explicit Open As must decode no-BOM UTF-16LE");
                 Require(frame->GetStatusBar() && frame->GetStatusBar()->GetStatusText().Contains("UTF-16LE"),
                         "status must identify current UTF-16LE encoding");
-                NativeDriver utf16Cancel(wxID_CANCEL);
+                FileCommandDriver utf16Cancel(FileCommand::Open, wxID_CANCEL);
                 frame->GetEventHandler()->ProcessEvent(utf16Open);
                 utf16Cancel.Stop();
                 Require(utf16Cancel.choosers == 1 && Text(frame) == "A中😀\r\n",
@@ -302,7 +228,7 @@ public:
                     const std::string bytes("\0\xd8", 2);
                     output.write(bytes.data(), bytes.size());
                 }
-                NativeDriver utf16Invalid(wxID_CANCEL, Filename(invalidUtf16Path));
+                FileCommandDriver utf16Invalid(FileCommand::Open, wxID_CANCEL, Filename(invalidUtf16Path));
                 frame->GetEventHandler()->ProcessEvent(utf16Open);
                 utf16Invalid.Stop();
                 Require(utf16Invalid.errors == 1 && utf16Invalid.prompts == 0 && Text(frame) == "A中😀\r\n",
