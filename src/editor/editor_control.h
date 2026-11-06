@@ -51,6 +51,9 @@ public:
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     void Copy();
     void Cut();
+    void CopyLine();
+    void CutLine();
+    void DeleteLine();
     void JumpToPosition(intptr_t position);
     void MatchBrace(bool select = false);
     void ToggleBookmark();

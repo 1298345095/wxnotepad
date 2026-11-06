@@ -146,6 +146,17 @@ wxMenu* EditorFrame::CreateEditMenu() {
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanPaste)); },
         wxID_PASTE);
+    const int cutLine = wxWindow::NewControlId();
+    const int copyLine = wxWindow::NewControlId();
+    const int deleteLine = wxWindow::NewControlId();
+    edit->Append(cutLine, "Cu&t Line\tCtrl+Shift+X");
+    edit->Append(copyLine, "&Copy Line\tCtrl+Shift+C");
+    edit->Append(deleteLine, "D&elete Line\tCtrl+Shift+D");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->CutLine(); }, cutLine);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->CopyLine(); }, copyLine);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->DeleteLine(); }, deleteLine);
+    for (const int id : {cutLine, copyLine, deleteLine})
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     AppendEditingCommands(edit);
     edit->AppendSeparator();
     AppendSearchCommands(edit);
