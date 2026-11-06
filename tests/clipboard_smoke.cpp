@@ -98,17 +98,24 @@ public:
         frame_->Raise();
         editor_->SetFocus();
         const auto activationDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-        while ((!frame_->IsActive() || !editor_->HasFocus()) && std::chrono::steady_clock::now() < activationDeadline) {
-            frame_->SetTitle(focusTitle);
+        bool acknowledged = privateFocusFile.empty();
+        while (std::chrono::steady_clock::now() < activationDeadline) {
+            if (!privateFocusFile.empty()) {
+                wxString pending;
+                wxFFile file(privateFocusFile, "rb");
+                file.ReadAll(&pending);
+                acknowledged = pending.empty();
+            }
+            // The peer's first map can take native focus before this process
+            // dispatches its deactivate event. Keep the request until the driver
+            // claims it, and process native events before trusting cached focus.
             wxYield();
+            if (acknowledged && frame_->IsActive() && editor_->HasFocus()) break;
             wxMilliSleep(10);
         }
-        if (!frame_->IsActive() || !editor_->HasFocus())
+        if (!acknowledged || !frame_->IsActive() || !editor_->HasFocus())
             throw std::runtime_error("editor must receive actual native focus after peer command: " +
                                      command.ToStdString());
-        if (!privateFocusFile.empty()) {
-            wxFFile file(privateFocusFile, "wb");
-        }
         frame_->SetTitle(title);
         SettleClipboard();
         return response;

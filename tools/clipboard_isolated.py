@@ -82,7 +82,12 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
         while test.poll() is None:
             focus = runtime / "focus"
             request = focus.read_text(encoding="utf-8") if focus.exists() else ""
-            if (request in ("editor", "peer", "gesture", "geometry") or request.startswith(("key:", "focus:", "drag:", "front:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "focus:", "drag:", "front:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+                if request == "peer-deferred":
+                    # The readiness fixture holds a claim long enough to expose
+                    # a receiver that replaces its focus request with a gesture.
+                    time.sleep(.1)
+                    request = "peer"
                 def front(title):
                     if backend == "x11":
                         windows = xdo("search", "--onlyvisible", "--name", title).splitlines()
@@ -205,8 +210,12 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     windows = xdo("search", "--onlyvisible", "--name", "wxnotepad clipboard focus: " + request).splitlines()
                     if not windows: time.sleep(.03); continue
                     window = windows[0]
+                    acknowledge(focus)
                     xdo("windowfocus", "--sync", window)
                 else:
+                    # Claim the focus request before native events can publish
+                    # the next gesture, as for key and gesture requests above.
+                    acknowledge(focus)
                     xdo("windowfocus", "--sync", weston_window)
                     xdo("key", "--clearmodifiers", "super+Tab")
                 last_switch = time.monotonic()
