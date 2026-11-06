@@ -50,6 +50,13 @@ jobs:
         uses: ./.github/actions/dependencies
         with:
           profile: gui
+      - name: Validate Linux native crash evidence
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v gdb
+          python -X utf8 tests/ci_cores_integration.py -v
       - name: Configure
         shell: bash
         env:
