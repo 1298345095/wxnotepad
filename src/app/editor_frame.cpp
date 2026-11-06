@@ -235,6 +235,7 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
         source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding, std::nullopt,
         [this] { indentation_.Load(*editor_, document_.Language(), document_.FileVariables()); });
     if (result.status == OpenStatus::Opened) {
+        wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
             ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
         UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -256,6 +257,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    wrapColumn_ = 0;
     indentation_.Reset(*editor_, document_.Language());
     GetMenuBar()->Check(automaticLanguageId_, true);
     UpdateDocumentState();
