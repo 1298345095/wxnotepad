@@ -325,6 +325,6 @@ if(BUILD_TESTING)
     if(UNIX AND NOT APPLE)
         add_test(NAME native_clipboard_peer_readiness COMMAND clipboard_smoke)
         set_tests_properties(native_clipboard_peer_readiness PROPERTIES TIMEOUT 30
-            ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=readiness;WXNOTEPAD_CLIPBOARD_DEFER_PEER_RENDER=1")
+            ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=readiness;WXNOTEPAD_CLIPBOARD_DEFER_PEER_RENDER=1;WXNOTEPAD_CLIPBOARD_DEFER_PEER_FOCUS_CLAIM=1")
     endif()
 endif()
