@@ -4,6 +4,7 @@
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
 #include "app/dialogs/align_lines_dialog.h"
+#include "app/dialogs/sort_lines_dialog.h"
 #include "app/dialogs/tab_settings_dialog.h"
 #include "settings/settings_store.h"
 #include <wx/accel.h>
@@ -262,11 +263,21 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     edit->AppendSeparator();
     const int mergeDuplicates = wxWindow::NewControlId();
     const int removeDuplicates = wxWindow::NewControlId();
+    const int sortLines = wxWindow::NewControlId();
+    edit->Append(sortLines, "S&ort Lines...\tAlt+O");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (ShowSortLinesDialog(this, sortOptions_, editor_->Send(Scintilla::Message::SelectionIsRectangle)))
+                editor_->SortLines(sortOptions_);
+            editor_->SetFocus();
+        },
+        sortLines);
     edit->Append(mergeDuplicates, "Merge Duplicate Lines");
     edit->Append(removeDuplicates, "Remove Duplicate Lines");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MergeDuplicateLines(); }, mergeDuplicates);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->RemoveDuplicateLines(); }, removeDuplicates);
-    for (const int id : {mergeDuplicates, removeDuplicates})
+    for (const int id : {sortLines, mergeDuplicates, removeDuplicates})
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) {
@@ -737,9 +748,8 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'I' && event.ControlDown()) {
-        if (!event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
-            !editor_->Send(Scintilla::Message::GetSelectionEmpty))
+    if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
+        if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
             editor_->SplitLines();
         return true;
     }
