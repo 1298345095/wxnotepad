@@ -71,7 +71,7 @@ controller would mostly relocate its current responsibilities. Native menu
 bindings can stay in the frame once feature algorithms and dialog construction
 have their own modules.
 
-The enclosure dialog invokes the frame's apply callback during its native OK
+The enclosure dialog applies the editor command during its native OK
 handler, preserving the original ordering where rectangle feedback appears
 while the custom dialog remains open. Its recalled text belongs to the frame.
 
