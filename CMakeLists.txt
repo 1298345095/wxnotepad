@@ -296,4 +296,10 @@ if(BUILD_TESTING)
     add_editor_test(replace_all_regex replace_all_regular_expression 30)
     add_editor_test(replace_selection replace_in_selection 30)
     add_editor_test(search_backslashes original_search_backslashes 30)
+    # Append to retain the existing private-display shard membership and order.
+    if(UNIX AND NOT APPLE)
+        add_test(NAME native_clipboard_peer_readiness COMMAND clipboard_smoke)
+        set_tests_properties(native_clipboard_peer_readiness PROPERTIES TIMEOUT 30
+            ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=readiness;WXNOTEPAD_CLIPBOARD_DEFER_PEER_RENDER=1")
+    endif()
 endif()
