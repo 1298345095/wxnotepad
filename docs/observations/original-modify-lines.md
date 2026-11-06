@@ -33,5 +33,11 @@ executable runs on Windows and private X11/Wayland displays. Linux native
 shortcut requests use `tests/native_key_helpers.h`, the existing isolated
 display transport and steady-clock deadlines with actual key-release checks.
 
+The links disable keyboard focus before native creation: wxMSW uses that policy
+when choosing `WS_TABSTOP`. The Windows Tab test enters native dialog-message
+processing; accelerator translation handles the shortcut tests. Its focus
+assertion runs after closing the dialog, allowing a regression to report failure
+through the application test boundary.
+
 Development evidence is retained under
 `E:/NewNotepad4/wxnotepad-evidence/everyday-line-editing-2026-11-06/issue-116/`.

@@ -51,11 +51,12 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
           Substitution{"$(I)", "$(0I)", "Continuous number (zero-based)."}}) {
         auto* controls = new wxBoxSizer(wxHORIZONTAL);
         for (const char* token : {row.token, row.zeroToken}) {
-            auto* link =
-                new wxHyperlinkCtrl(&dialog, wxID_ANY, token, token, wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_LEFT);
-            link->SetName(token);
+            auto* link = new wxHyperlinkCtrl;
             // The original SysLink controls are outside the TAB traversal chain.
+            // Set this before Create so wxMSW also omits the native WS_TABSTOP style.
             link->DisableFocusFromKeyboard();
+            link->Create(&dialog, wxID_ANY, token, token, wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_LEFT);
+            link->SetName(token);
             controls->Add(link, 0, wxRIGHT, dialog.FromDIP(10));
             link->Bind(wxEVT_HYPERLINK, [&, token](wxHyperlinkEvent&) {
                 focused->SetSelection(-1, -1);
