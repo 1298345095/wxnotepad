@@ -201,6 +201,17 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+    const int compressWhitespace = wxWindow::NewControlId();
+    edit->Append(compressWhitespace, "Compress &Whitespace\tAlt+W");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!editor_->CompressWhitespace())
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        compressWhitespace);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, compressWhitespace);
 }
 
 void EditorFrame::AppendSearchCommands(wxMenu* edit) {
