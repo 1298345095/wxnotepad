@@ -157,6 +157,20 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    const int duplicateSelection = wxWindow::NewControlId();
+    edit->Append(duplicateSelection, "Duplicate Selection\tAlt+D");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::SelectionDuplicate); },
+        duplicateSelection);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, duplicateSelection);
+    const int duplicateLine = wxWindow::NewControlId();
+    const int transposeLines = wxWindow::NewControlId();
+    edit->Append(duplicateLine, "Duplicate Line\tCtrl+D");
+    edit->Append(transposeLines, "Transpose Lines\tAlt+S");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::LineDuplicate); }, duplicateLine);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::LineTranspose); }, transposeLines);
+    for (const int id : {duplicateLine, transposeLines})
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     auto* enclosure = new wxMenu;
     const int customEnclosure = wxWindow::NewControlId();
     enclosure->Append(customEnclosure, "&With...\tAlt+Q");
