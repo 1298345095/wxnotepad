@@ -60,7 +60,7 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
             link->Bind(wxEVT_HYPERLINK, [&, token](wxHyperlinkEvent&) {
                 focused->SetSelection(-1, -1);
                 focused->WriteText(token);
-                focused->SetFocus();
+                dialog.CallAfter([field = focused] { field->SetFocus(); });
             });
         }
         controls->Add(new wxStaticText(&dialog, wxID_ANY, row.description));

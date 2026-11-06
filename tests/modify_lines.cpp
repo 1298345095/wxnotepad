@@ -147,6 +147,8 @@ wxCheckBox* Skip(wxDialog* dialog) {
 void ClickSubstitution(wxDialog* dialog, const char* token) {
     auto* link = wxDynamicCast(wxWindow::FindWindowByName(token, dialog), wxHyperlinkCtrl);
     Require(link, "all six original substitution links exist");
+    link->SetFocus();
+    wxYield();
 #ifdef __WXMSW__
     const auto handle = static_cast<HWND>(link->GetHandle());
     NMLINK notification{};
