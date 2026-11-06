@@ -103,36 +103,48 @@ public:
     int Enter(wxDialog* dialog) override {
         if (dialog->GetTitle() != "Column Wrap") return wxID_NONE;
         wxTheApp->CallAfter([this, dialog] {
-            auto* input = wxDynamicCast(wxWindow::FindWindowByName("Boundary", dialog), wxTextCtrl);
-            observed = input && input->GetValue() == expected_;
-            if (input) input->SetValue(chosen_);
-            if (action_ == DialogAction::Invalid) {
-                NativeSearch::Click(dialog, wxID_OK);
-                Require(dialog->IsShown() && input->HasFocus(), "invalid input stays open and refocuses Boundary");
-                NativeSearch::Click(dialog, wxID_CANCEL);
-            } else if (action_ == DialogAction::Return) {
-                input->SetFocus();
-                DialogKey(dialog, WXK_RETURN, "Return");
-            } else if (action_ == DialogAction::Escape) {
-                DialogKey(dialog, WXK_ESCAPE, "Escape");
-            } else if (action_ == DialogAction::Tab) {
-                input->SetFocus();
-                bool ok = false, cancel = false;
-                for (int i = 0; i < 5; ++i) {
-                    DialogKey(dialog, WXK_TAB, "Tab");
-                    auto* focused = wxWindow::FindFocus();
-                    ok |= focused && focused->GetId() == wxID_OK;
-                    cancel |= focused && focused->GetId() == wxID_CANCEL;
-                    if (ok && cancel && input->HasFocus()) break;
+            try {
+                auto* input = wxDynamicCast(wxWindow::FindWindowByName("Boundary", dialog), wxTextCtrl);
+                observed = input && input->GetValue() == expected_;
+                if (input) input->SetValue(chosen_);
+                if (action_ == DialogAction::Invalid) {
+                    NativeSearch::Click(dialog, wxID_OK);
+                    Require(dialog->IsShown() && input->HasFocus(), "invalid input stays open and refocuses Boundary");
+                    NativeSearch::Click(dialog, wxID_CANCEL);
+                } else if (action_ == DialogAction::Return) {
+                    input->SetFocus();
+                    DialogKey(dialog, WXK_RETURN, "Return");
+                } else if (action_ == DialogAction::Escape) {
+                    DialogKey(dialog, WXK_ESCAPE, "Escape");
+                } else if (action_ == DialogAction::Tab) {
+                    input->SetFocus();
+                    bool ok = false, cancel = false;
+                    for (int i = 0; i < 5; ++i) {
+                        DialogKey(dialog, WXK_TAB, "Tab");
+                        auto* focused = wxWindow::FindFocus();
+                        ok |= focused && focused->GetId() == wxID_OK;
+                        cancel |= focused && focused->GetId() == wxID_CANCEL;
+                        if (ok && cancel && input->HasFocus()) break;
+                    }
+                    Require(ok && cancel && input->HasFocus(), "native Tab traverses Boundary, OK and Cancel");
+                    NativeSearch::Click(dialog, wxID_CANCEL);
+                } else {
+                    NativeSearch::Click(dialog, action_ == DialogAction::Cancel ? wxID_CANCEL : wxID_OK);
+                    if (action_ == DialogAction::Accept && dialog->IsShown()) {
+                        NativeSearch::Click(dialog, wxID_CANCEL);
+                        throw std::runtime_error(("original accepted boundary must close the native dialog: " + chosen_)
+                                                     .ToStdString(wxConvUTF8));
+                    }
                 }
-                Require(ok && cancel && input->HasFocus(), "native Tab traverses Boundary, OK and Cancel");
-                NativeSearch::Click(dialog, wxID_CANCEL);
-            } else
-                NativeSearch::Click(dialog, action_ == DialogAction::Cancel ? wxID_CANCEL : wxID_OK);
+            } catch (const std::exception& error) {
+                failure = error.what();
+                if (dialog->IsShown()) NativeSearch::Click(dialog, wxID_CANCEL);
+            }
         });
         return wxID_NONE;
     }
     bool observed = false;
+    std::string failure;
 
 private:
     wxString expected_;
@@ -144,6 +156,7 @@ void Dialog(EditorFrame* frame, const wxString& expected, const wxString& chosen
         NativeKeys::Shortcut(frame, 'I', true, true, true);
     WrapDriver driver(expected, chosen, action);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Column Wrap..."));
+    if (!driver.failure.empty()) throw std::runtime_error(driver.failure);
     Require(driver.observed, "native Boundary shows original effective default/accepted recall");
 }
 void ColumnFixture(EditorFrame* frame) {
@@ -153,6 +166,7 @@ void ColumnFixture(EditorFrame* frame) {
     Require(id != wxNOT_FOUND, "native Edit menu exposes Column Wrap");
     WrapDriver driver;
     NativeSearch::Command(frame, id);
+    if (!driver.failure.empty()) throw std::runtime_error(driver.failure);
     Require(driver.observed && TestEditor::Text(editor) == "one\ntwo", "native boundary wraps original words");
     TestEditor::RequireSelection(editor, 0, 7, "column wrap replacement endpoints");
 }
@@ -241,8 +255,8 @@ void DialogCases(EditorFrame* frame) {
                 "Cancel/Esc/Tab keep text, history, accepted recall and save point");
         TestEditor::RequireSelection(editor, 1, 4, "cancel keeps partial endpoints");
     }
-    for (const auto* invalid : {"", "abc", "-1", "+1", "12abc", "12 ", "4294967296"})
-        Dialog(frame, "6", invalid, DialogAction::Invalid);
+    for (const auto* invalid : {"", "abc", "-1", "+1", "12abc", "12 ", "4294967296", "\t12", "Ⅻ", "⑫", "½", "零"})
+        Dialog(frame, "6", wxString::FromUTF8(invalid), DialogAction::Invalid);
     Dialog(frame, "6", "0", DialogAction::Return);
     Require(TestEditor::Text(editor) == "a\nb", "Return accepts and zero clamps to one");
     Dialog(frame, "1", "513", DialogAction::Accept);
@@ -250,6 +264,10 @@ void DialogCases(EditorFrame* frame) {
     Dialog(frame, "1", " 12", DialogAction::Accept);
     Dialog(frame, "12", "000000000000006", DialogAction::Accept);
     Dialog(frame, "6", "42", DialogAction::Cancel);
+    Dialog(frame, "6", wxString::FromUTF8("１２"), DialogAction::Accept);
+    Dialog(frame, "12", wxString::FromUTF8("٢"), DialogAction::Accept);
+    Dialog(frame, "2", wxString::FromUTF8("²"), DialogAction::Accept);
+    Dialog(frame, "2", wxString::FromUTF8("𝟞"), DialogAction::Accept);
     std::puts("PASS: native OK/Return/Cancel/Esc/Tab, invalid refocus, unsigned conversion, bounds and recall");
 }
 void SelectionAndProtection(EditorFrame* frame) {
@@ -354,12 +372,15 @@ void SplitCases(EditorFrame* frame) {
     TestEditor::ResetStream(editor, "one two three", 0, 13);
     NativeKeys::Shortcut(frame, 'I', true);
     Require(TestEditor::Text(editor) == "one two \nthree", "native Ctrl+I reaches Split Lines");
-    for (const auto modifiers : {std::pair{true, false}, std::pair{false, true}, std::pair{true, true}}) {
+    for (const auto modifiers : {std::pair{false, true}, std::pair{true, true}}) {
         TestEditor::ResetStream(editor, "one two three", 0, 13);
         NativeKeys::Shortcut(frame, 'I', true, modifiers.first, modifiers.second);
         Require(TestEditor::Text(editor) == "one two three" && !editor->Send(Message::CanUndo),
                 "extra shortcut modifiers do not invoke Split Lines");
     }
+    TestEditor::ResetStream(editor, "one two three", 0, 13);
+    NativeKeys::Shortcut(frame, 'I', true, true);
+    Require(TestEditor::Text(editor) == "One Two Three", "Ctrl+Alt+I retains original Title Case routing");
     TestEditor::ResetStream(editor, "one two three", 0, 13);
     editor->SetClientSize(static_cast<int>(width * 2), 200);
     Split(frame);

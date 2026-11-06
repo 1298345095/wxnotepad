@@ -25,9 +25,13 @@ and bounded to 0..4096, with the original `fill-column` file-variable override).
 Accepted boundaries are clamped to 1..512. The accepted value is recalled until
 New or a successful Open replaces the document. Cancel and invalid input preserve
 the recalled value. The input retains the original 15-character limit and
-unsigned decimal conversion behavior, including leading spaces and the signed
+unsigned decimal conversion behavior, including leading spaces, accepted Unicode
+digits and the signed
 assignment of values above INT_MAX. Windows `GetDlgItemInt` was independently
-queried for these conversion cases.
+queried for these conversion cases. `tools/capture_column_wrap_digits.py` captures
+only single Unicode digits actually accepted by that API; its checked-in ranges
+retain fullwidth, Arabic-Indic, superscript and supplementary digit input without
+accepting unrelated numeric characters such as Roman numerals or fractions.
 
 `original_line_wrap` drives actual menu/dialog controls, native Ctrl+I and dialog
 Return/Escape/Tab keys in a separate GUI process. Literal fixtures cover UTF-16
