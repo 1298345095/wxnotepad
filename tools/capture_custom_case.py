@@ -71,7 +71,7 @@ def capture_properties():
     properties = {name: [] for name in ("Upper", "Lower", "TitleDelta", "Invert", "Sentence", "TitleState")}
     for value in range(0x110000):
         values = (0,) * len(properties)
-        if value != 0 and not 0xD800 <= value <= 0xDFFF:
+        if not 0xD800 <= value <= 0xDFFF:
             values = capture_character(value)
         for target, captured in zip(properties.values(), values):
             target.append(captured)

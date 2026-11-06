@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include "settings/settings_store.h"
 #include "sort_reference_fixtures.h"
 #include "file_helpers.h"
@@ -7,7 +8,6 @@
 #include <cstring>
 #include <wx/radiobut.h>
 #include <wx/ffile.h>
-#include <wx/eventfilter.h>
 #include <chrono>
 #include <functional>
 
@@ -23,27 +23,15 @@ void WaitFor(const std::function<bool()>& condition, const char* message) {
     }
     Require(condition(), message);
 }
-#ifndef __WXMSW__
-class KeyRelease final : public wxEventFilter {
-public:
-    KeyRelease(int key, bool& released) : key_(key), released_(released) { wxEvtHandler::AddFilter(this); }
-    ~KeyRelease() override { wxEvtHandler::RemoveFilter(this); }
-    int FilterEvent(wxEvent& event) override {
-        if (event.GetEventType() == wxEVT_KEY_UP && static_cast<wxKeyEvent&>(event).GetKeyCode() == key_)
-            released_ = true;
-        return Event_Skip;
-    }
-
-private:
-    int key_;
-    bool& released_;
-};
-#endif
 void NativeKey(wxWindow* window, int key, const char* name, bool alt = false, bool* externalRelease = nullptr) {
 #ifdef __WXMSW__
-    Require(NativeSearch::WindowsShortcut(
-                window, key, {{VK_MENU, static_cast<BYTE>(alt ? 0x80 : 0)}, {VK_SHIFT, 0}, {VK_CONTROL, 0}}),
-            "native dialog key is handled");
+    if (auto* dialog = wxDynamicCast(window, wxDialog)) {
+        NativeKeys::DialogNavigation(dialog, key);
+    } else {
+        Require(NativeSearch::WindowsShortcut(
+                    window, key, {{VK_MENU, static_cast<BYTE>(alt ? 0x80 : 0)}, {VK_SHIFT, 0}, {VK_CONTROL, 0}}),
+                "native sort shortcut is handled");
+    }
 #else
     wxString path;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &path), "native keys use a private display");
@@ -63,7 +51,7 @@ void NativeKey(wxWindow* window, int key, const char* name, bool alt = false, bo
     }
     bool localReleased = false;
     bool& released = externalRelease ? *externalRelease : localReleased;
-    KeyRelease observer(key, released);
+    NativeKeys::KeyRelease observer(key, released, nullptr);
     {
         wxFFile file(path, "wb");
         file.Write(wxString("key:") + name);

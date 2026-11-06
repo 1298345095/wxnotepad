@@ -39,6 +39,78 @@ void ReferenceFixtures(EditorFrame* frame) {
     }
     std::puts("PASS: 36 literal original Windows custom-case fixtures and history");
 }
+void EmbeddedNulHistory(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    // Notepad4 89b8b36 Edit.cpp:1596 compares Title/Sentence through the first
+    // UTF-16 NUL, after mapping the complete length-aware selection.
+    for (const auto& [label, before] :
+         {std::pair{"Sentence Case", std::string("\0ABC", 4)}, std::pair{"Title Case", std::string("A\0b", 3)},
+          std::pair{"Sentence Case", std::string("A\0b", 3)}, std::pair{"Title Case", std::string("\0ABC", 4)},
+          std::pair{"Title Case", std::string("A\0B", 3)}}) {
+        TestEditor::ResetStream(editor, "");
+        editor->Send(Message::AddText, before.size(), reinterpret_cast<intptr_t>(before.data()));
+        editor->Send(Message::EmptyUndoBuffer);
+        editor->Send(Message::SetSavePoint);
+        Require(TestEditor::Text(editor) == before, "length-aware setup retains literal embedded NUL bytes");
+        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Message::Undo);
+        editor->Send(Message::SetSel, before.size(), 0);
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", label));
+        Require(TestEditor::Text(editor) == before, "original NUL-sensitive no-change gate retains literal bytes");
+        TestEditor::RequireSelection(editor, static_cast<intptr_t>(before.size()), 0,
+                                     "NUL-sensitive no-change gate retains reversed endpoints");
+        Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                "NUL-sensitive no-change gate retains save point and pending redo");
+        editor->Send(Message::Redo);
+        Require(TestEditor::Text(editor) == before + "!" && editor->Send(Message::GetModify),
+                "pending redo executes after unchanged NUL-sensitive conversion");
+        editor->Send(Message::Undo);
+        Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify),
+                "Undo restores original embedded NUL bytes and save point");
+    }
+    std::puts("PASS: embedded NUL Title/Sentence no-change bytes, reversed endpoints, save point and pending redo");
+}
+void EmbeddedNulChanges(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    struct Fixture {
+        const char* label;
+        std::string before;
+        std::string after;
+    };
+    // Literal results captured with the pinned EditMapTextCase Windows APIs,
+    // original UTF-16 loops and original no-change gate (zh-SG reference host).
+    for (const auto& fixture : {Fixture{"Title Case", std::string("a\0b", 3), std::string("A\0B", 3)},
+                                Fixture{"Sentence Case", std::string("a\0b", 3), std::string("A\0b", 3)},
+                                Fixture{"Invert Case", std::string("a\0b", 3), std::string("A\0B", 3)},
+                                Fixture{"Invert Case", std::string("A\0b", 3), std::string("a\0B", 3)},
+                                Fixture{"Invert Case", std::string("\0ABC", 4), std::string("\0abc", 4)},
+                                Fixture{"Title Case", std::string("a\0𐐀B", 7), std::string("A\0𐐀B", 7)},
+                                Fixture{"Sentence Case", std::string("a\0𐐀B", 7), std::string("A\0𐐨b", 7)},
+                                Fixture{"Invert Case", std::string("a\0𐐀B", 7), std::string("A\0𐐀b", 7)}}) {
+        TestEditor::ResetStream(editor, "");
+        editor->Send(Message::AddText, fixture.before.size(), reinterpret_cast<intptr_t>(fixture.before.data()));
+        editor->Send(Message::EmptyUndoBuffer);
+        editor->Send(Message::SetSavePoint);
+        Require(TestEditor::Text(editor) == fixture.before, "length-aware setup retains NUL and supplementary bytes");
+        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Message::Undo);
+        editor->Send(Message::SetSel, 0, fixture.before.size());
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", fixture.label));
+        Require(TestEditor::Text(editor) == fixture.after, "embedded NUL mapping matches literal original bytes");
+        TestEditor::RequireSelection(editor, 0, static_cast<intptr_t>(fixture.after.size()),
+                                     "changed embedded NUL mapping retains full UTF-8 endpoints");
+        Require(editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+                "changed embedded NUL mapping replaces pending redo and leaves the save point");
+        editor->Send(Message::Undo);
+        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::GetModify) &&
+                    !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                "one Undo restores original embedded NUL bytes and save point");
+        editor->Send(Message::Redo);
+        Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+                "one Redo restores literal mapped embedded NUL bytes");
+    }
+    std::puts("PASS: embedded NUL word boundaries and per-command UTF-16 behavior, endpoints, save point, Undo/Redo");
+}
 void Shortcuts(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const auto& [key, expected] : {std::pair{'U', "Ab"}, std::pair{'I', "Ab"}, std::pair{'O', "Ab"}}) {
@@ -257,6 +329,8 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                EmbeddedNulHistory(frame);
+                EmbeddedNulChanges(frame);
                 Menus(frame);
                 ReferenceFixtures(frame);
                 Shortcuts(frame);

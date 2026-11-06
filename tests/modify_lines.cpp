@@ -258,20 +258,7 @@ void NativeControls(EditorFrame* frame) {
             suffix->SetFocus();
             wxYield();
 #ifdef __WXMSW__
-            BYTE previous[256];
-            Require(GetKeyboardState(previous), "read owned test-thread keyboard state for Tab");
-            BYTE released[256];
-            std::copy(std::begin(previous), std::end(previous), std::begin(released));
-            for (const int key : {VK_CONTROL, VK_MENU, VK_SHIFT})
-                released[key] = 0;
-            Require(SetKeyboardState(released), "release opening shortcut modifiers during native Tab");
-            MSG message{};
-            message.hwnd = static_cast<HWND>(suffix->GetHandle());
-            message.message = WM_KEYDOWN;
-            message.wParam = VK_TAB;
-            // Tab uses native dialog navigation, rather than accelerator translation.
-            dialog->MSWProcessMessage(&message);
-            SetKeyboardState(previous);
+            NativeKeys::DialogNavigation(dialog, VK_TAB);
             wxYield();
 #else
             wxString focusFile;
