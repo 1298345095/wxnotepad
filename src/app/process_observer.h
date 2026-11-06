@@ -21,7 +21,9 @@ private:
     bool lastDirty_ = false;
     bool lastActive_ = false;
     bool publishPending_ = false;
+    bool commandPending_ = false;
     void Publish();
+    void CommandFailure(const char* stage, unsigned long error);
     void Observe();
     void OnFrameDestroyed(wxWindowDestroyEvent& event);
 };
