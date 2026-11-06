@@ -34,6 +34,7 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/date_time.cpp
     src/editor/align_lines.cpp
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
@@ -55,6 +56,7 @@ add_library(editor_runtime STATIC
     src/editor/editor_control.cpp
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
+    src/editor/platform/custom_case.cpp
     src/editor/platform/gtk_drag_drop.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
@@ -130,6 +132,15 @@ add_gui_program(wxnotepad src/app/main.cpp app_shell)
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(date_time_format tests/date_time_format.cpp)
+    target_link_libraries(date_time_format PRIVATE editor_runtime)
+    if(MSVC)
+        target_compile_options(date_time_format PRIVATE /utf-8)
+    endif()
+    add_test(NAME original_date_time_literals COMMAND date_time_format)
+    if(UNIX)
+        set_tests_properties(original_date_time_literals PROPERTIES ENVIRONMENT "LC_ALL=C.UTF-8")
+    endif()
     find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
     add_test(NAME original_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
@@ -165,6 +176,10 @@ if(BUILD_TESTING)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+    add_editor_test(date_time original_date_time_insertion 60)
+    add_test(NAME original_date_time_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/date_time_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(pad_spaces original_pad_spaces 60)
     add_editor_test(align_lines original_align_lines 60)
@@ -233,6 +248,7 @@ if(BUILD_TESTING)
     add_editor_test(join_lines original_join_lines 60)
     add_editor_test(duplicate_lines original_duplicate_lines 60)
     add_editor_test(case_conversion original_case_conversion 60)
+    add_editor_test(custom_case original_custom_case 60)
     add_editor_test(duplicate_transpose original_duplicate_transpose 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)

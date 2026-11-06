@@ -45,10 +45,10 @@ void Shortcuts(EditorFrame* frame) {
     for (const bool shift : {false, true}) {
         TestEditor::ResetStream(editor, "aB", 0, 2);
         NativeKeys::Shortcut(frame, 'U', true, true, shift);
-        Require(TestEditor::Text(editor) == "aB" && !editor->Send(Message::CanUndo),
-                "additional Alt modifier does not invoke upper or lower");
+        Require(TestEditor::Text(editor) == (shift ? "aB" : "Ab") && bool(editor->Send(Message::CanUndo)) == !shift,
+                "Ctrl+Alt+U invokes Invert while additional Shift invokes no case command");
     }
-    std::puts("PASS: native Ctrl+Shift+U, Ctrl+U and exact additional-Alt routing");
+    std::puts("PASS: native Ctrl+Shift+U, Ctrl+U and exact Ctrl+Alt+U routing");
 }
 void History(EditorFrame* frame) {
     auto* editor = frame->Editor();
