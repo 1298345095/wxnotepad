@@ -70,7 +70,7 @@ void NativeKey(EditorFrame* frame, int key, bool control, bool alt = false, bool
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys use private display");
     {
         wxFFile file(focusFile, "wb");
-        file.Write("front:wxnotepad");
+        file.Write(frame->IsActive() ? "focus:wxnotepad" : "front:wxnotepad");
     }
     wxStopWatch focusWait;
     while (focusWait.Time() < 3000) {
@@ -311,9 +311,15 @@ public:
     int Enter(wxDialog* dialog) override {
         if (dialog->GetTitle() == "Enclose Selection") return wxID_NONE;
         ++count;
+        for (auto* window : wxTopLevelWindows) {
+            auto* enclosure = wxDynamicCast(window, wxDialog);
+            if (enclosure && enclosure->GetTitle() == "Enclose Selection" && enclosure->IsShown())
+                enclosureVisible = true;
+        }
         return wxID_OK;
     }
     int count = 0;
+    bool enclosureVisible = false;
 };
 void Protection(EditorFrame* frame) {
     auto* editor = frame->Editor();
@@ -342,7 +348,8 @@ void Protection(EditorFrame* frame) {
     Menu(frame, "Triple Backticks");
     Require(feedback.count == 1, "rectangular triple enclosure reports original warning");
     Dialog(frame, "", "", "", "", wxID_OK);
-    Require(feedback.count == 2, "rectangle warning precedes both-empty custom-input return");
+    Require(feedback.count == 2 && feedback.enclosureVisible,
+            "OK applies and reports rectangle warning before closing the enclosure dialog");
     Require(TestEditor::Text(editor) == "alpha\nbeta" && !editor->Send(Message::CanUndo) &&
                 editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify) &&
                 editor->Send(Message::GetRectangularSelectionAnchor) == anchor &&

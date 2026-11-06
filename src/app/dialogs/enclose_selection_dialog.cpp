@@ -38,12 +38,17 @@ void ShowEncloseSelectionDialog(wxWindow* parent, EditorControl& editor, wxStrin
     dialog.SetMinSize(dialog.GetSize());
     prefix->SetFocus();
     dialog.CentreOnParent();
-    if (dialog.ShowModal() == wxID_OK) {
-        before = WinEditText(prefix);
-        after = WinEditText(suffix);
-        if (!editor.EncloseSelection(before, after))
-            wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
-                         wxOK | wxICON_WARNING, parent);
-    }
+    dialog.Bind(
+        wxEVT_BUTTON,
+        [&](wxCommandEvent&) {
+            before = WinEditText(prefix);
+            after = WinEditText(suffix);
+            if (!editor.EncloseSelection(before, after))
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, &dialog);
+            dialog.EndModal(wxID_OK);
+        },
+        wxID_OK);
+    dialog.ShowModal();
     editor.SetFocus();
 }
