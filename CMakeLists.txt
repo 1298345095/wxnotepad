@@ -37,6 +37,7 @@ add_library(editor_runtime STATIC
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
     src/editor/compress_whitespace.cpp
+    src/editor/duplicate_lines.cpp
     src/editor/indentation.cpp
     src/editor/join_lines.cpp
     src/editor/line_comments.cpp
@@ -209,6 +210,7 @@ if(BUILD_TESTING)
     add_editor_test(compress_whitespace original_compress_whitespace 60)
     add_editor_test(blank_lines original_blank_lines 60)
     add_editor_test(join_lines original_join_lines 60)
+    add_editor_test(duplicate_lines original_duplicate_lines 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
     add_editor_test(navigation_bindings original_navigation_bindings 60)
