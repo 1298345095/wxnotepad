@@ -35,6 +35,7 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
     src/editor/bookmarks.cpp
+    src/editor/compress_whitespace.cpp
     src/editor/indentation.cpp
     src/editor/join_lines.cpp
     src/editor/line_comments.cpp
@@ -204,6 +205,7 @@ if(BUILD_TESTING)
     set_tests_properties(original_toggle_line_comment PROPERTIES TIMEOUT 90)
     add_editor_test(move_lines original_move_lines 60)
     add_editor_test(strip_blanks original_strip_blanks 60)
+    add_editor_test(compress_whitespace original_compress_whitespace 60)
     add_editor_test(join_lines original_join_lines 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
