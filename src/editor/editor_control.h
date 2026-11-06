@@ -31,12 +31,18 @@ public:
     // False reports the original unsupported rectangular-selection operation.
     bool ToggleLineComments(const char* prefix, bool spaceAfterComment);
     bool EncloseSelection(const wxString& before, const wxString& after);
+    bool CompressWhitespace();
+    bool RemoveBlankLines(bool merge);
     void MoveLines(bool upwards);
+    void StripLeadingBlanks();
+    void StripTrailingBlanks();
     // The original duplicate-line caller uses (true, true) inside its own undo action.
     void PadWithSpaces(bool skipEmpty = false, bool noUndoGroup = false);
     void JoinLines();
     // False reports the original unsupported rectangular-selection operation.
     bool JoinParagraphs();
+    void MergeDuplicateLines();
+    void RemoveDuplicateLines();
     void SetIndentationWidths(int tabWidth, int indentWidth);
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
@@ -55,6 +61,7 @@ public:
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
 private:
+    void DuplicateLines(bool merge);
     class Core;
     wxTimer caretTimer_;
     wxTimer scrollTimer_;

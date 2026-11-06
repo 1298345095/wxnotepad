@@ -183,6 +183,45 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     addEnclosure("Triple &Double Quotes\tCtrl+6", "\"\"\"");
     addEnclosure("Triple &Backticks\tCtrl+9", "```");
     edit->AppendSubMenu(enclosure, "&Enclose Selection");
+    const int stripLeading = wxWindow::NewControlId();
+    const int stripTrailing = wxWindow::NewControlId();
+    edit->Append(stripTrailing, "Strip &Trailing Blanks\tAlt+T");
+    edit->Append(stripLeading, "Strip Leading Blan&ks");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->StripLeadingBlanks(); }, stripLeading);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->StripTrailingBlanks(); }, stripTrailing);
+    for (const int id : {stripLeading, stripTrailing})
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    const int mergeBlankLines = wxWindow::NewControlId();
+    const int removeBlankLines = wxWindow::NewControlId();
+    edit->Append(mergeBlankLines, "Merge Blank Lines\tAlt+B");
+    edit->Append(removeBlankLines, "Remove Blank Lines\tAlt+R");
+    for (const int id : {mergeBlankLines, removeBlankLines}) {
+        Bind(
+            wxEVT_MENU,
+            [this, id, mergeBlankLines](wxCommandEvent&) {
+                if (!editor_->RemoveBlankLines(id == mergeBlankLines))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    edit->AppendSeparator();
+    const int mergeDuplicates = wxWindow::NewControlId();
+    const int removeDuplicates = wxWindow::NewControlId();
+    edit->Append(mergeDuplicates, "Merge Duplicate Lines");
+    edit->Append(removeDuplicates, "Remove Duplicate Lines");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MergeDuplicateLines(); }, mergeDuplicates);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->RemoveDuplicateLines(); }, removeDuplicates);
+    for (const int id : {mergeDuplicates, removeDuplicates})
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) {
+                using Scintilla::Message;
+                event.Enable(editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionEnd)) >
+                             editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionStart)));
+            },
+            id);
     const int padSpaces = wxWindow::NewControlId();
     edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);
@@ -267,6 +306,17 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+    const int compressWhitespace = wxWindow::NewControlId();
+    edit->Append(compressWhitespace, "Compress &Whitespace\tAlt+W");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!editor_->CompressWhitespace())
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        compressWhitespace);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, compressWhitespace);
 }
 
 void EditorFrame::AppendSearchCommands(wxMenu* edit) {
@@ -549,8 +599,12 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
-    return HandleTabConversionKey(event) || HandleSearchKey(event) || HandleNavigationKey(event) ||
-           HandleViewKey(event) || HandleDocumentKey(event);
+    if (HandleTabConversionKey(event)) return true;
+    if (event.GetKeyCode() == 'T' && event.AltDown()) {
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
+        return true;
+    }
+    return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
 }
 
 void EditorFrame::ConvertTabs(bool toTabs, bool onlyIndent) {
