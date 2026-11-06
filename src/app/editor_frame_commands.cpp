@@ -173,7 +173,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     auto* conversion = new wxMenu;
     // Pinned Notepad4's case commands use CustomCaseMapping values upper=1, lower=2.
     for (const auto& [label, mapping] :
-         {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2}}) {
+         {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2},
+          std::pair{"In&vert Case\tCtrl+Alt+U", 40208}, std::pair{"Title &Case\tCtrl+Alt+I", 40210},
+          std::pair{"&Sentence Case\tCtrl+Alt+O", 40209}}) {
         const int id = wxWindow::NewControlId();
         conversion->Append(id, label);
         Bind(
@@ -718,6 +720,12 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
     if (HandleTabConversionKey(event)) return true;
+    const int key = event.GetKeyCode();
+    if (event.ControlDown() && event.AltDown() && (key == 'U' || key == 'I' || key == 'O')) {
+        if (!event.ShiftDown() && !event.MetaDown())
+            editor_->Send(Scintilla::Message::CustomCaseMapping, key == 'U' ? 40208 : key == 'I' ? 40210 : 40209);
+        return true;
+    }
     if (event.GetKeyCode() == 'T' && event.AltDown()) {
         if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
         return true;
