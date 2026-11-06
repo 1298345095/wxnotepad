@@ -5,6 +5,7 @@
 #include <wx/timer.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#include <chrono>
 #include <cstring>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
@@ -26,7 +27,7 @@ public:
         timer_.SetOwner(this);
         Bind(wxEVT_TIMER, [this](wxTimerEvent&) { Poll(); });
         timer_.Start(20);
-        started_ = wxGetUTCTimeMillis();
+        started_ = std::chrono::steady_clock::now();
         return true;
     }
 
@@ -35,10 +36,10 @@ private:
     wxFrame* frame_ = nullptr;
     wxTextCtrl* text_ = nullptr;
     wxTimer timer_;
-    wxLongLong started_;
+    std::chrono::steady_clock::time_point started_;
     bool pendingPaste_ = false;
     wxString pendingCommand_;
-    wxLongLong activationStarted_;
+    std::chrono::steady_clock::time_point activationStarted_;
     bool gestureRequested_ = false;
     bool gestureReceived_ = false;
     void Respond(const wxString& value) {
@@ -49,14 +50,14 @@ private:
         wxRenameFile(directory_ + "/response.tmp", directory_ + "/response", true);
     }
     void Poll() {
-        if (wxGetUTCTimeMillis() - started_ > 90000) {
+        if (std::chrono::steady_clock::now() - started_ > std::chrono::seconds(180)) {
             frame_->Destroy();
             ExitMainLoop();
             return;
         }
         if (!pendingCommand_.empty()) {
             if (!frame_->IsActive() || !text_->HasFocus()) {
-                if (wxGetUTCTimeMillis() - activationStarted_ > 3000) {
+                if (std::chrono::steady_clock::now() - activationStarted_ > std::chrono::seconds(3)) {
                     pendingCommand_.clear();
                     Respond("native focus unavailable");
                 }
@@ -69,13 +70,13 @@ private:
                 // changing Wayland clipboard ownership in this process too.
                 if (!gestureRequested_) {
                     gestureRequested_ = true;
-                    activationStarted_ = wxGetUTCTimeMillis();
+                    activationStarted_ = std::chrono::steady_clock::now();
                     wxFFile file(focusFile, "wb");
                     file.Write("gesture");
                     return;
                 }
                 if (!gestureReceived_) {
-                    if (wxGetUTCTimeMillis() - activationStarted_ > 3000) {
+                    if (std::chrono::steady_clock::now() - activationStarted_ > std::chrono::seconds(3)) {
                         pendingCommand_.clear();
                         Respond("native gesture unavailable");
                     }
@@ -115,7 +116,7 @@ private:
             }
             frame_->Raise();
             text_->SetFocus();
-            activationStarted_ = wxGetUTCTimeMillis();
+            activationStarted_ = std::chrono::steady_clock::now();
             gestureRequested_ = false;
             gestureReceived_ = false;
             pendingCommand_ = command;
