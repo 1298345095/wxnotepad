@@ -209,6 +209,25 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
             id);
     }
+    conversion->AppendSeparator();
+    for (const auto& [label, radix] :
+         {std::pair{"To &Hexadecimal\tCtrl+Alt+H", 16u}, std::pair{"To &Decimal\tCtrl+Alt+D", 10u},
+          std::pair{"To &Binary\tCtrl+Alt+B", 2u}, std::pair{"To &Octet", 8u}}) {
+        const int id = wxWindow::NewControlId();
+        conversion->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, radix](wxCommandEvent&) {
+                if (!editor_->ConvertNumberRadix(radix))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
     edit->AppendSubMenu(conversion, "Con&vert");
     const int modifyLines = wxWindow::NewControlId();
     edit->Append(modifyLines, "&Modify Lines...\tAlt+M");
