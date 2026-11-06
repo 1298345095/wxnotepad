@@ -144,7 +144,8 @@ wxCheckBox* Skip(wxDialog* dialog) {
     Require(option, "native Skip Empty Lines option exists");
     return option;
 }
-void InputKey(wxTextCtrl* field, int key, bool shift = false, bool control = false) {
+void InputReturn(wxTextCtrl* field, bool shift = false, bool control = false) {
+    Require(field->IsShownOnScreen(), "Return starts in an open native multiline field");
     field->SetFocus();
     wxYield();
 #ifdef __WXMSW__
@@ -157,28 +158,28 @@ void InputKey(wxTextCtrl* field, int key, bool shift = false, bool control = fal
     modified[VK_MENU] = 0;
     Require(SetKeyboardState(modified), "set owned multiline input modifiers");
     const auto handle = static_cast<HWND>(field->GetHandle());
-    PostMessageW(handle, WM_KEYDOWN, key, 1);
-    PostMessageW(handle, WM_KEYUP, key, 0xc0000001);
+    PostMessageW(handle, WM_KEYDOWN, VK_RETURN, 1);
+    PostMessageW(handle, WM_KEYUP, VK_RETURN, 0xc0000001);
     wxYield();
     SetKeyboardState(previous);
 #else
     wxString focusFile;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "multiline input uses private native keys");
     bool received = false;
-    NativeKeys::KeyRelease observer(key, received, nullptr);
+    NativeKeys::KeyRelease observer(WXK_RETURN, received, nullptr);
     {
         wxFFile file(focusFile, "wb");
-        file.Write(wxString("key:") + (control ? "ctrl+" : "") + (shift ? "shift+" : "") +
-                   (key == WXK_RETURN ? "Return" : "Escape"));
+        file.Write(wxString("key:") + (control ? "ctrl+" : "") + (shift ? "shift+" : "") + "Return");
     }
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-    // A closing modal dialog disables its parent until this driver unwinds, so
-    // the release may have no wx receiver. Its native closure is also completion.
-    while (!received && field->IsShownOnScreen() && std::chrono::steady_clock::now() < deadline) {
+    // Unshifted Return closes this modal receiver before its parent is enabled
+    // again. Shift+Return keeps the field open and must deliver its release.
+    const auto closed = [&] { return !shift && !field->IsShownOnScreen(); };
+    while (!received && !closed() && std::chrono::steady_clock::now() < deadline) {
         wxYield();
         wxMilliSleep(10);
     }
-    Require(received || !field->IsShownOnScreen(), "native multiline input releases or closes the dialog");
+    Require(received || closed(), "native Return releases or unshifted Return closes its dialog");
 #endif
     wxYield();
 }
@@ -235,7 +236,7 @@ void NativeControls(EditorFrame* frame) {
                 wxYield();
                 field->SetValue("line");
                 field->SetInsertionPointEnd();
-                InputKey(field, WXK_RETURN, true);
+                InputReturn(field, true);
                 Require(field->GetValue() == "line\n" && dialog->IsShown(),
                         "native Shift+Return inserts a line break in each field");
                 auto* other = field == prefix ? suffix : prefix;
@@ -307,7 +308,7 @@ void NativeControls(EditorFrame* frame) {
     Require(!opened, "Alt+Shift+M and Ctrl+Alt+M do not invoke Modify Lines");
     std::puts("PASS: native Alt+M modifiers, Shift+Return in both fields, six links, field replacement and focus");
 }
-void ReturnAndEscape(EditorFrame* frame) {
+void ReturnAndCancel(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const char* name : {"Prefix text to lines", "Append text to lines"}) {
         for (const bool control : {false, true}) {
@@ -317,7 +318,7 @@ void ReturnAndEscape(EditorFrame* frame) {
                 Field(dialog, "Prefix text to lines")->SetValue("[");
                 Field(dialog, "Append text to lines")->SetValue("]");
                 NativeSearch::Toggle(Skip(dialog), false);
-                InputKey(Field(dialog, name), WXK_RETURN, false, control);
+                InputReturn(Field(dialog, name), false, control);
                 closed = !dialog->IsShown();
                 if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
             });
@@ -334,13 +335,7 @@ void ReturnAndEscape(EditorFrame* frame) {
                             Field(dialog, "Append text to lines")->GetValue() == "]" && !Skip(dialog)->GetValue(),
                         "Return accepts prefix, suffix and checkbox recall");
                 Field(dialog, name)->SetValue("discard");
-#ifdef __WXMSW__
-                // Escape's wxMSW keyboard hook requires hardware input. Owned queued
-                // messages cover Return; private Linux displays also exercise Escape.
                 NativeSearch::Click(dialog, wxID_CANCEL);
-#else
-                InputKey(Field(dialog, name), WXK_ESCAPE);
-#endif
                 closed = !dialog->IsShown();
                 if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
             });
@@ -444,7 +439,7 @@ void Protection(EditorFrame* frame) {
         Visit(frame, [&](wxDialog* dialog) {
             Field(dialog, "Prefix text to lines")->Clear();
             Field(dialog, "Append text to lines")->Clear();
-            InputKey(Field(dialog, "Prefix text to lines"), WXK_RETURN);
+            InputReturn(Field(dialog, "Prefix text to lines"));
         });
         Require(feedback.count == 1 && feedback.applyBeforeClose,
                 "Return invokes OK and reports rectangle feedback before dialog closes");
@@ -543,7 +538,7 @@ public:
                 Dialog(frame);
                 NativeControls(frame);
                 NativeEolAndRecall(frame);
-                ReturnAndEscape(frame);
+                ReturnAndCancel(frame);
                 Protection(frame);
                 SavedBytes(frame);
                 std::puts("PASS: original Modify Lines");

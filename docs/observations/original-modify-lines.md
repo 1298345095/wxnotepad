@@ -30,7 +30,7 @@ history.
 
 `tests/modify_lines.cpp` verifies public text, exact selection endpoints,
 undo/redo/save points, native Alt+M modifiers, Return/Ctrl+Return acceptance,
-Shift+Return multiline entry in both fields, private Linux Escape, all six
+Shift+Return multiline entry in both fields, native Cancel, all six
 links, Tab/focus behavior, accepted recall, empty/read-only/rectangular paths,
 and independently reopened UTF-8, GBK and UTF-16LE saved bytes. The same native
 executable runs on Windows and private X11/Wayland displays. Linux native
