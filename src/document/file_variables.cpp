@@ -83,7 +83,9 @@ OriginalFileVariables ReadOriginalFileVariables(std::string_view bytes, bool noF
             variables.any =
                 variables.tabWidth || variables.indentWidth || variables.tabsAsSpaces || variables.tabIndents;
             variables.any |= IntegerVariable(window, "truncate-lines").has_value();
-            variables.any |= IntegerVariable(window, "fill-column").has_value();
+            if (const auto boundary = IntegerVariable(window, "fill-column"))
+                variables.longLinesLimit = std::clamp(*boundary, 0, 4096);
+            variables.any |= variables.longLinesLimit.has_value();
             variables.any |= StringVariable(window, "mode").has_value();
             if (variables.tabWidth && !variables.indentWidth) variables.indentWidth = variables.tabWidth;
             if (variables.indentWidth && !variables.tabWidth) variables.tabWidth = variables.indentWidth;

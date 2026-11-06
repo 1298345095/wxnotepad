@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
@@ -297,6 +298,22 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         alignLines);
     Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, alignLines);
     const int joinLines = wxWindow::NewControlId();
+    const int splitLines = wxWindow::NewControlId();
+    const int columnWrap = wxWindow::NewControlId();
+    edit->Append(splitLines, "&Split Lines\tCtrl+I");
+    edit->Append(columnWrap, "Column &Wrap...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            const int boundary = document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit);
+            if (ShowColumnWrapDialog(this, wrapColumn_, boundary) && !editor_->WrapToColumn(wrapColumn_))
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+            editor_->SetFocus();
+        },
+        columnWrap);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SplitLines(); }, splitLines);
     const int joinParagraphs = wxWindow::NewControlId();
     edit->Append(joinLines, "&Join Lines\tCtrl+J");
     edit->Append(joinParagraphs, "Join &Paragraphs\tCtrl+Shift+J");
@@ -309,7 +326,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
                              wxOK | wxICON_WARNING, this);
         },
         joinParagraphs);
-    for (const int id : {joinLines, joinParagraphs})
+    for (const int id : {splitLines, columnWrap, joinLines, joinParagraphs})
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
@@ -720,6 +737,12 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == 'I' && event.ControlDown()) {
+        if (!event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
+            !editor_->Send(Scintilla::Message::GetSelectionEmpty))
+            editor_->SplitLines();
+        return true;
+    }
     if (event.GetKeyCode() == WXK_F5 && event.ControlDown()) {
         if (!event.AltDown() && !event.MetaDown()) InsertDateTime(!event.ShiftDown());
         return true;
