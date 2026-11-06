@@ -47,7 +47,7 @@ target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
 target_link_libraries(editor_runtime PUBLIC notepad4_core)
 
 add_library(editor_features STATIC
-    src/editor/line_navigation.cpp
+    src/editor/go_to_location.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/file_variables.cpp

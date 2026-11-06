@@ -1,6 +1,6 @@
 #include "app/dialogs/go_to_line_dialog.h"
 #include "editor/editor_control.h"
-#include "editor/line_navigation.h"
+#include "editor/go_to_location.h"
 #include <wx/dialog.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
