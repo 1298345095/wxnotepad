@@ -160,20 +160,9 @@ void SelectionShapes(EditorFrame* frame) {
         Require(TestEditor::Text(editor) == "aß\nbé" && !editor->Send(Message::GetModify),
                 "rectangle conversion is one undo group");
     }
-    TestEditor::ResetStream(editor, "a\nx");
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 3);
-    editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 1);
-    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 3);
-    NativeSearch::Command(frame, upper);
-    Require(TestEditor::Text(editor) == "a\nx" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify) &&
-                editor->Send(Message::GetRectangularSelectionAnchorVirtualSpace) == 1 &&
-                editor->Send(Message::GetRectangularSelectionCaretVirtualSpace) == 3,
-            "virtual-only rectangle keeps empty byte ranges, virtual columns and history");
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetMultipleSelection, 0);
+    TestEditor::RequireVirtualRectangleUnchanged(
+        editor, [frame, upper] { NativeSearch::Command(frame, upper); },
+        "virtual-only rectangle keeps empty byte ranges, virtual columns and history");
     std::puts("PASS: multiple forward/reversed/empty selections, expansion endpoints, rectangles and virtual space");
 }
 void SavedBytes(EditorFrame* frame) {
