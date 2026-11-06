@@ -38,6 +38,23 @@ inline void ResetStream(EditorControl* editor, const char* text, intptr_t anchor
     editor->Send(Message::EmptyUndoBuffer);
     editor->Send(Message::SetSavePoint);
 }
+template <class Command>
+void RequireVirtualRectangleUnchanged(EditorControl* editor, Command command, const char* message) {
+    using Scintilla::Message;
+    ResetStream(editor, "a\nx");
+    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+    editor->Send(Message::SetRectangularSelectionAnchor, 1);
+    editor->Send(Message::SetRectangularSelectionCaret, 3);
+    editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 1);
+    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 3);
+    command();
+    if (Text(editor) != "a\nx" || editor->Send(Message::CanUndo) || editor->Send(Message::GetModify) ||
+        editor->Send(Message::GetRectangularSelectionAnchorVirtualSpace) != 1 ||
+        editor->Send(Message::GetRectangularSelectionCaretVirtualSpace) != 3)
+        throw Failure(message);
+    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
+    editor->Send(Message::SetMultipleSelection, 0);
+}
 inline void RequireSelection(EditorControl* editor, intptr_t anchor, intptr_t caret, const char* message) {
     using Scintilla::Message;
     if (editor->Send(Message::GetAnchor) != anchor || editor->Send(Message::GetCurrentPos) != caret) {
