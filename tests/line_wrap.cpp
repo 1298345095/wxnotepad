@@ -9,6 +9,7 @@
 #include <wx/modalhook.h>
 #include <wx/dialog.h>
 #include <wx/textctrl.h>
+#include <wx/timer.h>
 #include <cstdio>
 #include <stdexcept>
 #include <chrono>
@@ -18,6 +19,9 @@
 
 namespace {
 using Scintilla::Message;
+void Phase(const char* phase) {
+    std::fprintf(stderr, "PHASE: %s\n", phase);
+}
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -27,6 +31,7 @@ void Split(EditorFrame* frame) {
     NativeSearch::Command(frame, id);
 }
 void SplitFixture(EditorFrame* frame) {
+    Phase("split wide target");
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "one two three", 0, 13, Scintilla::EndOfLine::Lf);
     // A very wide view leaves this target unchanged, preserving history/endpoints.
@@ -39,9 +44,12 @@ void SplitFixture(EditorFrame* frame) {
     editor->Send(Message::SetMarginLeft, 0, 0);
     editor->Send(Message::SetMarginRight, 0, 0);
     const auto width = editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
+    std::fprintf(stderr, "PHASE: split rendered width=%lld\n", static_cast<long long>(width));
     editor->SetClientSize(static_cast<int>(width), 200);
     wxYield();
+    Phase("split narrow target");
     Split(frame);
+    Phase("split narrow completed");
     Require(TestEditor::Text(editor) == "one two \nthree", "split inserts current EOL at rendered word boundary");
     TestEditor::RequireSelection(editor, 0, 14, "split adjusts original caret for inserted EOL");
     editor->Send(Message::Undo);
@@ -59,6 +67,7 @@ void WaitFor(const std::function<bool()>& condition, const char* message) {
     Require(condition(), message);
 }
 void DialogKey(wxDialog* dialog, int key, const char* nativeName) {
+    std::fprintf(stderr, "PHASE: modal native key %s\n", nativeName);
 #ifdef __WXMSW__
     static_cast<void>(nativeName);
     NativeKeys::DialogNavigation(dialog, key);
@@ -91,17 +100,28 @@ void DialogKey(wxDialog* dialog, int key, const char* nativeName) {
         "native dialog key reaches its modal control");
 #endif
     wxYield();
+    std::fprintf(stderr, "PHASE: modal native key %s dispatched\n", nativeName);
 }
 enum class DialogAction : uint8_t { Accept, Cancel, Return, Escape, Invalid, Tab };
-class WrapDriver final : public wxModalDialogHook {
+class WrapDriver final : public wxEvtHandler, public wxModalDialogHook {
 public:
     WrapDriver(wxString expected = "80", wxString chosen = "6", DialogAction action = DialogAction::Accept)
-        : expected_(std::move(expected)), chosen_(std::move(chosen)), action_(action) {
+        : expected_(std::move(expected)), chosen_(std::move(chosen)), action_(action), deadline_(this) {
+        Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
+            failure = "Column Wrap native modal deadline expired";
+            std::fprintf(stderr, "FAIL: %s action=%d\n", failure.c_str(), static_cast<int>(action_));
+            if (active_) NativeSearch::Click(active_, wxID_CANCEL);
+        });
         Register();
     }
     int Enter(wxDialog* dialog) override {
         if (dialog->GetTitle() != "Column Wrap") return wxID_NONE;
+        std::fprintf(stderr, "PHASE: Column Wrap enter action=%d expected=<%s> chosen=<%s>\n",
+                     static_cast<int>(action_), expected_.utf8_str().data(), chosen_.utf8_str().data());
+        active_ = dialog;
+        deadline_.StartOnce(5000);
         wxTheApp->CallAfter([this, dialog] {
+            Phase("Column Wrap owned callback");
             try {
                 auto* input = wxDynamicCast(wxWindow::FindWindowByName("Boundary", dialog), wxTextCtrl);
                 observed = input && input->GetValue() == expected_;
@@ -142,6 +162,13 @@ public:
         });
         return wxID_NONE;
     }
+    void Exit(wxDialog* dialog) override {
+        if (dialog == active_) {
+            deadline_.Stop();
+            active_ = nullptr;
+            Phase("Column Wrap modal exited");
+        }
+    }
     bool observed = false;
     std::string failure;
 
@@ -149,6 +176,8 @@ private:
     wxString expected_;
     wxString chosen_;
     DialogAction action_;
+    wxTimer deadline_;
+    wxDialog* active_ = nullptr;
 };
 void Dialog(EditorFrame* frame, const wxString& expected, const wxString& chosen, DialogAction action) {
     if (action == DialogAction::Return || action == DialogAction::Escape || action == DialogAction::Tab)
@@ -519,13 +548,21 @@ public:
                     Dialog(frame, wxString::Format("%d", expected), "2", DialogAction::Cancel);
                     Require(settings_->Save(true), "save imported long-line boundary through original settings store");
                 } else {
+                    Phase("SplitFixture");
                     SplitFixture(frame);
+                    Phase("ColumnFixture");
                     ColumnFixture(frame);
+                    Phase("ColumnCases");
                     ColumnCases(frame->Editor());
+                    Phase("DialogCases");
                     DialogCases(frame);
+                    Phase("SelectionAndProtection");
                     SelectionAndProtection(frame);
+                    Phase("SplitCases");
                     SplitCases(frame);
+                    Phase("SavedBytes");
                     SavedBytes(frame);
+                    Phase("EffectiveBoundary");
                     EffectiveBoundary(frame);
                 }
                 std::puts("PASS: original Split Lines");

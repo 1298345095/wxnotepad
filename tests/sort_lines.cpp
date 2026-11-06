@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <vector>
 #include <cstring>
+#include <string_view>
 #include <wx/radiobut.h>
 #include <wx/ffile.h>
 #include <chrono>
@@ -199,10 +200,21 @@ void DialogBehavior(EditorFrame* frame) {
     std::puts("PASS: Alt+O, native Tab/OK/Cancel, exact option interactions, accepted-option recall and Cancel state");
 }
 void Fixtures(EditorControl* editor) {
+    // Linux reproduces the captured zh-SG NLS reference. Windows deliberately
+    // retains its native user-default collation, which varies with host locale.
+    bool capturedLocale = true;
+#ifdef __WXMSW__
+    wchar_t locale[LOCALE_NAME_MAX_LENGTH]{};
+    Require(GetUserDefaultLocaleName(locale, LOCALE_NAME_MAX_LENGTH) != 0, "read native collation locale");
+    capturedLocale = std::wstring_view(locale) == L"zh-SG";
+    if (!capturedLocale)
+        std::printf("SKIP: two captured zh-SG linguistic fixtures; native Windows user locale is %ls\n", locale);
+#endif
     struct Fixture {
         const char* before;
         unsigned options;
         const char* after;
+        bool requiresCapturedLocale = false;
     };
     const Fixture fixtures[] = {
         {"b\na\nc", SortOption::Descending, "c\nb\na"},
@@ -219,8 +231,8 @@ void Fixtures(EditorControl* editor) {
         {"\n😀\n中", SortOption::Ascending, "中\n😀\n"},
         {"é\né\nE\ne", SortOption::LogicalNumber, "E\ne\né\né"},
         {"a2\na02\na002\na10\na1\nA1\na01", SortOption::LogicalNumber, "a01\nA1\na1\na002\na02\na2\na10"},
-        {"阿\n波\n中\n一\n丁", SortOption::LogicalNumber, "阿\n波\n丁\n一\n中"},
-        {SortReference::logicalInput, SortOption::LogicalNumber, SortReference::logicalExpected},
+        {"阿\n波\n中\n一\n丁", SortOption::LogicalNumber, "阿\n波\n丁\n一\n中", true},
+        {SortReference::logicalInput, SortOption::LogicalNumber, SortReference::logicalExpected, true},
         {SortReference::fileTypeInput, SortOption::LogicalNumber | SortOption::FileType,
          SortReference::fileTypeExpected},
         {"b.txt\na.cpp\nz.TXT\nfile\na.tar.gz\n.gitignore\nname.\ndir.ext/file\ndir.ext\\file\na "
@@ -230,6 +242,7 @@ void Fixtures(EditorControl* editor) {
          "b.ext\nfile..ext\ndir.ext/file\n.gitignore\na.tar.gz\nb.txt\na.txt:stream"},
     };
     for (const auto& fixture : fixtures) {
+        if (fixture.requiresCapturedLocale && !capturedLocale) continue;
         TestEditor::ResetStream(editor, fixture.before, 0, 0, Scintilla::EndOfLine::Lf);
         editor->Send(Scintilla::Message::SetSel, 0, editor->Send(Scintilla::Message::GetLength));
         editor->SortLines(fixture.options);
