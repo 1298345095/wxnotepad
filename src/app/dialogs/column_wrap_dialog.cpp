@@ -42,9 +42,25 @@ bool ShowColumnWrapDialog(wxWindow* parent, int& column, int boundary) {
             // complete decimal value, then stores its UINT result in a signed int.
             std::string value;
             bool valid = true;
-            for (const wxUniChar character : input->GetValue()) {
+            const auto text = input->GetValue();
+            for (auto position = text.begin(); position != text.end(); ++position) {
+                auto character = static_cast<char32_t>(wxUniChar(*position).GetValue());
+                // wxString iterates UTF-16 units in the default Windows build.
+                // GetDlgItemInt accepts supplementary digits as complete pairs.
+                if (character >= 0xD800 && character <= 0xDBFF) {
+                    if (++position == text.end()) {
+                        valid = false;
+                        break;
+                    }
+                    const auto low = wxUniChar(*position).GetValue();
+                    if (low < 0xDC00 || low > 0xDFFF) {
+                        valid = false;
+                        break;
+                    }
+                    character = 0x10000 + ((character - 0xD800) << 10) + low - 0xDC00;
+                }
                 if (character == ' ' && value.empty()) continue;
-                const auto digit = DigitValue(character.GetValue());
+                const auto digit = DigitValue(character);
                 if (digit < 0) {
                     valid = false;
                     break;
