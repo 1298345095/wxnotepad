@@ -37,7 +37,7 @@ void Fixtures(EditorFrame* frame) {
         const auto expected = Unhex(fixture.expected);
         TestEditor::ResetStream(editor, "", 0, 0, Scintilla::EndOfLine::CrLf);
         editor->Send(Message::AddText, input.size(), reinterpret_cast<intptr_t>(input.data()));
-        editor->Send(Message::SetSel, 0, input.size());
+        editor->Send(Message::SetSel, 0, static_cast<intptr_t>(input.size()));
         editor->Send(Message::EmptyUndoBuffer);
         editor->Send(Message::SetSavePoint);
         Menu(frame, labels[fixture.command]);
@@ -150,9 +150,9 @@ void Shortcuts(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "a%20b", "native Ctrl+Shift+E performs URL Encode");
     NativeKeys::Shortcut(frame, 'R', true, false, true);
     Require(TestEditor::Text(editor) == "a b", "native Ctrl+Shift+R performs URL Decode");
-    for (int key : {'E', 'R'}) {
+    for (const auto key : {'E', 'R'}) {
         TestEditor::ResetStream(editor, "a%20b", 0, 5);
-        NativeKeys::Shortcut(frame, key, true, true, true);
+        NativeKeys::Shortcut(frame, static_cast<unsigned char>(key), true, true, true);
         Require(TestEditor::Text(editor) == "a%20b" && !editor->Send(Message::CanUndo),
                 "URL shortcuts require exact modifiers");
     }

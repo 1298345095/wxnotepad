@@ -148,16 +148,16 @@ def capture(executable: Path, output: Path) -> None:
     lines = ["// Captured from Notepad4 89b8b36 on Windows 11 build 26200.",
              "// Regenerate with tools/capture_url_fixtures.py; see docs/observations/original-url-conversion.md.",
              "#pragma once", "namespace UrlReference {",
-             "struct Fixture { const char* name; int command; const char* input; const char* expected;",
-             "    int anchor; int caret; bool modified; int undoAnchor; int undoCaret; int redoAnchor; int redoCaret; };",
+             "struct Fixture { const char* name; const char* input; const char* expected; int command;",
+             "    int anchor; int caret; int undoAnchor; int undoCaret; int redoAnchor; int redoCaret; bool modified; };",
              "inline constexpr Fixture fixtures[] = {"]
     for row in result["fixtures"]:
         command = {"encode": 0, "component": 1, "decode": 2}[row["command"]]
         after = row["after"]
-        lines.append(f'    {{"{row["name"]}", {command}, "{row["input"]}", "{after["hex"]}", '
-                     f'{after["anchor"]}, {after["caret"]}, {str(bool(after["modified"])).lower()}, '
+        lines.append(f'    {{"{row["name"]}", "{row["input"]}", "{after["hex"]}", {command}, '
+                     f'{after["anchor"]}, {after["caret"]}, '
                      f'{row["undone"]["anchor"]}, {row["undone"]["caret"]}, '
-                     f'{row["redone"]["anchor"]}, {row["redone"]["caret"]}}},')
+                     f'{row["redone"]["anchor"]}, {row["redone"]["caret"]}, {str(bool(after["modified"])).lower()}}},')
     lines += ["};", "} // namespace UrlReference", ""]
     header.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 

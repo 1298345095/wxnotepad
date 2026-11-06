@@ -81,9 +81,9 @@ std::string Escape(std::string_view text, bool component, bool slash = false, bo
     std::string result;
     for (const unsigned char ch : text) {
         const bool unreserved = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') ||
-                                std::string_view("-._~").find(ch) != std::string_view::npos;
-        const bool unsafe =
-            ch <= ' ' || ch >= 127 || std::string_view("\"<>&\\^`{}|[]").find(ch) != std::string_view::npos;
+                                std::string_view("-._~").find(static_cast<char>(ch)) != std::string_view::npos;
+        const bool unsafe = ch <= ' ' || ch >= 127 ||
+                            std::string_view("\"<>&\\^`{}|[]").find(static_cast<char>(ch)) != std::string_view::npos;
         if (component ? !unreserved : unsafe || (slash && ch == '/') || (extras && (ch == '?' || ch == '#'))) {
             result += '%';
             result += hex[ch >> 4];
@@ -101,9 +101,10 @@ bool SchemeCharacter(char ch) {
 std::string Encode(std::string text, bool component) {
     if (component) return Escape(text, true);
     const auto colon = text.find(':');
+    const auto prefix = std::string_view(text).substr(0, colon);
     size_t prefixLength = 0;
     std::string scheme;
-    if (colon != std::string::npos && colon > 1 && std::all_of(text.begin(), text.begin() + colon, SchemeCharacter)) {
+    if (colon != std::string::npos && colon > 1 && std::all_of(prefix.begin(), prefix.end(), SchemeCharacter)) {
         prefixLength = colon + 1;
         scheme = text.substr(0, colon);
         for (auto& ch : scheme)

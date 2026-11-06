@@ -1,3 +1,3 @@
 #pragma once
 
-enum class UrlConversion { Encode, ComponentEncode, Decode };
+enum class UrlConversion : unsigned char { Encode, ComponentEncode, Decode };
