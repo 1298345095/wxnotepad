@@ -40,7 +40,9 @@ add_library(editor_runtime STATIC
     src/editor/matching_brace.cpp
     src/editor/move_lines.cpp
     src/editor/editor_control.cpp
+    src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
+    src/editor/platform/gtk_drag_drop.cpp
     src/editor/platform/wx_platform.cpp)
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
     "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
@@ -64,11 +66,13 @@ target_link_libraries(editor_features PUBLIC editor_runtime)
 add_library(app_shell STATIC
     src/settings/settings_store.cpp
     src/settings/search_settings.cpp
-    src/app/go_to_line_dialog.cpp
-    src/app/tab_settings_dialog.cpp
+    src/app/dialogs/document_dialogs.cpp
+    src/app/dialogs/go_to_line_dialog.cpp
+    src/app/dialogs/search_feedback_dialog.cpp
+    src/app/dialogs/tab_settings_dialog.cpp
     src/app/editor_frame.cpp
     src/app/editor_frame_commands.cpp
-    src/app/find_replace_dialog.cpp
+    src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
