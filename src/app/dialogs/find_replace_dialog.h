@@ -3,6 +3,8 @@
 #include "search/search_session.h"
 #include <wx/dialog.h>
 #include <functional>
+#include <cstdint>
+#include <optional>
 
 class wxTextCtrl;
 class wxStaticText;
@@ -43,6 +45,7 @@ private:
     wxHyperlinkCtrl* modeLink_;
     bool replace_ = false;
     int selectionOptions_;
+    std::optional<uint64_t> findAllErrorRevision_;
     bool SeedQuery(bool firstTime);
     void UpdateButtons();
     void ConfigureSearch();
