@@ -1,5 +1,5 @@
 #include "native_search_helpers.h"
-#include "file_helpers.h"
+#include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/textctrl.h>
 #include <wx/ffile.h>
@@ -12,14 +12,6 @@ namespace {
 using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
-}
-void Reset(EditorControl* editor, const char* text, intptr_t anchor = 0, intptr_t caret = 0) {
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
 }
 void Menu(EditorFrame* frame, const char* label) {
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
@@ -110,17 +102,17 @@ void NativeKey(EditorFrame* frame, int key, bool control, bool alt = false, bool
 }
 void Shortcuts(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    Reset(editor, "x", 0, 1);
+    TestEditor::ResetStream(editor, "x", 0, 1);
     NativeKey(frame, '3', true);
     Require(TestEditor::Text(editor) == "'''x'''", "native Ctrl+3 encloses with triple single quotes");
-    Reset(editor, "x", 0, 1);
+    TestEditor::ResetStream(editor, "x", 0, 1);
     NativeKey(frame, '6', true);
     Require(TestEditor::Text(editor) == "\"\"\"x\"\"\"", "native Ctrl+6 encloses with triple double quotes");
-    Reset(editor, "x", 0, 1);
+    TestEditor::ResetStream(editor, "x", 0, 1);
     NativeKey(frame, '9', true);
     Require(TestEditor::Text(editor) == "```x```", "native Ctrl+9 encloses with triple backticks");
     for (int key : {'3', '6', '9'}) {
-        Reset(editor, "x", 0, 1);
+        TestEditor::ResetStream(editor, "x", 0, 1);
         NativeKey(frame, key, true, false, true);
         Require(TestEditor::Text(editor) == "x" && !editor->Send(Message::CanUndo),
                 "Ctrl+Shift does not invoke triple enclosure");
@@ -131,7 +123,7 @@ void Shortcuts(EditorFrame* frame) {
 }
 void Triple(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    Reset(editor, "A中文B", 7, 1);
+    TestEditor::ResetStream(editor, "A中文B", 7, 1);
     Menu(frame, "Triple Single Quotes");
     Require(TestEditor::Text(editor) == "A'''中文'''B", "original triple enclosure inserts around Unicode");
     Range(editor, 10, 4);
@@ -186,7 +178,7 @@ void Dialog(EditorFrame* frame, const wxString& recalledBefore, const wxString& 
 }
 void CustomDialog(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    Reset(editor, "cat", 0, 3);
+    TestEditor::ResetStream(editor, "cat", 0, 3);
     editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Cr));
     const auto before = wxString::FromUTF8("前\n(");
     const auto after = wxString::FromUTF8(")\n後");
@@ -205,7 +197,7 @@ void CustomDialog(EditorFrame* frame) {
 }
 void DialogKeys(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    Reset(editor, "x", 0, 1);
+    TestEditor::ResetStream(editor, "x", 0, 1);
     bool opened = false;
     {
         DialogDriver driver([&](wxDialog* dialog) {
@@ -270,7 +262,7 @@ void PublicBehavior(EditorFrame* frame) {
         {Scintilla::EndOfLine::Cr, "前\rA\rB\nxS\rT\rU\nV", 8},
     };
     for (const auto& fixture : fixtures) {
-        Reset(editor, "x", 1, 0);
+        TestEditor::ResetStream(editor, "x", 1, 0);
         editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(fixture.mode));
         Require(editor->EncloseSelection(wxString::FromUTF8("前\r\nA\rB\n"), "S\r\nT\rU\nV"),
                 "public enclosure accepts stream selection");
@@ -283,15 +275,15 @@ void PublicBehavior(EditorFrame* frame) {
         editor->Send(Message::Redo);
         Require(TestEditor::Text(editor) == fixture.expected, "normalization redo retains literal EOL bytes");
     }
-    Reset(editor, "ab", 1, 1);
+    TestEditor::ResetStream(editor, "ab", 1, 1);
     Require(editor->EncloseSelection(wxString::FromUTF8("😀"), ")"), "empty selection accepts Unicode prefix");
     Require(TestEditor::Text(editor) == "a😀)b", "empty selection inserts before/after at caret");
     Range(editor, 5, 5);
-    Reset(editor, "ab", 1, 1);
+    TestEditor::ResetStream(editor, "ab", 1, 1);
     editor->EncloseSelection("", ")");
     Require(TestEditor::Text(editor) == "a)b", "suffix-only enclosure inserts at empty selection");
     Range(editor, 1, 1);
-    Reset(editor, "ab", 0, 2);
+    TestEditor::ResetStream(editor, "ab", 0, 2);
     editor->EncloseSelection("(", "");
     Require(TestEditor::Text(editor) == "(ab", "prefix-only enclosure preserves selected content");
     Range(editor, 1, 3);
@@ -323,7 +315,7 @@ public:
 };
 void Protection(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    Reset(editor, "abcdefghi", 1, 3);
+    TestEditor::ResetStream(editor, "abcdefghi", 1, 3);
     editor->Send(Message::SetReadOnly, 1);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     for (const char* label : {"With...", "Triple Single Quotes", "Triple Double Quotes", "Triple Backticks"}) {
@@ -336,7 +328,7 @@ void Protection(EditorFrame* frame) {
                 !editor->Send(Message::GetModify),
             "core read-only protection rejects delimiter insertion");
     Range(editor, 4, 6);
-    Reset(editor, "alpha\nbeta", 0, 5);
+    TestEditor::ResetStream(editor, "alpha\nbeta", 0, 5);
     Menu(frame, "Triple Backticks");
     editor->Send(Message::Undo);
     editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
@@ -359,7 +351,7 @@ void Protection(EditorFrame* frame) {
     std::puts("PASS: original read-only availability and rectangular warning order/history");
 }
 void Recall(EditorFrame* frame) {
-    Reset(frame->Editor(), "cat");
+    TestEditor::ResetStream(frame->Editor(), "cat");
     Dialog(frame, "", "", "[", "]", wxID_OK);
     frame->Editor()->Send(Message::SetSavePoint);
     Require(frame->New(), "new document opens in current window");
@@ -406,12 +398,7 @@ void SavedBytes(EditorFrame* frame) {
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "one Redo and save restore independently read enclosed disk bytes");
     }
-    struct EncodedFixture {
-        const char* name;
-        FileEncoding encoding;
-        std::string before;
-        std::string after;
-    };
+    using EncodedFixture = TestFiles::EncodedFixture;
     const EncodedFixture encoded[] = {
         {"gbk", FileEncoding::Gbk, "\xd6\xd0", "\xce\xc4\n\xd6\xd0\xd6\xd0"},
         {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e", 4),
@@ -426,14 +413,10 @@ void SavedBytes(EditorFrame* frame) {
         editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
         editor->Send(Message::SelectAll);
         editor->EncloseSelection(wxString::FromUTF8("文\r\n"), wxString::FromUTF8("中"));
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
-                "Unicode prefix/suffix and pair normalization save exact GBK and UTF-16LE BOM bytes");
-        editor->Send(Message::Undo);
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
-                "encoded enclosure Undo saves original bytes");
-        editor->Send(Message::Redo);
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
-                "encoded enclosure Redo saves enclosed bytes");
+        TestFiles::RequireSavedUndoRedo(
+            frame, path, fixture,
+            {"Unicode prefix/suffix and pair normalization save exact GBK and UTF-16LE BOM bytes",
+             "encoded enclosure Undo saves original bytes", "encoded enclosure Redo saves enclosed bytes"});
     }
     std::filesystem::remove_all(directory);
     std::puts("PASS: C/C++, Python, JSON, Plain Text, GBK and UTF-16LE independent saved bytes and Undo/Redo");

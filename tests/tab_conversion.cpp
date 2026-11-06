@@ -52,14 +52,6 @@ void NativeKey(EditorControl* editor, char key, bool shift, bool alt) {
 #endif
     wxYield();
 }
-void Set(EditorControl* editor, const char* text, intptr_t anchor = 0, intptr_t caret = 0) {
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-}
 void Range(EditorControl* editor, intptr_t anchor, intptr_t caret) {
     Require(editor->Send(Message::GetAnchor) == anchor && editor->Send(Message::GetCurrentPos) == caret,
             "result selection matches original expanded range and direction");
@@ -92,7 +84,7 @@ void Conversions(EditorFrame* frame) {
         for (bool backwards : {false, true}) {
             const auto beforeLength = static_cast<intptr_t>(std::char_traits<char>::length(fixture.before));
             const auto afterLength = static_cast<intptr_t>(std::char_traits<char>::length(fixture.after));
-            Set(editor, fixture.before, backwards ? beforeLength : 0, backwards ? 0 : beforeLength);
+            TestEditor::ResetStream(editor, fixture.before, backwards ? beforeLength : 0, backwards ? 0 : beforeLength);
             editor->Send(Message::SetTabWidth, fixture.width);
             Menu(frame, fixture.command);
             if (TestEditor::Text(editor) != fixture.after)
@@ -117,16 +109,16 @@ void Conversions(EditorFrame* frame) {
     }
     editor->Send(Message::SetTabWidth, 4);
     for (bool backwards : {false, true}) {
-        Set(editor, "xx\tA\n \tBtail", backwards ? 8 : 2, backwards ? 2 : 8);
+        TestEditor::ResetStream(editor, "xx\tA\n \tBtail", backwards ? 8 : 2, backwards ? 2 : 8);
         Menu(frame, "Untabify Selection");
         Require(TestEditor::Text(editor) == "xx  A\n    Btail",
                 "first line expands but exact final byte boundary remains");
         Range(editor, backwards ? 11 : 0, backwards ? 0 : 11);
-        Set(editor, "    A\n    Btail", backwards ? 9 : 2, backwards ? 2 : 9);
+        TestEditor::ResetStream(editor, "    A\n    Btail", backwards ? 9 : 2, backwards ? 2 : 9);
         Menu(frame, "Tabify Selection");
         Require(TestEditor::Text(editor) == "\tA\n    Btail", "partial final space run flushes literally");
         Range(editor, backwards ? 6 : 0, backwards ? 0 : 6);
-        Set(editor, "xx\tA\n \tBtail", backwards ? 5 : 2, backwards ? 2 : 5);
+        TestEditor::ResetStream(editor, "xx\tA\n \tBtail", backwards ? 5 : 2, backwards ? 2 : 5);
         Menu(frame, "Untabify Selection");
         Require(TestEditor::Text(editor) == "xx  A\n \tBtail", "end at line start excludes all next-line text");
         Range(editor, backwards ? 6 : 0, backwards ? 0 : 6);
@@ -147,7 +139,7 @@ void Protection(EditorFrame* frame) {
     auto* editor = frame->Editor();
     editor->Send(Message::SetTabWidth, 4);
     for (const char* command : {"Tabify Selection", "Untabify Selection", "Tabify Indent", "Untabify Indent"}) {
-        Set(editor, "abc d", 1, 4);
+        TestEditor::ResetStream(editor, "abc d", 1, 4);
         editor->Send(Message::InsertText, 5, reinterpret_cast<intptr_t>("!"));
         editor->Send(Message::Undo);
         editor->Send(Message::SetSel, 4, 1);
@@ -171,7 +163,7 @@ void Protection(EditorFrame* frame) {
         RectangleFeedback feedback;
         frame->GetEventHandler()->ProcessEvent(empty);
         Require(feedback.count == 0, "empty rectangle returns before rectangular feedback");
-        Set(editor, "    A\n\tB", 0, 5);
+        TestEditor::ResetStream(editor, "    A\n\tB", 0, 5);
         editor->Send(Message::InsertText, 8, reinterpret_cast<intptr_t>("!"));
         editor->Send(Message::Undo);
         editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
@@ -186,7 +178,7 @@ void Protection(EditorFrame* frame) {
                     editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
                 "nonempty rectangle warns and preserves bytes, endpoints, history and save point");
         const bool toTabs = std::string(command).starts_with("Tabify");
-        Set(editor, toTabs ? "    A\nlast" : "\tA\nlast", 1, toTabs ? 5 : 2);
+        TestEditor::ResetStream(editor, toTabs ? "    A\nlast" : "\tA\nlast", 1, toTabs ? 5 : 2);
         const auto original = TestEditor::Text(editor);
         editor->Send(Message::SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);

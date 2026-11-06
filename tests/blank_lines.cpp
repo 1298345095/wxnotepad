@@ -15,14 +15,6 @@ void Menu(EditorFrame* frame, bool merge) {
     Require(id != wxNOT_FOUND, "Edit menu exposes Merge/Remove Blank Lines");
     NativeSearch::Command(frame, id);
 }
-void Set(EditorControl* editor, const char* text, intptr_t anchor = 0, intptr_t caret = 0) {
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-}
 void Range(EditorControl* editor, intptr_t anchor, intptr_t caret) {
     Require(editor->Send(Message::GetAnchor) == anchor && editor->Send(Message::GetCurrentPos) == caret,
             "blank-line deletion uses original core anchor/caret movement");
@@ -59,7 +51,7 @@ void Fixtures(EditorFrame* frame) {
          0, 0},
     };
     for (const auto& fixture : fixtures) {
-        Set(editor, fixture.before, fixture.anchor, fixture.caret);
+        TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
         const auto eol = editor->Send(Message::GetEOLMode);
         const auto encoding = frame->DocumentEncoding();
         Menu(frame, fixture.merge);
@@ -94,7 +86,7 @@ void NoChange(EditorFrame* frame) {
         {"\t \nA", false, 1, 2}, {"A\n \n\t\nZ", true, 2, 4},
     };
     for (const auto& fixture : fixtures) {
-        Set(editor, fixture.before, fixture.anchor, fixture.caret);
+        TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
         editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
         editor->Send(Message::Undo);
         editor->Send(Message::SetSel, fixture.anchor, fixture.caret);
@@ -120,7 +112,7 @@ public:
 void Protection(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const bool merge : {true, false}) {
-        Set(editor, "A\n\n\nB", 4, 1);
+        TestEditor::ResetStream(editor, "A\n\n\nB", 4, 1);
         editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
         editor->Send(Message::Undo);
         editor->Send(Message::SetSel, 4, 1);
@@ -152,7 +144,7 @@ void Protection(EditorFrame* frame) {
         editor->Send(Message::Redo);
         Require(TestEditor::Text(editor) == "A\n\n\nB!", "pending redo remains usable after read-only protection");
     }
-    Set(editor, "");
+    TestEditor::ResetStream(editor, "");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     for (const char* label : {"Merge Blank Lines", "Remove Blank Lines"})
         Require(frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", label)),
@@ -211,12 +203,12 @@ void NativeAlt(EditorFrame* frame, bool merge, bool control = false, bool shift 
 void Shortcuts(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const bool merge : {true, false}) {
-        Set(editor, "A\n \r\n\t\rB");
+        TestEditor::ResetStream(editor, "A\n \r\n\t\rB");
         NativeAlt(frame, merge);
         Require(TestEditor::Text(editor) == (merge ? "A\n\t\rB" : "A\nB"),
                 "actual Alt+B/Alt+R routes to the matching blank-line mode");
         for (const auto [control, shift] : {std::pair{true, false}, std::pair{false, true}, std::pair{true, true}}) {
-            Set(editor, "A\n \r\n\t\rB");
+            TestEditor::ResetStream(editor, "A\n \r\n\t\rB");
             NativeAlt(frame, merge, control, shift);
             Require(TestEditor::Text(editor) == "A\n \r\n\t\rB" && !editor->Send(Message::CanUndo) &&
                         !editor->Send(Message::GetModify),
