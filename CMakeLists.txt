@@ -59,6 +59,7 @@ add_library(editor_runtime STATIC
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
+    src/editor/platform/character_hex.cpp
     src/editor/platform/sort_collation.cpp
     src/editor/platform/gtk_drag_drop.cpp
     src/editor/platform/wx_platform.cpp)
@@ -256,6 +257,7 @@ if(BUILD_TESTING)
     add_editor_test(sort_lines original_sort_lines 90)
     add_editor_test(case_conversion original_case_conversion 60)
     add_editor_test(custom_case original_custom_case 60)
+    add_editor_test(character_hex original_character_hex 60)
     add_editor_test(duplicate_transpose original_duplicate_transpose 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
