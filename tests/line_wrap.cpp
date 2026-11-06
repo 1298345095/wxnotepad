@@ -61,8 +61,21 @@ void WaitFor(const std::function<bool()>& condition, const char* message) {
 void DialogKey(wxDialog* dialog, int key, const char* nativeName) {
 #ifdef __WXMSW__
     static_cast<void>(nativeName);
-    NativeSearch::WindowsShortcut(wxWindow::FindFocus() ? wxWindow::FindFocus() : dialog, key,
-                                  {{VK_CONTROL, 0}, {VK_SHIFT, 0}, {VK_MENU, 0}});
+    BYTE previous[256];
+    Require(GetKeyboardState(previous), "read test-thread keyboard state for native dialog navigation");
+    BYTE released[256];
+    std::copy(std::begin(previous), std::end(previous), std::begin(released));
+    for (const int modifier : {VK_CONTROL, VK_MENU, VK_SHIFT})
+        released[modifier] = 0;
+    Require(SetKeyboardState(released), "release shortcut modifiers for native dialog navigation");
+    MSG message{};
+    auto* focused = wxWindow::FindFocus();
+    message.hwnd = static_cast<HWND>((focused ? focused : dialog)->GetHandle());
+    message.message = WM_KEYDOWN;
+    message.wParam = key;
+    // Reuse the native dialog-navigation seam established by modify_lines.
+    dialog->MSWProcessMessage(&message);
+    SetKeyboardState(previous);
 #else
     bool released = false;
     auto* previousFocus = wxWindow::FindFocus();
