@@ -98,7 +98,7 @@ bool SchemeCharacter(char ch) {
     return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '+' || ch == '-' ||
            ch == '.';
 }
-std::string Encode(std::string text, bool component) {
+std::string Encode(const std::string& text, bool component) {
     if (component) return Escape(text, true);
     const auto colon = text.find(':');
     const auto prefix = std::string_view(text).substr(0, colon);
