@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 from contextlib import ExitStack
 
@@ -18,7 +19,7 @@ class Application:
         arguments = [str(executable), "--observe", str(folder)]
         if startup is not None:
             arguments += ["--startup-file", str(startup)]
-        self.process = subprocess.Popen(arguments, env=environment)
+        self.process = subprocess.Popen(arguments, env=environment, stderr=sys.stderr)
         self.state = wait_state(folder, self.process, lambda s: s["sequence"] == "0")
 
     def menu(self, item, menu="View"):
@@ -33,6 +34,9 @@ class Application:
     def close(self):
         requested = f"{self.sequence + 1}\nclose\n"
         command(self.folder, requested)
+        self.wait_for_close(requested)
+
+    def wait_for_close(self, requested):
         try:
             result = self.process.wait(timeout=10)
         except subprocess.TimeoutExpired as error:

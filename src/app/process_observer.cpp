@@ -99,17 +99,49 @@ void ProcessObserver::Publish() {
     publishPending_ = !published;
 }
 
+void ProcessObserver::CommandFailure(const char* stage, unsigned long error) {
+    if (!commandPending_) {
+        std::fprintf(stderr, "Observation command failed: stage=%s error=%lu last_ack=%s directory=%s; retry pending\n",
+                     stage, error, sequence_.utf8_str().data(), observation_.utf8_str().data());
+        std::fflush(stderr);
+    }
+    commandPending_ = true;
+}
+
 void ProcessObserver::Observe() {
     if (!frame_) return;
     const wxString path = observation_ + "/command";
     if (wxFileExists(path)) {
-        wxTextFile command(path);
-        if (!command.Open() || command.GetLineCount() < 2) return;
-        sequence_ = command[0];
-        const wxString operation = command[1];
-        const wxString source = command.GetLineCount() > 2 ? command[2] : wxString();
-        command.Close();
-        wxRemoveFile(path);
+        wxString sequence;
+        wxString operation;
+        wxString source;
+        {
+            // Expected IPC contention must not queue a deferred wxLogGui dialog.
+            // Restore normal logging before dispatching real editor commands.
+            const wxLogNull noGuiLog;
+            wxTextFile command(path);
+            if (!command.Open()) {
+                CommandFailure("open", wxSysErrorCode());
+                return;
+            }
+            if (command.GetLineCount() < 2) {
+                CommandFailure("packet", 0);
+                return;
+            }
+            sequence = command[0];
+            operation = command[1];
+            source = command.GetLineCount() > 2 ? command[2] : wxString();
+            if (!command.Close()) {
+                CommandFailure("close", wxSysErrorCode());
+                return;
+            }
+            if (!wxRemoveFile(path)) {
+                CommandFailure("remove", wxSysErrorCode());
+                return;
+            }
+        }
+        commandPending_ = false;
+        sequence_ = sequence;
         result_ = "failed";
         if (operation == "open" && !source.empty())
             result_ = frame_->Open(source).status == OpenStatus::Opened ? "ok" : "failed";
@@ -125,8 +157,10 @@ void ProcessObserver::Observe() {
         }
         Publish();
         if (operation == "close") frame_->Close();
-    } else if (publishPending_ || (frame_->Editor()->Send(Scintilla::Message::GetModify) != 0) != lastDirty_ ||
-               frame_->IsActive() != lastActive_) {
-        Publish();
+    } else {
+        commandPending_ = false;
+        if (publishPending_ || (frame_->Editor()->Send(Scintilla::Message::GetModify) != 0) != lastDirty_ ||
+            frame_->IsActive() != lastActive_)
+            Publish();
     }
 }
