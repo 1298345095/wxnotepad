@@ -2,6 +2,18 @@
 #include <ScintillaTypes.h>
 #include <ScintillaStructures.h>
 
+void EditorControl::FocusSelectionBoundary(bool start) {
+    using Scintilla::Message;
+    const auto anchor = Send(Message::GetAnchor);
+    const auto caret = Send(Message::GetCurrentPos);
+    if (!Send(Message::SelectionIsRectangle) && ((start && caret > anchor) || (!start && caret < anchor))) {
+        const auto mode = Send(Message::GetSelectionMode);
+        Send(Message::SetSel, caret, anchor);
+        Send(Message::SetSelectionMode, mode);
+        Send(Message::ChooseCaretX);
+    }
+}
+
 // Adapted from Notepad4 Edit.cpp::EditGotoBlock at 89b8b36; see licenses/Notepad4.txt.
 void EditorControl::GoToBlock(BlockNavigation command) {
     using Scintilla::Message;
