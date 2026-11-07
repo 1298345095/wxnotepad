@@ -15,6 +15,20 @@
 
 // Native shortcuts target the caller's editor on the existing private display.
 namespace NativeKeys {
+inline int UnshiftedPunctuation(int key) {
+    switch (key) {
+    case '{':
+        return '[';
+    case '}':
+        return ']';
+    case '<':
+        return ',';
+    case '>':
+        return '.';
+    default:
+        return key;
+    }
+}
 inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)> callback) {
 #ifdef __WXGTK__
     auto* widget = GTK_WIDGET(window->GetHandle());
@@ -66,6 +80,29 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
     wxTheApp->CallAfter([callback = std::move(callback)] { callback(true); });
 }
 
+class KeyRelease final : public wxEventFilter {
+public:
+    KeyRelease(int key, bool& received, bool* signal, wxWindow* intended = nullptr)
+        : key_(key), received_(received), signal_(signal), intended_(intended) {
+        wxEvtHandler::AddFilter(this);
+    }
+    ~KeyRelease() override { wxEvtHandler::RemoveFilter(this); }
+    int FilterEvent(wxEvent& event) override {
+        if (event.GetEventType() == wxEVT_KEY_UP &&
+            UnshiftedPunctuation(static_cast<wxKeyEvent&>(event).GetKeyCode()) == key_ &&
+            (!intended_ || event.GetEventObject() == intended_)) {
+            received_ = true;
+            if (signal_) *signal_ = true;
+        }
+        return Event_Skip;
+    }
+
+private:
+    int key_;
+    bool& received_;
+    bool* signal_;
+    wxWindow* intended_;
+};
 #ifdef __WXMSW__
 inline void DialogNavigation(wxDialog* dialog, int key) {
     BYTE previous[256];
@@ -150,37 +187,32 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
         }
     }
 }
-#else
-class KeyRelease final : public wxEventFilter {
-public:
-    KeyRelease(int key, bool& received, bool* signal) : key_(key), received_(received), signal_(signal) {
-        wxEvtHandler::AddFilter(this);
-    }
-    ~KeyRelease() override { wxEvtHandler::RemoveFilter(this); }
-    int FilterEvent(wxEvent& event) override {
-        if (event.GetEventType() == wxEVT_KEY_UP && static_cast<wxKeyEvent&>(event).GetKeyCode() == key_) {
-            received_ = true;
-            if (signal_) *signal_ = true;
-        }
-        return Event_Skip;
-    }
-
-private:
-    int key_;
-    bool& received_;
-    bool* signal_;
-};
 #endif
 inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
                      bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad") {
     const NativeTrace::Gesture trace(*frame->Editor(), key,
                                      (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
 #ifdef __WXMSW__
-    const int nativeKey = key >= WXK_F1 && key <= WXK_F24 ? VK_F1 + key - WXK_F1 : key;
+    int nativeKey = key >= WXK_F1 && key <= WXK_F24 ? VK_F1 + key - WXK_F1 : key;
+    // Match wxMSW's layout lookup and OEM fallback for punctuation accelerators.
+    if (key == '[' || key == ']' || key == ',' || key == '.') {
+        const SHORT mapped = VkKeyScanW(static_cast<wchar_t>(key));
+        if (mapped != -1)
+            nativeKey = LOBYTE(mapped);
+        else
+            nativeKey = key == '[' ? VK_OEM_4 : key == ']' ? VK_OEM_6 : key == ',' ? VK_OEM_COMMA : VK_OEM_PERIOD;
+    }
     NativeSearch::WindowsShortcut(frame->Editor(), nativeKey,
                                   {{VK_CONTROL, static_cast<BYTE>(control ? 0x80 : 0)},
                                    {VK_MENU, static_cast<BYTE>(alt ? 0x80 : 0)},
                                    {VK_SHIFT, static_cast<BYTE>(shift ? 0x80 : 0)}});
+    if (key == '[' || key == ']' || key == ',' || key == '.') {
+        bool received = false;
+        KeyRelease observer(key, received, releaseSignal, frame->Editor());
+        const LPARAM flags = (LPARAM{KF_UP | KF_REPEAT | (alt ? KF_ALTDOWN : 0)} << 16) | 1;
+        SendMessageW(static_cast<HWND>(frame->Editor()->GetHandle()), alt ? WM_SYSKEYUP : WM_KEYUP, nativeKey, flags);
+        if (!received) throw std::runtime_error("native punctuation release must reach the intended editor");
+    }
 #else
     using Clock = std::chrono::steady_clock;
     auto* editor = frame->Editor();
@@ -230,6 +262,10 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         wxFFile file(focusFile, "wb");
         const auto letter = static_cast<char>(key >= 'A' && key <= 'Z' ? key + 'a' - 'A' : key);
         const wxString name = key >= WXK_F1 && key <= WXK_F24 ? wxString::Format("F%d", key - WXK_F1 + 1)
+                              : key == '['                    ? "bracketleft"
+                              : key == ']'                    ? "bracketright"
+                              : key == ','                    ? "comma"
+                              : key == '.'                    ? "period"
                                                               : wxString::Format("%c", letter);
         file.Write(NativeTrace::Request(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") +
                                         (shift ? "shift+" : "") + name));

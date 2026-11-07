@@ -19,6 +19,7 @@ wxDECLARE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
 // Original Styles.h::LineHighlightMode.
 enum class LineHighlightMode { None, BackgroundColor, OutlineFrame };
+enum class BlockNavigation { Start, End, Previous, Next, PreviousSibling, NextSibling };
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
@@ -77,6 +78,8 @@ public:
     void CutLine();
     void DeleteLine();
     void JumpToPosition(intptr_t position);
+    void GoToBlock(BlockNavigation command);
+    void SelectCurrentBlockLines();
     void MatchBrace(bool select = false);
     void ToggleBookmark();
     void GoToBookmark(bool forwards);

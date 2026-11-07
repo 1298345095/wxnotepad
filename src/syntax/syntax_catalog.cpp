@@ -31,7 +31,7 @@ constexpr SyntaxDefinition definitions[] = {
      {},
      SCLEX_NULL,
      SyntaxLanguage::PlainText,
-     false,
+     true,
      nullptr,
      nullptr,
      nullptr,
