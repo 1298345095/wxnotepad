@@ -78,3 +78,16 @@ ctest --test-dir .ci/native-windows -C Release -R "original_occurrence_|original
 
 The integration owner runs the final Windows/private X11/private Wayland suites,
 canonical formatting, clang-tidy and independent Standards/Spec review.
+
+## Bookmark-command regression sequencing
+
+The integration `bookmarks` fixture originally moved the caret and toggled a
+bookmark in the same event-loop interval, then expected the old Find All
+indicator to remain. `original-bookmark-regression.json` independently captures
+that the original caret movement clears indicator 8 before Toggle runs, while
+retaining marker 0. A marker-only Toggle at an already settled caret retains the
+indicator and removes only its bookmark. The fixture now asserts the caret
+invalidation first, restores Find All, and retains its existing independent
+marker/indicator Toggle assertion. It similarly restores explicit Find All
+ownership before testing the bookmark-option clearing transition. The original
+marker and indicator expectations remain intact.

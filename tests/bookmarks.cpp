@@ -217,6 +217,13 @@ public:
                             !(editor->Send(Message::MarkerGet, 3) & 1),
                         "next bookmarked Find All replaces the shared set including manual additions");
                 editor->Send(Message::GotoPos, 0);
+                wxYield();
+                Require(!editor->Send(Message::IndicatorValueAt, 8, 0) &&
+                            !editor->Send(Message::IndicatorValueAt, 8, 10) &&
+                            (editor->Send(Message::MarkerGet, 0) & 1) && (editor->Send(Message::MarkerGet, 2) & 1) &&
+                            result->GetLabel().empty(),
+                        "original empty-caret update clears Find All indicators/count and retains its bookmarks");
+                Click(query->GetParent(), findAll->GetId());
                 Command(frame, toggle);
                 Require(!(editor->Send(Message::MarkerGet, 0) & 1) && editor->Send(Message::IndicatorValueAt, 8, 0),
                         "Toggle removes a Find All bookmark independently of its occurrence indicator");
@@ -230,6 +237,10 @@ public:
                 Require(editor->Send(Message::GetAnchor) == 18 && editor->Send(Message::GetCurrentPos) == 10 &&
                             (editor->Send(Message::MarkerGet, 2) & 1),
                         "Ctrl+Alt+Shift+F2 retains backward search-selection semantics");
+                Click(query->GetParent(), findAll->GetId());
+                Require((editor->Send(Message::MarkerGet, 0) & 1) && (editor->Send(Message::MarkerGet, 2) & 1) &&
+                            result->GetLabel() == "2 matches",
+                        "Find All restores explicit bookmark ownership after automatic selection marking");
                 Toggle(bookmark, false);
                 Click(query->GetParent(), findAll->GetId());
                 Require(editor->Send(Message::MarkerNext, 0, 1) == -1,
