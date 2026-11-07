@@ -129,7 +129,7 @@ def main():
             process.wait(timeout=10)
     (output / "original.json").write_text(json.dumps(dict(revision="89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
         documents=documents, fixtures=results), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    rows = ["// Captured from original Notepad4 89b8b36 by tools/capture_block_navigation.py.", "#pragma once", "namespace BlockReference {",
+    rows = ["// Captured from original Notepad4 89b8b36 by tests/reference_capture/capture_block_navigation.py.", "#pragma once", "namespace BlockReference {",
         "struct Document { const char* language; const char* text; };", "inline constexpr Document documents[] = {"]
     for document in documents:
         rows.append("    {" + json.dumps(document["language"]) + ", " + json.dumps(document["text"], ensure_ascii=False) + "},")

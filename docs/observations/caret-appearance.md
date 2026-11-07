@@ -84,7 +84,7 @@ the full caret appearance fixture passed on private X11 and Wayland displays
 - `original_caret_preference`: independent application processes, original
   captured packed-value fixtures, custom/system/zero periods, seed import,
   explicit and exit saves, and preserved unrelated INI fields.
-- `tools/capture_caret_fixtures.py`: owned original Windows process, native
+- `tests/reference_capture/capture_caret_fixtures.py`: owned original Windows process, native
   command/query paths, portable INI saves and numeric original GDI paint probes.
   Produces `tests/caret_reference.tsv` and a detailed external JSON capture.
 - `WXNOTEPAD_CARET_DPI96=1` enables the complementary Windows 96-DPI owned-window

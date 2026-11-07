@@ -23,7 +23,7 @@ observed behavior.
 
 ## Independent original fixtures
 
-`tools/capture_header_insert.py` captures the original process through owned
+`tests/reference_capture/capture_header_insert.py` captures the original process through owned
 Windows menu/Scintilla handles, launched using the existing issue93 private
 desktop runner. It uses no clipboard, physical desktop input or screenshots.
 Run its normal mode, `--extra` (explicit GBK and UTF-16LE without BOM), and
