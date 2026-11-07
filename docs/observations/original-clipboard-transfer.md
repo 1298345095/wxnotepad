@@ -20,7 +20,16 @@ logical line start only when the selection is empty; a selected range consumes
 that offer as stream text. A line lacking its final EOL gains the document's EOL.
 The core's conversion and multi-paste settings continue to control insertion.
 Failed publication does not delete a Cut or LineCut range. Read-only documents
-permit Copy and reject Cut/Paste. Successful edits retain the original undo group.
+permit Copy and reject byte changes from Cut/Paste. Successful edits retain the original undo group.
+
+The original `IDR_MAINWND` Ctrl+V accelerator uses the native Paste menu's
+availability. When editor protection disables Paste, Windows consumes Ctrl+V
+without invoking the command or changing the selection. The wx host applies the
+same application-key eligibility before the core key map on every backend.
+Direct `SCI_PASTE` keeps the original command-level selection repair: a protected
+reversed selection `(anchor=4, caret=1)` becomes `(1,1)`, while native Ctrl+V
+retains `(4,1)`. Independent original resource-accelerator capture includes a
+writable positive control that invokes the real original Paste command.
 
 GTK publishes ordinary native text targets. Rectangles use ScintillaGTK's existing
 UTF-8 convention: a final LF and a terminating NUL included in

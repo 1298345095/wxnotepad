@@ -98,7 +98,19 @@ void FileProtection(EditorFrame* frame) {
     struct RestorePermissions {
         const std::filesystem::path& path;
         std::filesystem::perms permissions;
-        ~RestorePermissions() { std::filesystem::permissions(path, permissions); }
+        bool pending = true;
+        void Restore() {
+            std::filesystem::permissions(path, permissions);
+            pending = false;
+        }
+        ~RestorePermissions() {
+            if (!pending) return;
+            std::error_code error;
+            std::filesystem::permissions(path, permissions, error);
+            if (error)
+                std::fprintf(stderr, "FAIL: restore native read-only fixture permissions (%s: %d)\n",
+                             error.category().name(), error.value());
+        }
     } restore{source, permissions};
     std::filesystem::permissions(source, std::filesystem::perms::owner_read);
     Require(frame->Open(TestFiles::Filename(source)).status == OpenStatus::Opened &&
@@ -123,6 +135,7 @@ void FileProtection(EditorFrame* frame) {
                     !editor->Send(Message::GetReadOnly) && !frame->GetTitle().Contains("Read Only"),
                 "accepting read-only Save redirects through native Save As to writable independent disk bytes");
     }
+    restore.Restore();
     std::puts("PASS: native file attributes, title priority and original Save / Save As distinction");
 }
 void CommandOutcomes(EditorFrame* frame) {
