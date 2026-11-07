@@ -21,6 +21,8 @@ public:
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme);
     SaveResult SaveAs();
+    SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveCopy();
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme);
     OpenResult Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding = std::nullopt);
@@ -38,6 +40,8 @@ private:
     IndentationSettings indentation_;
     DocumentSession document_;
     int automaticLanguageId_;
+    int saveCopyId_;
+    wxString lastSaveCopyDirectory_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
     wxString enclosureBefore_;
@@ -58,6 +62,9 @@ private:
     void AppendEditingCommands(wxMenu* edit);
     void AppendDateTimeCommands(wxMenu* edit);
     void InsertDateTime(bool shortDate);
+    void InsertFileName(FileNamePart part);
+    void CopyFileName(FileNamePart part);
+    void AppendFileNameCopyCommands(wxMenu* edit);
     void AppendSearchCommands(wxMenu* edit);
     void AppendNavigationCommands(wxMenu* edit);
     void AppendLineEndingCommands(wxMenu* edit);
@@ -76,6 +83,7 @@ private:
     bool HandleViewKey(const wxKeyEvent& event);
     bool HandleWhitespaceKey(const wxKeyEvent& event, int commandId);
     bool HandleDocumentKey(const wxKeyEvent& event);
+    void ToggleReadOnlyMode();
     void ShowLineEndingOptions();
     void ReportFind(const FindResult& result);
     bool SearchMessage(SearchDirection direction);

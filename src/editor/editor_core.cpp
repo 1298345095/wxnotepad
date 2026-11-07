@@ -624,7 +624,9 @@ bool EditorControl::Core::CanPaste() const noexcept {
 }
 
 void EditorControl::Core::Paste(bool) {
-    if (!core::Editor::CanPaste()) return;
+    // Original ScintillaWin::Paste repairs selections even when document writes
+    // are rejected. Native Paste availability and its actual outcome differ.
+    if (!pdoc->IsReadOnly() && !core::Editor::CanPaste()) return;
     const auto text = EditorClipboard::Read(window_, [this] { return sel.Empty(); });
     if (!text) return;
     const core::UndoGroup undo(pdoc);

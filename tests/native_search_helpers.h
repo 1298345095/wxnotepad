@@ -42,8 +42,10 @@ inline bool WindowsShortcut(wxWindow* window, int key, std::initializer_list<std
     WXNOTE_TRACE("driver.ack", "\ttarget=%p\tkey=%d", static_cast<void*>(window), key);
     MSG message{};
     message.hwnd = static_cast<HWND>(window->GetHandle());
-    message.message = WM_KEYDOWN;
+    const bool alt = (modified[VK_MENU] & 0x80) != 0;
+    message.message = alt ? WM_SYSKEYDOWN : WM_KEYDOWN;
     message.wParam = key;
+    message.lParam = alt ? (LPARAM{KF_ALTDOWN} << 16) : 0;
     const bool handled = wxGetTopLevelParent(window)->MSWTranslateMessage(&message);
     WXNOTE_TRACE("driver.accelerator-result", "\ttarget=%p\tkey=%d\thandled=%d", static_cast<void*>(window), key,
                  handled);

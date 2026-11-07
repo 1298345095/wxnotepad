@@ -5,8 +5,7 @@
 using Scintilla::Message;
 
 void EditorControl::IndentLines(bool forwards) {
-    if (Send(Message::GetReadOnly)) return;
-    if (Send(Message::GetSelectionEmpty) && Send(Message::GetSelections) == 1 &&
+    if (!Send(Message::GetReadOnly) && Send(Message::GetSelectionEmpty) && Send(Message::GetSelections) == 1 &&
         Send(Message::GetSelectionMode) == static_cast<intptr_t>(Scintilla::SelectionMode::Stream)) {
         // The core excludes an endpoint at a line start. Move an empty
         // selection to its line end so the explicit line command includes it.

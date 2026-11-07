@@ -23,6 +23,7 @@ struct SaveCleanupOptions {
 };
 
 enum class SaveStatus { Saved, Cancelled, Failed };
+enum class FileNamePart { BaseName, FileName, FullPath };
 struct SaveResult {
     SaveStatus status;
     wxString error;
@@ -47,12 +48,16 @@ public:
     explicit DocumentSession(EditorControl& editor, EncodingOptions options = {}, SyntaxDetectionOptions detection = {})
         : editor_(editor), encodingOptions_(options), detection_(detection) {}
     const wxString& Path() const { return path_; }
+    wxString FileNameText(FileNamePart part) const;
+    bool IsReadOnlyFile() const { return readOnlyFile_; }
+    bool RefreshReadOnlyFile();
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme);
     SaveResult Save(const GbkLossDecision& decideLoss = {});
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme);
+    SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt,
                     std::optional<EncodingChoice> weakEncoding = std::nullopt,
@@ -75,6 +80,7 @@ private:
     wxString path_;
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
+    bool readOnlyFile_ = false;
     SaveCleanupOptions saveCleanup_;
     Scintilla::EndOfLine defaultEolMode_ = Scintilla::EndOfLine::CrLf;
     EncodingOptions encodingOptions_;
@@ -86,7 +92,7 @@ private:
     bool DetectAutomaticLanguage();
     void ApplySaveCleanup();
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
-                      std::optional<SaveFileType> fileType = std::nullopt);
+                      std::optional<SaveFileType> fileType = std::nullopt, bool copy = false);
     OpenResult Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
                        bool keepLanguage = false);
 };

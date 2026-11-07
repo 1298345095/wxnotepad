@@ -100,6 +100,7 @@ add_library(app_shell STATIC
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
+    src/app/dialogs/insert_tag_dialog.cpp
     src/app/dialogs/modify_lines_dialog.cpp
     src/app/dialogs/go_to_line_dialog.cpp
     src/app/dialogs/search_feedback_dialog.cpp
@@ -203,6 +204,10 @@ if(BUILD_TESTING)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
     add_editor_test(date_time original_date_time_insertion 60)
+    add_editor_test(path_text original_path_text_insertion 90)
+    add_editor_test(read_only original_read_only_mode 120)
+    target_compile_definitions(read_only PRIVATE
+        "READ_ONLY_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/read_only_reference.tsv\"")
     add_editor_test(url_conversion original_url_conversion 60)
     target_compile_definitions(url_conversion PRIVATE
         "URL_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/url_reference_fixtures.tsv\"")
@@ -210,6 +215,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/date_time_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
     add_editor_test(save_cleanup original_save_cleanup 60)
+    add_editor_test(save_copy original_save_copy 90)
     add_editor_test(pad_spaces original_pad_spaces 60)
     add_editor_test(align_lines original_align_lines 60)
     add_editor_test(modify_lines original_modify_lines 60)
@@ -235,12 +241,16 @@ if(BUILD_TESTING)
         target_link_libraries(clipboard_peer PRIVATE PkgConfig::GTK)
     endif()
     add_editor_test(clipboard_smoke system_clipboard 30)
+    add_test(NAME original_read_only_clipboard COMMAND clipboard_smoke)
+    set_tests_properties(original_read_only_clipboard PROPERTIES TIMEOUT 120 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=read-only")
     add_test(NAME original_clipboard_shapes COMMAND clipboard_smoke)
     set_tests_properties(original_clipboard_shapes PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=1")
     add_test(NAME original_current_line_clipboard COMMAND clipboard_smoke)
     set_tests_properties(original_current_line_clipboard PROPERTIES TIMEOUT 90 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=lines")
     add_test(NAME original_line_clipboard_commands COMMAND clipboard_smoke)
     set_tests_properties(original_line_clipboard_commands PROPERTIES TIMEOUT 180 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=commands")
+    add_test(NAME original_path_text_clipboard COMMAND clipboard_smoke)
+    set_tests_properties(original_path_text_clipboard PROPERTIES TIMEOUT 180 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=path-text")
     add_dependencies(clipboard_smoke clipboard_peer)
     add_editor_test(gbk_smoke gbk_roundtrip 30)
     add_editor_test(eol_open mixed_line_ending_open 30)
@@ -278,6 +288,10 @@ if(BUILD_TESTING)
     add_editor_test(move_lines original_move_lines 60)
     add_editor_test(block_comments original_toggle_block_comment 60)
     add_editor_test(enclose_selection original_enclose_selection 60)
+    add_editor_test(insert_tag original_insert_tag 90)
+    target_compile_definitions(insert_tag PRIVATE
+        "TAG_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/tag_reference.tsv\""
+        "TAG_STATE_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/tag_state_reference.tsv\"")
     add_editor_test(strip_blanks original_strip_blanks 60)
     add_editor_test(compress_whitespace original_compress_whitespace 60)
     add_editor_test(blank_lines original_blank_lines 60)

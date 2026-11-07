@@ -1,0 +1,51 @@
+# Original Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a native tag dialog.
+# Capture: native-utilities-2026-11-06/143/original.json; executable provenance in research.md.
+# Scenario, stage, escaped UTF-8 text, anchor, caret, modified, undo, redo, mode, main, count, range anchor/caret/virtual pairs, rectangular endpoints/virtual pairs.
+caret	before	A中😀B\nlast	1	1	0	0	0	0	0	1	1	1	0	0	0	0	0	0
+caret	after	A<DiV a="😀"></MANUAL>中😀B\nlast	15	15	1	1	0	0	0	1	15	15	0	0	0	0	0	0
+caret	undo	A中😀B\nlast	1	1	0	0	1	0	0	1	1	1	0	0	-1	-1	0	0
+caret	redo	A<DiV a="😀"></MANUAL>中😀B\nlast	1	1	1	1	0	0	0	1	1	1	0	0	-1	-1	0	0
+normal	before	A中😀B\nlast	1	8	0	0	0	0	0	1	1	8	0	0	0	0	0	0
+normal	after	A<DiV a="😀">中😀</MANUAL>B\nlast	15	22	1	1	0	0	0	1	15	22	0	0	0	0	0	0
+normal	undo	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	-1	-1	0	0
+normal	redo	A<DiV a="😀">中😀</MANUAL>B\nlast	15	22	1	1	0	0	0	1	15	22	0	0	-1	-1	0	0
+reverse	before	A中😀B\nlast	8	1	0	0	0	0	0	1	8	1	0	0	0	0	0	0
+reverse	after	A<DiV a="😀">中😀</MANUAL>B\nlast	22	15	1	1	0	0	0	1	22	15	0	0	0	0	0	0
+reverse	undo	A中😀B\nlast	8	1	0	0	1	0	0	1	8	1	0	0	-1	-1	0	0
+reverse	redo	A<DiV a="😀">中😀</MANUAL>B\nlast	22	15	1	1	0	0	0	1	22	15	0	0	-1	-1	0	0
+multiline	before	A中😀B\nlast	14	0	0	0	0	0	0	1	14	0	0	0	0	0	0	0
+multiline	after	<DiV a="😀">A中😀B\nlast</MANUAL>	28	14	1	1	0	0	0	1	28	14	0	0	0	0	0	0
+multiline	undo	A中😀B\nlast	14	0	0	0	1	0	0	1	14	0	0	0	-1	-1	0	0
+multiline	redo	<DiV a="😀">A中😀B\nlast</MANUAL>	28	14	1	1	0	0	0	1	28	14	0	0	-1	-1	0	0
+multiple	before	A中😀B\nlast	14	10	0	0	0	0	1	2	1	8	0	0	14	10	0	0	0	0	0	0
+multiple	after	A中😀B\n<DiV a="😀">last</MANUAL>	28	24	1	1	0	0	0	1	28	24	0	0	0	0	0	0
+multiple	undo	A中😀B\nlast	14	10	0	0	1	0	1	2	1	8	0	0	14	10	0	0	-1	-1	0	0
+multiple	redo	A中😀B\n<DiV a="😀">last</MANUAL>	28	24	1	1	0	0	1	2	1	8	0	0	28	24	0	0	-1	-1	0	0
+virtual	before	A中😀B\nlast	14	14	0	0	0	0	0	1	14	14	4	2	0	0	0	0
+virtual	after	A中😀B\nlast<DiV a="😀"></MANUAL>	28	28	1	1	0	0	0	1	28	28	0	0	0	0	0	0
+virtual	undo	A中😀B\nlast	14	14	0	0	1	0	0	1	14	14	4	2	-1	-1	0	0
+virtual	redo	A中😀B\nlast<DiV a="😀"></MANUAL>	18	16	1	1	0	0	0	1	18	16	0	0	-1	-1	0	0
+rectangle	before	xxx\nxxx	1	7	0	0	0	1	1	2	3	3	0	4	7	7	0	4	1	7	2	4
+rectangle	after	xxx\nxxx	1	7	0	0	0	1	1	2	3	3	0	4	7	7	0	4	1	7	2	4
+rectangle	undo	xxx\nxxx	1	7	0	0	0	1	1	2	3	3	0	4	7	7	0	4	1	7	2	4
+rectangle	redo	xxx\nxxx	1	7	0	0	0	1	1	2	3	3	0	4	7	7	0	4	1	7	2	4
+rectangle-reverse	before	xxx\nxxx	7	1	0	0	0	1	1	2	7	7	2	2	3	3	2	2	7	1	2	4
+rectangle-reverse	after	xxx\nxxx	7	1	0	0	0	1	1	2	7	7	2	2	3	3	2	2	7	1	2	4
+rectangle-reverse	undo	xxx\nxxx	7	1	0	0	0	1	1	2	7	7	2	2	3	3	2	2	7	1	2	4
+rectangle-reverse	redo	xxx\nxxx	7	1	0	0	0	1	1	2	7	7	2	2	3	3	2	2	7	1	2	4
+readonly	before	A中😀B\nlast	1	8	0	0	0	0	0	1	1	8	0	0	0	0	0	0
+readonly	after	A中😀B\nlast	14	14	0	0	0	0	0	1	14	14	0	0	0	0	0	0
+readonly	undo	A中😀B\nlast	14	14	0	0	0	0	0	1	14	14	0	0	0	0	0	0
+readonly	redo	A中😀B\nlast	14	14	0	0	0	0	0	1	14	14	0	0	0	0	0	0
+cancel	before	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	0	0	0	0
+cancel	after	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	0	0	0	0
+cancel	undo	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	0	0	0	0
+cancel	redo	A中😀B\nlast!	1	8	1	1	0	0	0	1	1	8	0	0	-1	-1	0	0
+close	before	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	0	0	0	0
+close	after	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	0	0	0	0
+close	undo	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	0	0	0	0
+close	redo	A中😀B\nlast!	1	8	1	1	0	0	0	1	1	8	0	0	-1	-1	0	0
+empty	before	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	0	0	0	0
+empty	after	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	0	0	0	0
+empty	undo	A中😀B\nlast	1	8	0	0	1	0	0	1	1	8	0	0	0	0	0	0
+empty	redo	A中😀B\nlast!	1	8	1	1	0	0	0	1	1	8	0	0	-1	-1	0	0

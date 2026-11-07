@@ -11,6 +11,10 @@ struct ChosenSaveFile {
     wxString path;
     SaveFileType type;
 };
+struct SaveFileLocation {
+    wxString directory;
+    wxString filename;
+};
 
 class OpenFileDialog final : public wxFileDialog {
 public:
@@ -19,7 +23,7 @@ public:
 };
 
 std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
-                                             const wxString& path);
+                                             const wxString& path, const SaveFileLocation& initial = {});
 
 struct LineEndingOptions {
     int defaultMode;
