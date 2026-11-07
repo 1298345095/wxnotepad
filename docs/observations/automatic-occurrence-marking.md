@@ -91,3 +91,10 @@ invalidation first, restores Find All, and retains its existing independent
 marker/indicator Toggle assertion. It similarly restores explicit Find All
 ownership before testing the bookmark-option clearing transition. The original
 marker and indicator expectations remain intact.
+
+Decoration observations also wait for `NativePaint::Complete`: the pinned core
+delivers UpdateUI from its real paint/idle path, while `wxYield()` alone can leave
+a GTK frame-clock paint outstanding. The shared helper observes the two actual
+paint completions already used by brace tests. The occurrence/search fixtures
+use it at document-load, selection and query observation boundaries; the
+incremental matching timer loop keeps its existing event-loop behavior.

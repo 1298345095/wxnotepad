@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
+#include "native_paint_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
@@ -194,6 +195,7 @@ public:
                 editor->Send(Message::SetSavePoint);
                 editor->Send(Message::GotoPos, 5);
                 Command(frame, toggle);
+                NativePaint::Complete(editor);
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 auto* findAll = wxDynamicCast(wxWindow::FindWindowByName("Find All", frame), wxButton);
@@ -212,12 +214,13 @@ public:
                         "Clear All removes Find All bookmarks while retaining indicators and count");
                 editor->Send(Message::GotoPos, 14);
                 Command(frame, toggle);
+                NativePaint::Complete(editor);
                 Click(query->GetParent(), findAll->GetId());
                 Require((editor->Send(Message::MarkerGet, 0) & 1) && (editor->Send(Message::MarkerGet, 2) & 1) &&
                             !(editor->Send(Message::MarkerGet, 3) & 1),
                         "next bookmarked Find All replaces the shared set including manual additions");
                 editor->Send(Message::GotoPos, 0);
-                wxYield();
+                NativePaint::Complete(editor);
                 Require(!editor->Send(Message::IndicatorValueAt, 8, 0) &&
                             !editor->Send(Message::IndicatorValueAt, 8, 10) &&
                             (editor->Send(Message::MarkerGet, 0) & 1) && (editor->Send(Message::MarkerGet, 2) & 1) &&
@@ -229,11 +232,13 @@ public:
                         "Toggle removes a Find All bookmark independently of its occurrence indicator");
                 editor->Send(Message::GotoPos, 0);
                 Key(query, WXK_F2, true, false, true);
+                NativePaint::Complete(editor);
                 Require(editor->Send(Message::GetAnchor) == 0 && editor->Send(Message::GetCurrentPos) == 3 &&
                             (editor->Send(Message::MarkerGet, 2) & 1),
                         "Ctrl+Alt+F2 in Find extends search selection without toggling or clearing bookmarks");
                 editor->Send(Message::GotoPos, 18);
                 Key(query, WXK_F2, true, true, true);
+                NativePaint::Complete(editor);
                 Require(editor->Send(Message::GetAnchor) == 18 && editor->Send(Message::GetCurrentPos) == 10 &&
                             (editor->Send(Message::MarkerGet, 2) & 1),
                         "Ctrl+Alt+Shift+F2 retains backward search-selection semantics");
@@ -249,7 +254,7 @@ public:
                 Command(frame, toggle);
                 Click(query->GetParent(), wxID_CANCEL);
                 Require(frame->New(), "clean New replaces the current document");
-                wxYield();
+                NativePaint::Complete(editor);
                 Require(editor->Send(Message::MarkerNext, 0, 1) == -1 && result->GetLabel().empty(),
                         "document replacement clears shared manual bookmarks and Find All state");
                 std::puts(
