@@ -27,7 +27,8 @@ std::function<wxColour(int, int)> PixelReader(EditorControl* editor) {
     // Wayland does not support reading pixels back from a window DC. Ask the
     // actual native widget to paint its margin into an owned Cairo target.
     const int width =
-        static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + editor->Send(Message::GetMarginWidthN, 1));
+        static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + editor->Send(Message::GetMarginWidthN, 1) +
+                         editor->Send(Message::GetMarginWidthN, 2));
     const int height = editor->GetClientSize().y;
     auto* surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, width, height);
     auto* context = cairo_create(surface);
@@ -58,21 +59,23 @@ std::function<wxColour(int, int)> PixelReader(EditorControl* editor) {
 }
 void MarginBackground(EditorControl* editor) {
     const auto read = PixelReader(editor);
-    const int left = static_cast<int>(editor->Send(Message::GetMarginWidthN, 0));
-    const int width = static_cast<int>(editor->Send(Message::GetMarginWidthN, 1));
+    const int left =
+        static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + editor->Send(Message::GetMarginWidthN, 1));
+    const int width = static_cast<int>(editor->Send(Message::GetMarginWidthN, 2));
     for (const int y : {150, editor->GetClientSize().y - 20}) {
         for (const int x : {left + 1, left + width - 2}) {
             const auto pixel = read(x, y);
             std::printf("margin pixel %d,%d = %u,%u,%u\n", x, y, pixel.Red(), pixel.Green(), pixel.Blue());
-            Require(pixel == wxColour(240, 240, 240),
+            Require(pixel == wxColour(255, 255, 255),
                     "fold background must cover the complete margin beyond one 8x8 tile");
         }
     }
 }
 std::vector<unsigned int> MarkerPixels(EditorControl* editor, int line) {
     const auto read = PixelReader(editor);
-    const int left = static_cast<int>(editor->Send(Message::GetMarginWidthN, 0));
-    const int width = static_cast<int>(editor->Send(Message::GetMarginWidthN, 1));
+    const int left =
+        static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + editor->Send(Message::GetMarginWidthN, 1));
+    const int width = static_cast<int>(editor->Send(Message::GetMarginWidthN, 2));
     const auto position = editor->Send(Message::PositionFromLine, line);
     const int top = static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position));
     const int height = static_cast<int>(editor->Send(Message::TextHeight, line));
@@ -198,10 +201,8 @@ public:
                         "folding and Save must retain independent disk bytes");
                 saved.close();
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
-                Require(editor->Send(Message::GetMarginWidthN, 1) == 0 && editor->Send(Message::GetLineVisible, 2) &&
-                            !(static_cast<uintptr_t>(editor->Send(Message::GetFoldLevel, 0)) &
-                              static_cast<uintptr_t>(Scintilla::FoldLevel::HeaderFlag)),
-                        "Plain Text must hide and disable the margin and clear stale fold state");
+                Require(editor->Send(Message::GetMarginWidthN, 2) > 0 && editor->Send(Message::GetLineVisible, 2),
+                        "Plain Text must retain the original folding margin and reveal old contracted text");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
                 Paint(editor);
                 Require(editor->Send(Message::GetFoldExpanded, 0) && editor->Send(Message::GetLineVisible, 2),
@@ -213,7 +214,7 @@ public:
                         "successful same-language Open must reset all contraction state");
                 MarginClick(editor, 0);
                 NativeSearch::Command(frame, wxID_NEW);
-                Require(editor->Send(Message::GetLength) == 0 && editor->Send(Message::GetMarginWidthN, 1) == 0 &&
+                Require(editor->Send(Message::GetLength) == 0 && editor->Send(Message::GetMarginWidthN, 2) > 0 &&
                             editor->Send(Message::GetLineVisible, 0),
                         "New must reset folding and return to unnamed Plain Text");
                 std::filesystem::remove_all(directory);

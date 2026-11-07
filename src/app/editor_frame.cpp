@@ -21,6 +21,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                          : SyntaxDetectionOptions{}),
       search_(*editor_) {
     const auto& preferences = settings ? settings->values : defaults_;
+    editor_->SetCodeFoldingVisible(preferences.showCodeFolding);
+    editor_->SetCurrentBlockHighlighted(preferences.highlightCurrentBlock);
     ApplyIndentationGuides(*editor_, document_.Language(), preferences.showIndentGuides,
                            preferences.simpleIndentGuides);
     editor_->Send(Scintilla::Message::SetEdgeColumn,
@@ -93,6 +95,8 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.matchBraces = editor_->VisualBraceMatching();
+    settings_->values.showCodeFolding = editor_->CodeFoldingVisible();
+    settings_->values.highlightCurrentBlock = editor_->CurrentBlockHighlighted();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
     settings_->values.viewEOLs = editor_->Send(Scintilla::Message::GetViewEOL) != 0;
     settings_->values.showWordWrapSymbols = showWordWrapSymbols_;
