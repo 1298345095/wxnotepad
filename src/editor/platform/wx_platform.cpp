@@ -162,6 +162,23 @@ public:
         dc_->DrawRoundedRectangle(Rect(r), 3);
     }
     void SCICALL AlphaRectangle(PRectangle r, XYPOSITION radius, FillStroke s) override {
+#ifdef __WXMSW__
+        // Windows wxDC ignores pen/brush alpha. Brace and occurrence round-box
+        // indicators need the same native graphics alpha path as translucent fills.
+        std::unique_ptr<wxGraphicsContext> graphics(wxGraphicsContext::CreateFromUnknownDC(*dc_));
+        if (graphics) {
+            graphics->SetAntialiasMode(wxANTIALIAS_NONE);
+            const int width = std::max(1, static_cast<int>(std::lround(s.stroke.width)));
+            graphics->SetPen(wxPen(Color(s.stroke.colour), width));
+            graphics->SetBrush(wxBrush(Color(s.fill.colour)));
+            const auto rectangle = Rect(r);
+            const double inset = width / 2.0;
+            graphics->DrawRoundedRectangle(rectangle.x + inset, rectangle.y + inset,
+                                           std::max(0, rectangle.width - width),
+                                           std::max(0, rectangle.height - width), radius);
+            return;
+        }
+#endif
         StrokeSet(s.stroke);
         dc_->SetBrush(wxBrush(Color(s.fill.colour)));
         dc_->DrawRoundedRectangle(Rect(r), radius);

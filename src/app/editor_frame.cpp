@@ -50,6 +50,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         editor_->SetBookmarkMarginVisible(settings->values.showBookmarkMargin);
         editor_->SetChangeHistoryOptions(settings->values.changeHistoryMarker);
+        editor_->SetVisualBraceMatching(settings->values.matchBraces);
         editor_->Send(Scintilla::Message::SetViewEOL, settings->values.viewEOLs);
         showWordWrapSymbols_ = settings->values.showWordWrapSymbols;
         wordWrapSymbols_ = settings->values.wordWrapSymbols;
@@ -97,6 +98,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.showBookmarkMargin = editor_->BookmarkMarginVisible();
     settings_->values.changeHistoryMarker = editor_->ChangeHistoryOptions();
+    settings_->values.matchBraces = editor_->VisualBraceMatching();
     settings_->values.showCodeFolding = editor_->CodeFoldingVisible();
     settings_->values.highlightCurrentBlock = editor_->CurrentBlockHighlighted();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;

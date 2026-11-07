@@ -12,13 +12,16 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 
 wxDECLARE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
+struct SyntaxDefinition;
 
 // Original Edit.h::LineSelectionMode, including its built-in Visual Studio default.
 enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
 // Original Styles.h::LineHighlightMode.
 enum class LineHighlightMode { None, BackgroundColor, OutlineFrame };
+enum class BlockNavigation { Start, End, Previous, Next, PreviousSibling, NextSibling };
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
@@ -44,6 +47,8 @@ public:
     bool ConvertUrl(UrlConversion command);
     void InsertDateTime(DateTimeInsertion command, const wxString& format = {});
     void InsertGuid();
+    void InsertEncodingIdentifier(std::string_view name, const SyntaxDefinition& syntax);
+    void InsertScriptShebangLine(const SyntaxDefinition& syntax);
     void InsertUnicodeControlCharacter(UnicodeControlCharacter character, bool defaultEncoding);
     AlignmentResult AlignLines(AlignmentMode mode);
     bool ModifyLines(const wxString& prefix, const wxString& suffix, bool skipEmpty = false);
@@ -77,7 +82,11 @@ public:
     void CutLine();
     void DeleteLine();
     void JumpToPosition(intptr_t position);
+    void GoToBlock(BlockNavigation command);
+    void SelectCurrentBlockLines();
     void MatchBrace(bool select = false);
+    bool VisualBraceMatching() const { return matchBraces_; }
+    void SetVisualBraceMatching(bool enabled);
     void ToggleBookmark();
     void GoToBookmark(bool forwards);
     void SelectAllBookmarks();
@@ -100,6 +109,7 @@ public:
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
 private:
+    friend struct EditorCoreObservation;
     class Core;
     wxTimer caretTimer_;
     wxTimer scrollTimer_;
@@ -115,6 +125,7 @@ private:
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
     bool autoIndent_ = true;
+    bool matchBraces_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;

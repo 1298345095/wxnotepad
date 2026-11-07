@@ -68,6 +68,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
     values.showBookmarkMargin = ReadBool("ShowBookmarkMargin", defaults.showBookmarkMargin);
     values.changeHistoryMarker = ReadInt("ChangeHistoryMarker", defaults.changeHistoryMarker);
+    values.matchBraces = ReadBool("MatchBraces", defaults.matchBraces);
     values.showCodeFolding = ReadBool("ShowCodeFolding", defaults.showCodeFolding);
     values.highlightCurrentBlock = ReadBool("HighlightCurrentBlock", defaults.highlightCurrentBlock);
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", defaults.viewWhiteSpace);
@@ -308,6 +309,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
         WriteBool("ShowBookmarkMargin", values.showBookmarkMargin, defaults.showBookmarkMargin);
         WriteInt("ChangeHistoryMarker", values.changeHistoryMarker, defaults.changeHistoryMarker);
+        WriteBool("MatchBraces", values.matchBraces, defaults.matchBraces);
         WriteBool("ShowCodeFolding", values.showCodeFolding, defaults.showCodeFolding);
         WriteBool("HighlightCurrentBlock", values.highlightCurrentBlock, defaults.highlightCurrentBlock);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, defaults.viewWhiteSpace);

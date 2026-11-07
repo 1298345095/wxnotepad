@@ -19,6 +19,7 @@ struct OriginalSettings {
     bool showLineNumbers = true;
     bool showBookmarkMargin = false;
     int changeHistoryMarker = 0;
+    bool matchBraces = true;
     bool showCodeFolding = true;
     bool highlightCurrentBlock = true;
     bool viewWhiteSpace = false;
