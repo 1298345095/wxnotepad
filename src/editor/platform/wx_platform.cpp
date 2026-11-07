@@ -9,6 +9,10 @@
 #endif
 #include <wx/display.h>
 #include <wx/listbox.h>
+#ifdef __WXGTK__
+#include <pango/pango.h>
+#endif
+#include <algorithm>
 #include <chrono>
 #include <cstdarg>
 #include <cstdio>
@@ -235,7 +239,22 @@ public:
     void SCICALL MeasureWidths(const Font* f, std::string_view text, XYPOSITION* positions) override {
         FontSet(f);
         wxArrayInt extents;
-        dc_->GetPartialTextExtents(String(text), extents);
+        const auto characters = String(text);
+        dc_->GetPartialTextExtents(characters, extents);
+#ifdef __WXGTK__
+        std::vector<PangoLogAttr> cursorPositions;
+        size_t cursorExtent = 0;
+        if (utf8_ && !extents.empty() &&
+            std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; })) {
+            // wxGTK 3.3.3's Cairo extents compact Pango cursor clusters, then pad
+            // to the character count. Expand those same cursor boundaries while
+            // retaining the native DC's font, DPI and measured cluster advances.
+            const auto utf8 = characters.utf8_str();
+            cursorPositions.resize(characters.length() + 1);
+            pango_get_log_attrs(utf8.data(), static_cast<int>(utf8.length()), 0, pango_language_get_default(),
+                                cursorPositions.data(), static_cast<int>(cursorPositions.size()));
+        }
+#endif
         size_t character = 0;
         for (size_t byte = 0; byte < text.size();) {
             const unsigned char lead = text[byte];
@@ -244,7 +263,14 @@ public:
             width = std::min(width, text.size() - byte);
             const size_t units = utf8_ && width == 4 && sizeof(wchar_t) == 2 ? 2 : 1;
             character += units;
-            const double x = character && character <= extents.size() ? extents[character - 1] : 0;
+            size_t extent = character - 1;
+#ifdef __WXGTK__
+            if (!cursorPositions.empty()) {
+                extent = cursorExtent;
+                if (character < cursorPositions.size() && cursorPositions[character].is_cursor_position) ++cursorExtent;
+            }
+#endif
+            const double x = extent < extents.size() ? extents[extent] : 0;
             for (size_t j = 0; j < width; ++j)
                 positions[byte + j] = x;
             byte += width;

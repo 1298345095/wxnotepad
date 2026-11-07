@@ -9,6 +9,7 @@
 #include <chrono>
 #include <fstream>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 #include <vector>
 #ifdef __WXGTK__
@@ -149,6 +150,15 @@ void Rendering(EditorFrame* frame, PaintRows& paint) {
     Menu(frame, "Draw Block Caret in Selection");
     Menu(frame, "Block (OVR Mode)");
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("Wi中😀é \r\n"));
+    std::string raw(16, '\0');
+    editor->Send(Message::GetText, raw.size(), reinterpret_cast<intptr_t>(raw.data()));
+    raw.resize(15);
+    Require(raw == "Wi\xE4\xB8\xAD\xF0\x9F\x98\x80"
+                   "e\xCC\x81 \r\n" &&
+                editor->Send(Message::GetLength) == 15 && editor->Send(Message::GetLineEndPosition, 0) == 13 &&
+                editor->Send(Message::GetCodePage) == 65001 && editor->Send(Message::GetBidirectional) == 0,
+            "native caret fixture preserves original 15 UTF-8 bytes, line end 13 and LTR layout");
+    std::puts("PASS: original raw 15-byte UTF-8 fixture, line end 13 and LTR layout");
     editor->Send(Message::EmptyUndoBuffer);
     editor->Send(Message::SetSavePoint);
     editor->SetCurrentLineHighlightMode(LineHighlightMode::None);
@@ -159,11 +169,14 @@ void Rendering(EditorFrame* frame, PaintRows& paint) {
     const auto xAt = [editor](intptr_t position) {
         return static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position));
     };
+    Require(xAt(13) > xAt(12), "the trailing space after a combining cluster has positive native advance");
     for (const auto& [position, after] : {std::pair{0, 1}, {1, 2}, {2, 5}, {5, 9}, {9, 10}, {12, 13}}) {
         editor->Send(Message::SetSel, position, position);
         editor->Send(Message::SetOvertype, 0);
         auto [first, last] = Span(editor, paint, 2);
-        Require(std::abs(first - xAt(position)) <= 1 && std::abs(last - xAt(after)) <= 1,
+        const int queriedStart = xAt(position);
+        const int queriedEnd = xAt(after);
+        Require(std::abs(first - queriedStart) <= 1 && std::abs(last - queriedEnd) <= 1,
                 "block caret covers the native variable-width/Unicode character cell");
     }
     editor->Send(Message::SetSel, 0, 5);
