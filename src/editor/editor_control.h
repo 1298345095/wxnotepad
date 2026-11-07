@@ -22,6 +22,7 @@ struct SyntaxDefinition;
 enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
 // Original Styles.h::LineHighlightMode.
 enum class LineHighlightMode { None, BackgroundColor, OutlineFrame };
+enum class BlockNavigation { Start, End, Previous, Next, PreviousSibling, NextSibling };
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
@@ -82,7 +83,11 @@ public:
     void CutLine();
     void DeleteLine();
     void JumpToPosition(intptr_t position);
+    void GoToBlock(BlockNavigation command);
+    void SelectCurrentBlockLines();
     void MatchBrace(bool select = false);
+    bool VisualBraceMatching() const { return matchBraces_; }
+    void SetVisualBraceMatching(bool enabled);
     void ToggleBookmark();
     void GoToBookmark(bool forwards);
     void SelectAllBookmarks();
@@ -102,6 +107,7 @@ public:
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
 private:
+    friend struct EditorCoreObservation;
     class Core;
     wxTimer caretTimer_;
     wxTimer scrollTimer_;
@@ -114,6 +120,7 @@ private:
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
     bool autoIndent_ = true;
+    bool matchBraces_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;
