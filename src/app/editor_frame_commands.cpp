@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
+#include "editor/platform/clipboard.h"
 #include "editor/platform/custom_case.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
@@ -173,7 +174,41 @@ wxMenu* EditorFrame::CreateEditMenu() {
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanPaste)); },
         wxID_PASTE);
-    AppendFileNameCopyCommands(edit);
+    const int clearClipboard = wxWindow::NewControlId();
+    edit->Append(clearClipboard, "Clear Clip&board");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { EditorClipboard::Clear(*this); }, clearClipboard);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(EditorClipboard::HasData(*this)); },
+        clearClipboard);
+    auto* clipboard = new wxMenu;
+    AppendFileNameCopyCommands(clipboard);
+    clipboard->AppendSeparator();
+    const int copyAll = wxWindow::NewControlId();
+    clipboard->Append(copyAll, "Copy &All\tAlt+A");
+    const int copyAdd = wxWindow::NewControlId();
+    clipboard->Append(copyAdd, "Copy A&dd\tCtrl+E");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            editor_->Send(Scintilla::Message::CopyRange, 0, editor_->Send(Scintilla::Message::GetLength));
+        },
+        copyAll);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, copyAll);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!editor_->CopyAdd())
+                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        copyAdd);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+        copyAdd);
+    edit->AppendSubMenu(clipboard, "Cop&y to Clipboard");
     const int cutLine = wxWindow::NewControlId();
     const int copyLine = wxWindow::NewControlId();
     const int deleteLine = wxWindow::NewControlId();
@@ -903,8 +938,7 @@ void EditorFrame::CopyFileName(FileNamePart part) {
     editor_->Send(Scintilla::Message::CopyText, bytes.size(), reinterpret_cast<intptr_t>(bytes.c_str()));
 }
 
-void EditorFrame::AppendFileNameCopyCommands(wxMenu* edit) {
-    auto* copy = new wxMenu;
+void EditorFrame::AppendFileNameCopyCommands(wxMenu* copy) {
     for (const auto& [label, part] : {std::pair{"&File Name", FileNamePart::BaseName},
                                       std::pair{"File Name and &Ext.\tShift+F9", FileNamePart::FileName},
                                       std::pair{"Full &Path Name\tAlt+Shift+F9", FileNamePart::FullPath}}) {
@@ -913,7 +947,6 @@ void EditorFrame::AppendFileNameCopyCommands(wxMenu* edit) {
         Bind(wxEVT_MENU, [this, part](wxCommandEvent&) { CopyFileName(part); }, id);
         Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     }
-    edit->AppendSubMenu(copy, "Cop&y to Clipboard");
 }
 
 void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {

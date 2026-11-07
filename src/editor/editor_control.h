@@ -67,6 +67,8 @@ public:
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     void Copy();
+    // Original EditCopyAppend; false reports a nonempty rectangular selection.
+    bool CopyAdd();
     void Cut();
     void CopyLine();
     void CutLine();
