@@ -73,7 +73,7 @@ public:
         if (event.GetEventType() == wxEVT_PAINT && pending_) {
             wxPaintDC dc(editor_);
             auto* context = static_cast<cairo_t*>(dc.GetGraphicsContext()->GetNativeContext());
-            double x = 0, y = y_;
+            double x = x_, y = y_;
             cairo_user_to_device(context, &x, &y);
             Read(dc, static_cast<int>(x), static_cast<int>(y));
             pending_ = false;
@@ -81,8 +81,14 @@ public:
 #endif
         return handled;
     }
-    std::vector<unsigned> Row(int y) {
+    std::vector<unsigned> Row(int y) { return Capture(0, y, 400); }
+    unsigned Pixel(int x, int y) { return Capture(x, y, 1).front(); }
+
+private:
+    std::vector<unsigned> Capture(int x, int y, int count) {
+        x_ = x;
         y_ = y;
+        count_ = count;
         pending_ = true;
         row_.clear();
         editor_->Refresh(false);
@@ -92,7 +98,7 @@ public:
             wxYield();
 #ifndef __WXGTK__
             wxClientDC dc(editor_);
-            Read(dc, 0, y_);
+            Read(dc, x_, y_);
             pending_ = false;
 #endif
             if (pending_) wxMilliSleep(5);
@@ -101,16 +107,17 @@ public:
         return row_;
     }
 
-private:
     void Read(wxDC& dc, int x, int y) {
-        for (int column = 0; column < 400; ++column) {
+        for (int column = 0; column < count_; ++column) {
             wxColour colour;
             Require(dc.GetPixel(x + column, y, &colour), "native paint row is readable");
             row_.push_back(colour.GetRGB());
         }
     }
     EditorControl* editor_;
+    int x_ = 0;
     int y_ = 0;
+    int count_ = 400;
     bool pending_ = false;
     std::vector<unsigned> row_;
 };
@@ -209,6 +216,11 @@ void BlinkAndLifecycle(EditorFrame* frame, PaintRows& paint) {
     editor->Send(Message::SetCaretStyle, 0);
     const auto background = paint.Row(2);
     editor->Send(Message::SetCaretStyle, style);
+    const auto steady = paint.Row(2);
+    size_t pixel = 0;
+    while (pixel < steady.size() && steady[pixel] == background[pixel])
+        ++pixel;
+    Require(pixel < steady.size(), "locate an actual painted caret pixel before observing blink");
     auto appearance = editor->GetCaretAppearance();
     appearance.blinkPeriod = 400;
     editor->SetCaretAppearance(appearance);
@@ -216,9 +228,12 @@ void BlinkAndLifecycle(EditorFrame* frame, PaintRows& paint) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
     unsigned sample = 0;
     while ((!sawOn || !sawOff) && std::chrono::steady_clock::now() < deadline) {
-        // Capture the baseline once: toggling the style and painting twice per
-        // sample can alias a short blink period during slow native pixel reads.
-        const bool visible = paint.Row(2) != background;
+        // One observed pixel keeps native DPI virtualization/readback latency
+        // below the blink period. Full-row reads can alias whole blink cycles.
+        const bool visible = paint.Pixel(static_cast<int>(pixel), 2) != background[pixel];
+        std::printf("native blink sample=%u visible=%d focus=%lld period=%lld\n", sample, visible,
+                    static_cast<long long>(editor->Send(Message::GetFocus)),
+                    static_cast<long long>(editor->Send(Message::GetCaretPeriod)));
         sawOn |= visible;
         sawOff |= !visible;
         wxMilliSleep(13 * (1 + sample++ % 5));
@@ -227,9 +242,10 @@ void BlinkAndLifecycle(EditorFrame* frame, PaintRows& paint) {
     Require(sawOn && sawOff, "configured period produces both native visible and invisible caret paint phases");
     Menu(frame, "No Blink");
     for (int sample = 0; sample < 6; ++sample) {
-        wxMilliSleep(50);
+        wxMilliSleep(150);
         wxYield();
-        Require(Span(editor, paint, 2).first >= 0, "No Blink continuously paints the caret across timer intervals");
+        Require(paint.Pixel(static_cast<int>(pixel), 2) != background[pixel],
+                "No Blink continuously paints the caret across timer intervals");
     }
     auto* other = new wxButton(frame, wxID_ANY, "caret focus target", wxPoint(450, 100));
     other->SetFocus();
