@@ -84,11 +84,14 @@ public:
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget)) continue;
             if (GTK_IS_FILE_CHOOSER(widget)) {
-                if (!stage_++) {
+                if (stage_ == 0) {
+                    stage_ = 1;
                     ++choosers;
                     NativeDialogs::ChooseFile(widget, destination_);
-                } else if (stage_ == 2 && !destination_.empty())
+                } else if (stage_ == 1 && !destination_.empty() && NativeDialogs::CanAcceptFile(widget, destination_)) {
+                    stage_ = 2;
                     NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
+                }
             } else if (GTK_IS_MESSAGE_DIALOG(widget)) {
                 const auto name = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
                 if (name == "Save changes?") {

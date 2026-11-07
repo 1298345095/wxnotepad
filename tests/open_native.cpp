@@ -13,6 +13,7 @@
 #include <memory>
 #include <stdexcept>
 #include <vector>
+#include <utility>
 
 namespace {
 void Require(bool condition, const char* message) {
@@ -24,6 +25,94 @@ using TestEditor::Append;
 using TestEditor::Text;
 using TestFiles::Bytes;
 using TestFiles::Filename;
+
+#ifdef __WXGTK__
+// Hold the previous native selection while a requested filename completes.
+// The user-visible Open As result must come from the requested UTF-16 file.
+class DelayedFileSelection final : public wxTimer {
+public:
+    DelayedFileSelection(wxString expected, wxString previous)
+        : expected_(std::move(expected)), previous_(std::move(previous)) {
+        Start(10);
+    }
+    ~DelayedFileSelection() override {
+        if (holdSource_) g_source_remove(holdSource_);
+        if (restoreSource_) g_source_remove(restoreSource_);
+        if (chooser_) {
+            if (g_signal_handler_is_connected(chooser_, selection_)) g_signal_handler_disconnect(chooser_, selection_);
+            g_object_unref(chooser_);
+        }
+    }
+    bool Held() const { return held_; }
+    bool Restored() const { return restored_; }
+    void Notify() override {
+        GList* windows = gtk_window_list_toplevels();
+        for (auto* item = windows; item && !chooser_; item = item->next) {
+            auto* widget = GTK_WIDGET(item->data);
+            if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+            chooser_ = GTK_FILE_CHOOSER(g_object_ref(widget));
+            selection_ = g_signal_connect(chooser_, "selection-changed", G_CALLBACK(SelectionChanged), this);
+            Stop();
+        }
+        g_list_free(windows);
+    }
+
+private:
+    static void SelectionChanged(GtkFileChooser* chooser, gpointer data) {
+        auto& self = *static_cast<DelayedFileSelection*>(data);
+        char* selected = gtk_file_chooser_get_filename(chooser);
+        const bool requested = selected && wxString::FromUTF8(selected) == self.expected_;
+        g_free(selected);
+        if (self.held_ || !requested) return;
+        self.held_ = true;
+        self.holdSource_ = g_idle_add(
+            [](gpointer data) -> gboolean {
+                auto& self = *static_cast<DelayedFileSelection*>(data);
+                self.holdSource_ = 0;
+                gtk_file_chooser_set_filename(self.chooser_, self.previous_.utf8_str());
+                self.restoreSource_ = g_timeout_add(
+                    350,
+                    [](gpointer data) -> gboolean {
+                        auto& self = *static_cast<DelayedFileSelection*>(data);
+                        self.restoreSource_ = 0;
+                        self.restored_ = true;
+                        gtk_file_chooser_set_filename(self.chooser_, self.expected_.utf8_str());
+                        return G_SOURCE_REMOVE;
+                    },
+                    data);
+                return G_SOURCE_REMOVE;
+            },
+            data);
+    }
+    wxString expected_, previous_;
+    GtkFileChooser* chooser_ = nullptr;
+    gulong selection_ = 0;
+    guint holdSource_ = 0, restoreSource_ = 0;
+    bool held_ = false, restored_ = false;
+};
+
+void DelayedOpenAs(EditorFrame* frame, const std::filesystem::path& directory) {
+    const auto expected = directory / "delayed-utf16.txt";
+    const auto previous = directory / "previous-utf8.txt";
+    TestFiles::WriteBytes(expected, "\x2d\x4e");
+    TestFiles::WriteBytes(previous, "wrong");
+    DelayedFileSelection selection(Filename(expected), Filename(previous));
+    FileCommandDriver driver(FileDialogProfile::Open, wxID_NO, Filename(expected));
+    const auto result = frame->OpenAs(FileEncoding::Utf16Le);
+    driver.Stop();
+    if (result.status != OpenStatus::Opened || frame->DocumentPath() != Filename(expected))
+        std::fprintf(stderr, "Delayed native Open As status=%d held=%d restored=%d path='%s' error='%s'\n",
+                     static_cast<int>(result.status), selection.Held(), selection.Restored(),
+                     frame->DocumentPath().utf8_str().data(), result.error.utf8_str().data());
+    Require(selection.Held() && selection.Restored() && result.status == OpenStatus::Opened &&
+                frame->DocumentPath() == Filename(expected) && Text(frame) == "中" &&
+                frame->DocumentEncoding() == FileEncoding::Utf16Le && !frame->DocumentHasBom() &&
+                Bytes(expected) == "\x2d\x4e" && Bytes(previous) == "wrong",
+            "Open As must await the requested native filename instead of accepting a previous selection");
+    Require(frame->New(), "delayed native Open As fixture must restore a fresh document");
+    std::puts("PASS: delayed native selection opens the requested UTF-16LE file and preserves independent disk bytes");
+}
+#endif
 
 class OpenNativeApp final : public wxApp {
 public:
@@ -37,6 +126,9 @@ public:
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-switch");
             try {
                 std::filesystem::create_directory(directory);
+#ifdef __WXGTK__
+                DelayedOpenAs(frame, directory);
+#endif
                 const auto path = directory / "source.txt";
                 {
                     std::ofstream(path, std::ios::binary) << "opened 中文\n";

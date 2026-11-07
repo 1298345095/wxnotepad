@@ -58,12 +58,14 @@ public:
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget)) continue;
             if (GTK_IS_FILE_CHOOSER(widget)) {
-                if (!chooserStage_++) {
+                if (chooserStage_ == 0) {
+                    chooserStage_ = 1;
                     ++choosers;
                     Observe("chooser selection begin");
                     ChooseFile(widget, destination_);
                     Observe("chooser selection end");
-                } else if (chooserStage_ == 2 && !destination_.empty()) {
+                } else if (chooserStage_ == 1 && !destination_.empty() && CanAcceptFile(widget, destination_)) {
+                    chooserStage_ = 2;
                     Observe("chooser accept begin");
                     Respond(widget, GTK_RESPONSE_ACCEPT);
                     Observe("chooser accept end");
