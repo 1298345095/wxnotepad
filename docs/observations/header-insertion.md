@@ -23,7 +23,7 @@ observed behavior.
 
 ## Independent original fixtures
 
-`tools/capture_header_insert.py` captures the original process through owned
+`tests/reference_capture/capture_header_insert.py` captures the original process through owned
 Windows menu/Scintilla handles, launched using the existing issue93 private
 desktop runner. It uses no clipboard, physical desktop input or screenshots.
 Run its normal mode, `--extra` (explicit GBK and UTF-16LE without BOM), and
@@ -37,7 +37,7 @@ concatenates their records after the first header. `tests/header_saved.tsv`
 contains their independently read saved bytes for all 48 language/encoding/command
 combinations.
 
-The 1,248 native GUI scenarios inspect text, caret/anchor, modified state and
+On a supported native-ANSI host, the 1,248 native GUI scenarios inspect text, caret/anchor, modified state and
 Undo/Redo at all three stages. They cover four delivered languages, three EOL
 modes, encoding identities, directed selections, rectangles and protection.
 Native Ctrl+F8 tests additionally check exact modifiers, neighboring shortcuts,
@@ -62,6 +62,28 @@ Open, and select the matching independently captured UTF-8 record for every
 text/selection/history/saved-byte comparison. The raw ANSI records and Windows
 ANSI context remain unchanged. Explicit GBK and the other encoding cases retain
 their original records on every backend.
+
+Native ANSI also depends on the migrated codec set documented in
+[`docs/encoding.md`](../encoding.md). A Windows native page such as 1252 is
+recognized but unmigrated. `DefaultEncoding=0` therefore rejects its automatic
+Open before a header command can run. The native test applies each of those 216
+records to the public Open refusal boundary and verifies unchanged text,
+selection, history, protection, language, EOL, codec, BOM, path and disk bytes.
+It continues to apply every insertion assertion for the 1,032 constructible
+records. The independent-process test verifies eight such refusals while retaining
+a modified UTF-8/BOM document; original captured UTF-8/BOM bytes, Undo/Redo saves
+and reload prove the old format, history and save target survive. The other 40
+contexts retain their original saved-byte assertions. Both tests print supported
+and refused context counts. On native ACP936 all 1,248 insertion records and 48
+saved-byte contexts still run, including every raw ANSI value. UTF-8 ACP/legacy
+ACP routing remains unchanged.
+
+Hosted Windows validation first exposed this setup assumption. A process-only
+`activeCodePage=en-US` manifest on disposable executable copies reproduced the
+same Open refusal and startup exit 255 with real ACP1252/OEM437 and the original
+`DefaultEncoding=0`. No system code-page change, production hook or codec expansion
+was used. Failure diagnostics now identify the language, encoding, operation,
+native page and Open error rather than stopping at a generic fixture assertion.
 
 ## TDD and publication contention
 

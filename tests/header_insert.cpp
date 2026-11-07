@@ -65,6 +65,51 @@ void State(EditorControl* editor, const std::vector<std::string>& fields, size_t
         Require(editor->Send(messages[index]) == std::stoll(fields[start + index + 1]),
                 "header selection, save point and history match the original capture");
 }
+void PrepareSelection(EditorControl* editor, const std::vector<std::string>& fields) {
+    const auto data = Unhex(fields[5]);
+    TestEditor::ResetStream(editor, data.c_str(), std::stoll(fields[6]), std::stoll(fields[7]),
+                            static_cast<Scintilla::EndOfLine>(std::stoi(fields[2])));
+    if (fields[8] == "1") {
+        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(Message::SetRectangularSelectionAnchor, std::stoll(fields[6]));
+        editor->Send(Message::SetRectangularSelectionCaret, std::stoll(fields[7]));
+    }
+    if (fields[3] == "protected_redo") {
+        editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("redo"));
+        editor->Send(Message::Undo);
+        Require(editor->Send(Message::CanRedo), "protected reference scenario begins with a redo branch");
+    }
+    editor->Send(Message::SetReadOnly, fields[9] == "1");
+}
+void RejectedAnsiOpen(EditorFrame* frame, const std::filesystem::path& path, const std::vector<std::string>& fields,
+                      unsigned nativePage) {
+    auto* editor = frame->Editor();
+    PrepareSelection(editor, fields);
+    const auto text = TestEditor::Text(editor);
+    const auto codec = frame->DocumentEncoding();
+    const bool bom = frame->DocumentHasBom();
+    const auto oldPath = frame->DocumentPath();
+    const Message messages[] = {Message::GetAnchor,        Message::GetCurrentPos, Message::GetModify,
+                                Message::CanUndo,          Message::CanRedo,       Message::GetReadOnly,
+                                Message::GetSelectionMode, Message::GetSelections, Message::GetEOLMode,
+                                Message::GetLexer};
+    std::vector<intptr_t> before;
+    for (const auto message : messages)
+        before.push_back(editor->Send(message));
+    const auto bytes = Unhex(fields[5]);
+    TestFiles::WriteBytes(path, bytes);
+    const auto opened = frame->Open(TestFiles::Filename(path));
+    Require(opened.status == OpenStatus::Failed &&
+                opened.error.Contains(wxString::Format("code page %u", nativePage)) &&
+                opened.error.Contains("not migrated"),
+            "unmigrated native ANSI is rejected explicitly by public Open");
+    Require(TestEditor::Text(editor) == text && frame->DocumentEncoding() == codec && frame->DocumentHasBom() == bom &&
+                frame->DocumentPath() == oldPath && TestFiles::Bytes(path) == bytes,
+            "rejected native ANSI Open preserves text, codec, BOM, file identity and disk bytes");
+    for (size_t index = 0; index < std::size(messages); ++index)
+        Require(editor->Send(messages[index]) == before[index],
+                "rejected native ANSI Open preserves selection, history, protection, EOL and language");
+}
 void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) {
     std::filesystem::create_directories(directory);
     std::ifstream stream(std::filesystem::u8path(HEADER_REFERENCE));
@@ -76,8 +121,12 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
     // native and legacy pages. Keep the Windows ANSI capture context unchanged.
 #ifdef __WXMSW__
     constexpr bool nativeUtf8 = false;
+    const unsigned nativePage = GetACP();
+    const bool unmigratedNativeAnsi = nativePage != 936 && nativePage != CP_UTF8;
 #else
     const bool nativeUtf8 = wxLocale::GetSystemEncodingName().CmpNoCase("UTF-8") == 0;
+    constexpr unsigned nativePage = 0;
+    constexpr bool unmigratedNativeAnsi = false;
 #endif
     using ReferenceKey = std::array<std::string, 4>;
     const auto key = [](const std::vector<std::string>& fields) {
@@ -92,6 +141,7 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
     stream.clear();
     stream.seekg(recordsStart);
     size_t count = 0;
+    size_t rejected = 0;
     while (std::getline(stream, row)) {
         const auto fields = Fields(row);
         Require(fields.size() == 28, "original header record has all captured states");
@@ -99,6 +149,17 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
         const bool promotedAnsi = nativeUtf8 && encoding == "ansi";
         const auto& expected = promotedAnsi ? utf8References.at(key(fields)) : fields;
         auto* editor = frame->Editor();
+        if (unmigratedNativeAnsi && encoding == "ansi") {
+            try {
+                RejectedAnsiOpen(frame, directory / "unmigrated-ansi.txt", fields, nativePage);
+            } catch (...) {
+                std::fprintf(stderr, "Header refused Open: %s/%s/%s/%s/%s ACP=%u\n", fields[0].c_str(),
+                             encoding.c_str(), fields[2].c_str(), fields[3].c_str(), fields[4].c_str(), nativePage);
+                throw;
+            }
+            ++rejected;
+            continue;
+        }
         if (encoding != previousEncoding) {
             const auto path = directory / "reference.txt";
             std::string bytes = "A\r\nB\r\nC";
@@ -108,12 +169,24 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
             TestFiles::WriteBytes(path, bytes);
             editor->Send(Message::SetReadOnly, 0);
             editor->Send(Message::SetSavePoint);
-            Require(frame->Open(TestFiles::Filename(path),
-                                encoding == "ansi" ? std::nullopt
-                                                   : std::optional{encoding.starts_with("utf16") ? FileEncoding::Utf16Le
-                                                                   : encoding == "gbk"           ? FileEncoding::Gbk
-                                                                                                 : FileEncoding::Utf8})
-                            .status == OpenStatus::Opened,
+            const auto opened =
+                frame->Open(TestFiles::Filename(path),
+                            encoding == "ansi" ? std::nullopt
+                                               : std::optional{encoding.starts_with("utf16") ? FileEncoding::Utf16Le
+                                                               : encoding == "gbk"           ? FileEncoding::Gbk
+                                                                                             : FileEncoding::Utf8});
+            if (opened.status != OpenStatus::Opened) {
+#ifdef __WXMSW__
+                std::fprintf(stderr, "Header host ACP=%u OEM=%u\n", GetACP(), GetOEMCP());
+#else
+                std::fprintf(stderr, "Header host locale=%s\n",
+                             wxLocale::GetSystemEncodingName().utf8_string().c_str());
+#endif
+                std::fprintf(stderr, "Header Open: %s/%s/%s/%s/%s status=%d error=%s\n", fields[0].c_str(),
+                             encoding.c_str(), fields[2].c_str(), fields[3].c_str(), fields[4].c_str(),
+                             static_cast<int>(opened.status), opened.error.utf8_string().c_str());
+            }
+            Require(opened.status == OpenStatus::Opened,
                     "captured encoding identity opens through the application document interface");
             previousEncoding = encoding;
             previousLanguage.clear();
@@ -131,20 +204,7 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
             NativeSearch::Command(frame, id);
             previousLanguage = fields[0];
         }
-        const auto data = Unhex(fields[5]);
-        TestEditor::ResetStream(editor, data.c_str(), std::stoll(fields[6]), std::stoll(fields[7]),
-                                static_cast<Scintilla::EndOfLine>(std::stoi(fields[2])));
-        if (fields[8] == "1") {
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, std::stoll(fields[6]));
-            editor->Send(Message::SetRectangularSelectionCaret, std::stoll(fields[7]));
-        }
-        if (fields[3] == "protected_redo") {
-            editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("redo"));
-            editor->Send(Message::Undo);
-            Require(editor->Send(Message::CanRedo), "protected reference scenario begins with a redo branch");
-        }
-        editor->Send(Message::SetReadOnly, fields[9] == "1");
+        PrepareSelection(editor, fields);
         const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
         const auto zoom = editor->Send(Message::GetZoom);
         const auto codec = frame->DocumentEncoding();
@@ -171,9 +231,11 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
                 "header insertion retains encoding, BOM, EOL, font and zoom metadata");
         ++count;
     }
-    Require(count == 1248, "all independently captured header scenarios ran");
+    Require(count + rejected == 1248 && rejected == (unmigratedNativeAnsi ? 216U : 0U),
+            "all original records run in their supported insertion or explicit native-codec refusal context");
     frame->Editor()->Send(Message::SetReadOnly, 0);
-    std::printf("PASS: %zu native original header reference cases\n", count);
+    std::printf("PASS: %zu native original header reference cases; %zu native ANSI Open refusal records (ACP=%u)\n",
+                count, rejected, nativePage);
 }
 void KeyCases(EditorFrame* frame) {
     auto* editor = frame->Editor();
