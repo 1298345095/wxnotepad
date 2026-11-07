@@ -176,15 +176,60 @@ wxMenu* EditorFrame::CreateEditMenu() {
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     auto* conversion = new wxMenu;
     // Pinned Notepad4's case commands use CustomCaseMapping values upper=1, lower=2.
-    for (const auto& [label, mapping] : {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2},
-                                         std::pair{"In&vert Case\tCtrl+Alt+U", CustomCaseCommand::Invert},
-                                         std::pair{"Title &Case\tCtrl+Alt+I", CustomCaseCommand::Title},
-                                         std::pair{"&Sentence Case\tCtrl+Alt+O", CustomCaseCommand::Sentence}}) {
+    for (const auto& [label, mapping] :
+         {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2},
+          std::pair{"In&vert Case\tCtrl+Alt+U", CustomCaseCommand::Invert},
+          std::pair{"Title &Case\tCtrl+Alt+I", CustomCaseCommand::Title},
+          std::pair{"&Sentence Case\tCtrl+Alt+O", CustomCaseCommand::Sentence},
+          std::pair{"C&haracter to Hex\tCtrl+Alt+X", CustomCaseCommand::CharacterToHex},
+          std::pair{"Hex to Cha&racter\tCtrl+Alt+C", CustomCaseCommand::HexToCharacter},
+          std::pair{"Esca&pe C Chars\tCtrl+Alt+E", CustomCaseCommand::EscapeC},
+          std::pair{"&Unescape C Chars\tCtrl+Alt+R", CustomCaseCommand::UnescapeC},
+          std::pair{"Escape HT&ML/XML Chars\tAlt+Shift+X", CustomCaseCommand::EscapeHtml},
+          std::pair{"Unescape HTML/&XML Chars\tAlt+Shift+H", CustomCaseCommand::UnescapeHtml}}) {
         const int id = wxWindow::NewControlId();
         conversion->Append(id, label);
         Bind(
             wxEVT_MENU,
             [this, mapping](wxCommandEvent&) { editor_->Send(Scintilla::Message::CustomCaseMapping, mapping); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
+    conversion->AppendSeparator();
+    for (const auto& [label, command] : {std::pair{"URL &Encode\tCtrl+Shift+E", UrlConversion::Encode},
+                                         std::pair{"URL Component Encode", UrlConversion::ComponentEncode},
+                                         std::pair{"URL &Decode\tCtrl+Shift+R", UrlConversion::Decode}}) {
+        const int id = wxWindow::NewControlId();
+        conversion->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, command](wxCommandEvent&) {
+                if (!editor_->ConvertUrl(command))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
+    conversion->AppendSeparator();
+    for (const auto& [label, radix] :
+         {std::pair{"To &Hexadecimal\tCtrl+Alt+H", 16u}, std::pair{"To &Decimal\tCtrl+Alt+D", 10u},
+          std::pair{"To &Binary\tCtrl+Alt+B", 2u}, std::pair{"To &Octet", 8u}}) {
+        const int id = wxWindow::NewControlId();
+        conversion->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, radix](wxCommandEvent&) {
+                if (!editor_->ConvertNumberRadix(radix))
+                    wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
@@ -759,7 +804,26 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         return true;
     }
     if (HandleTabConversionKey(event)) return true;
+    if ((event.GetKeyCode() == 'X' || event.GetKeyCode() == 'C') && event.ControlDown() && event.AltDown()) {
+        if (!event.ShiftDown() && !event.MetaDown())
+            editor_->Send(Scintilla::Message::CustomCaseMapping, event.GetKeyCode() == 'X'
+                                                                     ? CustomCaseCommand::CharacterToHex
+                                                                     : CustomCaseCommand::HexToCharacter);
+        return true;
+    }
     const int key = event.GetKeyCode();
+    if (event.ControlDown() && event.AltDown() && (key == 'E' || key == 'R')) {
+        if (!event.ShiftDown() && !event.MetaDown())
+            editor_->Send(Scintilla::Message::CustomCaseMapping,
+                          key == 'E' ? CustomCaseCommand::EscapeC : CustomCaseCommand::UnescapeC);
+        return true;
+    }
+    if (event.AltDown() && event.ShiftDown() && (key == 'X' || key == 'H')) {
+        if (!event.ControlDown() && !event.MetaDown())
+            editor_->Send(Scintilla::Message::CustomCaseMapping,
+                          key == 'X' ? CustomCaseCommand::EscapeHtml : CustomCaseCommand::UnescapeHtml);
+        return true;
+    }
     if (event.ControlDown() && event.AltDown() && (key == 'U' || key == 'I' || key == 'O')) {
         if (!event.ShiftDown() && !event.MetaDown())
             editor_->Send(Scintilla::Message::CustomCaseMapping, key == 'U'   ? CustomCaseCommand::Invert

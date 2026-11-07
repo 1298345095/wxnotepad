@@ -40,6 +40,7 @@ add_library(editor_runtime STATIC
     src/editor/bookmarks.cpp
     src/editor/block_comments.cpp
     src/editor/enclose_selection.cpp
+    src/editor/url_conversion.cpp
     src/editor/compress_whitespace.cpp
     src/editor/sort_lines.cpp
     src/editor/indentation.cpp
@@ -53,10 +54,13 @@ add_library(editor_runtime STATIC
     src/editor/pad_spaces.cpp
     src/editor/strip_characters.cpp
     src/editor/tab_conversion.cpp
+    src/editor/number_radix.cpp
     src/editor/editor_control.cpp
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
+    src/editor/platform/character_hex.cpp
+    src/editor/platform/escape_text.cpp
     src/editor/platform/sort_collation.cpp
     src/editor/platform/gtk_drag_drop.cpp
     src/editor/platform/wx_platform.cpp)
@@ -179,6 +183,9 @@ if(BUILD_TESTING)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
     add_editor_test(date_time original_date_time_insertion 60)
+    add_editor_test(url_conversion original_url_conversion 60)
+    target_compile_definitions(url_conversion PRIVATE
+        "URL_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/url_reference_fixtures.tsv\"")
     add_test(NAME original_date_time_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/date_time_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
@@ -236,6 +243,8 @@ if(BUILD_TESTING)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(block_indentation block_indentation_commands 60)
     add_editor_test(tab_conversion original_tab_conversion 60)
+    add_editor_test(escape_text original_escape_text 90)
+    add_editor_test(number_radix original_number_radix 60)
     add_gui_program(line_comments tests/line_comments.cpp app_shell)
     add_test(NAME original_toggle_line_comment COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_comments_process.py" "$<TARGET_FILE:line_comments>")
@@ -252,6 +261,7 @@ if(BUILD_TESTING)
     add_editor_test(sort_lines original_sort_lines 90)
     add_editor_test(case_conversion original_case_conversion 60)
     add_editor_test(custom_case original_custom_case 60)
+    add_editor_test(character_hex original_character_hex 60)
     add_editor_test(duplicate_transpose original_duplicate_transpose 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
