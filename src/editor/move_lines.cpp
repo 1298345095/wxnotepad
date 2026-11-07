@@ -4,7 +4,6 @@
 using Scintilla::Message;
 
 void EditorControl::MoveLines(bool upwards) {
-    if (Send(Message::GetReadOnly)) return;
     // Notepad4 Edit.cpp::EditMoveUp/EditMoveDown at 89b8b36.
     const auto caret = Send(Message::GetCurrentPos);
     const auto anchor = Send(Message::GetAnchor);
