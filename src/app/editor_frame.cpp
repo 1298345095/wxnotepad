@@ -31,6 +31,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
         warnLineEndings_ = settings->values.warnLineEndings;
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
+        editor_->SetCurrentLineHighlightMode(
+            static_cast<LineHighlightMode>(settings->values.highlightCurrentLine % 10));
+        editor_->Send(Scintilla::Message::SetCaretLineHighlightSubLine, settings->values.highlightCurrentLine >= 10);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
         editor_->Send(Scintilla::Message::SetViewWS,
@@ -77,6 +80,9 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
     settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    settings_->values.highlightCurrentLine =
+        static_cast<int>(editor_->GetCurrentLineHighlightMode()) +
+        10 * static_cast<int>(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
     CaptureSearchSettings(search_, settings_->values);
     settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
     return settings_->Save(explicitSave);

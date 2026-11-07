@@ -62,5 +62,6 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
     InstallStyles(editor, definition.styles);
+    editor.SetCurrentLineHighlightMode(editor.GetCurrentLineHighlightMode());
     editor.Send(Message::ClearDocumentStyle);
 }

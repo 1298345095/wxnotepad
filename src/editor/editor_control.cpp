@@ -2,6 +2,7 @@
 #include "editor/editor_core.h"
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
+#include <cmath>
 #ifdef __WXMSW__
 #include <wx/caret.h>
 #endif
@@ -26,6 +27,10 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     GetCaret()->Show();
 #endif
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    // Original Notepad4.cpp::CreateEditControl current-line preferences.
+    Send(Message::SetCaretLineVisibleAlways, 1);
+    Send(Message::SetCaretLineHighlightSubLine, 1);
+    SetCurrentLineHighlightMode(lineHighlightMode_);
     WXNOTE_TRACE("editor.create", "\ttarget=%p\thandle=%p", static_cast<void*>(this), GetHandle());
     Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
     Send(Message::SetMarginMaskN, 0, 0);
@@ -36,6 +41,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
 #endif
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         core_->DpiChanged();
+        SetCurrentLineHighlightMode(lineHighlightMode_);
         Refresh(false);
         event.Skip();
     });
@@ -107,6 +113,23 @@ void EditorControl::SetLineSelectionMode(LineSelectionMode mode) {
     lineSelectionMode_ = mode;
     if (mode == LineSelectionMode::None)
         Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
+}
+
+void EditorControl::SetCurrentLineHighlightMode(LineHighlightMode mode) {
+    lineHighlightMode_ = mode;
+    const auto element = static_cast<uintptr_t>(Scintilla::Element::CaretLineBack);
+    if (mode == LineHighlightMode::None) {
+        Send(Message::ResetElementColour, element);
+        return;
+    }
+    // Original Styles.cpp::Style_HighlightCurrentLine and stlDefault.cpp.
+    // One rounding step preserves ScaleStylePixel's DPI * zoom scaling.
+    const bool outline = mode == LineHighlightMode::OutlineFrame;
+    const int width =
+        outline ? std::max(1, static_cast<int>(std::lround(2.0 * GetDPI().y * Send(Message::GetZoom) / 9600.0))) : 0;
+    Send(Message::SetCaretLineFrame, width);
+    Send(Message::SetCaretLineLayer, static_cast<uintptr_t>(Scintilla::Layer::UnderText));
+    Send(Message::SetElementColour, element, outline ? 0x5AC3C0C2 : 0x5A00FFFF);
 }
 
 void EditorControl::Copy() {
