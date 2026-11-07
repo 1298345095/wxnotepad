@@ -744,8 +744,9 @@ wxMenu* EditorFrame::CreateViewMenu() {
     AppendCurrentLineCommands(view);
     const int matchBraces = wxWindow::NewControlId();
     view->AppendCheckItem(matchBraces, "Visual &Brace Matching\tCtrl+Shift+V");
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching()); },
-         matchBraces);
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching()); },
+        matchBraces);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->VisualBraceMatching()); }, matchBraces);
     view->AppendSeparator();
     AppendFoldCommands(view);
