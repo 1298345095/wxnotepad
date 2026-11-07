@@ -92,7 +92,22 @@ class GCCReports(unittest.TestCase):
         self.assertFalse((output / 'summary.json').exists())
 
     @unittest.skipUnless(importlib.util.find_spec('gcovr'), 'Install the pinned coverage requirements')
-    def test_sonar_report_unions_header_branches_without_double_counting(self):
+    def test_sonar_report_merges_headers_and_preserves_source_conditions(self):
+        exception_source = self.root / 'src/exception_paths.cpp'
+        exception_source.write_text(
+            'int MayThrow(bool value) {\n'
+            '    if (!value) throw 7;\n'
+            '    return 1;\n}\n'
+            'int Handle(bool value) {\n'
+            '    try {\n'
+            '        return MayThrow(value);\n'
+            '    } catch (int) {\n'
+            '        return 2;\n    }\n}\n', encoding='utf-8')
+        driver = self.root / 'tests/exception_main.cpp'
+        driver.write_text('int Handle(bool);\nint main() { return Handle(true) != 1; }\n', encoding='utf-8')
+        executable = self.build / 'exception_driver'
+        self.compile(exception_source, driver, '-o', executable)
+        subprocess.run([executable], check=True)
         output = self.root / 'reports'
         collector = self.root / '.github/scripts/collect_coverage.py'
         collector.parent.mkdir(parents=True)
@@ -109,6 +124,15 @@ class GCCReports(unittest.TestCase):
         self.assertEqual(repeated.attrib['coveredBranches'], '1')
         untouched = files['src/never.cpp'].find("lineToCover[@lineNumber='1']")
         self.assertEqual(untouched.attrib['covered'], 'false')
+        exceptions = files['src/exception_paths.cpp']
+        condition = exceptions.find("lineToCover[@lineNumber='2']")
+        self.assertEqual(condition.attrib['branchesToCover'], '2')
+        self.assertEqual(condition.attrib['coveredBranches'], '1')
+        call = exceptions.find("lineToCover[@lineNumber='7']")
+        self.assertEqual(call.attrib['branchesToCover'], '1')
+        self.assertEqual(call.attrib['coveredBranches'], '1')
+        handler = exceptions.find("lineToCover[@lineNumber='9']")
+        self.assertEqual(handler.attrib['covered'], 'false')
         self.assertTrue(all(name.startswith('src/') for name in files))
         self.assertTrue(list((output / 'gcov').glob('*.gcov')))
 

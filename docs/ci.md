@@ -167,6 +167,15 @@ outcomes for `DocumentSession::HasUtf8Bom`, despite all four appearing in the
 raw per-translation-unit reports. The merged report includes all four; a second
 header control retains its three-of-four result.
 
+Native branch coverage uses gcovr's `--exclude-throw-branches`: GCC-marked
+exceptional control-flow edges are excluded from the reported branch denominator.
+Ordinary source conditions and exception-handler lines remain measured. All
+branches, including throw edges, remain in the preserved raw `.gcov` reports.
+This policy was selected after comparing identical counters: native coverage
+was 73.18% with all GCC branches and 90.32% with throw edges excluded, with the
+same source files and executable lines. The 80% gate and source scope are retained.
+See [gcovr's exception-branch explanation](https://gcovr.com/en/8.8/faq.html#why-does-c-code-have-so-many-uncovered-branches).
+
 Coverage tools use fixed test-only dependencies in `.github/requirements-coverage.txt`,
 installed in `.ci/coverage-venv`. `.coveragerc` records branch coverage for tools
 and CI scripts, including child Python processes. `WXNOTEPAD_COVERAGE_ROOT` gives

@@ -48,7 +48,7 @@ def write_sonar_report(output, root=ROOT):
     output, root = output.resolve(), root.resolve()
     command = [sys.executable, '-m', 'gcovr', '--root', str(root),
                '--filter', re.escape((root / 'src').as_posix() + '/'),
-               '--gcov-use-existing-files', '--gcov-keep',
+               '--gcov-use-existing-files', '--gcov-keep', '--exclude-throw-branches',
                '--sonarqube', str(output / 'sonar.xml'), '--sonarqube-metric', 'branch',
                str(output / 'gcov')]
     with (output / 'gcovr.log').open('w', encoding='utf-8') as log:
