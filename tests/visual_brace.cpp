@@ -1,47 +1,20 @@
 #include "brace_observation.h"
 #include "native_key_helpers.h"
+#include "native_paint_helpers.h"
 #include "visual_brace_fixtures.h"
 #include "encoded_file_helpers.h"
 #include <fstream>
 #include <wx/dcclient.h>
 #include <functional>
 #include <cstdio>
-#include <chrono>
 
 namespace {
 using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-class PaintCompletion final : public wxEvtHandler {
-public:
-    explicit PaintCompletion(EditorControl* editor) : editor_(editor) { editor_->PushEventHandler(this); }
-    ~PaintCompletion() override { editor_->PopEventHandler(false); }
-    bool ProcessEvent(wxEvent& event) override {
-        const bool handled = wxEvtHandler::ProcessEvent(event);
-        if (event.GetEventType() == wxEVT_PAINT) ++completed;
-        return handled;
-    }
-    unsigned completed = 0;
-private:
-    EditorControl* editor_;
-};
 void Paint(EditorControl* editor) {
-    PaintCompletion completion(editor);
-    // A first paint may style text and abandon its old layout. The second
-    // renders that real native layout. Update() is a no-op on wxGTK/Wayland,
-    // so observe completed native paint events while its frame clock runs.
-    for (int pass = 0; pass < 2; ++pass) {
-        const auto expected = completion.completed + 1;
-        editor->Refresh(false);
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-        while (completion.completed < expected && std::chrono::steady_clock::now() < deadline) {
-            editor->Update();
-            wxYield();
-            if (completion.completed < expected) wxMilliSleep(1);
-        }
-        Require(completion.completed >= expected, "actual native editor paint completes before decoration observation");
-    }
+    NativePaint::Complete(editor);
 }
 void Expect(EditorControl* editor, intptr_t first, intptr_t second, intptr_t style, intptr_t guide) {
     Paint(editor);
@@ -67,8 +40,7 @@ void Reference(EditorFrame* frame) {
             std::printf("reference %s/%s ", name, fixture.name);
             const auto match = fixture.match[language];
             Expect(editor, fixture.position, match, match < 0 && fixture.position >= 0 ? 35 : 34, fixture.guide);
-            Require(NativeSearch::Text(editor) == fixture.text &&
-                        editor->Send(Message::GetAnchor) == fixture.anchor &&
+            Require(NativeSearch::Text(editor) == fixture.text && editor->Send(Message::GetAnchor) == fixture.anchor &&
                         editor->Send(Message::GetCurrentPos) == fixture.caret && !editor->Send(Message::GetModify) &&
                         !editor->Send(Message::CanUndo),
                     "automatic feedback preserves original document, selection and history");
@@ -121,9 +93,8 @@ int ColouredPixels(EditorControl* editor, intptr_t position, bool bad) {
             // Original alpha50 / outline200 over white. Narrow channels exclude
             // coloured ClearType glyph fringes from the decoration observation.
             const auto within = [](int value, int expected) { return std::abs(value - expected) <= 2; };
-            count += bad ? colour.Red() == 255 &&
-                               ((within(colour.Green(), 205) && within(colour.Blue(), 205)) ||
-                                (within(colour.Green(), 55) && within(colour.Blue(), 55)))
+            count += bad ? colour.Red() == 255 && ((within(colour.Green(), 205) && within(colour.Blue(), 205)) ||
+                                                   (within(colour.Green(), 55) && within(colour.Blue(), 55)))
                          : (within(colour.Red(), 205) && within(colour.Green(), 251) && within(colour.Blue(), 207)) ||
                                (within(colour.Red(), 57) && within(colour.Green(), 239) && within(colour.Blue(), 63));
         }
@@ -135,7 +106,8 @@ int ColouredPixels(EditorControl* editor, intptr_t position, bool bad) {
 void BraceAppearance(EditorFrame* frame, int toggle) {
     auto* editor = frame->Editor();
     for (const auto [indicator, colour] : {std::pair{9, 0x0AEA02}, std::pair{10, 0x0000FF}}) {
-        Require(editor->Send(Message::IndicGetStyle, indicator) == static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox) &&
+        Require(editor->Send(Message::IndicGetStyle, indicator) ==
+                        static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox) &&
                     editor->Send(Message::IndicGetFore, indicator) == colour &&
                     editor->Send(Message::IndicGetAlpha, indicator) == 50 &&
                     editor->Send(Message::IndicGetOutlineAlpha, indicator) == 200,
@@ -205,9 +177,9 @@ void Lifecycle(EditorFrame* frame, int toggle) {
         Expect(editor, 0, std::string_view(language) == "Plain Text" ? 2 : 4, 34, 0);
         editor->Send(Message::StyleGetFont, 0, reinterpret_cast<intptr_t>(font));
         Require(editor->Send(Message::StyleGetSizeFractional, 0) == 1450 && editor->Send(Message::GetZoom) == 150 &&
-                    originalFont == font && editor->GetDPI() == dpi &&
-                    editor->Send(Message::GetAnchor) == 0 && editor->Send(Message::GetCurrentPos) == 0 &&
-                    !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+                    originalFont == font && editor->GetDPI() == dpi && editor->Send(Message::GetAnchor) == 0 &&
+                    editor->Send(Message::GetCurrentPos) == 0 && !editor->Send(Message::GetModify) &&
+                    !editor->Send(Message::CanUndo),
                 "syntax/highlighting changes refresh stationary context and preserve font/zoom/selection/history");
     }
     Require(frame->New(), "clean original fixture can be replaced through New");
@@ -222,8 +194,7 @@ void SavedState(EditorFrame* frame, int toggle) {
     std::filesystem::create_directory(directory);
     const TestFiles::EncodedFixture fixtures[] = {
         {"utf8", FileEncoding::Utf8, "(x)", "(x)!"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\xFF\xFE(\0x\0)\0", 8),
-         std::string("\xFF\xFE(\0x\0)\0!\0", 10)},
+        {"utf16", FileEncoding::Utf16Le, std::string("\xFF\xFE(\0x\0)\0", 8), std::string("\xFF\xFE(\0x\0)\0!\0", 10)},
         {"gbk", FileEncoding::Gbk, "(\xD6\xD0)", "(\xD6\xD0)!"}};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
@@ -249,7 +220,8 @@ void SavedState(EditorFrame* frame, int toggle) {
                 "appearance-only save retains independently read original disk bytes");
         editor->Send(Message::Redo);
         TestFiles::RequireSavedUndoRedo(frame, path, fixture,
-            {"redo saves exact edited bytes", "undo saves exact original bytes", "second redo saves exact edited bytes"});
+                                        {"redo saves exact edited bytes", "undo saves exact original bytes",
+                                         "second redo saves exact edited bytes"});
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "same-path replacement retains visual preference");
         editor->Send(Message::GotoPos, 0);
@@ -269,7 +241,8 @@ public:
                 auto* editor = frame->Editor();
                 const int toggle = frame->GetMenuBar()->FindMenuItem("View", "Visual Brace Matching");
                 Require(toggle != wxNOT_FOUND, "native View menu exposes original Visual Brace Matching command");
-                const std::unique_ptr<wxAcceleratorEntry> accelerator(frame->GetMenuBar()->FindItem(toggle)->GetAccel());
+                const std::unique_ptr<wxAcceleratorEntry> accelerator(
+                    frame->GetMenuBar()->FindItem(toggle)->GetAccel());
                 Require(accelerator && accelerator->GetKeyCode() == 'V' &&
                             accelerator->GetFlags() == (wxACCEL_CTRL | wxACCEL_SHIFT),
                         "automatic matching has the exact original Ctrl+Shift+V accelerator");
@@ -311,7 +284,11 @@ public:
         });
         return true;
     }
-    int OnRun() override { wxApp::OnRun(); return result_; }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+
 private:
     int result_ = 1;
 };
