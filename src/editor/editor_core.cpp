@@ -521,6 +521,14 @@ bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
             window_.Send(Message::CustomCaseMapping,
                          static_cast<uintptr_t>(event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower));
             return true;
+        case 'V':
+            if (!event.ShiftDown() && !event.MetaDown()) {
+                // The original application accelerator consumes disabled Ctrl+V.
+                // Direct SCI_PASTE retains its separate selection repair.
+                if (CanPaste()) window_.Send(Message::Paste);
+                return true;
+            }
+            break;
         default:
             break;
         }

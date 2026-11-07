@@ -1453,7 +1453,10 @@ void ReadOnlyCommands(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         Require(Text(editor) == "alpha\r\nbeta\r\n" && !editor->Send(Message::GetModify) &&
                     editor->Send(Message::GetUndoActions) == 0 && peer.Request("paste") == seed,
                 "protected Ctrl+V and independent editor-message Paste preserve text and history");
-        TestEditor::RequireSelection(editor, 1, 1, "original protected Paste retains selection collapse");
+        // Original IDR_MAINWND consumes disabled Ctrl+V without dispatching SCI_PASTE.
+        TestEditor::RequireSelection(editor, keyboard ? 4 : 1, 1,
+                                     keyboard ? "original disabled Ctrl+V retains the selection"
+                                              : "original direct protected Paste retains selection collapse");
     }
     TestEditor::ResetStream(editor, "history");
     editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
@@ -2012,14 +2015,19 @@ public:
                         editor->Send(Message::SetSel, 0, 1);
                         editor->Send(Message::SetReadOnly, 1);
                         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-                        Require(frame->GetMenuBar()->IsEnabled(wxID_COPY) &&
-                                    !frame->GetMenuBar()->IsEnabled(wxID_CUT) &&
-                                    !frame->GetMenuBar()->IsEnabled(wxID_PASTE),
-                                "read-only selection permits Copy but disables Cut/Paste");
+                        Require(frame->GetMenuBar()->IsEnabled(wxID_COPY),
+                                "original read-only nonempty document permits Copy");
+                        Require(frame->GetMenuBar()->IsEnabled(wxID_CUT),
+                                "original read-only nonempty document keeps Cut available");
+                        Require(!frame->GetMenuBar()->IsEnabled(wxID_PASTE),
+                                "original read-only document disables the Paste menu");
                         editor->Send(Message::Cut);
                         editor->Send(Message::Paste);
                         Require(Text(editor) == "A", "read-only commands preserve document");
+                        TestEditor::RequireSelection(editor, 0, 0,
+                                                     "original direct protected Paste collapses the selection");
                         editor->Send(Message::SetReadOnly, 0);
+                        editor->Send(Message::SetSel, 0, 1);
                         editor->Send(Message::EmptyUndoBuffer);
                         editor->Send(Message::SetSavePoint);
                         Menu(frame, wxID_PASTE);
