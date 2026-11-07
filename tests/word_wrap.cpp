@@ -288,22 +288,36 @@ private:
         const auto eol = editor->Send(Message::GetEOLMode);
         const auto lexer = editor->Send(Message::GetLexer);
         const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
-        std::exception_ptr failure;
-        CallAfter([&] {
-            auto* dialog = wxDynamicCast(wxWindow::FindWindowByName("Go to line", frame), wxDialog);
-            try {
-                Require(dialog && dialog->IsModal(), "native Go To Line opens in the combined view");
-                auto* input = wxDynamicCast(wxWindow::FindWindowByName("Go to line number", dialog), wxTextCtrl);
-                Require(input, "Go To Line exposes its logical line input");
-                input->SetValue("4");
-                NativeSearch::Click(dialog, wxID_OK);
-            } catch (...) {
-                failure = std::current_exception();
-                if (dialog && dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
+        class GoToLineResponder final : public wxModalDialogHook {
+        public:
+            explicit GoToLineResponder(EditorFrame* frame) : frame_(frame) { Register(); }
+            int Enter(wxDialog* dialog) override {
+                if (dialog->GetParent() != frame_ || dialog->GetName() != "Go to line") return wxID_NONE;
+                observed = true;
+                wxTheApp->CallAfter([this, dialog] {
+                    try {
+                        Require(dialog->IsModal(), "native Go To Line opens in the combined view");
+                        auto* input =
+                            wxDynamicCast(wxWindow::FindWindowByName("Go to line number", dialog), wxTextCtrl);
+                        Require(input, "Go To Line exposes its logical line input");
+                        input->SetValue("4");
+                        NativeSearch::Click(dialog, wxID_OK);
+                    } catch (...) {
+                        failure = std::current_exception();
+                        if (dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
+                    }
+                });
+                return wxID_NONE;
             }
-        });
+            bool observed = false;
+            std::exception_ptr failure;
+
+        private:
+            EditorFrame* frame_;
+        } responder(frame);
         NativeSearch::Command(frame, goTo);
-        if (failure) std::rethrow_exception(failure);
+        if (responder.failure) std::rethrow_exception(responder.failure);
+        Require(responder.observed, "native Go To Line opens in the combined view");
         const auto target = editor->Send(Message::PositionFromLine, 3);
         NativeSearch::Selection(editor, target, target, "Go To Line counts logical lines past wrapped rows");
         Require(editor->Send(Message::GetFoldExpanded, 1) && editor->Send(Message::GetFoldExpanded, 2) &&

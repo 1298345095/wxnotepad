@@ -282,6 +282,8 @@ public:
 #ifdef __WXGTK__
                 PaintObservation observation(editor);
                 paintObservation = &observation;
+                // Native keyboard activation follows the widget's first real paint.
+                observation.Read(0, 0);
 #endif
                 Modes(frame);
                 WrapAndLifecycle(frame);
