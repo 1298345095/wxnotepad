@@ -41,6 +41,39 @@ menus, zoom and DPI use that capability. Language changes, open/reopen, New,
 focus and temporary composition retain its preference state. The existing
 native font, point size and text rendering settings remain in place.
 
+## GTK cursor-cluster measurement
+
+The X11 and Wayland regression found a measurement adapter error after a
+combining sequence. For the original 15-byte fixture `Wi中😀é \r\n`, byte 12
+is the trailing space and byte 13 is the line end. Before correction, queried
+X at bytes 12 and 13 was 112 for both, while native paint covered 102–112.
+The pinned `EditView::DrawBlockCaret` correctly expands a zero-advance caret
+backward over shared horizontal space; the incorrect input advances made the
+space appear to belong to the preceding combining cluster.
+
+wxGTK 3.3.3's Cairo `GetPartialTextExtents` emits widths for Pango cursor
+boundaries, then pads the array to the character count. Interpreting that array
+as one independent entry per code point shifts every following advance when a
+cursor cluster contains several code points. The GTK adapter now uses the same
+Pango `is_cursor_position` boundaries to expand these measured cluster widths
+before mapping them to UTF-8 bytes. It retains the existing DC, font, DPI and
+measured widths. ASCII and Windows retain their previous mapping, and the work
+is linear in the input length.
+
+The regression keeps every original cell-paint assertion and independently
+verifies the raw UTF-8 bytes, line end 13, UTF-8 code page and LTR layout. It also
+requires positive advance for the trailing space: corrected queried X is 102
+at byte 12 and 112 at byte 13, matching native paint.
+
+Reference: wxWidgets `v3.3.3` `src/generic/graphicc.cpp`,
+`wxCairoContext::GetPartialTextExtents`; pinned Notepad4
+`EditView.cxx::DrawBlockCaret`. Diagnostic evidence is archived as
+`154/linux-caret-diagnostic.log` alongside the ticket's execution evidence.
+The premise assertions passed before the correction and the trailing-space
+advance failed (`154/linux-cluster-red.log`). With the GTK mapping corrected,
+the full caret appearance fixture passed on private X11 and Wayland displays
+(`154/linux-cluster-green.log`) with all cell assertions retained.
+
 ## Verification
 
 - `original_caret_appearance`: native menu activation and checks, queried core
