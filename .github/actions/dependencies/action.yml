@@ -24,7 +24,7 @@ runs:
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
         path: .ci/cache
-        key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ steps.metadata.outputs.image }}-${{ hashFiles('vcpkg.json', '.github/triplets/*.cmake', '.github/actions/dependencies/action.yml') }}
+        key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ steps.metadata.outputs.image }}-${{ hashFiles('vcpkg.json', '.github/triplets/*.cmake', '.github/ports/**', '.github/actions/dependencies/action.yml') }}
         restore-keys: |
           vcpkg-${{ runner.os }}-${{ runner.arch }}-
     - name: Restore Linux package downloads

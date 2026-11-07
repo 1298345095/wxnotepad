@@ -54,6 +54,7 @@ def dependencies():
     environment['VCPKG_BINARY_SOURCES'] = f'clear;files,{WORK / "cache/binaries"},readwrite'
     executable = VCPKG / ('vcpkg.exe' if WINDOWS else 'vcpkg')
     run([executable, 'install', '--triplet', TRIPLET, f'--overlay-triplets={ROOT / ".github/triplets"}',
+         f'--overlay-ports={ROOT / ".github/ports"}',
          f'--x-install-root={VCPKG / "installed"}', '--clean-after-build'],
         'dependencies.log', environment)
 
