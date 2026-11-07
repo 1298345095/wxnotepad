@@ -3,7 +3,7 @@
 #include "settings/settings_store.h"
 #include <wx/textctrl.h>
 #include <wx/ffile.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <wx/eventfilter.h>
 #include <fstream>
 #include <functional>
@@ -64,7 +64,7 @@ void NativeKey(EditorFrame* frame, int key, bool control, bool alt = false, bool
         wxFFile file(focusFile, "wb");
         file.Write(frame->IsActive() ? "focus:wxnotepad" : "front:wxnotepad");
     }
-    wxStopWatch focusWait;
+    TestClock::StopWatch focusWait;
     while (focusWait.Time() < 3000) {
         wxString pending;
         {
@@ -75,7 +75,7 @@ void NativeKey(EditorFrame* frame, int key, bool control, bool alt = false, bool
         wxYield();
         wxMilliSleep(10);
     }
-    wxStopWatch activation;
+    TestClock::StopWatch activation;
     while ((!frame->IsActive() || !editor->HasFocus()) && activation.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);
@@ -88,7 +88,7 @@ void NativeKey(EditorFrame* frame, int key, bool control, bool alt = false, bool
         file.Write(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") +
                    wxString::Format("%c", key == 'Q' ? 'q' : key));
     }
-    wxStopWatch wait;
+    TestClock::StopWatch wait;
     while (!received && wait.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);
@@ -155,7 +155,7 @@ void Dialog(EditorFrame* frame, const wxString& recalledBefore, const wxString& 
 #ifndef __WXMSW__
         // Let the opening shortcut release in its owned dialog before clicking
         // a button, as it does during ordinary keyboard interaction.
-        wxStopWatch wait;
+        TestClock::StopWatch wait;
         while (native && !released && wait.Time() < 3000) {
             wxYield();
             wxMilliSleep(10);
@@ -234,7 +234,7 @@ void DialogKeys(EditorFrame* frame) {
                 wxFFile file(focusFile, "wb");
                 file.Write("key:Return");
             }
-            wxStopWatch wait;
+            TestClock::StopWatch wait;
             while (input->GetValue() == "line" && dialog->IsShown() && wait.Time() < 3000) {
                 wxYield();
                 wxMilliSleep(10);

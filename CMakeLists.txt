@@ -418,6 +418,12 @@ if(BUILD_TESTING)
         set_tests_properties(native_clipboard_peer_readiness PROPERTIES TIMEOUT 30
             ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=readiness;WXNOTEPAD_CLIPBOARD_DEFER_PEER_RENDER=1;WXNOTEPAD_CLIPBOARD_DEFER_PEER_FOCUS_CLAIM=1")
     endif()
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        add_executable(steady_stopwatch tests/steady_stopwatch.cpp)
+        target_link_options(steady_stopwatch PRIVATE -Wl,--wrap=clock_gettime -Wl,--wrap=gettimeofday)
+        add_test(NAME native_monotonic_wait_clock COMMAND steady_stopwatch)
+        set_tests_properties(native_monotonic_wait_clock PROPERTIES TIMEOUT 30)
+    endif()
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

@@ -5,7 +5,7 @@
 #include <wx/app.h>
 #include <wx/menu.h>
 #include <wx/ffile.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <wx/modalhook.h>
 #include <cstdio>
 #include <memory>
@@ -121,7 +121,7 @@ void NativeKey(EditorControl* editor, bool shift, bool alt = false) {
         wxFFile request(focusFile, "wb");
         request.Write(wxString("key:ctrl+") + (shift ? "shift+" : "") + (alt ? "alt+" : "") + "j");
     }
-    wxStopWatch wait;
+    TestClock::StopWatch wait;
     while (!received && wait.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);

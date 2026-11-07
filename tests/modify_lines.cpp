@@ -104,7 +104,13 @@ class DialogDriver final : public wxModalDialogHook {
 public:
     explicit DialogDriver(std::function<void(wxDialog*)> action) : action_(std::move(action)) { Register(); }
     int Enter(wxDialog* dialog) override {
-        if (dialog->GetTitle() == "Modify Lines") wxTheApp->CallAfter([this, dialog] { action_(dialog); });
+        if (dialog->GetTitle() == "Modify Lines")
+            wxTheApp->CallAfter([this, dialog] {
+                NativeKeys::AfterPresentation(dialog, [this, dialog](bool presented) {
+                    Require(presented, "private compositor must present the owned dialog before native input");
+                    action_(dialog);
+                });
+            });
         return wxID_NONE;
     }
 

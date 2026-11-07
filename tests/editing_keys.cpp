@@ -5,7 +5,7 @@
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/ffile.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <cstdio>
 #include <stdexcept>
 #include <string>
@@ -68,7 +68,7 @@ void NativeKey(EditorControl* editor, int key, const char* gesture, bool control
         wxFFile file(focusFile, "wb");
         file.Write(NativeTrace::Request("key:" + wxString(gesture)));
     }
-    wxStopWatch wait;
+    TestClock::StopWatch wait;
     while (!received && wait.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);
@@ -191,7 +191,7 @@ public:
                     wxFFile file(focusFile, "wb");
                     file.Write("focus:" + frame->GetTitle());
                 }
-                wxStopWatch focusWait;
+                TestClock::StopWatch focusWait;
                 while (focusWait.Time() < 3000) {
                     wxString pending;
                     {

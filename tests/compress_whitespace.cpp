@@ -2,7 +2,7 @@
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/ffile.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <fstream>
 
 namespace {
@@ -160,7 +160,7 @@ void NativeAlt(EditorFrame* frame, bool shift = false, bool control = false) {
         wxFFile request(focusFile, "wb");
         request.Write("focus:wxnotepad");
     }
-    wxStopWatch focusWait;
+    TestClock::StopWatch focusWait;
     while (focusWait.Time() < 3000) {
         wxString pending;
         {
@@ -182,7 +182,7 @@ void NativeAlt(EditorFrame* frame, bool shift = false, bool control = false) {
         wxFFile request(focusFile, "wb");
         request.Write(wxString("key:alt+") + (shift ? "shift+" : "") + (control ? "ctrl+" : "") + "w");
     }
-    wxStopWatch wait;
+    TestClock::StopWatch wait;
     while (!received && wait.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);

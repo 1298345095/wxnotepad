@@ -33,6 +33,16 @@ UTF-8 rather than the runner's local code page. The private display helper claim
 an input request before delivering its native event so it cannot erase a newer
 request published by an event handler.
 
+Native polling intervals use `tests/steady_stopwatch.h`, backed by
+`std::chrono::steady_clock`. UTC corrections must not shorten key-delivery or
+dialog waits. During the coverage investigation WSL's UTC clock moved about
+13 seconds relative to the monotonic clock in four minutes; wxWidgets' Unix
+`wxStopWatch` uses UTC. The existing interval values are preserved. The Linux/GCC
+`native_monotonic_wait_clock` fixture wraps clock reads inside its own process
+and verifies forward/backward UTC jumps without changing the host clock.
+The Modify Lines native dialog uses the same asynchronous compositor-presentation
+confirmation as its parent frame before sending input to its multiline fields.
+
 Automated IME geometry checks do not establish real Microsoft Pinyin interaction;
 the existing human IME records remain applicable and Linux IME remains deferred.
 Hosted-runner resource measurements are not performance acceptance thresholds.

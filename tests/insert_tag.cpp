@@ -1,7 +1,7 @@
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
 #include <wx/textctrl.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <exception>
 #include <functional>
 #include <fstream>
@@ -61,7 +61,7 @@ int Dialog(EditorFrame* frame, int id, const std::function<void(wxDialog*)>& act
             observed = true;
             try {
 #ifndef __WXMSW__
-                wxStopWatch wait;
+                TestClock::StopWatch wait;
                 while (shortcut && !released && wait.Time() < 3000) {
                     wxYield();
                     wxMilliSleep(10);
@@ -70,7 +70,7 @@ int Dialog(EditorFrame* frame, int id, const std::function<void(wxDialog*)>& act
 #endif
                 auto* opening = Field(dialog, "Opening tag");
                 auto* closing = Field(dialog, "Closing tag");
-                wxStopWatch focusWait;
+                TestClock::StopWatch focusWait;
                 while (!opening->HasFocus() && focusWait.Time() < 3000) {
                     wxYield();
                     wxMilliSleep(10);
@@ -133,7 +133,7 @@ void FieldKey(wxTextCtrl* input, int key, bool shift = false) {
         wxFFile request(focusFile, "wb");
         request.Write(wxString("key:") + (shift ? "shift+" : "") + (key == WXK_TAB ? "Tab" : "Return"));
     }
-    wxStopWatch wait;
+    TestClock::StopWatch wait;
     while (!completed() && wait.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);
