@@ -45,7 +45,7 @@ void SelectByMouse(EditorControl* editor, intptr_t start, intptr_t end) {
         gdk_event_free(event);
     }
 #endif
-    wxYield();
+    NativePaint::Complete(editor);
     Require(editor->Send(Message::GetSelectionStart) == start && editor->Send(Message::GetSelectionEnd) == end,
             "native mouse drag changes the actual editor selection");
 }
@@ -78,7 +78,7 @@ public:
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
                 editor->Send(Message::SetSel, 0, 3);
-                wxYield();
+                NativePaint::Complete(editor);
                 for (intptr_t position : {0, 4, 10, 14, 18, 22})
                     Require(editor->Send(Message::IndicatorValueAt, 8, position) != 0,
                             "automatic marking includes case-insensitive substring matches");
@@ -115,7 +115,7 @@ public:
                 Command(frame, bookmark);
                 editor->Send(Message::MarkerAdd, 2, 0);
                 editor->Send(Message::SetSel, 8, 11);
-                wxYield();
+                NativePaint::Complete(editor);
                 Require(!editor->Send(Message::IndicatorValueAt, 8, 0) && editor->Send(Message::MarkerNext, 0, 1) == -1,
                         "partial-word selection clears automatic markers including shared manual bookmarks");
                 Command(frame, off);
@@ -135,7 +135,7 @@ public:
                     editor->Send(Message::EmptyUndoBuffer);
                     editor->Send(Message::SetSavePoint);
                     editor->Send(Message::SetSel, anchor, caret);
-                    wxYield();
+                    NativePaint::Complete(editor);
                 };
                 load("a  b  c", 1, 3);
                 Ranges(editor, {{1, 3}, {4, 6}}, "whitespace is a valid automatic needle");
@@ -149,18 +149,18 @@ public:
                 Ranges(editor, {{0, 3}, {4, 7}, {8, 11}}, "reversed selection retains the same needle");
                 load("one two one two", 0, 3);
                 editor->Send(Message::AddSelection, 7, 4);
-                wxYield();
+                NativePaint::Complete(editor);
                 Ranges(editor, {}, "multiple selections use original combined selection text");
                 load("one\none\n", 0, 7);
                 editor->Send(Message::SetSelectionMode, 1);
-                wxYield();
+                NativePaint::Complete(editor);
                 Ranges(editor, {}, "rectangular multiline selection clears marks");
                 load("one one", 0, 3);
                 editor->Send(Message::InsertText, 3, reinterpret_cast<intptr_t>("one"));
-                wxYield();
+                NativePaint::Complete(editor);
                 Ranges(editor, {}, "edit collapsing the selection clears marks");
                 editor->Send(Message::Undo);
-                wxYield();
+                NativePaint::Complete(editor);
                 Ranges(editor, {}, "original undo selection restoration leaves cleared marks until a selection update");
                 Require(Text(editor) == "one one" && editor->Send(Message::CanRedo),
                         "mark clearing preserves Undo/Redo");
@@ -205,7 +205,7 @@ public:
                             !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
                         "original incremental marking reaches beyond 1 MiB without changing large-document state");
                 Require(frame->New(), "new document succeeds");
-                wxYield();
+                NativePaint::Complete(editor);
                 Ranges(editor, {}, "new document stops and clears occurrence work");
                 load("one one", 0, 3);
                 Command(frame, wxID_FIND);
