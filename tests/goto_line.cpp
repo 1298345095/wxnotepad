@@ -3,6 +3,7 @@
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
 #include <wx/dialog.h>
+#include <wx/modalhook.h>
 #include <wx/stattext.h>
 #include <wx/stopwatch.h>
 #include <wx/textctrl.h>
@@ -366,24 +367,42 @@ private:
     int result_ = 1;
     void Dialog(EditorFrame* frame, int id, const std::function<void(wxDialog*, wxTextCtrl*)>& action,
                 bool shortcut = false) {
-        std::exception_ptr failure;
-        CallAfter([&] {
-            auto* dialog = wxDynamicCast(wxWindow::FindWindowByName("Go to line", frame), wxDialog);
-            try {
-                Require(dialog && dialog->IsModal(), "command must open the modal Go To Line dialog");
-                auto* input = wxDynamicCast(wxWindow::FindWindowByName("Go to line number", dialog), wxTextCtrl);
-                Require(input, "dialog must expose a line number input");
-                action(dialog, input);
-            } catch (...) {
-                failure = std::current_exception();
-                if (dialog && dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
+        class Driver final : public wxModalDialogHook {
+        public:
+            Driver(EditorFrame* frame, const std::function<void(wxDialog*, wxTextCtrl*)>& action)
+                : frame_(frame), action_(action) {
+                Register();
             }
-        });
+            int Enter(wxDialog* dialog) override {
+                if (dialog->GetParent() != frame_ || dialog->GetName() != "Go to line") return wxID_NONE;
+                observed = true;
+                wxTheApp->CallAfter([this, dialog] {
+                    try {
+                        Require(dialog->IsModal(), "command must open the modal Go To Line dialog");
+                        auto* input =
+                            wxDynamicCast(wxWindow::FindWindowByName("Go to line number", dialog), wxTextCtrl);
+                        Require(input, "dialog must expose a line number input");
+                        action_(dialog, input);
+                    } catch (...) {
+                        failure = std::current_exception();
+                        if (dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
+                    }
+                });
+                return wxID_NONE;
+            }
+            bool observed = false;
+            std::exception_ptr failure;
+
+        private:
+            EditorFrame* frame_;
+            const std::function<void(wxDialog*, wxTextCtrl*)>& action_;
+        } driver(frame, action);
         if (shortcut)
             Key(frame->Editor(), 'G', true);
         else
             NativeSearch::Command(frame, id);
-        if (failure) std::rethrow_exception(failure);
+        if (driver.failure) std::rethrow_exception(driver.failure);
+        Require(driver.observed, "command must open the modal Go To Line dialog");
         Require(!wxWindow::FindWindowByName("Go to line", frame),
                 "the completed Go To command must remove its native dialog");
     }
