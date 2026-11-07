@@ -246,8 +246,9 @@ public:
         wxLog::SetActiveTarget(new wxLogStderr);
         auto* frame = new EditorFrame;
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 TestEditor::ResetStream(frame->Editor(), "AoldZ", 1, 4);
                 Insert(frame, "File Name and Extension");
                 Require(TestEditor::Text(frame) == "AUntitledZ", "untitled insertion uses original fallback");

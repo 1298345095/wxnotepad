@@ -249,8 +249,9 @@ public:
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 auto* editor = frame->Editor();
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("alpha\r\nbeta"));
                 editor->Send(Message::SetSel, 3, 1);

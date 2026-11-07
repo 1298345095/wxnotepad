@@ -51,6 +51,20 @@ def acknowledge(focus):
     driver_trace(focus, "driver.ack")
 
 
+def mapped_toplevel(scene, process, surface):
+    """Match the current owned shell view, including already-presented views."""
+    layered = False
+    for section in re.split(r"(?=^Layer |^\tView )", scene, flags=re.MULTILINE):
+        if section.startswith("Layer "):
+            layered = True
+        if not layered or not section.startswith("\tView "):
+            continue
+        if re.match(rf"\tView \d+ \(role xdg_toplevel, PID {process}, surface ID {surface}, top-level window '", section):
+            if not re.search(r"\[(?:view|surface) is (?:not mapped!|not part of any layer|under parent view layer)\]", section):
+                return True
+    return False
+
+
 trace_gesture = "0"
 trace_sequence = 0
 trace_started = 0
@@ -121,7 +135,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
             if request.startswith("trace:"):
                 _, identity, request = request.split(":", 2)
                 trace_gesture = identity if identity.isdecimal() else "0"
-            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "focus:", "drag:", "front:", "move-peer:"))) and time.monotonic() - last_switch > .25:
+            if (request in ("editor", "peer", "peer-deferred", "gesture", "geometry") or request.startswith(("key:", "focus:", "drag:", "front:", "activate:", "prepare:", "move-peer:"))) and time.monotonic() - last_switch > .25:
                 driver_trace(focus, "driver.request", request.split(":", 1)[0])
                 if request == "peer-deferred":
                     # The readiness fixture holds a claim long enough to expose
@@ -169,6 +183,25 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     xdo("mouseup", "1")
                     xdo("keyup", "Super_L")
                     acknowledge(focus)
+                elif request.startswith(("activate:", "prepare:")):
+                    kind, process, surface, expiry = request.split(":")
+                    deadline = int(expiry) / 1_000_000
+                    while backend == "wayland" and time.monotonic() < deadline:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0: break
+                        try:
+                            scene = subprocess.run(["weston-debug", "scene-graph"], env=environment,
+                                                   capture_output=True, text=True,
+                                                   timeout=min(2, remaining), check=True).stdout
+                        except subprocess.TimeoutExpired:
+                            break
+                        if mapped_toplevel(scene, int(process), int(surface)):
+                            if time.monotonic() < deadline:
+                                if kind == "activate":
+                                    xdo("key", "--clearmodifiers", "super+Tab")
+                                acknowledge(focus)
+                            break
+                        time.sleep(min(.03, max(0, deadline - time.monotonic())))
                 elif request.startswith("front:"):
                     front(request[6:])
                     acknowledge(focus)

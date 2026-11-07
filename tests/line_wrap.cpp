@@ -537,8 +537,9 @@ public:
         if (probe) settings_ = std::make_unique<SettingsStore>();
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame, probe, expected] {
+        NativeKeys::AfterPresentation(frame, [this, frame, probe, expected](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 if (probe) {
                     TestEditor::ResetStream(frame->Editor(), "a b", 0, 3);
                     Dialog(frame, wxString::Format("%d", expected), "2", DialogAction::Cancel);

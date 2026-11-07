@@ -395,8 +395,9 @@ public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 TogglePreservesDocument(frame);
                 DocumentTransitions(frame);
                 FileProtection(frame);
