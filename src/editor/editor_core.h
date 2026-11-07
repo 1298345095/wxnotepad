@@ -8,6 +8,7 @@ class GtkTextDragDrop;
 
 class EditorControl::Core final : public Scintilla::Internal::ScintillaBase {
     friend struct EditorCoreObservation;
+
 public:
     Core(EditorControl& window, int selectionOptions);
     ~Core() override;
