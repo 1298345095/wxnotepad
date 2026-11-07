@@ -17,6 +17,7 @@ struct OriginalSettings {
     bool saveSettings = true;
     bool wordWrap = true;
     bool showLineNumbers = true;
+    bool matchBraces = true;
     bool viewWhiteSpace = false;
     bool showIndentGuides = false;
     bool simpleIndentGuides = false;

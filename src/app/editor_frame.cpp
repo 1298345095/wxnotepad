@@ -46,6 +46,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
             static_cast<LineHighlightMode>(settings->values.highlightCurrentLine % 10));
         editor_->Send(Scintilla::Message::SetCaretLineHighlightSubLine, settings->values.highlightCurrentLine >= 10);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
+        editor_->SetVisualBraceMatching(settings->values.matchBraces);
         editor_->Send(Scintilla::Message::SetViewEOL, settings->values.viewEOLs);
         showWordWrapSymbols_ = settings->values.showWordWrapSymbols;
         wordWrapSymbols_ = settings->values.wordWrapSymbols;
@@ -91,6 +92,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.showIndentGuides = editor_->Send(Scintilla::Message::GetIndentationGuides) != 0;
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
+    settings_->values.matchBraces = editor_->VisualBraceMatching();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
     settings_->values.viewEOLs = editor_->Send(Scintilla::Message::GetViewEOL) != 0;
     settings_->values.showWordWrapSymbols = showWordWrapSymbols_;

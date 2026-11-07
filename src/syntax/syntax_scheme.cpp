@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <span>
+#include <utility>
 #include <wx/settings.h>
 
 namespace {
@@ -73,6 +74,16 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
     editor.Send(Message::StyleSetFore, 32, Colour(0x000000));
     editor.Send(Message::StyleSetBack, 32, Colour(0xFFFFFF));
     editor.Send(Message::StyleClearAll);
+    // Original stlDefault.cpp / Styles.cpp: brace feedback uses independent
+    // translucent overlays, preserving the current font and DPI settings.
+    editor.Send(Message::BraceHighlightIndicator, 1, 9);
+    editor.Send(Message::BraceBadLightIndicator, 1, 10);
+    for (const auto [indicator, colour] : {std::pair{9, 0x02EA0A}, std::pair{10, 0xFF0000}}) {
+        editor.Send(Message::IndicSetStyle, indicator, static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox));
+        editor.Send(Message::IndicSetFore, indicator, Colour(colour));
+        editor.Send(Message::IndicSetAlpha, indicator, 50);
+        editor.Send(Message::IndicSetOutlineAlpha, indicator, 200);
+    }
     for (const auto& property : definition.properties)
         editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>(property.name),
                     reinterpret_cast<intptr_t>(property.value));

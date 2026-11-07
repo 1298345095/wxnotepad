@@ -78,6 +78,8 @@ public:
     void DeleteLine();
     void JumpToPosition(intptr_t position);
     void MatchBrace(bool select = false);
+    bool VisualBraceMatching() const { return matchBraces_; }
+    void SetVisualBraceMatching(bool enabled);
     void ToggleBookmark();
     void GoToBookmark(bool forwards);
     void SelectAllBookmarks();
@@ -91,6 +93,7 @@ public:
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
 private:
+    friend struct EditorCoreObservation;
     class Core;
     wxTimer caretTimer_;
     wxTimer scrollTimer_;
@@ -100,6 +103,7 @@ private:
     bool lineNumbersVisible_ = true;
     bool lineNumberWidthDirty_ = true;
     bool autoIndent_ = true;
+    bool matchBraces_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;

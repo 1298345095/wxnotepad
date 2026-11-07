@@ -97,6 +97,8 @@ private:
 };
 
 intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_t lParam) {
+    if (message == Message::SetLexer || message == Message::ClearDocumentStyle || message == Message::Colourise)
+        braceStyleChanged_ = true;
     // Original ScintillaWin::WndProc reports message failures through GetStatus.
     // Read-only enclosure can intentionally attempt a target beyond EOF after
     // the preceding insertion was rejected, then continue selection repair.
@@ -231,6 +233,12 @@ void EditorControl::Core::Draw(wxDC& dc) {
     paintingAllText = true;
     Paint(surface.get(), rcPaint);
     paintState = PaintState::notPainting;
+    // Style-only notifications do not queue UpdateUI in the pinned core.
+    // Refresh after its real styling/paint pass, then redraw changed overlays.
+    if (braceStyleChanged_) {
+        braceStyleChanged_ = false;
+        UpdateVisualBraceMatching();
+    }
     UpdateSystemCaret();
 }
 
@@ -660,6 +668,10 @@ void EditorControl::Core::NotifyChange() const noexcept {
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
+    if (notification.nmhdr.code == Scintilla::Notification::Modified &&
+        (static_cast<unsigned>(notification.modificationType) &
+         static_cast<unsigned>(Scintilla::ModificationFlags::ChangeStyle | Scintilla::ModificationFlags::LexerState)))
+        braceStyleChanged_ = true;
     // Notepad4.cpp SCN_CHARADDED: ignore tentative/multiple-selection typing.
     // The pinned CRLF condition handles CR, after the complete EOL is inserted.
     if (notification.nmhdr.code == Scintilla::Notification::CharAdded && !notification.listType &&
@@ -667,6 +679,10 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         (pdoc->eolMode != Scintilla::EndOfLine::CrLf || notification.ch != '\n'))
         window_.AutoIndent();
     SelectionRevision();
+    if (notification.nmhdr.code == Scintilla::Notification::UpdateUI &&
+        (static_cast<unsigned>(notification.updated) &
+         ~static_cast<unsigned>(Scintilla::Update::VScroll | Scintilla::Update::HScroll)))
+        const_cast<Core*>(this)->UpdateVisualBraceMatching();
     if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
         window_.lineNumberWidthDirty_ = true;
         window_.SetCurrentLineHighlightMode(window_.GetCurrentLineHighlightMode());
