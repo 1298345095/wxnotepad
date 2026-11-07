@@ -32,6 +32,7 @@ struct OriginalSettings {
     int longLineMode = 1;
     int selectOption = 15;
     int autoInsertMask = 511;
+    int markOccurrences = 1;
     bool saveFindReplace = false;
     int findReplaceOption = 2;
     int findReplaceFlag = 0;

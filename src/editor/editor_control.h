@@ -5,6 +5,7 @@
 #include "editor/date_time.h"
 #include "editor/special_insert.h"
 #include "editor/url_conversion.h"
+#include "editor/occurrence_marking.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
 #include <wx/timer.h>
@@ -87,6 +88,7 @@ public:
     void SetLineNumbersVisible(bool visible);
     LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
     void SetCurrentLineHighlightMode(LineHighlightMode mode);
+    OccurrenceMarking& Occurrences() { return *occurrences_; }
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
@@ -96,6 +98,7 @@ private:
     wxTimer scrollTimer_;
     wxTimer widenTimer_;
     std::unique_ptr<Core> core_;
+    std::unique_ptr<OccurrenceMarking> occurrences_;
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;
     bool lineNumberWidthDirty_ = true;

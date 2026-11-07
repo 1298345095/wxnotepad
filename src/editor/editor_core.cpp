@@ -660,6 +660,8 @@ void EditorControl::Core::NotifyChange() const noexcept {
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
+    if (notification.nmhdr.code == Scintilla::Notification::UpdateUI && window_.occurrences_)
+        window_.occurrences_->Update(notification.updated);
     // Notepad4.cpp SCN_CHARADDED: ignore tentative/multiple-selection typing.
     // The pinned CRLF condition handles CR, after the complete EOL is inserted.
     if (notification.nmhdr.code == Scintilla::Notification::CharAdded && !notification.listType &&

@@ -93,6 +93,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.longLineMode = std::clamp(ReadInt("LongLineMode", defaults.longLineMode), 1, 2);
     values.selectOption = ReadInt("SelectOption", defaults.selectOption);
     values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
+    values.markOccurrences = ReadInt("MarkOccurrences", defaults.markOccurrences);
     values.saveFindReplace = ReadBool("SaveFindReplace", defaults.saveFindReplace);
     values.findReplaceOption = ReadInt("FindReplaceOption", defaults.findReplaceOption);
     if (values.saveFindReplace) {
@@ -323,6 +324,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
         WriteInt("SelectOption", values.selectOption, defaults.selectOption);
         WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
+        WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);
         WriteBool("SaveFindReplace", values.saveFindReplace, defaults.saveFindReplace);
         WriteInt("FindReplaceOption", values.findReplaceOption, defaults.findReplaceOption);
         WriteInt("FindReplaceFlag", values.saveFindReplace ? values.findReplaceFlag : defaults.findReplaceFlag,

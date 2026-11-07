@@ -62,6 +62,7 @@ add_library(editor_runtime STATIC
     src/editor/strip_characters.cpp
     src/editor/tab_conversion.cpp
     src/editor/number_radix.cpp
+    src/editor/occurrence_marking.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
@@ -401,6 +402,10 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_settings_process.py" "$<TARGET_FILE:search_settings>")
     set_tests_properties(original_search_settings PROPERTIES TIMEOUT 90)
     add_editor_test(find_all original_find_all 30)
+    add_editor_test(occurrence_marking original_occurrence_marking 30)
+    add_test(NAME original_occurrence_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/occurrence_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_occurrence_settings PROPERTIES TIMEOUT 60)
     add_editor_test(bookmarks original_bookmark_commands 30)
     add_editor_test(search_options_smoke find_literal_options 30)
     add_editor_test(replace_smoke replace_literal_one 30)
