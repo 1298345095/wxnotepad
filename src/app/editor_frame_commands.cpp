@@ -846,6 +846,25 @@ void EditorFrame::InsertDateTime(bool shortDate) {
 
 void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
     auto* insert = new wxMenu;
+    const int guid = wxWindow::NewControlId();
+    insert->Append(guid, "New &GUID");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->InsertGuid(); }, guid);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, guid);
+    auto* controls = new wxMenu;
+    for (size_t index = 0; index < UnicodeControlInsertions.size(); ++index) {
+        const int id = wxWindow::NewControlId();
+        controls->Append(id, wxString::FromUTF8(UnicodeControlInsertions[index].label));
+        Bind(
+            wxEVT_MENU,
+            [this, index](wxCommandEvent&) {
+                editor_->InsertUnicodeControlCharacter(static_cast<UnicodeControlCharacter>(index),
+                                                       document_.IsDefaultEncoding());
+            },
+            id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    insert->AppendSubMenu(controls, "Unicode &Control Character");
+    insert->AppendSeparator();
     auto* timestamps = new wxMenu;
     const auto add = [this](wxMenu* menu, const char* label, DateTimeInsertion command) {
         const int id = wxWindow::NewControlId();

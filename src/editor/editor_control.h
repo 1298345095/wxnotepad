@@ -3,6 +3,7 @@
 #include "editor/align_lines.h"
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
+#include "editor/special_insert.h"
 #include "editor/url_conversion.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
@@ -40,6 +41,8 @@ public:
     bool EncloseSelection(const wxString& before, const wxString& after);
     bool ConvertUrl(UrlConversion command);
     void InsertDateTime(DateTimeInsertion command, const wxString& format = {});
+    void InsertGuid();
+    void InsertUnicodeControlCharacter(UnicodeControlCharacter character, bool defaultEncoding);
     AlignmentResult AlignLines(AlignmentMode mode);
     bool ModifyLines(const wxString& prefix, const wxString& suffix, bool skipEmpty = false);
     bool CompressWhitespace();
