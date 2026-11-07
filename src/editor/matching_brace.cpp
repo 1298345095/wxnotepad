@@ -21,8 +21,7 @@ void EditorControl::Core::UpdateVisualBraceMatching() {
         return ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == '{' || ch == '}' || ch == '<' || ch == '>';
     };
     auto position = WndProc(Message::GetCurrentPos, 0, 0);
-    if (!isBrace(WndProc(Message::GetCharAt, position, 0)))
-        position = WndProc(Message::PositionBefore, position, 0);
+    if (!isBrace(WndProc(Message::GetCharAt, position, 0))) position = WndProc(Message::PositionBefore, position, 0);
     if (!isBrace(WndProc(Message::GetCharAt, position, 0))) {
         WndProc(Message::BraceHighlight, static_cast<uintptr_t>(-1), -1);
         WndProc(Message::SetHighlightGuide, 0, 0);

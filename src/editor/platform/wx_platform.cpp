@@ -174,8 +174,8 @@ public:
             const auto rectangle = Rect(r);
             const double inset = width / 2.0;
             graphics->DrawRoundedRectangle(rectangle.x + inset, rectangle.y + inset,
-                                           std::max(0, rectangle.width - width),
-                                           std::max(0, rectangle.height - width), radius);
+                                           std::max(0, rectangle.width - width), std::max(0, rectangle.height - width),
+                                           radius);
             return;
         }
 #endif
