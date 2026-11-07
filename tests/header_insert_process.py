@@ -1,5 +1,6 @@
 """Compare actual application Save/reload with independently captured original bytes."""
 import csv
+import locale
 import os
 from pathlib import Path
 import shutil
@@ -18,8 +19,16 @@ def run(source, reference):
         shutil.copy2(source, executable)
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         config = folder / "Notepad4.ini"
-        for row in csv.DictReader(reference.open(encoding="utf-8"), delimiter="\t"):
+        rows = list(csv.DictReader(reference.open(encoding="utf-8"), delimiter="\t"))
+        utf8_rows = {(row["language"], row["command"]): row for row in rows if row["encoding"] == "utf8"}
+        # Linux resolves its native/legacy page from LC_CTYPE. getencoding()
+        # ignores Python's -X utf8 mode, independently establishing that context.
+        # Windows retains its original ANSI capture context and legacy ACP rules.
+        native_utf8 = sys.platform != "win32" and locale.getencoding().lower().replace("-", "") == "utf8"
+        for row in rows:
             encoding = row["encoding"]
+            promoted_ansi = native_utf8 and encoding == "ansi"
+            expected_row = utf8_rows[(row["language"], row["command"])] if promoted_ansi else row
             settings = "SaveSettings=0\nWarnLineEndings=0\nLoadASCIIasUTF8=0\nLoadANSIasUTF8=0\nSkipUnicodeDetection=0\n"
             settings += {"utf8": "DefaultEncoding=3", "utf8bom": "DefaultEncoding=4",
                          "utf16": "DefaultEncoding=6", "utf16bom": "DefaultEncoding=1",
@@ -36,13 +45,15 @@ def run(source, reference):
             app = Application(executable, folder, environment, document)
             try:
                 original = dict(app.state)
+                if promoted_ansi:
+                    assert original["encoding"] == "UTF-8" and original["bom"] == "0", original
                 app.named_menu("Edit", "Encoding Identifier" if row["command"] == "encoding" else "Script Shebang Line")
-                assert app.state["length"] == str(len(bytes.fromhex(row["utf8"]))), row
+                assert app.state["length"] == str(len(bytes.fromhex(expected_row["utf8"]))), row
                 assert app.state["dirty"] == "1", row
                 for key in ["encoding", "bom", "eol_mode", "zoom"]:
                     assert app.state[key] == original[key], (row, key, app.state, original)
                 request(app, "save")
-                expected = bytes.fromhex(row["bytes"])
+                expected = bytes.fromhex(expected_row["bytes"])
                 assert document.read_bytes() == expected, (row, document.read_bytes())
                 assert app.state["dirty"] == "0", row
                 app.named_menu("Edit", "Undo")
@@ -52,7 +63,7 @@ def run(source, reference):
                 request(app, "save")
                 assert document.read_bytes() == expected, row
                 request(app, "open", document)
-                assert app.state["length"] == str(len(bytes.fromhex(row["utf8"]))) and app.state["dirty"] == "0", row
+                assert app.state["length"] == str(len(bytes.fromhex(expected_row["utf8"]))) and app.state["dirty"] == "0", row
                 request(app, "save")
                 assert document.read_bytes() == expected, row
                 app.close()

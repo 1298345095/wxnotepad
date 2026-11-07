@@ -2,6 +2,7 @@
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <vector>
 
@@ -70,11 +71,33 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
     Require(stream.good(), "original header fixtures are available");
     std::string row, previousEncoding, previousLanguage;
     std::getline(stream, row);
+    // Original Edit.cpp 1106-1119 promotes ANSI to its explicit legacy-code-page
+    // identity. The Linux port resolves a UTF-8 native locale to UTF-8 for both
+    // native and legacy pages. Keep the Windows ANSI capture context unchanged.
+#ifdef __WXMSW__
+    constexpr bool nativeUtf8 = false;
+#else
+    const bool nativeUtf8 = wxLocale::GetSystemEncodingName().CmpNoCase("UTF-8") == 0;
+#endif
+    using ReferenceKey = std::array<std::string, 4>;
+    const auto key = [](const std::vector<std::string>& fields) {
+        return ReferenceKey{fields[0], fields[2], fields[3], fields[4]};
+    };
+    std::map<ReferenceKey, std::vector<std::string>> utf8References;
+    const auto recordsStart = stream.tellg();
+    while (std::getline(stream, row)) {
+        auto fields = Fields(row);
+        if (fields[1] == "utf8") utf8References.emplace(key(fields), std::move(fields));
+    }
+    stream.clear();
+    stream.seekg(recordsStart);
     size_t count = 0;
     while (std::getline(stream, row)) {
         const auto fields = Fields(row);
         Require(fields.size() == 28, "original header record has all captured states");
         const auto& encoding = fields[1];
+        const bool promotedAnsi = nativeUtf8 && encoding == "ansi";
+        const auto& expected = promotedAnsi ? utf8References.at(key(fields)) : fields;
         auto* editor = frame->Editor();
         if (encoding != previousEncoding) {
             const auto path = directory / "reference.txt";
@@ -94,6 +117,9 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
                     "captured encoding identity opens through the application document interface");
             previousEncoding = encoding;
             previousLanguage.clear();
+            if (promotedAnsi)
+                Require(frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentHasBom(),
+                        "UTF-8 native context promotes the ANSI load choice to explicit UTF-8 without BOM");
         }
         if (previousLanguage != fields[0]) {
             const char* label = fields[0] == "Python" ? "Python"
@@ -129,11 +155,11 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
                 "original header entries stay enabled for protected and rectangular selections");
         NativeSearch::Command(frame, id);
         try {
-            State(editor, fields, 10);
+            State(editor, expected, 10);
             editor->Send(Message::Undo);
-            State(editor, fields, 16);
+            State(editor, expected, 16);
             editor->Send(Message::Redo);
-            State(editor, fields, 22);
+            State(editor, expected, 22);
         } catch (...) {
             std::fprintf(stderr, "Header reference: %s/%s/%s/%s/%s\n", fields[0].c_str(), fields[1].c_str(),
                          fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
