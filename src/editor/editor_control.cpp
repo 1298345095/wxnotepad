@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "editor/platform/native_encoding.h"
 #include "editor/editor_core.h"
 #include "editor/platform/clipboard.h"
 #include "diagnostics/trace.h"
@@ -165,7 +166,7 @@ bool EditorControl::CopyAdd() {
     return true;
 }
 
-void EditorControl::SwapClipboard() {
+void EditorControl::SwapClipboard(bool defaultEncoding) {
     // Notepad4.cpp::IDM_EDIT_SWAP at 89b8b36; see licenses/Notepad4.txt.
     if (Send(Message::GetSelectionEmpty)) {
         const auto position = Send(Message::GetCurrentPos);
@@ -177,6 +178,7 @@ void EditorControl::SwapClipboard() {
     auto text = EditorClipboard::ReadPlainText(*GetParent());
     if (!text || text->empty()) return;
     *text = core::Document::TransformLineEnds(*text, static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode)));
+    if (defaultEncoding) *text = NativeDefaultEncodingText(wxString::FromUTF8(*text)).ToStdString(wxConvUTF8);
     auto caret = Send(Message::GetCurrentPos);
     auto anchor = Send(Message::GetAnchor);
     Send(Message::BeginUndoAction);

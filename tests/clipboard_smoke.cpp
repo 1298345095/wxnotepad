@@ -1814,7 +1814,10 @@ void SwapSavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 void SwapDefaultEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
 #ifdef __WXMSW__
-    Require(GetACP() == 936, "captured default-ANSI Swap requires system ACP 936");
+    if (GetACP() != 936) {
+        std::puts("SKIP: captured default-ANSI Swap requires system ACP 936");
+        return;
+    }
     const std::string replacement = "é中文??\r\nX";
     const std::string saved = "A\xa8\xa6\xd6\xd0\xce\xc4??\r\nXZ";
 #else
@@ -1836,8 +1839,12 @@ void SwapDefaultEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) 
         const auto bom = frame->DocumentHasBom();
         editor->Send(Message::SetSel, reversed ? 4 : 1, reversed ? 1 : 4);
         peer.OfferText("é中文😀\rX");
-        Gesture(editor);
-        NativeSearch::Command(frame, swap);
+        if (reversed) {
+            UtilityShortcut(frame, 'K', true);
+        } else {
+            Gesture(editor);
+            NativeSearch::Command(frame, swap);
+        }
         Require(Text(editor) == "A" + replacement + "Z",
                 "selected Swap applies captured system-default conversion before replacement");
         const auto end = 1 + static_cast<intptr_t>(replacement.size());
