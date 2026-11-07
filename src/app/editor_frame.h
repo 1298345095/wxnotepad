@@ -75,6 +75,8 @@ private:
     void AppendIndentationOptions(wxMenu* view);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
+    void ToggleIndentationGuides();
+    void ToggleLongLineMarker();
     void AppendCurrentLineCommands(wxMenu* view);
     void AppendFoldCommands(wxMenu* view);
     void AppendSettingsCommands(wxMenu* view);

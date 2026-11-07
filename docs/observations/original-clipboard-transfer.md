@@ -79,3 +79,26 @@ final rows. Existing native text targets and Paste's shape interpretation remain
 unchanged. The independent peer tests in `original_clipboard_utilities` cover
 these commands, native menu/shortcut availability, original NUL boundaries,
 rectangular feedback and unchanged encoded Save/Undo/Redo bytes.
+
+Issue #141 restores Swap and Ctrl+K from `src/Notepad4.cpp::IDM_EDIT_SWAP`.
+Its menu is enabled by a nonempty selection or native CanPaste. With a selection,
+it reads plain native Unicode first, stops at NUL, normalizes every CR/LF/CRLF to
+the document EOL mode, and uses the original Cut and ReplaceSel messages inside
+one undo action. The replacement length counts UTF-8 document bytes. The original
+anchor/caret direction determines the resulting selected endpoints, including
+rectangles and read-only endpoint clamping. Outgoing selection extraction and
+transfer-kind tags remain the delivered Cut rules.
+
+With an empty selection, Swap uses ordinary Paste, selects the old-to-resulting
+caret span, then clears every native clipboard format. This retains ordinary
+line/rectangle, multiple-caret, virtual-space and paste-convert behavior. A shaped
+paste can edit the document while leaving that selected span empty. Direct empty
+commands clear non-text or read-only offers even when native availability disables
+the menu. Document Undo/Redo does not restore the earlier clipboard offer.
+
+The focused `original_clipboard_swap` native test uses independent clipboard
+processes, actual menu/Ctrl+K, literal original Windows outcomes, and independent
+UTF-8/BOM/UTF-16LE/GBK disk reads through Save/Undo/Redo. Reference source is
+`89b8b36e0ee2c23f73be922315f17261ccfbbe1a`; root-coordinated Windows observations
+and the corrected shape/GBK capture are retained in the external #141 evidence
+directory. The existing baseline executable build log omitted its source revision.

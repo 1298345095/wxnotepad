@@ -5,6 +5,8 @@
 
 namespace DiagnosticTrace {
 bool Enabled() noexcept;
+// Use repository-controlled printf literals with matching scalar/pointer
+// conversions. Document, clipboard and IME payloads never supply a format.
 void Write(const char* event, const char* format = "", ...) noexcept;
 std::uint64_t BeginGesture() noexcept;
 void EndGesture() noexcept;

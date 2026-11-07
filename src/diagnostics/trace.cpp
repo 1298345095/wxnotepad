@@ -2,13 +2,13 @@
 #include <wx/eventfilter.h>
 #include <wx/window.h>
 #include <wx/version.h>
+#include <wx/utils.h>
+#include <wx/wxcrt.h>
 #include <atomic>
 #include <chrono>
 #include <cstdarg>
 #include <cstdio>
-#include <cstdlib>
 #include <mutex>
-#include <string_view>
 #ifdef __WXMSW__
 #include <windows.h>
 #else
@@ -22,7 +22,10 @@
 namespace DiagnosticTrace {
 namespace {
 using Clock = std::chrono::steady_clock;
+// Native callbacks share an identity without modifying their event payloads.
+// Only Begin/EndGesture write the current thread's callback-chain identity.
 thread_local std::uint64_t gesture = 0;
+// Concurrent driver threads must receive distinct process-local sequences.
 std::atomic<std::uint64_t> nextGesture{0};
 
 unsigned long Process() noexcept {
@@ -43,28 +46,19 @@ unsigned long Thread() noexcept {
 class Trace final : public wxEventFilter {
 public:
     Trace() noexcept {
-        const char* enabled = std::getenv("WXNOTEPAD_DIAGNOSTICS");
-        if (!enabled || std::string_view(enabled) != "1") return;
-#ifdef __WXMSW__
-        const wchar_t* destination = _wgetenv(L"WXNOTEPAD_DIAGNOSTIC_LOG");
-        if (!destination || !*destination) return;
-        if (std::wstring_view(destination) == L"stderr")
-#else
-        const char* destination = std::getenv("WXNOTEPAD_DIAGNOSTIC_LOG");
-        if (!destination || !*destination) return;
-        if (std::string_view(destination) == "stderr")
-#endif
+        wxString enabled;
+        if (!wxGetEnv("WXNOTEPAD_DIAGNOSTICS", &enabled) || enabled != "1") return;
+        wxString destination;
+        if (!wxGetEnv("WXNOTEPAD_DIAGNOSTIC_LOG", &destination) || destination.empty()) return;
+        // These existing wrappers retain native Unicode paths and C FILE output.
+        if (destination == "stderr")
             file_ = stderr;
         else {
-#ifdef __WXMSW__
-            file_ = _wfopen(destination, L"wb");
-#else
-            file_ = std::fopen(destination, "wb");
-#endif
-        }
-        if (!file_) {
-            std::fputs("Could not open native diagnostic log\n", stderr);
-            return;
+            file_ = wxFopen(destination, "wb");
+            if (!file_) {
+                std::fputs("Could not open native diagnostic log\n", stderr);
+                return;
+            }
         }
 #ifdef __WXGTK__
         const char* backend =
@@ -88,6 +82,8 @@ public:
         if (file_ != stderr) std::fclose(file_);
     }
     bool Enabled() const noexcept { return file_ != nullptr; }
+    // Source-controlled literal formats and matching scalar/pointer conversions
+    // write directly to FILE* without an intermediate formatted record string.
     void Record(const char* event, const char* format, ...) noexcept {
         va_list arguments;
         va_start(arguments, format);
@@ -103,6 +99,7 @@ public:
         std::fprintf(file_, "us=%lld\tpid=%lu\ttid=%lu\tseq=%llu\tevent=%s\tgesture=%llu",
                      static_cast<long long>(elapsed), Process(), Thread(), ++sequence_, event,
                      static_cast<unsigned long long>(gesture));
+        // Forward the same trusted format/arguments; no text payload supplies a format.
         std::vfprintf(file_, format, arguments);
         std::fputc('\n', file_);
         // Each completed transition reaches the OS before returning to native
