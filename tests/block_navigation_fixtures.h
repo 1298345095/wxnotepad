@@ -1,4 +1,4 @@
-// Captured from original Notepad4 89b8b36 by tools/capture_block_navigation.py.
+// Captured from original Notepad4 89b8b36 by tests/reference_capture/capture_block_navigation.py.
 #pragma once
 namespace BlockReference {
 struct Document {

@@ -20,11 +20,11 @@ behavior uses the existing Visual Studio mode bit, including Old Visual
 Studio. A caret without a fold parent selects the whole document. Plain
 Text uses the original null lexer's indentation folding.
 
-`tools/capture_block_navigation.py` captures native original-process
+`tests/reference_capture/capture_block_navigation.py` captures native original-process
 WM_COMMAND results and public Scintilla state without clipboard access:
 
 ```text
-python -X utf8 tools/capture_block_navigation.py ORIGINAL_EXE EVIDENCE_DIRECTORY tests/block_navigation_fixtures.h
+python -X utf8 tests/reference_capture/capture_block_navigation.py ORIGINAL_EXE EVIDENCE_DIRECTORY tests/block_navigation_fixtures.h
 clang-format -i tests/block_navigation_fixtures.h
 ```
 
