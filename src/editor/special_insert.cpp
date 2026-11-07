@@ -1,4 +1,6 @@
 #include "editor/editor_control.h"
+#include "syntax/syntax_catalog.h"
+#include "ScintillaTypes.h"
 
 #ifdef __WXMSW__
 #include <objbase.h>
@@ -29,4 +31,28 @@ void EditorControl::InsertUnicodeControlCharacter(UnicodeControlCharacter charac
     const char* text = UnicodeControlInsertions[static_cast<size_t>(character)].utf8;
     if (defaultEncoding && text[1] != '\0') return;
     Send(Scintilla::Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(text));
+}
+
+void EditorControl::InsertEncodingIdentifier(std::string_view name, const SyntaxDefinition& syntax) {
+    using Scintilla::Message;
+    std::string text(name);
+    if (syntax.encodingHeader) {
+        const auto position = Send(Message::GetCurrentPos);
+        const auto line = Send(Message::LineFromPosition, position);
+        if (line < 2 && position == Send(Message::PositionFromLine, line)) text = "#-*- coding: " + text + " -*-";
+    }
+    Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(text.c_str()));
+}
+
+void EditorControl::InsertScriptShebangLine(const SyntaxDefinition& syntax) {
+    using Scintilla::Message;
+    std::string text = "#!/usr/bin/env ";
+    if (syntax.scriptInterpreter) {
+        text += syntax.scriptInterpreter;
+        if (Send(Message::GetCurrentPos) == 0) {
+            const auto mode = static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode));
+            text += mode == Scintilla::EndOfLine::Cr ? "\r" : mode == Scintilla::EndOfLine::Lf ? "\n" : "\r\n";
+        }
+    }
+    Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(text.c_str()));
 }

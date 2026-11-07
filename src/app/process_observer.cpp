@@ -9,6 +9,9 @@
 #include <wx/log.h>
 #include <cstdio>
 #include <utility>
+#ifdef __WXMSW__
+#include <windows.h>
+#endif
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
@@ -102,8 +105,17 @@ void ProcessObserver::Publish() {
     wxFFile state(observation_ + "/state.tmp", "wb");
     const bool written = state.IsOpened() && state.Write(contents);
     const bool closed = state.IsOpened() && state.Close();
-    const bool published =
-        written && closed && wxRenameFile(observation_ + "/state.tmp", observation_ + "/state", true);
+    bool published = false;
+    if (written && closed) {
+        // wxRenameFile can fall back to copying over an open destination. Readers
+        // must see a complete old or new snapshot, so retry a failed rename.
+#ifdef __WXMSW__
+        published = MoveFileExW((observation_ + "/state.tmp").wc_str(), (observation_ + "/state").wc_str(),
+                                MOVEFILE_REPLACE_EXISTING) != 0;
+#else
+        published = ::rename((observation_ + "/state.tmp").utf8_str(), (observation_ + "/state").utf8_str()) == 0;
+#endif
+    }
     if (!published && !publishPending_) {
         const unsigned long error = wxSysErrorCode();
         const char* stage = !written ? "write" : !closed ? "close" : "rename";
