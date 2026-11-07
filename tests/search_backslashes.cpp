@@ -6,12 +6,14 @@
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <wx/textctrl.h>
+#include <array>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace {
 using Scintilla::Message;
@@ -24,17 +26,44 @@ std::string Text(EditorControl& editor) {
     text.pop_back();
     return text;
 }
-void Load(EditorControl& editor, const std::string& text) {
-    editor.Send(Message::ClearAll);
-    editor.Send(Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    editor.Send(Message::EmptyUndoBuffer);
-    editor.Send(Message::SetSavePoint);
-    editor.Send(Message::SetSel, 0, 0);
+void Load(EditorControl& editor, std::string_view text) {
+    using enum Message;
+    editor.Send(ClearAll);
+    editor.Send(AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+    editor.Send(EmptyUndoBuffer);
+    editor.Send(SetSavePoint);
+    editor.Send(SetSel, 0, 0);
+}
+void CheckEscapeForms(EditorControl& editor, SearchSession& search) {
+    const std::array<std::pair<const char*, std::string>, 6> forms{{
+        {R"(\a\b\e\f\n\r\t\v\\)", "\a\b\x{1b}\f\n\r\t\v\\"},
+        {R"(\x41\xFF\x00Z)", std::string("A\x{ff}\0Z", 4)},
+        {R"(\u4E2D\uD83D\uDE00)", "中😀"},
+        // Sonar treats literal replacement scalars as source-decoding errors.
+        {R"(\uD800\u0041\uDC00)", "\u{FFFD}A\u{FFFD}"},
+        {R"(\uD800\uD800\uDC00)", "\u{FFFD}𐀀"},
+        {R"(\x1 \xGG \u123 \uGGGG \q \0 \U00000041 \)", R"(\x1 \xGG \u123 \uGGGG \q \0 \U00000041 \)"},
+    }};
+    for (const auto& [escaped, expected] : forms) {
+        Load(editor, "[" + expected + "]");
+        search.Configure({escaped, "", {false, false, false, true}, false});
+        const auto found = search.Find(SearchDirection::Forward);
+        Require(found.status == FindStatus::Found && found.start == 1 && found.end == 1 + expected.size(),
+                "original escape grammar selects exact document bytes");
+        search.Configure({"[", escaped, {false, false, false, true}, false});
+        editor.Send(Message::SetSel, 0, 1);
+        Require(search.ReplaceOne().changed && Text(editor) == expected + expected + "]",
+                "Replace One uses the same original transform grammar");
+        editor.Send(Message::Undo);
+        Require(Text(editor) == "[" + expected + "]", "transformed Replace One undoes exactly");
+    }
+    std::puts("PASS: controls, raw hex/NUL, Unicode/surrogates and invalid/incomplete escapes");
 }
 class BackslashApp final : public wxApp {
 public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
+        // wxWidgets owns top-level windows and deletes them after Destroy().
         auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad backslash transforms");
         auto* editor = new EditorControl(frame);
         frame->Show();
@@ -81,29 +110,7 @@ public:
                 Require(search.ReplaceAll().count == 0 && editor->Send(Message::CanRedo),
                         "transformed no-match replacement preserves history");
                 std::puts("PASS: transformed replacement bytes, capture distinction, Undo and no-op history");
-                const std::pair<const char*, std::string> forms[] = {
-                    {"\\a\\b\\e\\f\\n\\r\\t\\v\\\\", "\a\b\x1b\f\n\r\t\v\\"},
-                    {"\\x41\\xFF\\x00Z", std::string("A\xff\0Z", 4)},
-                    {"\\u4E2D\\uD83D\\uDE00", "中😀"},
-                    {"\\uD800\\u0041\\uDC00", "�A�"},
-                    {"\\uD800\\uD800\\uDC00", "�𐀀"},
-                    {"\\x1 \\xGG \\u123 \\uGGGG \\q \\0 \\U00000041 \\",
-                     "\\x1 \\xGG \\u123 \\uGGGG \\q \\0 \\U00000041 \\"},
-                };
-                for (const auto& [escaped, expected] : forms) {
-                    Load(*editor, "[" + expected + "]");
-                    search.Configure({escaped, "", {false, false, false, true}, false});
-                    const auto found = search.Find(SearchDirection::Forward);
-                    Require(found.status == FindStatus::Found && found.start == 1 && found.end == 1 + expected.size(),
-                            "original escape grammar selects exact document bytes");
-                    search.Configure({"[", escaped, {false, false, false, true}, false});
-                    editor->Send(Message::SetSel, 0, 1);
-                    Require(search.ReplaceOne().changed && Text(*editor) == expected + expected + "]",
-                            "Replace One uses the same original transform grammar");
-                    editor->Send(Message::Undo);
-                    Require(Text(*editor) == "[" + expected + "]", "transformed Replace One undoes exactly");
-                }
-                std::puts("PASS: controls, raw hex/NUL, Unicode/surrogates and invalid/incomplete escapes");
+                CheckEscapeForms(*editor, search);
                 Load(*editor, "a\nb a\nb a\nb");
                 editor->Send(Message::SetSel, 4, 7);
                 search.Configure({"a\\nb", "X\\tY", {false, false, false, true}, false});
@@ -198,8 +205,9 @@ public:
                     [](wxKeyEvent& event) { event.Skip(); }, 2);
                 auto* seededDialog = ownedSeededDialog.get();
                 seededDialog->Present(false, 2);
-                auto* seededQuery = wxDynamicCast(wxWindow::FindWindowByName("Find query", seededDialog), wxTextCtrl);
-                auto* seededTransform =
+                const auto* seededQuery =
+                    wxDynamicCast(wxWindow::FindWindowByName("Find query", seededDialog), wxTextCtrl);
+                const auto* seededTransform =
                     wxDynamicCast(wxWindow::FindWindowByName("Transform backslashes", seededDialog), wxCheckBox);
                 Require(seededQuery && seededTransform && seededQuery->GetValue() == wxString::FromUTF8("中\\n文") &&
                             seededTransform->GetValue(),

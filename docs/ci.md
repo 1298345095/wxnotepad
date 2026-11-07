@@ -8,7 +8,7 @@ and retain shareable results; they do not replace local verification.
 
 | Workflow | Trigger | Work |
 | --- | --- | --- |
-| CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC 13 builds, all registered CTest tests, development build output |
+| CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC 13 builds, all registered CTest tests, development build output, Linux compilation-database SonarCloud analysis |
 | Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 18 |
 | CodeQL | Same | Traced C++ application build and Actions configuration analysis, with results in GitHub Security |
 
@@ -51,6 +51,9 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   Package-download keys include the profile and the existing dependency cache key;
   restore prefixes allow older compatible downloads to be reused. APT resolves
   current package versions normally, including on an exact download-cache hit.
+- After installation, the runner owns APT's `partial` download directory. APT
+  otherwise leaves it accessible only to `_apt`, which prevents SonarPython's
+  package-root discovery from traversing the workspace even outside source scope.
 - The vcpkg checkout uses the manifest's builtin baseline and wxWidgets override
   **3.3.3#1**. Only core features are requested, matching the prepared development
   dependencies; unused sound/SDL2 and debug-support features are not requested.
@@ -107,6 +110,53 @@ Compiler errors and core/Unix analyzer findings fail the job. Other check famili
 remain visible in per-file logs and exported fix records for classification;
 their existing API-convention diagnostics are not treated as a warning-free
 baseline. CodeQL results are available separately in GitHub Security.
+
+### SonarCloud
+
+The Linux CI job invokes the pinned official SonarQube Scan action after the native
+tests, reusing the existing build and dependencies. `sonar-project.properties`
+selects `.ci/build/cmake/compile_commands.json`; the scanner runs on the same
+runner while its SDK, prepared original core and generated headers still exist.
+This analyzes the Linux compilation variant. Windows builds and tests continue
+independently. Checkout fetches full history for source attribution and PR analysis.
+
+Python analysis targets the workflow's Python 3.12. Python files under `tests/`
+are classified as tests; their inclusion pattern also excludes them from the main
+source scope. C++ fixtures remain in `sonar.sources` because CFamily does not
+analyze files classified through `sonar.tests`. Generated language-scheme tables
+retain their existing duplication exclusions and remain analyzed.
+
+The `tests/` tree is excluded from coverage metrics, including C++ fixtures that
+CFamily requires in source scope. Those fixtures still receive code analysis.
+Application sources remain subject to the configured coverage gate. The current
+workflow does not collect application coverage reports; adding that collection
+is required before future production-code changes can satisfy the coverage gate.
+
+Configure these project settings before enabling the CI scanner:
+
+1. Add the repository Actions secret `SONAR_TOKEN`, using a SonarCloud token with
+   Execute Analysis permission on `1298345095_wxnotepad2`.
+2. Turn off **Administration > Analysis Method > Automatic Analysis** in that
+   SonarCloud project. CI analysis and Automatic Analysis must not run together.
+
+Same-repository PRs, pushes to main and manual runs submit analysis after a
+successful Linux build, including when native tests fail. Fork PRs retain the
+normal build/test checks and skip this secret-dependent step. Scanner failures
+fail the Linux job. The SonarCloud quality-gate check remains a separate check.
+
+Read scanner diagnostics in the **Analyze SonarCloud with the Linux compilation
+database** step log. The Linux evidence artifact also retains the compilation
+database and `.scannerwork/report-task.txt`, which identifies the background task.
+Investigate encoding warnings from the exact scanner filename and line; keep
+UTF-8 configured and avoid excluding source files to suppress an unexplained
+warning.
+
+Tests that expect Unicode replacement scalars use C++ Unicode escapes rather
+than literal U+FFFD characters. The runtime UTF-8 bytes are identical; Sonar's
+source reader otherwise reports these intentional characters as decoding errors.
+
+References: [SonarCloud GitHub Actions setup](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/ci-based-analysis/github-actions-for-sonarcloud),
+[CFamily compilation database](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/running-the-analysis).
 
 ## Evidence and build output
 

@@ -29,14 +29,21 @@ Raw MCP responses and local validation logs are retained outside the checkout in
 
 ## Analysis scope
 
-Automatic analysis reads `.sonarcloud.properties`: application sources, tests,
-developer tools and workflows all remain in `sonar.sources`. CFamily disregards
-`sonar.tests`, so C++ fixtures must stay in source scope to retain analysis. The three generated language
+CI-based analysis reads `sonar-project.properties` and the existing Linux build's
+compilation database. Application sources, C++ tests, developer tools and workflows
+remain in `sonar.sources`. Python fixtures are classified with `sonar.tests` and a
+Python-only inclusion pattern, which also excludes them from main source scope.
+CFamily disregards `sonar.tests`, so C++ fixtures stay in source scope to retain
+analysis. Python targets the CI interpreter version, 3.12. The three generated language
 scheme tables are excluded from copy/paste metrics because their contents and
 ordering come from the pinned upstream schemes. Other code analysis remains
 enabled for those tables. Quality-gate thresholds and rule profiles are unchanged.
 
-Reference: [SonarQube Cloud automatic analysis configuration](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/automatic-analysis).
+Test fixtures are excluded from coverage metrics through `sonar.coverage.exclusions`,
+while their code analysis remains enabled. Application coverage scope is retained.
+
+Configuration and cutover: [GitHub Actions](../ci.md#sonarcloud).
+Reference: [SonarQube Cloud compilation-database analysis](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/running-the-analysis).
 See also [CFamily test-file analysis](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/customizing-the-analysis).
 
 ## CLI finding review
@@ -77,3 +84,19 @@ drag scenarios. It reproduced the missing-offset failure in three runs before th
 fix and passed three runs afterward. This Wayland-specific check explicitly skips
 on X11; the existing full drag test continues to run on both backends. Raw red/green
 logs and the original failed CI artifact are retained with the other evidence.
+
+## wxWidgets test integration
+
+In `tests/search_backslashes.cpp`, S110 is accepted for the `BackslashApp`
+integration: the fixture adds one class directly above `wxApp`, while the
+remaining reported inheritance depth belongs to wxWidgets. The standard
+`wxIMPLEMENT_APP` entry point uses its native initialization and process-result
+hooks.
+
+The top-level `wxFrame` allocation is an S5025 false positive. Both test outcomes
+call `Destroy()`. In the pinned wxWidgets 3.3.3 source,
+`wxTopLevelWindowBase::Destroy` queues deferred deletion,
+`wxAppConsoleBase::DeletePendingObjects` deletes queued objects, and
+`wxAppBase::DeleteAllTLWs` deletes remaining top-level windows during cleanup.
+This frame follows the framework's ownership contract. Each disposition has an
+issue-specific source explanation and independent Standards and Spec review.
