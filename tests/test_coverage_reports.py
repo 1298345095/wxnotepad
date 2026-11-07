@@ -14,6 +14,13 @@ SPEC.loader.exec_module(COLLECTOR)
 
 
 class MissingCoverage(unittest.TestCase):
+    def test_cli_rejects_executable_override(self):
+        result = subprocess.run([sys.executable, str(ROOT / '.github/scripts/collect_coverage.py'),
+                                 '--gcov', str(Path(sys.executable))],
+                                capture_output=True, text=True, encoding='utf-8')
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('unrecognized arguments: --gcov', result.stderr)
+
     def test_missing_notes_fail_without_creating_a_successful_report(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
@@ -26,7 +33,7 @@ class MissingCoverage(unittest.TestCase):
                      'The coverage toolchain is Linux GCC 13')
 class GCCReports(unittest.TestCase):
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(prefix='wxnotepad coverage 测试 ')
+        self.temporary = tempfile.TemporaryDirectory(prefix='wxnotepad coverage 测试 ; $literal ')
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         self.build = self.root / 'build'

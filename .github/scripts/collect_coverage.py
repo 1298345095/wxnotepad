@@ -9,7 +9,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def collect(build, output, root=ROOT, gcov='gcov-13'):
+def collect(build, output, root=ROOT):
     build, output, root = build.resolve(), output.resolve(), root.resolve()
     notes = sorted(build.rglob('*.gcno'))
     if not notes:
@@ -18,11 +18,11 @@ def collect(build, output, root=ROOT, gcov='gcov-13'):
     reports.mkdir(parents=True, exist_ok=False)
     kept = 0
     with (output / 'gcov.log').open('w', encoding='utf-8') as log:
-        version = subprocess.check_output([gcov, '--version'], text=True, encoding='utf-8')
+        version = subprocess.check_output(['gcov-13', '--version'], text=True, encoding='utf-8')
         log.write(version)
         for index, note in enumerate(notes):
             with tempfile.TemporaryDirectory(prefix='wxnotepad-gcov-') as temporary:
-                command = [gcov, '-b', '-c', '-p', '-l', '--hash-filenames', str(note)]
+                command = ['gcov-13', '-b', '-c', '-p', '-l', '--hash-filenames', '--', str(note)]
                 result = subprocess.run(command, cwd=temporary, stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT, text=True, encoding='utf-8')
                 log.write('+ ' + ' '.join(command) + '\n' + result.stdout)
@@ -46,9 +46,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-dir', type=Path, default=ROOT / '.ci/build/coverage-cmake')
     parser.add_argument('--output', type=Path, default=ROOT / '.ci/reports/coverage')
-    parser.add_argument('--gcov', default='gcov-13')
     arguments = parser.parse_args()
-    collect(arguments.build_dir, arguments.output, gcov=arguments.gcov)
+    collect(arguments.build_dir, arguments.output)
 
 
 if __name__ == '__main__':
