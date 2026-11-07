@@ -1899,7 +1899,10 @@ void SwapExplicitGbk(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 void SwapDefaultReadOnly(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
 #ifdef __WXMSW__
-    Require(GetACP() == 936, "captured default-ANSI read-only Swap requires system ACP 936");
+    if (GetACP() != 936) {
+        std::puts("SKIP: captured default-ANSI read-only Swap requires system ACP 936");
+        return;
+    }
 #endif
     const std::string ascii = "0123456789012345678901234567890123456789";
     const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-default-readonly");
@@ -2109,6 +2112,7 @@ public:
                         SwapDefaultEncoding(frame, editor, peer);
                         SwapDefaultCaretEncoding(frame, editor, peer);
                         SwapExplicitGbk(frame, editor, peer);
+                        SwapDefaultReadOnly(frame, editor, peer);
                     } else if (shapes == "swap")
                         Swap(frame, editor, peer);
                     else if (shapes == "utilities")

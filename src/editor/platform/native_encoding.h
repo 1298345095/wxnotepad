@@ -7,7 +7,7 @@
 #include <windows.h>
 #endif
 
-inline wxString NativeDefaultEncodingText(const wxString& text) {
+inline wxString NativeDefaultEncodingText(const wxString& text, size_t* nativeLength = nullptr) {
 #ifdef __WXMSW__
     // Original WideCharToMultiByte(cpEdit, 0) insertion boundary. The migrated
     // core keeps UTF-8, including when the document uses system-default ANSI.
@@ -18,8 +18,10 @@ inline wxString NativeDefaultEncodingText(const wxString& text) {
         std::string legacy(size, '\0');
         WideCharToMultiByte(CP_ACP, 0, wide.data(), static_cast<int>(wide.size()), legacy.data(), size, nullptr,
                             nullptr);
+        if (nativeLength) *nativeLength = legacy.size();
         return wxString(legacy.data(), wxConvLocal, legacy.size());
     }
 #endif
+    if (nativeLength) *nativeLength = text.ToStdString(wxConvUTF8).size();
     return text;
 }

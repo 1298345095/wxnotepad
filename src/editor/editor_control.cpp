@@ -178,16 +178,23 @@ void EditorControl::SwapClipboard(bool defaultEncoding) {
     auto text = EditorClipboard::ReadPlainText(*GetParent());
     if (!text || text->empty()) return;
     *text = core::Document::TransformLineEnds(*text, static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode)));
-    if (defaultEncoding) *text = NativeDefaultEncodingText(wxString::FromUTF8(*text)).ToStdString(wxConvUTF8);
+    const bool protectedDefault = defaultEncoding && Send(Message::GetReadOnly);
+    size_t nativeLength = 0;
+    if (defaultEncoding)
+        *text = NativeDefaultEncodingText(wxString::FromUTF8(*text), protectedDefault ? &nativeLength : nullptr)
+                    .ToStdString(wxConvUTF8);
+    // Protected writes insert nothing: retain the original raw native-byte
+    // displacement and SetSel's clamp. Writable replacements use UTF-8 bytes.
+    const auto replacementLength = static_cast<intptr_t>(protectedDefault ? nativeLength : text->size());
     auto caret = Send(Message::GetCurrentPos);
     auto anchor = Send(Message::GetAnchor);
     Send(Message::BeginUndoAction);
     Send(Message::Cut);
     Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(text->c_str()));
     if (caret > anchor)
-        caret = anchor + static_cast<intptr_t>(text->size());
+        caret = anchor + replacementLength;
     else
-        anchor = caret + static_cast<intptr_t>(text->size());
+        anchor = caret + replacementLength;
     Send(Message::SetSel, anchor, caret);
     Send(Message::EndUndoAction);
 }
