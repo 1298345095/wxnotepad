@@ -170,7 +170,7 @@ void EditorControl::SwapClipboard(bool defaultEncoding) {
     // Notepad4.cpp::IDM_EDIT_SWAP at 89b8b36; see licenses/Notepad4.txt.
     if (Send(Message::GetSelectionEmpty)) {
         const auto position = Send(Message::GetCurrentPos);
-        Send(Message::Paste);
+        core_->PasteWithEncoding(defaultEncoding);
         Send(Message::SetSel, position, Send(Message::GetCurrentPos));
         EditorClipboard::Clear(*GetParent());
         return;

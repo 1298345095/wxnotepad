@@ -23,6 +23,7 @@ public:
     void Character(std::string_view text);
     bool EditingKey(const wxKeyEvent& event);
     bool Navigation(const wxKeyEvent& event);
+    void PasteWithEncoding(bool defaultEncoding);
     void TickCaret();
     void TickScroll();
     void TickWiden();

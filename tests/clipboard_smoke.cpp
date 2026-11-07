@@ -1814,7 +1814,10 @@ void SwapSavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 void SwapDefaultCaretEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
 #ifdef __WXMSW__
-    Require(GetACP() == 936, "captured default-ANSI caret Swap requires system ACP 936");
+    if (GetACP() != 936) {
+        std::puts("SKIP: captured default-ANSI caret Swap requires system ACP 936");
+        return;
+    }
     const std::string expected = "Aoé中文??\r\nXldZ";
     const std::string saved = "Ao\xa8\xa6\xd6\xd0\xce\xc4??\r\nXldZ";
     constexpr intptr_t end = 15;
@@ -1853,6 +1856,44 @@ void SwapDefaultCaretEncoding(EditorFrame* frame, EditorControl* editor, Peer& p
             "Redo restores converted caret bytes and preserves independent clipboard emptiness");
     std::filesystem::remove_all(directory);
     std::puts("PASS: captured system-default caret Swap conversion, span, disk and history");
+}
+
+void SwapExplicitGbk(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-explicit-gbk");
+    std::filesystem::create_directory(directory);
+    const auto path = directory / "gbk.txt";
+    const std::string original = "\xc7\xb0old\xe1\xe1";
+    for (const bool caret : {false, true}) {
+        TestFiles::WriteBytes(path, original);
+        editor->Send(Message::SetSavePoint);
+        Require(frame->Open(TestFiles::Filename(path), FileEncoding::Gbk).status == OpenStatus::Opened,
+                "explicit GBK document opens into the UTF-8 core");
+        editor->Send(Message::SetSel, 3, caret ? 3 : 6);
+        peer.OfferText("中文😀\nX");
+        Gesture(editor);
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Swap"));
+        // Independent original actual-GBK captures in 141/original-swap-corrected.json.
+        const std::string expected = caret ? "前中文😀\r\nXold後" : "前中文😀\r\nX後";
+        Require(Text(editor) == expected && frame->DocumentEncoding() == FileEncoding::Gbk,
+                "explicit GBK Swap retains original Unicode until the encoded-save boundary");
+        TestEditor::RequireSelection(editor, 3, 16, "explicit GBK Swap retains captured UTF-8 byte endpoints");
+        if (caret)
+            Require(peer.Request("utility-formats") == "empty", "explicit GBK caret Swap clears native formats");
+        else
+            Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+                    "explicit GBK selected Swap independently publishes the original selection");
+        Require(frame->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
+                    TestFiles::Bytes(path) == original && Text(editor) == expected && editor->Send(Message::GetModify),
+                "explicit GBK save cancellation preserves Unicode, modification and original disk bytes");
+        const std::string saved =
+            caret ? "\xc7\xb0\xd6\xd0\xce\xc4??\r\nXold\xe1\xe1" : "\xc7\xb0\xd6\xd0\xce\xc4??\r\nX\xe1\xe1";
+        Require(frame->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+                    TestFiles::Bytes(path) == saved && Text(editor) == expected,
+                "approved GBK save writes native placeholders while keeping Unicode in the editor");
+    }
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: explicit GBK selected/caret Swap preserves Unicode and existing loss-save decisions");
 }
 
 void SwapDefaultEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) {
@@ -2015,9 +2056,11 @@ public:
                 if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
                     if (shapes == "swap-ansi-caret")
                         SwapDefaultCaretEncoding(frame, editor, peer);
-                    else if (shapes == "swap-encoding")
+                    else if (shapes == "swap-encoding") {
                         SwapDefaultEncoding(frame, editor, peer);
-                    else if (shapes == "swap")
+                        SwapDefaultCaretEncoding(frame, editor, peer);
+                        SwapExplicitGbk(frame, editor, peer);
+                    } else if (shapes == "swap")
                         Swap(frame, editor, peer);
                     else if (shapes == "utilities")
                         Utilities(frame, editor, peer);
