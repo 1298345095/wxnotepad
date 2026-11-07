@@ -63,7 +63,7 @@ public:
                 Paint(editor);
                 Require(editor->Send(Message::GetLexer) == SCLEX_NULL &&
                             editor->Send(Message::GetStyleIndexAt, 0) == 0 &&
-                            editor->Send(Message::GetMarginWidthN, 1) == 0 &&
+                            editor->Send(Message::GetMarginWidthN, 2) > 0 &&
                             frame->GetStatusBar()->GetStatusText().Contains("Plain Text (override)"),
                         "manual Plain Text above 32 MiB must use the existing no-lexer and cleared-style path");
                 Require(frame->Save().status == SaveStatus::Saved && Bytes(source) == bytes &&
