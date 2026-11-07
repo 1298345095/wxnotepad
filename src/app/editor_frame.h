@@ -50,6 +50,9 @@ private:
     int wrapColumn_ = 0;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
+    bool showWordWrapSymbols_ = false;
+    int wordWrapSymbols_ = 2;
+    void ApplyWrapSymbols();
     void CreateMenus();
     wxMenu* CreateFileMenu();
     wxMenu* CreateEditMenu();
@@ -73,7 +76,7 @@ private:
     bool HandleSearchKey(const wxKeyEvent& event);
     bool HandleNavigationKey(const wxKeyEvent& event);
     bool HandleViewKey(const wxKeyEvent& event);
-    bool HandleWhitespaceKey(const wxKeyEvent& event, int commandId);
+    bool HandleDisplayKey(const wxKeyEvent& event, int whitespace, int eol, int symbols);
     bool HandleDocumentKey(const wxKeyEvent& event);
     void ShowLineEndingOptions();
     void ReportFind(const FindResult& result);
