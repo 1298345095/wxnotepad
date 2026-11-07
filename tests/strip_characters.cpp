@@ -1,8 +1,6 @@
-#include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
-#include <wx/ffile.h>
-#include <wx/stopwatch.h>
 
 namespace {
 using Scintilla::Message;
@@ -18,53 +16,18 @@ void Strip(EditorFrame* frame, bool first) {
     NativeSearch::Command(frame, id);
 }
 void NativeAlt(EditorFrame* frame, bool first, bool shift = false, bool control = false) {
+#ifdef __WXMSW__
     auto* editor = frame->Editor();
     editor->SetFocus();
     wxYield();
-#ifdef __WXMSW__
     const bool handled = NativeSearch::WindowsShortcut(editor, first ? 'Z' : 'L',
                                                        {{VK_MENU, 0x80},
                                                         {VK_CONTROL, static_cast<BYTE>(control ? 0x80 : 0)},
                                                         {VK_SHIFT, static_cast<BYTE>(shift ? 0x80 : 0)}});
     Require(handled || shift || control, "native Alt+Z/Alt+L accelerator is handled");
 #else
-    wxString focusFile;
-    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys require a private display");
-    {
-        wxFFile request(focusFile, "wb");
-        request.Write("focus:wxnotepad");
-    }
-    wxStopWatch focusWait;
-    while (focusWait.Time() < 3000) {
-        wxString pending;
-        {
-            wxFFile request(focusFile, "rb");
-            request.ReadAll(&pending);
-        }
-        if (pending.empty()) break;
-        wxYield();
-        wxMilliSleep(10);
-    }
     bool received = false;
-    wxEvtHandler observer;
-    observer.Bind(wxEVT_KEY_UP, [&received, first](wxKeyEvent& event) {
-        if (event.GetKeyCode() == (first ? 'Z' : 'L')) received = true;
-        event.Skip();
-    });
-    editor->PushEventHandler(&observer);
-    {
-        wxFFile request(focusFile, "wb");
-        request.Write(wxString("key:alt+") + (shift ? "shift+" : "") + (control ? "ctrl+" : "") + (first ? "z" : "l"));
-    }
-    wxStopWatch wait;
-    while (!received && wait.Time() < 3000) {
-        wxYield();
-        wxMilliSleep(10);
-    }
-    editor->PopEventHandler(false);
-    if (!received)
-        std::fprintf(stderr, "Alt+%c shift=%d ctrl=%d focus=%d text=<%s>\n", first ? 'Z' : 'L', shift, control,
-                     wxWindow::FindFocus() == editor, TestEditor::Text(editor).c_str());
+    NativeKeys::Shortcut(frame, first ? 'Z' : 'L', control, true, shift, &received);
     Require(received, "actual private-display Alt+Z/Alt+L release reaches editor");
 #endif
     wxYield();
