@@ -55,11 +55,11 @@ public:
                 Require(frame->GetMenuBar()->IsChecked(command) && editor->Send(Message::GetMarginWidthN, 0) > 0,
                         "a fresh window must show a checked line-number margin for logical line 1");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
-                const auto foldWidth = editor->Send(Message::GetMarginWidthN, 1);
+                const auto foldWidth = editor->Send(Message::GetMarginWidthN, 2);
                 NativeSearch::Command(frame, command);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(!frame->GetMenuBar()->IsChecked(command) && editor->Send(Message::GetMarginWidthN, 0) == 0 &&
-                            editor->Send(Message::GetMarginWidthN, 1) == foldWidth && foldWidth > 0,
+                            editor->Send(Message::GetMarginWidthN, 2) == foldWidth && foldWidth > 0,
                         "hiding line numbers must retain the independent fold margin");
                 NativeSearch::Command(frame, command);
                 Require(editor->Send(Message::GetMarginWidthN, 0) > 0, "showing line numbers must restore the margin");
@@ -128,7 +128,8 @@ public:
                     const auto caretX = editor->Send(Message::PointXFromPosition, 0, length);
                     const auto caretY = editor->Send(Message::PointYFromPosition, 0, length);
                     Require(caretX >= editor->Send(Message::GetMarginWidthN, 0) +
-                                          editor->Send(Message::GetMarginWidthN, 1) &&
+                                          editor->Send(Message::GetMarginWidthN, 1) +
+                                          editor->Send(Message::GetMarginWidthN, 2) &&
                                 caretX < editor->GetClientSize().x && caretY >= 0 && caretY < editor->GetClientSize().y,
                             "changing the number margin must keep the horizontally scrolled caret visible");
                     Require(NativeSearch::Text(editor) == savedBytes && editor->DocumentRevision() == revision &&

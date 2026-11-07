@@ -255,13 +255,13 @@ private:
         NativeSearch::Command(frame, whitespace);
         frame->SetSize(500, 400);
         Layout(frame);
-        const auto foldWidth = editor->Send(Message::GetMarginWidthN, 1);
+        const auto foldWidth = editor->Send(Message::GetMarginWidthN, 2);
         editor->Send(Message::SetSel, 2, commentEnd);
         editor->Send(Message::ScrollCaret);
         NativeSearch::Command(frame, numbers);
         Layout(frame);
         Require(editor->Send(Message::GetMarginWidthN, 0) == 0 &&
-                    editor->Send(Message::GetMarginWidthN, 1) == foldWidth,
+                    editor->Send(Message::GetMarginWidthN, 2) == foldWidth,
                 "hiding numbers while wrapped preserves the fold margin");
         NativeSearch::Command(frame, numbers);
         Layout(frame);
