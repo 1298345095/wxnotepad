@@ -66,6 +66,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
+    values.showBookmarkMargin = ReadBool("ShowBookmarkMargin", defaults.showBookmarkMargin);
+    values.changeHistoryMarker = ReadInt("ChangeHistoryMarker", defaults.changeHistoryMarker);
     values.matchBraces = ReadBool("MatchBraces", defaults.matchBraces);
     values.showCodeFolding = ReadBool("ShowCodeFolding", defaults.showCodeFolding);
     values.highlightCurrentBlock = ReadBool("HighlightCurrentBlock", defaults.highlightCurrentBlock);
@@ -96,6 +98,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.longLineMode = std::clamp(ReadInt("LongLineMode", defaults.longLineMode), 1, 2);
     values.selectOption = ReadInt("SelectOption", defaults.selectOption);
     values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
+    values.markOccurrences = ReadInt("MarkOccurrences", defaults.markOccurrences);
     values.saveFindReplace = ReadBool("SaveFindReplace", defaults.saveFindReplace);
     values.findReplaceOption = ReadInt("FindReplaceOption", defaults.findReplaceOption);
     if (values.saveFindReplace) {
@@ -305,6 +308,8 @@ bool SettingsStore::Save(bool explicitSave) {
     if (values.saveSettings || explicitSave) {
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
+        WriteBool("ShowBookmarkMargin", values.showBookmarkMargin, defaults.showBookmarkMargin);
+        WriteInt("ChangeHistoryMarker", values.changeHistoryMarker, defaults.changeHistoryMarker);
         WriteBool("MatchBraces", values.matchBraces, defaults.matchBraces);
         WriteBool("ShowCodeFolding", values.showCodeFolding, defaults.showCodeFolding);
         WriteBool("HighlightCurrentBlock", values.highlightCurrentBlock, defaults.highlightCurrentBlock);
@@ -329,6 +334,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
         WriteInt("SelectOption", values.selectOption, defaults.selectOption);
         WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
+        WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);
         WriteBool("SaveFindReplace", values.saveFindReplace, defaults.saveFindReplace);
         WriteInt("FindReplaceOption", values.findReplaceOption, defaults.findReplaceOption);
         WriteInt("FindReplaceFlag", values.saveFindReplace ? values.findReplaceFlag : defaults.findReplaceFlag,

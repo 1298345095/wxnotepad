@@ -17,6 +17,7 @@ void EditorControl::GoToBookmark(bool forwards) {
     auto target = Send(message, forwards ? line + 1 : line - 1, 1);
     if (target < 0) target = Send(message, forwards ? 0 : Send(Message::GetLineCount), 1);
     if (target < 0) return;
+    Occurrences().IgnoreNextSelectionUpdate();
     Send(Message::EnsureVisible, target);
     Send(Message::GotoLine, target);
     Send(Message::SetYCaretPolicy,
