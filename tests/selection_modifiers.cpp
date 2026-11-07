@@ -247,11 +247,23 @@ public:
                 editor->Send(Message::ShowLines, 0, 40);
                 wxScrollWinEvent vertical(wxEVT_SCROLLWIN_THUMBTRACK, 15, wxVERTICAL);
                 editor->GetEventHandler()->ProcessEvent(vertical);
-                wxScrollWinEvent horizontal(wxEVT_SCROLLWIN_THUMBTRACK, 200, wxHORIZONTAL);
+                // Preserve the document endpoints while keeping the complete
+                // gesture visible beside the current native margin widths.
+                const int horizontalPosition =
+                    std::max(200, Point(editor, 19 * 102 + 42).x - editor->GetClientSize().x / 2);
+                wxScrollWinEvent horizontal(wxEVT_SCROLLWIN_THUMBTRACK, horizontalPosition, wxHORIZONTAL);
                 editor->GetEventHandler()->ProcessEvent(horizontal);
-                Require(editor->Send(Message::GetFirstVisibleLine) == 15 && editor->Send(Message::GetXOffset) == 200,
+                Require(editor->Send(Message::GetFirstVisibleLine) == 15 &&
+                            editor->Send(Message::GetXOffset) == horizontalPosition,
                         "rectangle fixture scrolls both viewport axes");
-                Drag(editor, Point(editor, 17 * 102 + 40), Point(editor, 19 * 102 + 42), false, false, true);
+                const auto anchorPoint = Point(editor, 17 * 102 + 40);
+                const auto caretPoint = Point(editor, 19 * 102 + 42);
+                Require(editor->GetClientRect().Contains(anchorPoint) && editor->GetClientRect().Contains(caretPoint) &&
+                            editor->Send(Message::PositionFromPointClose, anchorPoint.x, anchorPoint.y) ==
+                                17 * 102 + 40 &&
+                            editor->Send(Message::PositionFromPointClose, caretPoint.x, caretPoint.y) == 19 * 102 + 42,
+                        "scrolled rectangle endpoints must remain inside the measured text viewport");
+                Drag(editor, anchorPoint, caretPoint, false, false, true);
                 Require(editor->Send(Message::GetSelections) == 3 &&
                             editor->Send(Message::GetRectangularSelectionAnchor) == 17 * 102 + 40 &&
                             editor->Send(Message::GetRectangularSelectionCaret) == 19 * 102 + 42,

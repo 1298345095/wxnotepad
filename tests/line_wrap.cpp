@@ -35,8 +35,11 @@ void SplitFixture(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "one two three" && !editor->Send(Message::CanUndo), "wide split is a no-op");
     TestEditor::RequireSelection(editor, 0, 13, "split retains selection");
     editor->SetLineNumbersVisible(false);
-    for (int margin = 0; margin < 5; ++margin)
-        editor->Send(Message::SetMarginWidthN, margin, 0);
+    // New/Open reapply retained preferences, so keep this measured text-only
+    // viewport through those transitions instead of clearing raw widths once.
+    editor->SetBookmarkMarginVisible(false);
+    editor->SetChangeHistoryOptions(0);
+    editor->SetCodeFoldingVisible(false);
     editor->Send(Message::SetMarginLeft, 0, 0);
     editor->Send(Message::SetMarginRight, 0, 0);
     const auto width = editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
