@@ -819,6 +819,8 @@ void EditorFrame::ApplyWrapSymbols() {
     case 2:
         flags |= static_cast<uintptr_t>(Scintilla::WrapVisualFlag::End);
         break;
+    default:
+        break;
     }
     switch (wordWrapSymbols_ / 10) {
     case 1:
@@ -830,6 +832,8 @@ void EditorFrame::ApplyWrapSymbols() {
     case 3:
         flags |= static_cast<uintptr_t>(Scintilla::WrapVisualFlag::Margin);
         if (!editor_->LineNumbersVisible()) editor_->SetLineNumbersVisible(true);
+        break;
+    default:
         break;
     }
     editor_->Send(Message::SetWrapVisualFlagsLocation, location);
