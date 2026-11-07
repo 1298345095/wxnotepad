@@ -66,6 +66,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
+    values.showCodeFolding = ReadBool("ShowCodeFolding", defaults.showCodeFolding);
+    values.highlightCurrentBlock = ReadBool("HighlightCurrentBlock", defaults.highlightCurrentBlock);
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", defaults.viewWhiteSpace);
     values.showIndentGuides = ReadBool("ShowIndentGuides", defaults.showIndentGuides);
     values.simpleIndentGuides = ReadBool("SimpleIndentGuides", defaults.simpleIndentGuides, "Settings2");
@@ -303,6 +305,8 @@ bool SettingsStore::Save(bool explicitSave) {
     if (values.saveSettings || explicitSave) {
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
+        WriteBool("ShowCodeFolding", values.showCodeFolding, defaults.showCodeFolding);
+        WriteBool("HighlightCurrentBlock", values.highlightCurrentBlock, defaults.highlightCurrentBlock);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, defaults.viewWhiteSpace);
         WriteBool("ShowIndentGuides", values.showIndentGuides, defaults.showIndentGuides);
         WriteBool("ViewEOLs", values.viewEOLs, defaults.viewEOLs);

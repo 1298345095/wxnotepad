@@ -127,7 +127,7 @@ public:
                     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language.name));
                     Paint(editor);
                     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-                    const bool capable = editor->Send(Message::GetMarginWidthN, 1) > 0;
+                    const bool capable = editor->Send(Message::GetMarginWidthN, 2) > 0;
                     Require(frame->GetMenuBar()->IsEnabled(collapse) == capable &&
                                 frame->GetMenuBar()->IsEnabled(expand) == capable,
                             "fold command enablement must follow the selected language's folding capability");
@@ -163,9 +163,9 @@ public:
                 }
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-                Require(!frame->GetMenuBar()->IsEnabled(collapse) && !frame->GetMenuBar()->IsEnabled(expand),
-                        "Plain Text must disable both native fold commands");
-                std::puts("PASS: native command enablement follows effective language and disables Plain Text");
+                Require(frame->GetMenuBar()->IsEnabled(collapse) && frame->GetMenuBar()->IsEnabled(expand),
+                        "Plain Text must retain the original preference-based native fold command gate");
+                std::puts("PASS: native command enablement follows the folding preference in Plain Text");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

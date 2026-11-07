@@ -86,6 +86,10 @@ public:
     void SetLineSelectionMode(LineSelectionMode mode);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
+    bool CodeFoldingVisible() const { return codeFoldingVisible_; }
+    void SetCodeFoldingVisible(bool visible);
+    bool CurrentBlockHighlighted() const { return highlightCurrentBlock_; }
+    void SetCurrentBlockHighlighted(bool enabled);
     LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
     void SetCurrentLineHighlightMode(LineHighlightMode mode);
     OccurrenceMarking& Occurrences() { return *occurrences_; }
@@ -102,11 +106,15 @@ private:
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;
     bool lineNumberWidthDirty_ = true;
+    bool codeFoldingVisible_ = true;
+    bool foldMarginWidthDirty_ = true;
+    bool highlightCurrentBlock_ = true;
     bool autoIndent_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;
     void UpdateLineNumberMargin();
+    void UpdateFoldMargin();
     void OnPaint(wxPaintEvent& event);
     void OnKeyDown(wxKeyEvent& event);
     void OnSize(wxSizeEvent& event);
