@@ -342,6 +342,11 @@ if(BUILD_TESTING)
     add_editor_test(fold_all fold_all_commands 60)
     add_editor_test(line_numbers line_number_view 60)
     add_editor_test(whitespace_view visible_whitespace 30)
+    add_editor_test(line_symbols original_line_symbols 60)
+    add_test(NAME original_line_symbol_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_symbols_process.py" "$<TARGET_FILE:line_symbols>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
+    set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
     add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(file_indentation original_file_indentation 60)
