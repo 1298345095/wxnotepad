@@ -43,4 +43,7 @@ struct OriginalSettings {
     int backspaceUnindents = 2;
     wxString dateTimeShort;
     wxString dateTimeLong;
+    bool viewEOLs = false;
+    bool showWordWrapSymbols = false;
+    int wordWrapSymbols = 2;
 };
