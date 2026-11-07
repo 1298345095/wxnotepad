@@ -394,8 +394,9 @@ public:
         if (probe) settings_ = std::make_unique<SettingsStore>();
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame, probe] {
+        NativeKeys::AfterPresentation(frame, [this, frame, probe](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 if (probe) {
                     if (argc == 7)
                         Require(frame->Open(argv[6]).status == OpenStatus::Opened,

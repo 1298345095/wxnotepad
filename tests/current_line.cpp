@@ -276,8 +276,9 @@ public:
 #endif
         auto* frame = new EditorFrame;
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 auto* editor = frame->Editor();
 #ifdef __WXGTK__
                 PaintObservation observation(editor);

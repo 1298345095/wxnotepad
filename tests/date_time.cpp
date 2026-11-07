@@ -182,8 +182,9 @@ public:
         settings_.values.dateTimeLong = "long:%Y-%m-%d %H:%M:%S";
         auto* frame = new EditorFrame(&settings_);
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 SelectionCases(frame);
                 LiveCommands(frame);
                 SavedBytes(frame);

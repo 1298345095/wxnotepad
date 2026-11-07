@@ -437,8 +437,9 @@ public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 auto* edit = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Edit"));
                 std::array<int, 2> tags{};
                 size_t index = 0;

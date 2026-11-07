@@ -248,8 +248,9 @@ public:
     bool OnInit() override {
         auto* frame = new EditorFrame(&settings_);
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 Encoding(frame);
                 Fixtures(frame);
                 State(frame);
