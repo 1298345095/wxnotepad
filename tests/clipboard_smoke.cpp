@@ -1911,7 +1911,7 @@ void SwapDefaultReadOnly(EditorFrame* frame, EditorControl* editor, Peer& peer) 
         const std::string original = dbcs ? "Aold中文XYZ" : ascii;
 #ifdef __WXMSW__
         const std::string disk = dbcs ? "Aold\xd6\xd0\xce\xc4XYZ" : ascii;
-        const intptr_t end = dbcs ? 8 : 7;
+        constexpr intptr_t end = 7;
 #else
         const std::string disk = original;
         constexpr intptr_t end = 11;
