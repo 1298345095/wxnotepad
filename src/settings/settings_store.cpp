@@ -86,6 +86,12 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.noEncodingTags = ReadBool("NoEncodingTags", defaults.encoding.noEncodingTags);
     values.encoding.noFileVariables = ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), 10, 500);
+    int caretStyle = ReadInt("CaretStyle", defaults.caret.lineWidth);
+    values.caret.blockAfterSelection = caretStyle >= 100;
+    caretStyle %= 100;
+    values.caret.overstrikeBlock = caretStyle >= 10;
+    values.caret.lineWidth = std::clamp(caretStyle % 10, 0, 3);
+    values.caret.blinkPeriod = ReadInt("CaretBlinkPeriod", defaults.caret.blinkPeriod);
     const int currentLine = ReadInt("HighlightCurrentLine", defaults.highlightCurrentLine);
     values.highlightCurrentLine = std::clamp(currentLine % 10, 0, 2) + (currentLine >= 10 ? 10 : 0);
     values.longLinesLimit = std::clamp(ReadInt("LongLinesLimit", defaults.longLinesLimit), 0, 4096);
@@ -315,6 +321,10 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, defaults.encoding.loadNFOasOEM);
         WriteBool("NoEncodingTags", values.encoding.noEncodingTags, defaults.encoding.noEncodingTags);
         WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
+        WriteInt("CaretStyle",
+                 values.caret.lineWidth + 10 * values.caret.overstrikeBlock + 100 * values.caret.blockAfterSelection,
+                 defaults.caret.lineWidth);
+        WriteInt("CaretBlinkPeriod", values.caret.blinkPeriod, defaults.caret.blinkPeriod);
         WriteInt("HighlightCurrentLine", values.highlightCurrentLine, defaults.highlightCurrentLine);
         WriteInt("LongLinesLimit", values.longLinesLimit, defaults.longLinesLimit);
         WriteBool("MarkLongLines", values.markLongLines, defaults.markLongLines);

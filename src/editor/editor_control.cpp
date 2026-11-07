@@ -5,9 +5,6 @@
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
 #include <cmath>
-#ifdef __WXMSW__
-#include <wx/caret.h>
-#endif
 
 using Scintilla::Message;
 namespace core = Scintilla::Internal;
@@ -24,10 +21,6 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         return true;
     }();
     SetBackgroundStyle(wxBG_STYLE_PAINT);
-#ifdef __WXMSW__
-    SetCaret(new wxCaret(this, 1, 1));
-    GetCaret()->Show();
-#endif
     core_ = std::make_unique<Core>(*this, selectionOptions);
     // Original Notepad4.cpp::CreateEditControl current-line preferences.
     Send(Message::SetCaretLineVisibleAlways, 1);
@@ -37,13 +30,11 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
     Send(Message::SetMarginMaskN, 0, 0);
     SetLineNumbersVisible(true);
-#ifdef __WXMSW__
-    // Use one native caret for display and for input methods on Windows.
-    Send(Message::SetCaretStyle, 0);
-#endif
+    ApplyCaretAppearance();
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         core_->DpiChanged();
         SetCurrentLineHighlightMode(lineHighlightMode_);
+        ApplyCaretAppearance();
         Refresh(false);
         event.Skip();
     });
@@ -59,6 +50,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         WXNOTE_TRACE("editor.focus-out", "\ttarget=%p\tfocus=%p", static_cast<void*>(this),
                      static_cast<void*>(wxWindow::FindFocus()));
         Send(Message::SetFocus, 0);
+        core_->SyncSystemCaret();
         Refresh(false);
         event.Skip();
     });
@@ -276,6 +268,8 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
         lineNumberWidthDirty_ = true;
     UpdateLineNumberMargin();
     if (message == Message::FoldAll) core_->RepairFoldSelection();
+    if (message == Message::SetZoom || message == Message::ZoomIn || message == Message::ZoomOut)
+        ApplyCaretAppearance();
     core_->SelectionRevision();
     return result;
 }
@@ -377,6 +371,8 @@ WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM
                   message == WM_INPUTLANGCHANGE)) {
         core_->SyncSystemCaret();
     }
+    if (core_ && message == WM_IME_STARTCOMPOSITION) core_->CompositionStarted();
+    if (core_ && message == WM_IME_ENDCOMPOSITION) core_->CompositionEnded();
     return wxControl::MSWWindowProc(message, wParam, lParam);
 }
 #endif

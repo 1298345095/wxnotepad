@@ -78,6 +78,7 @@ private:
     void ToggleIndentationGuides();
     void ToggleLongLineMarker();
     void AppendCurrentLineCommands(wxMenu* view);
+    void AppendCaretCommands(wxMenu* view);
     void AppendFoldCommands(wxMenu* view);
     void AppendSettingsCommands(wxMenu* view);
     bool HandleCommandKey(const wxKeyEvent& event);

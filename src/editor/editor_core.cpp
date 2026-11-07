@@ -10,7 +10,6 @@
 #include <chrono>
 #include <cmath>
 #ifdef __WXMSW__
-#include <wx/caret.h>
 #include <imm.h>
 #include <cwchar>
 #endif
@@ -187,6 +186,9 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
 }
 
 EditorControl::Core::~Core() {
+#ifdef __WXMSW__
+    DestroySystemCaret();
+#endif
 #ifdef __WXGTK__
     gtkDragDrop_.reset();
 #endif
@@ -402,6 +404,16 @@ void EditorControl::Core::SyncSystemCaret() {
     UpdateSystemCaret();
 }
 
+void EditorControl::Core::CompositionStarted() {
+    // Match original ScintillaWin's windowed IME: the IME draws its own caret.
+    DropCaret();
+}
+
+void EditorControl::Core::CompositionEnded() {
+    ShowCaretAtCurrentPosition();
+    UpdateSystemCaret();
+}
+
 void EditorControl::Core::RepairFoldSelection() {
     // The core keeps contraction state but can leave the selection in
     // hidden text. Move only hidden endpoints to their visible header.
@@ -423,28 +435,11 @@ void EditorControl::Core::RepairFoldSelection() {
 }
 
 void EditorControl::Core::ShowDropFeedback(int x, int y) {
-#ifdef __WXMSW__
-    if (!dropFeedback_) {
-        // The ordinary Windows caret is native; an unfocused drop target
-        // still needs the original core's insertion marker.
-        window_.GetCaret()->Hide();
-        WndProc(Message::SetCaretStyle, 1, 0);
-    }
-#endif
-    dropFeedback_ = true;
     SetDragPosition(SPositionFromLocation(core::Point(x, y), false, false, UserVirtualSpace()));
 }
 
 void EditorControl::Core::ClearDropFeedback() {
     SetDragPosition(core::SelectionPosition(Sci::invalidPosition));
-#ifdef __WXMSW__
-    if (dropFeedback_) {
-        WndProc(Message::SetCaretStyle, 0, 0);
-        window_.GetCaret()->Show();
-        UpdateSystemCaret();
-    }
-#endif
-    dropFeedback_ = false;
 }
 
 bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
@@ -551,12 +546,27 @@ void EditorControl::Core::NotifyCaretMove() const noexcept {
 
 void EditorControl::Core::UpdateSystemCaret() {
 #ifdef __WXMSW__
-    if (!window_.HasFocus() || !window_.GetCaret()) return;
+    if (!hasFocus) {
+        DestroySystemCaret();
+        return;
+    }
     const auto point = PointMainCaret();
     const int height = std::max(1, vs.lineHeight);
-    window_.GetCaret()->SetSize(1, height);
-    window_.GetCaret()->Move(static_cast<int>(point.x), static_cast<int>(point.y));
     const auto window = static_cast<HWND>(window_.GetHandle());
+    const int width = std::max(1, vs.caret.width);
+    if (!systemCaretBitmap_ || width != systemCaretWidth_ || height != systemCaretHeight_) {
+        DestroySystemCaret();
+        // Original ScintillaWin::CreateSystemCaret uses a zero bitmap: native
+        // IME/accessibility geometry stays available while the core draws it.
+        const std::vector<BYTE> bits(((width + 15) / 16) * 2 * height);
+        systemCaretBitmap_ = CreateBitmap(width, height, 1, 1, bits.data());
+        if (systemCaretBitmap_ && ::CreateCaret(window, static_cast<HBITMAP>(systemCaretBitmap_), width, height)) {
+            systemCaretWidth_ = width;
+            systemCaretHeight_ = height;
+            ::ShowCaret(window);
+        }
+    }
+    ::SetCaretPos(static_cast<int>(point.x), static_cast<int>(point.y));
     if (const auto context = ImmGetContext(window)) {
         // Microsoft Pinyin needs explicit IMM forms in addition to the
         // system caret. All positions are in the editor's client coordinates.
@@ -582,6 +592,15 @@ void EditorControl::Core::UpdateSystemCaret() {
     }
 #endif
 }
+
+#ifdef __WXMSW__
+void EditorControl::Core::DestroySystemCaret() {
+    if (!systemCaretBitmap_) return;
+    ::DestroyCaret();
+    DeleteObject(static_cast<HBITMAP>(systemCaretBitmap_));
+    systemCaretBitmap_ = nullptr;
+}
+#endif
 
 void EditorControl::Core::SetHorizontalScrollPos() {
     window_.SetScrollPos(wxHORIZONTAL, xOffset);
