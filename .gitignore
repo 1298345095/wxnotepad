@@ -1,5 +1,6 @@
 .codegraph/
 /.ci/
+/.scannerwork/
 
 # Out-of-source CMake builds and generated packages
 /build/
