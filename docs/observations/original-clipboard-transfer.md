@@ -20,7 +20,16 @@ logical line start only when the selection is empty; a selected range consumes
 that offer as stream text. A line lacking its final EOL gains the document's EOL.
 The core's conversion and multi-paste settings continue to control insertion.
 Failed publication does not delete a Cut or LineCut range. Read-only documents
-permit Copy and reject Cut/Paste. Successful edits retain the original undo group.
+permit Copy and reject byte changes from Cut/Paste. Successful edits retain the original undo group.
+
+The original `IDR_MAINWND` Ctrl+V accelerator uses the native Paste menu's
+availability. When editor protection disables Paste, Windows consumes Ctrl+V
+without invoking the command or changing the selection. The wx host applies the
+same application-key eligibility before the core key map on every backend.
+Direct `SCI_PASTE` keeps the original command-level selection repair: a protected
+reversed selection `(anchor=4, caret=1)` becomes `(1,1)`, while native Ctrl+V
+retains `(4,1)`. Independent original resource-accelerator capture includes a
+writable positive control that invokes the real original Paste command.
 
 GTK publishes ordinary native text targets. Rectangles use ScintillaGTK's existing
 UTF-8 convention: a final LF and a terminating NUL included in
@@ -47,3 +56,49 @@ line tag or the rectangle marker. It therefore transfers stream text. This
 observation does not establish line metadata support in other native editors.
 The empty-selection current-line Copy/Cut preference belongs to issue #72;
 this slice preserves the existing explicit LineCopy/LineCut command parameters.
+
+Issue #140 retains the original bulk clipboard commands. Copy All publishes the
+whole buffer as stream text while retaining selection and document state. Copy
+Add appends two CRLF sequences and selected text to existing Unicode text; its
+direct caret-only handler uses the whole buffer. Its native menu and Ctrl+E
+remain selection-gated. Without Unicode text, it calls the underlying core Copy,
+which leaves a caret-only clipboard unchanged for every current-line preference.
+Only the Unicode-append branch rejects a nonempty rectangular selection.
+
+The original SelectionText extraction replaces NUL with spaces for Copy All and
+selected Copy Add. Whole-buffer Copy Add and existing clipboard text stop at the
+first NUL. Successful append discards previous transfer-kind tags. Clear Clipboard
+accepts non-text formats and leaves no native formats. GTK takes a zero-target
+offer before releasing ownership, clearing both foreign ownership and clipboard
+manager caches on the supported X11/Wayland backends.
+
+GTK rectangle offers additionally expose `application/x-wxnotepad-plain-text`
+containing original UTF-8 bytes before the LF/NUL shape carrier. Copy Add reads
+that target when available, retaining both ordinary rectangles and genuine empty
+final rows. Existing native text targets and Paste's shape interpretation remain
+unchanged. The independent peer tests in `original_clipboard_utilities` cover
+these commands, native menu/shortcut availability, original NUL boundaries,
+rectangular feedback and unchanged encoded Save/Undo/Redo bytes.
+
+Issue #141 restores Swap and Ctrl+K from `src/Notepad4.cpp::IDM_EDIT_SWAP`.
+Its menu is enabled by a nonempty selection or native CanPaste. With a selection,
+it reads plain native Unicode first, stops at NUL, normalizes every CR/LF/CRLF to
+the document EOL mode, and uses the original Cut and ReplaceSel messages inside
+one undo action. The replacement length counts UTF-8 document bytes. The original
+anchor/caret direction determines the resulting selected endpoints, including
+rectangles and read-only endpoint clamping. Outgoing selection extraction and
+transfer-kind tags remain the delivered Cut rules.
+
+With an empty selection, Swap uses ordinary Paste, selects the old-to-resulting
+caret span, then clears every native clipboard format. This retains ordinary
+line/rectangle, multiple-caret, virtual-space and paste-convert behavior. A shaped
+paste can edit the document while leaving that selected span empty. Direct empty
+commands clear non-text or read-only offers even when native availability disables
+the menu. Document Undo/Redo does not restore the earlier clipboard offer.
+
+The focused `original_clipboard_swap` native test uses independent clipboard
+processes, actual menu/Ctrl+K, literal original Windows outcomes, and independent
+UTF-8/BOM/UTF-16LE/GBK disk reads through Save/Undo/Redo. Reference source is
+`89b8b36e0ee2c23f73be922315f17261ccfbbe1a`; root-coordinated Windows observations
+and the corrected shape/GBK capture are retained in the external #141 evidence
+directory. The existing baseline executable build log omitted its source revision.

@@ -4,6 +4,7 @@
 #include "editor_test_helpers.h"
 #include "app/editor_frame.h"
 #include "native_dialog_helpers.h"
+#include "diagnostics/trace.h"
 #include <wx/wx.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
@@ -38,11 +39,16 @@ inline bool WindowsShortcut(wxWindow* window, int key, std::initializer_list<std
     for (const auto& [modifier, state] : modifiers)
         modified[modifier] = state;
     if (!SetKeyboardState(modified)) throw std::runtime_error("must set this test thread's shortcut modifiers");
+    WXNOTE_TRACE("driver.ack", "\ttarget=%p\tkey=%d", static_cast<void*>(window), key);
     MSG message{};
     message.hwnd = static_cast<HWND>(window->GetHandle());
-    message.message = WM_KEYDOWN;
+    const bool alt = (modified[VK_MENU] & 0x80) != 0;
+    message.message = alt ? WM_SYSKEYDOWN : WM_KEYDOWN;
     message.wParam = key;
+    message.lParam = alt ? (LPARAM{KF_ALTDOWN} << 16) : 0;
     const bool handled = wxGetTopLevelParent(window)->MSWTranslateMessage(&message);
+    WXNOTE_TRACE("driver.accelerator-result", "\ttarget=%p\tkey=%d\thandled=%d", static_cast<void*>(window), key,
+                 handled);
     SetKeyboardState(previous);
     return handled;
 }

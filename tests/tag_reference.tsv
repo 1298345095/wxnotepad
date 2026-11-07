@@ -1,0 +1,227 @@
+# Original Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a native tag dialog.
+# Capture: native-utilities-2026-11-06/143/original.json; executable provenance in research.md.
+# Language, opening field, generated closing field; backslash escapes preserve field text; "" denotes empty.
+Plain Text	<tag>	</tag>
+Plain Text	<DiV a="x">	</DiV>
+Plain Text	before<x-y:z_1.2>after	</x-y:z_1.2>
+Plain Text	<1>	</1>
+Plain Text	<:>	</:>
+Plain Text	<_>	</_>
+Plain Text	<->	</->
+Plain Text	<.>	</.>
+Plain Text	<p>	</p>
+Plain Text	<P>	</P>
+Plain Text	<BR>	""
+Plain Text	<br>	""
+Plain Text	<area>	""
+Plain Text	<BASEFONT>	""
+Plain Text	<command>	""
+Plain Text	<isindex>	""
+Plain Text	<keygen>	""
+Plain Text	<frame>	""
+Plain Text	<img>	""
+Plain Text	<wbr>	""
+Plain Text	<source>	""
+Plain Text	<input>	""
+Plain Text	<param>	""
+Plain Text	<track>	""
+Plain Text	<embed>	""
+Plain Text	<col>	""
+Plain Text	<hr>	""
+Plain Text	<link>	""
+Plain Text	<meta>	""
+Plain Text	<base>	""
+Plain Text	<x/>	""
+Plain Text	<x />	""
+Plain Text	<x/ >	</x>
+Plain Text	<x a='>'/>	</x>
+Plain Text	<x? >	</x>
+Plain Text	</x>	""
+Plain Text	<>	""
+Plain Text	< x>	""
+Plain Text	<x	""
+Plain Text	<中文>	""
+Plain Text	<a中文>	</a>
+Plain Text	<😀>	""
+Plain Text	<a😀>	</a>
+Plain Text	<!bad><good>	""
+Plain Text	x	""
+Plain Text	<	""
+Plain Text	plain	""
+Plain Text	<tag><other>	</tag>
+Plain Text	<tag attr="a/b">	</tag>
+Plain Text	<bravo>	</bravo>
+Plain Text	<BR-x>	</BR-x>
+Plain Text	<a\tb>	</a>
+Plain Text	<a\nb>	</a>
+Plain Text	<a\rb>	</a>
+Plain Text	<a\r\nb>	</a>
+Plain Text	prefix\n<item>\nend	</item>
+C/C++	<tag>	</tag>
+C/C++	<DiV a="x">	</DiV>
+C/C++	before<x-y:z_1.2>after	</x-y:z_1.2>
+C/C++	<1>	</1>
+C/C++	<:>	</:>
+C/C++	<_>	</_>
+C/C++	<->	</->
+C/C++	<.>	</.>
+C/C++	<p>	</p>
+C/C++	<P>	</P>
+C/C++	<BR>	""
+C/C++	<br>	""
+C/C++	<area>	""
+C/C++	<BASEFONT>	""
+C/C++	<command>	""
+C/C++	<isindex>	""
+C/C++	<keygen>	""
+C/C++	<frame>	""
+C/C++	<img>	""
+C/C++	<wbr>	""
+C/C++	<source>	""
+C/C++	<input>	""
+C/C++	<param>	""
+C/C++	<track>	""
+C/C++	<embed>	""
+C/C++	<col>	""
+C/C++	<hr>	""
+C/C++	<link>	""
+C/C++	<meta>	""
+C/C++	<base>	""
+C/C++	<x/>	""
+C/C++	<x />	""
+C/C++	<x/ >	</x>
+C/C++	<x a='>'/>	</x>
+C/C++	<x? >	</x>
+C/C++	</x>	""
+C/C++	<>	""
+C/C++	< x>	""
+C/C++	<x	""
+C/C++	<中文>	""
+C/C++	<a中文>	</a>
+C/C++	<😀>	""
+C/C++	<a😀>	</a>
+C/C++	<!bad><good>	""
+C/C++	x	""
+C/C++	<	""
+C/C++	plain	""
+C/C++	<tag><other>	</tag>
+C/C++	<tag attr="a/b">	</tag>
+C/C++	<bravo>	</bravo>
+C/C++	<BR-x>	</BR-x>
+C/C++	<a\tb>	</a>
+C/C++	<a\nb>	</a>
+C/C++	<a\rb>	</a>
+C/C++	<a\r\nb>	</a>
+C/C++	prefix\n<item>\nend	</item>
+Python	<tag>	</tag>
+Python	<DiV a="x">	</DiV>
+Python	before<x-y:z_1.2>after	</x-y:z_1.2>
+Python	<1>	</1>
+Python	<:>	</:>
+Python	<_>	</_>
+Python	<->	</->
+Python	<.>	</.>
+Python	<p>	</p>
+Python	<P>	</P>
+Python	<BR>	""
+Python	<br>	""
+Python	<area>	""
+Python	<BASEFONT>	""
+Python	<command>	""
+Python	<isindex>	""
+Python	<keygen>	""
+Python	<frame>	""
+Python	<img>	""
+Python	<wbr>	""
+Python	<source>	""
+Python	<input>	""
+Python	<param>	""
+Python	<track>	""
+Python	<embed>	""
+Python	<col>	""
+Python	<hr>	""
+Python	<link>	""
+Python	<meta>	""
+Python	<base>	""
+Python	<x/>	""
+Python	<x />	""
+Python	<x/ >	</x>
+Python	<x a='>'/>	</x>
+Python	<x? >	</x>
+Python	</x>	""
+Python	<>	""
+Python	< x>	""
+Python	<x	""
+Python	<中文>	""
+Python	<a中文>	</a>
+Python	<😀>	""
+Python	<a😀>	</a>
+Python	<!bad><good>	""
+Python	x	""
+Python	<	""
+Python	plain	""
+Python	<tag><other>	</tag>
+Python	<tag attr="a/b">	</tag>
+Python	<bravo>	</bravo>
+Python	<BR-x>	</BR-x>
+Python	<a\tb>	</a>
+Python	<a\nb>	</a>
+Python	<a\rb>	</a>
+Python	<a\r\nb>	</a>
+Python	prefix\n<item>\nend	</item>
+JSON	<tag>	</tag>
+JSON	<DiV a="x">	</DiV>
+JSON	before<x-y:z_1.2>after	</x-y:z_1.2>
+JSON	<1>	</1>
+JSON	<:>	</:>
+JSON	<_>	</_>
+JSON	<->	</->
+JSON	<.>	</.>
+JSON	<p>	</p>
+JSON	<P>	</P>
+JSON	<BR>	""
+JSON	<br>	""
+JSON	<area>	""
+JSON	<BASEFONT>	""
+JSON	<command>	""
+JSON	<isindex>	""
+JSON	<keygen>	""
+JSON	<frame>	""
+JSON	<img>	""
+JSON	<wbr>	""
+JSON	<source>	""
+JSON	<input>	""
+JSON	<param>	""
+JSON	<track>	""
+JSON	<embed>	""
+JSON	<col>	""
+JSON	<hr>	""
+JSON	<link>	""
+JSON	<meta>	""
+JSON	<base>	""
+JSON	<x/>	""
+JSON	<x />	""
+JSON	<x/ >	</x>
+JSON	<x a='>'/>	</x>
+JSON	<x? >	</x>
+JSON	</x>	""
+JSON	<>	""
+JSON	< x>	""
+JSON	<x	""
+JSON	<中文>	""
+JSON	<a中文>	</a>
+JSON	<😀>	""
+JSON	<a😀>	</a>
+JSON	<!bad><good>	""
+JSON	x	""
+JSON	<	""
+JSON	plain	""
+JSON	<tag><other>	</tag>
+JSON	<tag attr="a/b">	</tag>
+JSON	<bravo>	</bravo>
+JSON	<BR-x>	</BR-x>
+JSON	<a\tb>	</a>
+JSON	<a\nb>	</a>
+JSON	<a\rb>	</a>
+JSON	<a\r\nb>	</a>
+JSON	prefix\n<item>\nend	</item>

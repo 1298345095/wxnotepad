@@ -43,7 +43,16 @@ void SplitFixture(EditorFrame* frame) {
     editor->SetClientSize(static_cast<int>(width), 200);
     wxYield();
     Split(frame);
-    Require(TestEditor::Text(editor) == "one two \nthree", "split inserts current EOL at rendered word boundary");
+    const auto splitText = TestEditor::Text(editor);
+    if (splitText != "one two \nthree")
+        std::fprintf(stderr,
+                     "Split fixture: requested_width=%lld actual_width=%d frame_width=%d wrap_flags=%lld "
+                     "wrap_location=%lld zoom=%lld text='%s'\n",
+                     static_cast<long long>(width), editor->GetClientSize().x, frame->GetClientSize().x,
+                     static_cast<long long>(editor->Send(Message::GetWrapVisualFlags)),
+                     static_cast<long long>(editor->Send(Message::GetWrapVisualFlagsLocation)),
+                     static_cast<long long>(editor->Send(Message::GetZoom)), splitText.c_str());
+    Require(splitText == "one two \nthree", "split inserts current EOL at rendered word boundary");
     TestEditor::RequireSelection(editor, 0, 14, "split adjusts original caret for inserted EOL");
     editor->Send(Message::Undo);
     Require(TestEditor::Text(editor) == "one two three" && !editor->Send(Message::CanUndo), "split is one Undo action");
@@ -528,8 +537,9 @@ public:
         if (probe) settings_ = std::make_unique<SettingsStore>();
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame, probe, expected] {
+        NativeKeys::AfterPresentation(frame, [this, frame, probe, expected](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 if (probe) {
                     TestEditor::ResetStream(frame->Editor(), "a b", 0, 3);
                     Dialog(frame, wxString::Format("%d", expected), "2", DialogAction::Cancel);

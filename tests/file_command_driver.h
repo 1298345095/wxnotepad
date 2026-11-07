@@ -32,7 +32,7 @@ public:
                 if (!IsWindowVisible(window)) return TRUE;
                 wchar_t title[256]{};
                 GetWindowTextW(window, title, 256);
-                if (wxString(title) == "Save changes?") {
+                if (wxString(title) == "Save changes?" || wxString(title) == "Read only file") {
                     driver.Observe("confirmation response begin");
                     ++driver.prompts;
                     const int button = driver.choice_ == wxID_YES ? IDYES : driver.choice_ == wxID_NO ? IDNO : IDCANCEL;
@@ -58,12 +58,14 @@ public:
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget)) continue;
             if (GTK_IS_FILE_CHOOSER(widget)) {
-                if (!chooserStage_++) {
+                if (chooserStage_ == 0) {
+                    chooserStage_ = 1;
                     ++choosers;
                     Observe("chooser selection begin");
                     ChooseFile(widget, destination_);
                     Observe("chooser selection end");
-                } else if (chooserStage_ == 2 && !destination_.empty()) {
+                } else if (chooserStage_ == 1 && !destination_.empty() && CanAcceptFile(widget, destination_)) {
+                    chooserStage_ = 2;
                     Observe("chooser accept begin");
                     Respond(widget, GTK_RESPONSE_ACCEPT);
                     Observe("chooser accept end");
@@ -72,7 +74,7 @@ public:
             }
             if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
             const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
-            if (title == "Save changes?") {
+            if (title == "Save changes?" || title == "Read only file") {
                 Observe("confirmation response begin");
                 ++prompts;
                 Respond(widget, choice_ == wxID_YES  ? GTK_RESPONSE_YES

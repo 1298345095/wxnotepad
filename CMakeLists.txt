@@ -7,6 +7,7 @@ endif()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+option(WXNOTEPAD_ENABLE_DIAGNOSTICS "Include opt-in native diagnostic tracing" OFF)
 find_package(wxWidgets 3.3.3 EXACT CONFIG REQUIRED)
 
 set(NOTEPAD4_SOURCE "" CACHE PATH "Pinned, patched source produced by tools/build.py")
@@ -56,6 +57,7 @@ add_library(editor_runtime STATIC
     src/editor/tab_conversion.cpp
     src/editor/number_radix.cpp
     src/editor/editor_control.cpp
+    src/editor/special_insert.cpp
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
@@ -67,6 +69,14 @@ add_library(editor_runtime STATIC
 target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
     "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
 target_link_libraries(editor_runtime PUBLIC notepad4_core)
+if(WXNOTEPAD_ENABLE_DIAGNOSTICS)
+    target_sources(editor_runtime PRIVATE src/diagnostics/trace.cpp)
+    target_compile_definitions(editor_runtime PUBLIC WXNOTEPAD_DIAGNOSTICS)
+    target_compile_definitions(editor_runtime PRIVATE
+        "WXNOTEPAD_DIAGNOSTIC_BUILD=\"${PROJECT_VERSION}/$<CONFIG>\""
+        "WXNOTEPAD_DIAGNOSTIC_CORE=\"${core_revision}\""
+        "WXNOTEPAD_DIAGNOSTIC_COMPILER=\"${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}\"")
+endif()
 
 add_library(editor_features STATIC
     src/editor/go_to_location.cpp
@@ -85,12 +95,14 @@ target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
     src/app/dialogs/column_wrap_dialog.cpp
+    src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
     src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
+    src/app/dialogs/insert_tag_dialog.cpp
     src/app/dialogs/modify_lines_dialog.cpp
     src/app/dialogs/go_to_line_dialog.cpp
     src/app/dialogs/search_feedback_dialog.cpp
@@ -102,7 +114,7 @@ add_library(app_shell STATIC
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
     target_link_libraries(editor_features PRIVATE advapi32)
-    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi)
+    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32)
     target_link_libraries(app_shell PRIVATE shell32 ole32)
 endif()
 
@@ -148,6 +160,14 @@ if(BUILD_TESTING)
         set_tests_properties(original_date_time_literals PROPERTIES ENVIRONMENT "LC_ALL=C.UTF-8")
     endif()
     find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+    set(diagnostic_mode)
+    if(NOT WXNOTEPAD_ENABLE_DIAGNOSTICS)
+        set(diagnostic_mode --compiled-out)
+    endif()
+    add_test(NAME native_diagnostic_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/diagnostics_process.py" "$<TARGET_FILE:wxnotepad>" ${diagnostic_mode}
+        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/diagnostics/process")
+    set_tests_properties(native_diagnostic_process PROPERTIES TIMEOUT 60)
     add_test(NAME original_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_settings_lifecycle PROPERTIES TIMEOUT 60)
@@ -171,6 +191,9 @@ if(BUILD_TESTING)
     add_test(NAME original_zoom_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/zoom_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_zoom_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME original_current_line_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_line_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_current_line_preference PROPERTIES TIMEOUT 60)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
@@ -183,6 +206,19 @@ if(BUILD_TESTING)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
     add_editor_test(date_time original_date_time_insertion 60)
+    add_editor_test(special_insert original_special_insertion 60)
+    target_compile_definitions(special_insert PRIVATE
+        "SPECIAL_INSERT_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv\""
+        "SPECIAL_INSERT_STATES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_states.tsv\""
+        "SPECIAL_INSERT_SAVED=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_saved.tsv\"")
+    add_test(NAME original_special_insertion_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_process.py" "$<TARGET_FILE:wxnotepad>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv")
+    set_tests_properties(original_special_insertion_process PROPERTIES TIMEOUT 90)
+    add_editor_test(path_text original_path_text_insertion 90)
+    add_editor_test(read_only original_read_only_mode 120)
+    target_compile_definitions(read_only PRIVATE
+        "READ_ONLY_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/read_only_reference.tsv\"")
     add_editor_test(url_conversion original_url_conversion 60)
     target_compile_definitions(url_conversion PRIVATE
         "URL_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/url_reference_fixtures.tsv\"")
@@ -190,6 +226,7 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/date_time_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
     add_editor_test(save_cleanup original_save_cleanup 60)
+    add_editor_test(save_copy original_save_copy 90)
     add_editor_test(pad_spaces original_pad_spaces 60)
     add_editor_test(align_lines original_align_lines 60)
     add_editor_test(modify_lines original_modify_lines 60)
@@ -215,13 +252,24 @@ if(BUILD_TESTING)
         target_link_libraries(clipboard_peer PRIVATE PkgConfig::GTK)
     endif()
     add_editor_test(clipboard_smoke system_clipboard 30)
+    add_test(NAME original_read_only_clipboard COMMAND clipboard_smoke)
+    set_tests_properties(original_read_only_clipboard PROPERTIES TIMEOUT 120 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=read-only")
     add_test(NAME original_clipboard_shapes COMMAND clipboard_smoke)
     set_tests_properties(original_clipboard_shapes PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=1")
     add_test(NAME original_current_line_clipboard COMMAND clipboard_smoke)
     set_tests_properties(original_current_line_clipboard PROPERTIES TIMEOUT 90 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=lines")
     add_test(NAME original_line_clipboard_commands COMMAND clipboard_smoke)
     set_tests_properties(original_line_clipboard_commands PROPERTIES TIMEOUT 180 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=commands")
+    add_test(NAME original_path_text_clipboard COMMAND clipboard_smoke)
+    set_tests_properties(original_path_text_clipboard PROPERTIES TIMEOUT 180 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=path-text")
     add_dependencies(clipboard_smoke clipboard_peer)
+    add_test(NAME original_clipboard_utilities COMMAND clipboard_smoke)
+    set_tests_properties(original_clipboard_utilities PROPERTIES TIMEOUT 180 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=utilities")
+    add_test(NAME original_clipboard_swap COMMAND clipboard_smoke)
+    set_tests_properties(original_clipboard_swap PROPERTIES TIMEOUT 180 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=swap")
+    add_test(NAME original_clipboard_swap_default_encoding COMMAND clipboard_smoke)
+    set_tests_properties(original_clipboard_swap_default_encoding PROPERTIES TIMEOUT 180
+        ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=swap-encoding")
     add_editor_test(gbk_smoke gbk_roundtrip 30)
     add_editor_test(eol_open mixed_line_ending_open 30)
     add_editor_test(gbk_native gbk_native_choices 60)
@@ -241,6 +289,12 @@ if(BUILD_TESTING)
     add_editor_test(selection_modifiers selection_modifiers 60)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
+    add_editor_test(current_line original_current_line_highlight 60)
+    if(WIN32)
+        add_test(NAME original_current_line_dpi96 COMMAND current_line)
+        set_tests_properties(original_current_line_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_CURRENT_LINE_DPI96=1")
+    endif()
     add_editor_test(block_indentation block_indentation_commands 60)
     add_editor_test(tab_conversion original_tab_conversion 60)
     add_editor_test(escape_text original_escape_text 90)
@@ -252,6 +306,10 @@ if(BUILD_TESTING)
     add_editor_test(move_lines original_move_lines 60)
     add_editor_test(block_comments original_toggle_block_comment 60)
     add_editor_test(enclose_selection original_enclose_selection 60)
+    add_editor_test(insert_tag original_insert_tag 90)
+    target_compile_definitions(insert_tag PRIVATE
+        "TAG_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/tag_reference.tsv\""
+        "TAG_STATE_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/tag_state_reference.tsv\"")
     add_editor_test(strip_blanks original_strip_blanks 60)
     add_editor_test(compress_whitespace original_compress_whitespace 60)
     add_editor_test(blank_lines original_blank_lines 60)
@@ -265,6 +323,9 @@ if(BUILD_TESTING)
     add_editor_test(duplicate_transpose original_duplicate_transpose 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(word_wrap word_wrap_view 60)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.27)
+        set_tests_properties(word_wrap_view PROPERTIES TIMEOUT_SIGNAL_NAME SIGQUIT)
+    endif()
     add_editor_test(navigation_bindings original_navigation_bindings 60)
     add_editor_test(matching_brace original_matching_brace_commands 60)
     target_include_directories(font_smoke PRIVATE src/editor/platform
@@ -281,6 +342,11 @@ if(BUILD_TESTING)
     endif()
     add_editor_test(file_smoke first_utf8_save 30)
     add_editor_test(close_smoke close_unsaved 30)
+    add_test(NAME native_diagnostic_delivery COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/diagnostics_native_process.py"
+        "$<TARGET_FILE:editing_keys>" "$<TARGET_FILE:close_smoke>" ${diagnostic_mode}
+        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/diagnostics/native")
+    set_tests_properties(native_diagnostic_delivery PROPERTIES TIMEOUT 150)
     add_editor_test(open_smoke open_utf8 30)
     add_editor_test(syntax_cpp cpp_highlighting 30)
     add_editor_test(syntax_python python_highlighting 30)
@@ -294,6 +360,15 @@ if(BUILD_TESTING)
     add_editor_test(fold_all fold_all_commands 60)
     add_editor_test(line_numbers line_number_view 60)
     add_editor_test(whitespace_view visible_whitespace 30)
+    add_editor_test(guides original_guides_and_long_lines 90)
+    add_test(NAME original_guides_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/guides_process.py" "$<TARGET_FILE:guides>")
+    set_tests_properties(original_guides_settings_lifecycle PROPERTIES TIMEOUT 90)
+    add_editor_test(line_symbols original_line_symbols 60)
+    add_test(NAME original_line_symbol_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_symbols_process.py" "$<TARGET_FILE:line_symbols>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
+    set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
     add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(file_indentation original_file_indentation 60)

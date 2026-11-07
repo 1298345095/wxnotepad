@@ -1,6 +1,10 @@
 #include "editor/editor_control.h"
+#include "editor/platform/native_encoding.h"
 #include "editor/editor_core.h"
+#include "editor/platform/clipboard.h"
+#include "diagnostics/trace.h"
 #include <wx/dcclient.h>
+#include <cmath>
 #ifdef __WXMSW__
 #include <wx/caret.h>
 #endif
@@ -25,6 +29,11 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     GetCaret()->Show();
 #endif
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    // Original Notepad4.cpp::CreateEditControl current-line preferences.
+    Send(Message::SetCaretLineVisibleAlways, 1);
+    Send(Message::SetCaretLineHighlightSubLine, 1);
+    SetCurrentLineHighlightMode(lineHighlightMode_);
+    WXNOTE_TRACE("editor.create", "\ttarget=%p\thandle=%p", static_cast<void*>(this), GetHandle());
     Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
     Send(Message::SetMarginMaskN, 0, 0);
     SetLineNumbersVisible(true);
@@ -34,16 +43,21 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
 #endif
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         core_->DpiChanged();
+        SetCurrentLineHighlightMode(lineHighlightMode_);
         Refresh(false);
         event.Skip();
     });
     Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& event) {
+        WXNOTE_TRACE("editor.focus-in", "\ttarget=%p\tfocus=%p", static_cast<void*>(this),
+                     static_cast<void*>(wxWindow::FindFocus()));
         Send(Message::SetFocus, 1);
         core_->SyncSystemCaret();
         Refresh(false);
         event.Skip();
     });
     Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) {
+        WXNOTE_TRACE("editor.focus-out", "\ttarget=%p\tfocus=%p", static_cast<void*>(this),
+                     static_cast<void*>(wxWindow::FindFocus()));
         Send(Message::SetFocus, 0);
         Refresh(false);
         event.Skip();
@@ -66,6 +80,16 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     Bind(wxEVT_SCROLLWIN_THUMBTRACK, scroll);
     Bind(wxEVT_SCROLLWIN_THUMBRELEASE, scroll);
     Bind(wxEVT_KEY_DOWN, &EditorControl::OnKeyDown, this);
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    Bind(wxEVT_KEY_UP, [this](wxKeyEvent& event) {
+        WXNOTE_TRACE(
+            "editor.key-up", "\ttarget=%p\tfocus=%p\tkey=%d\tmodifiers=%d\tlength=%lld\tanchor=%lld\tcaret=%lld",
+            static_cast<void*>(this), static_cast<void*>(wxWindow::FindFocus()), event.GetKeyCode(),
+            event.GetModifiers(), static_cast<long long>(Send(Message::GetLength)),
+            static_cast<long long>(Send(Message::GetAnchor)), static_cast<long long>(Send(Message::GetCurrentPos)));
+        event.Skip();
+    });
+#endif
     Bind(wxEVT_CHAR, [this](wxKeyEvent& event) {
         const int character = event.GetUnicodeKey();
         if (character >= 32 && character != WXK_DELETE && !event.ControlDown() && !event.AltDown()) {
@@ -83,6 +107,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
 }
 
 EditorControl::~EditorControl() {
+    WXNOTE_TRACE("editor.destroy", "\ttarget=%p", static_cast<void*>(this));
     SetDropTarget(nullptr);
 }
 
@@ -92,12 +117,86 @@ void EditorControl::SetLineSelectionMode(LineSelectionMode mode) {
         Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
 }
 
+void EditorControl::SetCurrentLineHighlightMode(LineHighlightMode mode) {
+    lineHighlightMode_ = mode;
+    const auto element = static_cast<uintptr_t>(Scintilla::Element::CaretLineBack);
+    if (mode == LineHighlightMode::None) {
+        Send(Message::ResetElementColour, element);
+        return;
+    }
+    // Original Styles.cpp::Style_HighlightCurrentLine and stlDefault.cpp.
+    // One rounding step preserves ScaleStylePixel's DPI * zoom scaling.
+    const bool outline = mode == LineHighlightMode::OutlineFrame;
+    const int width =
+        outline ? std::max(1, static_cast<int>(std::lround(2.0 * GetDPI().y * Send(Message::GetZoom) / 9600.0))) : 0;
+    Send(Message::SetCaretLineFrame, width);
+    Send(Message::SetCaretLineLayer, static_cast<uintptr_t>(Scintilla::Layer::UnderText));
+    Send(Message::SetElementColour, element, outline ? 0x5AC3C0C2 : 0x5A00FFFF);
+}
+
 void EditorControl::Copy() {
     // Notepad4.cpp::IDM_EDIT_COPY at 89b8b36; see licenses/Notepad4.txt.
     if (Send(Message::GetSelectionEmpty) && lineSelectionMode_ != LineSelectionMode::None)
         Send(Message::LineCopy, static_cast<uintptr_t>(lineSelectionMode_) & 1);
     else
         Send(Message::Copy);
+}
+
+bool EditorControl::CopyAdd() {
+    // Edit.cpp::EditCopyAppend at 89b8b36. The missing-Unicode branch calls
+    // the underlying Copy message, bypassing the application's line preference.
+    if (!EditorClipboard::HasText()) {
+        Send(Message::Copy);
+        return true;
+    }
+    const bool empty = Send(Message::GetSelectionEmpty);
+    if (!empty && Send(Message::SelectionIsRectangle)) return false;
+    const auto length = empty ? Send(Message::GetLength) : Send(Message::GetSelText);
+    std::string added(static_cast<size_t>(length) + 1, '\0');
+    Send(empty ? Message::GetText : Message::GetSelText, empty ? length : 0, reinterpret_cast<intptr_t>(added.data()));
+    added.resize(added.find('\0'));
+    if (added.empty()) return true;
+    auto old = EditorClipboard::ReadPlainText(*GetParent());
+    if (!old) return true;
+    old->append("\r\n\r\n");
+    old->append(added);
+    core::SelectionText text;
+    text.Copy(*old, 65001, false, false);
+    EditorClipboard::Write(*GetParent(), text);
+    return true;
+}
+
+void EditorControl::SwapClipboard(bool defaultEncoding) {
+    // Notepad4.cpp::IDM_EDIT_SWAP at 89b8b36; see licenses/Notepad4.txt.
+    if (Send(Message::GetSelectionEmpty)) {
+        const auto position = Send(Message::GetCurrentPos);
+        core_->PasteWithEncoding(defaultEncoding);
+        Send(Message::SetSel, position, Send(Message::GetCurrentPos));
+        EditorClipboard::Clear(*GetParent());
+        return;
+    }
+    auto text = EditorClipboard::ReadPlainText(*GetParent());
+    if (!text || text->empty()) return;
+    *text = core::Document::TransformLineEnds(*text, static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode)));
+    const bool protectedDefault = defaultEncoding && Send(Message::GetReadOnly);
+    size_t nativeLength = 0;
+    if (defaultEncoding)
+        *text = NativeDefaultEncodingText(wxString::FromUTF8(*text), protectedDefault ? &nativeLength : nullptr)
+                    .ToStdString(wxConvUTF8);
+    // Protected writes insert nothing: retain the original raw native-byte
+    // displacement and SetSel's clamp. Writable replacements use UTF-8 bytes.
+    const auto replacementLength = static_cast<intptr_t>(protectedDefault ? nativeLength : text->size());
+    auto caret = Send(Message::GetCurrentPos);
+    auto anchor = Send(Message::GetAnchor);
+    Send(Message::BeginUndoAction);
+    Send(Message::Cut);
+    Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(text->c_str()));
+    if (caret > anchor)
+        caret = anchor + replacementLength;
+    else
+        anchor = caret + replacementLength;
+    Send(Message::SetSel, anchor, caret);
+    Send(Message::EndUndoAction);
 }
 
 void EditorControl::Cut() {
@@ -223,6 +322,11 @@ std::optional<std::string> EditorControl::ExpandRegexReplacement(const std::stri
 }
 
 void EditorControl::OnKeyDown(wxKeyEvent& event) {
+    WXNOTE_TRACE("editor.key-down", "\ttarget=%p\tfocus=%p\tkey=%d\tmodifiers=%d\tlength=%lld\tanchor=%lld\tcaret=%lld",
+                 static_cast<void*>(this), static_cast<void*>(wxWindow::FindFocus()), event.GetKeyCode(),
+                 event.GetModifiers(), static_cast<long long>(Send(Message::GetLength)),
+                 static_cast<long long>(Send(Message::GetAnchor)),
+                 static_cast<long long>(Send(Message::GetCurrentPos)));
     if (core_->Navigation(event)) return;
     if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
         (event.GetKeyCode() == WXK_BACK || event.GetKeyCode() == WXK_DELETE)) {
@@ -263,6 +367,12 @@ void EditorControl::OnSize(wxSizeEvent& event) {
 
 #ifdef __WXMSW__
 WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam) {
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    if (message == WM_DESTROYCLIPBOARD) WXNOTE_TRACE("clipboard.cleared", "\ttarget=%p", static_cast<void*>(this));
+    if (message == WM_RENDERFORMAT || message == WM_RENDERALLFORMATS)
+        WXNOTE_TRACE("clipboard.transfer", "\ttarget=%p\tformat=%llu", static_cast<void*>(this),
+                     static_cast<unsigned long long>(wParam));
+#endif
     if (core_ && (message == WM_IME_STARTCOMPOSITION || message == WM_IME_COMPOSITION || message == WM_IME_SETCONTEXT ||
                   message == WM_INPUTLANGCHANGE)) {
         core_->SyncSystemCaret();

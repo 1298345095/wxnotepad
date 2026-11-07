@@ -84,12 +84,15 @@ public:
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget)) continue;
             if (GTK_IS_FILE_CHOOSER(widget)) {
-                if (!stage_++) {
+                if (stage_ == 0) {
+                    stage_ = 1;
                     ++choosers;
                     if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
                     NativeDialogs::ChooseFile(widget, path_);
-                } else if (stage_ == 2 && !path_.empty())
+                } else if (stage_ == 1 && !path_.empty() && NativeDialogs::CanAcceptFile(widget, path_)) {
+                    stage_ = 2;
                     Respond(widget, GTK_RESPONSE_ACCEPT);
+                }
             } else if (GTK_IS_MESSAGE_DIALOG(widget)) {
                 const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
                 if (title == "GBK character loss") {

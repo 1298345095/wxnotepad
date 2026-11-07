@@ -148,7 +148,7 @@ private:
         }
         wxRemoveFile(request);
         if (command == "copy" || command == "wxcopy" || command == "nontext" || command == "paste" ||
-            command.StartsWith("shape")) {
+            command.StartsWith("shape") || command.StartsWith("utility-")) {
             frame_->SetTitle(wxString::Format("wxnotepad clipboard focus: peer [%lu]", wxGetProcessId()));
             wxString focusFile;
             if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile)) {
@@ -168,7 +168,40 @@ private:
         Perform(command);
     }
     void Perform(const wxString& command) {
-        if (command == "shape-read") {
+        if (command == "utility-formats") {
+#ifdef __WXMSW__
+            if (!::OpenClipboard(static_cast<HWND>(frame_->GetHandle()))) {
+                Respond("failed");
+                return;
+            }
+            const bool any = ::CountClipboardFormats() != 0;
+            ::CloseClipboard();
+#elif defined(__WXGTK__)
+            GdkAtom* targets = nullptr;
+            gint count = 0;
+            const bool any =
+                gtk_clipboard_wait_for_targets(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), &targets, &count) &&
+                count > 0;
+            g_free(static_cast<void*>(targets));
+#endif
+            Respond(any ? "data" : "empty");
+        } else if (command == "utility-empty") {
+#ifdef __WXMSW__
+            if (!::OpenClipboard(static_cast<HWND>(frame_->GetHandle()))) {
+                Respond("failed");
+                return;
+            }
+            const bool cleared = ::EmptyClipboard() != 0;
+            ::CloseClipboard();
+#elif defined(__WXGTK__)
+            auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+            const GtkTargetEntry targets{};
+            const bool cleared = gtk_clipboard_set_with_data(
+                clipboard, &targets, 0, [](GtkClipboard*, GtkSelectionData*, guint, gpointer) {}, nullptr, nullptr);
+            gtk_clipboard_clear(clipboard);
+#endif
+            Respond(cleared ? "ready" : "failed");
+        } else if (command == "shape-read" || command == "utility-read" || command == "utility-raw") {
             wxString shape = "stream";
             wxString text;
 #ifdef __WXMSW__
@@ -186,8 +219,14 @@ private:
             }
             const auto capacity = ::GlobalSize(memory) / sizeof(wchar_t);
             size_t length = 0;
-            while (length < capacity && bytes[length] != L'\0')
-                ++length;
+            if (command == "utility-raw") {
+                length = capacity;
+                while (length && bytes[length - 1] == L'\0')
+                    --length;
+            } else {
+                while (length < capacity && bytes[length] != L'\0')
+                    ++length;
+            }
             text = wxString(bytes, length);
             ::GlobalUnlock(memory);
             if (::IsClipboardFormatAvailable(::RegisterClipboardFormatW(L"MSDEVLineSelect")) &&
@@ -216,6 +255,10 @@ private:
                 shape = "rectangle";
                 --length;
             }
+            if (command == "utility-read") {
+                const auto* end = static_cast<const char*>(std::memchr(bytes, '\0', length));
+                if (end) length = static_cast<int>(end - bytes);
+            }
             text = wxString::FromUTF8(bytes, length);
             gtk_selection_data_free(data);
             if (shape != "rectangle" &&
@@ -231,11 +274,26 @@ private:
             }
             file.Close();
             Respond(shape);
-        } else if (command.StartsWith("shape-")) {
-            const bool rectangle = command == "shape-rectangle" || command == "shape-both";
-            const bool line = command == "shape-line" || command == "shape-both";
-            const bool vsLine = command == "shape-vsline";
-            const auto text = wxString::FromUTF8(rectangle ? "中文\tX\n日本\tY\n" : "中文\tX\n日本\tY");
+        } else if (command.StartsWith("shape-") || command.StartsWith("utility-offer")) {
+            const bool rectangle = command == "shape-rectangle" || command == "shape-both" ||
+                                   command == "utility-offer-rectangle" || command == "utility-offer-both";
+            const bool line = command == "shape-line" || command == "shape-both" || command == "utility-offer-line" ||
+                              command == "utility-offer-both";
+            const bool vsLine = command == "shape-vsline" || command == "utility-offer-vsline";
+            wxString text = wxString::FromUTF8(rectangle ? "中文\tX\n日本\tY\n" : "中文\tX\n日本\tY");
+            if (command.StartsWith("utility-offer")) {
+                wxFFile file(directory_ + "/offer.txt", "rb");
+                if (!file.IsOpened()) {
+                    Respond("failed");
+                    return;
+                }
+                std::string bytes(static_cast<size_t>(file.Length()), '\0');
+                if (file.Read(bytes.data(), bytes.size()) != bytes.size()) {
+                    Respond("failed");
+                    return;
+                }
+                text = wxString::FromUTF8(bytes.data(), bytes.size());
+            }
 #ifdef __WXMSW__
             if (!::OpenClipboard(static_cast<HWND>(frame_->GetHandle()))) {
                 Respond("failed");
@@ -276,7 +334,8 @@ private:
             }
             ::CloseClipboard();
 #elif defined(__WXGTK__)
-            auto* value = new std::string(text.ToUTF8().data());
+            const auto utf8 = text.ToUTF8();
+            auto* value = new std::string(utf8.data(), utf8.length());
             if (rectangle) value->push_back('\0');
             auto* list = gtk_target_list_new(nullptr, 0);
             gtk_target_list_add_text_targets(list, 0);

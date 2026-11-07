@@ -1,4 +1,5 @@
 #include "editor/editor_core.h"
+#include "editor/platform/native_encoding.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/custom_case.h"
 #include "editor/platform/gtk_drag_drop.h"
@@ -521,6 +522,14 @@ bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
             window_.Send(Message::CustomCaseMapping,
                          static_cast<uintptr_t>(event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower));
             return true;
+        case 'V':
+            if (!event.ShiftDown() && !event.MetaDown()) {
+                // The original application accelerator consumes disabled Ctrl+V.
+                // Direct SCI_PASTE retains its separate selection repair.
+                if (CanPaste()) window_.Send(Message::Paste);
+                return true;
+            }
+            break;
         default:
             break;
         }
@@ -624,9 +633,18 @@ bool EditorControl::Core::CanPaste() const noexcept {
 }
 
 void EditorControl::Core::Paste(bool) {
-    if (!core::Editor::CanPaste()) return;
-    const auto text = EditorClipboard::Read(window_, [this] { return sel.Empty(); });
+    PasteWithEncoding(false);
+}
+
+void EditorControl::Core::PasteWithEncoding(bool defaultEncoding) {
+    // Swap supplies the document's encoding context to the same native Paste
+    // boundary; ordinary Paste keeps its existing UTF-8 behavior.
+    // Original ScintillaWin::Paste repairs selections even when document writes
+    // are rejected. Native Paste availability and its actual outcome differ.
+    if (!pdoc->IsReadOnly() && !core::Editor::CanPaste()) return;
+    auto text = EditorClipboard::Read(window_, [this] { return sel.Empty(); });
     if (!text) return;
+    if (defaultEncoding) text->text = NativeDefaultEncodingText(wxString::FromUTF8(text->text)).ToStdString(wxConvUTF8);
     const core::UndoGroup undo(pdoc);
     ClearSelection(multiPasteMode == Scintilla::MultiPaste::Each);
     auto shape = PasteShape::stream;
@@ -649,7 +667,10 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         (pdoc->eolMode != Scintilla::EndOfLine::CrLf || notification.ch != '\n'))
         window_.AutoIndent();
     SelectionRevision();
-    if (notification.nmhdr.code == Scintilla::Notification::Zoom) window_.lineNumberWidthDirty_ = true;
+    if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
+        window_.lineNumberWidthDirty_ = true;
+        window_.SetCurrentLineHighlightMode(window_.GetCurrentLineHighlightMode());
+    }
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&
         (static_cast<int>(notification.modificationType) &
          static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {

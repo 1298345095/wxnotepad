@@ -1,6 +1,7 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
+#include "native_dialog_helpers.h"
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <cstdio>
@@ -61,12 +62,10 @@ struct GtkDialogProbe {
                         probe.stage = 4;
                         gtk_dialog_response(GTK_DIALOG(widget), GTK_RESPONSE_CANCEL);
                     } else {
-                        const wxFileName target(probe.path);
-                        gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(widget), target.GetPath().utf8_str());
-                        gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(widget), target.GetFullName().utf8_str());
+                        NativeDialogs::ChooseFile(widget, probe.path);
                         probe.stage = 1;
                     }
-                } else if (probe.stage == 1) {
+                } else if (probe.stage == 1 && NativeDialogs::CanAcceptFile(widget, probe.path)) {
                     probe.stage = 2;
                     gtk_dialog_response(GTK_DIALOG(widget), GTK_RESPONSE_ACCEPT);
                 } else if (probe.stage == 3) {

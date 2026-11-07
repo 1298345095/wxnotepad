@@ -442,8 +442,9 @@ public:
         settings_->values.fixTrailingBlanks = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 TestEditor::ResetStream(frame->Editor(), "b\na\nc", 0, 5, Scintilla::EndOfLine::Lf);
                 const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Sort Lines...");
                 Require(id != wxNOT_FOUND, "Edit menu exposes Sort Lines");

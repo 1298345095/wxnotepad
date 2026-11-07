@@ -1,13 +1,71 @@
 #pragma once
 
 #include "native_search_helpers.h"
+#include "native_trace_helpers.h"
 #include <wx/eventfilter.h>
 #include <wx/ffile.h>
+#include <wx/timer.h>
 #include <chrono>
 #include <algorithm>
+#include <functional>
+#ifdef __WXGTK__
+#include <gdk/gdkwayland.h>
+#include <wayland-client-core.h>
+#endif
 
 // Native shortcuts target the caller's editor on the existing private display.
 namespace NativeKeys {
+inline void AfterPresentation(EditorFrame* frame, std::function<void(bool)> callback) {
+#ifdef __WXGTK__
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) {
+        // Keep the normal main loop running until Weston sees this exact view.
+        // Entering a synchronous shortcut wait before the first commit can leave
+        // GTK awaiting a frame callback for an empty, unmapped surface.
+        class Preparation final : public wxTimer {
+        public:
+            Preparation(EditorFrame* frame, std::function<void(bool)> callback)
+                : callback_(std::move(callback)),
+                  deadline_(std::chrono::steady_clock::now() + std::chrono::seconds(3)) {
+                auto* widget = GTK_WIDGET(frame->GetHandle());
+                auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
+                if (surface && wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile_)) {
+                    const auto remaining = std::chrono::duration_cast<std::chrono::microseconds>(
+                                               deadline_ - std::chrono::steady_clock::now())
+                                               .count();
+                    wxFFile file(focusFile_, "wb");
+                    file.Write(wxString::Format("prepare:%lu:%u:%lld", wxGetProcessId(),
+                                                wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface)),
+                                                static_cast<long long>(g_get_monotonic_time() + remaining)));
+                }
+                Start(10);
+            }
+            void Notify() override {
+                bool ready = false;
+                if (!focusFile_.empty()) {
+                    wxString pending;
+                    wxFFile file(focusFile_, "rb");
+                    ready = file.IsOpened() && file.ReadAll(&pending) && pending.empty();
+                }
+                if (!ready && std::chrono::steady_clock::now() < deadline_) return;
+                Stop();
+                auto callback = std::move(callback_);
+                delete this;
+                callback(ready);
+            }
+
+        private:
+            std::function<void(bool)> callback_;
+            std::chrono::steady_clock::time_point deadline_;
+            wxString focusFile_;
+        };
+        new Preparation(frame, std::move(callback));
+        return;
+    }
+#endif
+    wxTheApp->CallAfter([callback = std::move(callback)] { callback(true); });
+}
+
 #ifdef __WXMSW__
 inline void DialogNavigation(wxDialog* dialog, int key) {
     BYTE previous[256];
@@ -114,7 +172,9 @@ private:
 };
 #endif
 inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
-                     bool* releaseSignal = nullptr) {
+                     bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad") {
+    const NativeTrace::Gesture trace(*frame->Editor(), key,
+                                     (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
 #ifdef __WXMSW__
     const int nativeKey = key >= WXK_F1 && key <= WXK_F24 ? VK_F1 + key - WXK_F1 : key;
     NativeSearch::WindowsShortcut(frame->Editor(), nativeKey,
@@ -125,16 +185,32 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     using Clock = std::chrono::steady_clock;
     auto* editor = frame->Editor();
     editor->SetFocus();
+#ifdef __WXGTK__
+    auto* widget = GTK_WIDGET(frame->GetHandle());
+    const bool wayland = GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget));
+#endif
     wxYield();
     wxString focusFile;
     if (!wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile))
         throw std::runtime_error("native shortcuts require a private display");
+    const auto focusDeadline = Clock::now() + std::chrono::seconds(3);
+    wxString intent = wxString(frame->IsActive() ? "focus:" : "front:") + focusName;
+#ifdef __WXGTK__
+    if (!frame->IsActive() && wayland) {
+        auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
+        if (!surface) throw std::runtime_error("native shortcuts require the owned Wayland surface");
+        const auto remaining =
+            std::chrono::duration_cast<std::chrono::microseconds>(focusDeadline - Clock::now()).count();
+        intent = wxString::Format("activate:%lu:%u:%lld", wxGetProcessId(),
+                                  wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface)),
+                                  static_cast<long long>(g_get_monotonic_time() + remaining));
+    }
+#endif
     {
         wxFFile file(focusFile, "wb");
-        file.Write(frame->IsActive() ? "focus:wxnotepad" : "front:wxnotepad");
+        file.Write(NativeTrace::Request(intent));
     }
     bool acknowledged = false;
-    const auto focusDeadline = Clock::now() + std::chrono::seconds(3);
     while (Clock::now() < focusDeadline) {
         wxString pending;
         {
@@ -155,7 +231,8 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         const auto letter = static_cast<char>(key >= 'A' && key <= 'Z' ? key + 'a' - 'A' : key);
         const wxString name = key >= WXK_F1 && key <= WXK_F24 ? wxString::Format("F%d", key - WXK_F1 + 1)
                                                               : wxString::Format("%c", letter);
-        file.Write(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") + name);
+        file.Write(NativeTrace::Request(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") +
+                                        (shift ? "shift+" : "") + name));
     }
     const auto keyDeadline = Clock::now() + std::chrono::seconds(3);
     while (!received && Clock::now() < keyDeadline) {

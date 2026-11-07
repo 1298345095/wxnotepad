@@ -1,13 +1,16 @@
 #include "app/editor_frame.h"
+#include "syntax/syntax_scheme.h"
 #include "editor/editor_control.h"
 #include "app/dialogs/document_dialogs.h"
 #include "app/dialogs/find_replace_dialog.h"
 #include "app/dialogs/search_feedback_dialog.h"
 #include "settings/settings_store.h"
 #include "settings/search_settings.h"
+#include "diagnostics/trace.h"
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
+#include <wx/filename.h>
 
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
@@ -17,6 +20,15 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
                          : SyntaxDetectionOptions{}),
       search_(*editor_) {
+    const auto& preferences = settings ? settings->values : defaults_;
+    ApplyIndentationGuides(*editor_, document_.Language(), preferences.showIndentGuides,
+                           preferences.simpleIndentGuides);
+    editor_->Send(Scintilla::Message::SetEdgeColumn,
+                  settings ? settings->values.longLinesLimit : defaults_.longLinesLimit);
+    if (settings && settings->values.markLongLines) {
+        editor_->Send(Scintilla::Message::SetEdgeMode, settings->values.longLineMode);
+        ApplyLongLineColour(*editor_);
+    }
     indentation_.Apply(*editor_, document_.Language());
     if (settings) {
         document_.SetSaveCleanup({settings->values.fixLineEndings, settings->values.fixTrailingBlanks});
@@ -30,7 +42,14 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
         warnLineEndings_ = settings->values.warnLineEndings;
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
+        editor_->SetCurrentLineHighlightMode(
+            static_cast<LineHighlightMode>(settings->values.highlightCurrentLine % 10));
+        editor_->Send(Scintilla::Message::SetCaretLineHighlightSubLine, settings->values.highlightCurrentLine >= 10);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
+        editor_->Send(Scintilla::Message::SetViewEOL, settings->values.viewEOLs);
+        showWordWrapSymbols_ = settings->values.showWordWrapSymbols;
+        wordWrapSymbols_ = settings->values.wordWrapSymbols;
+        ApplyWrapSymbols();
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
         editor_->Send(Scintilla::Message::SetViewWS,
                       static_cast<uintptr_t>(settings->values.viewWhiteSpace ? Scintilla::WhiteSpace::VisibleAlways
@@ -45,27 +64,45 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     });
     Bind(wxEVT_EDITOR_STATE_CHANGED, [this](wxCommandEvent&) { UpdateDocumentState(); });
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
+        WXNOTE_TRACE("close.request", "\ttarget=%p\tcan_veto=%d\tdirty=%d", static_cast<void*>(this), event.CanVeto(),
+                     editor_->Send(Scintilla::Message::GetModify) != 0);
         if (event.CanVeto() && !ConfirmDiscardChanges("closing")) {
             event.Veto();
+            WXNOTE_TRACE("close.veto", "\ttarget=%p", static_cast<void*>(this));
             return;
         }
         SaveSettings(false);
+        WXNOTE_TRACE("close.destroy-deferred", "\ttarget=%p", static_cast<void*>(this));
         Destroy();
     });
+#ifdef WXNOTEPAD_DIAGNOSTICS
+    Bind(wxEVT_DESTROY, [this](wxWindowDestroyEvent& event) {
+        if (event.GetEventObject() == this) WXNOTE_TRACE("frame.destroy", "\ttarget=%p", static_cast<void*>(this));
+        event.Skip();
+    });
+#endif
     UpdateDocumentState();
     editor_->SetFocus();
 }
 
 bool EditorFrame::SaveSettings(bool explicitSave) {
     if (!settings_) return true;
+    settings_->values.markLongLines = editor_->Send(Scintilla::Message::GetEdgeMode) != 0;
+    settings_->values.showIndentGuides = editor_->Send(Scintilla::Message::GetIndentationGuides) != 0;
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    settings_->values.viewEOLs = editor_->Send(Scintilla::Message::GetViewEOL) != 0;
+    settings_->values.showWordWrapSymbols = showWordWrapSymbols_;
+    settings_->values.wordWrapSymbols = wordWrapSymbols_;
     settings_->values.warnLineEndings = warnLineEndings_;
     settings_->values.defaultEOLMode = defaultEolMode_;
     settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
     settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    settings_->values.highlightCurrentLine =
+        static_cast<int>(editor_->GetCurrentLineHighlightMode()) +
+        10 * static_cast<int>(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
     CaptureSearchSettings(search_, settings_->values);
     settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
     return settings_->Save(explicitSave);
@@ -157,7 +194,10 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
 
 void EditorFrame::UpdateDocumentState() {
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
-    SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + " - wxnotepad");
+    const wxString protection = document_.IsReadOnlyFile()                       ? " (Read Only File)"
+                                : editor_->Send(Scintilla::Message::GetReadOnly) ? " (Read Only Mode)"
+                                                                                 : "";
+    SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + protection + " - wxnotepad");
     const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
                               : document_.Encoding() == FileEncoding::Gbk   ? "GBK (CP936)"
                                                                             : "UTF-8";
@@ -205,6 +245,15 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
 
 SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
     if (!document_.Path().empty()) {
+        if (document_.RefreshReadOnlyFile()) {
+            UpdateDocumentState();
+            if (wxMessageBox("\"" + document_.Path() + "\" is read only. Save to a different file?", "Read only file",
+                             wxYES_NO | wxICON_WARNING, this) != wxYES)
+                return {SaveStatus::Cancelled, {}};
+            const auto chosen = ChooseSaveFile(this, "Save As", document_.Language(), document_.Path());
+            if (!chosen) return SaveAs(std::nullopt, decideLoss);
+            return SaveAs(chosen->path, decideLoss, chosen->type);
+        }
         const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
         UpdateDocumentState();
         return result;
@@ -230,10 +279,45 @@ SaveResult EditorFrame::SaveAs() {
     return SaveAs(chosen->path, {}, chosen->type);
 }
 
+SaveResult EditorFrame::SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    const auto result = document_.SaveCopy(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+    if (result.status == SaveStatus::Saved && destination) lastSaveCopyDirectory_ = wxFileName(*destination).GetPath();
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    UpdateDocumentState();
+    return result;
+}
+
+SaveResult EditorFrame::SaveCopy() {
+    wxString directory = lastSaveCopyDirectory_;
+    wxString filename;
+    if (document_.Path().empty() && directory.empty())
+        directory = wxGetCwd();
+    else if (document_.Path().empty()) {
+        // Original FileSave combines an empty Untitled basename with the last
+        // copy directory; FileDialog::Show then treats its last component as
+        // the filename and adds the current scheme's default extension.
+        wxFileName initial(directory);
+        if (!initial.GetFullName().empty() && !initial.HasExt()) {
+            const auto extensions = SyntaxFor(document_.Language()).extensions;
+            if (!extensions.empty()) initial.SetExt(extensions.front());
+        }
+        directory = initial.GetPath();
+        filename = initial.GetFullName();
+    }
+    const auto chosen =
+        ChooseSaveFile(this, "Save Copy", document_.Language(), document_.Path(), {directory, filename});
+    return SaveCopy(chosen ? std::optional<wxString>(chosen->path) : std::nullopt);
+}
+
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
     const auto result = document_.Open(
         source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding, std::nullopt,
-        [this] { indentation_.Load(*editor_, document_.Language(), document_.FileVariables()); });
+        [this] {
+            indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            editor_->Send(Scintilla::Message::SetEdgeColumn,
+                          document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
+        });
     if (result.status == OpenStatus::Opened) {
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
@@ -257,6 +341,8 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    editor_->Send(Scintilla::Message::SetEdgeColumn,
+                  settings_ ? settings_->values.longLinesLimit : defaults_.longLinesLimit);
     wrapColumn_ = 0;
     indentation_.Reset(*editor_, document_.Language());
     GetMenuBar()->Check(automaticLanguageId_, true);
@@ -288,10 +374,18 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);
     dialog.SetYesNoCancelLabels("&Save", "&Discard", "&Cancel");
+    WXNOTE_TRACE("close.confirm", "\ttarget=%p\tstage=show-request\tdirty=1\tlength=%lld", static_cast<void*>(this),
+                 static_cast<long long>(editor_->Send(Scintilla::Message::GetLength)));
     const int choice = dialog.ShowModal();
+    WXNOTE_TRACE("close.choice", "\ttarget=%p\tchoice=%s", static_cast<void*>(this),
+                 choice == wxID_YES  ? "Save"
+                 : choice == wxID_NO ? "Discard"
+                                     : "Cancel");
     if (choice == wxID_NO) return true;
     if (choice != wxID_YES) return false;
     const auto result = Save();
+    WXNOTE_TRACE("close.save-result", "\ttarget=%p\tsaved=%d", static_cast<void*>(this),
+                 result.status == SaveStatus::Saved);
     if (result.status == SaveStatus::Failed)
         wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
     return result.status == SaveStatus::Saved;

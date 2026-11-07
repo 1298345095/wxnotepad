@@ -3,6 +3,7 @@
 #include "editor/align_lines.h"
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
+#include "editor/special_insert.h"
 #include "editor/url_conversion.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
@@ -16,6 +17,8 @@ wxDECLARE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 
 // Original Edit.h::LineSelectionMode, including its built-in Visual Studio default.
 enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
+// Original Styles.h::LineHighlightMode.
+enum class LineHighlightMode { None, BackgroundColor, OutlineFrame };
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
@@ -40,6 +43,8 @@ public:
     bool EncloseSelection(const wxString& before, const wxString& after);
     bool ConvertUrl(UrlConversion command);
     void InsertDateTime(DateTimeInsertion command, const wxString& format = {});
+    void InsertGuid();
+    void InsertUnicodeControlCharacter(UnicodeControlCharacter character, bool defaultEncoding);
     AlignmentResult AlignLines(AlignmentMode mode);
     bool ModifyLines(const wxString& prefix, const wxString& suffix, bool skipEmpty = false);
     bool CompressWhitespace();
@@ -64,6 +69,9 @@ public:
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     void Copy();
+    // Original EditCopyAppend; false reports a nonempty rectangular selection.
+    bool CopyAdd();
+    void SwapClipboard(bool defaultEncoding = false);
     void Cut();
     void CopyLine();
     void CutLine();
@@ -77,6 +85,8 @@ public:
     void SetLineSelectionMode(LineSelectionMode mode);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
+    LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
+    void SetCurrentLineHighlightMode(LineHighlightMode mode);
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
@@ -92,6 +102,7 @@ private:
     bool autoIndent_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
+    LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;
     void UpdateLineNumberMargin();
     void OnPaint(wxPaintEvent& event);
     void OnKeyDown(wxKeyEvent& event);

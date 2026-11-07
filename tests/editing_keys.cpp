@@ -1,5 +1,6 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
+#include "native_trace_helpers.h"
 #include <wx/wx.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -35,6 +36,7 @@ void Key(EditorControl* editor, int key, bool control = false, bool shift = fals
     editor->GetEventHandler()->ProcessEvent(event);
 }
 void NativeKey(EditorControl* editor, int key, const char* gesture, bool control = false, bool shift = false) {
+    const NativeTrace::Gesture trace(*editor, key, (control ? wxMOD_CONTROL : 0) | (shift ? wxMOD_SHIFT : 0));
     std::printf("Native key: %s\n", gesture);
     std::fflush(stdout);
 #ifdef __WXMSW__
@@ -46,7 +48,10 @@ void NativeKey(EditorControl* editor, int key, const char* gesture, bool control
     modified[VK_SHIFT] = shift ? 0x80 : 0;
     Require(SetKeyboardState(modified), "set native thread modifiers");
     const int virtualKey = key == WXK_INSERT ? VK_INSERT : key == WXK_DELETE ? VK_DELETE : key;
+    WXNOTE_TRACE("driver.ack", "\ttarget=%p", static_cast<void*>(editor));
+    WXNOTE_TRACE("driver.key-down", "\ttarget=%p\tkey=%d", static_cast<void*>(editor), key);
     SendMessageW(static_cast<HWND>(editor->GetHandle()), WM_KEYDOWN, virtualKey, 0);
+    WXNOTE_TRACE("driver.key-up", "\ttarget=%p\tkey=%d", static_cast<void*>(editor), key);
     SendMessageW(static_cast<HWND>(editor->GetHandle()), WM_KEYUP, virtualKey, 0);
     SetKeyboardState(previous);
 #else
@@ -61,7 +66,7 @@ void NativeKey(EditorControl* editor, int key, const char* gesture, bool control
     editor->PushEventHandler(&observer);
     {
         wxFFile file(focusFile, "wb");
-        file.Write("key:" + wxString(gesture));
+        file.Write(NativeTrace::Request("key:" + wxString(gesture)));
     }
     wxStopWatch wait;
     while (!received && wait.Time() < 3000) {

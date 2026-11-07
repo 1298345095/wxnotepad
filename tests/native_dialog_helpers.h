@@ -103,6 +103,15 @@ inline void Respond(GtkWidget* dialog, int response) {
     gtk_button_clicked(GTK_BUTTON(button));
 }
 
+inline bool CanAcceptFile(GtkWidget* widget, const wxString& expected) {
+    // GTK can finish changing folders/selection after set_filename returns.
+    char* selected = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget));
+    const bool matches = selected && wxString::FromUTF8(selected) == expected;
+    g_free(selected);
+    auto* accept = gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_ACCEPT);
+    return matches && accept && gtk_widget_is_sensitive(accept);
+}
+
 inline void ChooseFile(GtkWidget* widget, const wxString& destination) {
     if (destination.empty())
         Respond(widget, GTK_RESPONSE_CANCEL);

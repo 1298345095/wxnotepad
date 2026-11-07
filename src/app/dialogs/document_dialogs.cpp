@@ -18,7 +18,7 @@ std::optional<wxString> OpenFileDialog::Choose() {
 }
 
 std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
-                                             const wxString& path) {
+                                             const wxString& path, const SaveFileLocation& initial) {
     wxString wildcard;
     std::vector<SaveFileType> types;
     const auto addLanguage = [&](const SyntaxDefinition& definition, bool current) {
@@ -39,7 +39,8 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
     wildcard += "All Files (*)|*";
     types.emplace_back(SaveType::AllFiles);
     const wxFileName current(path);
-    wxFileDialog dialog(parent, title, current.GetPath(), current.GetFullName(), wildcard,
+    wxFileDialog dialog(parent, title, initial.directory.empty() ? current.GetPath() : initial.directory,
+                        initial.filename.empty() ? current.GetFullName() : initial.filename, wildcard,
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     dialog.SetFilterIndex(0);
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;

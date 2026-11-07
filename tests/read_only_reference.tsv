@@ -1,0 +1,34 @@
+# Native label	anchor	caret	EOL	enabled; original 89b8b36, protected alpha\r\nbeta\r\n, input anchor=4 caret=1
+Upper Case	1	1	0	1
+Toggle Line Comment	7	0	0	1
+Move Up	4	1	0	1
+Move Down	11	8	0	1
+Delete Line	4	1	0	1
+Time/Date (Short Form)	1	1	0	1
+Indent	7	0	0	1
+Unindent	7	0	0	1
+Transpose Lines	4	1	0	1
+Duplicate Line	4	1	0	1
+Duplicate Selection	4	1	0	1
+Pad With Spaces	4	1	0	1
+Strip First Character	4	1	0	1
+Strip Last Character	4	1	0	1
+Strip Trailing Blanks	4	1	0	1
+Compress Whitespace	4	1	0	1
+Merge Blank Lines	4	1	0	1
+Remove Blank Lines	4	1	0	1
+Merge Duplicate Lines	4	1	0	0
+Remove Duplicate Lines	4	1	0	0
+URL Decode	4	1	0	1
+Untabify Selection	4	1	0	1
+Tabify Selection	4	1	0	1
+Untabify Indent	4	1	0	1
+Tabify Indent	4	1	0	1
+Toggle Block Comment	6	3	0	1
+URL Encode	4	1	0	1
+URL Component Encode	4	1	0	1
+Strip Leading Blanks	4	1	0	1
+Split Lines	4	1	0	1
+Join Lines	4	1	0	1
+Join Paragraphs	4	1	0	1
+Convert to LF	4	1	2	1

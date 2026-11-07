@@ -21,6 +21,8 @@ public:
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme);
     SaveResult SaveAs();
+    SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveCopy();
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme);
     OpenResult Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding = std::nullopt);
@@ -38,6 +40,8 @@ private:
     IndentationSettings indentation_;
     DocumentSession document_;
     int automaticLanguageId_;
+    int saveCopyId_;
+    wxString lastSaveCopyDirectory_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
     wxString enclosureBefore_;
@@ -50,6 +54,9 @@ private:
     int wrapColumn_ = 0;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
+    bool showWordWrapSymbols_ = false;
+    int wordWrapSymbols_ = 2;
+    void ApplyWrapSymbols();
     void CreateMenus();
     wxMenu* CreateFileMenu();
     wxMenu* CreateEditMenu();
@@ -58,6 +65,9 @@ private:
     void AppendEditingCommands(wxMenu* edit);
     void AppendDateTimeCommands(wxMenu* edit);
     void InsertDateTime(bool shortDate);
+    void InsertFileName(FileNamePart part);
+    void CopyFileName(FileNamePart part);
+    void AppendFileNameCopyCommands(wxMenu* copy);
     void AppendSearchCommands(wxMenu* edit);
     void AppendNavigationCommands(wxMenu* edit);
     void AppendLineEndingCommands(wxMenu* edit);
@@ -65,6 +75,9 @@ private:
     void AppendIndentationOptions(wxMenu* view);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
+    void ToggleIndentationGuides();
+    void ToggleLongLineMarker();
+    void AppendCurrentLineCommands(wxMenu* view);
     void AppendFoldCommands(wxMenu* view);
     void AppendSettingsCommands(wxMenu* view);
     bool HandleCommandKey(const wxKeyEvent& event);
@@ -73,8 +86,9 @@ private:
     bool HandleSearchKey(const wxKeyEvent& event);
     bool HandleNavigationKey(const wxKeyEvent& event);
     bool HandleViewKey(const wxKeyEvent& event);
-    bool HandleWhitespaceKey(const wxKeyEvent& event, int commandId);
+    bool HandleDisplayKey(const wxKeyEvent& event, int whitespace, int eol, int symbols);
     bool HandleDocumentKey(const wxKeyEvent& event);
+    void ToggleReadOnlyMode();
     void ShowLineEndingOptions();
     void ReportFind(const FindResult& result);
     bool SearchMessage(SearchDirection direction);
