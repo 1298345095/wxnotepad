@@ -223,6 +223,13 @@ if(BUILD_TESTING)
             ENVIRONMENT "WXNOTEPAD_CARET_DPI96=1")
     endif()
     add_editor_test(special_insert original_special_insertion 60)
+    add_editor_test(header_insert original_header_insertion 90)
+    target_compile_definitions(header_insert PRIVATE
+        "HEADER_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/header_reference.tsv\"")
+    add_test(NAME original_header_insertion_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/header_insert_process.py" "$<TARGET_FILE:wxnotepad>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/header_saved.tsv")
+    set_tests_properties(original_header_insertion_process PROPERTIES TIMEOUT 180)
     target_compile_definitions(special_insert PRIVATE
         "SPECIAL_INSERT_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv\""
         "SPECIAL_INSERT_STATES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_states.tsv\""
