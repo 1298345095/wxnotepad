@@ -1,8 +1,6 @@
-#include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
-#include <wx/ffile.h>
-#include <wx/stopwatch.h>
 #include <fstream>
 
 namespace {
@@ -152,50 +150,18 @@ void Protection(EditorFrame* frame) {
     std::puts("PASS: original menu gates, read-only core protection and both rectangular-selection warnings");
 }
 void NativeAlt(EditorFrame* frame, bool merge, bool control = false, bool shift = false) {
+#ifdef __WXMSW__
     auto* editor = frame->Editor();
     editor->SetFocus();
     wxYield();
-#ifdef __WXMSW__
     const bool handled = NativeSearch::WindowsShortcut(editor, merge ? 'B' : 'R',
                                                        {{VK_MENU, 0x80},
                                                         {VK_CONTROL, static_cast<BYTE>(control ? 0x80 : 0)},
                                                         {VK_SHIFT, static_cast<BYTE>(shift ? 0x80 : 0)}});
     Require(handled || control || shift, "native Alt+B/Alt+R accelerator is handled");
 #else
-    wxString focusFile;
-    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys require a private display");
-    {
-        wxFFile request(focusFile, "wb");
-        request.Write("focus:wxnotepad");
-    }
-    wxStopWatch focusWait;
-    while (focusWait.Time() < 3000) {
-        wxString pending;
-        {
-            wxFFile request(focusFile, "rb");
-            request.ReadAll(&pending);
-        }
-        if (pending.empty()) break;
-        wxYield();
-        wxMilliSleep(10);
-    }
     bool received = false;
-    wxEvtHandler observer;
-    observer.Bind(wxEVT_KEY_UP, [&received, merge](wxKeyEvent& event) {
-        if (event.GetKeyCode() == (merge ? 'B' : 'R')) received = true;
-        event.Skip();
-    });
-    editor->PushEventHandler(&observer);
-    {
-        wxFFile request(focusFile, "wb");
-        request.Write(wxString("key:alt+") + (control ? "ctrl+" : "") + (shift ? "shift+" : "") + (merge ? "b" : "r"));
-    }
-    wxStopWatch wait;
-    while (!received && wait.Time() < 3000) {
-        wxYield();
-        wxMilliSleep(10);
-    }
-    editor->PopEventHandler(false);
+    NativeKeys::Shortcut(frame, merge ? 'B' : 'R', control, true, shift, &received);
     Require(received, "actual private-display blank-line shortcut release reaches editor");
 #endif
     wxYield();
@@ -266,8 +232,9 @@ public:
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor must present the owned editor before native scenarios");
                 Fixtures(frame);
                 NoChange(frame);
                 Protection(frame);
