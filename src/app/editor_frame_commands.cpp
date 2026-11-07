@@ -1,4 +1,6 @@
 #include "app/editor_frame.h"
+#include "syntax/syntax_scheme.h"
+#include "app/dialogs/long_line_settings_dialog.h"
 #include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
 #include "editor/platform/clipboard.h"
@@ -424,8 +426,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
-            const auto& preferences = settings_ ? settings_->values : defaults_;
-            const int boundary = document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit);
+            const int boundary = static_cast<int>(editor_->Send(Scintilla::Message::GetEdgeColumn));
             if (ShowColumnWrapDialog(this, wrapColumn_, boundary) && !editor_->WrapToColumn(wrapColumn_))
                 wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
                              wxOK | wxICON_WARNING, this);
@@ -692,6 +693,7 @@ wxMenu* EditorFrame::CreateViewMenu() {
     AppendZoomCommands(view);
     view->AppendSeparator();
     AppendDisplayCommands(view);
+    AppendCurrentLineCommands(view);
     view->AppendSeparator();
     AppendFoldCommands(view);
     AppendSettingsCommands(view);
@@ -748,6 +750,36 @@ void EditorFrame::AppendZoomCommands(wxMenu* view) {
 }
 
 void EditorFrame::AppendDisplayCommands(wxMenu* view) {
+    const int longLineSettings = wxWindow::NewControlId();
+    view->Append(longLineSettings, "Long Line Settings...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            int limit = static_cast<int>(editor_->Send(Scintilla::Message::GetEdgeColumn));
+            int mode = preferences.longLineMode;
+            if (ShowLongLineSettingsDialog(this, limit, mode)) {
+                preferences.longLinesLimit = limit;
+                preferences.longLineMode = mode;
+                editor_->Send(Scintilla::Message::SetEdgeColumn, limit);
+                editor_->Send(Scintilla::Message::SetEdgeMode, mode);
+                ApplyLongLineColour(*editor_);
+            }
+        },
+        longLineSettings);
+    const int marker = wxWindow::NewControlId();
+    view->AppendCheckItem(marker, "&Long Line Marker\tCtrl+Shift+L");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleLongLineMarker(); }, marker);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetEdgeMode) != 0); }, marker);
+    const int guides = wxWindow::NewControlId();
+    view->AppendCheckItem(guides, "Indentation &Guides\tCtrl+Shift+G");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleIndentationGuides(); }, guides);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetIndentationGuides) != 0); },
+        guides);
     const int wordWrap = wxWindow::NewControlId();
     view->AppendCheckItem(wordWrap, "&Word Wrap\tCtrl+Shift+W");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleWordWrap(); }, wordWrap);
@@ -859,6 +891,38 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
     addFoldCommand("&Expand All", static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
 }
 
+void EditorFrame::AppendCurrentLineCommands(wxMenu* view) {
+    auto* currentLine = new wxMenu;
+    const auto addMode = [this, currentLine](const char* label, LineHighlightMode mode) {
+        const int id = wxWindow::NewControlId();
+        currentLine->AppendRadioItem(id, label);
+        Bind(wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->SetCurrentLineHighlightMode(mode); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) { event.Check(editor_->GetCurrentLineHighlightMode() == mode); }, id);
+    };
+    addMode("&No Highlight", LineHighlightMode::None);
+    addMode("Background &Color\tCtrl+Shift+I", LineHighlightMode::BackgroundColor);
+    addMode("Outline &Frame\tCtrl+Shift+F", LineHighlightMode::OutlineFrame);
+    currentLine->AppendSeparator();
+    const int subline = wxWindow::NewControlId();
+    currentLine->AppendCheckItem(subline, "Highlight &Subline");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            editor_->Send(Scintilla::Message::SetCaretLineHighlightSubLine,
+                          !editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
+        },
+        subline);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Check(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine) != 0);
+        },
+        subline);
+    view->AppendSubMenu(currentLine, "Highlight C&urrent Line");
+}
+
 void EditorFrame::AppendSettingsCommands(wxMenu* view) {
     if (settings_) {
         view->AppendSeparator();
@@ -922,7 +986,9 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         return true;
     }
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
-        if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
+        if (event.ShiftDown() && !event.MetaDown())
+            editor_->SetCurrentLineHighlightMode(LineHighlightMode::BackgroundColor);
+        else if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
             editor_->SplitLines();
         return true;
     }
@@ -1120,7 +1186,20 @@ bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+    if (event.GetKeyCode() == 'L' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+        !event.MetaDown()) {
+        ToggleLongLineMarker();
+        return true;
+    }
+    if (event.GetKeyCode() == 'G' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+        !event.MetaDown()) {
+        ToggleIndentationGuides();
+        return true;
+    }
+    if (event.GetKeyCode() == 'F' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+        editor_->SetCurrentLineHighlightMode(LineHighlightMode::OutlineFrame);
+    else if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
         editor_->ToggleWordWrap();
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
@@ -1128,6 +1207,19 @@ bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
     else
         return false;
     return true;
+}
+
+void EditorFrame::ToggleIndentationGuides() {
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+    ApplyIndentationGuides(*editor_, document_.Language(), editor_->Send(Scintilla::Message::GetIndentationGuides) == 0,
+                           preferences.simpleIndentGuides);
+}
+
+void EditorFrame::ToggleLongLineMarker() {
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+    const bool show = editor_->Send(Scintilla::Message::GetEdgeMode) == 0;
+    editor_->Send(Scintilla::Message::SetEdgeMode, show ? preferences.longLineMode : 0);
+    if (show) ApplyLongLineColour(*editor_);
 }
 
 bool EditorFrame::HandleDisplayKey(const wxKeyEvent& event, int whitespace, int eol, int symbols) {

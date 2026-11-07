@@ -50,12 +50,38 @@ retains the stored value, Save Settings Now writes the current value, and the
 default `100` is omitted. It scales the existing native point-size font through
 the original core and does not replace the base font size or DPI handling.
 
-`[Settings] LongLinesLimit` defaults to `80` and is bounded to `0..4096` on load.
-It supplies Column Wrap's initial Boundary, with the original `fill-column`
-file-variable override. The accepted dialog value is bounded to `1..512` and
-recalled until New or a successful Open replaces the document. This recall is
-session state. The global setting follows explicit/exit saving and omits its
-default value.
+`HighlightCurrentLine` defaults to `12`: Outline Frame with Highlight Subline.
+The original integer-prefix parser takes `value % 10`, clamped to 0–2,
+for No Highlight, Background Color and Outline Frame; values at least 10 enable
+the independent subline option. Save packs mode + 10 * subline and omits 12.
+The View submenu and Ctrl+Shift+I/F select background/frame without changing
+the subline choice. Current-line styling uses the original default colors and
+alpha under the text, with frame width scaled by window DPI and zoom. It follows
+the existing explicit/exit-save lifecycle and survives document/language changes.
+
+`[Settings] ShowIndentGuides` and `MarkLongLines` default to `0`. View exposes
+Indentation Guides (Ctrl+Shift+G), Long Line Marker (Ctrl+Shift+L), and Long Line
+Settings. Guides follow the original language metadata: Plain Text and Python
+use look-forward guides; C/C++ and JSON use look-both. The advanced load-only
+`[Settings2] SimpleIndentGuides` flag defaults to `0`; enabling it selects real
+indentation guides for every language. Saves preserve that flag in place.
+
+`[Settings] LongLinesLimit` defaults to `80`, bounded to `0..4096` on load.
+`LongLineMode` defaults to `1` (edge line), bounded to `1..2` (background).
+The original guide foreground is orange; the edge-line foreground is yellow.
+Background mode uses the native system 3D-light color. The existing native font,
+zoom and DPI behavior remain in use.
+
+New initializes the live boundary from the global limit. Open applies the
+original `fill-column` file-variable override. Accepting Long Line Settings
+updates both the live and global limit, remembers the mode, and enables the
+marker. Cancel retains the previous state. Language changes retain the live
+boundary; reopening reparses the file variables. Saving persists the global
+limit through the existing explicit/exit lifecycle, omitting default values.
+
+Column Wrap uses this live boundary for its initial Boundary. Its accepted value
+is separately bounded to `1..512` and recalled until New or a successful Open
+replaces the document. This session recall does not change the marker limit.
 
 Find/Replace extends this store with the original `[Settings]` fields:
 

@@ -18,13 +18,18 @@ struct OriginalSettings {
     bool wordWrap = true;
     bool showLineNumbers = true;
     bool viewWhiteSpace = false;
+    bool showIndentGuides = false;
+    bool simpleIndentGuides = false;
     bool autoSelect = true;
     bool noCgiGuess = false;
     bool fixLineEndings = false;
     bool fixTrailingBlanks = false;
     EncodingOptions encoding;
     int zoomLevel = 100;
+    int highlightCurrentLine = 12;
     int longLinesLimit = 80;
+    bool markLongLines = false;
+    int longLineMode = 1;
     int selectOption = 15;
     int autoInsertMask = 511;
     bool saveFindReplace = false;

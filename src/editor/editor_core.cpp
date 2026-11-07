@@ -651,7 +651,10 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         (pdoc->eolMode != Scintilla::EndOfLine::CrLf || notification.ch != '\n'))
         window_.AutoIndent();
     SelectionRevision();
-    if (notification.nmhdr.code == Scintilla::Notification::Zoom) window_.lineNumberWidthDirty_ = true;
+    if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
+        window_.lineNumberWidthDirty_ = true;
+        window_.SetCurrentLineHighlightMode(window_.GetCurrentLineHighlightMode());
+    }
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&
         (static_cast<int>(notification.modificationType) &
          static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {
