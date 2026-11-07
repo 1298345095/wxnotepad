@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "editor/editor_core.h"
+#include "editor/platform/clipboard.h"
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
 #ifdef __WXMSW__
@@ -115,6 +116,30 @@ void EditorControl::Copy() {
         Send(Message::LineCopy, static_cast<uintptr_t>(lineSelectionMode_) & 1);
     else
         Send(Message::Copy);
+}
+
+bool EditorControl::CopyAdd() {
+    // Edit.cpp::EditCopyAppend at 89b8b36. The missing-Unicode branch calls
+    // the underlying Copy message, bypassing the application's line preference.
+    if (!EditorClipboard::HasText()) {
+        Send(Message::Copy);
+        return true;
+    }
+    const bool empty = Send(Message::GetSelectionEmpty);
+    if (!empty && Send(Message::SelectionIsRectangle)) return false;
+    const auto length = empty ? Send(Message::GetLength) : Send(Message::GetSelText);
+    std::string added(static_cast<size_t>(length) + 1, '\0');
+    Send(empty ? Message::GetText : Message::GetSelText, empty ? length : 0, reinterpret_cast<intptr_t>(added.data()));
+    added.resize(added.find('\0'));
+    if (added.empty()) return true;
+    auto old = EditorClipboard::ReadPlainText(*GetParent());
+    if (!old) return true;
+    old->append("\r\n\r\n");
+    old->append(added);
+    core::SelectionText text;
+    text.Copy(*old, 65001, false, false);
+    EditorClipboard::Write(*GetParent(), text);
+    return true;
 }
 
 void EditorControl::Cut() {

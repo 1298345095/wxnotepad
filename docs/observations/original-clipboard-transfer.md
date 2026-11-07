@@ -47,3 +47,26 @@ line tag or the rectangle marker. It therefore transfers stream text. This
 observation does not establish line metadata support in other native editors.
 The empty-selection current-line Copy/Cut preference belongs to issue #72;
 this slice preserves the existing explicit LineCopy/LineCut command parameters.
+
+Issue #140 retains the original bulk clipboard commands. Copy All publishes the
+whole buffer as stream text while retaining selection and document state. Copy
+Add appends two CRLF sequences and selected text to existing Unicode text; its
+direct caret-only handler uses the whole buffer. Its native menu and Ctrl+E
+remain selection-gated. Without Unicode text, it calls the underlying core Copy,
+which leaves a caret-only clipboard unchanged for every current-line preference.
+Only the Unicode-append branch rejects a nonempty rectangular selection.
+
+The original SelectionText extraction replaces NUL with spaces for Copy All and
+selected Copy Add. Whole-buffer Copy Add and existing clipboard text stop at the
+first NUL. Successful append discards previous transfer-kind tags. Clear Clipboard
+accepts non-text formats and leaves no native formats. GTK takes a zero-target
+offer before releasing ownership, clearing both foreign ownership and clipboard
+manager caches on the supported X11/Wayland backends.
+
+GTK rectangle offers additionally expose `application/x-wxnotepad-plain-text`
+containing original UTF-8 bytes before the LF/NUL shape carrier. Copy Add reads
+that target when available, retaining both ordinary rectangles and genuine empty
+final rows. Existing native text targets and Paste's shape interpretation remain
+unchanged. The independent peer tests in `original_clipboard_utilities` cover
+these commands, native menu/shortcut availability, original NUL boundaries,
+rectangular feedback and unchanged encoded Save/Undo/Redo bytes.
