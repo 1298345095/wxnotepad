@@ -692,6 +692,7 @@ wxMenu* EditorFrame::CreateViewMenu() {
     AppendZoomCommands(view);
     view->AppendSeparator();
     AppendDisplayCommands(view);
+    AppendCurrentLineCommands(view);
     view->AppendSeparator();
     AppendFoldCommands(view);
     AppendSettingsCommands(view);
@@ -772,13 +773,72 @@ void EditorFrame::AppendDisplayCommands(wxMenu* view) {
             GetMenuBar()->Check(whitespace, visible);
         },
         whitespace);
-    // One frame hook owns dispatch; the dialog retains its narrower callback.
-    Bind(wxEVT_CHAR_HOOK, [this, whitespace](wxKeyEvent& event) {
-        if (!HandleCommandKey(event) && !HandleWhitespaceKey(event, whitespace)) event.Skip();
-    });
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetViewWS) != 0); }, whitespace);
+    const int eol = wxWindow::NewControlId();
+    view->AppendCheckItem(eol, "Show Line &Endings\tCtrl+Shift+9");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            editor_->Send(Scintilla::Message::SetViewEOL, !editor_->Send(Scintilla::Message::GetViewEOL));
+        },
+        eol);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetViewEOL) != 0); }, eol);
+    const int symbols = wxWindow::NewControlId();
+    view->AppendCheckItem(symbols, "Show Wrap S&ymbols\tCtrl+Shift+0");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            showWordWrapSymbols_ = !showWordWrapSymbols_;
+            ApplyWrapSymbols();
+        },
+        symbols);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(showWordWrapSymbols_); }, symbols);
+    // One frame hook owns dispatch; the dialog retains its narrower callback.
+    Bind(wxEVT_CHAR_HOOK, [this, whitespace, eol, symbols](wxKeyEvent& event) {
+        if (!HandleCommandKey(event) && !HandleDisplayKey(event, whitespace, eol, symbols)) event.Skip();
+    });
+}
+
+void EditorFrame::ApplyWrapSymbols() {
+    // Notepad4.cpp::SetWrapVisualFlags at 89b8b36; see licenses/Notepad4.txt.
+    using Scintilla::Message;
+    if (!showWordWrapSymbols_) {
+        editor_->Send(Message::SetWrapVisualFlags, 0);
+        return;
+    }
+    if (wordWrapSymbols_ == 0) wordWrapSymbols_ = 2;
+    uintptr_t flags = 0;
+    uintptr_t location = 0;
+    switch (wordWrapSymbols_ % 10) {
+    case 1:
+        location |= static_cast<uintptr_t>(Scintilla::WrapVisualLocation::EndByText);
+        [[fallthrough]];
+    case 2:
+        flags |= static_cast<uintptr_t>(Scintilla::WrapVisualFlag::End);
+        break;
+    default:
+        break;
+    }
+    switch (wordWrapSymbols_ / 10) {
+    case 1:
+        location |= static_cast<uintptr_t>(Scintilla::WrapVisualLocation::StartByText);
+        [[fallthrough]];
+    case 2:
+        flags |= static_cast<uintptr_t>(Scintilla::WrapVisualFlag::Start);
+        break;
+    case 3:
+        flags |= static_cast<uintptr_t>(Scintilla::WrapVisualFlag::Margin);
+        if (!editor_->LineNumbersVisible()) editor_->SetLineNumbersVisible(true);
+        break;
+    default:
+        break;
+    }
+    editor_->Send(Message::SetWrapVisualFlagsLocation, location);
+    editor_->Send(Message::SetWrapVisualFlags, flags);
 }
 
 void EditorFrame::AppendFoldCommands(wxMenu* view) {
@@ -798,6 +858,38 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
     addFoldCommand("&Collapse All", static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
                                         static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
     addFoldCommand("&Expand All", static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
+}
+
+void EditorFrame::AppendCurrentLineCommands(wxMenu* view) {
+    auto* currentLine = new wxMenu;
+    const auto addMode = [this, currentLine](const char* label, LineHighlightMode mode) {
+        const int id = wxWindow::NewControlId();
+        currentLine->AppendRadioItem(id, label);
+        Bind(wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->SetCurrentLineHighlightMode(mode); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) { event.Check(editor_->GetCurrentLineHighlightMode() == mode); }, id);
+    };
+    addMode("&No Highlight", LineHighlightMode::None);
+    addMode("Background &Color\tCtrl+Shift+I", LineHighlightMode::BackgroundColor);
+    addMode("Outline &Frame\tCtrl+Shift+F", LineHighlightMode::OutlineFrame);
+    currentLine->AppendSeparator();
+    const int subline = wxWindow::NewControlId();
+    currentLine->AppendCheckItem(subline, "Highlight &Subline");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            editor_->Send(Scintilla::Message::SetCaretLineHighlightSubLine,
+                          !editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
+        },
+        subline);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Check(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine) != 0);
+        },
+        subline);
+    view->AppendSubMenu(currentLine, "Highlight C&urrent Line");
 }
 
 void EditorFrame::AppendSettingsCommands(wxMenu* view) {
@@ -863,7 +955,9 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         return true;
     }
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
-        if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
+        if (event.ShiftDown() && !event.MetaDown())
+            editor_->SetCurrentLineHighlightMode(LineHighlightMode::BackgroundColor);
+        else if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
             editor_->SplitLines();
         return true;
     }
@@ -1043,7 +1137,10 @@ bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+    if (event.GetKeyCode() == 'F' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+        editor_->SetCurrentLineHighlightMode(LineHighlightMode::OutlineFrame);
+    else if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
         editor_->ToggleWordWrap();
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
@@ -1053,10 +1150,14 @@ bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
     return true;
 }
 
-bool EditorFrame::HandleWhitespaceKey(const wxKeyEvent& event, int commandId) {
-    if ((event.GetKeyCode() != '8' && event.GetKeyCode() != '*') || !event.ControlDown() || !event.ShiftDown() ||
-        event.AltDown() || event.MetaDown())
-        return false;
+bool EditorFrame::HandleDisplayKey(const wxKeyEvent& event, int whitespace, int eol, int symbols) {
+    if (!event.ControlDown() || !event.ShiftDown() || event.AltDown() || event.MetaDown()) return false;
+    const int key = event.GetKeyCode();
+    const int commandId = key == '8' || key == '*'   ? whitespace
+                          : key == '9' || key == '(' ? eol
+                          : key == '0' || key == ')' ? symbols
+                                                     : wxID_NONE;
+    if (commandId == wxID_NONE) return false;
     wxCommandEvent command(wxEVT_MENU, commandId);
     GetEventHandler()->ProcessEvent(command);
     return true;

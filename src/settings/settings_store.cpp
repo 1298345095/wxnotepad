@@ -67,6 +67,10 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", defaults.viewWhiteSpace);
+    values.viewEOLs = ReadBool("ViewEOLs", defaults.viewEOLs);
+    values.showWordWrapSymbols = ReadBool("ShowWordWrapSymbols", defaults.showWordWrapSymbols);
+    const int wrapSymbols = std::clamp(ReadInt("WordWrapSymbols", defaults.wordWrapSymbols), 0, 32);
+    values.wordWrapSymbols = std::min(wrapSymbols % 10, 2) + (wrapSymbols / 10) * 10;
     values.autoSelect = ReadBool("AutoSelect", defaults.autoSelect, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", defaults.noCgiGuess, "Settings2");
     values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
@@ -80,6 +84,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.noEncodingTags = ReadBool("NoEncodingTags", defaults.encoding.noEncodingTags);
     values.encoding.noFileVariables = ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), 10, 500);
+    const int currentLine = ReadInt("HighlightCurrentLine", defaults.highlightCurrentLine);
+    values.highlightCurrentLine = std::clamp(currentLine % 10, 0, 2) + (currentLine >= 10 ? 10 : 0);
     values.longLinesLimit = std::clamp(ReadInt("LongLinesLimit", defaults.longLinesLimit), 0, 4096);
     values.selectOption = ReadInt("SelectOption", defaults.selectOption);
     values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
@@ -293,6 +299,9 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, defaults.viewWhiteSpace);
+        WriteBool("ViewEOLs", values.viewEOLs, defaults.viewEOLs);
+        WriteBool("ShowWordWrapSymbols", values.showWordWrapSymbols, defaults.showWordWrapSymbols);
+        WriteInt("WordWrapSymbols", values.wordWrapSymbols, defaults.wordWrapSymbols);
         WriteBool("AutoSelect", values.autoSelect, defaults.autoSelect, "Styles");
         WriteInt("DefaultEncoding", values.encoding.defaultEncoding, defaults.encoding.defaultEncoding);
         WriteBool("SkipUnicodeDetection", values.encoding.skipUnicodeDetection, defaults.encoding.skipUnicodeDetection);
@@ -301,6 +310,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, defaults.encoding.loadNFOasOEM);
         WriteBool("NoEncodingTags", values.encoding.noEncodingTags, defaults.encoding.noEncodingTags);
         WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
+        WriteInt("HighlightCurrentLine", values.highlightCurrentLine, defaults.highlightCurrentLine);
         WriteInt("LongLinesLimit", values.longLinesLimit, defaults.longLinesLimit);
         WriteBool("FixLineEndings", values.fixLineEndings, defaults.fixLineEndings);
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);

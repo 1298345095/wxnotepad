@@ -32,7 +32,14 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
         warnLineEndings_ = settings->values.warnLineEndings;
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
+        editor_->SetCurrentLineHighlightMode(
+            static_cast<LineHighlightMode>(settings->values.highlightCurrentLine % 10));
+        editor_->Send(Scintilla::Message::SetCaretLineHighlightSubLine, settings->values.highlightCurrentLine >= 10);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
+        editor_->Send(Scintilla::Message::SetViewEOL, settings->values.viewEOLs);
+        showWordWrapSymbols_ = settings->values.showWordWrapSymbols;
+        wordWrapSymbols_ = settings->values.wordWrapSymbols;
+        ApplyWrapSymbols();
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
         editor_->Send(Scintilla::Message::SetViewWS,
                       static_cast<uintptr_t>(settings->values.viewWhiteSpace ? Scintilla::WhiteSpace::VisibleAlways
@@ -73,11 +80,17 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    settings_->values.viewEOLs = editor_->Send(Scintilla::Message::GetViewEOL) != 0;
+    settings_->values.showWordWrapSymbols = showWordWrapSymbols_;
+    settings_->values.wordWrapSymbols = wordWrapSymbols_;
     settings_->values.warnLineEndings = warnLineEndings_;
     settings_->values.defaultEOLMode = defaultEolMode_;
     settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
     settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    settings_->values.highlightCurrentLine =
+        static_cast<int>(editor_->GetCurrentLineHighlightMode()) +
+        10 * static_cast<int>(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
     CaptureSearchSettings(search_, settings_->values);
     settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
     return settings_->Save(explicitSave);
