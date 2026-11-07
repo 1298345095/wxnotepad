@@ -25,16 +25,18 @@ inline void AfterPresentation(EditorFrame* frame, std::function<void(bool)> call
         class Preparation final : public wxTimer {
         public:
             Preparation(EditorFrame* frame, std::function<void(bool)> callback)
-                : callback_(std::move(callback)), deadline_(std::chrono::steady_clock::now() + std::chrono::seconds(3)) {
+                : callback_(std::move(callback)),
+                  deadline_(std::chrono::steady_clock::now() + std::chrono::seconds(3)) {
                 auto* widget = GTK_WIDGET(frame->GetHandle());
                 auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
                 if (surface && wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile_)) {
                     const auto remaining = std::chrono::duration_cast<std::chrono::microseconds>(
-                                               deadline_ - std::chrono::steady_clock::now()).count();
+                                               deadline_ - std::chrono::steady_clock::now())
+                                               .count();
                     wxFFile file(focusFile_, "wb");
                     file.Write(wxString::Format("prepare:%lu:%u:%lld", wxGetProcessId(),
-                                              wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface)),
-                                              static_cast<long long>(g_get_monotonic_time() + remaining)));
+                                                wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface)),
+                                                static_cast<long long>(g_get_monotonic_time() + remaining)));
                 }
                 Start(10);
             }
@@ -51,6 +53,7 @@ inline void AfterPresentation(EditorFrame* frame, std::function<void(bool)> call
                 delete this;
                 callback(ready);
             }
+
         private:
             std::function<void(bool)> callback_;
             std::chrono::steady_clock::time_point deadline_;
@@ -196,7 +199,8 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     if (!frame->IsActive() && wayland) {
         auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
         if (!surface) throw std::runtime_error("native shortcuts require the owned Wayland surface");
-        const auto remaining = std::chrono::duration_cast<std::chrono::microseconds>(focusDeadline - Clock::now()).count();
+        const auto remaining =
+            std::chrono::duration_cast<std::chrono::microseconds>(focusDeadline - Clock::now()).count();
         intent = wxString::Format("activate:%lu:%u:%lld", wxGetProcessId(),
                                   wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface)),
                                   static_cast<long long>(g_get_monotonic_time() + remaining));
