@@ -8,15 +8,18 @@ namespace {
 int wallOffset = 0;
 }
 
-extern "C" int __real_clock_gettime(clockid_t clock, timespec* value);
-extern "C" int __real_gettimeofday(timeval* value, void* zone);
-extern "C" int __wrap_clock_gettime(clockid_t clock, timespec* value) {
-    const int result = __real_clock_gettime(clock, value);
+// GNU ld's ABI spellings remain linker labels rather than reserved C++ names.
+extern "C" int RealClockGetTime(clockid_t clock, timespec* value) asm("__real_clock_gettime");
+extern "C" int RealGetTimeOfDay(timeval* value, void* zone) asm("__real_gettimeofday");
+extern "C" int WrapClockGetTime(clockid_t clock, timespec* value) asm("__wrap_clock_gettime");
+extern "C" int WrapGetTimeOfDay(timeval* value, void* zone) asm("__wrap_gettimeofday");
+extern "C" int WrapClockGetTime(clockid_t clock, timespec* value) {
+    const int result = RealClockGetTime(clock, value);
     if (result == 0 && clock == CLOCK_REALTIME) value->tv_sec += wallOffset;
     return result;
 }
-extern "C" int __wrap_gettimeofday(timeval* value, void* zone) {
-    const int result = __real_gettimeofday(value, zone);
+extern "C" int WrapGetTimeOfDay(timeval* value, void* zone) {
+    const int result = RealGetTimeOfDay(value, zone);
     if (result == 0) value->tv_sec += wallOffset;
     return result;
 }
