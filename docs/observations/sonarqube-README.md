@@ -81,3 +81,19 @@ drag scenarios. It reproduced the missing-offset failure in three runs before th
 fix and passed three runs afterward. This Wayland-specific check explicitly skips
 on X11; the existing full drag test continues to run on both backends. Raw red/green
 logs and the original failed CI artifact are retained with the other evidence.
+
+## wxWidgets test integration
+
+In `tests/search_backslashes.cpp`, S110 is accepted for the `BackslashApp`
+integration: the fixture adds one class directly above `wxApp`, while the
+remaining reported inheritance depth belongs to wxWidgets. The standard
+`wxIMPLEMENT_APP` entry point uses its native initialization and process-result
+hooks.
+
+The top-level `wxFrame` allocation is an S5025 false positive. Both test outcomes
+call `Destroy()`. In the pinned wxWidgets 3.3.3 source,
+`wxTopLevelWindowBase::Destroy` queues deferred deletion,
+`wxAppConsoleBase::DeletePendingObjects` deletes queued objects, and
+`wxAppBase::DeleteAllTLWs` deletes remaining top-level windows during cleanup.
+This frame follows the framework's ownership contract. Each disposition has an
+issue-specific source explanation and independent Standards and Spec review.
