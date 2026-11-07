@@ -90,6 +90,10 @@ public:
     int ChangeHistoryOptions() const { return changeHistoryOptions_; }
     void SetChangeHistoryOptions(int options);
     void ToggleChangeHistory();
+    bool CodeFoldingVisible() const { return codeFoldingVisible_; }
+    void SetCodeFoldingVisible(bool visible);
+    bool CurrentBlockHighlighted() const { return highlightCurrentBlock_; }
+    void SetCurrentBlockHighlighted(bool enabled);
     LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
     void SetCurrentLineHighlightMode(LineHighlightMode mode);
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
@@ -107,12 +111,16 @@ private:
     bool bookmarkMarginVisible_ = false;
     bool bookmarkMarginWidthDirty_ = true;
     int changeHistoryOptions_ = 0;
+    bool codeFoldingVisible_ = true;
+    bool foldMarginWidthDirty_ = true;
+    bool highlightCurrentBlock_ = true;
     bool autoIndent_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;
     void UpdateLineNumberMargin();
     void UpdateBookmarkMargin();
+    void UpdateFoldMargin();
     void OnPaint(wxPaintEvent& event);
     void OnKeyDown(wxKeyEvent& event);
     void OnSize(wxSizeEvent& event);

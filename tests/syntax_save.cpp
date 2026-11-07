@@ -125,8 +125,8 @@ void Automatic(EditorFrame* frame, const char* language, int lexer) {
     Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")) &&
                 status.Contains(language) && !status.Contains("override") &&
                 frame->Editor()->Send(Message::GetLexer) == lexer &&
-                (frame->Editor()->Send(Message::GetMarginWidthN, 1) != 0) == (lexer != SCLEX_NULL),
-            "successful naming must select Automatic and install the filename's lexer and fold capability");
+                frame->Editor()->Send(Message::GetMarginWidthN, 2) > 0,
+            "successful naming must select Automatic, install the filename's lexer and retain the folding margin");
 }
 void Selected(EditorFrame* frame, const char* language, int lexer) {
     Paint(frame);

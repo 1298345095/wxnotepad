@@ -17,10 +17,11 @@ inline void Paint(EditorControl* editor) {
     }
 }
 inline void MarginClick(EditorControl* editor, int line, const char* marginMessage) {
-    const auto width = editor->Send(Message::GetMarginWidthN, 1);
-    if (width != editor->FromDIP(16)) throw std::runtime_error(marginMessage);
+    const auto width = editor->Send(Message::GetMarginWidthN, 2);
+    if (width <= 0) throw std::runtime_error(marginMessage);
     const auto position = editor->Send(Message::PositionFromLine, line);
-    const int x = static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + width / 2);
+    const int x = static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) +
+                                   editor->Send(Message::GetMarginWidthN, 1) + width / 2);
     const int y = static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position) +
                                    editor->Send(Message::TextHeight, line) / 2);
     if (y < 0 || y >= editor->GetClientSize().y)

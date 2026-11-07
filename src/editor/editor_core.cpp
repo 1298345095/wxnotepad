@@ -245,13 +245,11 @@ void EditorControl::Core::UpdateWrapLayout() {
 }
 
 void EditorControl::Core::DpiChanged() {
-    if (WndProc(Message::GetMarginWidthN, 2, 0) > 0) {
-        WndProc(Message::SetMarginWidthN, 2, window_.FromDIP(16));
-        for (int marker = 25; marker <= 31; ++marker)
-            WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
-    }
+    for (int marker = 25; marker <= 31; ++marker)
+        WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
     InvalidateStyleRedraw();
     window_.lineNumberWidthDirty_ = true;
+    window_.foldMarginWidthDirty_ = true;
     window_.UpdateLineNumberMargin();
     ChangeSize();
 }
@@ -677,6 +675,7 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
     if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
         window_.lineNumberWidthDirty_ = true;
         window_.bookmarkMarginWidthDirty_ = true;
+        window_.foldMarginWidthDirty_ = true;
         window_.SetCurrentLineHighlightMode(window_.GetCurrentLineHighlightMode());
     }
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&

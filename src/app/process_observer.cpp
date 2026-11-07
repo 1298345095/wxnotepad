@@ -89,10 +89,13 @@ void ProcessObserver::Publish() {
             frame_->Editor()->AutoIndentEnabled()) +
         "document_status\t" + frame_->GetStatusBar()->GetStatusText() + "\n" +
         wxString::Format(
-            "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\n",
+            "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\ncode_folding\t%d\ncurrent_block\t%"
+            "d\nfold_margin\t%lld\n",
             static_cast<int>(frame_->Editor()->GetLineSelectionMode()),
             static_cast<int>(frame_->Editor()->GetCurrentLineHighlightMode()),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine))) +
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine)),
+            frame_->Editor()->CodeFoldingVisible(), frame_->Editor()->CurrentBlockHighlighted(),
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, 2))) +
         wxString::Format("bookmark_margin\t%d\nchange_history\t%lld\n", frame_->Editor()->BookmarkMarginVisible(),
                          static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetChangeHistory)));
     // A reader can temporarily deny replacement on Windows. IPC errors must

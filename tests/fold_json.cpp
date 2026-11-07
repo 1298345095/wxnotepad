@@ -116,9 +116,8 @@ public:
                 Require(!editor->Send(Message::GetFoldExpanded, 1),
                         "choosing JSON again must preserve its nested fold state");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
-                Require(editor->Send(Message::GetMarginWidthN, 1) == 0 && !Header(editor, 0) && !Header(editor, 1) &&
-                            editor->Send(Message::GetLineVisible, 3),
-                        "Plain Text must clear JSON headers, hide the fold margin and reveal all text");
+                Require(editor->Send(Message::GetMarginWidthN, 2) > 0 && editor->Send(Message::GetLineVisible, 3),
+                        "Plain Text must retain the original fold margin and reveal old contracted JSON text");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "JSON"));
                 Paint(editor);
                 Require(Header(editor, 0) && Header(editor, 1) && Header(editor, 2) &&
@@ -139,7 +138,7 @@ public:
                             editor->Send(Message::GetLineVisible, 3) && !editor->Send(Message::CanUndo),
                         "same-language Open must rebuild JSON fold levels and clear old contraction/history");
                 NativeSearch::Command(frame, wxID_NEW);
-                Require(editor->Send(Message::GetLength) == 0 && editor->Send(Message::GetMarginWidthN, 1) == 0,
+                Require(editor->Send(Message::GetLength) == 0 && editor->Send(Message::GetMarginWidthN, 2) > 0,
                         "New must reset JSON folding to unnamed Plain Text");
                 std::filesystem::remove_all(directory);
                 std::puts("PASS: JSON language/reset transitions preserve editor history and saved bytes");

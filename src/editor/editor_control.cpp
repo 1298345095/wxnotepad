@@ -49,6 +49,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         Send(Message::MarkerSetBackTranslucent, marker,
              marker == 21 || marker == 24 ? 0xFF000000 | Send(Message::StyleGetBack, 33) : colour);
     }
+    SetCurrentBlockHighlighted(true);
 #ifdef __WXMSW__
     // Use one native caret for display and for input methods on Windows.
     Send(Message::SetCaretStyle, 0);
@@ -286,8 +287,11 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     }
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
-        message == Message::StyleSetItalic || message == Message::SetZoom)
-        lineNumberWidthDirty_ = bookmarkMarginWidthDirty_ = true;
+        message == Message::StyleSetItalic || message == Message::SetZoom) {
+        lineNumberWidthDirty_ = true;
+        bookmarkMarginWidthDirty_ = true;
+        foldMarginWidthDirty_ = true;
+    }
     UpdateLineNumberMargin();
     UpdateBookmarkMargin();
     if (message == Message::FoldAll) core_->RepairFoldSelection();
@@ -347,7 +351,35 @@ void EditorControl::ToggleChangeHistory() {
         SetChangeHistoryOptions(changeHistoryOptions_ == 0 ? 3 : 0);
 }
 
+void EditorControl::SetCodeFoldingVisible(bool visible) {
+    codeFoldingVisible_ = visible;
+    foldMarginWidthDirty_ = true;
+    UpdateFoldMargin();
+    if (!visible) Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
+    core_->UpdateWrapLayout();
+}
+
+void EditorControl::UpdateFoldMargin() {
+    if (!foldMarginWidthDirty_) return;
+    foldMarginWidthDirty_ = false;
+    // Original Styles.cpp::UpdateFoldMarginWidth, default CodeFolding size 0.
+    const auto width = codeFoldingVisible_ ? core_->WndProc(Message::TextWidth,
+                                                            static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber),
+                                                            reinterpret_cast<intptr_t>("+_"))
+                                           : 0;
+    if (core_->WndProc(Message::GetMarginWidthN, 2, 0) != width) {
+        core_->WndProc(Message::SetMarginWidthN, 2, width);
+        core_->UpdateWrapLayout();
+    }
+}
+
+void EditorControl::SetCurrentBlockHighlighted(bool enabled) {
+    highlightCurrentBlock_ = enabled;
+    Send(Message::MarkerEnableHighlight, enabled);
+}
+
 void EditorControl::UpdateLineNumberMargin() {
+    UpdateFoldMargin();
     if (!lineNumberWidthDirty_) return;
     lineNumberWidthDirty_ = false;
     intptr_t width = 0;

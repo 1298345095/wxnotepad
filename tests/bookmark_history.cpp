@@ -179,10 +179,33 @@ void Geometry(EditorFrame* frame) {
     }
     editor->Send(Message::SetZoom, 100);
     NativeKeys::Shortcut(frame, WXK_F2, true);
-    Menu(frame, "Bookmark Margin");
+    const auto sharedWidth = editor->Send(Message::GetMarginWidthN, 1);
+    const auto foldingWidth = editor->Send(Message::GetMarginWidthN, 2);
+    const auto textX = editor->Send(Message::PointXFromPosition, 0, 0);
+    const auto bookmarkPixels = bookmarkCount();
+    Require(foldingWidth > 0 && bookmarkPixels > 0, "original independent bookmark and folding margins are visible");
+    Menu(frame, "Show Code Folding");
+    Require(editor->Send(Message::GetMarginWidthN, 2) == 0 &&
+                editor->Send(Message::GetMarginWidthN, 1) == sharedWidth &&
+                editor->Send(Message::PointXFromPosition, 0, 0) == textX - foldingWidth &&
+                bookmarkCount() == bookmarkPixels,
+            "native folding toggle shifts text by its own margin while bookmark geometry and paint stay fixed");
+    Menu(frame, "Show Code Folding");
+    Require(editor->Send(Message::GetMarginWidthN, 2) == foldingWidth &&
+                editor->Send(Message::PointXFromPosition, 0, 0) == textX && bookmarkCount() == bookmarkPixels &&
+                NativeSearch::Text(editor) == "first\r\nsecond\r\nlast" && !editor->Send(Message::CanUndo) &&
+                !editor->Send(Message::GetModify),
+            "restored folding margin retains bookmark pixels, text bytes and clean undo/save state");
     Menu(frame, "Change History Marker");
+    Require(editor->Send(Message::GetMarginWidthN, 1) == sharedWidth && bookmarkCount() == bookmarkPixels,
+            "enabling history alongside visible bookmarks preserves shared geometry and bookmark appearance");
+    Menu(frame, "Bookmark Margin");
     Require(editor->Send(Message::GetMarginWidthN, 1) == editor->Send(Message::TextHeight, 0) - 2,
             "history alone keeps bookmark margin visible while bookmark preference stays hidden");
+    Menu(frame, "Show Code Folding");
+    Require(editor->Send(Message::GetMarginWidthN, 2) == 0 && editor->Send(Message::GetMarginWidthN, 1) == sharedWidth,
+            "history-only shared margin remains visible with folding hidden");
+    Menu(frame, "Show Code Folding");
     MarginClick(editor, 1);
     Require(editor->Send(Message::MarkerGet, 1) & 1, "history-only margin click preserves hidden bookmarks");
     const int textLeft =
