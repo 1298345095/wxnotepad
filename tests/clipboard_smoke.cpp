@@ -954,6 +954,71 @@ void CurrentLines(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     }
     std::puts("PASS: all original current-line modes, boundary EOLs, columns, same/peer paste, shortcuts and history");
 }
+void ReadOnlyCommands(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const int mode = frame->GetMenuBar()->FindMenuItem("File", "Read Only Mode");
+    Require(mode != wxNOT_FOUND, "original read-only mode exists in the native File Mode menu");
+    for (bool keyboard : {false, true}) {
+        TestEditor::ResetStream(editor, "alpha\r\nbeta\r\n", 1, 4);
+        Require(peer.Request("copy") == "ready", "independent stock app publishes the clipboard seed");
+        const auto seed = peer.Request("paste");
+        Gesture(editor);
+        NativeSearch::Command(frame, mode);
+        Require(frame->GetMenuBar()->IsEnabled(wxID_CUT), "original nonempty Cut stays enabled while protected");
+        if (keyboard)
+            NativeLineShortcut(editor, 'X', false);
+        else
+            NativeSearch::Command(frame, wxID_CUT);
+        Require(Text(editor) == "alpha\r\nbeta\r\n" && !editor->Send(Message::GetModify) &&
+                    editor->Send(Message::GetUndoActions) == 0 && peer.Request("paste") == seed,
+                "protected native Cut and Ctrl+X retain bytes, save point, history and independent clipboard bytes");
+        TestEditor::RequireSelection(editor, 1, 4, "original protected stream Cut retains selection");
+        Gesture(editor);
+        if (keyboard)
+            NativeLineShortcut(editor, 'X', true);
+        else
+            NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Cut Line"));
+        Require(Text(editor) == "alpha\r\nbeta\r\n" && peer.Request("paste") == seed,
+                "protected native Cut Line and Ctrl+Shift+X preserve document and independently received clipboard");
+        TestEditor::RequireSelection(editor, 7, 0,
+                                     "original protected Cut Line expands selection before rejecting writes");
+        editor->Send(Message::SetSel, 1, 4);
+        Gesture(editor);
+        if (keyboard)
+            NativeLineShortcut(editor, 'C', false);
+        else
+            NativeSearch::Command(frame, wxID_COPY);
+        Require(peer.Request("paste") == "lph", "native Copy and Ctrl+C remain usable on protected selections");
+
+        TestEditor::ResetStream(editor, "alpha\r\nbeta\r\n", 4, 1);
+        Require(peer.Request("copy") == "ready", "republish independent native text before protected Paste");
+        Gesture(editor);
+        NativeSearch::Command(frame, mode);
+        Require(!frame->GetMenuBar()->IsEnabled(wxID_PASTE),
+                "original native Paste menu is disabled by write protection");
+        if (keyboard)
+            NativeLineShortcut(editor, 'V', false);
+        else
+            editor->Send(Message::Paste);
+        Require(Text(editor) == "alpha\r\nbeta\r\n" && !editor->Send(Message::GetModify) &&
+                    editor->Send(Message::GetUndoActions) == 0 && peer.Request("paste") == seed,
+                "protected Ctrl+V and independent editor-message Paste preserve text and history");
+        TestEditor::RequireSelection(editor, 1, 1, "original protected Paste retains selection collapse");
+    }
+    TestEditor::ResetStream(editor, "history");
+    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Message::Undo);
+    NativeSearch::Command(frame, mode);
+    const auto history = editor->Send(Message::GetUndoCurrent);
+    NativeLineShortcut(editor, 'Z', false);
+    NativeLineShortcut(editor, 'Y', false);
+    Require(Text(editor) == "history" && editor->Send(Message::GetUndoCurrent) == history,
+            "protected native Ctrl+Z/Ctrl+Y retain the underlying history cursor");
+    NativeSearch::Command(frame, mode);
+    editor->Send(Message::Redo);
+    Require(Text(editor) == "history!", "original Redo survives protected keyboard Undo/Redo attempts");
+    std::puts("PASS: F10 mode, native/keyboard Cut/Copy/Paste/Undo/Redo with independently received clipboard bytes");
+}
 class ClipboardApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -992,7 +1057,9 @@ public:
                 Require(peer.Request("ready") == "ready", "external clipboard application is running");
                 wxString shapes;
                 if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-                    if (shapes == "commands")
+                    if (shapes == "read-only")
+                        ReadOnlyCommands(frame, editor, peer);
+                    else if (shapes == "commands")
                         LineCommands(frame, editor, peer);
                     else if (shapes == "lines")
                         CurrentLines(frame, editor, peer);

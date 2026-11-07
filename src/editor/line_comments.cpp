@@ -7,7 +7,6 @@
 
 bool EditorControl::ToggleLineComments(const char* prefix, bool spaceAfterComment) {
     using Scintilla::Message;
-    if (Send(Message::GetReadOnly)) return true;
     if (Send(Message::SelectionIsRectangle)) return false;
 
     // Adapted from Notepad4 89b8b36 Edit.cpp::EditToggleLineComments.

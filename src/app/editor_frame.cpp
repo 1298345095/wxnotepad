@@ -168,7 +168,10 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
 
 void EditorFrame::UpdateDocumentState() {
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
-    SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + " - wxnotepad");
+    const wxString protection = document_.IsReadOnlyFile()                       ? " (Read Only File)"
+                                : editor_->Send(Scintilla::Message::GetReadOnly) ? " (Read Only Mode)"
+                                                                                 : "";
+    SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + protection + " - wxnotepad");
     const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
                               : document_.Encoding() == FileEncoding::Gbk   ? "GBK (CP936)"
                                                                             : "UTF-8";
@@ -216,6 +219,15 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
 
 SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
     if (!document_.Path().empty()) {
+        if (document_.RefreshReadOnlyFile()) {
+            UpdateDocumentState();
+            if (wxMessageBox("\"" + document_.Path() + "\" is read only. Save to a different file?", "Read only file",
+                             wxYES_NO | wxICON_WARNING, this) != wxYES)
+                return {SaveStatus::Cancelled, {}};
+            const auto chosen = ChooseSaveFile(this, "Save As", document_.Language(), document_.Path());
+            if (!chosen) return SaveAs(std::nullopt, decideLoss);
+            return SaveAs(chosen->path, decideLoss, chosen->type);
+        }
         const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
         UpdateDocumentState();
         return result;
