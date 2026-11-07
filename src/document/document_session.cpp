@@ -171,6 +171,20 @@ void RestoreReloadView(EditorControl& editor, const ReloadView& view) {
 }
 } // namespace
 
+wxString DocumentSession::FileNameText(FileNamePart part) const {
+    wxString text = path_.empty()                    ? wxString("Untitled")
+                    : part == FileNamePart::FullPath ? path_
+                                                     : wxFileName(path_).GetFullName();
+    if (part == FileNamePart::BaseName) {
+        // Pinned Notepad4 uses PathRemoveExtension, including leading dots and
+        // its reset at a space or backslash; wxFileName::GetName differs.
+        const auto dot = text.find_last_of('.');
+        const auto boundary = text.find_last_of(" \\");
+        if (dot != wxString::npos && (boundary == wxString::npos || dot > boundary)) text.Truncate(dot);
+    }
+    return text;
+}
+
 SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
                                       SaveFileType fileType) {
     if (!destination) return {SaveStatus::Cancelled, {}};

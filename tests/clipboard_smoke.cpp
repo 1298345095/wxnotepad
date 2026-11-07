@@ -3,6 +3,7 @@
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include <wx/wx.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -13,6 +14,7 @@
 #include <cstdio>
 #include <chrono>
 #include <stdexcept>
+#include <vector>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
@@ -954,6 +956,119 @@ void CurrentLines(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     }
     std::puts("PASS: all original current-line modes, boundary EOLs, columns, same/peer paste, shortcuts and history");
 }
+void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    auto* edit = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Edit"));
+    const int submenu = edit->FindItem("Copy to Clipboard");
+    Require(submenu != wxNOT_FOUND, "original Copy to Clipboard submenu exists");
+    auto* copy = edit->FindItem(submenu)->GetSubMenu();
+    const auto state = [editor] {
+        std::vector<intptr_t> result;
+        for (const auto message : {Message::GetAnchor, Message::GetCurrentPos, Message::GetModify, Message::CanUndo,
+                                   Message::CanRedo, Message::GetSelections, Message::GetMainSelection,
+                                   Message::GetSelectionMode, Message::GetEOLMode, Message::GetReadOnly})
+            result.push_back(editor->Send(message));
+        for (intptr_t i = 0; i < editor->Send(Message::GetSelections); ++i) {
+            result.push_back(editor->Send(Message::GetSelectionNAnchor, i));
+            result.push_back(editor->Send(Message::GetSelectionNCaret, i));
+        }
+        return result;
+    };
+    const auto check = [&](const char* label, const std::string& expected, int shortcut = 0) {
+        const int id = copy->FindItem(label);
+        Require(id != wxNOT_FOUND, "original filename copy command exists");
+        if (shortcut)
+            Require(peer.Request("copy") == "ready", "independent peer seeds distinct owned text before shortcut");
+        const auto before = state();
+        const auto text = Text(editor);
+        const auto encoding = frame->DocumentEncoding();
+        const bool bom = frame->DocumentHasBom();
+        if (shortcut) {
+            std::printf("Checking native %sShift+F9 publication\n", shortcut == 2 ? "Alt+" : "");
+            const auto title = frame->GetTitle();
+            const auto focusName = wxString::Format("wxnotepad path copy target %lu", wxGetProcessId());
+            frame->SetTitle(focusName);
+            NativeKeys::Shortcut(frame, WXK_F9, false, shortcut == 2, true, nullptr, focusName);
+            frame->SetTitle(title);
+        } else {
+            Gesture(editor);
+            NativeSearch::Command(frame, id);
+        }
+        Require(peer.Request("shape-read") == "stream" && peer.SavedText() == expected,
+                "independent native clipboard peer receives original literal filename text without shape tags");
+        Require(Text(editor) == text && state() == before && frame->DocumentEncoding() == encoding &&
+                    frame->DocumentHasBom() == bom,
+                "copying preserves text, directed/all selection ranges, histories, save point and metadata");
+    };
+    TestEditor::ResetStream(editor, "AoldZ", 4, 1);
+    for (const char* label : {"File Name", "File Name and Ext.", "Full Path Name"})
+        check(label, "Untitled");
+    const auto directory = TestFiles::TemporaryDirectory("path-text-copy") / std::filesystem::u8path("目录😀");
+    std::filesystem::create_directories(directory);
+    const std::pair<const char*, const char*> names[] = {{"report.txt", "report"},
+                                                         {"archive.part.txt", "archive.part"},
+                                                         {"README", "README"},
+                                                         {".env", ""},
+                                                         {".config.json", ".config"},
+                                                         {"dot.before space", "dot.before space"},
+                                                         {"no.ext space.txt", "no.ext space"},
+                                                         {"é中文😀.txt", "é中文😀"}};
+    for (const auto& [name, base] : names) {
+        const auto path = directory / std::filesystem::u8path(name);
+        TestFiles::WriteBytes(path, "AoldZ");
+        editor->Send(Message::SetSavePoint);
+        Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+                "copy filename fixture opens through native document identity");
+        TestEditor::ResetStream(editor, "AoldZ", 4, 1);
+        check("File Name", base);
+        check("File Name and Ext.", name);
+        check("Full Path Name", TestFiles::Filename(path).utf8_string());
+    }
+    const auto legacyPath = directory / std::filesystem::u8path("é中文😀.txt");
+    Require(frame->Open(TestFiles::Filename(legacyPath), FileEncoding::Gbk).status == OpenStatus::Opened,
+            "open explicit GBK identity before Unicode clipboard publication");
+    check("File Name and Ext.", "é中文😀.txt");
+    for (const int shape : {0, 1, 2, 3, 4}) {
+        TestEditor::ResetStream(editor, "abcd\nefgh", 1, 2, Scintilla::EndOfLine::Lf);
+        if (shape == 0)
+            editor->Send(Message::SetSel, 1, 1);
+        else if (shape == 1)
+            editor->Send(Message::AddSelection, 7, 6);
+        else if (shape == 2) {
+            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+            editor->Send(Message::SetRectangularSelectionAnchor, 1);
+            editor->Send(Message::SetRectangularSelectionCaret, 7);
+        } else if (shape == 3)
+            editor->Send(Message::SetReadOnly, 1);
+        else {
+            editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+            check("File Name and Ext.", "é中文😀.txt");
+            editor->Send(Message::Undo);
+        }
+        check("File Name and Ext.", "é中文😀.txt");
+    }
+    editor->Send(Message::SetReadOnly, 0);
+    check("File Name and Ext.", "é中文😀.txt", 1);
+    check("Full Path Name", frame->DocumentPath().utf8_string(), 2);
+    const auto previous = frame->DocumentPath();
+    Require(frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled && frame->DocumentPath() == previous,
+            "cancelled Save As retains the copied identity");
+    check("File Name and Ext.", "é中文😀.txt");
+    Require(frame->SaveAs(TestFiles::Filename(directory / "missing" / "failed.txt")).status == SaveStatus::Failed &&
+                frame->DocumentPath() == previous,
+            "failed Save As retains the copied identity");
+    check("Full Path Name", previous.utf8_string());
+    const auto renamed = directory / "renamed.txt";
+    Require(frame->SaveAs(TestFiles::Filename(renamed)).status == SaveStatus::Saved,
+            "successful Save As commits the copied identity");
+    check("File Name and Ext.", "renamed.txt");
+    check("Full Path Name", TestFiles::Filename(renamed).utf8_string());
+    std::filesystem::remove(renamed);
+    check("File Name and Ext.", "renamed.txt");
+    std::puts("PASS: all three name/path copy commands, literal Unicode/native paths, identity transitions,");
+    std::puts("      real menu/shortcuts, plain native peer bytes and unchanged editor/history/metadata");
+}
+
 class ClipboardApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -992,7 +1107,9 @@ public:
                 Require(peer.Request("ready") == "ready", "external clipboard application is running");
                 wxString shapes;
                 if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-                    if (shapes == "commands")
+                    if (shapes == "path-text")
+                        PathTextCopies(frame, editor, peer);
+                    else if (shapes == "commands")
                         LineCommands(frame, editor, peer);
                     else if (shapes == "lines")
                         CurrentLines(frame, editor, peer);

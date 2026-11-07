@@ -115,7 +115,7 @@ private:
 };
 #endif
 inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
-                     bool* releaseSignal = nullptr) {
+                     bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad") {
     const NativeTrace::Gesture trace(frame->Editor(), key,
                                      (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
 #ifdef __WXMSW__
@@ -134,7 +134,7 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
         throw std::runtime_error("native shortcuts require a private display");
     {
         wxFFile file(focusFile, "wb");
-        file.Write(NativeTrace::Request(frame->IsActive() ? "focus:wxnotepad" : "front:wxnotepad"));
+        file.Write(NativeTrace::Request(wxString(frame->IsActive() ? "focus:" : "front:") + focusName));
     }
     bool acknowledged = false;
     const auto focusDeadline = Clock::now() + std::chrono::seconds(3);
