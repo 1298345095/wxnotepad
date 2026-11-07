@@ -1896,6 +1896,45 @@ void SwapExplicitGbk(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     std::puts("PASS: explicit GBK selected/caret Swap preserves Unicode and existing loss-save decisions");
 }
 
+void SwapDefaultReadOnly(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+#ifdef __WXMSW__
+    Require(GetACP() == 936, "captured default-ANSI read-only Swap requires system ACP 936");
+    constexpr intptr_t end = 7;
+#else
+    constexpr intptr_t end = 11;
+#endif
+    const std::string original = "0123456789012345678901234567890123456789";
+    const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-default-readonly");
+    std::filesystem::create_directory(directory);
+    const auto path = directory / "default.txt";
+    const int swap = frame->GetMenuBar()->FindMenuItem("Edit", "Swap");
+    for (const bool reversed : {false, true}) {
+        TestFiles::WriteBytes(path, original);
+        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
+                "configured system-default protected document opens through native detection");
+        frame->ToggleReadOnlyMode();
+        Require(editor->Send(Message::GetReadOnly), "native Read Only mode protects the actual document");
+        editor->Send(Message::SetSel, reversed ? 4 : 1, reversed ? 1 : 4);
+        peer.OfferText("中文😀");
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        Require(frame->GetMenuBar()->IsEnabled(swap), "original selected Swap remains enabled in Read Only mode");
+        Gesture(editor);
+        NativeSearch::Command(frame, swap);
+        // Independently observed original ACP936 endpoints in
+        // review-fixes/original-ansi-readonly.json; protected writes insert nothing.
+        TestEditor::RequireSelection(editor, reversed ? end : 1, reversed ? 1 : end,
+                                     "protected default-ANSI Swap uses original converted native byte endpoints");
+        Require(Text(editor) == original && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
+                    !editor->Send(Message::CanRedo) && TestFiles::Bytes(path) == original &&
+                    peer.Request("utility-read") == "stream" && peer.SavedText() == "中文😀",
+                "protected default-ANSI Swap preserves independent document, disk, clipboard and history");
+        frame->ToggleReadOnlyMode();
+    }
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: captured default-ANSI read-only native byte endpoints and independent unchanged state");
+}
+
 void SwapDefaultEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
 #ifdef __WXMSW__
@@ -2016,8 +2055,8 @@ public:
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         wxLog::SetActiveTarget(new wxLogStderr);
         wxString mode;
-        const bool defaultSwap =
-            wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &mode) && (mode == "swap-encoding" || mode == "swap-ansi-caret");
+        const bool defaultSwap = wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &mode) &&
+                                 (mode == "swap-encoding" || mode == "swap-ansi-caret" || mode == "swap-ansi-readonly");
         encodingSettings_.values.encoding.defaultEncoding = 0;
         encodingSettings_.values.encoding.loadASCIIasUTF8 = false;
         encodingSettings_.values.encoding.loadANSIasUTF8 = false;
@@ -2054,7 +2093,9 @@ public:
                 Require(peer.Request("ready") == "ready", "external clipboard application is running");
                 wxString shapes;
                 if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-                    if (shapes == "swap-ansi-caret")
+                    if (shapes == "swap-ansi-readonly")
+                        SwapDefaultReadOnly(frame, editor, peer);
+                    else if (shapes == "swap-ansi-caret")
                         SwapDefaultCaretEncoding(frame, editor, peer);
                     else if (shapes == "swap-encoding") {
                         SwapDefaultEncoding(frame, editor, peer);
