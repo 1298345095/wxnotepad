@@ -126,7 +126,12 @@ void Combined(EditorFrame* frame) {
         {"utf16le", FileEncoding::Utf16Le, utf16, utf16 + std::string("!\0", 2)},
         {"gbk", FileEncoding::Gbk, gbk, gbk + "!"}};
     for (const auto& fixture : fixtures) {
-        const auto path = directory / std::filesystem::u8path(std::string(fixture.name) + "-中文.txt");
+#ifdef __WXMSW__
+        const auto filename = std::filesystem::path(wxString::FromUTF8(fixture.name).ToStdWstring() + L"-中文.txt");
+#else
+        const auto filename = std::filesystem::path(std::string(fixture.name) + "-中文.txt");
+#endif
+        const auto path = directory / filename;
         {
             std::ofstream output(path, std::ios::binary);
             output << fixture.before;
