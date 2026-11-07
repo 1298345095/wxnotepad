@@ -42,10 +42,10 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
     using Scintilla::Message;
     const auto& definition = SyntaxFor(language);
     const bool fold = definition.canFold;
-    editor.Send(Message::SetMarginTypeN, 1, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
-    editor.Send(Message::SetMarginMaskN, 1, Scintilla::MaskFolders);
-    editor.Send(Message::SetMarginSensitiveN, 1, fold);
-    editor.Send(Message::SetMarginWidthN, 1, fold ? editor.FromDIP(16) : 0);
+    editor.Send(Message::SetMarginTypeN, 2, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
+    editor.Send(Message::SetMarginMaskN, 2, Scintilla::MaskFolders);
+    editor.Send(Message::SetMarginSensitiveN, 2, fold);
+    editor.Send(Message::SetMarginWidthN, 2, fold ? editor.FromDIP(16) : 0);
     constexpr auto automatic = static_cast<uintptr_t>(Scintilla::AutomaticFold::Show) |
                                static_cast<uintptr_t>(Scintilla::AutomaticFold::Click) |
                                static_cast<uintptr_t>(Scintilla::AutomaticFold::Change);

@@ -85,6 +85,11 @@ public:
     void SetLineSelectionMode(LineSelectionMode mode);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
+    bool BookmarkMarginVisible() const { return bookmarkMarginVisible_; }
+    void SetBookmarkMarginVisible(bool visible);
+    int ChangeHistoryOptions() const { return changeHistoryOptions_; }
+    void SetChangeHistoryOptions(int options);
+    void ToggleChangeHistory();
     LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
     void SetCurrentLineHighlightMode(LineHighlightMode mode);
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
@@ -99,11 +104,15 @@ private:
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;
     bool lineNumberWidthDirty_ = true;
+    bool bookmarkMarginVisible_ = false;
+    bool bookmarkMarginWidthDirty_ = true;
+    int changeHistoryOptions_ = 0;
     bool autoIndent_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;
     void UpdateLineNumberMargin();
+    void UpdateBookmarkMargin();
     void OnPaint(wxPaintEvent& event);
     void OnKeyDown(wxKeyEvent& event);
     void OnSize(wxSizeEvent& event);

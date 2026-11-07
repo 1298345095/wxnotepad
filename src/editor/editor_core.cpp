@@ -245,8 +245,8 @@ void EditorControl::Core::UpdateWrapLayout() {
 }
 
 void EditorControl::Core::DpiChanged() {
-    if (WndProc(Message::GetMarginWidthN, 1, 0) > 0) {
-        WndProc(Message::SetMarginWidthN, 1, window_.FromDIP(16));
+    if (WndProc(Message::GetMarginWidthN, 2, 0) > 0) {
+        WndProc(Message::SetMarginWidthN, 2, window_.FromDIP(16));
         for (int marker = 25; marker <= 31; ++marker)
             WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
     }
@@ -660,6 +660,13 @@ void EditorControl::Core::NotifyChange() const noexcept {
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
+    // Original bookmark-margin clicks use the clicked line and keep the caret.
+    if (notification.nmhdr.code == Scintilla::Notification::MarginClick && notification.margin == 1 &&
+        window_.BookmarkMarginVisible()) {
+        const auto line = window_.Send(Message::LineFromPosition, notification.position);
+        window_.Send((window_.Send(Message::MarkerGet, line) & 1) ? Message::MarkerDelete : Message::MarkerAdd, line,
+                     0);
+    }
     // Notepad4.cpp SCN_CHARADDED: ignore tentative/multiple-selection typing.
     // The pinned CRLF condition handles CR, after the complete EOL is inserted.
     if (notification.nmhdr.code == Scintilla::Notification::CharAdded && !notification.listType &&
@@ -669,6 +676,7 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
     SelectionRevision();
     if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
         window_.lineNumberWidthDirty_ = true;
+        window_.bookmarkMarginWidthDirty_ = true;
         window_.SetCurrentLineHighlightMode(window_.GetCurrentLineHighlightMode());
     }
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&

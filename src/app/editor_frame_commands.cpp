@@ -800,6 +800,20 @@ void EditorFrame::AppendDisplayCommands(wxMenu* view) {
         wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible()); },
         lineNumbers);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->LineNumbersVisible()); }, lineNumbers);
+    const int bookmarkMargin = wxWindow::NewControlId();
+    view->AppendCheckItem(bookmarkMargin, "&Bookmark Margin\tCtrl+Shift+M");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetBookmarkMarginVisible(!editor_->BookmarkMarginVisible()); },
+        bookmarkMargin);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->BookmarkMarginVisible()); },
+        bookmarkMargin);
+    const int changeHistory = wxWindow::NewControlId();
+    view->AppendCheckItem(changeHistory, "Change &History Marker");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleChangeHistory(); }, changeHistory);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->ChangeHistoryOptions() != 0); },
+        changeHistory);
     const int whitespace = wxWindow::NewControlId();
     view->AppendCheckItem(whitespace, "Show &Whitespace\tCtrl+Shift+8");
     Bind(
@@ -1199,6 +1213,9 @@ bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
         editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible());
+    else if (event.GetKeyCode() == 'M' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
+        editor_->SetBookmarkMarginVisible(!editor_->BookmarkMarginVisible());
     else
         return false;
     return true;

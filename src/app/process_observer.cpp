@@ -92,7 +92,9 @@ void ProcessObserver::Publish() {
             "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\n",
             static_cast<int>(frame_->Editor()->GetLineSelectionMode()),
             static_cast<int>(frame_->Editor()->GetCurrentLineHighlightMode()),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine)));
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine))) +
+        wxString::Format("bookmark_margin\t%d\nchange_history\t%lld\n", frame_->Editor()->BookmarkMarginVisible(),
+                         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetChangeHistory)));
     // A reader can temporarily deny replacement on Windows. IPC errors must
     // stay out of wxLogGui: its deferred modal dialog can outlive the frame.
     const wxLogNull noGuiLog;

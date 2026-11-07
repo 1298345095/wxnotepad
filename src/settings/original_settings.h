@@ -17,6 +17,8 @@ struct OriginalSettings {
     bool saveSettings = true;
     bool wordWrap = true;
     bool showLineNumbers = true;
+    bool showBookmarkMargin = false;
+    int changeHistoryMarker = 0;
     bool viewWhiteSpace = false;
     bool showIndentGuides = false;
     bool simpleIndentGuides = false;

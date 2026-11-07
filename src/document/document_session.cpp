@@ -389,6 +389,8 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
                                     bool keepLanguage) {
     const auto lineEndings = CountLineEndings(bytes);
     editor_.Send(Scintilla::Message::SetReadOnly, 0);
+    const auto changeHistory = editor_.Send(Scintilla::Message::GetChangeHistory);
+    editor_.Send(Scintilla::Message::SetChangeHistory, 0);
     const auto selectionHistory = editor_.Send(Scintilla::Message::GetUndoSelectionHistory);
     editor_.Send(Scintilla::Message::SetUndoSelectionHistory, 0);
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
@@ -401,6 +403,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     editor_.Send(Scintilla::Message::GotoPos, 0);
     editor_.Send(Scintilla::Message::SetXOffset, 0);
     editor_.Send(Scintilla::Message::SetSavePoint);
+    editor_.Send(Scintilla::Message::SetChangeHistory, changeHistory);
     editor_.Send(Scintilla::Message::SetUndoSelectionHistory, selectionHistory);
     path_ = path;
     RefreshReadOnlyFile();
