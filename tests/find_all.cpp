@@ -66,13 +66,14 @@ public:
                         "editing the query retains submitted Find All state until a dialog action");
                 editor->Send(Message::GotoPos, 0);
                 Click(query->GetParent(), wxID_FORWARD);
-                Require(!marked(0) && result->GetLabel().empty() && (editor->Send(Message::MarkerGet, 0) & 1),
-                        "submitting a changed query clears count and marks while retaining Find All bookmarks");
+                Require(
+                    marked(0) && !marked(4) && result->GetLabel().empty() && (editor->Send(Message::MarkerGet, 0) & 1),
+                    "changed-query FindNext replaces Find All with automatic selection marks and retains bookmarks");
                 Toggle(bookmark, false);
                 query->SetValue("one");
                 run();
-                Require(editor->Send(Message::MarkerNext, 0, 1) == -1,
-                        "next Find All without bookmarks clears the prior Find All bookmarks");
+                Require(editor->Send(Message::MarkerNext, 0, 1) == 0,
+                        "Find All without bookmarks retains markers after automatic selection takes channel ownership");
                 editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("!"));
                 wxYield();
                 Require(result->GetLabel().empty() && !marked(1), "edits invalidate count and occurrence marks");

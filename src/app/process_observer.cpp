@@ -94,16 +94,18 @@ void ProcessObserver::Publish() {
         wxString::Format(
             "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\n"
             "caret_style\t%lld\ncaret_width\t%lld\ncaret_period\t%lld\n"
-            "match_braces\t%d\ncode_folding\t%d\ncurrent_block\t%d\nfold_margin\t%lld\n",
+            "mark_occurrences\t%d\ncode_folding\t%d\nmatch_braces\t%d\ncurrent_block\t%d\nfold_margin\t%lld\n",
             static_cast<int>(frame_->Editor()->GetLineSelectionMode()),
             static_cast<int>(frame_->Editor()->GetCurrentLineHighlightMode()),
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine)),
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretStyle)),
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretWidth)),
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretPeriod)),
-            frame_->Editor()->VisualBraceMatching(), frame_->Editor()->CodeFoldingVisible(),
-            frame_->Editor()->CurrentBlockHighlighted(),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, 2)));
+            frame_->Editor()->Occurrences().Options(), frame_->Editor()->CodeFoldingVisible(),
+            frame_->Editor()->VisualBraceMatching(), frame_->Editor()->CurrentBlockHighlighted(),
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, 2))) +
+        wxString::Format("bookmark_margin\t%d\nchange_history\t%lld\n", frame_->Editor()->BookmarkMarginVisible(),
+                         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetChangeHistory)));
     // A reader can temporarily deny replacement on Windows. IPC errors must
     // stay out of wxLogGui: its deferred modal dialog can outlive the frame.
     const wxLogNull noGuiLog;

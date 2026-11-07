@@ -22,6 +22,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     }();
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    occurrences_ = std::make_unique<OccurrenceMarking>(*this);
     // Original Notepad4.cpp::CreateEditControl current-line preferences.
     Send(Message::SetCaretLineVisibleAlways, 1);
     Send(Message::SetCaretLineHighlightSubLine, 1);
@@ -30,10 +31,24 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
     Send(Message::SetMarginMaskN, 0, 0);
     SetLineNumbersVisible(true);
+    Send(Message::SetMarginTypeN, 1, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
+    Send(Message::SetMarginMaskN, 1, 0x1FFFFFF);
+    Send(Message::SetMarginSensitiveN, 1, 1);
+    Send(Message::SetMarginCursorN, 1, static_cast<intptr_t>(Scintilla::CursorShape::Arrow));
+    SetBookmarkMarginVisible(false);
+    // Original Styles.cpp change-history defaults: saved green, modified blue.
+    for (const int marker : {21, 22, 23, 24}) {
+        const auto colour = marker <= 22 ? 0xFF008000 : 0xFFFF8000;
+        Send(Message::MarkerSetForeTranslucent, marker, colour);
+        Send(Message::MarkerSetBackTranslucent, marker,
+             marker == 21 || marker == 24 ? 0xFF000000 | Send(Message::StyleGetBack, 33) : colour);
+    }
     SetCurrentBlockHighlighted(true);
     ApplyCaretAppearance();
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         core_->DpiChanged();
+        bookmarkMarginWidthDirty_ = true;
+        UpdateBookmarkMargin();
         SetCurrentLineHighlightMode(lineHighlightMode_);
         ApplyCaretAppearance();
         Refresh(false);
@@ -253,6 +268,9 @@ void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
 }
 
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
+    if (occurrences_ &&
+        (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer))
+        occurrences_->Stop();
     core_->SelectionRevision();
     const auto result = core_->WndProc(message, wParam, lParam);
     if (message == Message::ClearAll) {
@@ -267,9 +285,11 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
         message == Message::StyleSetItalic || message == Message::SetZoom) {
         lineNumberWidthDirty_ = true;
+        bookmarkMarginWidthDirty_ = true;
         foldMarginWidthDirty_ = true;
     }
     UpdateLineNumberMargin();
+    UpdateBookmarkMargin();
     if (message == Message::FoldAll) core_->RepairFoldSelection();
     if (message == Message::SetZoom || message == Message::ZoomIn || message == Message::ZoomOut)
         ApplyCaretAppearance();
@@ -290,6 +310,43 @@ void EditorControl::SetLineNumbersVisible(bool visible) {
     lineNumberWidthDirty_ = true;
     UpdateLineNumberMargin();
     Send(Message::ScrollCaret);
+}
+
+void EditorControl::SetBookmarkMarginVisible(bool visible) {
+    bookmarkMarginVisible_ = visible;
+    // Original Styles.cpp::Style_SetBookmark at 89b8b36.
+    Send(Message::MarkerDefine, 0,
+         static_cast<intptr_t>(visible ? Scintilla::MarkerSymbol::VerticalBookmark
+                                       : Scintilla::MarkerSymbol::Background));
+    Send(Message::MarkerSetBackTranslucent, 0, visible ? 0xFF408040 : 0x2800FF00);
+    if (visible) Send(Message::MarkerSetForeTranslucent, 0, 0xFF408040);
+    Send(Message::MarkerSetLayer, 0, static_cast<intptr_t>(Scintilla::Layer::OverText));
+    bookmarkMarginWidthDirty_ = true;
+    UpdateBookmarkMargin();
+}
+
+void EditorControl::UpdateBookmarkMargin() {
+    if (!bookmarkMarginWidthDirty_) return;
+    bookmarkMarginWidthDirty_ = false;
+    const auto width =
+        (bookmarkMarginVisible_ || changeHistoryOptions_ != 0) ? core_->WndProc(Message::TextHeight, 0, 0) - 2 : 0;
+    if (core_->WndProc(Message::GetMarginWidthN, 1, 0) != width) {
+        core_->WndProc(Message::SetMarginWidthN, 1, width);
+        core_->UpdateWrapLayout();
+    }
+}
+
+void EditorControl::SetChangeHistoryOptions(int options) {
+    changeHistoryOptions_ = options;
+    Send(Message::SetChangeHistory, static_cast<uintptr_t>(options));
+    bookmarkMarginWidthDirty_ = true;
+    UpdateBookmarkMargin();
+}
+
+void EditorControl::ToggleChangeHistory() {
+    // Notepad4.cpp::IDM_VIEW_CHANGE_HISTORY_MARKER. Never discard undo to enable it.
+    if (changeHistoryOptions_ != 0 || !Send(Message::CanUndo))
+        SetChangeHistoryOptions(changeHistoryOptions_ == 0 ? 3 : 0);
 }
 
 void EditorControl::SetCodeFoldingVisible(bool visible) {

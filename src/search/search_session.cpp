@@ -1,9 +1,7 @@
 #include "search/search_session.h"
 #include "search/find_text.h"
 #include "editor/editor_control.h"
-#include <array>
 #include <cstdint>
-#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -183,27 +181,6 @@ private:
     bool started_ = false;
 };
 
-struct IndicatorRange {
-    intptr_t start;
-    intptr_t length;
-};
-struct OccurrenceMarking {
-    bool multiline;
-    bool bookmarks;
-};
-
-void MarkOccurrenceRanges(EditorControl& editor, std::span<const IndicatorRange> ranges, OccurrenceMarking marking) {
-    using Scintilla::Message;
-    for (const auto& range : ranges) {
-        editor.Send(Message::IndicatorFillRange, range.start, range.length);
-        if (!marking.bookmarks) continue;
-        auto line = editor.Send(Message::LineFromPosition, range.start);
-        const auto last = marking.multiline ? editor.Send(Message::LineFromPosition, range.start + range.length) : line;
-        for (; line <= last; ++line) {
-            if (!(editor.Send(Message::MarkerGet, line) & 1)) editor.Send(Message::MarkerAdd, line, 0);
-        }
-    }
-}
 } // namespace
 
 std::string SearchSession::QueryBytes() const {
@@ -220,15 +197,11 @@ bool SearchSession::UsesRegex() const {
 }
 
 SearchSession::SearchSession(EditorControl& editor) : editor_(editor) {
-    editor_.Bind(wxEVT_EDITOR_STATE_CHANGED, &SearchSession::OnEditorState, this);
 }
 
-SearchSession::~SearchSession() {
-    editor_.Unbind(wxEVT_EDITOR_STATE_CHANGED, &SearchSession::OnEditorState, this);
-}
+SearchSession::~SearchSession() = default;
 
 void SearchSession::Configure(SearchRequest request) {
-    if (request.query != request_.query || request.options != request_.options) ClearFindAll();
     request_ = std::move(request);
 }
 
@@ -262,83 +235,25 @@ void SearchSession::Remember(bool replacement) {
 }
 
 void SearchSession::ClearFindAll() {
-    if (matchCount_.has_value()) {
-        editor_.Send(Scintilla::Message::SetIndicatorCurrent, 8);
-        editor_.Send(Scintilla::Message::IndicatorClearRange, 0, editor_.Send(Scintilla::Message::GetLength));
-        matchCount_.reset();
-    }
+    if (editor_.Occurrences().FindAllCount().has_value()) editor_.Occurrences().Clear();
 }
 
 std::optional<size_t> SearchSession::MatchCount() {
-    if (markedRevision_ != editor_.DocumentRevision()) ClearFindAll();
-    return matchCount_;
-}
-
-void SearchSession::OnEditorState(wxCommandEvent& event) {
-    MatchCount();
-    event.Skip();
+    return editor_.Occurrences().FindAllCount();
 }
 
 FindAllResult SearchSession::FindAll() {
     using Scintilla::Message;
-    ClearFindAll();
-    // Ordinary invalidation retains Find All bookmarks; a new request replaces them.
-    if (bookmarkForFindAll_) editor_.Send(Message::MarkerDeleteAll, 0);
     const auto query = QueryBytes();
     if (!query.length()) return {FindStatus::EmptyQuery};
-    markedRevision_ = editor_.DocumentRevision();
-    matchCount_ = 0;
-    if (UsesRegex() && query.length() == 1 && (query.data()[0] == '^' || query.data()[0] == '$')) {
-        matchCount_ = static_cast<size_t>(editor_.Send(Message::GetLineCount) - (query.data()[0] == '^'));
-        return {FindStatus::Found, *matchCount_};
-    }
-    bookmarkForFindAll_ = request_.bookmarkMatchedLines;
-    editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
-    editor_.Send(Message::SetIndicatorCurrent, 8);
-    const auto limit = editor_.Send(Message::GetLength);
-    intptr_t start = 0;
     const bool multiline = request_.options.transformBackslashes && query.find_first_of("\r\n") != std::string::npos;
-    const bool searchForLineEnd = UsesRegex() && query.length() > 1 && query.data()[query.length() - 1] == '$' &&
-                                  query.data()[query.length() - 2] != '\\';
-    // Preserve EditMarkAll's 240-range cache, aggregation and bookmark coverage.
-    std::array<IndicatorRange, 240> ranges{};
-    size_t index = 0;
-    const auto markRanges = [&] {
-        MarkOccurrenceRanges(editor_, std::span(ranges.data(), index),
-                             {.multiline = multiline, .bookmarks = request_.bookmarkMatchedLines});
-        index = 0;
-    };
-    while (start < limit) {
-        editor_.Send(Message::SetTargetStart, start);
-        editor_.Send(Message::SetTargetEnd, limit);
-        const auto found =
-            editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data()));
-        if (found < 0) {
-            if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
-                ClearFindAll();
-                return {FindStatus::InvalidPattern};
-            }
-            break;
-        }
-        ++*matchCount_;
-        const auto end = editor_.Send(Message::GetTargetEnd);
-        // Empty matches count but have no visible range/bookmark; advance UTF-8.
-        if (end == found) {
-            start = editor_.Send(Message::PositionAfter, found);
-            if (start <= found) break;
-            continue;
-        }
-        if (index && found == start && !searchForLineEnd) {
-            ranges[index - 1].length += end - found;
-        } else {
-            ranges[index++] = {.start = found, .length = end - found};
-            if (index == ranges.size()) markRanges();
-        }
-        start = end;
+    editor_.Occurrences().FindAll(query, SearchFlags(), multiline, request_.bookmarkMatchedLines);
+    if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
+        ClearFindAll();
+        return {FindStatus::InvalidPattern};
     }
-    markRanges();
-    return {FindStatus::Found, *matchCount_};
+    return {FindStatus::Found, editor_.Occurrences().FindAllCount().value_or(0)};
 }
 
 void SearchSession::SetWrapConfirmation(std::function<bool(SearchDirection)> confirm) {

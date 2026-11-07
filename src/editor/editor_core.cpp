@@ -685,6 +685,15 @@ void EditorControl::Core::NotifyChange() const noexcept {
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
+    if (notification.nmhdr.code == Scintilla::Notification::UpdateUI && window_.occurrences_)
+        window_.occurrences_->Update(notification.updated);
+    // Original bookmark-margin clicks use the clicked line and keep the caret.
+    if (notification.nmhdr.code == Scintilla::Notification::MarginClick && notification.margin == 1 &&
+        window_.BookmarkMarginVisible()) {
+        const auto line = window_.Send(Message::LineFromPosition, notification.position);
+        window_.Send((window_.Send(Message::MarkerGet, line) & 1) ? Message::MarkerDelete : Message::MarkerAdd, line,
+                     0);
+    }
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&
         (static_cast<unsigned>(notification.modificationType) &
          static_cast<unsigned>(Scintilla::ModificationFlags::ChangeStyle | Scintilla::ModificationFlags::LexerState)))
@@ -702,6 +711,7 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         const_cast<Core*>(this)->UpdateVisualBraceMatching();
     if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
         window_.lineNumberWidthDirty_ = true;
+        window_.bookmarkMarginWidthDirty_ = true;
         window_.foldMarginWidthDirty_ = true;
         window_.SetCurrentLineHighlightMode(window_.GetCurrentLineHighlightMode());
     }

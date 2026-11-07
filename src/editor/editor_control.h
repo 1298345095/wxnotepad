@@ -6,6 +6,7 @@
 #include "editor/caret_appearance.h"
 #include "editor/special_insert.h"
 #include "editor/url_conversion.h"
+#include "editor/occurrence_marking.h"
 #include <ScintillaMessages.h>
 #include <wx/control.h>
 #include <wx/timer.h>
@@ -95,6 +96,11 @@ public:
     void SetLineSelectionMode(LineSelectionMode mode);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
+    bool BookmarkMarginVisible() const { return bookmarkMarginVisible_; }
+    void SetBookmarkMarginVisible(bool visible);
+    int ChangeHistoryOptions() const { return changeHistoryOptions_; }
+    void SetChangeHistoryOptions(int options);
+    void ToggleChangeHistory();
     bool CodeFoldingVisible() const { return codeFoldingVisible_; }
     void SetCodeFoldingVisible(bool visible);
     bool CurrentBlockHighlighted() const { return highlightCurrentBlock_; }
@@ -103,6 +109,7 @@ public:
     void SetCurrentLineHighlightMode(LineHighlightMode mode);
     const CaretAppearance& GetCaretAppearance() const { return caretAppearance_; }
     void SetCaretAppearance(CaretAppearance appearance);
+    OccurrenceMarking& Occurrences() { return *occurrences_; }
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 
@@ -113,9 +120,13 @@ private:
     wxTimer scrollTimer_;
     wxTimer widenTimer_;
     std::unique_ptr<Core> core_;
+    std::unique_ptr<OccurrenceMarking> occurrences_;
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;
     bool lineNumberWidthDirty_ = true;
+    bool bookmarkMarginVisible_ = false;
+    bool bookmarkMarginWidthDirty_ = true;
+    int changeHistoryOptions_ = 0;
     bool codeFoldingVisible_ = true;
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
@@ -127,6 +138,7 @@ private:
     CaretAppearance caretAppearance_;
     void ApplyCaretAppearance();
     void UpdateLineNumberMargin();
+    void UpdateBookmarkMargin();
     void UpdateFoldMargin();
     void OnPaint(wxPaintEvent& event);
     void OnKeyDown(wxKeyEvent& event);
