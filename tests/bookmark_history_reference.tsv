@@ -18,3 +18,9 @@ read-only-disable	61610d0a6e65770d0a62620d0a6363	0	0	0	0	22	0,0,0,0
 read-only-enable	61610d0a6e65770d0a62620d0a6363	3	0	0	0	22	0,0,0,0
 read-only-released	61610d0a6e65770d0a62620d0a6363	3	0	1	1	22	0,0,0,0
 new		3	0	0	0	22	0
+modified-before-delete	616263	3	1	1	0	22	8388608
+deleted-modified	6163	3	1	1	0	22	8388608
+saved-deletion	6163	3	0	1	0	22	4194304
+undo-saved-deletion	616263	3	1	1	1	22	20971520
+redo-saved-deletion	6163	3	0	1	0	22	4194304
+new-after-reverted		3	0	0	0	22	0

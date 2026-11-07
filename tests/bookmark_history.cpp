@@ -112,6 +112,18 @@ void History(EditorFrame* frame) {
     editor->Send(Message::SetSavePoint);
     Require(frame->New(), "native clean New succeeds");
     check("new");
+    editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("abc"));
+    check("modified-before-delete");
+    editor->Send(Message::DeleteRange, 1, 1);
+    check("deleted-modified");
+    editor->Send(Message::SetSavePoint);
+    check("saved-deletion");
+    editor->Send(Message::Undo);
+    check("undo-saved-deletion");
+    editor->Send(Message::Redo);
+    check("redo-saved-deletion");
+    NativeSearch::Command(frame, wxID_NEW);
+    check("new-after-reverted");
     Require(row == rows.size(), "all original native fixture states were checked");
     std::puts("PASS: original insert/delete/savepoint/Undo/Redo/read-only/New history fixtures and undo gate");
 }

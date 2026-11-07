@@ -41,6 +41,9 @@ history-only background bookmarks, modified and saved history bars, and remeasur
 geometry across zoom and line-number changes. The Windows DPI96 variant uses
 the existing complementary thread-awareness emulation without changing monitor
 scale.
+The integrated folding checks toggle the native folding preference with bookmarks
+visible and with history alone, verify that the text origin moves by exactly the
+folding margin width, and retain the same bookmark pixels and shared margin width.
 
 Raw original capture scripts, states, numeric paint probes and red/green logs
 are preserved in
