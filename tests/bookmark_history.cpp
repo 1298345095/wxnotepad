@@ -23,9 +23,8 @@ void Menu(EditorFrame* frame, const char* label) {
     NativeSearch::Command(frame, id);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
-void History(EditorFrame* frame) {
-    auto* editor = frame->Editor();
-    std::ifstream source(std::filesystem::path(BOOKMARK_HISTORY_REFERENCE));
+std::vector<std::vector<std::string>> LoadHistoryFixture(const std::filesystem::path& path) {
+    std::ifstream source{path};
     Require(source.is_open(), "pinned native history fixture is available");
     std::vector<std::vector<std::string>> rows;
     for (std::string line; std::getline(source, line);) {
@@ -37,6 +36,18 @@ void History(EditorFrame* frame) {
         Require(fields.size() == 8, "native fixture has eight independent observations");
         rows.push_back(std::move(fields));
     }
+    return rows;
+}
+void CheckHistoryState(EditorControl* editor, const std::vector<std::string>& expected, const char* name) {
+    for (const auto [index, message] : {std::pair{2, Message::GetChangeHistory},
+                                        {3, Message::GetModify},
+                                        {4, Message::CanUndo},
+                                        {5, Message::CanRedo}})
+        Require(editor->Send(message) == std::stoll(expected[index]), name);
+}
+void History(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    const auto rows = LoadHistoryFixture(BOOKMARK_HISTORY_REFERENCE);
     size_t row = 0;
     const auto check = [&](const char* name) {
         Require(row < rows.size() && rows[row][0] == name, "native fixture sequence matches named operation");
@@ -49,11 +60,7 @@ void History(EditorFrame* frame) {
             hex += digits[ch & 15];
         }
         Require(hex == expected[1], "document bytes agree with independent original fixture");
-        for (const auto [index, message] : {std::pair{2, Message::GetChangeHistory},
-                                            {3, Message::GetModify},
-                                            {4, Message::CanUndo},
-                                            {5, Message::CanRedo}})
-            Require(editor->Send(message) == std::stoll(expected[index]), name);
+        CheckHistoryState(editor, expected, name);
         Require(editor->Send(Message::MarkerSymbolDefined, 0) == std::stoll(expected[6]),
                 "shared bookmark style agrees with native original");
         std::ostringstream markers;
@@ -244,18 +251,7 @@ void Geometry(EditorFrame* frame) {
 void FileLifecycle(EditorFrame* frame) {
     auto* editor = frame->Editor();
     Menu(frame, "Change History Marker");
-    std::ifstream source(std::filesystem::path(BOOKMARK_HISTORY_FILES));
-    Require(source.is_open(), "pinned original native file/history fixture exists");
-    std::vector<std::vector<std::string>> rows;
-    for (std::string line; std::getline(source, line);) {
-        if (line.empty() || line[0] == '#') continue;
-        std::vector<std::string> fields;
-        std::istringstream input(line);
-        for (std::string field; std::getline(input, field, '\t');)
-            fields.push_back(field);
-        Require(fields.size() == 8, "original file fixture fields are complete");
-        rows.push_back(std::move(fields));
-    }
+    const auto rows = LoadHistoryFixture(BOOKMARK_HISTORY_FILES);
     const auto decode = [](const std::string& hex) {
         std::string bytes;
         for (size_t i = 0; i < hex.size(); i += 2)
@@ -272,11 +268,7 @@ void FileLifecycle(EditorFrame* frame) {
         const auto& expected = rows[row++];
         Require(NativeSearch::Text(editor) == decode(expected[1]),
                 "file operation text agrees with original UTF-16 fixture");
-        for (const auto [index, message] : {std::pair{2, Message::GetChangeHistory},
-                                            {3, Message::GetModify},
-                                            {4, Message::CanUndo},
-                                            {5, Message::CanRedo}})
-            Require(editor->Send(message) == std::stoll(expected[index]), name);
+        CheckHistoryState(editor, expected, name);
         std::ostringstream markers;
         for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line) {
             if (line) markers << ',';
