@@ -212,6 +212,14 @@ public:
                 wxCommandEvent utf16Open(wxEVT_MENU, utf16Menu);
                 frame->GetEventHandler()->ProcessEvent(utf16Open);
                 utf16Pick.Stop();
+                if (utf16Pick.choosers != 1 || Text(frame) != "A中😀\r\n" ||
+                    frame->DocumentEncoding() != FileEncoding::Utf16Le || frame->DocumentHasBom())
+                    std::fprintf(
+                        stderr,
+                        "Open As state: choosers=%d prompts=%d errors=%d path='%s' bytes=%zu encoding=%d bom=%d\n",
+                        utf16Pick.choosers, utf16Pick.prompts, utf16Pick.errors,
+                        frame->DocumentPath().utf8_str().data(), Text(frame).size(),
+                        static_cast<int>(frame->DocumentEncoding()), frame->DocumentHasBom());
                 Require(utf16Pick.choosers == 1 && Text(frame) == "A中😀\r\n" &&
                             frame->DocumentEncoding() == FileEncoding::Utf16Le && !frame->DocumentHasBom(),
                         "native explicit Open As must decode no-BOM UTF-16LE");

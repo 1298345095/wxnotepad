@@ -88,7 +88,8 @@ void Protection(EditorFrame* frame) {
     Choose(frame, "C/C++");
     editor->Send(Message::SetReadOnly, 1);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-    Require(!frame->GetMenuBar()->IsEnabled(id), "read-only state disables line-comment menu");
+    Require(frame->GetMenuBar()->IsEnabled(id),
+            "original read-only line-comment menu retains its lexer capability gate");
     wxCommandEvent readOnlyCommand(wxEVT_MENU, id);
     frame->GetEventHandler()->ProcessEvent(readOnlyCommand);
     Require(TestEditor::Text(editor) == "alpha\nbeta" && !editor->Send(Message::CanUndo) &&

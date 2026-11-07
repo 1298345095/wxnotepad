@@ -171,6 +171,32 @@ void RestoreReloadView(EditorControl& editor, const ReloadView& view) {
 }
 } // namespace
 
+wxString DocumentSession::FileNameText(FileNamePart part) const {
+    wxString text = path_.empty()                    ? wxString("Untitled")
+                    : part == FileNamePart::FullPath ? path_
+                                                     : wxFileName(path_).GetFullName();
+    if (part == FileNamePart::BaseName) {
+        // Pinned Notepad4 uses PathRemoveExtension, including leading dots and
+        // its reset at a space or backslash; wxFileName::GetName differs.
+        const auto dot = text.find_last_of('.');
+        const auto boundary = text.find_last_of(" \\");
+        if (dot != wxString::npos && (boundary == wxString::npos || dot > boundary)) text.Truncate(dot);
+    }
+    return text;
+}
+
+bool DocumentSession::RefreshReadOnlyFile() {
+    readOnlyFile_ = false;
+    if (path_.empty()) return false;
+#ifdef __WXMSW__
+    const auto attributes = GetFileAttributesW(path_.wc_str());
+    readOnlyFile_ = attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_READONLY) != 0;
+#else
+    readOnlyFile_ = wxFileExists(path_) && !wxFileName::IsFileWritable(path_);
+#endif
+    return readOnlyFile_;
+}
+
 SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
                                       SaveFileType fileType) {
     if (!destination) return {SaveStatus::Cancelled, {}};
@@ -191,8 +217,26 @@ SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination, c
     return SaveTo(*destination, decideLoss, fileType);
 }
 
+SaveResult DocumentSession::SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    if (!destination) return {SaveStatus::Cancelled, {}};
+    if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
+    return SaveTo(*destination, decideLoss, std::nullopt, true);
+}
+
 SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
-                                   std::optional<SaveFileType> fileType) {
+                                   std::optional<SaveFileType> fileType, bool copy) {
+    if (copy) {
+        // Original Save Copy opens/creates the destination before cleanup and
+        // legacy-loss confirmation. Cancel keeps a new empty file, while an
+        // existing file retains its bytes. Ordinary Save/Save As retain their
+        // existing safe-write preparation.
+        wxLogNull quiet;
+        wxFile file;
+        if (wxDirExists(destination)) return {SaveStatus::Failed, "Choose a file as the save destination."};
+        const bool opened =
+            wxFileExists(destination) ? file.Open(destination, wxFile::read_write) : file.Create(destination, false);
+        if (!opened || !file.Close()) return {SaveStatus::Failed, "Could not open the destination for writing."};
+    }
     PendingSave temporary;
     // Original EditSaveFile opens the destination before changing text. Prepare
     // the safe-write sibling at that point, without truncating the destination.
@@ -220,6 +264,9 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
         bytes.insert(0, "\xef\xbb\xbf");
     const auto error = WriteSafely(destination, bytes, temporary);
     if (!error.empty()) return {SaveStatus::Failed, error};
+    // Original EditSaveFile/FileSave leave the live identity, scheme and save
+    // point alone for Save Copy; optional cleanup above remains in its history.
+    if (copy) return {SaveStatus::Saved, {}};
     const auto previousLanguage = Language();
     if (fileType) {
         const auto* selected = std::get_if<SyntaxLanguage>(&*fileType);
@@ -236,6 +283,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
             languageOverride_.reset();
     }
     path_ = destination;
+    RefreshReadOnlyFile();
     if (fileType && !languageOverride_) DetectAutomaticLanguage();
     // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
@@ -308,6 +356,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     const bool samePath = !path_.empty() && *source == path_;
 #endif
     const auto view = CaptureReloadView(editor_);
+    const bool keepReadOnly = samePath && editor_.Send(Scintilla::Message::GetReadOnly);
     wxFileName loadPath(*source);
     loadPath.Normalize(wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE | wxPATH_NORM_LONG |
                        wxPATH_NORM_SHORTCUT);
@@ -331,6 +380,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     // FileLoad applies the loaded file's indentation before restoring its view
     // or resolving a saved visual column against the new tab width.
     if (configureLoadedDocument) configureLoadedDocument();
+    if (keepReadOnly || IsReadOnlyFile()) editor_.Send(Scintilla::Message::SetReadOnly, 1);
     if (samePath) RestoreReloadView(editor_, view);
     return result;
 }
@@ -338,6 +388,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
 OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
                                     bool keepLanguage) {
     const auto lineEndings = CountLineEndings(bytes);
+    editor_.Send(Scintilla::Message::SetReadOnly, 0);
     const auto selectionHistory = editor_.Send(Scintilla::Message::GetUndoSelectionHistory);
     editor_.Send(Scintilla::Message::SetUndoSelectionHistory, 0);
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
@@ -352,6 +403,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     editor_.Send(Scintilla::Message::SetSavePoint);
     editor_.Send(Scintilla::Message::SetUndoSelectionHistory, selectionHistory);
     path_ = path;
+    RefreshReadOnlyFile();
     encoding_ = encoding;
     hasBom_ = bom;
     bool unknownLanguage = false;
