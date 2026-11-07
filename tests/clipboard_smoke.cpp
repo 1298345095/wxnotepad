@@ -1811,6 +1811,50 @@ void SwapSavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     std::puts("PASS: independent UTF-8/BOM/UTF-16LE/GBK disk bytes, metadata, save points and history");
 }
 
+void SwapDefaultCaretEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+#ifdef __WXMSW__
+    Require(GetACP() == 936, "captured default-ANSI caret Swap requires system ACP 936");
+    const std::string expected = "Aoé中文??\r\nXldZ";
+    const std::string saved = "Ao\xa8\xa6\xd6\xd0\xce\xc4??\r\nXldZ";
+    constexpr intptr_t end = 15;
+#else
+    const std::string expected = "Aoé中文😀\r\nXldZ";
+    const std::string saved = "Aoé中文😀\r\nXldZ";
+    constexpr intptr_t end = 17;
+#endif
+    const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-default-caret");
+    std::filesystem::create_directory(directory);
+    const auto path = directory / "default.txt";
+    TestFiles::WriteBytes(path, "AoldZ");
+    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
+            "configured system-default caret document opens through native detection");
+    editor->Send(Message::SetSel, 2, 2);
+    peer.OfferText("é中文😀\rX");
+    Gesture(editor);
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Swap"));
+    Require(Text(editor) == expected, "caret Swap applies captured system-default conversion in native Paste");
+    TestEditor::RequireSelection(editor, 2, end, "default-ANSI caret Swap selects the converted UTF-8 byte span");
+    Require(peer.Request("utility-formats") == "empty", "default-ANSI caret Swap clears all native formats");
+    int lossPrompts = 0;
+    Require(frame->Save([&] {
+                     ++lossPrompts;
+                     return GbkLossChoice::Cancel;
+                 }).status == SaveStatus::Saved &&
+                lossPrompts == 0 && TestFiles::Bytes(path) == saved,
+            "default-ANSI caret Swap saves captured native bytes without a second loss decision");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "AoldZ" && !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
+                frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == "AoldZ",
+            "one Undo restores independent original default-ANSI caret bytes");
+    editor->Send(Message::Redo);
+    Require(Text(editor) == expected && frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == saved &&
+                peer.Request("utility-formats") == "empty",
+            "Redo restores converted caret bytes and preserves independent clipboard emptiness");
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: captured system-default caret Swap conversion, span, disk and history");
+}
+
 void SwapDefaultEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
 #ifdef __WXMSW__
@@ -1931,7 +1975,8 @@ public:
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         wxLog::SetActiveTarget(new wxLogStderr);
         wxString mode;
-        const bool defaultSwap = wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &mode) && mode == "swap-encoding";
+        const bool defaultSwap =
+            wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &mode) && (mode == "swap-encoding" || mode == "swap-ansi-caret");
         encodingSettings_.values.encoding.defaultEncoding = 0;
         encodingSettings_.values.encoding.loadASCIIasUTF8 = false;
         encodingSettings_.values.encoding.loadANSIasUTF8 = false;
@@ -1968,7 +2013,9 @@ public:
                 Require(peer.Request("ready") == "ready", "external clipboard application is running");
                 wxString shapes;
                 if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-                    if (shapes == "swap-encoding")
+                    if (shapes == "swap-ansi-caret")
+                        SwapDefaultCaretEncoding(frame, editor, peer);
+                    else if (shapes == "swap-encoding")
                         SwapDefaultEncoding(frame, editor, peer);
                     else if (shapes == "swap")
                         Swap(frame, editor, peer);
