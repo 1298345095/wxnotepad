@@ -1,5 +1,6 @@
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
+#include "native_key_helpers.h"
 #include "file_helpers.h"
 #include <wx/statusbr.h>
 #include <filesystem>
@@ -203,9 +204,10 @@ public:
         settings_->values.wordWrap = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-eol-conversion");
             try {
+                Require(presented, "private compositor presents the editor before native conversion scenarios");
                 auto* editor = frame->Editor();
                 struct Mode {
                     const char* label;
