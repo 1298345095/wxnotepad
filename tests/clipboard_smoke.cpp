@@ -4,6 +4,7 @@
 #include "file_helpers.h"
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
+#include "encoded_file_helpers.h"
 #include <wx/wx.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -41,6 +42,14 @@ std::string Text(EditorControl* editor) {
 }
 class Peer {
 public:
+    void OfferText(const std::string& bytes) {
+        {
+            wxFFile file(directory_ + "/offer.txt", "wb");
+            Require(file.IsOpened() && file.Write(bytes.data(), bytes.size()) == bytes.size(),
+                    "write owned native text offer");
+        }
+        Require(Request("utility-offer") == "ready", "independent process publishes literal Unicode offer");
+    }
     std::string SavedText() const {
         wxFFile file(directory_ + "/received.txt", "rb");
         Require(file.IsOpened(), "open independently saved native clipboard bytes");
@@ -956,6 +965,329 @@ void CurrentLines(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     }
     std::puts("PASS: all original current-line modes, boundary EOLs, columns, same/peer paste, shortcuts and history");
 }
+void UtilityShortcut(EditorFrame* frame, int key, bool control, bool alt = false) {
+    const auto title = frame->GetTitle();
+    const auto focusName = wxString::Format("wxnotepad clipboard utilities target %lu", wxGetProcessId());
+    frame->SetTitle(focusName);
+    NativeKeys::Shortcut(frame, key, control, alt, false, nullptr, focusName);
+    frame->SetTitle(title);
+}
+
+void UtilityBytes(EditorControl* editor, const std::string& text, intptr_t anchor, intptr_t caret) {
+    using Scintilla::Message;
+    TestEditor::ResetStream(editor, "", 0, 0, Scintilla::EndOfLine::Lf);
+    editor->Send(Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+    editor->Send(Message::SetSel, anchor, caret);
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+}
+
+void UtilityTextBoundaries(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    struct AppendCase {
+        std::string old, added, expected;
+        bool whole = false;
+    };
+    const AppendCase cases[] = {
+        {"", "alpha", "\r\n\r\nalpha"},
+        {"X\nY\rZ", "中文😀\r\nB\nC\r", "X\nY\rZ\r\n\r\n中文😀\r\nB\nC\r"},
+        {std::string("old\0suffix", 10), "new", "old\r\n\r\nnew"},
+        {"old", std::string("A\0B", 3), "old\r\n\r\nA B"},
+        {"old", std::string("\0B", 2), "old\r\n\r\n B"},
+        {"old", std::string("A\0B", 3), "old\r\n\r\nA", true},
+        {"old", std::string("\0B", 2), "old", true},
+        {"old", "", "old"},
+    };
+    for (const auto& fixture : cases) {
+        UtilityBytes(editor, fixture.added, 0, fixture.whole ? 0 : static_cast<intptr_t>(fixture.added.size()));
+        peer.OfferText(fixture.old);
+        Gesture(editor);
+        Require(editor->CopyAdd(), "plain append accepts literal Unicode and NUL-boundary fixture");
+        Require(peer.Request("utility-read") == "stream" && peer.SavedText() == fixture.expected,
+                "independent native text consumer receives original empty/mixed-EOL/NUL append boundary");
+        Require(Text(editor) == fixture.added && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+                "append boundary fixture retains full document bytes and save point");
+    }
+    UtilityBytes(editor, "whole\r\nbuffer", 3, 3);
+    peer.OfferText("old");
+    const int copyAdd = frame->GetMenuBar()->FindMenuItem("Edit", "Copy Add");
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(!frame->GetMenuBar()->IsEnabled(copyAdd), "caret-only native menu remains selection-gated");
+    UtilityShortcut(frame, 'E', true);
+    Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+            "disabled native Ctrl+E retains clipboard despite direct handler's whole-buffer branch");
+    Gesture(editor);
+    Require(editor->CopyAdd(), "direct caret-only append accepts a whole document");
+    Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old\r\n\r\nwhole\r\nbuffer",
+            "direct Copy Add whole-buffer branch is distinct from native availability");
+    UtilityBytes(editor, std::string("A\0B", 3), 2, 0);
+    Gesture(editor);
+    editor->Send(Message::CopyRange, 0, editor->Send(Message::GetLength));
+    Require(peer.Request("utility-raw") == "stream" && peer.SavedText() == "A B",
+            "Copy All replaces embedded NUL with a space in native storage");
+    Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "A B",
+            "ordinary native Unicode consumer receives Copy All's original NUL replacement");
+    peer.PreserveSavedText("clipboard-utilities-nul.txt");
+    UtilityBytes(editor, "", 0, 0);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(!frame->GetMenuBar()->IsEnabled(copyAdd) &&
+                !frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", "Copy All")),
+            "empty document disables original native bulk-copy commands");
+    peer.OfferText("sentinel");
+    UtilityShortcut(frame, 'A', false, true);
+    Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "sentinel",
+            "disabled native Alt+A retains clipboard for an empty document");
+    Gesture(editor);
+    editor->Send(Message::CopyRange, 0, 0);
+    Require(peer.Request("utility-read") == "stream" && peer.SavedText().empty(),
+            "direct empty-range Copy All publishes empty Unicode text");
+    std::puts("PASS: original clipboard empty, mixed-EOL and NUL boundaries");
+}
+
+void UtilityRectangleText(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    TestEditor::ResetStream(editor, "a1b\nc2d", 0, 0, Scintilla::EndOfLine::Lf);
+    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+    editor->Send(Message::SetRectangularSelectionAnchor, 1);
+    editor->Send(Message::SetRectangularSelectionCaret, 6);
+    Gesture(editor);
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Copy All"));
+    Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "a1b\nc2d" &&
+                editor->Send(Message::SelectionIsRectangle) &&
+                editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
+                editor->Send(Message::GetRectangularSelectionCaret) == 6,
+            "Copy All publishes the whole buffer while retaining rectangular selection");
+    Gesture(editor);
+    editor->Send(Message::Copy);
+    SettleClipboard();
+    TestEditor::ResetStream(editor, "tail", 0, 4);
+    Gesture(editor);
+    Require(editor->CopyAdd(), "stream Copy Add accepts an earlier rectangular clipboard");
+    Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "1\n2\r\n\r\ntail",
+            "Copy Add uses rectangle text without a synthetic native transport separator");
+    TestEditor::ResetStream(editor, "a1b\n\n", 0, 0, Scintilla::EndOfLine::Lf);
+    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+    editor->Send(Message::SetRectangularSelectionAnchor, 1);
+    editor->Send(Message::SetRectangularSelectionCaret, 4);
+    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 2);
+    Gesture(editor);
+    editor->Send(Message::Copy);
+    SettleClipboard();
+    TestEditor::ResetStream(editor, "tail", 0, 4);
+    Gesture(editor);
+    Require(editor->CopyAdd(), "append accepts a previously copied rectangle with an empty final row");
+    Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "1\n\r\n\r\ntail",
+            "plain rectangle transfer preserves a genuine final row separator");
+    peer.PreserveSavedText("clipboard-utilities-rectangle.txt");
+}
+
+class UtilityFeedback final : public wxModalDialogHook {
+public:
+    UtilityFeedback() { Register(); }
+    int Enter(wxDialog*) override {
+        ++count;
+        return wxID_OK;
+    }
+    int count = 0;
+};
+
+void UtilityFallbacks(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const int copyAdd = frame->GetMenuBar()->FindMenuItem("Edit", "Copy Add");
+    for (const char* offer : {"utility-empty", "nontext"}) {
+        for (const auto mode : {LineSelectionMode::None, LineSelectionMode::VisualStudio, LineSelectionMode::Normal,
+                                LineSelectionMode::OldVisualStudio}) {
+            TestEditor::ResetStream(editor, "first\nlast", 2, 2);
+            editor->SetLineSelectionMode(mode);
+            Require(peer.Request(offer) == "ready", "independent process seeds a missing-Unicode clipboard");
+            const auto before = peer.Request("utility-formats");
+            Gesture(editor);
+            Require(editor->CopyAdd(), "caret-only missing-Unicode fallback invokes underlying Copy");
+            Require(peer.Request("utility-formats") == before && !editor->Send(Message::CanPaste),
+                    "underlying Copy leaves missing-Unicode clipboard unchanged for every current-line preference");
+            TestEditor::RequireSelection(editor, 2, 2, "caret-only fallback preserves its endpoints");
+        }
+        TestEditor::ResetStream(editor, "first\nlast", 1, 4);
+        Require(peer.Request(offer) == "ready", "seed missing Unicode for selected fallback");
+        Gesture(editor);
+        NativeSearch::Command(frame, copyAdd);
+        Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "irs",
+                "selected missing-Unicode fallback transfers ordinary core selection text");
+        TestEditor::ResetStream(editor, "a1b\nc2d", 0, 0, Scintilla::EndOfLine::Lf);
+        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(Message::SetRectangularSelectionAnchor, 1);
+        editor->Send(Message::SetRectangularSelectionCaret, 6);
+        Require(peer.Request(offer) == "ready", "seed missing Unicode for rectangular fallback");
+        Gesture(editor);
+        UtilityFeedback feedback;
+        NativeSearch::Command(frame, copyAdd);
+        Require(feedback.count == 0 && peer.Request("shape-read") == "rectangle",
+                "missing-Unicode branch copies a rectangle without the Unicode-append warning");
+#ifdef __WXMSW__
+        Require(peer.SavedText() == "1\n2", "Windows fallback retains original rectangle text");
+#else
+        Require(peer.SavedText() == "1\n2\n", "GTK fallback retains native rectangle transport meaning");
+#endif
+    }
+    editor->SetLineSelectionMode(LineSelectionMode::VisualStudio);
+    TestEditor::ResetStream(editor, "a1b\nc2d", 0, 0, Scintilla::EndOfLine::Lf);
+    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+    editor->Send(Message::SetRectangularSelectionAnchor, 1);
+    editor->Send(Message::SetRectangularSelectionCaret, 6);
+    peer.OfferText("unchanged");
+    Gesture(editor);
+    {
+        UtilityFeedback feedback;
+        NativeSearch::Command(frame, copyAdd);
+        Require(feedback.count == 1 && peer.Request("utility-read") == "stream" && peer.SavedText() == "unchanged",
+                "Unicode append reports a rectangular selection and preserves the independently owned offer");
+    }
+    Require(Text(editor) == "a1b\nc2d" && editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
+                editor->Send(Message::GetRectangularSelectionCaret) == 6 && !editor->Send(Message::CanUndo),
+            "rectangle rejection retains editor bytes, rectangle and history");
+    editor->Send(Message::SetRectangularSelectionCaret, 1);
+    Gesture(editor);
+    Require(editor->CopyAdd(), "empty rectangle uses the original whole-buffer Unicode branch");
+    Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "unchanged\r\n\r\na1b\nc2d",
+            "empty rectangle is separate from rejected nonempty rectangular selection");
+    std::puts("PASS: original clipboard fallback branches and rectangular notification");
+}
+
+void UtilitySavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const auto directory = TestFiles::TemporaryDirectory("clipboard-utilities-中文");
+    std::filesystem::create_directory(directory);
+    const TestFiles::EncodedFixture fixtures[] = {
+        {"utf8", FileEncoding::Utf8,
+         "\xef\xbb\xbf"
+         "A B\r\n",
+         "\xef\xbb\xbf"
+         "A B\r\n!"},
+        {"gbk", FileEncoding::Gbk, "\xd6\xd0\r\n", "\xd6\xd0\r\n!"},
+        {"utf16", FileEncoding::Utf16Le,
+         std::string("\xff\xfe"
+                     "A\0 \0B\0\r\0\n\0",
+                     12),
+         std::string("\xff\xfe"
+                     "A\0 \0B\0\r\0\n\0!\0",
+                     14)},
+    };
+    for (const auto& fixture : fixtures) {
+        const auto path = directory / (std::string(fixture.name) + ".txt");
+        TestFiles::WriteBytes(path, fixture.before);
+        editor->Send(Message::SetSavePoint);
+        Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
+                "open independently encoded clipboard utility fixture");
+        const auto text = Text(editor);
+        const auto bom = frame->DocumentHasBom();
+        const auto eol = editor->Send(Message::GetEOLMode);
+        editor->Send(Message::EmptyUndoBuffer);
+        editor->Send(Message::SetSavePoint);
+        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Message::Undo);
+        Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                "seed an original pending Redo before clipboard commands");
+        editor->Send(Message::SetSel, 3, 0);
+        editor->Send(Message::SetReadOnly, 1);
+        {
+            UtilityFeedback feedback;
+            for (const char* label : {"Copy All", "Copy Add", "Clear Clipboard"}) {
+                const int command = frame->GetMenuBar()->FindMenuItem("Edit", label);
+                frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+                Require(frame->GetMenuBar()->IsEnabled(command),
+                        "selected read-only document retains copy availability");
+                Gesture(editor);
+                NativeSearch::Command(frame, command);
+            }
+            Require(feedback.count == 0, "successful clipboard utilities produce no modal notification");
+        }
+        Require(peer.Request("utility-formats") == "empty", "encoded utility commands leave no clipboard formats");
+        Require(Text(editor) == text, "clipboard utilities retain full decoded editor bytes");
+        Require(frame->DocumentEncoding() == fixture.encoding && frame->DocumentHasBom() == bom &&
+                    editor->Send(Message::GetEOLMode) == eol,
+                "clipboard utilities retain encoding, BOM and EOL metadata");
+        Require(!editor->Send(Message::GetModify), "clipboard utilities retain document save point");
+        Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+                "read-only clipboard commands retain disabled Undo/Redo availability");
+        TestEditor::RequireSelection(editor, 3, 0, "clipboard utilities retain reverse selected endpoints");
+        editor->Send(Message::SetReadOnly, 0);
+        Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                "clipboard commands preserve pending Redo while read-only commands are disabled");
+        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
+                "clipboard utilities independently save the unchanged original encoded bytes");
+        const auto artifact = std::string("clipboard-utilities-") + fixture.name;
+        std::filesystem::copy_file(path, artifact + "-before.txt", std::filesystem::copy_options::overwrite_existing);
+        editor->Send(Message::Redo);
+        TestFiles::RequireSavedUndoRedo(frame, path, fixture,
+                                        {"clipboard commands preserve previous Redo encoded result",
+                                         "clipboard commands preserve previous Undo encoded result",
+                                         "clipboard commands preserve repeated Redo encoded result"});
+        std::filesystem::copy_file(path, artifact + "-after.txt", std::filesystem::copy_options::overwrite_existing);
+    }
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: clipboard utilities retain encoded disk bytes and original Undo/Redo");
+}
+
+void Utilities(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const int copyAll = frame->GetMenuBar()->FindMenuItem("Edit", "Copy All");
+    Require(copyAll != wxNOT_FOUND, "native Copy All menu exists");
+    const std::string text = "first\r\n中文😀\nlast\rtail";
+    TestEditor::ResetStream(editor, text.c_str());
+    editor->Send(Message::SetSel, 12, 2);
+    const auto anchor = editor->Send(Message::GetAnchor);
+    const auto caret = editor->Send(Message::GetCurrentPos);
+    Gesture(editor);
+    NativeSearch::Command(frame, copyAll);
+    Require(peer.Request("shape-read") == "stream" && peer.SavedText() == text,
+            "Copy All transfers whole Unicode mixed-EOL buffer as native stream text");
+    peer.PreserveSavedText("clipboard-utilities-peer.txt");
+    Require(Text(editor) == text && editor->Send(Message::GetAnchor) == anchor &&
+                editor->Send(Message::GetCurrentPos) == caret && !editor->Send(Message::GetModify) &&
+                !editor->Send(Message::CanUndo),
+            "Copy All retains selection, caret, bytes and save point");
+    UtilityShortcut(frame, 'A', false, true);
+    Require(peer.Request("shape-read") == "stream" && peer.SavedText() == text, "native Alt+A invokes Copy All");
+    std::puts("PASS: native Copy All");
+    const int copyAdd = frame->GetMenuBar()->FindMenuItem("Edit", "Copy Add");
+    Require(copyAdd != wxNOT_FOUND, "native Copy Add menu exists");
+    TestEditor::ResetStream(editor, "alpha\nbeta", 0, 5);
+    Require(peer.Request("shape-line") == "ready", "independent process owns tagged Unicode clipboard");
+    Gesture(editor);
+    NativeSearch::Command(frame, copyAdd);
+    Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "中文\tX\n日本\tY\r\n\r\nalpha",
+            "Copy Add appends two CRLF separators and selected text while dropping line tags");
+    Require(Text(editor) == "alpha\nbeta" && editor->Send(Message::GetAnchor) == 0 &&
+                editor->Send(Message::GetCurrentPos) == 5 && !editor->Send(Message::GetModify) &&
+                !editor->Send(Message::CanUndo),
+            "Copy Add retains document, selection, save point and history");
+    Require(peer.Request("shape-line") == "ready", "prepare independently owned clipboard for native Ctrl+E");
+    UtilityShortcut(frame, 'E', true);
+    Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "中文\tX\n日本\tY\r\n\r\nalpha",
+            "native Ctrl+E invokes Copy Add");
+    std::puts("PASS: native Copy Add");
+    const int clearClipboard = frame->GetMenuBar()->FindMenuItem("Edit", "Clear Clipboard");
+    Require(clearClipboard != wxNOT_FOUND, "native Clear Clipboard menu exists");
+    Require(peer.Request("nontext") == "ready" && peer.Request("utility-formats") == "data",
+            "independent owner publishes a non-text clipboard format");
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(frame->GetMenuBar()->IsEnabled(clearClipboard), "any native format enables Clear Clipboard");
+    Gesture(editor);
+    NativeSearch::Command(frame, clearClipboard);
+    Require(peer.Request("utility-formats") == "empty", "independent native process observes a cleared clipboard");
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(!frame->GetMenuBar()->IsEnabled(clearClipboard), "empty native clipboard disables Clear Clipboard");
+    Require(Text(editor) == "alpha\nbeta" && editor->Send(Message::GetAnchor) == 0 &&
+                editor->Send(Message::GetCurrentPos) == 5 && !editor->Send(Message::GetModify) &&
+                !editor->Send(Message::CanUndo),
+            "Clear Clipboard retains document, selection, save point and history");
+    std::puts("PASS: native Clear Clipboard");
+    UtilityRectangleText(frame, editor, peer);
+    UtilityTextBoundaries(frame, editor, peer);
+    UtilityFallbacks(frame, editor, peer);
+    UtilitySavedState(frame, editor, peer);
+}
+
 void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
     auto* edit = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Edit"));
@@ -1172,7 +1504,9 @@ public:
                 Require(peer.Request("ready") == "ready", "external clipboard application is running");
                 wxString shapes;
                 if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-                    if (shapes == "path-text")
+                    if (shapes == "utilities")
+                        Utilities(frame, editor, peer);
+                    else if (shapes == "path-text")
                         PathTextCopies(frame, editor, peer);
                     else if (shapes == "read-only")
                         ReadOnlyCommands(frame, editor, peer);
