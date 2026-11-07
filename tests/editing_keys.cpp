@@ -36,7 +36,7 @@ void Key(EditorControl* editor, int key, bool control = false, bool shift = fals
     editor->GetEventHandler()->ProcessEvent(event);
 }
 void NativeKey(EditorControl* editor, int key, const char* gesture, bool control = false, bool shift = false) {
-    const NativeTrace::Gesture trace(editor, key, (control ? wxMOD_CONTROL : 0) | (shift ? wxMOD_SHIFT : 0));
+    const NativeTrace::Gesture trace(*editor, key, (control ? wxMOD_CONTROL : 0) | (shift ? wxMOD_SHIFT : 0));
     std::printf("Native key: %s\n", gesture);
     std::fflush(stdout);
 #ifdef __WXMSW__
