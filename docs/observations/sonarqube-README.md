@@ -39,6 +39,9 @@ scheme tables are excluded from copy/paste metrics because their contents and
 ordering come from the pinned upstream schemes. Other code analysis remains
 enabled for those tables. Quality-gate thresholds and rule profiles are unchanged.
 
+Test fixtures are excluded from coverage metrics through `sonar.coverage.exclusions`,
+while their code analysis remains enabled. Application coverage scope is retained.
+
 Configuration and cutover: [GitHub Actions](../ci.md#sonarcloud).
 Reference: [SonarQube Cloud compilation-database analysis](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/running-the-analysis).
 See also [CFamily test-file analysis](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/customizing-the-analysis).

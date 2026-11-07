@@ -126,6 +126,12 @@ source scope. C++ fixtures remain in `sonar.sources` because CFamily does not
 analyze files classified through `sonar.tests`. Generated language-scheme tables
 retain their existing duplication exclusions and remain analyzed.
 
+The `tests/` tree is excluded from coverage metrics, including C++ fixtures that
+CFamily requires in source scope. Those fixtures still receive code analysis.
+Application sources remain subject to the configured coverage gate. The current
+workflow does not collect application coverage reports; adding that collection
+is required before future production-code changes can satisfy the coverage gate.
+
 Configure these project settings before enabling the CI scanner:
 
 1. Add the repository Actions secret `SONAR_TOKEN`, using a SonarCloud token with
