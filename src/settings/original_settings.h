@@ -1,6 +1,7 @@
 #pragma once
 
 #include "document/encoding/encoding_detection.h"
+#include "editor/caret_appearance.h"
 #include <wx/string.h>
 #include <array>
 #include <vector>
@@ -31,6 +32,7 @@ struct OriginalSettings {
     bool fixTrailingBlanks = false;
     EncodingOptions encoding;
     int zoomLevel = 100;
+    CaretAppearance caret;
     int highlightCurrentLine = 12;
     int longLinesLimit = 80;
     bool markLongLines = false;

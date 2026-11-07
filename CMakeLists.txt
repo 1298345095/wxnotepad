@@ -41,6 +41,7 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/caret_appearance.cpp
     src/editor/date_time.cpp
     src/editor/align_lines.cpp
     src/editor/blank_lines.cpp
@@ -202,6 +203,9 @@ if(BUILD_TESTING)
     add_test(NAME original_current_line_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_line_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_current_line_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME original_caret_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/caret_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_caret_preference PROPERTIES TIMEOUT 60)
     add_test(NAME original_visual_brace_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/visual_brace_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_visual_brace_preference PROPERTIES TIMEOUT 60)
@@ -217,6 +221,12 @@ if(BUILD_TESTING)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
     add_editor_test(date_time original_date_time_insertion 60)
+    add_editor_test(caret_appearance original_caret_appearance 60)
+    if(WIN32)
+        add_test(NAME original_caret_dpi96 COMMAND caret_appearance)
+        set_tests_properties(original_caret_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_CARET_DPI96=1")
+    endif()
     add_editor_test(special_insert original_special_insertion 60)
     add_editor_test(header_insert original_header_insertion 90)
     target_compile_definitions(header_insert PRIVATE

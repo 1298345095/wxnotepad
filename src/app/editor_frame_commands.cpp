@@ -742,6 +742,7 @@ wxMenu* EditorFrame::CreateViewMenu() {
     view->AppendSeparator();
     AppendDisplayCommands(view);
     AppendCurrentLineCommands(view);
+    AppendCaretCommands(view);
     auto* occurrences = new wxMenu;
     for (const auto& [label, bit] : {std::pair{"&Off", 1}, std::pair{"Match &Case", 2},
                                      std::pair{"Match &Whole Word Only", 4}, std::pair{"&Bookmark Matched Line", 8}}) {
@@ -1018,6 +1019,69 @@ void EditorFrame::AppendCurrentLineCommands(wxMenu* view) {
         },
         subline);
     view->AppendSubMenu(currentLine, "Highlight C&urrent Line");
+}
+
+void EditorFrame::AppendCaretCommands(wxMenu* view) {
+    auto* caret = new wxMenu;
+    const int overstrike = wxWindow::NewControlId();
+    caret->AppendCheckItem(overstrike, "Block (&OVR Mode)");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto appearance = editor_->GetCaretAppearance();
+            appearance.overstrikeBlock = !appearance.overstrikeBlock;
+            editor_->SetCaretAppearance(appearance);
+        },
+        overstrike);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->GetCaretAppearance().overstrikeBlock); },
+        overstrike);
+    caret->AppendSeparator();
+    const char* modes[] = {"Block (&INS Mode)", "Line Width &1", "Line Width &2", "Line Width &3"};
+    for (int width = 0; width <= 3; ++width) {
+        const int id = wxWindow::NewControlId();
+        caret->AppendRadioItem(id, modes[width]);
+        Bind(
+            wxEVT_MENU,
+            [this, width](wxCommandEvent&) {
+                auto appearance = editor_->GetCaretAppearance();
+                appearance.lineWidth = width;
+                editor_->SetCaretAppearance(appearance);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, width](wxUpdateUIEvent& event) { event.Check(editor_->GetCaretAppearance().lineWidth == width); },
+            id);
+    }
+    caret->AppendSeparator();
+    const int blink = wxWindow::NewControlId();
+    caret->AppendCheckItem(blink, "&No Blink");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto appearance = editor_->GetCaretAppearance();
+            appearance.blinkPeriod = appearance.blinkPeriod == 0 ? -1 : 0;
+            editor_->SetCaretAppearance(appearance);
+        },
+        blink);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->GetCaretAppearance().blinkPeriod == 0); }, blink);
+    const int selection = wxWindow::NewControlId();
+    caret->AppendCheckItem(selection, "Draw Block Caret in &Selection");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto appearance = editor_->GetCaretAppearance();
+            appearance.blockAfterSelection = !appearance.blockAfterSelection;
+            editor_->SetCaretAppearance(appearance);
+        },
+        selection);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(!editor_->GetCaretAppearance().blockAfterSelection); }, selection);
+    view->AppendSubMenu(caret, "C&aret Style");
 }
 
 void EditorFrame::AppendSettingsCommands(wxMenu* view) {

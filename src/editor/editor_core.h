@@ -33,6 +33,8 @@ public:
     void Mouse(wxMouseEvent& event);
     void CaptureLost();
     void SyncSystemCaret();
+    void CompositionStarted();
+    void CompositionEnded();
     void RepairFoldSelection();
     void UpdateVisualBraceMatching();
 
@@ -40,7 +42,12 @@ private:
     class TextDropTarget;
     void ShowDropFeedback(int x, int y);
     void ClearDropFeedback();
-    bool dropFeedback_ = false;
+#ifdef __WXMSW__
+    void DestroySystemCaret();
+    void* systemCaretBitmap_ = nullptr;
+    int systemCaretWidth_ = 0;
+    int systemCaretHeight_ = 0;
+#endif
 #ifdef __WXGTK__
     std::unique_ptr<GtkTextDragDrop> gtkDragDrop_;
 #endif

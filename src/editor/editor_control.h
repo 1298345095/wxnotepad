@@ -3,6 +3,7 @@
 #include "editor/align_lines.h"
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
+#include "editor/caret_appearance.h"
 #include "editor/special_insert.h"
 #include "editor/url_conversion.h"
 #include "editor/occurrence_marking.h"
@@ -106,6 +107,8 @@ public:
     void SetCurrentBlockHighlighted(bool enabled);
     LineHighlightMode GetCurrentLineHighlightMode() const { return lineHighlightMode_; }
     void SetCurrentLineHighlightMode(LineHighlightMode mode);
+    const CaretAppearance& GetCaretAppearance() const { return caretAppearance_; }
+    void SetCaretAppearance(CaretAppearance appearance);
     OccurrenceMarking& Occurrences() { return *occurrences_; }
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
@@ -132,6 +135,8 @@ private:
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;
+    CaretAppearance caretAppearance_;
+    void ApplyCaretAppearance();
     void UpdateLineNumberMargin();
     void UpdateBookmarkMargin();
     void UpdateFoldMargin();
