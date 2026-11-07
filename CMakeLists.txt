@@ -269,8 +269,7 @@ if(BUILD_TESTING)
     set_tests_properties(original_clipboard_swap PROPERTIES TIMEOUT 180 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=swap")
     add_test(NAME original_clipboard_swap_default_encoding COMMAND clipboard_smoke)
     set_tests_properties(original_clipboard_swap_default_encoding PROPERTIES TIMEOUT 180
-        ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=swap-encoding"
-        SKIP_REGULAR_EXPRESSION "SKIP: captured default-ANSI Swap requires system ACP 936")
+        ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=swap-encoding")
     add_editor_test(gbk_smoke gbk_roundtrip 30)
     add_editor_test(eol_open mixed_line_ending_open 30)
     add_editor_test(gbk_native gbk_native_choices 60)
