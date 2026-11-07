@@ -57,6 +57,7 @@ add_library(editor_runtime STATIC
     src/editor/tab_conversion.cpp
     src/editor/number_radix.cpp
     src/editor/editor_control.cpp
+    src/editor/special_insert.cpp
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
@@ -94,6 +95,7 @@ target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
     src/app/dialogs/column_wrap_dialog.cpp
+    src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
     src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
@@ -112,7 +114,7 @@ add_library(app_shell STATIC
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
     target_link_libraries(editor_features PRIVATE advapi32)
-    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi)
+    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32)
     target_link_libraries(app_shell PRIVATE shell32 ole32)
 endif()
 
@@ -189,6 +191,9 @@ if(BUILD_TESTING)
     add_test(NAME original_zoom_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/zoom_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_zoom_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME original_current_line_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_line_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_current_line_preference PROPERTIES TIMEOUT 60)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
@@ -201,6 +206,15 @@ if(BUILD_TESTING)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
     add_editor_test(date_time original_date_time_insertion 60)
+    add_editor_test(special_insert original_special_insertion 60)
+    target_compile_definitions(special_insert PRIVATE
+        "SPECIAL_INSERT_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv\""
+        "SPECIAL_INSERT_STATES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_states.tsv\""
+        "SPECIAL_INSERT_SAVED=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_saved.tsv\"")
+    add_test(NAME original_special_insertion_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_process.py" "$<TARGET_FILE:wxnotepad>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv")
+    set_tests_properties(original_special_insertion_process PROPERTIES TIMEOUT 90)
     add_editor_test(path_text original_path_text_insertion 90)
     add_editor_test(read_only original_read_only_mode 120)
     target_compile_definitions(read_only PRIVATE
@@ -272,6 +286,12 @@ if(BUILD_TESTING)
     add_editor_test(selection_modifiers selection_modifiers 60)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
+    add_editor_test(current_line original_current_line_highlight 60)
+    if(WIN32)
+        add_test(NAME original_current_line_dpi96 COMMAND current_line)
+        set_tests_properties(original_current_line_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_CURRENT_LINE_DPI96=1")
+    endif()
     add_editor_test(block_indentation block_indentation_commands 60)
     add_editor_test(tab_conversion original_tab_conversion 60)
     add_editor_test(escape_text original_escape_text 90)
@@ -334,6 +354,15 @@ if(BUILD_TESTING)
     add_editor_test(fold_all fold_all_commands 60)
     add_editor_test(line_numbers line_number_view 60)
     add_editor_test(whitespace_view visible_whitespace 30)
+    add_editor_test(guides original_guides_and_long_lines 90)
+    add_test(NAME original_guides_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/guides_process.py" "$<TARGET_FILE:guides>")
+    set_tests_properties(original_guides_settings_lifecycle PROPERTIES TIMEOUT 90)
+    add_editor_test(line_symbols original_line_symbols 60)
+    add_test(NAME original_line_symbol_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_symbols_process.py" "$<TARGET_FILE:line_symbols>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
+    set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
     add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(file_indentation original_file_indentation 60)

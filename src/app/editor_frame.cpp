@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "syntax/syntax_scheme.h"
 #include "editor/editor_control.h"
 #include "app/dialogs/document_dialogs.h"
 #include "app/dialogs/find_replace_dialog.h"
@@ -19,6 +20,15 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
                          : SyntaxDetectionOptions{}),
       search_(*editor_) {
+    const auto& preferences = settings ? settings->values : defaults_;
+    ApplyIndentationGuides(*editor_, document_.Language(), preferences.showIndentGuides,
+                           preferences.simpleIndentGuides);
+    editor_->Send(Scintilla::Message::SetEdgeColumn,
+                  settings ? settings->values.longLinesLimit : defaults_.longLinesLimit);
+    if (settings && settings->values.markLongLines) {
+        editor_->Send(Scintilla::Message::SetEdgeMode, settings->values.longLineMode);
+        ApplyLongLineColour(*editor_);
+    }
     indentation_.Apply(*editor_, document_.Language());
     if (settings) {
         document_.SetSaveCleanup({settings->values.fixLineEndings, settings->values.fixTrailingBlanks});
@@ -32,7 +42,14 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
         warnLineEndings_ = settings->values.warnLineEndings;
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
+        editor_->SetCurrentLineHighlightMode(
+            static_cast<LineHighlightMode>(settings->values.highlightCurrentLine % 10));
+        editor_->Send(Scintilla::Message::SetCaretLineHighlightSubLine, settings->values.highlightCurrentLine >= 10);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
+        editor_->Send(Scintilla::Message::SetViewEOL, settings->values.viewEOLs);
+        showWordWrapSymbols_ = settings->values.showWordWrapSymbols;
+        wordWrapSymbols_ = settings->values.wordWrapSymbols;
+        ApplyWrapSymbols();
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
         editor_->Send(Scintilla::Message::SetViewWS,
                       static_cast<uintptr_t>(settings->values.viewWhiteSpace ? Scintilla::WhiteSpace::VisibleAlways
@@ -70,14 +87,22 @@ EditorFrame::EditorFrame(SettingsStore* settings)
 
 bool EditorFrame::SaveSettings(bool explicitSave) {
     if (!settings_) return true;
+    settings_->values.markLongLines = editor_->Send(Scintilla::Message::GetEdgeMode) != 0;
+    settings_->values.showIndentGuides = editor_->Send(Scintilla::Message::GetIndentationGuides) != 0;
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    settings_->values.viewEOLs = editor_->Send(Scintilla::Message::GetViewEOL) != 0;
+    settings_->values.showWordWrapSymbols = showWordWrapSymbols_;
+    settings_->values.wordWrapSymbols = wordWrapSymbols_;
     settings_->values.warnLineEndings = warnLineEndings_;
     settings_->values.defaultEOLMode = defaultEolMode_;
     settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
     settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    settings_->values.highlightCurrentLine =
+        static_cast<int>(editor_->GetCurrentLineHighlightMode()) +
+        10 * static_cast<int>(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
     CaptureSearchSettings(search_, settings_->values);
     settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
     return settings_->Save(explicitSave);
@@ -287,7 +312,12 @@ SaveResult EditorFrame::SaveCopy() {
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
     const auto result = document_.Open(
         source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding, std::nullopt,
-        [this] { indentation_.Load(*editor_, document_.Language(), document_.FileVariables()); });
+        [this] {
+            indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            editor_->Send(Scintilla::Message::SetEdgeColumn,
+                          document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
+        });
     if (result.status == OpenStatus::Opened) {
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
@@ -311,6 +341,8 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::New() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    editor_->Send(Scintilla::Message::SetEdgeColumn,
+                  settings_ ? settings_->values.longLinesLimit : defaults_.longLinesLimit);
     wrapColumn_ = 0;
     indentation_.Reset(*editor_, document_.Language());
     GetMenuBar()->Check(automaticLanguageId_, true);

@@ -1072,14 +1072,14 @@ void UtilityRectangleText(EditorFrame* frame, EditorControl* editor, Peer& peer)
     editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
     editor->Send(Message::SetRectangularSelectionAnchor, 1);
     editor->Send(Message::SetRectangularSelectionCaret, 4);
-    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 2);
+    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 0);
     Gesture(editor);
     editor->Send(Message::Copy);
     SettleClipboard();
     TestEditor::ResetStream(editor, "tail", 0, 4);
     Gesture(editor);
     Require(editor->CopyAdd(), "append accepts a previously copied rectangle with an empty final row");
-    Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "1\n\r\n\r\ntail",
+    Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "a\n\r\n\r\ntail",
             "plain rectangle transfer preserves a genuine final row separator");
     peer.PreserveSavedText("clipboard-utilities-rectangle.txt");
 }
