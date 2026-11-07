@@ -1,0 +1,235 @@
+#include "native_key_helpers.h"
+#include "encoded_file_helpers.h"
+#include "settings/settings_store.h"
+#include <fstream>
+#include <sstream>
+#include <vector>
+
+namespace {
+using Scintilla::Message;
+void Require(bool value, const char* message) {
+    if (!value) throw std::runtime_error(message);
+}
+int InsertId(EditorFrame* frame, const char* label) {
+    auto* edit = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Edit"));
+    auto* insert = edit->FindItem(edit->FindItem("Insert"))->GetSubMenu();
+    const int id = insert->FindItem(label);
+    Require(id != wxNOT_FOUND, "original header command exists in the native Insert menu");
+    return id;
+}
+void Encoding(EditorFrame* frame) {
+    NativeSearch::Command(frame, InsertId(frame, "Encoding Identifier"));
+}
+void BasicEncoding(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    TestEditor::ResetStream(editor, "AoldZ", 1, 4);
+    Encoding(frame);
+    Require(TestEditor::Text(editor) == "AUTF-8Z",
+            "encoding insertion replaces selection with the original preferred name");
+    TestEditor::RequireSelection(editor, 6, 6, "encoding insertion collapses to its UTF-8 endpoint");
+    editor->Send(Message::Undo);
+    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) &&
+                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+            "one Undo restores input and save point");
+    TestEditor::RequireSelection(editor, 1, 4, "Undo restores the directed selection");
+    editor->Send(Message::Redo);
+    Require(TestEditor::Text(editor) == "AUTF-8Z", "one Redo restores the header insertion");
+}
+void BasicShebang(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    TestEditor::ResetStream(editor, "A\nB", 0, 0, Scintilla::EndOfLine::Lf);
+    NativeSearch::Command(frame, InsertId(frame, "Script Shebang Line"));
+    Require(TestEditor::Text(editor) == "#!/usr/bin/env A\nB",
+            "unsupported syntax inserts the original generic prefix without an appended EOL");
+}
+std::string Unhex(const std::string& value) {
+    std::string bytes;
+    for (size_t offset = 0; offset < value.size(); offset += 2)
+        bytes += static_cast<char>(std::stoi(value.substr(offset, 2), nullptr, 16));
+    return bytes;
+}
+std::vector<std::string> Fields(const std::string& row) {
+    std::istringstream stream(row);
+    std::vector<std::string> fields;
+    for (std::string field; std::getline(stream, field, '\t');)
+        fields.push_back(field);
+    return fields;
+}
+void State(EditorControl* editor, const std::vector<std::string>& fields, size_t start) {
+    Require(TestEditor::Text(editor) == Unhex(fields[start]),
+            "header text matches independently captured original bytes");
+    const Message messages[] = {Message::GetAnchor, Message::GetCurrentPos, Message::GetModify, Message::CanUndo,
+                                Message::CanRedo};
+    for (size_t index = 0; index < std::size(messages); ++index)
+        Require(editor->Send(messages[index]) == std::stoll(fields[start + index + 1]),
+                "header selection, save point and history match the original capture");
+}
+void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) {
+    std::filesystem::create_directories(directory);
+    std::ifstream stream(std::filesystem::u8path(HEADER_REFERENCE));
+    Require(stream.good(), "original header fixtures are available");
+    std::string row, previousEncoding, previousLanguage;
+    std::getline(stream, row);
+    size_t count = 0;
+    while (std::getline(stream, row)) {
+        const auto fields = Fields(row);
+        Require(fields.size() == 28, "original header record has all captured states");
+        const auto& encoding = fields[1];
+        auto* editor = frame->Editor();
+        if (encoding != previousEncoding) {
+            const auto path = directory / "reference.txt";
+            std::string bytes = "A\r\nB\r\nC";
+            if (encoding == "utf8bom") bytes = "\xef\xbb\xbf" + bytes;
+            if (encoding.starts_with("utf16")) bytes = std::string("A\0\r\0\n\0B\0\r\0\n\0C\0", 14);
+            if (encoding == "utf16bom") bytes = "\xff\xfe" + bytes;
+            TestFiles::WriteBytes(path, bytes);
+            editor->Send(Message::SetReadOnly, 0);
+            editor->Send(Message::SetSavePoint);
+            Require(frame->Open(TestFiles::Filename(path),
+                                encoding == "ansi" ? std::nullopt
+                                                   : std::optional{encoding.starts_with("utf16") ? FileEncoding::Utf16Le
+                                                                   : encoding == "gbk"           ? FileEncoding::Gbk
+                                                                                                 : FileEncoding::Utf8})
+                            .status == OpenStatus::Opened,
+                    "captured encoding identity opens through the application document interface");
+            previousEncoding = encoding;
+            previousLanguage.clear();
+        }
+        if (previousLanguage != fields[0]) {
+            const char* label = fields[0] == "Python" ? "Python"
+                                : fields[0] == "Cpp"  ? "C/C++"
+                                : fields[0] == "Json" ? "JSON"
+                                                      : "Plain Text";
+            const int id = frame->GetMenuBar()->FindMenuItem("Language", label);
+            Require(id != wxNOT_FOUND, "captured language is available in the native menu");
+            NativeSearch::Command(frame, id);
+            previousLanguage = fields[0];
+        }
+        const auto data = Unhex(fields[5]);
+        TestEditor::ResetStream(editor, data.c_str(), std::stoll(fields[6]), std::stoll(fields[7]),
+                                static_cast<Scintilla::EndOfLine>(std::stoi(fields[2])));
+        if (fields[8] == "1") {
+            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+            editor->Send(Message::SetRectangularSelectionAnchor, std::stoll(fields[6]));
+            editor->Send(Message::SetRectangularSelectionCaret, std::stoll(fields[7]));
+        }
+        if (fields[3] == "protected_redo") {
+            editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("redo"));
+            editor->Send(Message::Undo);
+            Require(editor->Send(Message::CanRedo), "protected reference scenario begins with a redo branch");
+        }
+        editor->Send(Message::SetReadOnly, fields[9] == "1");
+        const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
+        const auto zoom = editor->Send(Message::GetZoom);
+        const auto codec = frame->DocumentEncoding();
+        const auto bom = frame->DocumentHasBom();
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        const int id = InsertId(frame, fields[4] == "encoding" ? "Encoding Identifier" : "Script Shebang Line");
+        Require(frame->GetMenuBar()->FindItem(id)->IsEnabled(),
+                "original header entries stay enabled for protected and rectangular selections");
+        NativeSearch::Command(frame, id);
+        try {
+            State(editor, fields, 10);
+            editor->Send(Message::Undo);
+            State(editor, fields, 16);
+            editor->Send(Message::Redo);
+            State(editor, fields, 22);
+        } catch (...) {
+            std::fprintf(stderr, "Header reference: %s/%s/%s/%s/%s\n", fields[0].c_str(), fields[1].c_str(),
+                         fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
+            throw;
+        }
+        Require(editor->Send(Message::GetEOLMode) == std::stoi(fields[2]) && frame->DocumentEncoding() == codec &&
+                    frame->DocumentHasBom() == bom && editor->Send(Message::StyleGetSizeFractional, 32) == font &&
+                    editor->Send(Message::GetZoom) == zoom,
+                "header insertion retains encoding, BOM, EOL, font and zoom metadata");
+        ++count;
+    }
+    Require(count == 1248, "all independently captured header scenarios ran");
+    frame->Editor()->Send(Message::SetReadOnly, 0);
+    std::printf("PASS: %zu native original header reference cases\n", count);
+}
+void KeyCases(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(Message::SetSavePoint);
+    Require(frame->New(), "fresh UTF-8 document is available for the native Ctrl+F8 shortcut");
+    TestEditor::ResetStream(editor, "AoldZ", 4, 1);
+    NativeKeys::Shortcut(frame, WXK_F8, true);
+    Require(TestEditor::Text(editor) == "AUTF-8Z", "native Ctrl+F8 invokes encoding insertion on the owned editor");
+    editor->Send(Message::Undo);
+    TestEditor::RequireSelection(editor, 4, 1, "native Ctrl+F8 Undo restores the reversed selection");
+    for (const auto modifiers :
+         {std::array{false, false, false}, std::array{false, false, true}, std::array{false, true, false},
+          std::array{true, false, true}, std::array{true, true, false}}) {
+        NativeKeys::Shortcut(frame, WXK_F8, modifiers[0], modifiers[1], modifiers[2]);
+        Require(TestEditor::Text(editor) == "AoldZ" && editor->Send(Message::CanRedo),
+                "F8 neighbors and extra modifiers preserve text and the existing redo branch");
+    }
+    editor->Send(Message::SetReadOnly, 1);
+    NativeKeys::Shortcut(frame, WXK_F8, true);
+    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(Message::CanRedo),
+            "protected Ctrl+F8 retains text and clears redo like the original ReplaceSel command");
+    TestEditor::RequireSelection(editor, 1, 1, "protected Ctrl+F8 collapses the selection like the original command");
+    editor->Send(Message::SetReadOnly, 0);
+    TestEditor::ResetStream(editor, "");
+    NativeKeys::Shortcut(frame, WXK_F8, true);
+    Require(TestEditor::Text(editor) == "UTF-8", "native Ctrl+F8 is available in an empty document");
+    std::puts("PASS: native Ctrl+F8 exact modifiers, neighbors, empty and protected documents");
+}
+void LossDecision(EditorFrame* frame, const std::filesystem::path& directory) {
+    auto* editor = frame->Editor();
+    editor->Send(Message::SetSavePoint);
+    const auto path = directory / "loss.txt";
+    TestFiles::WriteBytes(path, "AoldZ");
+    Require(frame->Open(TestFiles::Filename(path), FileEncoding::Gbk).status == OpenStatus::Opened,
+            "explicit CP936 document opens for the existing loss decision");
+    TestEditor::ResetStream(editor, "😀old中", 4, 7);
+    Encoding(frame);
+    Require(TestEditor::Text(editor) == "😀GBK中", "encoding insertion preserves neighboring Unicode bytes");
+    bool asked = false;
+    Require(frame->Save([&asked] {
+                     asked = true;
+                     return GbkLossChoice::Cancel;
+                 }).status == SaveStatus::Cancelled &&
+                asked && TestFiles::Bytes(path) == "AoldZ" && editor->Send(Message::GetModify),
+            "header insertion retains the existing legacy loss decision and cancelled Save bytes");
+}
+class HeaderInsertApp final : public wxApp {
+public:
+    bool OnInit() override {
+        wxLog::SetActiveTarget(new wxLogStderr);
+        settings_.values.encoding.defaultEncoding = 0;
+        settings_.values.encoding.loadASCIIasUTF8 = false;
+        settings_.values.encoding.loadANSIasUTF8 = false;
+        auto* frame = new EditorFrame(&settings_);
+        frame->Show();
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
+            try {
+                Require(presented, "private compositor presents the owned header test editor");
+                BasicEncoding(frame);
+                BasicShebang(frame);
+                ReferenceCases(frame, TestFiles::TemporaryDirectory("headers"));
+                KeyCases(frame);
+                LossDecision(frame, TestFiles::TemporaryDirectory("headers"));
+                result_ = 0;
+            } catch (const std::exception& error) {
+                std::fprintf(stderr, "FAIL: %s\n", error.what());
+            }
+            frame->Editor()->Send(Message::SetSavePoint);
+            frame->Destroy();
+            ExitMainLoop();
+        });
+        return true;
+    }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+
+private:
+    int result_ = 1;
+    SettingsStore settings_;
+};
+} // namespace
+wxIMPLEMENT_APP(HeaderInsertApp);

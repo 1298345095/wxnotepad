@@ -1030,6 +1030,10 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F8 && event.ControlDown()) {
+        if (!event.AltDown() && !event.ShiftDown() && !event.MetaDown()) InsertEncodingIdentifier();
+        return true;
+    }
     if (event.GetKeyCode() == WXK_F9 && event.ControlDown() && event.ShiftDown()) {
         if (!event.AltDown() && !event.MetaDown()) InsertFileName(FileNamePart::FullPath);
         return true;
@@ -1121,6 +1125,16 @@ void EditorFrame::AppendFileNameCopyCommands(wxMenu* copy) {
 
 void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
     auto* insert = new wxMenu;
+    const int encoding = wxWindow::NewControlId();
+    insert->Append(encoding, "&Encoding Identifier\tCtrl+F8");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { InsertEncodingIdentifier(); }, encoding);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, encoding);
+    const int shebang = wxWindow::NewControlId();
+    insert->Append(shebang, "Script She&bang Line");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->InsertScriptShebangLine(SyntaxFor(document_.Language())); },
+        shebang);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, shebang);
     const int insertTag = wxWindow::NewControlId();
     insert->Append(insertTag, "&HTML/XML Tag...\tAlt+X");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowInsertTagDialog(this, *editor_); }, insertTag);
@@ -1176,6 +1190,11 @@ void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
         Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     }
     edit->AppendSubMenu(insert, "&Insert");
+}
+
+void EditorFrame::InsertEncodingIdentifier() {
+    const EncodingChoice encoding(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding());
+    editor_->InsertEncodingIdentifier(OriginalEncodingIdentifier(encoding), SyntaxFor(document_.Language()));
 }
 
 void EditorFrame::ConvertTabs(bool toTabs, bool onlyIndent) {

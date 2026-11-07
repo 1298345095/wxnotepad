@@ -12,8 +12,10 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 
 wxDECLARE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
+struct SyntaxDefinition;
 
 // Original Edit.h::LineSelectionMode, including its built-in Visual Studio default.
 enum class LineSelectionMode { None, VisualStudio, Normal, OldVisualStudio };
@@ -45,6 +47,8 @@ public:
     bool ConvertUrl(UrlConversion command);
     void InsertDateTime(DateTimeInsertion command, const wxString& format = {});
     void InsertGuid();
+    void InsertEncodingIdentifier(std::string_view name, const SyntaxDefinition& syntax);
+    void InsertScriptShebangLine(const SyntaxDefinition& syntax);
     void InsertUnicodeControlCharacter(UnicodeControlCharacter character, bool defaultEncoding);
     AlignmentResult AlignLines(AlignmentMode mode);
     bool ModifyLines(const wxString& prefix, const wxString& suffix, bool skipEmpty = false);
