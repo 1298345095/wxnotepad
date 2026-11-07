@@ -48,9 +48,20 @@ bytes.
 
 `tests/header_insert_process.py` starts 48 independent actual application
 processes and checks saved, undone, redone and reloaded bytes against the original
-captures. Default ANSI, explicit GBK, UTF-8 with/without BOM and UTF-16LE
-with/without BOM remain distinct identities; normal encoding-tag interpretation
+captures. The reference set distinguishes default ANSI, explicit GBK, UTF-8
+with/without BOM and UTF-16LE with/without BOM; normal encoding-tag interpretation
 remains enabled.
+
+The loaded identity follows the existing native encoding policy. On Linux with a
+UTF-8 locale, a configured default-ANSI load becomes explicit UTF-8. Original
+`Edit.cpp` 1106–1119 promotes ANSI to `Encoding_GetIndex(legacyACP)`; the Linux
+port resolves both native and legacy pages to its UTF-8 locale. The tests establish
+that locale independently through wxWidgets' system-locale query and Python's
+`locale.getencoding()` (which ignores Python UTF-8 mode), assert UTF-8/no-BOM after
+Open, and select the matching independently captured UTF-8 record for every
+text/selection/history/saved-byte comparison. The raw ANSI records and Windows
+ANSI context remain unchanged. Explicit GBK and the other encoding cases retain
+their original records on every backend.
 
 ## TDD and publication contention
 
