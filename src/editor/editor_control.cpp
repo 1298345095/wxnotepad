@@ -142,6 +142,31 @@ bool EditorControl::CopyAdd() {
     return true;
 }
 
+void EditorControl::SwapClipboard() {
+    // Notepad4.cpp::IDM_EDIT_SWAP at 89b8b36; see licenses/Notepad4.txt.
+    if (Send(Message::GetSelectionEmpty)) {
+        const auto position = Send(Message::GetCurrentPos);
+        Send(Message::Paste);
+        Send(Message::SetSel, position, Send(Message::GetCurrentPos));
+        EditorClipboard::Clear(*GetParent());
+        return;
+    }
+    auto text = EditorClipboard::ReadPlainText(*GetParent());
+    if (!text || text->empty()) return;
+    *text = core::Document::TransformLineEnds(*text, static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode)));
+    auto caret = Send(Message::GetCurrentPos);
+    auto anchor = Send(Message::GetAnchor);
+    Send(Message::BeginUndoAction);
+    Send(Message::Cut);
+    Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(text->c_str()));
+    if (caret > anchor)
+        caret = anchor + static_cast<intptr_t>(text->size());
+    else
+        anchor = caret + static_cast<intptr_t>(text->size());
+    Send(Message::SetSel, anchor, caret);
+    Send(Message::EndUndoAction);
+}
+
 void EditorControl::Cut() {
     // Original IDM_EDIT_CUT and EditJumpTo (1-based line/column).
     if (!Send(Message::GetSelectionEmpty) || lineSelectionMode_ == LineSelectionMode::None) {

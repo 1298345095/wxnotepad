@@ -42,13 +42,13 @@ std::string Text(EditorControl* editor) {
 }
 class Peer {
 public:
-    void OfferText(const std::string& bytes) {
+    void OfferText(const std::string& bytes, const char* command = "utility-offer") {
         {
             wxFFile file(directory_ + "/offer.txt", "wb");
             Require(file.IsOpened() && file.Write(bytes.data(), bytes.size()) == bytes.size(),
                     "write owned native text offer");
         }
-        Require(Request("utility-offer") == "ready", "independent process publishes literal Unicode offer");
+        Require(Request(command) == "ready", "independent process publishes literal Unicode offer");
     }
     std::string SavedText() const {
         wxFFile file(directory_ + "/received.txt", "rb");
@@ -966,6 +966,9 @@ void CurrentLines(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     std::puts("PASS: all original current-line modes, boundary EOLs, columns, same/peer paste, shortcuts and history");
 }
 void UtilityShortcut(EditorFrame* frame, int key, bool control, bool alt = false) {
+    // Queued state events update the document title; drain them before naming
+    // the temporary native input target.
+    wxYield();
     const auto title = frame->GetTitle();
     const auto focusName = wxString::Format("wxnotepad clipboard utilities target %lu", wxGetProcessId());
     frame->SetTitle(focusName);
@@ -1466,6 +1469,391 @@ void ReadOnlyCommands(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     Require(Text(editor) == "history!", "original Redo survives protected keyboard Undo/Redo attempts");
     std::puts("PASS: F10 mode, native/keyboard Cut/Copy/Paste/Undo/Redo with independently received clipboard bytes");
 }
+void SwapNow(EditorControl* editor) {
+    Gesture(editor);
+    editor->SwapClipboard();
+}
+
+void SwapBoundaries(EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    // Literal original Windows results at Notepad4 89b8b36; see original-clipboard-transfer.md.
+    struct EolCase {
+        Scintilla::EndOfLine mode;
+        const char* selected;
+        intptr_t selectedEnd;
+        const char* pasted;
+        intptr_t pastedEnd;
+    };
+    const EolCase endings[] = {
+        {Scintilla::EndOfLine::CrLf, "AX\r\nY\r\nZ\r\nQZ", 11, "AoX\r\nY\r\nZ\r\nQldZ", 12},
+        {Scintilla::EndOfLine::Cr, "AX\rY\rZ\rQZ", 8, "AoX\rY\rZ\rQldZ", 9},
+        {Scintilla::EndOfLine::Lf, "AX\nY\nZ\nQZ", 8, "AoX\nY\nZ\nQldZ", 9},
+    };
+    for (const auto& fixture : endings) {
+        for (const bool convert : {false, true}) {
+            TestEditor::ResetStream(editor, "AoldZ", 1, 4, fixture.mode);
+            editor->Send(Message::SetPasteConvertEndings, convert);
+            peer.OfferText("X\r\nY\nZ\rQ");
+            SwapNow(editor);
+            Require(Text(editor) == fixture.selected,
+                    "selected Swap always applies original clipboard EOL normalization");
+            TestEditor::RequireSelection(editor, 1, fixture.selectedEnd,
+                                         "normalized selected Swap uses byte endpoints");
+            Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+                    "normalized Swap independently transfers the original cut bytes");
+            TestEditor::ResetStream(editor, "AoldZ", 2, 2, fixture.mode);
+            peer.OfferText("X\r\nY\nZ\rQ");
+            SwapNow(editor);
+            Require(Text(editor) == (convert ? fixture.pasted : "AoX\r\nY\nZ\rQldZ"),
+                    "empty-selection Swap preserves the ordinary paste-convert setting");
+            TestEditor::RequireSelection(editor, 2, convert ? fixture.pastedEnd : 10,
+                                         "ordinary Paste determines the exact selected span");
+            Require(peer.Request("utility-formats") == "empty",
+                    "mixed-EOL caret Swap independently clears native data");
+        }
+    }
+    editor->Send(Message::SetPasteConvertEndings, 1);
+    for (const auto& offer : {std::string(), std::string("\0suffix", 7), std::string("X\0suffix", 8)}) {
+        const bool inserts = !offer.empty() && offer.front() == 'X';
+        TestEditor::ResetStream(editor, "AoldZ", 1, 4);
+        peer.OfferText(offer);
+        SwapNow(editor);
+        Require(Text(editor) == (inserts ? "AXZ" : "AoldZ") && editor->Send(Message::GetModify) == inserts &&
+                    editor->Send(Message::CanUndo) == inserts,
+                "selected Swap uses the native C-string boundary and leaves empty text unchanged");
+        TestEditor::RequireSelection(editor, 1, inserts ? 2 : 4,
+                                     "selected C-string boundary retains original endpoints");
+        Require(peer.Request("utility-read") == "stream" && peer.SavedText() == (inserts ? "old" : ""),
+                "independent consumer sees original C-string clipboard results");
+        TestEditor::ResetStream(editor, "AoldZ", 2, 2);
+        peer.OfferText(offer);
+        SwapNow(editor);
+        Require(Text(editor) == (inserts ? "AoXldZ" : "AoldZ") && peer.Request("utility-formats") == "empty",
+                "caret C-string Swap clears Unicode even when Paste inserts nothing");
+    }
+    UtilityBytes(editor, std::string("A\0BCZ", 5), 0, 4);
+    peer.OfferText("Q");
+    SwapNow(editor);
+    Require(Text(editor) == "QZ" && peer.Request("utility-read") == "stream" && peer.SavedText() == "A BC",
+            "Swap Cut preserves original selected NUL-to-space clipboard conversion");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == std::string("A\0BCZ", 5), "single Undo independently restores original embedded NUL bytes");
+    TestEditor::ResetStream(editor, "A中文😀Z", 1, 11);
+    peer.OfferText("X");
+    SwapNow(editor);
+    Require(Text(editor) == "AXZ" && peer.Request("utility-read") == "stream" && peer.SavedText() == "中文😀",
+            "selected Swap independently transfers the original non-ASCII cut text as native Unicode");
+    std::puts("PASS: original Swap EOL and empty/embedded-NUL text boundaries");
+}
+
+void SwapAvailability(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const int swap = frame->GetMenuBar()->FindMenuItem("Edit", "Swap");
+    for (const char* offer : {"utility-empty", "nontext"}) {
+        TestEditor::ResetStream(editor, "AoldZ", 1, 4);
+        Require(peer.Request(offer) == "ready", "independent owner publishes absent/non-text Swap fixture");
+        const auto formats = peer.Request("utility-formats");
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        Require(frame->GetMenuBar()->IsEnabled(swap), "selection enables Swap without native paste capability");
+        SwapNow(editor);
+        Require(Text(editor) == "AoldZ" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify) &&
+                    peer.Request("utility-formats") == formats,
+                "unreadable selected Swap retains document history and independent native formats");
+        editor->Send(Message::SetSel, 2, 2);
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        Require(!frame->GetMenuBar()->IsEnabled(swap), "absent/non-text caret disables native Swap");
+        UtilityShortcut(frame, 'K', true);
+        Require(peer.Request("utility-formats") == formats, "disabled native Ctrl+K retains the independent offer");
+        SwapNow(editor);
+        Require(Text(editor) == "AoldZ" && !editor->Send(Message::CanUndo) &&
+                    peer.Request("utility-formats") == "empty",
+                "forced caret command clears non-text formats separately from native availability");
+    }
+    const int readOnly = frame->GetMenuBar()->FindMenuItem("File", "Read Only Mode");
+    for (const bool empty : {false, true}) {
+        TestEditor::ResetStream(editor, "AoldZ", empty ? 2 : 1, empty ? 2 : 4);
+        peer.OfferText("replacement");
+        NativeSearch::Command(frame, readOnly);
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        Require(frame->GetMenuBar()->IsEnabled(swap) == !empty, "original selection enables Swap in read-only mode");
+        SwapNow(editor);
+        Require(Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+                "read-only Swap retains document bytes and history");
+        TestEditor::RequireSelection(editor, empty ? 2 : 1, empty ? 2 : 5,
+                                     "read-only Swap retains original selected endpoint side effect");
+        if (empty)
+            Require(peer.Request("utility-formats") == "empty", "forced read-only caret Swap clears the native offer");
+        else
+            Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "replacement",
+                    "selected read-only Swap independently retains the offered text");
+        NativeSearch::Command(frame, readOnly);
+    }
+    TestEditor::ResetStream(editor, "AoldZ", 1, 4);
+    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Message::Undo);
+    editor->Send(Message::SetSel, 1, 4);
+    Require(peer.Request("nontext") == "ready", "prepare a non-text no-op with pending Redo");
+    SwapNow(editor);
+    Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo), "no-op Swap preserves pending Redo");
+    peer.OfferText("X");
+    SwapNow(editor);
+    Require(Text(editor) == "AXZ" && !editor->Send(Message::CanRedo), "actual Swap replaces the old Redo branch");
+#ifdef __WXMSW__
+    TestEditor::ResetStream(editor, "AoldZ", 1, 4);
+    peer.OfferText("owned held offer");
+    Require(peer.Request("hold") == "held", "independent process holds Windows clipboard");
+    SwapNow(editor);
+    Require(peer.Request("release") == "released", "independent process releases Windows clipboard");
+    Require(Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && peer.Request("utility-read") == "stream" &&
+                peer.SavedText() == "owned held offer",
+            "unavailable Windows clipboard leaves selected Swap unchanged");
+#endif
+    std::puts("PASS: native Swap availability, read-only outcomes, unavailable text and pending Redo");
+}
+
+void SwapShapes(EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    for (const char* marker : {"utility-offer-line", "utility-offer-vsline"}) {
+        TestEditor::ResetStream(editor, "AoldZ", 2, 2, Scintilla::EndOfLine::CrLf);
+        peer.OfferText("X\r\nY", marker);
+        SwapNow(editor);
+        Require(Text(editor) == "X\r\nY\r\nAoldZ", "caret Swap uses original tagged line insertion at line start");
+        TestEditor::RequireSelection(editor, 2, 8, "line Swap selects the actual old/new caret span");
+        Require(peer.Request("utility-formats") == "empty",
+                "tagged line Swap independently clears every native format");
+    }
+    for (const char* marker : {"utility-offer-rectangle", "utility-offer-both"}) {
+        TestEditor::ResetStream(editor, "AA\r\nAA", 1, 1, Scintilla::EndOfLine::CrLf);
+        peer.OfferText("X\r\nY\r\n", marker);
+        SwapNow(editor);
+        Require(Text(editor) == "AXA\r\nAYA",
+                "caret Swap retains rectangle insertion and rectangle-over-line precedence");
+        TestEditor::RequireSelection(editor, 1, 1,
+                                     "rectangle Paste can retain an empty old/new caret span after editing");
+        Require(peer.Request("utility-formats") == "empty", "rectangle Swap independently clears its native tags");
+        TestEditor::ResetStream(editor, "AoldZ", 1, 4, Scintilla::EndOfLine::CrLf);
+        peer.OfferText("b\r\n", marker);
+        SwapNow(editor);
+        Require(Text(editor) == "Ab\r\nZ", "selected Swap consumes tagged rectangle text as normalized stream bytes");
+        Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+                "selected stream Swap replaces incoming shape metadata with original Cut metadata");
+    }
+    for (const bool reverse : {false, true}) {
+        // Identical rows keep the original post-Cut rectangle geometry independent of native fonts.
+        TestEditor::ResetStream(editor, "abcd\r\nabcd\r\nabcd", 0, 0, Scintilla::EndOfLine::CrLf);
+        wxYield();
+        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(Message::SetRectangularSelectionAnchor, reverse ? 14 : 1);
+        editor->Send(Message::SetRectangularSelectionCaret, reverse ? 1 : 14);
+        const intptr_t ranges[3][2] = {{1, 2}, {7, 8}, {13, 14}};
+        peer.OfferText("Q\nR");
+        Require(editor->Send(Message::GetSelections) == 3 && editor->Send(Message::GetMainSelection) == 2,
+                "uniform native rectangle matches independently captured original selection state");
+        for (int index = 0; index < 3; ++index) {
+            const auto* range = ranges[reverse ? 2 - index : index];
+            Require(editor->Send(Message::GetSelectionNAnchor, index) == range[reverse ? 1 : 0] &&
+                        editor->Send(Message::GetSelectionNCaret, index) == range[reverse ? 0 : 1],
+                    "native rectangular ranges match independent original byte positions");
+        }
+        SwapNow(editor);
+        Require(Text(editor) == (reverse ? "aQ\r\nRcd\r\nacd\r\nacd" : "acd\r\nacd\r\naQ\r\nRcd"),
+                "selected rectangle Swap retains original main-range insertion site");
+        TestEditor::RequireSelection(editor, reverse ? 5 : 1, reverse ? 1 : 5,
+                                     "rectangle Swap uses original rectangle endpoint direction and becomes stream");
+        Require(!editor->Send(Message::SelectionIsRectangle) && peer.Request("utility-read") == "rectangle",
+                "selected rectangle Swap independently publishes original rectangular Cut metadata");
+#ifdef __WXGTK__
+        Require(peer.SavedText() == "b\r\nb\r\nb\n", "GTK native rectangle retains its required LF transport carrier");
+#else
+        Require(peer.SavedText() == "b\r\nb\r\nb", "Windows native rectangle retains original cut text bytes");
+#endif
+        peer.PreserveSavedText("clipboard-swap-rectangle-peer.txt");
+    }
+    // Our earlier rectangle Copy offers exact plain text in addition to its native shape carrier.
+    for (const bool emptyLastRow : {false, true}) {
+        TestEditor::ResetStream(editor, emptyLastRow ? "a1b\n\n" : "a1b\nc2d", 0, 0, Scintilla::EndOfLine::Lf);
+        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(Message::SetRectangularSelectionAnchor, 1);
+        editor->Send(Message::SetRectangularSelectionCaret, emptyLastRow ? 4 : 6);
+        if (emptyLastRow) editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 2);
+        Gesture(editor);
+        editor->Send(Message::Copy);
+        TestEditor::ResetStream(editor, "AoldZ", 1, 4, Scintilla::EndOfLine::Lf);
+        SwapNow(editor);
+        Require(Text(editor) == (emptyLastRow ? "A1\nZ" : "A1\n2Z"),
+                "selected Swap retains exact rectangle plain text and genuine empty final rows");
+    }
+    std::puts("PASS: line/rectangle native offers, precedence, selection direction and clipboard metadata");
+}
+
+void SwapMultiple(EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    for (const bool additional : {false, true}) {
+        TestEditor::ResetStream(editor, "abcd efgh ijkl", 1, 3, Scintilla::EndOfLine::CrLf);
+        editor->Send(Message::SetMultipleSelection, 1);
+        editor->Send(Message::SetAdditionalSelectionTyping, additional);
+        editor->Send(Message::AddSelection, 8, 6);
+        editor->Send(Message::SetMainSelection, 1);
+        peer.OfferText("QQQ");
+        SwapNow(editor);
+        Require(Text(editor) == (additional ? "ad eQQQh ijkl" : "abcd eQQQh ijkl"),
+                "Swap retains original selected-range filtering and main insertion");
+        TestEditor::RequireSelection(editor, 6, 9, "multiple-selection Swap retains recorded original endpoints");
+        Require(editor->Send(Message::GetSelections) == 1 && peer.Request("utility-read") == "stream" &&
+                    peer.SavedText() == "bc\r\nfg",
+                "Cut extracts every original range before selection filtering");
+    }
+    for (const auto mode : {Scintilla::MultiPaste::Once, Scintilla::MultiPaste::Each}) {
+        TestEditor::ResetStream(editor, "abcd efgh", 1, 1);
+        editor->Send(Message::SetMultipleSelection, 1);
+        editor->Send(Message::SetAdditionalSelectionTyping, 1);
+        editor->Send(Message::AddSelection, 6, 6);
+        editor->Send(Message::SetMainSelection, 1);
+        editor->Send(Message::SetMultiPaste, static_cast<uintptr_t>(mode));
+        peer.OfferText("Q");
+        SwapNow(editor);
+        Require(Text(editor) == (mode == Scintilla::MultiPaste::Once ? "abcd eQfgh" : "aQbcd eQfgh"),
+                "caret Swap retains original Once/Each multi-paste behavior");
+        TestEditor::RequireSelection(editor, 6, mode == Scintilla::MultiPaste::Once ? 7 : 8,
+                                     "multi-caret Swap selects the recorded old/new main caret span");
+        Require(peer.Request("utility-formats") == "empty", "multi-caret Swap clears independent native ownership");
+    }
+    editor->Send(Message::SetMultipleSelection, 0);
+    editor->Send(Message::SetAdditionalSelectionTyping, 0);
+    editor->Send(Message::SetMultiPaste, static_cast<uintptr_t>(Scintilla::MultiPaste::Once));
+    TestEditor::ResetStream(editor, "a\r\nb", 1, 1, Scintilla::EndOfLine::CrLf);
+    editor->Send(Message::SetVirtualSpaceOptions, 3);
+    editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 2);
+    editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 2);
+    peer.OfferText("Q");
+    SwapNow(editor);
+    Require(Text(editor) == "a  Q\r\nb", "caret Swap realizes original virtual space through Paste");
+    TestEditor::RequireSelection(editor, 1, 4, "virtual caret Swap selects padding and inserted text together");
+    editor->Send(Message::Undo);
+    Require(editor->Send(Message::GetSelectionNCaretVirtualSpace, 0) == 2,
+            "Undo restores the original virtual caret state");
+    TestEditor::ResetStream(editor, "a\r\nb", 0, 0, Scintilla::EndOfLine::CrLf);
+    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+    editor->Send(Message::SetRectangularSelectionAnchor, 1);
+    editor->Send(Message::SetRectangularSelectionCaret, 4);
+    editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 1);
+    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 3);
+    peer.OfferText("Q");
+    SwapNow(editor);
+    Require(Text(editor) == "a\r\nbQ" && peer.Request("utility-read") == "rectangle" && peer.SavedText() == "\r\n",
+            "selected virtual rectangle Swap retains original empty-row Cut payload and insertion");
+    TestEditor::RequireSelection(editor, 1, 2, "selected virtual rectangle Swap becomes the original stream span");
+    std::puts("PASS: multiple selections, Once/Each carets and original virtual space");
+}
+
+void SwapSavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-中文");
+    std::filesystem::create_directory(directory);
+    const TestFiles::EncodedFixture fixtures[] = {
+        {"utf8", FileEncoding::Utf8, "AoldZ", "AXZ"},
+        {"utf8-bom", FileEncoding::Utf8,
+         "\xef\xbb\xbf"
+         "AoldZ",
+         "\xef\xbb\xbf"
+         "AXZ"},
+        {"gbk", FileEncoding::Gbk,
+         "\xc7\xb0"
+         "old"
+         "\xe1\xe1",
+         "\xc7\xb0"
+         "X"
+         "\xe1\xe1"},
+        {"utf16", FileEncoding::Utf16Le,
+         std::string("\xff\xfe"
+                     "A\0o\0l\0d\0Z\0",
+                     12),
+         std::string("\xff\xfe"
+                     "A\0X\0Z\0",
+                     8)},
+    };
+    for (const auto& fixture : fixtures) {
+        const auto path = directory / (std::string(fixture.name) + ".txt");
+        TestFiles::WriteBytes(path, fixture.before);
+        editor->Send(Message::SetSavePoint);
+        Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
+                "open independently encoded Swap fixture with Unicode path");
+        const auto bom = frame->DocumentHasBom();
+        const auto eol = editor->Send(Message::GetEOLMode);
+        const bool gbk = fixture.encoding == FileEncoding::Gbk;
+        editor->Send(Message::SetSel, gbk ? 3 : 1, gbk ? 6 : 4);
+        editor->Send(Message::EmptyUndoBuffer);
+        peer.OfferText("X");
+        SwapNow(editor);
+        Require(Text(editor) == (gbk ? "前X後" : "AXZ") && frame->DocumentEncoding() == fixture.encoding &&
+                    frame->DocumentHasBom() == bom && editor->Send(Message::GetEOLMode) == eol,
+                "Swap retains decoded Unicode, file encoding, BOM and EOL metadata");
+        Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+                "independent peer receives cut text from every encoded document");
+        TestFiles::RequireSavedUndoRedo(frame, path, fixture,
+                                        {"Swap saves independent expected encoded bytes",
+                                         "one Undo saves the independent original encoded bytes",
+                                         "one Redo saves the independent exchanged encoded bytes"});
+        Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+                "independent encoded Save/Undo/Redo leaves clipboard ownership unchanged");
+        const auto artifact = std::string("clipboard-swap-") + fixture.name + ".txt";
+        std::filesystem::copy_file(path, artifact, std::filesystem::copy_options::overwrite_existing);
+    }
+    peer.PreserveSavedText("clipboard-swap-peer.txt");
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: independent UTF-8/BOM/UTF-16LE/GBK disk bytes, metadata, save points and history");
+}
+
+void Swap(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const int swap = frame->GetMenuBar()->FindMenuItem("Edit", "Swap");
+    Require(swap != wxNOT_FOUND, "native Swap menu exists");
+    TestEditor::ResetStream(editor, "AoldZ", 1, 4);
+    peer.OfferText("X");
+    Gesture(editor);
+    NativeSearch::Command(frame, swap);
+    Require(Text(editor) == "AXZ", "original selected Swap replaces the cut span with the earlier offer");
+    TestEditor::RequireSelection(editor, 1, 2, "selected Swap retains forward replacement endpoints");
+    Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+            "independent native receiver gets the original cut selection");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
+                editor->Send(Message::CanRedo),
+            "one Undo restores the original saved document");
+    editor->Send(Message::Redo);
+    Require(Text(editor) == "AXZ" && peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+            "Redo restores the document exchange while the native clipboard retains cut text");
+    std::puts("PASS: original selected Swap and independent clipboard history");
+    TestEditor::ResetStream(editor, "AoldZ", 4, 1);
+    peer.OfferText("中文😀");
+    UtilityShortcut(frame, 'K', true);
+    Require(Text(editor) == "A中文😀Z", "native Ctrl+K exchanges a reversed Unicode selection");
+    TestEditor::RequireSelection(editor, 11, 1, "native Ctrl+K retains reversed UTF-8 byte endpoints");
+    Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+            "independent receiver observes the cut selection from native Ctrl+K");
+    std::puts("PASS: real native Ctrl+K and reversed Unicode endpoints");
+    TestEditor::ResetStream(editor, "AoldZ", 2, 2);
+    peer.OfferText("X");
+    Gesture(editor);
+    editor->SwapClipboard();
+    Require(Text(editor) == "AoXldZ", "empty-selection Swap uses the original native paste path");
+    TestEditor::RequireSelection(editor, 2, 3, "empty-selection Swap selects the original-to-resulting caret span");
+    Require(peer.Request("utility-formats") == "empty", "empty-selection Swap clears every native clipboard format");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
+                editor->Send(Message::CanRedo) && peer.Request("utility-formats") == "empty",
+            "empty-selection Undo restores the saved document while its clipboard remains cleared");
+    editor->Send(Message::Redo);
+    Require(Text(editor) == "AoXldZ" && peer.Request("utility-formats") == "empty",
+            "empty-selection Redo retains independently observed clipboard emptiness");
+    std::puts("PASS: empty-selection Paste, selected span and independent Clear Clipboard history");
+    SwapBoundaries(editor, peer);
+    SwapAvailability(frame, editor, peer);
+    SwapShapes(editor, peer);
+    SwapMultiple(editor, peer);
+    SwapSavedState(frame, editor, peer);
+}
+
 class ClipboardApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -1504,7 +1892,9 @@ public:
                 Require(peer.Request("ready") == "ready", "external clipboard application is running");
                 wxString shapes;
                 if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-                    if (shapes == "utilities")
+                    if (shapes == "swap")
+                        Swap(frame, editor, peer);
+                    else if (shapes == "utilities")
                         Utilities(frame, editor, peer);
                     else if (shapes == "path-text")
                         PathTextCopies(frame, editor, peer);

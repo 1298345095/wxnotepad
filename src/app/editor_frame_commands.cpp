@@ -153,6 +153,16 @@ wxMenu* EditorFrame::CreateEditMenu() {
     edit->Append(wxID_CUT, "Cu&t\tCtrl+X");
     edit->Append(wxID_COPY, "&Copy\tCtrl+C");
     edit->Append(wxID_PASTE, "&Paste\tCtrl+V");
+    const int swap = wxWindow::NewControlId();
+    edit->Append(swap, "S&wap\tCtrl+K");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SwapClipboard(); }, swap);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty) ||
+                         editor_->Send(Scintilla::Message::CanPaste));
+        },
+        swap);
     edit->AppendSeparator();
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Undo); }, wxID_UNDO);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::Redo); }, wxID_REDO);
