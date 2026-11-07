@@ -54,6 +54,13 @@ C++ to Plain Text transitions for `["]"]` (mate byte 4 becomes byte 2).
 Windows `wxDC` ignores colour alpha; `AlphaRectangle` uses the same native
 graphics-context approach already used for translucent fills.
 
+The native test waits for two completed `wxEVT_PAINT` handlers with a finite
+deadline before reading decoration state. The initial Wayland regression
+executed zero paint events during two immediate `Update()`/`Yield()` calls;
+[wxWidgets documents `Update()` as a no-op on wxGTK/Wayland](https://docs.wxwidgets.org/3.3/classwx_window.html).
+Waiting for the real frame-clock-driven paints preserves the original position,
+guide and pixel assertions.
+
 Registered tests:
 
 - `original_visual_brace_matching`: actual native checked menu, exact accelerator,
