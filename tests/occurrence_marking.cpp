@@ -226,6 +226,16 @@ public:
                 Require(
                     editor->Send(Message::MarkerGet, 1) & 1,
                     "case-invariant selection retains original cached marking and manual bookmarks across Match Case");
+                request.query = "123";
+                request.options.matchCase = false;
+                search.Configure(request);
+                Require(search.FindAll().count == 2, "explicit numeric Find All marks both matches");
+                editor->Send(Message::MarkerAdd, 1, 0);
+                request.options.matchCase = true;
+                search.Configure(request);
+                Require(search.FindAll().count == 2 && (editor->Send(Message::MarkerGet, 1) & 1),
+                        "unchanged explicit case-invariant marking retains manual bookmarks across search option "
+                        "submission");
                 std::puts("PASS: original option bits, Unicode/white/multiple/rectangular needles, edits, native "
                           "mouse/paint and large-document lifecycle");
                 result_ = 0;

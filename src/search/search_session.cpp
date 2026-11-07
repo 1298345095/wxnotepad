@@ -202,7 +202,6 @@ SearchSession::SearchSession(EditorControl& editor) : editor_(editor) {
 SearchSession::~SearchSession() = default;
 
 void SearchSession::Configure(SearchRequest request) {
-    if (request.query != request_.query || request.options != request_.options) ClearFindAll();
     request_ = std::move(request);
 }
 

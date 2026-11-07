@@ -50,6 +50,9 @@ source checkout is pinned at `89b8b36`. The build log does not stamp a commit.
   retaining Find All bookmarks. A later Find All without bookmarks retains those
   lines after that ownership transition. These captures justify the updated
   assertions in the existing `find_all` fixture.
+  Submitting search options retains the shared result until a matching or
+  selection transition replaces it; repeated numeric Find All requests preserve
+  the original unchanged-query cache across Match Case changes.
 - `original-settings.json` captures default, 0, 1, 2, 15, 31, -1, `14suffix` and
   invalid imports, actual native Off/option menu states and explicit saved values.
 

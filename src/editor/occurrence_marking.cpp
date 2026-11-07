@@ -187,8 +187,11 @@ void OccurrenceMarking::Start(bool changed, unsigned flags, std::string text) {
 }
 
 void OccurrenceMarking::FindAll(std::string text, Scintilla::FindOption flags, bool multiline, bool bookmarks) {
-    Start(false, static_cast<unsigned>(flags) | FromFindAll | (multiline ? Multiline : 0) | (bookmarks ? Bookmark : 0),
-          std::move(text));
+    auto findFlags = static_cast<unsigned>(flags);
+    if (!(findFlags & static_cast<unsigned>(Scintilla::FindOption::RegExp | Scintilla::FindOption::MatchCase)) &&
+        !CaseSensitiveSelection(text))
+        findFlags |= static_cast<unsigned>(Scintilla::FindOption::MatchCase);
+    Start(false, findFlags | FromFindAll | (multiline ? Multiline : 0) | (bookmarks ? Bookmark : 0), std::move(text));
 }
 
 std::optional<size_t> OccurrenceMarking::FindAllCount() const {
