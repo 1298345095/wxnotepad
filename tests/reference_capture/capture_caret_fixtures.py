@@ -205,9 +205,9 @@ def capture(executable, output):
             row["saved"] = [line for line in saved.splitlines() if line.startswith(("CaretStyle=", "CaretBlinkPeriod="))]
             result["settings"].append(row)
     output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    fixture = Path(__file__).resolve().parents[1] / "tests/caret_reference.tsv"
+    fixture = Path(__file__).resolve().parents[1] / "caret_reference.tsv"
     with fixture.open("w", encoding="utf-8", newline="") as target:
-        target.write("# Original Notepad4 89b8b36, captured by tools/capture_caret_fixtures.py\n")
+        target.write("# Original Notepad4 89b8b36, captured by tests/reference_capture/capture_caret_fixtures.py\n")
         target.write("# input packed style, input blink period, queried core style, canonical packed style\n")
         for row in result["settings"]:
             saved = next((line.split("=", 1)[1] for line in row["saved"] if line.startswith("CaretStyle=")), "1")

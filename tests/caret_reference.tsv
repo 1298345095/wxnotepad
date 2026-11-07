@@ -1,4 +1,4 @@
-# Original Notepad4 89b8b36, captured by tools/capture_caret_fixtures.py
+# Original Notepad4 89b8b36, captured by tests/reference_capture/capture_caret_fixtures.py
 # input packed style, input blink period, queried core style, canonical packed style
 1	-1	1	1
 0	0	2	0
