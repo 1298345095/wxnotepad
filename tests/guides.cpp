@@ -87,13 +87,16 @@ public:
         active_ = dialog;
         timeout_.StartOnce(5000);
         wxTheApp->CallAfter([this, dialog] {
-            try {
-                seen = true;
-                action_(dialog);
-            } catch (const std::exception& failure) {
-                error = failure.what();
-                if (dialog->IsShown()) NativeSearch::Click(dialog, wxID_CANCEL);
-            }
+            NativeKeys::AfterPresentation(dialog, [this, dialog](bool ready) {
+                try {
+                    Require(ready, "native limit dialog is presented before navigation");
+                    seen = true;
+                    action_(dialog);
+                } catch (const std::exception& failure) {
+                    error = failure.what();
+                    if (dialog->IsShown()) NativeSearch::Click(dialog, wxID_CANCEL);
+                }
+            });
         });
         return wxID_NONE;
     }

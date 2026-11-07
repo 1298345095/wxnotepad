@@ -53,6 +53,14 @@ branches: `document_session.h:69` reported 3/4 despite a raw union of 4/4.
 The collector keeps the original reports and uses pinned `gcovr==8.8` to merge
 them before generic import. Coverage gates and source scope are retained.
 
+The approved native coverage policy excludes GCC-marked throw edges via gcovr's
+`--exclude-throw-branches`. A same-counter comparison retained 73 source files
+and 6969 executable lines while removing 4027 exceptional outcomes, including
+one covered outcome. Combined native coverage changed from 73.18% to 90.32%.
+These are whole-native-report measurements; main's new-code gate is measured
+separately. Ordinary conditions, uncovered handler lines, all raw reports and
+the existing source scope and 80% threshold are retained.
+
 ## CLI finding review
 
 The command runners intentionally accept a local executable, repository, build
