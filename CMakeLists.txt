@@ -200,6 +200,9 @@ if(BUILD_TESTING)
     add_test(NAME original_current_line_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_line_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_current_line_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME original_visual_brace_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/visual_brace_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_visual_brace_preference PROPERTIES TIMEOUT 60)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
@@ -303,6 +306,9 @@ if(BUILD_TESTING)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(current_line original_current_line_highlight 60)
+    add_editor_test(visual_brace original_visual_brace_matching 90)
+    target_include_directories(visual_brace PRIVATE src/editor/platform
+        "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     if(WIN32)
         add_test(NAME original_current_line_dpi96 COMMAND current_line)
         set_tests_properties(original_current_line_dpi96 PROPERTIES TIMEOUT 60

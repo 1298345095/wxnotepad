@@ -702,6 +702,11 @@ wxMenu* EditorFrame::CreateViewMenu() {
     view->AppendSeparator();
     AppendDisplayCommands(view);
     AppendCurrentLineCommands(view);
+    const int matchBraces = wxWindow::NewControlId();
+    view->AppendCheckItem(matchBraces, "Visual &Brace Matching\tCtrl+Shift+V");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching()); },
+         matchBraces);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->VisualBraceMatching()); }, matchBraces);
     view->AppendSeparator();
     AppendFoldCommands(view);
     AppendSettingsCommands(view);
@@ -1210,6 +1215,10 @@ bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == 'V' && event.ControlDown() && event.ShiftDown()) {
+        if (!event.AltDown() && !event.MetaDown()) editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching());
+        return true;
+    }
     if (event.GetKeyCode() == 'L' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
         !event.MetaDown()) {
         ToggleLongLineMarker();

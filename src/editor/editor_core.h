@@ -7,6 +7,7 @@ class GtkTextDragDrop;
 #endif
 
 class EditorControl::Core final : public Scintilla::Internal::ScintillaBase {
+    friend struct EditorCoreObservation;
 public:
     Core(EditorControl& window, int selectionOptions);
     ~Core() override;
@@ -33,6 +34,7 @@ public:
     void CaptureLost();
     void SyncSystemCaret();
     void RepairFoldSelection();
+    void UpdateVisualBraceMatching();
 
 private:
     class TextDropTarget;
@@ -83,4 +85,5 @@ private:
     intptr_t countedEnd_ = -1;
     intptr_t selectedCharacters_ = 0;
     mutable bool selectionCountDirty_ = true;
+    mutable bool braceStyleChanged_ = false;
 };
