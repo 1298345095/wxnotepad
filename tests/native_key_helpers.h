@@ -257,7 +257,8 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     if (!acknowledged || !frame->IsActive() || !editor->HasFocus())
         throw std::runtime_error("private native input must activate the owned editor");
     bool received = false;
-    KeyRelease observer(key, received, releaseSignal);
+    const bool punctuation = key == '[' || key == ']' || key == ',' || key == '.';
+    KeyRelease observer(key, received, releaseSignal, punctuation ? editor : nullptr);
     {
         wxFFile file(focusFile, "wb");
         const auto letter = static_cast<char>(key >= 'A' && key <= 'Z' ? key + 'a' - 'A' : key);
