@@ -1900,36 +1900,44 @@ void SwapDefaultReadOnly(EditorFrame* frame, EditorControl* editor, Peer& peer) 
     using Scintilla::Message;
 #ifdef __WXMSW__
     Require(GetACP() == 936, "captured default-ANSI read-only Swap requires system ACP 936");
-    constexpr intptr_t end = 7;
-#else
-    constexpr intptr_t end = 11;
 #endif
-    const std::string original = "0123456789012345678901234567890123456789";
+    const std::string ascii = "0123456789012345678901234567890123456789";
     const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-default-readonly");
     std::filesystem::create_directory(directory);
     const auto path = directory / "default.txt";
     const int swap = frame->GetMenuBar()->FindMenuItem("Edit", "Swap");
-    for (const bool reversed : {false, true}) {
-        TestFiles::WriteBytes(path, original);
-        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
-                "configured system-default protected document opens through native detection");
-        frame->ToggleReadOnlyMode();
-        Require(editor->Send(Message::GetReadOnly), "native Read Only mode protects the actual document");
-        editor->Send(Message::SetSel, reversed ? 4 : 1, reversed ? 1 : 4);
-        peer.OfferText("中文😀");
-        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-        Require(frame->GetMenuBar()->IsEnabled(swap), "original selected Swap remains enabled in Read Only mode");
-        Gesture(editor);
-        NativeSearch::Command(frame, swap);
-        // Independently observed original ACP936 endpoints in
-        // review-fixes/original-ansi-readonly.json; protected writes insert nothing.
-        TestEditor::RequireSelection(editor, reversed ? end : 1, reversed ? 1 : end,
-                                     "protected default-ANSI Swap uses original converted native byte endpoints");
-        Require(Text(editor) == original && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::CanRedo) && TestFiles::Bytes(path) == original &&
-                    peer.Request("utility-read") == "stream" && peer.SavedText() == "中文😀",
-                "protected default-ANSI Swap preserves independent document, disk, clipboard and history");
-        frame->ToggleReadOnlyMode();
+    const int readOnly = frame->GetMenuBar()->FindMenuItem("File", "Read Only Mode");
+    for (const bool dbcs : {false, true}) {
+        const std::string original = dbcs ? "Aold中文XYZ" : ascii;
+#ifdef __WXMSW__
+        const std::string disk = dbcs ? "Aold\xd6\xd0\xce\xc4XYZ" : ascii;
+        const intptr_t end = dbcs ? 8 : 7;
+#else
+        const std::string disk = original;
+        constexpr intptr_t end = 11;
+#endif
+        for (const bool reversed : {false, true}) {
+            TestFiles::WriteBytes(path, disk);
+            Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
+                    "configured system-default protected document opens through native detection");
+            NativeSearch::Command(frame, readOnly);
+            Require(editor->Send(Message::GetReadOnly), "native Read Only mode protects the actual document");
+            editor->Send(Message::SetSel, reversed ? 4 : 1, reversed ? 1 : 4);
+            peer.OfferText("中文😀");
+            frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            Require(frame->GetMenuBar()->IsEnabled(swap), "original selected Swap remains enabled in Read Only mode");
+            Gesture(editor);
+            NativeSearch::Command(frame, swap);
+            // Independently observed original ACP936 endpoints in
+            // review-fixes/original-ansi-readonly.json; protected writes insert nothing.
+            TestEditor::RequireSelection(editor, reversed ? end : 1, reversed ? 1 : end,
+                                         "protected default-ANSI Swap uses original converted native byte endpoints");
+            Require(Text(editor) == original && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
+                        !editor->Send(Message::CanRedo) && TestFiles::Bytes(path) == disk &&
+                        peer.Request("utility-read") == "stream" && peer.SavedText() == "中文😀",
+                    "protected default-ANSI Swap preserves independent document, disk, clipboard and history");
+            NativeSearch::Command(frame, readOnly);
+        }
     }
     std::filesystem::remove_all(directory);
     std::puts("PASS: captured default-ANSI read-only native byte endpoints and independent unchanged state");
