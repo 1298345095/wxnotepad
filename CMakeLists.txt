@@ -189,6 +189,9 @@ if(BUILD_TESTING)
     add_test(NAME original_zoom_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/zoom_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_zoom_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME original_current_line_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_line_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_current_line_preference PROPERTIES TIMEOUT 60)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
@@ -270,6 +273,12 @@ if(BUILD_TESTING)
     add_editor_test(selection_modifiers selection_modifiers 60)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
+    add_editor_test(current_line original_current_line_highlight 60)
+    if(WIN32)
+        add_test(NAME original_current_line_dpi96 COMMAND current_line)
+        set_tests_properties(original_current_line_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_CURRENT_LINE_DPI96=1")
+    endif()
     add_editor_test(block_indentation block_indentation_commands 60)
     add_editor_test(tab_conversion original_tab_conversion 60)
     add_editor_test(escape_text original_escape_text 90)

@@ -84,6 +84,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.noEncodingTags = ReadBool("NoEncodingTags", defaults.encoding.noEncodingTags);
     values.encoding.noFileVariables = ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
     values.zoomLevel = std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), 10, 500);
+    const int currentLine = ReadInt("HighlightCurrentLine", defaults.highlightCurrentLine);
+    values.highlightCurrentLine = std::clamp(currentLine % 10, 0, 2) + (currentLine >= 10 ? 10 : 0);
     values.longLinesLimit = std::clamp(ReadInt("LongLinesLimit", defaults.longLinesLimit), 0, 4096);
     values.selectOption = ReadInt("SelectOption", defaults.selectOption);
     values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
@@ -308,6 +310,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, defaults.encoding.loadNFOasOEM);
         WriteBool("NoEncodingTags", values.encoding.noEncodingTags, defaults.encoding.noEncodingTags);
         WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
+        WriteInt("HighlightCurrentLine", values.highlightCurrentLine, defaults.highlightCurrentLine);
         WriteInt("LongLinesLimit", values.longLinesLimit, defaults.longLinesLimit);
         WriteBool("FixLineEndings", values.fixLineEndings, defaults.fixLineEndings);
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);

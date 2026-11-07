@@ -50,6 +50,15 @@ retains the stored value, Save Settings Now writes the current value, and the
 default `100` is omitted. It scales the existing native point-size font through
 the original core and does not replace the base font size or DPI handling.
 
+`HighlightCurrentLine` defaults to `12`: Outline Frame with Highlight Subline.
+The original integer-prefix parser takes `value % 10`, clamped to 0–2,
+for No Highlight, Background Color and Outline Frame; values at least 10 enable
+the independent subline option. Save packs mode + 10 * subline and omits 12.
+The View submenu and Ctrl+Shift+I/F select background/frame without changing
+the subline choice. Current-line styling uses the original default colors and
+alpha under the text, with frame width scaled by window DPI and zoom. It follows
+the existing explicit/exit-save lifecycle and survives document/language changes.
+
 `[Settings] LongLinesLimit` defaults to `80` and is bounded to `0..4096` on load.
 It supplies Column Wrap's initial Boundary, with the original `fill-column`
 file-variable override. The accepted dialog value is bounded to `1..512` and

@@ -692,6 +692,7 @@ wxMenu* EditorFrame::CreateViewMenu() {
     AppendZoomCommands(view);
     view->AppendSeparator();
     AppendDisplayCommands(view);
+    AppendCurrentLineCommands(view);
     view->AppendSeparator();
     AppendFoldCommands(view);
     AppendSettingsCommands(view);
@@ -859,6 +860,38 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
     addFoldCommand("&Expand All", static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
 }
 
+void EditorFrame::AppendCurrentLineCommands(wxMenu* view) {
+    auto* currentLine = new wxMenu;
+    const auto addMode = [this, currentLine](const char* label, LineHighlightMode mode) {
+        const int id = wxWindow::NewControlId();
+        currentLine->AppendRadioItem(id, label);
+        Bind(wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->SetCurrentLineHighlightMode(mode); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) { event.Check(editor_->GetCurrentLineHighlightMode() == mode); }, id);
+    };
+    addMode("&No Highlight", LineHighlightMode::None);
+    addMode("Background &Color\tCtrl+Shift+I", LineHighlightMode::BackgroundColor);
+    addMode("Outline &Frame\tCtrl+Shift+F", LineHighlightMode::OutlineFrame);
+    currentLine->AppendSeparator();
+    const int subline = wxWindow::NewControlId();
+    currentLine->AppendCheckItem(subline, "Highlight &Subline");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            editor_->Send(Scintilla::Message::SetCaretLineHighlightSubLine,
+                          !editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
+        },
+        subline);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Check(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine) != 0);
+        },
+        subline);
+    view->AppendSubMenu(currentLine, "Highlight C&urrent Line");
+}
+
 void EditorFrame::AppendSettingsCommands(wxMenu* view) {
     if (settings_) {
         view->AppendSeparator();
@@ -922,7 +955,9 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         return true;
     }
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
-        if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
+        if (event.ShiftDown() && !event.MetaDown())
+            editor_->SetCurrentLineHighlightMode(LineHighlightMode::BackgroundColor);
+        else if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
             editor_->SplitLines();
         return true;
     }
@@ -1102,7 +1137,10 @@ bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
-    if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+    if (event.GetKeyCode() == 'F' && event.ControlDown() && event.ShiftDown() && !event.AltDown() && !event.MetaDown())
+        editor_->SetCurrentLineHighlightMode(LineHighlightMode::OutlineFrame);
+    else if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
         editor_->ToggleWordWrap();
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())

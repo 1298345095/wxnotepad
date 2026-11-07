@@ -88,7 +88,11 @@ void ProcessObserver::Publish() {
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetBackSpaceUnIndents)),
             frame_->Editor()->AutoIndentEnabled()) +
         "document_status\t" + frame_->GetStatusBar()->GetStatusText() + "\n" +
-        wxString::Format("line_selection\t%d\n", static_cast<int>(frame_->Editor()->GetLineSelectionMode()));
+        wxString::Format(
+            "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\n",
+            static_cast<int>(frame_->Editor()->GetLineSelectionMode()),
+            static_cast<int>(frame_->Editor()->GetCurrentLineHighlightMode()),
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine)));
     // A reader can temporarily deny replacement on Windows. IPC errors must
     // stay out of wxLogGui: its deferred modal dialog can outlive the frame.
     const wxLogNull noGuiLog;

@@ -24,6 +24,7 @@ struct OriginalSettings {
     bool fixTrailingBlanks = false;
     EncodingOptions encoding;
     int zoomLevel = 100;
+    int highlightCurrentLine = 12;
     int longLinesLimit = 80;
     int selectOption = 15;
     int autoInsertMask = 511;
