@@ -116,7 +116,7 @@ private:
 #endif
 inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
                      bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad") {
-    const NativeTrace::Gesture trace(frame->Editor(), key,
+    const NativeTrace::Gesture trace(*frame->Editor(), key,
                                      (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
 #ifdef __WXMSW__
     const int nativeKey = key >= WXK_F1 && key <= WXK_F24 ? VK_F1 + key - WXK_F1 : key;

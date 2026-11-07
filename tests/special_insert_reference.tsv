@@ -1,0 +1,29 @@
+# Original Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a: src/Notepad4.rc:294-320 and src/Edit.cpp:6500-6529.
+# Original menu order/mnemonics (tab column adapted to em dash), literal UTF-8 bytes, original command ID.
+WJ — &Word joiner	e281a0	40280
+ZWJ — Zero width &joiner	e2808d	40262
+ZWNJ — Zero width &non-joiner	e2808c	40263
+LRM — &Left-to-right mark	e2808e	40260
+RLM — &Right-to-left mark	e2808f	40261
+LRE — Start of left-to-right &embedding	e280aa	40264
+RLE — Start of right-to-left e&mbedding	e280ab	40265
+LRO — Start of left-to-right &override	e280ad	40266
+RLO — Start of right-to-left o&verride	e280ae	40267
+LRI — Left-to-&right isolate	e281a6	40281
+RLI — Right-to-&left isolate	e281a7	40282
+FSI — &First strong isolate	e281a8	40283
+PDI — Po&p directional isolate	e281a9	40284
+PDF — &Pop directional formatting	e280ac	40268
+NADS — N&ational digit shapes substitution	e281ae	40269
+NODS — Nominal (European) &digit shapes	e281af	40270
+ASS — Activate &symmetric swapping	e281ab	40271
+ISS — Inhibit s&ymmetric swapping	e281aa	40272
+AAFS — Activate Arabic &form shaping	e281ad	40273
+IAFS — Inhibit Arabic form s&haping	e281ac	40274
+ALM — &Arabic letter mark	d89c	40285
+RS — Record Separator (&Block separator)	1e	40275
+US — Unit Separator (&Segment separator)	1f	40276
+LS — L&ine Separator	e280a8	40277
+PS — Para&graph Separator	e280a9	40278
+ZWSP — &Zero width space	e2808b	40279
+SHY — Soft &hyphen	c2ad	40286
