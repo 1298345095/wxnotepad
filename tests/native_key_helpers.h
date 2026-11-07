@@ -63,7 +63,7 @@ inline void AfterPresentation(EditorFrame* frame, std::function<void(bool)> call
         return;
     }
 #endif
-    frame->CallAfter([callback = std::move(callback)] { callback(true); });
+    wxTheApp->CallAfter([callback = std::move(callback)] { callback(true); });
 }
 
 #ifdef __WXMSW__
