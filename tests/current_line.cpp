@@ -275,7 +275,7 @@ public:
         }
 #endif
         auto* frame = new EditorFrame;
-        frame->ShowWithoutActivating();
+        frame->Show();
         CallAfter([this, frame] {
             try {
                 auto* editor = frame->Editor();
