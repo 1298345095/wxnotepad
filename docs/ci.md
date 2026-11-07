@@ -158,9 +158,16 @@ reports, zero-hit records and per-translation-unit header branches. GCC's filena
 option avoids filesystem name-length limits; source identity comes from each
 report's `Source:` record. Corrupt counters fail collection. Reusing an existing
 report directory is rejected to prevent stale reports from entering a scan.
-Sonar imports these through `sonar.cfamily.gcov.reportsPath`.
+The pinned test-only `gcovr==8.8` then combines those reports by branch identity
+and writes `sonar.xml` for `sonar.coverageReportPaths`. This preserves complementary
+outcomes across translation units without counting repeated outcomes twice.
+The original `.gcov` files and the merger log remain in the evidence artifact.
+Direct CFamily gcov import was observed to retain only three of four covered
+outcomes for `DocumentSession::HasUtf8Bom`, despite all four appearing in the
+raw per-translation-unit reports. The merged report includes all four; a second
+header control retains its three-of-four result.
 
-Python uses the fixed test-only dependency in `.github/requirements-coverage.txt`,
+Coverage tools use fixed test-only dependencies in `.github/requirements-coverage.txt`,
 installed in `.ci/coverage-venv`. `.coveragerc` records branch coverage for tools
 and CI scripts, including child Python processes. `WXNOTEPAD_COVERAGE_ROOT` gives
 children stable source and counter paths even when their working directories
