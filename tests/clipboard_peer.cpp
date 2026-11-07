@@ -274,12 +274,14 @@ private:
             }
             file.Close();
             Respond(shape);
-        } else if (command.StartsWith("shape-") || command == "utility-offer") {
-            const bool rectangle = command == "shape-rectangle" || command == "shape-both";
-            const bool line = command == "shape-line" || command == "shape-both";
-            const bool vsLine = command == "shape-vsline";
+        } else if (command.StartsWith("shape-") || command.StartsWith("utility-offer")) {
+            const bool rectangle = command == "shape-rectangle" || command == "shape-both" ||
+                                   command == "utility-offer-rectangle" || command == "utility-offer-both";
+            const bool line = command == "shape-line" || command == "shape-both" || command == "utility-offer-line" ||
+                              command == "utility-offer-both";
+            const bool vsLine = command == "shape-vsline" || command == "utility-offer-vsline";
             wxString text = wxString::FromUTF8(rectangle ? "中文\tX\n日本\tY\n" : "中文\tX\n日本\tY");
-            if (command == "utility-offer") {
+            if (command.StartsWith("utility-offer")) {
                 wxFFile file(directory_ + "/offer.txt", "rb");
                 if (!file.IsOpened()) {
                     Respond("failed");

@@ -71,6 +71,7 @@ public:
     void Copy();
     // Original EditCopyAppend; false reports a nonempty rectangular selection.
     bool CopyAdd();
+    void SwapClipboard();
     void Cut();
     void CopyLine();
     void CutLine();
