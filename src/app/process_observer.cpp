@@ -100,7 +100,9 @@ void ProcessObserver::Publish() {
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine)),
             frame_->Editor()->Occurrences().Options(), frame_->Editor()->CodeFoldingVisible(),
             frame_->Editor()->VisualBraceMatching(), frame_->Editor()->CurrentBlockHighlighted(),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, 2)));
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, 2))) +
+        wxString::Format("bookmark_margin\t%d\nchange_history\t%lld\n", frame_->Editor()->BookmarkMarginVisible(),
+                         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetChangeHistory)));
     // A reader can temporarily deny replacement on Windows. IPC errors must
     // stay out of wxLogGui: its deferred modal dialog can outlive the frame.
     const wxLogNull noGuiLog;

@@ -95,6 +95,11 @@ public:
     void SetLineSelectionMode(LineSelectionMode mode);
     bool LineNumbersVisible() const { return lineNumbersVisible_; }
     void SetLineNumbersVisible(bool visible);
+    bool BookmarkMarginVisible() const { return bookmarkMarginVisible_; }
+    void SetBookmarkMarginVisible(bool visible);
+    int ChangeHistoryOptions() const { return changeHistoryOptions_; }
+    void SetChangeHistoryOptions(int options);
+    void ToggleChangeHistory();
     bool CodeFoldingVisible() const { return codeFoldingVisible_; }
     void SetCodeFoldingVisible(bool visible);
     bool CurrentBlockHighlighted() const { return highlightCurrentBlock_; }
@@ -116,6 +121,9 @@ private:
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;
     bool lineNumberWidthDirty_ = true;
+    bool bookmarkMarginVisible_ = false;
+    bool bookmarkMarginWidthDirty_ = true;
+    int changeHistoryOptions_ = 0;
     bool codeFoldingVisible_ = true;
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
@@ -125,6 +133,7 @@ private:
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
     LineHighlightMode lineHighlightMode_ = LineHighlightMode::OutlineFrame;
     void UpdateLineNumberMargin();
+    void UpdateBookmarkMargin();
     void UpdateFoldMargin();
     void OnPaint(wxPaintEvent& event);
     void OnKeyDown(wxKeyEvent& event);

@@ -59,6 +59,15 @@ the subline choice. Current-line styling uses the original default colors and
 alpha under the text, with frame width scaled by window DPI and zoom. It follows
 the existing explicit/exit-save lifecycle and survives document/language changes.
 
+`[Settings] ShowBookmarkMargin` defaults to `0`; View > Bookmark Margin and
+Ctrl+Shift+M switch shared manual/Find All bookmarks between the original vertical
+green symbol and alpha-40 green line background. `ChangeHistoryMarker` defaults
+to `0` and retains the original integer-prefix value on import and save. The
+native toggle selects `3` (enabled plus margin markers) or `0`. Enabling from
+disabled requires the original `CanUndo == false` gate and preserves pending
+Undo/Redo actions. Both preferences use the existing explicit/exit-save lifecycle
+and omit defaults. See [bookmark and change-history evidence](observations/bookmark-history.md).
+
 `[Settings] ShowIndentGuides` and `MarkLongLines` default to `0`. View exposes
 Indentation Guides (Ctrl+Shift+G), Long Line Marker (Ctrl+Shift+L), and Long Line
 Settings. Guides follow the original language metadata: Plain Text and Python
