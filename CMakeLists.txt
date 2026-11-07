@@ -46,6 +46,7 @@ add_library(editor_runtime STATIC
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
     src/editor/block_comments.cpp
+    src/editor/block_navigation.cpp
     src/editor/enclose_selection.cpp
     src/editor/url_conversion.cpp
     src/editor/compress_whitespace.cpp
@@ -201,6 +202,9 @@ if(BUILD_TESTING)
     add_test(NAME original_current_line_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_line_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_current_line_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME original_visual_brace_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/visual_brace_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_visual_brace_preference PROPERTIES TIMEOUT 60)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
@@ -214,6 +218,13 @@ if(BUILD_TESTING)
     endfunction()
     add_editor_test(date_time original_date_time_insertion 60)
     add_editor_test(special_insert original_special_insertion 60)
+    add_editor_test(header_insert original_header_insertion 90)
+    target_compile_definitions(header_insert PRIVATE
+        "HEADER_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/header_reference.tsv\"")
+    add_test(NAME original_header_insertion_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/header_insert_process.py" "$<TARGET_FILE:wxnotepad>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/header_saved.tsv")
+    set_tests_properties(original_header_insertion_process PROPERTIES TIMEOUT 180)
     target_compile_definitions(special_insert PRIVATE
         "SPECIAL_INSERT_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv\""
         "SPECIAL_INSERT_STATES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_states.tsv\""
@@ -297,6 +308,9 @@ if(BUILD_TESTING)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(current_line original_current_line_highlight 60)
+    add_editor_test(visual_brace original_visual_brace_matching 90)
+    target_include_directories(visual_brace PRIVATE src/editor/platform
+        "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     if(WIN32)
         add_test(NAME original_current_line_dpi96 COMMAND current_line)
         set_tests_properties(original_current_line_dpi96 PROPERTIES TIMEOUT 60
@@ -334,6 +348,7 @@ if(BUILD_TESTING)
         set_tests_properties(word_wrap_view PROPERTIES TIMEOUT_SIGNAL_NAME SIGQUIT)
     endif()
     add_editor_test(navigation_bindings original_navigation_bindings 60)
+    add_editor_test(block_navigation original_block_navigation 120)
     add_editor_test(matching_brace original_matching_brace_commands 60)
     target_include_directories(font_smoke PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
