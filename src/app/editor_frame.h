@@ -67,7 +67,7 @@ private:
     void InsertDateTime(bool shortDate);
     void InsertFileName(FileNamePart part);
     void CopyFileName(FileNamePart part);
-    void AppendFileNameCopyCommands(wxMenu* edit);
+    void AppendFileNameCopyCommands(wxMenu* copy);
     void AppendSearchCommands(wxMenu* edit);
     void AppendNavigationCommands(wxMenu* edit);
     void AppendLineEndingCommands(wxMenu* edit);
