@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "steady_stopwatch.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
 #include "tab_settings_helpers.h"
@@ -21,7 +22,7 @@ void Status(EditorFrame* frame, const wxString& expected) {
     auto* status = frame->GetStatusBar();
     Require(status->GetFieldsCount() >= 2, "status must expose a position field");
     // Native Wayland configure and paint acknowledgements arrive asynchronously.
-    wxStopWatch clock;
+    TestClock::StopWatch clock;
     do {
         NativeFold::Paint(frame->Editor());
         if (status->GetStatusText(1) == expected) return;

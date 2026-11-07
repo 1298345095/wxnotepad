@@ -59,7 +59,11 @@ def dependencies():
         'dependencies.log', environment)
 
 
-def configure(app_only):
+def configure(app_only, *, coverage=False):
+    directory = BUILD / ('coverage-cmake' if coverage else 'cmake')
+    prefix = 'coverage-' if coverage else ''
+    if coverage and sys.platform != 'linux':
+        raise SystemExit('Coverage requires Linux and GCC')
     if not WINDOWS:
         header = VCPKG / 'installed' / TRIPLET / 'include/gtk-3.0/gdk/gdkconfig.h'
         configuration = header.read_text(encoding='utf-8')
@@ -72,7 +76,7 @@ def configure(app_only):
             raise SystemExit('The CI GTK3 dependency must support X11 and Wayland; enable gtk3[wayland]')
     run([sys.executable, '-X', 'utf8', ROOT / 'tools/build.py', '--prepare-only',
          '--build-dir', BUILD], 'prepare.log')
-    command = cmake_command(['-S', ROOT, '-B', BUILD / 'cmake',
+    command = cmake_command(['-S', ROOT, '-B', directory,
                f'-DNOTEPAD4_SOURCE={BUILD / "original-core"}',
                f'-DCMAKE_TOOLCHAIN_FILE={VCPKG / "scripts/buildsystems/vcpkg.cmake"}',
                f'-DVCPKG_INSTALLED_DIR={VCPKG / "installed"}',
@@ -80,8 +84,11 @@ def configure(app_only):
                f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
                '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON', '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
                '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=OFF',
+               '-DWXNOTEPAD_ENABLE_COVERAGE=' + ('ON' if coverage else 'OFF'),
                '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON')])
-    run(command, 'configure.log')
+    if coverage:
+        command.append(f'-DPython3_EXECUTABLE={sys.executable}')
+    run(command, prefix + 'configure.log')
 
 
 def cmake_command(arguments):
@@ -94,12 +101,13 @@ def cmake_command(arguments):
     return ['cmake', *arguments]
 
 
-def build(app_only, jobs):
+def build(app_only, jobs, *, coverage=False):
     print(f'Build workers: {jobs}', flush=True)
-    command = ['--build', BUILD / 'cmake', '--config', 'Release', '--parallel', str(jobs)]
+    directory = BUILD / ('coverage-cmake' if coverage else 'cmake')
+    command = ['--build', directory, '--config', 'Release', '--parallel', str(jobs)]
     if app_only:
         command += ['--target', 'wxnotepad']
-    run(cmake_command(command), 'build.log')
+    run(cmake_command(command), ('coverage-' if coverage else '') + 'build.log')
 
 
 def test_shards(cmake_dir, expression, jobs, directory):
@@ -245,6 +253,8 @@ def main():
                        help='Concurrent private Linux display sessions; Windows uses one desktop')
     diagnostic = commands.add_parser('diagnostic-build')
     diagnostic.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
+    coverage = commands.add_parser('coverage-build')
+    coverage.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
     diagnostic = commands.add_parser('diagnostic-test')
     diagnostic.add_argument('--backend', choices=('windows', 'x11', 'wayland'), required=True)
     arguments = parser.parse_args()
@@ -258,6 +268,9 @@ def main():
         test(arguments.backend, arguments.cmake_dir.resolve(), arguments.tests, arguments.jobs)
     elif arguments.command == 'diagnostic-build':
         diagnostic_build(arguments.jobs)
+    elif arguments.command == 'coverage-build':
+        configure(False, coverage=True)
+        build(False, arguments.jobs, coverage=True)
     elif arguments.command == 'diagnostic-test':
         test(arguments.backend, (BUILD / 'diagnostic-cmake').resolve(), '^native_diagnostic_', 1, 'diagnostic-')
     else:

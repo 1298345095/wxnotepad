@@ -15,19 +15,19 @@
 
 // Native shortcuts target the caller's editor on the existing private display.
 namespace NativeKeys {
-inline void AfterPresentation(EditorFrame* frame, std::function<void(bool)> callback) {
+inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)> callback) {
 #ifdef __WXGTK__
-    auto* widget = GTK_WIDGET(frame->GetHandle());
+    auto* widget = GTK_WIDGET(window->GetHandle());
     if (GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))) {
         // Keep the normal main loop running until Weston sees this exact view.
         // Entering a synchronous shortcut wait before the first commit can leave
         // GTK awaiting a frame callback for an empty, unmapped surface.
         class Preparation final : public wxTimer {
         public:
-            Preparation(EditorFrame* frame, std::function<void(bool)> callback)
+            Preparation(wxTopLevelWindow* window, std::function<void(bool)> callback)
                 : callback_(std::move(callback)),
                   deadline_(std::chrono::steady_clock::now() + std::chrono::seconds(3)) {
-                auto* widget = GTK_WIDGET(frame->GetHandle());
+                auto* widget = GTK_WIDGET(window->GetHandle());
                 auto* surface = gdk_wayland_window_get_wl_surface(gtk_widget_get_window(widget));
                 if (surface && wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile_)) {
                     const auto remaining = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -59,7 +59,7 @@ inline void AfterPresentation(EditorFrame* frame, std::function<void(bool)> call
             std::chrono::steady_clock::time_point deadline_;
             wxString focusFile_;
         };
-        new Preparation(frame, std::move(callback));
+        new Preparation(window, std::move(callback));
         return;
     }
 #endif

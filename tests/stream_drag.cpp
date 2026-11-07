@@ -5,7 +5,7 @@
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 #include <wx/process.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <cstdio>
 #include <atomic>
 #include <stdexcept>
@@ -36,14 +36,14 @@ std::string Text(EditorControl* editor) {
     return value;
 }
 void Wait(int milliseconds) {
-    wxStopWatch watch;
+    TestClock::StopWatch watch;
     while (watch.Time() < milliseconds) {
         wxYield();
         wxMilliSleep(10);
     }
 }
 void WaitForDriver(const wxString& control) {
-    wxStopWatch watch;
+    TestClock::StopWatch watch;
     while (watch.Time() < 8000) {
         wxYield();
         wxFFile response(control, "rb");
@@ -321,7 +321,7 @@ public:
     void WaitForSource() const {
         // Failed native GTK drags can animate after pointer release. Observe
         // completion before starting another transfer from the same control.
-        wxStopWatch wait;
+        TestClock::StopWatch wait;
         while (dragging_ && wait.Time() < 3000)
             Wait(20);
         Require(!dragging_, "native peer source must finish the previous transfer");
@@ -491,7 +491,7 @@ public:
                                 (delayOffset ? "--peer-delayed-offset" : "--peer") + " \"" + directory + "\"",
                             wxEXEC_ASYNC)) {
         Require(process > 0, "start independent native drag peer process");
-        wxStopWatch wait;
+        TestClock::StopWatch wait;
         while (!wxFileExists(directory + "/ready") && wait.Time() < 5000)
             Wait(20);
         Require(wxFileExists(directory + "/ready"), "independent native peer must become ready");
@@ -499,7 +499,7 @@ public:
     ~PeerProcess() {
         wxFFile quit(directory + "/quit", "wb");
         quit.Close();
-        wxStopWatch wait;
+        TestClock::StopWatch wait;
         while (!wxFileExists(directory + "/done") && wait.Time() < 3000)
             Wait(20);
         if (!wxFileExists(directory + "/done")) wxKill(process, wxSIGTERM);
@@ -509,7 +509,7 @@ public:
         {
             wxFFile request(directory + "/read", "wb");
         }
-        wxStopWatch wait;
+        TestClock::StopWatch wait;
         while (wxFileExists(directory + "/read") && wait.Time() < 3000)
             Wait(20);
         Require(!wxFileExists(directory + "/read"), "native peer must report its current control value");
@@ -527,7 +527,7 @@ public:
         wxFFile file(directory + "/seed", "wb");
         Require(file.Write(text, wxConvUTF8), "write native peer's next source text");
         file.Close();
-        wxStopWatch wait;
+        TestClock::StopWatch wait;
         while (wxFileExists(directory + "/seed") && wait.Time() < 3000)
             Wait(20);
         Require(!wxFileExists(directory + "/seed"), "peer must accept next Unicode source value");
@@ -552,7 +552,7 @@ std::pair<wxPoint, wxPoint> WaylandOrigins(EditorControl* editor, const wxString
         wxFFile request(control, "wb");
         request.Write("geometry");
     }
-    wxStopWatch wait;
+    TestClock::StopWatch wait;
     const auto offsetPath = directory + "/offset";
     while ((!wxFileExists(response) || !wxFileExists(offsetPath)) && wait.Time() < 5000)
         Wait(20);
@@ -948,7 +948,7 @@ private:
 
     wxTimer timer_;
     wxString privateControl_;
-    wxStopWatch offsetDelay_;
+    TestClock::StopWatch offsetDelay_;
     int result_ = 0;
 };
 } // namespace

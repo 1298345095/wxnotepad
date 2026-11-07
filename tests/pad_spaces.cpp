@@ -5,7 +5,7 @@
 #include <wx/app.h>
 #include <wx/ffile.h>
 #include <wx/menu.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -212,7 +212,7 @@ void NativeAltP(EditorFrame* frame, bool control, bool shift) {
         wxFFile file(focusFile, "wb");
         file.Write("focus:wxnotepad");
     }
-    wxStopWatch focusWait;
+    TestClock::StopWatch focusWait;
     while (focusWait.Time() < 3000) {
         wxString pending;
         {
@@ -234,7 +234,7 @@ void NativeAltP(EditorFrame* frame, bool control, bool shift) {
         wxFFile file(focusFile, "wb");
         file.Write(wxString("key:alt+") + (control ? "ctrl+" : "") + (shift ? "shift+" : "") + "p");
     }
-    wxStopWatch wait;
+    TestClock::StopWatch wait;
     while (!received && wait.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);

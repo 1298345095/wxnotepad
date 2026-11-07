@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "steady_stopwatch.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
@@ -23,7 +24,7 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 bool Focused(wxWindow* window) {
-    wxStopWatch clock;
+    TestClock::StopWatch clock;
     while (wxWindow::FindFocus() != window && clock.Time() < 2000) {
         wxMilliSleep(10);
         wxYield();

@@ -12,7 +12,7 @@
 #include <wx/ffile.h>
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <cstdio>
 #include <chrono>
 #include <stdexcept>
@@ -181,7 +181,7 @@ void NonTextOffer(EditorControl* editor) {
 #ifdef __WXGTK__
     auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
     std::string formats;
-    wxStopWatch watch;
+    TestClock::StopWatch watch;
     do {
         formats.clear();
         GdkAtom* targets = nullptr;
@@ -215,7 +215,7 @@ void NonTextOffer(EditorControl* editor) {
 void TextOffer(EditorControl* editor) {
 #ifdef __WXGTK__
     auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-    wxStopWatch watch;
+    TestClock::StopWatch watch;
     bool nativeText = false;
     do {
         nativeText = gtk_clipboard_wait_is_text_available(clipboard);
