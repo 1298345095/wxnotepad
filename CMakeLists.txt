@@ -57,6 +57,7 @@ add_library(editor_runtime STATIC
     src/editor/tab_conversion.cpp
     src/editor/number_radix.cpp
     src/editor/editor_control.cpp
+    src/editor/special_insert.cpp
     src/editor/editor_core.cpp
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
@@ -113,7 +114,7 @@ add_library(app_shell STATIC
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
     target_link_libraries(editor_features PRIVATE advapi32)
-    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi)
+    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32)
     target_link_libraries(app_shell PRIVATE shell32 ole32)
 endif()
 
@@ -205,6 +206,15 @@ if(BUILD_TESTING)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
     add_editor_test(date_time original_date_time_insertion 60)
+    add_editor_test(special_insert original_special_insertion 60)
+    target_compile_definitions(special_insert PRIVATE
+        "SPECIAL_INSERT_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv\""
+        "SPECIAL_INSERT_STATES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_states.tsv\""
+        "SPECIAL_INSERT_SAVED=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_saved.tsv\"")
+    add_test(NAME original_special_insertion_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_process.py" "$<TARGET_FILE:wxnotepad>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv")
+    set_tests_properties(original_special_insertion_process PROPERTIES TIMEOUT 90)
     add_editor_test(path_text original_path_text_insertion 90)
     add_editor_test(read_only original_read_only_mode 120)
     target_compile_definitions(read_only PRIVATE

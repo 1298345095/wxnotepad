@@ -1076,6 +1076,29 @@ void EditorFrame::AppendFileNameCopyCommands(wxMenu* copy) {
 
 void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
     auto* insert = new wxMenu;
+    const int insertTag = wxWindow::NewControlId();
+    insert->Append(insertTag, "&HTML/XML Tag...\tAlt+X");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowInsertTagDialog(this, *editor_); }, insertTag);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, insertTag);
+    const int guid = wxWindow::NewControlId();
+    insert->Append(guid, "New &GUID");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->InsertGuid(); }, guid);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, guid);
+    auto* controls = new wxMenu;
+    for (size_t index = 0; index < UnicodeControlInsertions.size(); ++index) {
+        const int id = wxWindow::NewControlId();
+        controls->Append(id, wxString::FromUTF8(UnicodeControlInsertions[index].label));
+        Bind(
+            wxEVT_MENU,
+            [this, index](wxCommandEvent&) {
+                editor_->InsertUnicodeControlCharacter(static_cast<UnicodeControlCharacter>(index),
+                                                       document_.IsDefaultEncoding());
+            },
+            id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    insert->AppendSubMenu(controls, "Unicode &Control Character");
+    insert->AppendSeparator();
     for (const auto& [label, part] : {std::pair{"&File Name", FileNamePart::BaseName},
                                       std::pair{"File Name and E&xtension\tCtrl+F9", FileNamePart::FileName},
                                       std::pair{"Full &Path Name\tCtrl+Shift+F9", FileNamePart::FullPath}}) {
@@ -1085,11 +1108,6 @@ void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
         Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     }
     insert->AppendSeparator();
-    const int insertTag = wxWindow::NewControlId();
-    insert->Append(insertTag, "&HTML/XML Tag...\tAlt+X");
-    insert->AppendSeparator();
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowInsertTagDialog(this, *editor_); }, insertTag);
-    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, insertTag);
     auto* timestamps = new wxMenu;
     const auto add = [this](wxMenu* menu, const char* label, DateTimeInsertion command) {
         const int id = wxWindow::NewControlId();
