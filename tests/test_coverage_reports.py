@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('collect_coverage', ROOT / '.github/scripts/collect_coverage.py')
@@ -43,10 +44,14 @@ class GCCReports(unittest.TestCase):
         (self.root / 'src/choice.h').write_text(
             '#pragma once\nstatic inline int Choose(bool value) {\n'
             '    if (value) return 1;\n    return 2;\n}\n', encoding='utf-8')
+        (self.root / 'src/repeated.h').write_text(
+            '#pragma once\nstatic inline int Repeated(bool value) {\n'
+            '    if (value) return 1;\n    return 2;\n}\n', encoding='utf-8')
         for name, value, expected in (('first', 'true', 1), ('second', 'false', 2)):
             source = self.root / 'tests' / f'{name}.cpp'
-            source.write_text('#include "../src/choice.h"\n'
-                              f'int main() {{ return Choose({value}) != {expected}; }}\n', encoding='utf-8')
+            source.write_text('#include "../src/choice.h"\n#include "../src/repeated.h"\n'
+                              f'int main() {{ return Choose({value}) != {expected} || Repeated(true) != 1; }}\n',
+                              encoding='utf-8')
             self.compile(source, '-o', self.build / name)
         for name in ('first', 'second', 'first'):
             subprocess.run([self.build / name], check=True)
@@ -85,6 +90,27 @@ class GCCReports(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, 'gcov failed'):
             COLLECTOR.collect(self.build, output, self.root)
         self.assertFalse((output / 'summary.json').exists())
+
+    @unittest.skipUnless(importlib.util.find_spec('gcovr'), 'Install the pinned coverage requirements')
+    def test_sonar_report_unions_header_branches_without_double_counting(self):
+        output = self.root / 'reports'
+        collector = self.root / '.github/scripts/collect_coverage.py'
+        collector.parent.mkdir(parents=True)
+        shutil.copy2(ROOT / '.github/scripts/collect_coverage.py', collector)
+        subprocess.run([sys.executable, str(collector), '--build-dir', str(self.build),
+                        '--output', str(output)], check=True, capture_output=True,
+                       text=True, encoding='utf-8')
+        files = {item.attrib['path']: item for item in ET.parse(output / 'sonar.xml').getroot()}
+        choice = files['src/choice.h'].find("lineToCover[@lineNumber='3']")
+        self.assertEqual(choice.attrib['branchesToCover'], '2')
+        self.assertEqual(choice.attrib['coveredBranches'], '2')
+        repeated = files['src/repeated.h'].find("lineToCover[@lineNumber='3']")
+        self.assertEqual(repeated.attrib['branchesToCover'], '2')
+        self.assertEqual(repeated.attrib['coveredBranches'], '1')
+        untouched = files['src/never.cpp'].find("lineToCover[@lineNumber='1']")
+        self.assertEqual(untouched.attrib['covered'], 'false')
+        self.assertTrue(all(name.startswith('src/') for name in files))
+        self.assertTrue(list((output / 'gcov').glob('*.gcov')))
 
 
 if __name__ == '__main__':

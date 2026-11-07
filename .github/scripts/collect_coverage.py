@@ -2,8 +2,10 @@
 import argparse
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,12 +44,24 @@ def collect(build, output, root=ROOT):
     print(f'Collected {kept} maintained-source reports from {len(notes)} translation units')
 
 
+def write_sonar_report(output, root=ROOT):
+    output, root = output.resolve(), root.resolve()
+    command = [sys.executable, '-m', 'gcovr', '--root', str(root),
+               '--filter', re.escape((root / 'src').as_posix() + '/'),
+               '--gcov-use-existing-files', '--gcov-keep',
+               '--sonarqube', str(output / 'sonar.xml'), '--sonarqube-metric', 'branch',
+               str(output / 'gcov')]
+    with (output / 'gcovr.log').open('w', encoding='utf-8') as log:
+        subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-dir', type=Path, default=ROOT / '.ci/build/coverage-cmake')
     parser.add_argument('--output', type=Path, default=ROOT / '.ci/reports/coverage')
     arguments = parser.parse_args()
     collect(arguments.build_dir, arguments.output)
+    write_sonar_report(arguments.output)
 
 
 if __name__ == '__main__':

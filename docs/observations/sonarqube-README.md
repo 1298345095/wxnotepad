@@ -46,6 +46,13 @@ Configuration and cutover: [GitHub Actions](../ci.md#sonarcloud).
 Reference: [SonarQube Cloud compilation-database analysis](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/running-the-analysis).
 See also [CFamily test-file analysis](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/customizing-the-analysis).
 
+Native coverage is imported from gcovr's merged generic XML. Main analysis at
+`7f3a0cf` confirmed that direct per-TU gcov import lost complementary shared-header
+branches: `document_session.h:69` reported 3/4 despite a raw union of 4/4.
+`column_input.h:21` is a repeated-outcome control and correctly remains 3/4.
+The collector keeps the original reports and uses pinned `gcovr==8.8` to merge
+them before generic import. Coverage gates and source scope are retained.
+
 ## CLI finding review
 
 The command runners intentionally accept a local executable, repository, build
