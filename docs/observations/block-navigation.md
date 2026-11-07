@@ -46,3 +46,19 @@ and working Undo/Redo. A separate file scenario switches Automatic and
 Plain Text on the same document and checks independently read UTF-16LE
 file bytes and BOM after saving. The test is registered for the existing
 Windows, private X11, and private Wayland runners.
+
+The fixture seeds a pending Redo by clearing the document and undoing that
+edit. The pinned core's `Document::Undo` calls `ModifiedAt(0)`, invalidating
+styling from the beginning of the restored text. The cleared fold data also
+needs rebuilding. Full colourising and native painting therefore happen
+after this history setup. The fixture
+asserts complete styling and the independently captured first-line fold
+header before running its first menu command, so its starting fold tree
+does not depend on event-loop repaint timing.
+The complete-styling check accepts an end-styled position at or beyond the
+document length: the pinned `LexAccessor::StyleEndPos` includes an EOF
+sentinel, which release `StyleContext::Complete` can style.
+`NativeFold::Paint` uses the shared `NativePaint::Complete` seam: two actual
+native paint handlers must return, with a steady-clock deadline for each.
+This settles the post-styling layout on wxGTK/Wayland, where `Update()` alone
+does not deliver a native paint. An uncompleted paint fails explicitly.

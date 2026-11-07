@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "native_paint_helpers.h"
 #include <wx/wx.h>
 #include <wx/dnd.h>
 #include <wx/ffile.h>
@@ -196,9 +197,10 @@ void ObserveNativeDrags(wxString* control) {
 #endif
 wxPoint At(EditorControl* editor, intptr_t position) {
     using Scintilla::Message;
-    return editor->GetPosition() +
-           wxPoint(static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position)) + 1,
-                   static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position)) + 5);
+    const wxPoint point(static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position)) + 1,
+                        static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position)) + 5);
+    // Include the editor's native client border in the frame-relative gesture.
+    return editor->GetParent()->ScreenToClient(editor->ClientToScreen(point));
 }
 // GTK uses the toolkit's actual native text view as the independent peer.
 // Windows uses wx's OLE text data object, without the editor implementation.
@@ -630,7 +632,8 @@ public:
         CallAfter([this, frame, editor, peer] {
             try {
                 using Scintilla::Message;
-                Wait(500);
+                NativePaint::Complete(editor);
+                editor->Send(Message::SetXOffset, 0);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one two three"));
                 editor->Send(Message::SetSel, 0, 3);
                 editor->Send(Message::EmptyUndoBuffer);

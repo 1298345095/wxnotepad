@@ -1,48 +1,20 @@
 #include "brace_observation.h"
 #include "native_key_helpers.h"
+#include "native_paint_helpers.h"
 #include "visual_brace_fixtures.h"
 #include "encoded_file_helpers.h"
 #include <fstream>
 #include <wx/dcclient.h>
 #include <functional>
 #include <cstdio>
-#include <chrono>
 
 namespace {
 using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-class PaintCompletion final : public wxEvtHandler {
-public:
-    explicit PaintCompletion(EditorControl* editor) : editor_(editor) { editor_->PushEventHandler(this); }
-    ~PaintCompletion() override { editor_->PopEventHandler(false); }
-    bool ProcessEvent(wxEvent& event) override {
-        const bool handled = wxEvtHandler::ProcessEvent(event);
-        if (event.GetEventType() == wxEVT_PAINT) ++completed;
-        return handled;
-    }
-    unsigned completed = 0;
-
-private:
-    EditorControl* editor_;
-};
 void Paint(EditorControl* editor) {
-    PaintCompletion completion(editor);
-    // A first paint may style text and abandon its old layout. The second
-    // renders that real native layout. Update() is a no-op on wxGTK/Wayland,
-    // so observe completed native paint events while its frame clock runs.
-    for (int pass = 0; pass < 2; ++pass) {
-        const auto expected = completion.completed + 1;
-        editor->Refresh(false);
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-        while (completion.completed < expected && std::chrono::steady_clock::now() < deadline) {
-            editor->Update();
-            wxYield();
-            if (completion.completed < expected) wxMilliSleep(1);
-        }
-        Require(completion.completed >= expected, "actual native editor paint completes before decoration observation");
-    }
+    NativePaint::Complete(editor);
 }
 void Expect(EditorControl* editor, intptr_t first, intptr_t second, intptr_t style, intptr_t guide) {
     Paint(editor);
