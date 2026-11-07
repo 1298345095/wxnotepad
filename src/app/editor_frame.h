@@ -82,6 +82,7 @@ private:
     bool HandleViewKey(const wxKeyEvent& event);
     bool HandleWhitespaceKey(const wxKeyEvent& event, int commandId);
     bool HandleDocumentKey(const wxKeyEvent& event);
+    void ToggleReadOnlyMode();
     void ShowLineEndingOptions();
     void ReportFind(const FindResult& result);
     bool SearchMessage(SearchDirection direction);

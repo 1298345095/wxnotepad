@@ -49,6 +49,8 @@ public:
         : editor_(editor), encodingOptions_(options), detection_(detection) {}
     const wxString& Path() const { return path_; }
     wxString FileNameText(FileNamePart part) const;
+    bool IsReadOnlyFile() const { return readOnlyFile_; }
+    bool RefreshReadOnlyFile();
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme);
@@ -78,6 +80,7 @@ private:
     wxString path_;
     FileEncoding encoding_ = FileEncoding::Utf8;
     bool hasBom_ = false;
+    bool readOnlyFile_ = false;
     SaveCleanupOptions saveCleanup_;
     Scintilla::EndOfLine defaultEolMode_ = Scintilla::EndOfLine::CrLf;
     EncodingOptions encodingOptions_;

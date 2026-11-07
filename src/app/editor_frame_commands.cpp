@@ -80,6 +80,14 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->Append(wxID_SAVEAS, "Save &As...\tF6");
     saveCopyId_ = wxWindow::NewControlId();
     file->Append(saveCopyId_, "Save Cop&y...\tCtrl+F6");
+    auto* mode = new wxMenu;
+    const int readOnly = wxWindow::NewControlId();
+    mode->AppendCheckItem(readOnly, "&Read Only Mode\tF10");
+    file->AppendSubMenu(mode, "File &Mode");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleReadOnlyMode(); }, readOnly);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetReadOnly) != 0); }, readOnly);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -113,7 +121,9 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
         },
         wxID_SAVE);
-    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, wxID_SAVE);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetModify)); },
+        wxID_SAVE);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -159,11 +169,7 @@ wxMenu* EditorFrame::CreateEditMenu() {
         [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, wxID_COPY);
     Bind(
         wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) {
-            event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
-                         editor_->Send(Scintilla::Message::GetLength) != 0);
-        },
-        wxID_CUT);
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, wxID_CUT);
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanPaste)); },
         wxID_PASTE);
@@ -433,9 +439,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     edit->Append(unindent, "&Unindent");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->IndentLines(false); }, unindent);
     for (const int id : {indent, unindent})
-        Bind(
-            wxEVT_UPDATE_UI,
-            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     const int lineComment = wxWindow::NewControlId();
     auto* lineCommentItem = new wxMenuItem(edit, lineComment, "T&oggle Line Comment\tCtrl+/");
     lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_DIVIDE, lineComment));
@@ -446,7 +450,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         wxEVT_MENU,
         [this](wxCommandEvent&) {
             const auto* prefix = SyntaxFor(document_.Language()).lineComment;
-            if (!prefix || editor_->Send(Scintilla::Message::GetReadOnly)) return;
+            if (!prefix) return;
             const auto& preferences = settings_ ? settings_->values : defaults_;
             if (!editor_->ToggleLineComments(prefix, (preferences.autoInsertMask & 256) != 0))
                 wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
@@ -455,10 +459,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         lineComment);
     Bind(
         wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) {
-            event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
-                         SyntaxFor(document_.Language()).lineComment != nullptr);
-        },
+        [this](wxUpdateUIEvent& event) { event.Enable(SyntaxFor(document_.Language()).lineComment != nullptr); },
         lineComment);
     edit->AppendSeparator();
     const int blockComment = wxWindow::NewControlId();
@@ -485,9 +486,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(true); }, moveUp);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(false); }, moveDown);
     for (const int id : {moveUp, moveDown})
-        Bind(
-            wxEVT_UPDATE_UI,
-            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     const int compressWhitespace = wxWindow::NewControlId();
     edit->Append(compressWhitespace, "Compress &Whitespace\tAlt+W");
     Bind(
@@ -1031,6 +1030,10 @@ bool EditorFrame::HandleWhitespaceKey(const wxKeyEvent& event, int commandId) {
 }
 
 bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F10) {
+        if (!event.HasAnyModifiers()) ToggleReadOnlyMode();
+        return true;
+    }
     if (event.GetKeyCode() != WXK_F6) return false;
     // GTK Wayland can consume Ctrl while matching F6 accelerators. Route
     // the original exact modifiers before native accelerator matching.
@@ -1042,4 +1045,10 @@ bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
         GetEventHandler()->ProcessEvent(command);
     }
     return true;
+}
+
+void EditorFrame::ToggleReadOnlyMode() {
+    editor_->Send(Scintilla::Message::SetReadOnly, !editor_->Send(Scintilla::Message::GetReadOnly));
+    UpdateDocumentState();
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
