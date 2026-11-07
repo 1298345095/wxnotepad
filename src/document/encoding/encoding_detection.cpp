@@ -305,6 +305,15 @@ int LegacyFileEncoding(std::string_view bytes, const EncodingCandidates& candida
 }
 } // namespace
 
+std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding) {
+    const auto names = catalog[EncodingIndex(encoding)].names;
+    const auto separator = names.find(',');
+    if (separator != std::string_view::npos) return names.substr(0, separator);
+    // The original falls back to the status item's short display name for the
+    // BOM UTF-16 catalog entries, whose parse-name lists are empty.
+    return "UTF-16LE BOM";
+}
+
 int NormalizeEncodingSetting(int value) {
     const int index = DefaultEncoding(value);
     if (index == 6) return -1; // Original global UTF-8 default is omitted on Save.
