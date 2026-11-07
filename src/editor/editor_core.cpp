@@ -1,4 +1,5 @@
 #include "editor/editor_core.h"
+#include "editor/platform/native_encoding.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/custom_case.h"
 #include "editor/platform/gtk_drag_drop.h"
@@ -632,11 +633,18 @@ bool EditorControl::Core::CanPaste() const noexcept {
 }
 
 void EditorControl::Core::Paste(bool) {
+    PasteWithEncoding(false);
+}
+
+void EditorControl::Core::PasteWithEncoding(bool defaultEncoding) {
+    // Swap supplies the document's encoding context to the same native Paste
+    // boundary; ordinary Paste keeps its existing UTF-8 behavior.
     // Original ScintillaWin::Paste repairs selections even when document writes
     // are rejected. Native Paste availability and its actual outcome differ.
     if (!pdoc->IsReadOnly() && !core::Editor::CanPaste()) return;
-    const auto text = EditorClipboard::Read(window_, [this] { return sel.Empty(); });
+    auto text = EditorClipboard::Read(window_, [this] { return sel.Empty(); });
     if (!text) return;
+    if (defaultEncoding) text->text = NativeDefaultEncodingText(wxString::FromUTF8(text->text)).ToStdString(wxConvUTF8);
     const core::UndoGroup undo(pdoc);
     ClearSelection(multiPasteMode == Scintilla::MultiPaste::Each);
     auto shape = PasteShape::stream;

@@ -4,6 +4,7 @@
 #include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
 #include "editor/platform/clipboard.h"
+#include "editor/platform/native_encoding.h"
 #include "editor/platform/custom_case.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
@@ -22,9 +23,6 @@
 #include <wx/strconv.h>
 #include <cstdlib>
 #include "app/dialogs/modify_lines_dialog.h"
-#ifdef __WXMSW__
-#include <windows.h>
-#endif
 
 namespace {
 void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
@@ -157,7 +155,7 @@ wxMenu* EditorFrame::CreateEditMenu() {
     edit->Append(wxID_PASTE, "&Paste\tCtrl+V");
     const int swap = wxWindow::NewControlId();
     edit->Append(swap, "S&wap\tCtrl+K");
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SwapClipboard(); }, swap);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SwapClipboard(document_.IsDefaultEncoding()); }, swap);
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) {
@@ -1049,20 +1047,7 @@ void EditorFrame::InsertDateTime(bool shortDate) {
 
 void EditorFrame::InsertFileName(FileNamePart part) {
     auto text = document_.FileNameText(part);
-#ifdef __WXMSW__
-    if (document_.IsDefaultEncoding() && !text.empty()) {
-        // Original insertion uses WideCharToMultiByte(cpEdit, 0), while Copy
-        // publishes the unchanged Unicode value. Our core stores UTF-8 even
-        // for default-ANSI documents, so round-trip that native conversion here.
-        const auto wide = text.ToStdWstring();
-        const int size =
-            WideCharToMultiByte(CP_ACP, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
-        std::string legacy(size, '\0');
-        WideCharToMultiByte(CP_ACP, 0, wide.data(), static_cast<int>(wide.size()), legacy.data(), size, nullptr,
-                            nullptr);
-        text = wxString(legacy.data(), wxConvLocal, legacy.size());
-    }
-#endif
+    if (document_.IsDefaultEncoding()) text = NativeDefaultEncodingText(text);
     const auto bytes = text.ToStdString(wxConvUTF8);
     editor_->Send(Scintilla::Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
 }

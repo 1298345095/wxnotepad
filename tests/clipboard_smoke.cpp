@@ -5,6 +5,7 @@
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
+#include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -16,6 +17,9 @@
 #include <chrono>
 #include <stdexcept>
 #include <vector>
+#ifdef __WXMSW__
+#include <windows.h>
+#endif
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
@@ -1807,6 +1811,205 @@ void SwapSavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     std::puts("PASS: independent UTF-8/BOM/UTF-16LE/GBK disk bytes, metadata, save points and history");
 }
 
+void SwapDefaultCaretEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+#ifdef __WXMSW__
+    if (GetACP() != 936) {
+        std::puts("SKIP: captured default-ANSI caret Swap requires system ACP 936");
+        return;
+    }
+    const std::string expected = "Aoé中文??\r\nXldZ";
+    const std::string saved = "Ao\xa8\xa6\xd6\xd0\xce\xc4??\r\nXldZ";
+    constexpr intptr_t end = 15;
+#else
+    const std::string expected = "Aoé中文😀\r\nXldZ";
+    const std::string saved = "Aoé中文😀\r\nXldZ";
+    constexpr intptr_t end = 17;
+#endif
+    const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-default-caret");
+    std::filesystem::create_directory(directory);
+    const auto path = directory / "default.txt";
+    TestFiles::WriteBytes(path, "AoldZ");
+    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
+            "configured system-default caret document opens through native detection");
+    editor->Send(Message::SetSel, 2, 2);
+    peer.OfferText("é中文😀\rX");
+    Gesture(editor);
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Swap"));
+    Require(Text(editor) == expected, "caret Swap applies captured system-default conversion in native Paste");
+    TestEditor::RequireSelection(editor, 2, end, "default-ANSI caret Swap selects the converted UTF-8 byte span");
+    Require(peer.Request("utility-formats") == "empty", "default-ANSI caret Swap clears all native formats");
+    int lossPrompts = 0;
+    Require(frame->Save([&] {
+                     ++lossPrompts;
+                     return GbkLossChoice::Cancel;
+                 }).status == SaveStatus::Saved &&
+                lossPrompts == 0 && TestFiles::Bytes(path) == saved,
+            "default-ANSI caret Swap saves captured native bytes without a second loss decision");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "AoldZ" && !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
+                frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == "AoldZ",
+            "one Undo restores independent original default-ANSI caret bytes");
+    editor->Send(Message::Redo);
+    Require(Text(editor) == expected && frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == saved &&
+                peer.Request("utility-formats") == "empty",
+            "Redo restores converted caret bytes and preserves independent clipboard emptiness");
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: captured system-default caret Swap conversion, span, disk and history");
+}
+
+void SwapExplicitGbk(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+    const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-explicit-gbk");
+    std::filesystem::create_directory(directory);
+    const auto path = directory / "gbk.txt";
+    const std::string original = "\xc7\xb0old\xe1\xe1";
+    for (const bool caret : {false, true}) {
+        TestFiles::WriteBytes(path, original);
+        editor->Send(Message::SetSavePoint);
+        Require(frame->Open(TestFiles::Filename(path), FileEncoding::Gbk).status == OpenStatus::Opened,
+                "explicit GBK document opens into the UTF-8 core");
+        editor->Send(Message::SetSel, 3, caret ? 3 : 6);
+        peer.OfferText("中文😀\nX");
+        Gesture(editor);
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Swap"));
+        // Independent original actual-GBK captures in 141/original-swap-corrected.json.
+        const std::string expected = caret ? "前中文😀\r\nXold後" : "前中文😀\r\nX後";
+        Require(Text(editor) == expected && frame->DocumentEncoding() == FileEncoding::Gbk,
+                "explicit GBK Swap retains original Unicode until the encoded-save boundary");
+        TestEditor::RequireSelection(editor, 3, 16, "explicit GBK Swap retains captured UTF-8 byte endpoints");
+        if (caret)
+            Require(peer.Request("utility-formats") == "empty", "explicit GBK caret Swap clears native formats");
+        else
+            Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+                    "explicit GBK selected Swap independently publishes the original selection");
+        Require(frame->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
+                    TestFiles::Bytes(path) == original && Text(editor) == expected && editor->Send(Message::GetModify),
+                "explicit GBK save cancellation preserves Unicode, modification and original disk bytes");
+        const std::string saved =
+            caret ? "\xc7\xb0\xd6\xd0\xce\xc4??\r\nXold\xe1\xe1" : "\xc7\xb0\xd6\xd0\xce\xc4??\r\nX\xe1\xe1";
+        Require(frame->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+                    TestFiles::Bytes(path) == saved && Text(editor) == expected,
+                "approved GBK save writes native placeholders while keeping Unicode in the editor");
+    }
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: explicit GBK selected/caret Swap preserves Unicode and existing loss-save decisions");
+}
+
+void SwapDefaultReadOnly(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+#ifdef __WXMSW__
+    if (GetACP() != 936) {
+        std::puts("SKIP: captured default-ANSI read-only Swap requires system ACP 936");
+        return;
+    }
+#endif
+    const std::string ascii = "0123456789012345678901234567890123456789";
+    const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-default-readonly");
+    std::filesystem::create_directory(directory);
+    const auto path = directory / "default.txt";
+    const int swap = frame->GetMenuBar()->FindMenuItem("Edit", "Swap");
+    const int readOnly = frame->GetMenuBar()->FindMenuItem("File", "Read Only Mode");
+    for (const bool dbcs : {false, true}) {
+        const std::string original = dbcs ? "Aold中文XYZ" : ascii;
+#ifdef __WXMSW__
+        const std::string disk = dbcs ? "Aold\xd6\xd0\xce\xc4XYZ" : ascii;
+        constexpr intptr_t end = 7;
+#else
+        const std::string disk = original;
+        constexpr intptr_t end = 11;
+#endif
+        for (const bool reversed : {false, true}) {
+            TestFiles::WriteBytes(path, disk);
+            Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
+                    "configured system-default protected document opens through native detection");
+            NativeSearch::Command(frame, readOnly);
+            Require(editor->Send(Message::GetReadOnly), "native Read Only mode protects the actual document");
+            editor->Send(Message::SetSel, reversed ? 4 : 1, reversed ? 1 : 4);
+            peer.OfferText("中文😀");
+            frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+            Require(frame->GetMenuBar()->IsEnabled(swap), "original selected Swap remains enabled in Read Only mode");
+            Gesture(editor);
+            NativeSearch::Command(frame, swap);
+            // Independently observed original ACP936 endpoints in
+            // review-fixes/original-ansi-readonly.json; protected writes insert nothing.
+            TestEditor::RequireSelection(editor, reversed ? end : 1, reversed ? 1 : end,
+                                         "protected default-ANSI Swap uses original converted native byte endpoints");
+            Require(Text(editor) == original && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
+                        !editor->Send(Message::CanRedo) && TestFiles::Bytes(path) == disk &&
+                        peer.Request("utility-read") == "stream" && peer.SavedText() == "中文😀",
+                    "protected default-ANSI Swap preserves independent document, disk, clipboard and history");
+            NativeSearch::Command(frame, readOnly);
+        }
+    }
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: captured default-ANSI read-only native byte endpoints and independent unchanged state");
+}
+
+void SwapDefaultEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    using Scintilla::Message;
+#ifdef __WXMSW__
+    if (GetACP() != 936) {
+        std::puts("SKIP: captured default-ANSI Swap requires system ACP 936");
+        return;
+    }
+    const std::string replacement = "é中文??\r\nX";
+    const std::string saved = "A\xa8\xa6\xd6\xd0\xce\xc4??\r\nXZ";
+#else
+    const std::string replacement = "é中文😀\r\nX";
+    const std::string saved = "Aé中文😀\r\nXZ";
+#endif
+    // Independent original ACP936 capture: 141/original-swap.json and
+    // capture-conclusions.md, not the migrated encoder's output.
+    const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-default");
+    std::filesystem::create_directory(directory);
+    const auto path = directory / "default.txt";
+    const int swap = frame->GetMenuBar()->FindMenuItem("Edit", "Swap");
+    for (const bool reversed : {false, true}) {
+        TestFiles::WriteBytes(path, "AoldZ");
+        editor->Send(Message::SetSavePoint);
+        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
+                "configured system-default document opens through native detection");
+        const auto encoding = frame->DocumentEncoding();
+        const auto bom = frame->DocumentHasBom();
+        editor->Send(Message::SetSel, reversed ? 4 : 1, reversed ? 1 : 4);
+        peer.OfferText("é中文😀\rX");
+        if (reversed) {
+            UtilityShortcut(frame, 'K', true);
+        } else {
+            Gesture(editor);
+            NativeSearch::Command(frame, swap);
+        }
+        Require(Text(editor) == "A" + replacement + "Z",
+                "selected Swap applies captured system-default conversion before replacement");
+        const auto end = 1 + static_cast<intptr_t>(replacement.size());
+        TestEditor::RequireSelection(editor, reversed ? end : 1, reversed ? 1 : end,
+                                     "default-ANSI Swap retains direction with converted UTF-8 endpoints");
+        Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
+                "default-ANSI Swap independently publishes the original selected text");
+        int lossPrompts = 0;
+        Require(frame->Save([&] {
+                         ++lossPrompts;
+                         return GbkLossChoice::Cancel;
+                     }).status == SaveStatus::Saved &&
+                    lossPrompts == 0 && TestFiles::Bytes(path) == saved && frame->DocumentEncoding() == encoding &&
+                    frame->DocumentHasBom() == bom,
+                "converted default-ANSI Swap saves captured bytes without a second loss decision");
+        editor->Send(Message::Undo);
+        Require(Text(editor) == "AoldZ" && !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                "one Undo restores the default-ANSI source edit");
+        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == "AoldZ",
+                "Undo saves independent original default-ANSI bytes");
+        editor->Send(Message::Redo);
+        Require(Text(editor) == "A" + replacement + "Z" && frame->Save().status == SaveStatus::Saved &&
+                    TestFiles::Bytes(path) == saved && peer.Request("utility-read") == "stream" &&
+                    peer.SavedText() == "old",
+                "Redo restores converted bytes while independent clipboard retains cut text");
+    }
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: captured system-default selected Swap conversion, endpoints, disk and history");
+}
+
 void Swap(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
     const int swap = frame->GetMenuBar()->FindMenuItem("Edit", "Swap");
@@ -1862,7 +2065,13 @@ public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         wxLog::SetActiveTarget(new wxLogStderr);
-        auto* frame = new EditorFrame;
+        wxString mode;
+        const bool defaultSwap = wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &mode) &&
+                                 (mode == "swap-encoding" || mode == "swap-ansi-caret" || mode == "swap-ansi-readonly");
+        encodingSettings_.values.encoding.defaultEncoding = 0;
+        encodingSettings_.values.encoding.loadASCIIasUTF8 = false;
+        encodingSettings_.values.encoding.loadANSIasUTF8 = false;
+        auto* frame = new EditorFrame(defaultSwap ? &encodingSettings_ : nullptr);
         wxString focusProbe;
         if (wxGetEnv("WXNOTEPAD_CLIPBOARD_FOCUS_PROBE", &focusProbe)) {
             // Read-only native-window identity preflight: no clipboard query,
@@ -1895,7 +2104,16 @@ public:
                 Require(peer.Request("ready") == "ready", "external clipboard application is running");
                 wxString shapes;
                 if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
-                    if (shapes == "swap")
+                    if (shapes == "swap-ansi-readonly")
+                        SwapDefaultReadOnly(frame, editor, peer);
+                    else if (shapes == "swap-ansi-caret")
+                        SwapDefaultCaretEncoding(frame, editor, peer);
+                    else if (shapes == "swap-encoding") {
+                        SwapDefaultEncoding(frame, editor, peer);
+                        SwapDefaultCaretEncoding(frame, editor, peer);
+                        SwapExplicitGbk(frame, editor, peer);
+                        SwapDefaultReadOnly(frame, editor, peer);
+                    } else if (shapes == "swap")
                         Swap(frame, editor, peer);
                     else if (shapes == "utilities")
                         Utilities(frame, editor, peer);
@@ -2080,6 +2298,7 @@ public:
 private:
     int result_ = 1;
     wxTimer probeTimer_;
+    SettingsStore encodingSettings_;
 };
 } // namespace
 wxIMPLEMENT_APP(ClipboardApp);
