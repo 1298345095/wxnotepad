@@ -55,6 +55,7 @@ public:
     SaveResult Save(const GbkLossDecision& decideLoss = {});
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme);
+    SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt,
                     std::optional<EncodingChoice> weakEncoding = std::nullopt,
@@ -88,7 +89,7 @@ private:
     bool DetectAutomaticLanguage();
     void ApplySaveCleanup();
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
-                      std::optional<SaveFileType> fileType = std::nullopt);
+                      std::optional<SaveFileType> fileType = std::nullopt, bool copy = false);
     OpenResult Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
                        bool keepLanguage = false);
 };
