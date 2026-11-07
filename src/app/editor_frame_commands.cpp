@@ -4,6 +4,7 @@
 #include "editor/platform/custom_case.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
+#include "app/dialogs/insert_tag_dialog.h"
 #include "app/dialogs/align_lines_dialog.h"
 #include "app/dialogs/sort_lines_dialog.h"
 #include "app/dialogs/tab_settings_dialog.h"
@@ -15,8 +16,12 @@
 #include <wx/msgdlg.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
+#include <wx/strconv.h>
 #include <cstdlib>
 #include "app/dialogs/modify_lines_dialog.h"
+#ifdef __WXMSW__
+#include <windows.h>
+#endif
 
 namespace {
 void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
@@ -73,6 +78,16 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->Append(openUtf16, "Open As UTF-16LE...");
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
     file->Append(wxID_SAVEAS, "Save &As...\tF6");
+    saveCopyId_ = wxWindow::NewControlId();
+    file->Append(saveCopyId_, "Save Cop&y...\tCtrl+F6");
+    auto* mode = new wxMenu;
+    const int readOnly = wxWindow::NewControlId();
+    mode->AppendCheckItem(readOnly, "&Read Only Mode\tF10");
+    file->AppendSubMenu(mode, "File &Mode");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleReadOnlyMode(); }, readOnly);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetReadOnly) != 0); }, readOnly);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -106,7 +121,9 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
         },
         wxID_SAVE);
-    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, wxID_SAVE);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetModify)); },
+        wxID_SAVE);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -115,6 +132,15 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
         },
         wxID_SAVEAS);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto result = SaveCopy();
+            if (result.status == SaveStatus::Failed)
+                wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
+        },
+        saveCopyId_);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, saveCopyId_);
     return file;
 }
 
@@ -143,14 +169,11 @@ wxMenu* EditorFrame::CreateEditMenu() {
         [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, wxID_COPY);
     Bind(
         wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) {
-            event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
-                         editor_->Send(Scintilla::Message::GetLength) != 0);
-        },
-        wxID_CUT);
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, wxID_CUT);
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanPaste)); },
         wxID_PASTE);
+    AppendFileNameCopyCommands(edit);
     const int cutLine = wxWindow::NewControlId();
     const int copyLine = wxWindow::NewControlId();
     const int deleteLine = wxWindow::NewControlId();
@@ -260,6 +283,10 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     auto* enclosure = new wxMenu;
     const int customEnclosure = wxWindow::NewControlId();
     enclosure->Append(customEnclosure, "&With...\tAlt+Q");
+    const int encloseTag = wxWindow::NewControlId();
+    enclosure->Append(encloseTag, "&HTML/XML Tag...\tAlt+X");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowInsertTagDialog(this, *editor_); }, encloseTag);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, encloseTag);
     enclosure->AppendSeparator();
     Bind(
         wxEVT_MENU,
@@ -412,9 +439,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     edit->Append(unindent, "&Unindent");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->IndentLines(false); }, unindent);
     for (const int id : {indent, unindent})
-        Bind(
-            wxEVT_UPDATE_UI,
-            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     const int lineComment = wxWindow::NewControlId();
     auto* lineCommentItem = new wxMenuItem(edit, lineComment, "T&oggle Line Comment\tCtrl+/");
     lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_DIVIDE, lineComment));
@@ -425,7 +450,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         wxEVT_MENU,
         [this](wxCommandEvent&) {
             const auto* prefix = SyntaxFor(document_.Language()).lineComment;
-            if (!prefix || editor_->Send(Scintilla::Message::GetReadOnly)) return;
+            if (!prefix) return;
             const auto& preferences = settings_ ? settings_->values : defaults_;
             if (!editor_->ToggleLineComments(prefix, (preferences.autoInsertMask & 256) != 0))
                 wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
@@ -434,10 +459,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
         lineComment);
     Bind(
         wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) {
-            event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly) &&
-                         SyntaxFor(document_.Language()).lineComment != nullptr);
-        },
+        [this](wxUpdateUIEvent& event) { event.Enable(SyntaxFor(document_.Language()).lineComment != nullptr); },
         lineComment);
     edit->AppendSeparator();
     const int blockComment = wxWindow::NewControlId();
@@ -464,9 +486,7 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(true); }, moveUp);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(false); }, moveDown);
     for (const int id : {moveUp, moveDown})
-        Bind(
-            wxEVT_UPDATE_UI,
-            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetReadOnly)); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     const int compressWhitespace = wxWindow::NewControlId();
     edit->Append(compressWhitespace, "Compress &Whitespace\tAlt+W");
     Bind(
@@ -849,6 +869,19 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F9 && event.ControlDown() && event.ShiftDown()) {
+        if (!event.AltDown() && !event.MetaDown()) InsertFileName(FileNamePart::FullPath);
+        return true;
+    }
+    if (event.GetKeyCode() == WXK_F9 && event.AltDown() && event.ShiftDown() && !event.ControlDown()) {
+        if (!event.MetaDown()) CopyFileName(FileNamePart::FullPath);
+        return true;
+    }
+    if (event.GetKeyCode() == 'X' && event.AltDown() && !event.ControlDown() && !event.ShiftDown() &&
+        !event.MetaDown()) {
+        ShowInsertTagDialog(this, *editor_);
+        return true;
+    }
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
         if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
             editor_->SplitLines();
@@ -899,8 +932,61 @@ void EditorFrame::InsertDateTime(bool shortDate) {
                             shortDate ? preferences.dateTimeShort : preferences.dateTimeLong);
 }
 
+void EditorFrame::InsertFileName(FileNamePart part) {
+    auto text = document_.FileNameText(part);
+#ifdef __WXMSW__
+    if (document_.IsDefaultEncoding() && !text.empty()) {
+        // Original insertion uses WideCharToMultiByte(cpEdit, 0), while Copy
+        // publishes the unchanged Unicode value. Our core stores UTF-8 even
+        // for default-ANSI documents, so round-trip that native conversion here.
+        const auto wide = text.ToStdWstring();
+        const int size =
+            WideCharToMultiByte(CP_ACP, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
+        std::string legacy(size, '\0');
+        WideCharToMultiByte(CP_ACP, 0, wide.data(), static_cast<int>(wide.size()), legacy.data(), size, nullptr,
+                            nullptr);
+        text = wxString(legacy.data(), wxConvLocal, legacy.size());
+    }
+#endif
+    const auto bytes = text.ToStdString(wxConvUTF8);
+    editor_->Send(Scintilla::Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
+}
+
+void EditorFrame::CopyFileName(FileNamePart part) {
+    const auto text = document_.FileNameText(part);
+    const auto bytes = text.ToStdString(wxConvUTF8);
+    editor_->Send(Scintilla::Message::CopyText, bytes.size(), reinterpret_cast<intptr_t>(bytes.c_str()));
+}
+
+void EditorFrame::AppendFileNameCopyCommands(wxMenu* edit) {
+    auto* copy = new wxMenu;
+    for (const auto& [label, part] : {std::pair{"&File Name", FileNamePart::BaseName},
+                                      std::pair{"File Name and &Ext.\tShift+F9", FileNamePart::FileName},
+                                      std::pair{"Full &Path Name\tAlt+Shift+F9", FileNamePart::FullPath}}) {
+        const int id = wxWindow::NewControlId();
+        copy->Append(id, label);
+        Bind(wxEVT_MENU, [this, part](wxCommandEvent&) { CopyFileName(part); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    edit->AppendSubMenu(copy, "Cop&y to Clipboard");
+}
+
 void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
     auto* insert = new wxMenu;
+    for (const auto& [label, part] : {std::pair{"&File Name", FileNamePart::BaseName},
+                                      std::pair{"File Name and E&xtension\tCtrl+F9", FileNamePart::FileName},
+                                      std::pair{"Full &Path Name\tCtrl+Shift+F9", FileNamePart::FullPath}}) {
+        const int id = wxWindow::NewControlId();
+        insert->Append(id, label);
+        Bind(wxEVT_MENU, [this, part](wxCommandEvent&) { InsertFileName(part); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    insert->AppendSeparator();
+    const int insertTag = wxWindow::NewControlId();
+    insert->Append(insertTag, "&HTML/XML Tag...\tAlt+X");
+    insert->AppendSeparator();
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowInsertTagDialog(this, *editor_); }, insertTag);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, insertTag);
     auto* timestamps = new wxMenu;
     const auto add = [this](wxMenu* menu, const char* label, DateTimeInsertion command) {
         const int id = wxWindow::NewControlId();
@@ -1003,12 +1089,25 @@ bool EditorFrame::HandleDisplayKey(const wxKeyEvent& event, int whitespace, int 
 }
 
 bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F10) {
+        if (!event.HasAnyModifiers()) ToggleReadOnlyMode();
+        return true;
+    }
     if (event.GetKeyCode() != WXK_F6) return false;
     // GTK Wayland can consume Ctrl while matching F6 accelerators. Route
     // the original exact modifiers before native accelerator matching.
     if (!event.HasAnyModifiers()) {
         wxCommandEvent command(wxEVT_MENU, wxID_SAVEAS);
         GetEventHandler()->ProcessEvent(command);
+    } else if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown()) {
+        wxCommandEvent command(wxEVT_MENU, saveCopyId_);
+        GetEventHandler()->ProcessEvent(command);
     }
     return true;
+}
+
+void EditorFrame::ToggleReadOnlyMode() {
+    editor_->Send(Scintilla::Message::SetReadOnly, !editor_->Send(Scintilla::Message::GetReadOnly));
+    UpdateDocumentState();
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }

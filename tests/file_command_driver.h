@@ -32,7 +32,7 @@ public:
                 if (!IsWindowVisible(window)) return TRUE;
                 wchar_t title[256]{};
                 GetWindowTextW(window, title, 256);
-                if (wxString(title) == "Save changes?") {
+                if (wxString(title) == "Save changes?" || wxString(title) == "Read only file") {
                     driver.Observe("confirmation response begin");
                     ++driver.prompts;
                     const int button = driver.choice_ == wxID_YES ? IDYES : driver.choice_ == wxID_NO ? IDNO : IDCANCEL;
@@ -72,7 +72,7 @@ public:
             }
             if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
             const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
-            if (title == "Save changes?") {
+            if (title == "Save changes?" || title == "Read only file") {
                 Observe("confirmation response begin");
                 ++prompts;
                 Respond(widget, choice_ == wxID_YES  ? GTK_RESPONSE_YES

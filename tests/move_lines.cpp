@@ -229,21 +229,24 @@ public:
                 NativeAlt(frame, true, true);
                 Require(NativeSearch::Text(editor) == "A\nBB\nlast", "Alt+Shift+Up does not move lines");
                 std::puts("PASS: actual native Alt+Up/Down and exact modifiers");
-                Reset(editor, "A\nBB\nlast", 3, 4);
+                TestEditor::ResetStream(editor, "alpha\r\nbeta\r\n", 4, 1);
                 editor->Send(Message::SetReadOnly, 1);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 for (const char* label : {"Move Up", "Move Down"}) {
-                    Require(!frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", label)),
-                            "read-only disables move menus");
+                    Require(frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", label)),
+                            "original read-only move menus remain enabled");
                 }
-                editor->MoveLines(true);
+                editor->MoveLines(false);
+                TestEditor::RequireSelection(editor, 11, 8,
+                                             "original protected Move Down repairs the destination selection");
+                editor->Send(Message::SetSel, 4, 1);
                 NativeAlt(frame, false);
-                Require(NativeSearch::Text(editor) == "A\nBB\nlast" && editor->Send(Message::GetAnchor) == 3 &&
-                            editor->Send(Message::GetCurrentPos) == 4 && !editor->Send(Message::GetModify) &&
+                Require(NativeSearch::Text(editor) == "alpha\r\nbeta\r\n" && editor->Send(Message::GetAnchor) == 11 &&
+                            editor->Send(Message::GetCurrentPos) == 8 && !editor->Send(Message::GetModify) &&
                             !editor->Send(Message::CanUndo),
-                        "read-only preserves bytes, selection and history");
+                        "read-only native Move Down retains original selection repair without changing bytes/history");
                 editor->Send(Message::SetReadOnly, 0);
-                std::puts("PASS: read-only menu and keyboard gating");
+                std::puts("PASS: original read-only menu/keyboard availability and selection effects");
                 const std::string longLine = "first " + std::string(300, 'x');
                 Reset(editor, (longLine + "\nB\nlast").c_str(), 2, 2);
                 frame->SetClientSize(wxSize(500, 300));

@@ -49,6 +49,7 @@ public:
         Start(150);
     }
     int choosers = 0;
+    int copyChoosers = 0;
     int confirmations = 0;
     int errors = 0;
     wxString selectedType;
@@ -63,9 +64,12 @@ public:
                 GetWindowTextW(window, title, 256);
                 wchar_t ownerTitle[256]{};
                 GetWindowTextW(GetWindow(window, GW_OWNER), ownerTitle, 256);
-                if (wxString(title) == "Save As" || wxString(title) == "Save file") {
+                if (wxString(title) == "Save As" || wxString(title) == "Save file" || wxString(title) == "Save Copy") {
                     if (!driver.stage_++) {
-                        ++driver.choosers;
+                        if (wxString(title) == "Save Copy")
+                            ++driver.copyChoosers;
+                        else
+                            ++driver.choosers;
                         if (!driver.selectedType.empty()) NativeDialogs::ChooseFileType(window, driver.selectedType);
                         NativeDialogs::ChooseFile(window, driver.destination_);
                     } else if (driver.cancelChooser_)
@@ -88,7 +92,10 @@ public:
             if (!gtk_widget_get_visible(widget)) continue;
             if (GTK_IS_FILE_CHOOSER(widget)) {
                 if (!stage_++) {
-                    ++choosers;
+                    if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Save Copy")
+                        ++copyChoosers;
+                    else
+                        ++choosers;
                     if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
                     NativeDialogs::ChooseFile(widget, destination_);
                 } else if (cancelChooser_)
@@ -219,6 +226,8 @@ public:
                     untouched.Stop();
                     if (untouched.choosers != 0) std::fprintf(stderr, "Unexpected Save As modifiers: %d\n", modifiers);
                     Require(untouched.choosers == 0, "modified F6 must not invoke Save As");
+                    Require(untouched.copyChoosers == (modifiers == 1 ? 1 : 0),
+                            "exact Ctrl+F6 must invoke Save Copy and other modified F6 must not");
                 }
                 NativeDriver formerBinding;
                 Shortcut(frame, 'S', true, true);

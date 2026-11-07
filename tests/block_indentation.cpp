@@ -314,8 +314,8 @@ public:
                 editor->Send(Message::SetReadOnly, 1);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 for (const auto* label : {"Indent", "Unindent"})
-                    Require(!frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", label)),
-                            "read-only core disables block menus");
+                    Require(frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", label)),
+                            "original read-only block menus remain enabled");
                 editor->IndentLines(true);
                 NativeTab(editor, true);
                 Require(Text(editor) == "\tA\nB", "read-only block commands preserve text");
