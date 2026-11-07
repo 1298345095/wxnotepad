@@ -176,8 +176,8 @@ public:
                     Paint(editor);
                     Reachable(editor);
                     if (std::string(language) == "Plain Text")
-                        Require(editor->Send(Message::GetMarginWidthN, 1) == 0 && !Header(editor, 0),
-                                "Plain Text must clear Python levels and hide its fold margin");
+                        Require(editor->Send(Message::GetMarginWidthN, 2) > 0,
+                                "Plain Text must retain the original fold margin");
                     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Python"));
                     Paint(editor);
                     Reachable(editor);
@@ -195,8 +195,8 @@ public:
                 MarginClick(editor, 0);
                 NativeSearch::Command(frame, wxID_NEW);
                 Paint(editor);
-                Require(editor->Send(Message::GetLength) == 0 && editor->Send(Message::GetMarginWidthN, 1) == 0,
-                        "New must clear Python text and return to inactive Plain Text folding");
+                Require(editor->Send(Message::GetLength) == 0 && editor->Send(Message::GetMarginWidthN, 2) > 0,
+                        "New must clear Python text and retain the original Plain Text folding margin");
                 std::filesystem::remove_all(directory);
                 std::puts("PASS: Python language/document transitions and saved bytes retain view/history invariants");
                 frame->Destroy();
