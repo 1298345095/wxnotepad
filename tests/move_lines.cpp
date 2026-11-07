@@ -1,7 +1,7 @@
 #include "native_search_helpers.h"
 #include "file_helpers.h"
 #include <wx/ffile.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <fstream>
 
 namespace {
@@ -29,7 +29,7 @@ void NativeAlt(EditorFrame* frame, bool upwards, bool shift = false) {
         wxFFile file(focusFile, "wb");
         file.Write("focus:wxnotepad");
     }
-    wxStopWatch focusWait;
+    TestClock::StopWatch focusWait;
     while (focusWait.Time() < 3000) {
         wxString pending;
         {
@@ -51,7 +51,7 @@ void NativeAlt(EditorFrame* frame, bool upwards, bool shift = false) {
         wxFFile file(focusFile, "wb");
         file.Write(wxString("key:alt+") + (shift ? "shift+" : "") + (upwards ? "Up" : "Down"));
     }
-    wxStopWatch wait;
+    TestClock::StopWatch wait;
     while (!received && wait.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);

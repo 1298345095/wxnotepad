@@ -5,7 +5,7 @@
 #include <wx/dialog.h>
 #include <wx/modalhook.h>
 #include <wx/stattext.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <wx/textctrl.h>
 #include <cstdio>
 #include <exception>
@@ -17,7 +17,7 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 bool WaitFor(const std::function<bool()>& ready) {
-    wxStopWatch timer;
+    TestClock::StopWatch timer;
     while (!ready() && timer.Time() < 2000) {
         wxYield();
         wxMilliSleep(1);

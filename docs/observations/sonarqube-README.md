@@ -100,3 +100,39 @@ call `Destroy()`. In the pinned wxWidgets 3.3.3 source,
 `wxAppBase::DeleteAllTLWs` deletes remaining top-level windows during cleanup.
 This frame follows the framework's ownership contract. Each disposition has an
 issue-specific source explanation and independent Standards and Spec review.
+
+## Main gate review after compilation-database cutover
+
+At `921159a`, main's wider new-code period reports eight reliability and six
+security issues. The two S6427 findings in `EditorControl::SwapClipboard` are
+resolved by assigning directly to the optional. Its existing nonempty check,
+line-ending conversion, native encoding conversion and selection rules remain.
+
+The other twelve findings have these specific false-positive explanations:
+
+| Rule | Location | Source evidence |
+| --- | --- | --- |
+| S3584 | `tests/path_text.cpp`, `PathTextApp::OnInit` | The reported allocation is `wxLogStderr`, stored by `wxLog::SetActiveTarget`. |
+| S3584 | `tests/stream_drag.cpp`, `DragApp::OnInit` | The new active logger is retained; the returned previous logger is deleted. |
+| S3584 | `tests/clipboard_smoke.cpp`, `ClipboardApp::OnInit` | The reported allocation is the retained active `wxLogStderr`. |
+| S2259 | `sort_lines_dialog.cpp`, initial radio choice | Every element is assigned by the fixed-size construction loop; the selected index is 0–3 (`Descending` is 1). |
+| S2259 | `sort_lines_dialog.cpp`, column checkbox | The seven-element construction loop initializes index 6 before `Enable`. |
+| S2259 | `align_lines_dialog.cpp`, accepted choice | All five radio pointers are initialized before the modal dialog and the result loop. |
+| S5145 | `editor_test_helpers.h`, expected anchor | A fixed `%lld` conversion formats an integer position. |
+| S5145 | `editor_test_helpers.h`, expected caret | A fixed `%lld` conversion formats an integer position. |
+| S5145 | `url_conversion.cpp`, fixture name | The source is the repository's compile-time `URL_REFERENCE_FIXTURES` TSV, used by the native test. |
+| S5145 | `special_insert.cpp`, fixture row | The source is the repository's compile-time `SPECIAL_INSERT_STATES` TSV. |
+| S5145 | `special_insert.cpp`, expected state | This is a substring of that same fixed fixture row. |
+| S5145 | `insert_tag.cpp`, scanner row | The source is the repository's compile-time `TAG_REFERENCE_FIXTURES` TSV. |
+
+For all three logger findings, the pinned wxWidgets 3.3.3 implementation stores
+the new pointer in `wxLog::ms_pLogger` (`src/common/log.cpp:531`).
+`wxAppBase::CleanUp` deletes it via `delete wxLog::SetActiveTarget(nullptr)`
+(`src/common/appcmn.cpp:164`). The analyzer's issue flows identify these new logger
+allocations, rather than an old target or a frame. The dialog findings miss
+elements initialized by loops; ordinary throwing `new` cannot return a null
+pointer on the continuing path. The diagnostic findings have either numeric
+formatting or repository-owned fixture sources.
+
+Issue-specific transitions and review receipts are retained with the local
+`sonar-gate-fixes-2026-11-07` evidence. No rule profile or gate threshold is changed.

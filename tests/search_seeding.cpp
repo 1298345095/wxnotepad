@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "steady_stopwatch.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
 #include "native_search_helpers.h"
@@ -22,7 +23,7 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 bool Focused(wxWindow* window) {
-    wxStopWatch clock;
+    TestClock::StopWatch clock;
     while (wxWindow::FindFocus() != window && clock.Time() < 2000) {
         wxMilliSleep(10);
         wxYield();
@@ -42,7 +43,7 @@ void ClipboardGesture(EditorControl* editor) {
     }
     frame->Raise();
     editor->SetFocus();
-    wxStopWatch activation;
+    TestClock::StopWatch activation;
     while ((!frame->IsActive() || !editor->HasFocus()) && activation.Time() < 3000) {
         frame->SetTitle(focusTitle);
         wxYield();
@@ -64,7 +65,7 @@ void ClipboardGesture(EditorControl* editor) {
         wxFFile request(path, "wb");
         request.Write("gesture");
     }
-    wxStopWatch clock;
+    TestClock::StopWatch clock;
     while (!received && clock.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);
@@ -160,7 +161,7 @@ public:
                     Require(wxTheClipboard->SetData(new wxTextDataObject(wxString::FromUTF8("剪贴\\path\ntext"))),
                             "native clipboard must accept the Unicode fixture");
                     wxTheClipboard->Close();
-                    wxStopWatch publication;
+                    TestClock::StopWatch publication;
                     while (publication.Time() < 250) {
                         wxYield();
                         wxMilliSleep(10);

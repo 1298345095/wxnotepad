@@ -7,7 +7,7 @@
 #include <wx/app.h>
 #include <wx/ffile.h>
 #include <wx/menu.h>
-#include <wx/stopwatch.h>
+#include "steady_stopwatch.h"
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
@@ -87,7 +87,7 @@ void DialogTab(GtkWidget* dialog, bool shift) {
         wxFFile file(focusFile, "wb");
         file.Write("focus:" + wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(dialog))));
     }
-    wxStopWatch focusWait;
+    TestClock::StopWatch focusWait;
     while (focusWait.Time() < 3000) {
         wxString pending;
         {
@@ -104,7 +104,7 @@ void DialogTab(GtkWidget* dialog, bool shift) {
         wxFFile file(focusFile, "wb");
         file.Write(shift ? "key:shift+Tab" : "key:Tab");
     }
-    wxStopWatch wait;
+    TestClock::StopWatch wait;
     while (gtk_window_get_focus(GTK_WINDOW(dialog)) == previous && wait.Time() < 3000) {
         wxYield();
         wxMilliSleep(10);

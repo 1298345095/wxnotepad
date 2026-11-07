@@ -1,0 +1,14 @@
+[run]
+branch = True
+parallel = True
+patch = subprocess
+data_file = ${WXNOTEPAD_COVERAGE_ROOT?}/.ci/reports/coverage/.coverage
+source =
+    ${WXNOTEPAD_COVERAGE_ROOT?}/tools
+    ${WXNOTEPAD_COVERAGE_ROOT?}/.github/scripts
+
+[report]
+include_namespace_packages = True
+
+[xml]
+output = ${WXNOTEPAD_COVERAGE_ROOT?}/.ci/reports/coverage/python.xml
