@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <span>
+#include <wx/settings.h>
 
 namespace {
 // Scintilla's public color values are BGR; upstream default strings are RGB.
@@ -18,6 +19,24 @@ void InstallStyles(EditorControl& editor, std::span<const SyntaxStyle> styles) {
     }
 }
 } // namespace
+
+void ApplyIndentationGuides(EditorControl& editor, SyntaxLanguage language, bool show, bool simple) {
+    // Notepad4 89b8b36 Styles.cpp::Style_SetIndentGuides.
+    const auto mode = !show                                   ? Scintilla::IndentView::None
+                      : simple                                ? Scintilla::IndentView::Real
+                      : SyntaxFor(language).indentLookForward ? Scintilla::IndentView::LookForward
+                                                              : Scintilla::IndentView::LookBoth;
+    editor.Send(Scintilla::Message::SetIndentationGuides, static_cast<uintptr_t>(mode));
+}
+
+void ApplyLongLineColour(EditorControl& editor) {
+    // The original default style supplies a line foreground but no background.
+    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_3DLIGHT);
+    const auto colour = editor.Send(Scintilla::Message::GetEdgeMode) == 1
+                            ? Colour(0xFFC000)
+                            : background.Red() | (background.Green() << 8U) | (background.Blue() << 16U);
+    editor.Send(Scintilla::Message::SetEdgeColour, colour);
+}
 
 void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
     using Scintilla::Message;
@@ -62,5 +81,9 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
     InstallStyles(editor, definition.styles);
+    editor.Send(Message::StyleSetFore, 37, Colour(0xFF8000));
+    ApplyLongLineColour(editor);
+    const auto guides = editor.Send(Message::GetIndentationGuides);
+    if (guides != 0) ApplyIndentationGuides(editor, language, true, guides == 1);
     editor.Send(Message::ClearDocumentStyle);
 }

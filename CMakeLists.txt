@@ -94,6 +94,7 @@ target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
     src/app/dialogs/column_wrap_dialog.cpp
+    src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
     src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
@@ -330,6 +331,10 @@ if(BUILD_TESTING)
     add_editor_test(fold_all fold_all_commands 60)
     add_editor_test(line_numbers line_number_view 60)
     add_editor_test(whitespace_view visible_whitespace 30)
+    add_editor_test(guides original_guides_and_long_lines 90)
+    add_test(NAME original_guides_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/guides_process.py" "$<TARGET_FILE:guides>")
+    set_tests_properties(original_guides_settings_lifecycle PROPERTIES TIMEOUT 90)
     add_editor_test(indentation_options indentation_options 60)
     add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(file_indentation original_file_indentation 60)

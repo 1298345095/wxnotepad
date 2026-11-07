@@ -38,6 +38,7 @@ struct SyntaxDefinition {
     const char* blockCommentOpen = nullptr;
     const char* blockCommentClose = nullptr;
     int commentStyleLast = 0;
+    bool indentLookForward = false;
 };
 
 std::span<const SyntaxDefinition> SyntaxCatalog();

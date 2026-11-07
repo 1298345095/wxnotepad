@@ -71,6 +71,16 @@ controller would mostly relocate its current responsibilities. Native menu
 bindings can stay in the frame once feature algorithms and dialog construction
 have their own modules.
 
+Indentation guides use the syntax catalog's original look-forward metadata and
+the pinned core's guide drawing. `syntax_scheme.cpp` installs the original
+guide/edge default colors while preserving the native font. The live editor
+edge column holds the current file's long-line boundary; Long Line Settings
+updates it and the global preference together. Column Wrap reads that boundary
+until its separate accepted-value recall is set. Both numeric dialogs reuse
+the original unsigned decimal conversion in `app/dialogs/column_input.h` and
+retain their distinct bounds. The frame applies imported preferences and file
+variables at the existing startup, New, Open and save lifecycle points.
+
 The enclosure and Modify Lines dialogs apply editor commands during their native
 OK handlers, preserving the original ordering where rectangle feedback appears
 while the custom dialog remains open. Recalled text and the Modify Lines
