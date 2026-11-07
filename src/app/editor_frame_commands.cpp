@@ -73,6 +73,8 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->Append(openUtf16, "Open As UTF-16LE...");
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
     file->Append(wxID_SAVEAS, "Save &As...\tF6");
+    saveCopyId_ = wxWindow::NewControlId();
+    file->Append(saveCopyId_, "Save Cop&y...\tCtrl+F6");
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -115,6 +117,15 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
         },
         wxID_SAVEAS);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto result = SaveCopy();
+            if (result.status == SaveStatus::Failed)
+                wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
+        },
+        saveCopyId_);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, saveCopyId_);
     return file;
 }
 
@@ -949,6 +960,9 @@ bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
     // the original exact modifiers before native accelerator matching.
     if (!event.HasAnyModifiers()) {
         wxCommandEvent command(wxEVT_MENU, wxID_SAVEAS);
+        GetEventHandler()->ProcessEvent(command);
+    } else if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown()) {
+        wxCommandEvent command(wxEVT_MENU, saveCopyId_);
         GetEventHandler()->ProcessEvent(command);
     }
     return true;

@@ -191,8 +191,26 @@ SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination, c
     return SaveTo(*destination, decideLoss, fileType);
 }
 
+SaveResult DocumentSession::SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    if (!destination) return {SaveStatus::Cancelled, {}};
+    if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
+    return SaveTo(*destination, decideLoss, std::nullopt, true);
+}
+
 SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
-                                   std::optional<SaveFileType> fileType) {
+                                   std::optional<SaveFileType> fileType, bool copy) {
+    if (copy) {
+        // Original Save Copy opens/creates the destination before cleanup and
+        // legacy-loss confirmation. Cancel keeps a new empty file, while an
+        // existing file retains its bytes. Ordinary Save/Save As retain their
+        // existing safe-write preparation.
+        wxLogNull quiet;
+        wxFile file;
+        if (wxDirExists(destination)) return {SaveStatus::Failed, "Choose a file as the save destination."};
+        const bool opened =
+            wxFileExists(destination) ? file.Open(destination, wxFile::read_write) : file.Create(destination, false);
+        if (!opened || !file.Close()) return {SaveStatus::Failed, "Could not open the destination for writing."};
+    }
     PendingSave temporary;
     // Original EditSaveFile opens the destination before changing text. Prepare
     // the safe-write sibling at that point, without truncating the destination.
@@ -220,6 +238,9 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
         bytes.insert(0, "\xef\xbb\xbf");
     const auto error = WriteSafely(destination, bytes, temporary);
     if (!error.empty()) return {SaveStatus::Failed, error};
+    // Original EditSaveFile/FileSave leave the live identity, scheme and save
+    // point alone for Save Copy; optional cleanup above remains in its history.
+    if (copy) return {SaveStatus::Saved, {}};
     const auto previousLanguage = Language();
     if (fileType) {
         const auto* selected = std::get_if<SyntaxLanguage>(&*fileType);

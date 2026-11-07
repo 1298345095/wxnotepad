@@ -21,6 +21,8 @@ public:
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme);
     SaveResult SaveAs();
+    SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveCopy();
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme);
     OpenResult Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding = std::nullopt);
@@ -38,6 +40,8 @@ private:
     IndentationSettings indentation_;
     DocumentSession document_;
     int automaticLanguageId_;
+    int saveCopyId_;
+    wxString lastSaveCopyDirectory_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
     wxString enclosureBefore_;

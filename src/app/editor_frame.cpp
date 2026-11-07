@@ -9,6 +9,7 @@
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
+#include <wx/filename.h>
 
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
@@ -239,6 +240,36 @@ SaveResult EditorFrame::SaveAs() {
     const auto chosen = ChooseSaveFile(this, "Save As", document_.Language(), document_.Path());
     if (!chosen) return SaveAs(std::nullopt);
     return SaveAs(chosen->path, {}, chosen->type);
+}
+
+SaveResult EditorFrame::SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+    const auto result = document_.SaveCopy(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+    if (result.status == SaveStatus::Saved && destination) lastSaveCopyDirectory_ = wxFileName(*destination).GetPath();
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    UpdateDocumentState();
+    return result;
+}
+
+SaveResult EditorFrame::SaveCopy() {
+    wxString directory = lastSaveCopyDirectory_;
+    wxString filename;
+    if (document_.Path().empty() && directory.empty())
+        directory = wxGetCwd();
+    else if (document_.Path().empty()) {
+        // Original FileSave combines an empty Untitled basename with the last
+        // copy directory; FileDialog::Show then treats its last component as
+        // the filename and adds the current scheme's default extension.
+        wxFileName initial(directory);
+        if (!initial.GetFullName().empty() && !initial.HasExt()) {
+            const auto extensions = SyntaxFor(document_.Language()).extensions;
+            if (!extensions.empty()) initial.SetExt(extensions.front());
+        }
+        directory = initial.GetPath();
+        filename = initial.GetFullName();
+    }
+    const auto chosen =
+        ChooseSaveFile(this, "Save Copy", document_.Language(), document_.Path(), {directory, filename});
+    return SaveCopy(chosen ? std::optional<wxString>(chosen->path) : std::nullopt);
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
