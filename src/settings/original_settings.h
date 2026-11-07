@@ -26,6 +26,7 @@ struct OriginalSettings {
     bool fixTrailingBlanks = false;
     EncodingOptions encoding;
     int zoomLevel = 100;
+    int highlightCurrentLine = 12;
     int longLinesLimit = 80;
     bool markLongLines = false;
     int longLineMode = 1;
@@ -47,4 +48,7 @@ struct OriginalSettings {
     int backspaceUnindents = 2;
     wxString dateTimeShort;
     wxString dateTimeLong;
+    bool viewEOLs = false;
+    bool showWordWrapSymbols = false;
+    int wordWrapSymbols = 2;
 };

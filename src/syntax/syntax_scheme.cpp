@@ -85,5 +85,6 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
     ApplyLongLineColour(editor);
     const auto guides = editor.Send(Message::GetIndentationGuides);
     if (guides != 0) ApplyIndentationGuides(editor, language, true, guides == 1);
+    editor.SetCurrentLineHighlightMode(editor.GetCurrentLineHighlightMode());
     editor.Send(Message::ClearDocumentStyle);
 }

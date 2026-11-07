@@ -1,7 +1,9 @@
 #include "editor/editor_control.h"
 #include "editor/editor_core.h"
+#include "editor/platform/clipboard.h"
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
+#include <cmath>
 #ifdef __WXMSW__
 #include <wx/caret.h>
 #endif
@@ -26,6 +28,10 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     GetCaret()->Show();
 #endif
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    // Original Notepad4.cpp::CreateEditControl current-line preferences.
+    Send(Message::SetCaretLineVisibleAlways, 1);
+    Send(Message::SetCaretLineHighlightSubLine, 1);
+    SetCurrentLineHighlightMode(lineHighlightMode_);
     WXNOTE_TRACE("editor.create", "\ttarget=%p\thandle=%p", static_cast<void*>(this), GetHandle());
     Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
     Send(Message::SetMarginMaskN, 0, 0);
@@ -36,6 +42,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
 #endif
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         core_->DpiChanged();
+        SetCurrentLineHighlightMode(lineHighlightMode_);
         Refresh(false);
         event.Skip();
     });
@@ -109,12 +116,53 @@ void EditorControl::SetLineSelectionMode(LineSelectionMode mode) {
         Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
 }
 
+void EditorControl::SetCurrentLineHighlightMode(LineHighlightMode mode) {
+    lineHighlightMode_ = mode;
+    const auto element = static_cast<uintptr_t>(Scintilla::Element::CaretLineBack);
+    if (mode == LineHighlightMode::None) {
+        Send(Message::ResetElementColour, element);
+        return;
+    }
+    // Original Styles.cpp::Style_HighlightCurrentLine and stlDefault.cpp.
+    // One rounding step preserves ScaleStylePixel's DPI * zoom scaling.
+    const bool outline = mode == LineHighlightMode::OutlineFrame;
+    const int width =
+        outline ? std::max(1, static_cast<int>(std::lround(2.0 * GetDPI().y * Send(Message::GetZoom) / 9600.0))) : 0;
+    Send(Message::SetCaretLineFrame, width);
+    Send(Message::SetCaretLineLayer, static_cast<uintptr_t>(Scintilla::Layer::UnderText));
+    Send(Message::SetElementColour, element, outline ? 0x5AC3C0C2 : 0x5A00FFFF);
+}
+
 void EditorControl::Copy() {
     // Notepad4.cpp::IDM_EDIT_COPY at 89b8b36; see licenses/Notepad4.txt.
     if (Send(Message::GetSelectionEmpty) && lineSelectionMode_ != LineSelectionMode::None)
         Send(Message::LineCopy, static_cast<uintptr_t>(lineSelectionMode_) & 1);
     else
         Send(Message::Copy);
+}
+
+bool EditorControl::CopyAdd() {
+    // Edit.cpp::EditCopyAppend at 89b8b36. The missing-Unicode branch calls
+    // the underlying Copy message, bypassing the application's line preference.
+    if (!EditorClipboard::HasText()) {
+        Send(Message::Copy);
+        return true;
+    }
+    const bool empty = Send(Message::GetSelectionEmpty);
+    if (!empty && Send(Message::SelectionIsRectangle)) return false;
+    const auto length = empty ? Send(Message::GetLength) : Send(Message::GetSelText);
+    std::string added(static_cast<size_t>(length) + 1, '\0');
+    Send(empty ? Message::GetText : Message::GetSelText, empty ? length : 0, reinterpret_cast<intptr_t>(added.data()));
+    added.resize(added.find('\0'));
+    if (added.empty()) return true;
+    auto old = EditorClipboard::ReadPlainText(*GetParent());
+    if (!old) return true;
+    old->append("\r\n\r\n");
+    old->append(added);
+    core::SelectionText text;
+    text.Copy(*old, 65001, false, false);
+    EditorClipboard::Write(*GetParent(), text);
+    return true;
 }
 
 void EditorControl::Cut() {

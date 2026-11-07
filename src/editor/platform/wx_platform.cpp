@@ -4,6 +4,9 @@
 #include <wx/wx.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
+#ifdef __WXMSW__
+#include <wx/graphics.h>
+#endif
 #include <wx/display.h>
 #include <wx/listbox.h>
 #include <chrono>
@@ -117,6 +120,21 @@ public:
         dc_->DrawRectangle(Rect(r));
     }
     void SCICALL FillRectangle(PRectangle r, Fill f) override {
+#ifdef __WXMSW__
+        // Native wxDC brushes ignore alpha on Windows. Keep native text and
+        // opaque drawing, using a graphics context only for translucent fills.
+        if (f.colour.GetAlpha() < 255) {
+            std::unique_ptr<wxGraphicsContext> graphics(wxGraphicsContext::CreateFromUnknownDC(*dc_));
+            if (graphics) {
+                graphics->SetAntialiasMode(wxANTIALIAS_NONE);
+                graphics->SetPen(*wxTRANSPARENT_PEN);
+                graphics->SetBrush(wxBrush(Color(f.colour)));
+                const auto rectangle = Rect(r);
+                graphics->DrawRectangle(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+                return;
+            }
+        }
+#endif
         dc_->SetPen(*wxTRANSPARENT_PEN);
         dc_->SetBrush(wxBrush(Color(f.colour)));
         dc_->DrawRectangle(Rect(r));
