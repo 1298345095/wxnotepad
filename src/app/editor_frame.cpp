@@ -33,6 +33,10 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         warnLineEndings_ = settings->values.warnLineEndings;
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
+        editor_->Send(Scintilla::Message::SetViewEOL, settings->values.viewEOLs);
+        showWordWrapSymbols_ = settings->values.showWordWrapSymbols;
+        wordWrapSymbols_ = settings->values.wordWrapSymbols;
+        ApplyWrapSymbols();
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
         editor_->Send(Scintilla::Message::SetViewWS,
                       static_cast<uintptr_t>(settings->values.viewWhiteSpace ? Scintilla::WhiteSpace::VisibleAlways
@@ -73,6 +77,9 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
+    settings_->values.viewEOLs = editor_->Send(Scintilla::Message::GetViewEOL) != 0;
+    settings_->values.showWordWrapSymbols = showWordWrapSymbols_;
+    settings_->values.wordWrapSymbols = wordWrapSymbols_;
     settings_->values.warnLineEndings = warnLineEndings_;
     settings_->values.defaultEOLMode = defaultEolMode_;
     settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
