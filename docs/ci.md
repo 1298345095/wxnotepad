@@ -58,6 +58,11 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   Installing the system GTK development package does not enable Wayland inside
   the separately built vcpkg GTK. Configure records and checks the actual SDK
   backend macros before compiling; the full native suites still exercise both.
+- The GTK3 overlay in `.github/ports` preserves the pinned 3.24.52 archive and
+  build patches, adding native pathbar button-query cancellation. Explicit vcpkg
+  installation selects this overlay; its files participate in the existing cache
+  key, and vcpkg's package ABI validates restored binaries. Local dependency builds
+  can select the same overlay with `--overlay-ports=<repository>/.github/ports`.
 - CI-only triplets build Release dependencies, avoiding unused Debug builds.
   Normal development triplets and the existing local installations are unchanged.
 - Windows uses the installed Visual Studio C++ developer shell and Ninja, matching

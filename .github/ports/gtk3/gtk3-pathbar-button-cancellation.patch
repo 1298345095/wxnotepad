@@ -1,0 +1,108 @@
+--- a/gtk/gtkpathbar.c
++++ b/gtk/gtkpathbar.c
+@@ -125,7 +125,8 @@
+   GFile *file;
+   GtkWidget *image;
+   GtkWidget *label;
+-  GCancellable *cancellable;
++  GtkPathBar *path_bar; /* valid while the request is not cancelled */
++  GCancellable *cancellable; /* owned, independently of the async callback */
+   guint ignore_changes : 1;
+   guint file_is_hidden : 1;
+ };
+@@ -1320,6 +1321,25 @@
+ };
+ 
+ static void
++button_data_cancel (ButtonData *button_data)
++{
++  GCancellable *cancellable = button_data->cancellable;
++
++  if (cancellable == NULL)
++    return;
++
++  button_data->cancellable = NULL;
++
++  /* Dispose/finalize cancels requests before the path bar can go away.
++   * An already-cancelled request must not access its former path bar.
++   */
++  if (!g_cancellable_is_cancelled (cancellable))
++    cancel_cancellable (button_data->path_bar, cancellable);
++
++  g_object_unref (cancellable);
++}
++
++static void
+ set_button_image_get_info_cb (GCancellable *cancellable,
+ 			      GFileInfo    *info,
+ 			      const GError *error,
+@@ -1341,7 +1361,7 @@
+ 
+   g_assert (cancellable == data->button_data->cancellable);
+   cancellable_async_done (data->path_bar, cancellable);
+-  data->button_data->cancellable = NULL;
++  g_clear_object (&data->button_data->cancellable);
+ 
+   if (error)
+     goto out;
+@@ -1405,10 +1425,7 @@
+       data->path_bar = path_bar;
+       data->button_data = button_data;
+ 
+-      if (button_data->cancellable)
+-	{
+-	  cancel_cancellable (path_bar, button_data->cancellable);
+-	}
++      button_data_cancel (button_data);
+ 
+       button_data->cancellable =
+         _gtk_file_system_get_info (path_bar->priv->file_system,
+@@ -1417,6 +1434,7 @@
+ 				   set_button_image_get_info_cb,
+ 				   data);
+       add_cancellable (path_bar, button_data->cancellable);
++      g_object_ref (button_data->cancellable);
+       break;
+ 
+     case DESKTOP_BUTTON:
+@@ -1430,10 +1448,7 @@
+       data->path_bar = path_bar;
+       data->button_data = button_data;
+ 
+-      if (button_data->cancellable)
+-	{
+-	  cancel_cancellable (path_bar, button_data->cancellable);
+-	}
++      button_data_cancel (button_data);
+ 
+       button_data->cancellable =
+         _gtk_file_system_get_info (path_bar->priv->file_system,
+@@ -1442,6 +1457,7 @@
+ 				   set_button_image_get_info_cb,
+ 				   data);
+       add_cancellable (path_bar, button_data->cancellable);
++      g_object_ref (button_data->cancellable);
+       break;
+     default:
+       break;
+@@ -1451,6 +1467,7 @@
+ static void
+ button_data_free (ButtonData *button_data)
+ {
++  button_data_cancel (button_data);
+   if (button_data->file)
+     g_object_unref (button_data->file);
+   button_data->file = NULL;
+@@ -1557,8 +1574,12 @@
+   file_is_hidden = !! file_is_hidden;
+   /* Is it a special button? */
+   button_data = g_new0 (ButtonData, 1);
++  button_data->path_bar = path_bar;
+   button_data->type = find_button_type (path_bar, file, root_file);
+   button_data->button = gtk_toggle_button_new ();
++  /* Cancel before GtkContainer's destroy handler destroys the image. */
++  g_signal_connect_swapped (button_data->button, "destroy",
++                            G_CALLBACK (button_data_cancel), button_data);
+   atk_obj = gtk_widget_get_accessible (button_data->button);
+   gtk_widget_set_focus_on_click (button_data->button, FALSE);
+   gtk_widget_add_events (button_data->button, GDK_SCROLL_MASK);
