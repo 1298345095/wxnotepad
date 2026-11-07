@@ -131,12 +131,6 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
-      - name: Analyze SonarCloud with the Linux compilation database
-        if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
       - name: Preserve logs and test evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -151,7 +145,6 @@ jobs:
             .ci/build/diagnostic-cmake/close_smoke*
             .ci/build/cmake/CMakeFiles/CMakeConfigureLog.yaml
             .ci/build/cmake/compile_commands.json
-            .scannerwork/report-task.txt
             .ci/build/cmake/clipboard_smoke
             .ci/build/cmake/clipboard_peer
             .ci/build/cmake/stream_drag
@@ -160,6 +153,106 @@ jobs:
             .ci/build/notepad4-source.tar
             .ci/vcpkg/buildtrees/**/*.log
             vcpkg.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+
+  coverage:
+    name: Linux coverage / SonarCloud
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PYTHONUTF8: '1'
+      WXNOTEPAD_COVERAGE_ROOT: ${{ github.workspace }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install fixed coverage test dependency
+        id: coverage_tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/reports/coverage
+          python -m venv .ci/coverage-venv
+          .ci/coverage-venv/bin/python -m pip install --disable-pip-version-check \
+            -r .github/requirements-coverage.txt 2>&1 | tee .ci/reports/coverage/dependency.log
+      - name: Measure Python helper tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          .ci/coverage-venv/bin/python -m coverage run -m unittest discover -s tests -p 'test_*.py' -v \
+            2>&1 | tee .ci/reports/coverage/python-tests.log
+      - name: Set up dependencies
+        uses: ./.github/actions/dependencies
+        with:
+          profile: gui
+      - name: Build instrumented application and tests
+        id: build
+        shell: bash
+        run: .ci/coverage-venv/bin/python -m coverage run .github/scripts/ci.py coverage-build
+      - name: Enable Linux native core dumps
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/reports/cores
+          sudo sysctl -w "kernel.core_pattern=$PWD/.ci/reports/cores/core.%p.%E"
+      - name: Measure private X11
+        shell: bash
+        run: |
+          ulimit -c unlimited
+          .ci/coverage-venv/bin/python -m coverage run .github/scripts/ci.py test \
+            --backend x11 --cmake-dir .ci/build/coverage-cmake
+      - name: Measure private Wayland
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        run: |
+          ulimit -c unlimited
+          .ci/coverage-venv/bin/python -m coverage run .github/scripts/ci.py test \
+            --backend wayland --cmake-dir .ci/build/coverage-cmake
+      - name: Collect native crash evidence
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        run: .ci/coverage-venv/bin/python -m coverage run .github/scripts/collect_cores.py
+      - name: Collect native coverage
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        run: .ci/coverage-venv/bin/python -m coverage run .github/scripts/collect_coverage.py
+      - name: Combine Python coverage
+        if: ${{ !cancelled() && steps.coverage_tools.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          .ci/coverage-venv/bin/python -m coverage combine --keep
+          .ci/coverage-venv/bin/python -m coverage xml
+          .ci/coverage-venv/bin/python -m coverage report
+      - name: Analyze SonarCloud with coverage and compilation database
+        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+      - name: Preserve coverage and test evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: evidence-coverage-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .ci/reports/
+            .ci/build/coverage-cmake/Testing/Temporary/
+            .ci/build/coverage-cmake/CMakeFiles/CMakeConfigureLog.yaml
+            .ci/build/coverage-cmake/compile_commands.json
+            .ci/build/coverage-cmake/**/*.gcno
+            .ci/build/coverage-cmake/**/*.gcda
+            .ci/build/original-core/wxnotepad-source.json
+            .ci/build/notepad4-source.tar
+            .scannerwork/report-task.txt
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30

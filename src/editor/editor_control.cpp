@@ -177,12 +177,12 @@ void EditorControl::SwapClipboard(bool defaultEncoding) {
     }
     auto text = EditorClipboard::ReadPlainText(*GetParent());
     if (!text || text->empty()) return;
-    *text = core::Document::TransformLineEnds(*text, static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode)));
+    text = core::Document::TransformLineEnds(*text, static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode)));
     const bool protectedDefault = defaultEncoding && Send(Message::GetReadOnly);
     size_t nativeLength = 0;
     if (defaultEncoding)
-        *text = NativeDefaultEncodingText(wxString::FromUTF8(*text), protectedDefault ? &nativeLength : nullptr)
-                    .ToStdString(wxConvUTF8);
+        text = NativeDefaultEncodingText(wxString::FromUTF8(*text), protectedDefault ? &nativeLength : nullptr)
+                   .ToStdString(wxConvUTF8);
     // Protected writes insert nothing: retain the original raw native-byte
     // displacement and SetSel's clamp. Writable replacements use UTF-8 bytes.
     const auto replacementLength = static_cast<intptr_t>(protectedDefault ? nativeLength : text->size());
