@@ -29,6 +29,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     GetCaret()->Show();
 #endif
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    occurrences_ = std::make_unique<OccurrenceMarking>(*this);
     // Original Notepad4.cpp::CreateEditControl current-line preferences.
     Send(Message::SetCaretLineVisibleAlways, 1);
     Send(Message::SetCaretLineHighlightSubLine, 1);
@@ -275,6 +276,9 @@ void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
 }
 
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
+    if (occurrences_ &&
+        (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer))
+        occurrences_->Stop();
     core_->SelectionRevision();
     const auto result = core_->WndProc(message, wParam, lParam);
     if (message == Message::ClearAll) {

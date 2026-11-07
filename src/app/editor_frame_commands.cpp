@@ -742,6 +742,25 @@ wxMenu* EditorFrame::CreateViewMenu() {
     view->AppendSeparator();
     AppendDisplayCommands(view);
     AppendCurrentLineCommands(view);
+    auto* occurrences = new wxMenu;
+    for (const auto& [label, bit] : {std::pair{"&Off", 1}, std::pair{"Match &Case", 2},
+                                     std::pair{"Match &Whole Word Only", 4}, std::pair{"&Bookmark Matched Line", 8}}) {
+        const int id = wxWindow::NewControlId();
+        occurrences->AppendCheckItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, bit](wxCommandEvent&) { editor_->Occurrences().SetOptions(editor_->Occurrences().Options() ^ bit); },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, bit](wxUpdateUIEvent& event) {
+                const int options = editor_->Occurrences().Options();
+                event.Check(bit == 1 ? !(options & 1) : (options & bit) != 0);
+                event.Enable(bit == 1 || (options & 1));
+            },
+            id);
+    }
+    view->AppendSubMenu(occurrences, "Mark &Occurrences");
     const int matchBraces = wxWindow::NewControlId();
     view->AppendCheckItem(matchBraces, "Visual &Brace Matching\tCtrl+Shift+V");
     Bind(

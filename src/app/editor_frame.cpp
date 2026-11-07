@@ -21,6 +21,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                          : SyntaxDetectionOptions{}),
       search_(*editor_) {
     const auto& preferences = settings ? settings->values : defaults_;
+    editor_->Occurrences().SetOptions(preferences.markOccurrences);
     editor_->SetCodeFoldingVisible(preferences.showCodeFolding);
     editor_->SetCurrentBlockHighlighted(preferences.highlightCurrentBlock);
     ApplyIndentationGuides(*editor_, document_.Language(), preferences.showIndentGuides,
@@ -115,6 +116,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
         10 * static_cast<int>(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
     CaptureSearchSettings(search_, settings_->values);
     settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
+    settings_->values.markOccurrences = editor_->Occurrences().Options();
     return settings_->Save(explicitSave);
 }
 
