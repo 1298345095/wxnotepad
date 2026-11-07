@@ -15,8 +15,12 @@
 #include <wx/msgdlg.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
+#include <wx/strconv.h>
 #include <cstdlib>
 #include "app/dialogs/modify_lines_dialog.h"
+#ifdef __WXMSW__
+#include <windows.h>
+#endif
 
 namespace {
 void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
@@ -151,6 +155,7 @@ wxMenu* EditorFrame::CreateEditMenu() {
     Bind(
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::CanPaste)); },
         wxID_PASTE);
+    AppendFileNameCopyCommands(edit);
     const int cutLine = wxWindow::NewControlId();
     const int copyLine = wxWindow::NewControlId();
     const int deleteLine = wxWindow::NewControlId();
@@ -794,6 +799,14 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F9 && event.ControlDown() && event.ShiftDown()) {
+        if (!event.AltDown() && !event.MetaDown()) InsertFileName(FileNamePart::FullPath);
+        return true;
+    }
+    if (event.GetKeyCode() == WXK_F9 && event.AltDown() && event.ShiftDown() && !event.ControlDown()) {
+        if (!event.MetaDown()) CopyFileName(FileNamePart::FullPath);
+        return true;
+    }
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
         if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
             editor_->SplitLines();
@@ -844,8 +857,56 @@ void EditorFrame::InsertDateTime(bool shortDate) {
                             shortDate ? preferences.dateTimeShort : preferences.dateTimeLong);
 }
 
+void EditorFrame::InsertFileName(FileNamePart part) {
+    auto text = document_.FileNameText(part);
+#ifdef __WXMSW__
+    if (document_.IsDefaultEncoding() && !text.empty()) {
+        // Original insertion uses WideCharToMultiByte(cpEdit, 0), while Copy
+        // publishes the unchanged Unicode value. Our core stores UTF-8 even
+        // for default-ANSI documents, so round-trip that native conversion here.
+        const auto wide = text.ToStdWstring();
+        const int size =
+            WideCharToMultiByte(CP_ACP, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
+        std::string legacy(size, '\0');
+        WideCharToMultiByte(CP_ACP, 0, wide.data(), static_cast<int>(wide.size()), legacy.data(), size, nullptr,
+                            nullptr);
+        text = wxString(legacy.data(), wxConvLocal, legacy.size());
+    }
+#endif
+    const auto bytes = text.ToStdString(wxConvUTF8);
+    editor_->Send(Scintilla::Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
+}
+
+void EditorFrame::CopyFileName(FileNamePart part) {
+    const auto text = document_.FileNameText(part);
+    const auto bytes = text.ToStdString(wxConvUTF8);
+    editor_->Send(Scintilla::Message::CopyText, bytes.size(), reinterpret_cast<intptr_t>(bytes.c_str()));
+}
+
+void EditorFrame::AppendFileNameCopyCommands(wxMenu* edit) {
+    auto* copy = new wxMenu;
+    for (const auto& [label, part] : {std::pair{"&File Name", FileNamePart::BaseName},
+                                      std::pair{"File Name and &Ext.\tShift+F9", FileNamePart::FileName},
+                                      std::pair{"Full &Path Name\tAlt+Shift+F9", FileNamePart::FullPath}}) {
+        const int id = wxWindow::NewControlId();
+        copy->Append(id, label);
+        Bind(wxEVT_MENU, [this, part](wxCommandEvent&) { CopyFileName(part); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    edit->AppendSubMenu(copy, "Cop&y to Clipboard");
+}
+
 void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
     auto* insert = new wxMenu;
+    for (const auto& [label, part] : {std::pair{"&File Name", FileNamePart::BaseName},
+                                      std::pair{"File Name and E&xtension\tCtrl+F9", FileNamePart::FileName},
+                                      std::pair{"Full &Path Name\tCtrl+Shift+F9", FileNamePart::FullPath}}) {
+        const int id = wxWindow::NewControlId();
+        insert->Append(id, label);
+        Bind(wxEVT_MENU, [this, part](wxCommandEvent&) { InsertFileName(part); }, id);
+        Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+    }
+    insert->AppendSeparator();
     auto* timestamps = new wxMenu;
     const auto add = [this](wxMenu* menu, const char* label, DateTimeInsertion command) {
         const int id = wxWindow::NewControlId();

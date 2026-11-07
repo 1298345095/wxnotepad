@@ -23,6 +23,7 @@ struct SaveCleanupOptions {
 };
 
 enum class SaveStatus { Saved, Cancelled, Failed };
+enum class FileNamePart { BaseName, FileName, FullPath };
 struct SaveResult {
     SaveStatus status;
     wxString error;
@@ -47,6 +48,7 @@ public:
     explicit DocumentSession(EditorControl& editor, EncodingOptions options = {}, SyntaxDetectionOptions detection = {})
         : editor_(editor), encodingOptions_(options), detection_(detection) {}
     const wxString& Path() const { return path_; }
+    wxString FileNameText(FileNamePart part) const;
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme);

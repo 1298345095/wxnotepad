@@ -58,6 +58,9 @@ private:
     void AppendEditingCommands(wxMenu* edit);
     void AppendDateTimeCommands(wxMenu* edit);
     void InsertDateTime(bool shortDate);
+    void InsertFileName(FileNamePart part);
+    void CopyFileName(FileNamePart part);
+    void AppendFileNameCopyCommands(wxMenu* edit);
     void AppendSearchCommands(wxMenu* edit);
     void AppendNavigationCommands(wxMenu* edit);
     void AppendLineEndingCommands(wxMenu* edit);
