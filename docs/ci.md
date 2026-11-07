@@ -151,6 +151,10 @@ The complete X11 and Wayland suites collect into a fresh coverage tree. GCC writ
 counters on orderly process exit; a forcibly terminated process is not evidence
 of executed application lines. Local-filesystem profile locking merges counters
 from independent test processes. The existing private-session sharder is reused.
+The byte-exact large-file language test has a 120-second guard in coverage builds
+and 60 seconds in ordinary builds. The instrumented scenario completed all checks
+in 88.50 seconds under controlled CPU contention. Supported Linux CMake versions
+use SIGQUIT on timeout so the existing crash collector can preserve a core/stack.
 
 `collect_coverage.py` runs GCC 13's `gcov` separately for every notes file, including
 translation units without counters. It preserves unmodified maintained `src/`
