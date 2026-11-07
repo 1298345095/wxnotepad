@@ -4,6 +4,7 @@
 #include "editor/platform/custom_case.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
+#include "app/dialogs/insert_tag_dialog.h"
 #include "app/dialogs/align_lines_dialog.h"
 #include "app/dialogs/sort_lines_dialog.h"
 #include "app/dialogs/tab_settings_dialog.h"
@@ -260,6 +261,10 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     auto* enclosure = new wxMenu;
     const int customEnclosure = wxWindow::NewControlId();
     enclosure->Append(customEnclosure, "&With...\tAlt+Q");
+    const int encloseTag = wxWindow::NewControlId();
+    enclosure->Append(encloseTag, "&HTML/XML Tag...\tAlt+X");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowInsertTagDialog(this, *editor_); }, encloseTag);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, encloseTag);
     enclosure->AppendSeparator();
     Bind(
         wxEVT_MENU,
@@ -794,6 +799,11 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == 'X' && event.AltDown() && !event.ControlDown() && !event.ShiftDown() &&
+        !event.MetaDown()) {
+        ShowInsertTagDialog(this, *editor_);
+        return true;
+    }
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
         if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
             editor_->SplitLines();
@@ -846,6 +856,11 @@ void EditorFrame::InsertDateTime(bool shortDate) {
 
 void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
     auto* insert = new wxMenu;
+    const int insertTag = wxWindow::NewControlId();
+    insert->Append(insertTag, "&HTML/XML Tag...\tAlt+X");
+    insert->AppendSeparator();
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowInsertTagDialog(this, *editor_); }, insertTag);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, insertTag);
     auto* timestamps = new wxMenu;
     const auto add = [this](wxMenu* menu, const char* label, DateTimeInsertion command) {
         const int id = wxWindow::NewControlId();

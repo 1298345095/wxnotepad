@@ -100,6 +100,7 @@ add_library(app_shell STATIC
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
+    src/app/dialogs/insert_tag_dialog.cpp
     src/app/dialogs/modify_lines_dialog.cpp
     src/app/dialogs/go_to_line_dialog.cpp
     src/app/dialogs/search_feedback_dialog.cpp
@@ -269,6 +270,10 @@ if(BUILD_TESTING)
     add_editor_test(move_lines original_move_lines 60)
     add_editor_test(block_comments original_toggle_block_comment 60)
     add_editor_test(enclose_selection original_enclose_selection 60)
+    add_editor_test(insert_tag original_insert_tag 90)
+    target_compile_definitions(insert_tag PRIVATE
+        "TAG_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/tag_reference.tsv\""
+        "TAG_STATE_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/tag_state_reference.tsv\"")
     add_editor_test(strip_blanks original_strip_blanks 60)
     add_editor_test(compress_whitespace original_compress_whitespace 60)
     add_editor_test(blank_lines original_blank_lines 60)
