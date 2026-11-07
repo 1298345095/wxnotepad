@@ -160,8 +160,19 @@ void NativeAlt(EditorFrame* frame, bool merge, bool control = false, bool shift 
                                                         {VK_SHIFT, static_cast<BYTE>(shift ? 0x80 : 0)}});
     Require(handled || control || shift, "native Alt+B/Alt+R accelerator is handled");
 #else
+    auto* editor = frame->Editor();
     bool received = false;
-    NativeKeys::Shortcut(frame, merge ? 'B' : 'R', control, true, shift, &received);
+    wxEvtHandler observer;
+    observer.Bind(wxEVT_KEY_UP, [&received, merge](wxKeyEvent& event) {
+        if (event.GetKeyCode() == (merge ? 'B' : 'R')) received = true;
+        event.Skip();
+    });
+    editor->PushEventHandler(&observer);
+    struct RemoveObserver {
+        EditorControl* editor;
+        ~RemoveObserver() { editor->PopEventHandler(false); }
+    } removeObserver{editor};
+    NativeKeys::Shortcut(frame, merge ? 'B' : 'R', control, true, shift);
     Require(received, "actual private-display blank-line shortcut release reaches editor");
 #endif
     wxYield();
