@@ -63,6 +63,7 @@ add_library(editor_runtime STATIC
     src/editor/strip_characters.cpp
     src/editor/tab_conversion.cpp
     src/editor/number_radix.cpp
+    src/editor/occurrence_marking.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
@@ -307,6 +308,18 @@ if(BUILD_TESTING)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(current_line original_current_line_highlight 60)
+    add_editor_test(bookmark_history original_bookmark_history 90)
+    target_compile_definitions(bookmark_history PRIVATE
+        "BOOKMARK_HISTORY_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/bookmark_history_reference.tsv\""
+        "BOOKMARK_HISTORY_FILES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/bookmark_history_files.tsv\"")
+    add_test(NAME original_bookmark_history_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/bookmark_history_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_bookmark_history_preference PROPERTIES TIMEOUT 90)
+    if(WIN32)
+        add_test(NAME original_bookmark_history_dpi96 COMMAND bookmark_history)
+        set_tests_properties(original_bookmark_history_dpi96 PROPERTIES TIMEOUT 90
+            ENVIRONMENT "WXNOTEPAD_BOOKMARK_DPI96=1")
+    endif()
     add_editor_test(visual_brace original_visual_brace_matching 90)
     target_include_directories(visual_brace PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
@@ -425,6 +438,10 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_settings_process.py" "$<TARGET_FILE:search_settings>")
     set_tests_properties(original_search_settings PROPERTIES TIMEOUT 90)
     add_editor_test(find_all original_find_all 30)
+    add_editor_test(occurrence_marking original_occurrence_marking 30)
+    add_test(NAME original_occurrence_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/occurrence_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_occurrence_settings PROPERTIES TIMEOUT 60)
     add_editor_test(bookmarks original_bookmark_commands 30)
     add_editor_test(search_options_smoke find_literal_options 30)
     add_editor_test(replace_smoke replace_literal_one 30)

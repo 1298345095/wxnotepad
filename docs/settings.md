@@ -59,6 +59,15 @@ the subline choice. Current-line styling uses the original default colors and
 alpha under the text, with frame width scaled by window DPI and zoom. It follows
 the existing explicit/exit-save lifecycle and survives document/language changes.
 
+`[Settings] ShowBookmarkMargin` defaults to `0`; View > Bookmark Margin and
+Ctrl+Shift+M switch shared manual/Find All bookmarks between the original vertical
+green symbol and alpha-40 green line background. `ChangeHistoryMarker` defaults
+to `0` and retains the original integer-prefix value on import and save. The
+native toggle selects `3` (enabled plus margin markers) or `0`. Enabling from
+disabled requires the original `CanUndo == false` gate and preserves pending
+Undo/Redo actions. Both preferences use the existing explicit/exit-save lifecycle
+and omit defaults. See [bookmark and change-history evidence](observations/bookmark-history.md).
+
 `[Settings] ShowIndentGuides` and `MarkLongLines` default to `0`. View exposes
 Indentation Guides (Ctrl+Shift+G), Long Line Marker (Ctrl+Shift+L), and Long Line
 Settings. Guides follow the original language metadata: Plain Text and Python
@@ -91,6 +100,14 @@ Find/Replace extends this store with the original `[Settings]` fields:
 | `SaveFindReplace` | `0` | Loads/saves submitted query and replacement histories and packed search flags. |
 | `FindReplaceOption` | `2` | Original low option bits and upper dialog-behavior bits, including No Find Wrap. |
 | `FindReplaceFlag` | `0` | Original search flags and search-option bits; used only with SaveFindReplace enabled. |
+| `MarkOccurrences` | `1` | Bit `1` enables automatic occurrence marking, `2` matches case, `4` requires a whole-word selection and `8` bookmarks matched lines. Raw integer bits are retained. |
+
+The View menu exposes Mark Occurrences with Off, Match Case, Match Whole Word Only
+and Bookmark Matched Line. Off toggles the enable bit and retains the other options.
+Automatic occurrences and Find All share indicator 8 and bookmark marker 0, including
+the original clearing and ownership transitions. Single-line nonempty selections
+seed automatic marking without changing the Find/Replace query or history. Work
+continues in the original measured 1 MiB chunks with a 100 ms time slot.
 
 The View menu exposes Save Find/Replace, Copy Selection As Find Text and Copy
 Paste Buffer As Find Text. Submitted searches retain their query/options through

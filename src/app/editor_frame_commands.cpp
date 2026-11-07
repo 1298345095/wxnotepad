@@ -742,10 +742,30 @@ wxMenu* EditorFrame::CreateViewMenu() {
     view->AppendSeparator();
     AppendDisplayCommands(view);
     AppendCurrentLineCommands(view);
+    auto* occurrences = new wxMenu;
+    for (const auto& [label, bit] : {std::pair{"&Off", 1}, std::pair{"Match &Case", 2},
+                                     std::pair{"Match &Whole Word Only", 4}, std::pair{"&Bookmark Matched Line", 8}}) {
+        const int id = wxWindow::NewControlId();
+        occurrences->AppendCheckItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, bit](wxCommandEvent&) { editor_->Occurrences().SetOptions(editor_->Occurrences().Options() ^ bit); },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, bit](wxUpdateUIEvent& event) {
+                const int options = editor_->Occurrences().Options();
+                event.Check(bit == 1 ? !(options & 1) : (options & bit) != 0);
+                event.Enable(bit == 1 || (options & 1));
+            },
+            id);
+    }
+    view->AppendSubMenu(occurrences, "Mark &Occurrences");
     const int matchBraces = wxWindow::NewControlId();
     view->AppendCheckItem(matchBraces, "Visual &Brace Matching\tCtrl+Shift+V");
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching()); },
-         matchBraces);
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching()); },
+        matchBraces);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->VisualBraceMatching()); }, matchBraces);
     view->AppendSeparator();
     AppendFoldCommands(view);
@@ -845,6 +865,20 @@ void EditorFrame::AppendDisplayCommands(wxMenu* view) {
         wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible()); },
         lineNumbers);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->LineNumbersVisible()); }, lineNumbers);
+    const int bookmarkMargin = wxWindow::NewControlId();
+    view->AppendCheckItem(bookmarkMargin, "&Bookmark Margin\tCtrl+Shift+M");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetBookmarkMarginVisible(!editor_->BookmarkMarginVisible()); },
+        bookmarkMargin);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->BookmarkMarginVisible()); },
+        bookmarkMargin);
+    const int changeHistory = wxWindow::NewControlId();
+    view->AppendCheckItem(changeHistory, "Change &History Marker");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleChangeHistory(); }, changeHistory);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->ChangeHistoryOptions() != 0); },
+        changeHistory);
     const int whitespace = wxWindow::NewControlId();
     view->AppendCheckItem(whitespace, "Show &Whitespace\tCtrl+Shift+8");
     Bind(
@@ -1306,6 +1340,9 @@ bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
         editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible());
+    else if (event.GetKeyCode() == 'M' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
+        editor_->SetBookmarkMarginVisible(!editor_->BookmarkMarginVisible());
     else
         return false;
     return true;
