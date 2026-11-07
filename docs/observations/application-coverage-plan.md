@@ -8,7 +8,7 @@ Application/build sources were inspected in the preparation worktree; the curren
 ## Recommendation
 
 Add an independent Ubuntu 24.04 coverage-and-Sonar job with no dependency on the ordinary native-test job.
-Build one opt-in coverage tree, reuse the X11/Wayland sharder, generate GCC 13's plain `.gcov` reports,
+Build one opt-in coverage tree, reuse the X11/Wayland sharder, generate per-TU GCC 13 `.gcov` reports,
 and scan in that same job. Move the existing Linux Sonar step there, retaining one scan location per workflow.
 Keep ordinary builds/tests, resource observations, diagnostics and development artifacts on their current
 paths. Independent jobs can overlap, subject to runner availability and concurrency limits. [CI] [Jobs]
@@ -86,11 +86,15 @@ Generate and scan within the same checkout/job so absolute source paths remain v
 its own real compilation database, generated headers and Release SDK. The ordinary build tree exists
 only in the other job. Retain the current source scope and diagnostics setting. [SonarConfig] [CI] [Runners]
 
-Enumerate coverage-tree `.gcno` files, including objects without a `.gcda`; discovery by `.gcda` alone
-would silently omit never-run translation units. Invoke `gcov-13 -b -c -p` once with the complete notes/object
-list in a scratch report directory. GCC sums contributions when given multiple inputs; path-preserving
-names distinguish same-basename sources. Do not run a per-object loop that overwrites shared-header reports.
-Inspect one shared executable header's combined counts during acceptance. [Gcov]
+Enumerate all coverage-tree `.gcno` files, including objects without `.gcda`; notes-only inputs preserve
+never-run translation units. Invoke `gcov-13 -b -c -p -l` separately for each notes file into the report
+directory: long names distinguish header contributions from different source files. [Gcov] [ProbeLong]
+
+A GCC 13.3 probe used four concurrent processes/two executables sharing objects and an unlinked notes-only
+TU. Counts merged correctly; the untouched return/TU remained `#####`. Shared-header counts used the
+valid partial-block suffix (`4*` for four hits), which stays intact in raw reports. The all-notes invocation dropped
+header function/branch records, even with `-l`. Per-TU `-l` retained separate header reports with taken
+counts 4/0 and never/never. Original counters and all variants are archived with the logs. [Probe] [ProbeLong]
 
 The collector should retain whole, unmodified `.gcov` files whose `Source:` resolves inside repository
 `src/`, including maintained/generated headers. It can discard reports for tests, staged upstream core,
@@ -103,10 +107,12 @@ Write the retained files to `.ci/reports/coverage/gcov` and set
 `.gcov` reports, not gcovr XML. Keep `sonar.coverage.exclusions=tests/**`. Preserve collector output,
 coverage CTest evidence and the coverage compilation database alongside existing evidence. [Parameters]
 
-Direct gcov already supplies the supported format, zero-hit records, source attribution and multi-input
-aggregation needed here. gcovr would add Python packaging/version maintenance without closing a demonstrated
-gap. If the pinned-tool acceptance run reveals a real aggregation/format problem, gcovr's `--sonarqube`
-exports generic XML for `sonar.coverageReportPaths`; compare that specific fix before adding it. [Gcovr] [Parameters]
+Prefer the proven per-TU native output, with Sonar's merge of duplicate-header line/branch records still
+requiring acceptance verification. gcovr now has a concrete potential role: aggregate contributions before
+generic XML import via `--sonarqube`/`sonar.coverageReportPaths`, if native import loses that information.
+It adds a pinned Python dependency and merge/filter defaults to validate. Its current GCC 13 path parses
+gcov text, so a JSON workaround cannot be assumed. Compare that bounded alternative if the native import
+check fails; gcovr was neither installed nor tested here. [Gcovr] [GcovrMerge] [GcovrParser] [Parameters]
 
 ## Implementation order and acceptance
 
@@ -117,7 +123,9 @@ exports generic XML for `sonar.coverageReportPaths`; compare that specific fix b
    Test/report failure must prevent a successful coverage scan; retain failure logs through `always()` evidence upload.
 3. In one clean instrumented run, verify a known executed application line has hits and a known untouched
    application branch body has zero hits, then confirm both on the matching Sonar source lines.
-   Include an unrun maintained translation unit and a shared header in this check; remove temporary probes.
+   Include an unrun maintained TU; for shared headers, check imported condition counts against known
+   source behavior using complementary TU branch outcomes and a repeated-same-outcome control to check
+   branch union and deduplication. Line-hit counts alone cannot establish this.
 4. For the first real feature among #150–#156, add its behavior tests through the established test seam,
    exercise meaningful successful/empty/boundary outcomes, and inspect imported new-code coverage against
    the unchanged gate. Report imports and assertion execution alone do not establish feature coverage.
@@ -125,10 +133,9 @@ exports generic XML for `sonar.coverageReportPaths`; compare that specific fix b
    Use existing build/provenance records to identify the ordinary executable for development artifacts and
    resource observations. `tools/resources.py` already captures build context. [Resources] [Helpers]
 
-This research ran no build, native tests, compiler probe or dependency installation. Runtime overhead,
-the exact GCC 13 report/header import behavior and the first feature's achieved coverage remain to be
-measured during implementation. Linux coverage also leaves Windows-only branches for their native tests;
-this plan provides no Windows coverage measurement.
+Research included the bounded GCC probe above; it ran no application build/native suite or dependency
+installation. Application overhead, Sonar's duplicate-header merge and first-feature coverage remain
+unmeasured. Linux coverage leaves Windows-only branches to native tests without a Windows coverage report.
 
 [CI]: https://github.com/1298345095/wxnotepad/blob/22f67d444fdb6ecc3bb890f13e4d32d7460fa3d4/.github/workflows/ci.yml
 [SonarConfig]: https://github.com/1298345095/wxnotepad/blob/22f67d444fdb6ecc3bb890f13e4d32d7460fa3d4/sonar-project.properties
@@ -147,6 +154,10 @@ this plan provides no Windows coverage measurement.
 [CMakeCompile]: https://cmake.org/cmake/help/latest/command/target_compile_options.html
 [CMakeLink]: https://cmake.org/cmake/help/latest/command/target_link_options.html
 [Gcovr]: https://gcovr.com/en/stable/output/sonarqube.html
+[GcovrMerge]: https://gcovr.com/en/stable/manpage.html
+[GcovrParser]: https://gcovr.com/en/stable/guide/gcov_parser.html
+[Probe]: <E:/NewNotepad4/wxnotepad-evidence/sonar-analysis-config-2026-11-07/gcov-probe/variants.log>
+[ProbeLong]: <E:/NewNotepad4/wxnotepad-evidence/sonar-analysis-config-2026-11-07/gcov-probe/per-tu-long.log>
 [Jobs]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobs
 [Runners]: https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job
 [Caches]: https://docs.github.com/en/actions/concepts/workflows-and-actions/dependency-caching
