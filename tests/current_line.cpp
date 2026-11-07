@@ -2,7 +2,6 @@
 #include "editor/editor_control.h"
 #include "encoded_file_helpers.h"
 #include "native_key_helpers.h"
-#include "syntax/syntax_scheme.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
 #include <wx/menu.h>
@@ -10,6 +9,11 @@
 #include <cstdio>
 #include <stdexcept>
 #include <fstream>
+#include <chrono>
+#ifdef __WXGTK__
+#include <wx/graphics.h>
+#include <cairo.h>
+#endif
 
 namespace {
 using Scintilla::Message;
@@ -69,11 +73,64 @@ void Paint(EditorControl* editor) {
     editor->Update();
     wxYield();
 }
+#ifdef __WXGTK__
+// Wayland client DCs are separate Cairo surfaces. Observe the actual widget's
+// paint event after its normal handler, while the native GTK paint context lives.
+class PaintObservation final : public wxEvtHandler {
+public:
+    explicit PaintObservation(EditorControl* editor) : editor_(editor) { editor_->PushEventHandler(this); }
+    ~PaintObservation() override { editor_->PopEventHandler(false); }
+    bool ProcessEvent(wxEvent& event) override {
+        const bool handled = wxEvtHandler::ProcessEvent(event);
+        if (event.GetEventType() == wxEVT_PAINT && pending_) {
+            wxPaintDC dc(editor_);
+            // GTK's paint surface belongs to the native top-level window;
+            // account for its client translation before reading surface pixels.
+            auto* context = static_cast<cairo_t*>(dc.GetGraphicsContext()->GetNativeContext());
+            double x = x_;
+            double y = y_;
+            cairo_user_to_device(context, &x, &y);
+            sampled_ = dc.GetPixel(static_cast<int>(x), static_cast<int>(y), &colour_);
+            pending_ = false;
+        }
+        return handled;
+    }
+    wxColour Read(int x, int y) {
+        x_ = x;
+        y_ = y;
+        sampled_ = false;
+        pending_ = true;
+        editor_->Refresh(false);
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (pending_ && std::chrono::steady_clock::now() < deadline) {
+            editor_->Update();
+            wxYield();
+            if (pending_) wxMilliSleep(10);
+        }
+        Require(!pending_ && sampled_, "sample actual GTK widget pixels during native paint");
+        return colour_;
+    }
+
+private:
+    EditorControl* editor_;
+    int x_ = 0;
+    int y_ = 0;
+    bool pending_ = false;
+    bool sampled_ = false;
+    wxColour colour_;
+};
+PaintObservation* paintObservation = nullptr;
+#endif
 wxColour Pixel(EditorControl* editor, int x, int y) {
+#ifdef __WXGTK__
+    const auto colour = paintObservation->Read(x, y);
+#else
     Paint(editor);
     wxClientDC pixels(editor);
     wxColour colour;
     Require(pixels.GetPixel(x, y, &colour), "read the actual owned editor's painted background");
+#endif
+    std::printf("sample %d,%d=%u,%u,%u\n", x, y, colour.Red(), colour.Green(), colour.Blue());
     return colour;
 }
 bool Yellow(wxColour colour) {
@@ -121,9 +178,8 @@ void WrapAndLifecycle(EditorFrame* frame) {
     editor->Send(Message::SetSel, 10, 2);
     const auto anchor = editor->Send(Message::GetAnchor);
     const auto caret = editor->Send(Message::GetCurrentPos);
-    for (const auto language :
-         {SyntaxLanguage::Cpp, SyntaxLanguage::PlainText, SyntaxLanguage::Python, SyntaxLanguage::Json}) {
-        ApplySyntaxLanguage(*editor, language);
+    for (const char* language : {"C/C++", "Plain Text", "Python", "JSON"}) {
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
         Require(editor->Send(Message::GetElementColour, static_cast<uintptr_t>(Scintilla::Element::CaretLineBack)) ==
                         0x5AC3C0C2 &&
                     editor->Send(Message::GetCaretLineHighlightSubLine),
@@ -142,7 +198,7 @@ void WrapAndLifecycle(EditorFrame* frame) {
                 (editor->GetDPI().y == 96 && normal == 2 && wide == 4),
             "original frame scales once with actual window DPI and zoom");
     Require(editor->Send(Message::StyleGetSize, 32) == 12, "highlight keeps delivered native 12-point base font");
-    ApplySyntaxLanguage(*editor, SyntaxLanguage::Cpp);
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
     TestEditor::ResetStream(editor, "int main() {\n    return 0;\n}\nlast\n");
     editor->Send(Message::Colourise, 0, -1);
     editor->Send(Message::SetFoldLevel, 0, 0x2400);
@@ -223,6 +279,10 @@ public:
         CallAfter([this, frame] {
             try {
                 auto* editor = frame->Editor();
+#ifdef __WXGTK__
+                PaintObservation observation(editor);
+                paintObservation = &observation;
+#endif
                 Modes(frame);
                 WrapAndLifecycle(frame);
                 SavedState(frame);
