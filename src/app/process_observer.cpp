@@ -90,13 +90,16 @@ void ProcessObserver::Publish() {
         "document_status\t" + frame_->GetStatusBar()->GetStatusText() + "\n" +
         wxString::Format(
             "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\n"
-            "caret_style\t%lld\ncaret_width\t%lld\ncaret_period\t%lld\n",
+            "caret_style\t%lld\ncaret_width\t%lld\ncaret_period\t%lld\n"
+            "code_folding\t%d\ncurrent_block\t%d\nfold_margin\t%lld\n",
             static_cast<int>(frame_->Editor()->GetLineSelectionMode()),
             static_cast<int>(frame_->Editor()->GetCurrentLineHighlightMode()),
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine)),
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretStyle)),
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretWidth)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretPeriod)));
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretPeriod)),
+            frame_->Editor()->CodeFoldingVisible(), frame_->Editor()->CurrentBlockHighlighted(),
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, 2)));
     // A reader can temporarily deny replacement on Windows. IPC errors must
     // stay out of wxLogGui: its deferred modal dialog can outlive the frame.
     const wxLogNull noGuiLog;

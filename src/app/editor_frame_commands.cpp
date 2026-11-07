@@ -882,17 +882,27 @@ void EditorFrame::ApplyWrapSymbols() {
 }
 
 void EditorFrame::AppendFoldCommands(wxMenu* view) {
+    const int show = wxWindow::NewControlId();
+    view->AppendCheckItem(show, "Show Code &Folding\tCtrl+Shift+Alt+F");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetCodeFoldingVisible(!editor_->CodeFoldingVisible()); }, show);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->CodeFoldingVisible()); }, show);
+    const int highlight = wxWindow::NewControlId();
+    view->AppendCheckItem(highlight, "Highlight Current &Block");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) { editor_->SetCurrentBlockHighlighted(!editor_->CurrentBlockHighlighted()); },
+        highlight);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->CurrentBlockHighlighted()); },
+        highlight);
     const auto addFoldCommand = [this, view](const wxString& label, uintptr_t action) {
         const int id = wxWindow::NewControlId();
         view->Append(id, label);
         Bind(
             wxEVT_MENU,
             [this, action](wxCommandEvent&) {
-                if (LanguageCanFold(document_.Language())) editor_->Send(Scintilla::Message::FoldAll, action);
+                if (editor_->CodeFoldingVisible()) editor_->Send(Scintilla::Message::FoldAll, action);
             },
-            id);
-        Bind(
-            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(LanguageCanFold(document_.Language())); },
             id);
     };
     addFoldCommand("&Collapse All", static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
