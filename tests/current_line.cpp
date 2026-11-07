@@ -275,13 +275,15 @@ public:
         }
 #endif
         auto* frame = new EditorFrame;
-        frame->ShowWithoutActivating();
+        frame->Show();
         CallAfter([this, frame] {
             try {
                 auto* editor = frame->Editor();
 #ifdef __WXGTK__
                 PaintObservation observation(editor);
                 paintObservation = &observation;
+                // Native keyboard activation follows the widget's first real paint.
+                observation.Read(0, 0);
 #endif
                 Modes(frame);
                 WrapAndLifecycle(frame);
