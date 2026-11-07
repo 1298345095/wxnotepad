@@ -25,17 +25,6 @@
 #include "app/dialogs/modify_lines_dialog.h"
 
 namespace {
-void FocusSelectionBoundary(EditorControl& editor, bool start) {
-    using Scintilla::Message;
-    const auto anchor = editor.Send(Message::GetAnchor);
-    const auto caret = editor.Send(Message::GetCurrentPos);
-    if (!editor.Send(Message::SelectionIsRectangle) && ((start && caret > anchor) || (!start && caret < anchor))) {
-        const auto mode = editor.Send(Message::GetSelectionMode);
-        editor.Send(Message::SetSel, caret, anchor);
-        editor.Send(Message::SetSelectionMode, mode);
-        editor.Send(Message::ChooseCaretX);
-    }
-}
 void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     using Scintilla::Message;
     // Original Dialogs.cpp::ZoomLevelDlgProc and InitZoomLevelComboBox.
@@ -84,8 +73,8 @@ void EditorFrame::CreateMenus() {
     const wxAcceleratorEntry selectionKeys[] = {{wxACCEL_CTRL | wxACCEL_SHIFT, ',', selectionStart},
                                                 {wxACCEL_CTRL | wxACCEL_SHIFT, '.', selectionEnd}};
     SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(std::size(selectionKeys)), selectionKeys));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { FocusSelectionBoundary(*editor_, true); }, selectionStart);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { FocusSelectionBoundary(*editor_, false); }, selectionEnd);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->FocusSelectionBoundary(true); }, selectionStart);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->FocusSelectionBoundary(false); }, selectionEnd);
 }
 
 wxMenu* EditorFrame::CreateFileMenu() {
@@ -1359,7 +1348,7 @@ bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
         if ((key == ',' || key == '.') && event.ControlDown() && event.ShiftDown()) {
             // Original CMD_JUMP2SELSTART / CMD_JUMP2SELEND: change the active
             // endpoint without changing the selected text or line-selection mode.
-            FocusSelectionBoundary(*editor_, key == ',');
+            editor_->FocusSelectionBoundary(key == ',');
             return true;
         }
     }

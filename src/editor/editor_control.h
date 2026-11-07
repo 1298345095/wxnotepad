@@ -86,6 +86,7 @@ public:
     void JumpToPosition(intptr_t position);
     void GoToBlock(BlockNavigation command);
     void SelectCurrentBlockLines();
+    void FocusSelectionBoundary(bool start);
     void MatchBrace(bool select = false);
     bool VisualBraceMatching() const { return matchBraces_; }
     void SetVisualBraceMatching(bool enabled);
