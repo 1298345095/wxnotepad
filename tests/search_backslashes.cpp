@@ -85,8 +85,9 @@ public:
                     {"\\a\\b\\e\\f\\n\\r\\t\\v\\\\", "\a\b\x1b\f\n\r\t\v\\"},
                     {"\\x41\\xFF\\x00Z", std::string("A\xff\0Z", 4)},
                     {"\\u4E2D\\uD83D\\uDE00", "中😀"},
-                    {"\\uD800\\u0041\\uDC00", "�A�"},
-                    {"\\uD800\\uD800\\uDC00", "�𐀀"},
+                    // Sonar treats literal replacement scalars as source-decoding errors.
+                    {"\\uD800\\u0041\\uDC00", "\uFFFDA\uFFFD"},
+                    {"\\uD800\\uD800\\uDC00", "\uFFFD𐀀"},
                     {"\\x1 \\xGG \\u123 \\uGGGG \\q \\0 \\U00000041 \\",
                      "\\x1 \\xGG \\u123 \\uGGGG \\q \\0 \\U00000041 \\"},
                 };

@@ -51,6 +51,9 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   Package-download keys include the profile and the existing dependency cache key;
   restore prefixes allow older compatible downloads to be reused. APT resolves
   current package versions normally, including on an exact download-cache hit.
+- After installation, the runner owns APT's `partial` download directory. APT
+  otherwise leaves it accessible only to `_apt`, which prevents SonarPython's
+  package-root discovery from traversing the workspace even outside source scope.
 - The vcpkg checkout uses the manifest's builtin baseline and wxWidgets override
   **3.3.3#1**. Only core features are requested, matching the prepared development
   dependencies; unused sound/SDL2 and debug-support features are not requested.
@@ -141,6 +144,10 @@ database and `.scannerwork/report-task.txt`, which identifies the background tas
 Investigate encoding warnings from the exact scanner filename and line; keep
 UTF-8 configured and avoid excluding source files to suppress an unexplained
 warning.
+
+Tests that expect Unicode replacement scalars use C++ Unicode escapes rather
+than literal U+FFFD characters. The runtime UTF-8 bytes are identical; Sonar's
+source reader otherwise reports these intentional characters as decoding errors.
 
 References: [SonarCloud GitHub Actions setup](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/ci-based-analysis/github-actions-for-sonarcloud),
 [CFamily compilation database](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/running-the-analysis).

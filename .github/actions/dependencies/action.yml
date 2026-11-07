@@ -69,6 +69,8 @@ runs:
         sudo apt-get "${apt_options[@]}" update
         sudo apt-get "${apt_options[@]}" -o "Dir::Cache::archives=$apt_archives/" \
           -o APT::Keep-Downloaded-Packages=true install -y --no-install-recommends "${linux_packages[@]}"
+        # APT changes partial to _apt:root/0700; Python analysis walks this directory.
+        sudo chown "$(id -u):$(id -g)" "$apt_archives/partial"
         printf '%s\n' 'CC=gcc-13' 'CXX=g++-13' >> "$GITHUB_ENV"
         if compgen -G "$apt_archives/*.deb" > /dev/null; then
           printf '%s\n' 'archives=true' >> "$GITHUB_OUTPUT"
