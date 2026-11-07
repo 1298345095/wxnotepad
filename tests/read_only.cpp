@@ -327,11 +327,23 @@ void NavigationAndEditing(EditorFrame* frame) {
 }
 class AcceptTransformation final : public wxModalDialogHook {
 public:
-    explicit AcceptTransformation(const char* title) : title_(title) { Register(); }
+    explicit AcceptTransformation(const char* title, bool* released = nullptr) : title_(title), released_(released) {
+        Register();
+    }
     int Enter(wxDialog* dialog) override {
         if (dialog->GetTitle() != title_) return wxID_NONE;
         ++shown;
-        wxTheApp->CallAfter([dialog] {
+        wxTheApp->CallAfter([this, dialog] {
+#ifndef __WXMSW__
+            // Closing a shortcut-opened modal before its physical release can
+            // withdraw Wayland keyboard focus while that release is in flight.
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+            while (released_ && !*released_ && std::chrono::steady_clock::now() < deadline) {
+                wxYield();
+                wxMilliSleep(10);
+            }
+            Require(!released_ || *released_, "opening shortcut releases before the protected dialog responds");
+#endif
             for (const auto* name : {"Insert before selection", "Prefix text to lines"})
                 if (auto* input = wxDynamicCast(wxWindow::FindWindowByName(name, dialog), wxTextCtrl))
                     input->SetValue("[");
@@ -348,6 +360,7 @@ public:
 
 private:
     wxString title_;
+    bool* released_;
 };
 void TransformationDialogs(EditorFrame* frame) {
     auto* editor = frame->Editor();
@@ -361,9 +374,10 @@ void TransformationDialogs(EditorFrame* frame) {
             if (keyboard && !key) continue;
             TestEditor::ResetStream(editor, "beta beta\r\nalpha alpha\r\n", 0, 23);
             editor->Send(Message::SetReadOnly, 1);
-            AcceptTransformation dialog(title);
+            bool released = false;
+            AcceptTransformation dialog(title, keyboard ? &released : nullptr);
             if (keyboard)
-                NativeKeys::Shortcut(frame, key, false, true);
+                NativeKeys::Shortcut(frame, key, false, true, false, &released);
             else
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", label));
             Require(dialog.shown == 1 && TestEditor::Text(editor) == "beta beta\r\nalpha alpha\r\n" &&
