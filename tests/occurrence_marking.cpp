@@ -1,15 +1,11 @@
 #include "native_search_helpers.h"
+#include "native_paint_helpers.h"
 #include <wx/app.h>
 #include <cstdio>
 #include <stdexcept>
 #include <vector>
 #include <chrono>
-#include <wx/dcclient.h>
 #include <wx/stattext.h>
-#ifdef __WXGTK__
-#include <wx/graphics.h>
-#include <cairo.h>
-#endif
 
 namespace {
 using Scintilla::Message;
@@ -65,66 +61,6 @@ void Ranges(EditorControl* editor, std::vector<std::pair<intptr_t, intptr_t>> ex
     }
     Require(actual == expected, message);
 }
-class PaintPixels final : public wxEvtHandler {
-public:
-    explicit PaintPixels(EditorControl* editor) : editor_(editor) {
-#ifdef __WXGTK__
-        editor_->PushEventHandler(this);
-#endif
-    }
-    ~PaintPixels() override {
-#ifdef __WXGTK__
-        editor_->PopEventHandler(false);
-#endif
-    }
-    std::vector<unsigned long> Read(intptr_t start, intptr_t end) {
-        x_ = static_cast<int>(editor_->Send(Message::PointXFromPosition, 0, start));
-        width_ = static_cast<int>(editor_->Send(Message::PointXFromPosition, 0, end)) - x_;
-        y_ = static_cast<int>(editor_->Send(Message::PointYFromPosition, 0, start));
-        height_ = static_cast<int>(editor_->Send(Message::TextHeight, 0));
-        pixels_.clear();
-        pending_ = true;
-        editor_->Refresh(false);
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-        while (pending_ && std::chrono::steady_clock::now() < deadline) {
-            editor_->Update();
-            wxYield();
-#ifndef __WXGTK__
-            wxClientDC dc(editor_);
-            Capture(dc, x_, y_);
-#endif
-        }
-        Require(!pending_, "observe actual native occurrence painting");
-        return pixels_;
-    }
-#ifdef __WXGTK__
-    bool ProcessEvent(wxEvent& event) override {
-        const bool handled = wxEvtHandler::ProcessEvent(event);
-        if (event.GetEventType() == wxEVT_PAINT && pending_) {
-            wxPaintDC dc(editor_);
-            auto* context = static_cast<cairo_t*>(dc.GetGraphicsContext()->GetNativeContext());
-            double x = x_, y = y_;
-            cairo_user_to_device(context, &x, &y);
-            Capture(dc, static_cast<int>(x), static_cast<int>(y));
-        }
-        return handled;
-    }
-#endif
-private:
-    void Capture(wxDC& dc, int x, int y) {
-        for (int row = 0; row < height_; ++row)
-            for (int col = 0; col < width_; ++col) {
-                wxColour colour;
-                Require(dc.GetPixel(x + col, y + row, &colour), "read native paint pixels numerically");
-                pixels_.push_back(colour.GetRGB());
-            }
-        pending_ = false;
-    }
-    EditorControl* editor_;
-    int x_ = 0, y_ = 0, width_ = 0, height_ = 0;
-    bool pending_ = false;
-    std::vector<unsigned long> pixels_;
-};
 class OccurrenceApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -232,10 +168,13 @@ public:
                 SelectByMouse(editor, 0, 3);
                 Ranges(editor, {{0, 3}, {4, 7}}, "native mouse selection refreshes occurrence ranges");
                 {
-                    PaintPixels paint(editor);
-                    const auto marked = paint.Read(4, 7);
+                    const auto x = editor->Send(Message::PointXFromPosition, 0, 4);
+                    const auto end = editor->Send(Message::PointXFromPosition, 0, 7);
+                    const wxRect area(static_cast<int>(x), 0, static_cast<int>(end - x),
+                                      static_cast<int>(editor->Send(Message::TextHeight, 0)));
+                    const auto marked = NativePaint::Read(editor, area);
                     Command(frame, off);
-                    const auto cleared = paint.Read(4, 7);
+                    const auto cleared = NativePaint::Read(editor, area);
                     Require(marked != cleared, "native paint changes at the unselected occurrence when marking is off");
                     Command(frame, off);
                 }
