@@ -56,7 +56,8 @@ public:
         for (GList* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
-            if (!stage_++) {
+            if (stage_ == 0) {
+                stage_ = 1;
                 ++choosers;
                 const auto* current = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(widget));
                 GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
@@ -77,8 +78,10 @@ public:
                 g_slist_free(filters);
                 if (!type_.empty()) NativeDialogs::ChooseFileType(widget, type_);
                 NativeDialogs::ChooseFile(widget, path_);
-            } else if (stage_ == 2 && !path_.empty())
+            } else if (stage_ == 1 && !path_.empty() && NativeDialogs::CanAcceptFile(widget, path_)) {
+                stage_ = 2;
                 NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
+            }
         }
         g_list_free(windows);
 #endif

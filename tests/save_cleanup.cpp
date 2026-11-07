@@ -3,6 +3,7 @@
 #include "file_helpers.h"
 #include <wx/choice.h>
 #include <wx/dialog.h>
+#include <wx/timer.h>
 #include <filesystem>
 #include <fstream>
 
@@ -19,12 +20,16 @@ void Load(EditorControl* editor, const std::string& text) {
     editor->Send(Message::SetSavePoint);
     editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
 }
-void Options(EditorFrame* frame, bool fix, bool strip, bool accept = true, int defaultMode = -1) {
-    bool observed = false;
-    wxTheApp->CallAfter([&] {
+class LineEndingOptionsDriver final : public wxTimer {
+public:
+    LineEndingOptionsDriver(bool& observed, bool fix, bool strip, bool accept, int mode)
+        : observed_(observed), fix_(fix), strip_(strip), accept_(accept), mode_(mode) {
+        Start(10);
+    }
+    void Notify() override {
         for (auto* window : wxTopLevelWindows) {
             auto* dialog = wxDynamicCast(window, wxDialog);
-            if (!dialog || dialog->GetTitle() != "Line Endings") continue;
+            if (!dialog || dialog->GetTitle() != "Line Endings" || !dialog->IsModal() || !dialog->IsShown()) continue;
             auto* mode = wxDynamicCast(wxWindow::FindWindowByName("Default line ending mode", dialog), wxChoice);
             auto* warn = wxDynamicCast(
                 wxWindow::FindWindowByLabel("Show inconsistent line endings warning on loading.", dialog), wxCheckBox);
@@ -32,19 +37,31 @@ void Options(EditorFrame* frame, bool fix, bool strip, bool accept = true, int d
                 wxWindow::FindWindowByLabel("&Ensure consistent line endings when saving.", dialog), wxCheckBox);
             auto* blanks =
                 wxDynamicCast(wxWindow::FindWindowByLabel("&Strip trailing blanks when saving.", dialog), wxCheckBox);
-            observed = mode && mode->GetCount() == 3 && mode->GetString(0) == "Windows (CR+LF)" &&
-                       mode->GetString(1) == "Unix/macOS (LF)" && mode->GetString(2) == "Classic Mac OS (CR)" && warn &&
-                       consistent && blanks;
-            if (observed) {
-                if (defaultMode >= 0) mode->SetSelection(defaultMode);
+            observed_ = mode && mode->GetCount() == 3 && mode->GetString(0) == "Windows (CR+LF)" &&
+                        mode->GetString(1) == "Unix/macOS (LF)" && mode->GetString(2) == "Classic Mac OS (CR)" &&
+                        warn && consistent && blanks;
+            Stop();
+            if (observed_) {
+                if (mode_ >= 0) mode->SetSelection(mode_);
                 if (warn->GetValue()) NativeSearch::Toggle(warn, false);
-                if (consistent->GetValue() != fix) NativeSearch::Toggle(consistent, fix);
-                if (blanks->GetValue() != strip) NativeSearch::Toggle(blanks, strip);
+                if (consistent->GetValue() != fix_) NativeSearch::Toggle(consistent, fix_);
+                if (blanks->GetValue() != strip_) NativeSearch::Toggle(blanks, strip_);
             }
-            NativeSearch::Click(dialog, accept ? wxID_OK : wxID_CANCEL);
+            NativeSearch::Click(dialog, observed_ && accept_ ? wxID_OK : wxID_CANCEL);
             return;
         }
-    });
+    }
+
+private:
+    bool& observed_;
+    bool fix_, strip_, accept_;
+    int mode_;
+};
+void Options(EditorFrame* frame, bool fix, bool strip, bool accept = true, int defaultMode = -1) {
+    bool observed = false;
+    LineEndingOptionsDriver driver(observed, fix, strip, accept, defaultMode);
+    // Native events may run before menu dispatch creates the modal dialog.
+    wxYield();
     const auto id = frame->GetMenuBar()->FindMenuItem("Edit", "Default Line Ending...");
     Require(id != wxNOT_FOUND, "original Default Line Ending options must be exposed");
     NativeSearch::Command(frame, id);

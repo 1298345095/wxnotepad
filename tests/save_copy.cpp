@@ -72,6 +72,10 @@ public:
     wxString folder;
     wxString filename;
     wxString selectedType;
+    void AcceptDefaultFilename(const wxString& expected) {
+        acceptDefault_ = true;
+        destination_ = expected;
+    }
     void Notify() override {
 #ifdef __WXMSW__
         EnumThreadWindows(
@@ -120,7 +124,10 @@ public:
                     },
                     data);
                 if (!driver.selectedType.empty()) NativeDialogs::ChooseFileType(window, driver.selectedType);
-                NativeDialogs::ChooseFile(window, driver.destination_);
+                if (driver.acceptDefault_)
+                    PostMessageW(window, WM_COMMAND, IDOK, 0);
+                else
+                    NativeDialogs::ChooseFile(window, driver.destination_);
                 return TRUE;
             },
             reinterpret_cast<LPARAM>(this));
@@ -143,7 +150,8 @@ public:
                 continue;
             }
             if (!GTK_IS_FILE_CHOOSER(widget)) continue;
-            if (!stage_++) {
+            if (stage_ == 0) {
+                stage_ = 1;
                 ++choosers;
                 char* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
                 char* name = gtk_file_chooser_get_current_name(GTK_FILE_CHOOSER(widget));
@@ -152,11 +160,13 @@ public:
                 g_free(directory);
                 g_free(name);
                 if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
-                NativeDialogs::ChooseFile(widget, destination_);
+                if (!acceptDefault_) NativeDialogs::ChooseFile(widget, destination_);
             } else if (cancelChooser_)
                 NativeDialogs::Respond(widget, GTK_RESPONSE_CANCEL);
-            else if (stage_ == 2 && !destination_.empty())
+            else if (stage_ == 1 && !destination_.empty() && NativeDialogs::CanAcceptFile(widget, destination_)) {
+                stage_ = 2;
                 NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
+            }
         }
         g_list_free(windows);
 #endif
@@ -168,7 +178,28 @@ private:
     bool replace_;
     GbkLossChoice loss_;
     bool cancelChooser_ = false;
+    bool acceptDefault_ = false;
 };
+
+void SaveSuggestedCopy(EditorFrame* frame, const std::filesystem::path& directory, const char* basename,
+                       const std::string& expected) {
+    const auto identity = frame->DocumentPath();
+    const auto target = directory / basename;
+    CopyChooser chooser;
+    chooser.AcceptDefaultFilename(Filename(target));
+    const auto result = frame->SaveCopy();
+    chooser.Stop();
+    // Windows can hide a registered extension in the filename edit. Accept the
+    // untouched suggestion and independently verify its full effective name.
+    if (result.status != SaveStatus::Saved || chooser.folder != Filename(directory) ||
+        !std::filesystem::is_regular_file(target))
+        std::fprintf(stderr, "Suggested copy folder='%s' display='%s' expected='%s' status=%d\n",
+                     chooser.folder.utf8_str().data(), chooser.filename.utf8_str().data(),
+                     Filename(target).utf8_str().data(), static_cast<int>(result.status));
+    Require(result.status == SaveStatus::Saved && chooser.choosers == 1 && chooser.folder == Filename(directory) &&
+                Bytes(target) == expected && frame->DocumentPath() == identity,
+            "untouched native copy suggestion must save the exact ORIGINAL full basename and bytes");
+}
 
 void Identity(EditorFrame* frame, const std::filesystem::path& directory) {
     const auto source = directory / "source.txt";
@@ -221,18 +252,19 @@ void RememberDirectory(EditorFrame* frame, const std::filesystem::path& director
     Require(frame->SaveCopy().status == SaveStatus::Cancelled && cancel.choosers == 1,
             "native Save Copy chooser must support cancellation");
     cancel.Stop();
-    if (cancel.folder != Filename(remembered) || cancel.filename != "source.txt")
+    if (cancel.folder != Filename(remembered))
         std::fprintf(stderr, "Copy chooser folder='%s' name='%s'\n", cancel.folder.utf8_str().data(),
                      cancel.filename.utf8_str().data());
-    Require(cancel.folder == Filename(remembered) && cancel.filename == "source.txt",
-            "next copy chooser must remember successful directory and retain ORIGINAL basename");
+    Require(cancel.folder == Filename(remembered), "next copy chooser must remember successful directory");
+    SaveSuggestedCopy(frame, remembered, "source.txt", Bytes(directory / "source.txt"));
     Require(frame->SaveCopy(Filename(directory / "missing" / "copy.txt")).status == SaveStatus::Failed,
             "failed copy must report failure");
     CopyChooser afterFailure;
     frame->SaveCopy();
     afterFailure.Stop();
-    Require(afterFailure.folder == Filename(remembered) && afterFailure.filename == "source.txt",
+    Require(afterFailure.folder == Filename(remembered),
             "cancelled and failed copies must retain the last SUCCESSFUL directory");
+    SaveSuggestedCopy(frame, remembered, "source.txt", Bytes(directory / "source.txt"));
     const auto output = remembered / "menu.json";
     CopyChooser menu(Filename(output));
     menu.selectedType = "JSON";
@@ -275,8 +307,8 @@ void RememberDirectory(EditorFrame* frame, const std::filesystem::path& director
     CopyChooser afterOpen;
     frame->SaveCopy();
     afterOpen.Stop();
-    Require(afterOpen.folder == Filename(remembered) && afterOpen.filename == "other.cpp",
-            "Open must retain this window's successful copy directory and use the newly opened basename");
+    Require(afterOpen.folder == Filename(remembered), "Open must retain this window's successful copy directory");
+    SaveSuggestedCopy(frame, remembered, "other.cpp", "other");
     Require(frame->Open(Filename(directory / "source.txt")).status == OpenStatus::Opened,
             "original source must reopen after directory lifetime check");
     std::puts("PASS: native Save Copy remembers successful directory and original basename");
@@ -323,8 +355,8 @@ void UntitledAfterCopy(EditorFrame* frame, const std::filesystem::path& director
     CopyChooser cancel;
     frame->SaveCopy();
     cancel.Stop();
-    Require(cancel.folder == Filename(directory) && cancel.filename == "copies.txt",
-            "original Untitled copy must seed remembered directory's PARENT and basename with default extension");
+    Require(cancel.folder == Filename(directory), "original Untitled copy must seed remembered directory's PARENT");
+    SaveSuggestedCopy(frame, directory, "copies.txt", {});
     const auto output = directory / "untitled-copy.txt";
     CopyChooser accept(Filename(output));
     frame->SaveCopy();
