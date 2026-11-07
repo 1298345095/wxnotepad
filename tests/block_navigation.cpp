@@ -60,12 +60,19 @@ void ReferenceCases(EditorFrame* frame, const int* commands) {
         editor->Send(Message::SetSelectionMode, 0);
         editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.text));
         editor->Send(Message::SetTabWidth, 4);
-        editor->Send(Message::Colourise, 0, -1);
-        NativeFold::Paint(editor);
         editor->Send(Message::EmptyUndoBuffer);
         editor->Send(Message::ClearAll);
         editor->Send(Message::Undo);
         editor->Send(Message::SetSavePoint);
+        // Undo invalidates styling from the start of the restored text. Prepare
+        // the captured fold tree after the destructive history setup.
+        editor->Send(Message::Colourise, 0, -1);
+        NativeFold::Paint(editor);
+        // All five original documents have a captured fold header at line zero.
+        // Release lexers may also style the EOF sentinel (Length()+1).
+        Require(editor->Send(Message::GetEndStyled) >= editor->Send(Message::GetLength) &&
+                    (editor->Send(Message::GetFoldLevel, 0) & 0x2000) != 0,
+                "original fixture's styling and first-line fold header are ready after history setup");
         for (const auto& row : BlockReference::fixtures) {
             if (row.document != static_cast<int>(document)) continue;
             editor->Send(Message::SetReadOnly, 0);

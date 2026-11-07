@@ -1,20 +1,14 @@
 #pragma once
 
 #include "editor/editor_control.h"
+#include "native_paint_helpers.h"
 #include <wx/wx.h>
 #include <stdexcept>
 
 namespace NativeFold {
 using Scintilla::Message;
 inline void Paint(EditorControl* editor) {
-    for (int attempt = 0; attempt < 40; ++attempt) {
-        wxYield();
-        editor->Refresh(false);
-        editor->Update();
-        wxYield();
-        if (editor->Send(Message::GetEndStyled) == editor->Send(Message::GetLength)) return;
-        wxMilliSleep(10);
-    }
+    NativePaint::Complete(editor);
 }
 inline void MarginClick(EditorControl* editor, int line, const char* marginMessage) {
     const auto width = editor->Send(Message::GetMarginWidthN, 2);

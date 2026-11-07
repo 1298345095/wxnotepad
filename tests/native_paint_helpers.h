@@ -1,7 +1,9 @@
 #pragma once
 
 #include "editor/editor_control.h"
+#include <wx/app.h>
 #include <wx/dcclient.h>
+#include <wx/utils.h>
 #include <chrono>
 #include <functional>
 #include <stdexcept>
@@ -13,6 +15,35 @@
 
 // Numeric samples from the actual widget paint surface; no image capture.
 namespace NativePaint {
+inline void Complete(EditorControl* editor) {
+    class Completion final : public wxEvtHandler {
+    public:
+        explicit Completion(EditorControl* editor) : editor_(editor) { editor_->PushEventHandler(this); }
+        ~Completion() override { editor_->PopEventHandler(false); }
+        bool ProcessEvent(wxEvent& event) override {
+            const bool handled = wxEvtHandler::ProcessEvent(event);
+            if (event.GetEventType() == wxEVT_PAINT) ++completed;
+            return handled;
+        }
+        unsigned completed = 0;
+
+    private:
+        EditorControl* editor_;
+    } completion(editor);
+    // Styling can abandon the first layout. Observe a second real paint of
+    // the settled layout; Update() alone is a no-op on wxGTK/Wayland.
+    for (int pass = 0; pass < 2; ++pass) {
+        const auto expected = completion.completed + 1;
+        editor->Refresh(false);
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (completion.completed < expected && std::chrono::steady_clock::now() < deadline) {
+            editor->Update();
+            wxYield();
+            if (completion.completed < expected) wxMilliSleep(1);
+        }
+        if (completion.completed < expected) throw std::runtime_error("actual native editor paint must complete");
+    }
+}
 inline std::vector<wxColour> Read(EditorControl* editor, const wxRect& area) {
     std::vector<wxColour> pixels;
     const auto sample = [&](wxDC& dc) {
