@@ -252,6 +252,8 @@ public:
     bool OnInit() override {
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
+        // Editor fixtures remove backing files before the remaining dialog checks.
+        settings_->values.fileWatching.mode = FileWatchingMode::None;
         settings_->values.wordWrap = false;
         // Mixed-EOL warning choices are covered by mixed_line_ending_open.
         settings_->values.warnLineEndings = false;

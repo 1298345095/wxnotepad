@@ -419,6 +419,8 @@ public:
     bool OnInit() override {
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
+        // Editor fixtures remove backing files before the remaining keyboard checks.
+        settings_->values.fileWatching.mode = FileWatchingMode::None;
         settings_->values.wordWrap = false;
         settings_->values.warnLineEndings = false;
         settings_->values.fixLineEndings = false;
