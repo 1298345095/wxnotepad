@@ -25,7 +25,7 @@ void ModifiedRevert(EditorFrame* frame, int revert, const std::filesystem::path&
         before += std::string(200, 'x') + "\n";
     TestFiles::WriteBytes(path, before);
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "view fixture must open");
-    const int python = frame->GetMenuBar()->FindMenuItem("Language", "Python");
+    const int python = frame->GetMenuBar()->FindMenuItem("Scheme", "Python");
     Command(frame, python);
     editor->Send(Message::BeginUndoAction);
     TestEditor::Append(frame, "dirty");

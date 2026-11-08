@@ -6,6 +6,7 @@
 #include "search/search_session.h"
 #include "editor/indentation_settings.h"
 #include "editor/align_lines.h"
+#include "app/file_change_monitor.h"
 
 class EditorControl;
 class FindReplaceDialog;
@@ -34,6 +35,8 @@ public:
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
     bool NewDocument();
+    void SetFileWatchingOptions(const FileWatchingOptions& options);
+    const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
 
 private:
     EditorControl* editor_;
@@ -41,6 +44,8 @@ private:
     OriginalSettings defaults_;
     IndentationSettings indentation_;
     DocumentSession document_;
+    FileWatchingOptions fileWatchingOptions_;
+    FileChangeMonitor fileChangeMonitor_;
     int automaticLanguageId_;
     int saveCopyId_;
     int revertId_;
@@ -107,6 +112,9 @@ private:
     bool HandleDocumentKey(const wxKeyEvent& event);
     void ToggleReadOnlyMode();
     void ShowLineEndingOptions();
+    void ShowFileChangeNotificationOptions();
+    void RefreshFileWatching();
+    void HandleFileChange();
     void ReportFind(const FindResult& result);
     bool SearchMessage(SearchDirection direction);
     bool ShowSearchMessage(const wxString& key, const wxString& message, bool confirm);

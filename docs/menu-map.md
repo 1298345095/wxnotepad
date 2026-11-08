@@ -68,6 +68,7 @@ Settings
     Copy Selection As Find Text; Copy Paste Buffer As Find Text
     Line Selection Mode > None; Visual Studio; Old Visual Studio; Normal
   Appearance > Auto-Shrink Horizontal Scrollbar
+  File Change Notification (Alt+F5)
   Other Settings > Remember Search Options
   Save Settings On Exit; Save Settings Now
 ```
