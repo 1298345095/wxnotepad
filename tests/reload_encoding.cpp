@@ -181,16 +181,19 @@ void DeliveredCodecs(EditorFrame* frame) {
     struct Fixture {
         std::string bytes;
         FileEncoding encoding;
+        int picker;
+        const char* label;
         bool bom;
         std::string text;
     };
-    const Fixture fixtures[] = {{"\xe4\xb8\xad", FileEncoding::Utf8, false, "中"},
-                                {"\xef\xbb\xbf\xe4\xb8\xad", FileEncoding::Utf8, true, "中"},
-                                {"\x2d\x4e", FileEncoding::Utf16Le, false, "中"},
-                                {"\xff\xfe\x2d\x4e", FileEncoding::Utf16Le, true, "中"},
-                                {"\xd6\xd0", FileEncoding::Gbk, false, "中"},
-                                {"# coding: utf-8\n\xd6\xd0", FileEncoding::Gbk, false, "# coding: utf-8\n中"},
-                                {"a\r\nb\nc\r", FileEncoding::Utf8, false, "a\r\nb\nc\r"}};
+    const Fixture fixtures[] = {
+        {"\xe4\xb8\xad", FileEncoding::Utf8, 0, "UTF-8", false, "中"},
+        {"\xef\xbb\xbf\xe4\xb8\xad", FileEncoding::Utf8, 0, "UTF-8", true, "中"},
+        {"\x2d\x4e", FileEncoding::Utf16Le, 1, "UTF-16LE", false, "中"},
+        {"\xff\xfe\x2d\x4e", FileEncoding::Utf16Le, 1, "UTF-16LE", true, "中"},
+        {"\xd6\xd0", FileEncoding::Gbk, 2, "GBK (CP936)", false, "中"},
+        {"# coding: utf-8\n\xd6\xd0", FileEncoding::Gbk, 2, "GBK (CP936)", false, "# coding: utf-8\n中"},
+        {"a\r\nb\nc\r", FileEncoding::Utf8, 0, "UTF-8", false, "a\r\nb\nc\r"}};
     const auto path = TestFiles::TemporaryDirectory("codecs.txt");
     for (const auto& fixture : fixtures) {
         TestFiles::WriteBytes(path, "initial");
@@ -198,18 +201,16 @@ void DeliveredCodecs(EditorFrame* frame) {
                 "codec source fixture must open");
         TestFiles::WriteBytes(path, fixture.bytes);
         ReloadDialogs driver;
-        driver.selected = static_cast<int>(fixture.encoding);
+        driver.selected = fixture.picker;
         const auto result = frame->ReloadWithEncoding();
         driver.Stop();
-        const wxString label = fixture.encoding == FileEncoding::Utf8      ? "UTF-8"
-                               : fixture.encoding == FileEncoding::Utf16Le ? "UTF-16LE"
-                                                                           : "GBK (CP936)";
         Require(
             result.status == OpenStatus::Opened && driver.validChoices && driver.initial == 0 &&
                 driver.lineEndings == (fixture.text == "a\r\nb\nc\r" ? 1 : 0) &&
                 TestEditor::Text(frame) == fixture.text && TestFiles::Bytes(path) == fixture.bytes &&
                 frame->DocumentEncoding() == fixture.encoding && frame->DocumentHasBom() == fixture.bom &&
-                frame->GetStatusBar()->GetStatusText().StartsWith(label + (fixture.bom ? " (BOM)" : " |")) &&
+                frame->GetStatusBar()->GetStatusText().StartsWith(wxString(fixture.label) +
+                                                                  (fixture.bom ? " (BOM)" : " |")) &&
                 !frame->Editor()->Send(Scintilla::Message::GetModify) &&
                 !frame->Editor()->Send(Scintilla::Message::CanUndo),
             "explicit reload must honor the selected codec, actual BOM, conflicting declarations and mixed EOL bytes");
@@ -217,7 +218,7 @@ void DeliveredCodecs(EditorFrame* frame) {
         cancelled.cancel = true;
         Require(frame->ReloadWithEncoding().status == OpenStatus::Cancelled, "codec normalization picker must cancel");
         cancelled.Stop();
-        Require(cancelled.initial == static_cast<int>(fixture.encoding),
+        Require(cancelled.initial == fixture.picker,
                 "current source codec must normalize both BOM and BOM-less picker selections");
     }
     std::puts(
