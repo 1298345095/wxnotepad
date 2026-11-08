@@ -80,56 +80,7 @@ public:
 #ifdef __WXMSW__
         EnumThreadWindows(
             GetCurrentThreadId(),
-            [](HWND window, LPARAM data) -> BOOL {
-                auto& driver = *reinterpret_cast<CopyChooser*>(data);
-                wchar_t title[256]{};
-                GetWindowTextW(window, title, 256);
-                if (!IsWindowVisible(window)) return TRUE;
-                if (wxString(title) == "GBK character loss") {
-                    ++driver.losses;
-                    SendMessageW(window, WM_USER + 102, driver.loss_ == GbkLossChoice::Replace ? IDOK : IDCANCEL, 0);
-                    return TRUE;
-                }
-                if (wxString(title) != "Save Copy") {
-                    wchar_t owner[256]{};
-                    GetWindowTextW(GetWindow(window, GW_OWNER), owner, 256);
-                    if (wxString(owner) == "Save Copy") {
-                        ++driver.overwrites;
-                        driver.cancelChooser_ = !driver.replace_;
-                        SendMessageW(window, WM_USER + 102, driver.replace_ ? IDYES : IDNO, 0);
-                    }
-                    return TRUE;
-                }
-                if (driver.stage_++) {
-                    if (driver.cancelChooser_) SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
-                    return TRUE;
-                }
-                ++driver.choosers;
-                EnumChildWindows(
-                    window,
-                    [](HWND child, LPARAM data) -> BOOL {
-                        auto& driver = *reinterpret_cast<CopyChooser*>(data);
-                        wchar_t kind[64]{}, text[4096]{};
-                        GetClassNameW(child, kind, 64);
-                        GetWindowTextW(child, text, 4096);
-                        if (IsWindowVisible(child) && wxString(kind) == "Edit" && driver.filename.empty())
-                            driver.filename = text;
-                        const wxString label(text);
-                        if (wxString(kind) == "ToolbarWindow32") {
-                            const auto prefix = label.find(": ");
-                            if (prefix != wxString::npos && wxFileName(label.Mid(prefix + 2)).IsAbsolute())
-                                driver.folder = label.Mid(prefix + 2);
-                        }
-                        return TRUE;
-                    },
-                    data);
-                if (!driver.selectedType.empty()) NativeDialogs::ChooseFileType(window, driver.selectedType);
-                if (driver.acceptDefault_)
-                    PostMessageW(window, WM_COMMAND, IDOK, 0);
-                else
-                    NativeDialogs::ChooseFile(window, driver.destination_);
-                return TRUE;
-            },
+            [](HWND window, LPARAM data) -> BOOL { return reinterpret_cast<CopyChooser*>(data)->HandleWindow(window); },
             reinterpret_cast<LPARAM>(this));
 #elif defined(__WXGTK__)
         GList* windows = gtk_window_list_toplevels();
@@ -137,42 +88,102 @@ public:
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget)) continue;
             if (GTK_IS_MESSAGE_DIALOG(widget)) {
-                if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "GBK character loss") {
-                    ++losses;
-                    NativeDialogs::Respond(widget,
-                                           loss_ == GbkLossChoice::Replace ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
-                } else {
-                    ++overwrites;
-                    cancelChooser_ = !replace_;
-                    Require(ClickOverwrite(widget, replace_ ? "Replace" : "Cancel"),
-                            "native overwrite must expose Replace/Cancel");
-                }
+                HandleMessage(widget);
                 continue;
             }
-            if (!GTK_IS_FILE_CHOOSER(widget)) continue;
-            if (stage_ == 0) {
-                stage_ = 1;
-                ++choosers;
-                char* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
-                char* name = gtk_file_chooser_get_current_name(GTK_FILE_CHOOSER(widget));
-                folder = wxString::FromUTF8(directory ? directory : "");
-                filename = wxString::FromUTF8(name ? name : "");
-                g_free(directory);
-                g_free(name);
-                if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
-                if (!acceptDefault_) NativeDialogs::ChooseFile(widget, destination_);
-            } else if (cancelChooser_)
-                NativeDialogs::Respond(widget, GTK_RESPONSE_CANCEL);
-            else if (stage_ == 1 && !destination_.empty() && NativeDialogs::CanAcceptFile(widget, destination_)) {
-                stage_ = 2;
-                NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
-            }
+            if (GTK_IS_FILE_CHOOSER(widget)) HandleChooser(widget);
         }
         g_list_free(windows);
 #endif
     }
 
 private:
+#ifdef __WXGTK__
+    void HandleMessage(GtkWidget* widget) {
+        if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "GBK character loss") {
+            ++losses;
+            NativeDialogs::Respond(widget, loss_ == GbkLossChoice::Replace ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
+        } else {
+            ++overwrites;
+            cancelChooser_ = !replace_;
+            Require(ClickOverwrite(widget, replace_ ? "Replace" : "Cancel"),
+                    "native overwrite must expose Replace/Cancel");
+        }
+    }
+    void HandleChooser(GtkWidget* widget) {
+        if (stage_ == 0) {
+            stage_ = 1;
+            ++choosers;
+            char* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
+            char* name = gtk_file_chooser_get_current_name(GTK_FILE_CHOOSER(widget));
+            folder = wxString::FromUTF8(directory ? directory : "");
+            filename = wxString::FromUTF8(name ? name : "");
+            g_free(directory);
+            g_free(name);
+            if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
+            if (!acceptDefault_) NativeDialogs::ChooseFile(widget, destination_);
+        } else if (cancelChooser_)
+            NativeDialogs::Respond(widget, GTK_RESPONSE_CANCEL);
+        else if (stage_ == 1 && !destination_.empty() && NativeDialogs::CanAcceptFile(widget, destination_)) {
+            stage_ = 2;
+            NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
+        }
+    }
+#endif
+#ifdef __WXMSW__
+    void ReadSuggestion(HWND window) {
+        EnumChildWindows(
+            window,
+            [](HWND child, LPARAM data) -> BOOL {
+                auto& driver = *reinterpret_cast<CopyChooser*>(data);
+                wchar_t kind[64]{}, text[4096]{};
+                GetClassNameW(child, kind, 64);
+                GetWindowTextW(child, text, 4096);
+                if (IsWindowVisible(child) && wxString(kind) == "Edit" && driver.filename.empty())
+                    driver.filename = text;
+                const wxString label(text);
+                if (wxString(kind) == "ToolbarWindow32") {
+                    const auto prefix = label.find(": ");
+                    if (prefix != wxString::npos && wxFileName(label.Mid(prefix + 2)).IsAbsolute())
+                        driver.folder = label.Mid(prefix + 2);
+                }
+                return TRUE;
+            },
+            reinterpret_cast<LPARAM>(this));
+    }
+    BOOL HandleWindow(HWND window) {
+        wchar_t title[256]{};
+        GetWindowTextW(window, title, 256);
+        if (!IsWindowVisible(window)) return TRUE;
+        if (wxString(title) == "GBK character loss") {
+            ++losses;
+            SendMessageW(window, WM_USER + 102, loss_ == GbkLossChoice::Replace ? IDOK : IDCANCEL, 0);
+            return TRUE;
+        }
+        if (wxString(title) != "Save Copy") {
+            wchar_t owner[256]{};
+            GetWindowTextW(GetWindow(window, GW_OWNER), owner, 256);
+            if (wxString(owner) == "Save Copy") {
+                ++overwrites;
+                cancelChooser_ = !replace_;
+                SendMessageW(window, WM_USER + 102, replace_ ? IDYES : IDNO, 0);
+            }
+            return TRUE;
+        }
+        if (stage_++) {
+            if (cancelChooser_) SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
+            return TRUE;
+        }
+        ++choosers;
+        ReadSuggestion(window);
+        if (!selectedType.empty()) NativeDialogs::ChooseFileType(window, selectedType);
+        if (acceptDefault_)
+            PostMessageW(window, WM_COMMAND, IDOK, 0);
+        else
+            NativeDialogs::ChooseFile(window, destination_);
+        return TRUE;
+    }
+#endif
     wxString destination_;
     int stage_ = 0;
     bool replace_;
@@ -351,7 +362,7 @@ void Formats(SettingsStore* settings, const std::filesystem::path& directory) {
 }
 
 void UntitledAfterCopy(EditorFrame* frame, const std::filesystem::path& directory) {
-    Require(frame->New(), "clean source must permit New");
+    Require(frame->NewDocument(), "clean source must permit New");
     CopyChooser cancel;
     frame->SaveCopy();
     cancel.Stop();

@@ -115,9 +115,10 @@ public:
                             editor->Send(Message::StyleGetFore, SCE_PY_NUMBER) == 0x0000FF,
                         "original Python light palette and grouped styles must be installed");
                 for (const int style : {SCE_PY_WORD, SCE_PY_STRING_DQ, SCE_PY_TRIPLE_STRING_DQ, SCE_PY_FMTSTRING_DQ}) {
-                    Require(Font(editor, style) == Font(editor, 32) &&
+                    Require(Font(editor, style) == Font(editor, static_cast<int>(Scintilla::StylesCommon::Default)) &&
                                 editor->Send(Message::StyleGetSizeFractional, style) ==
-                                    editor->Send(Message::StyleGetSizeFractional, 32) &&
+                                    editor->Send(Message::StyleGetSizeFractional,
+                                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) &&
                                 editor->Send(Message::StyleGetBack, style) == 0xFFFFFF,
                             "Python styles must retain native font, size and light background");
                 }
@@ -182,7 +183,7 @@ public:
                 Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: CRLF",
                         "unnamed text must support manual Python selection");
                 Command(frame, wxID_UNDO);
-                Require(frame->New(), "clean unnamed document must reset");
+                Require(frame->NewDocument(), "clean unnamed document must reset");
                 std::puts("PASS: extensions, native menu choices, transitions and Save As language reidentification");
 
                 const std::string triple = "doc = \"\"\"中文\ninside\n\"\"\"\nreturn 42\n";

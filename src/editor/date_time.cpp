@@ -13,7 +13,21 @@
 
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 namespace {
+constexpr uint64_t TicksPerSecond = 10'000'000;
+constexpr uint64_t TicksPerMillisecond = TicksPerSecond / std::milli::den;
+constexpr uint64_t TicksPerMicrosecond = TicksPerSecond / std::micro::den;
+constexpr uint64_t NanosecondsPerTick = std::nano::den / TicksPerSecond;
+using UnixTick = std::chrono::duration<uint64_t, std::ratio<1, TicksPerSecond>>;
+#ifdef __WXMSW__
+constexpr uint64_t WindowsToUnixEpochTicks = UINT64_C(116444736000000000);
+#endif
+
 #ifndef __WXMSW__
+void RemoveTimeSeparator(std::wstring& date) {
+    while (!date.empty() && std::wcschr(L" :./-", date.back()))
+        date.pop_back();
+}
+
 std::wstring LongDateFormat(const std::wstring& format) {
     std::wstring date;
     bool time = false;
@@ -23,8 +37,7 @@ std::wstring LongDateFormat(const std::wstring& format) {
             if ((format[index] == L'E' || format[index] == L'O') && index + 1 < format.size()) ++index;
             const auto specifier = format[index++];
             if (std::wcschr(L"HIklMpPrRsSTXzZ", specifier)) {
-                while (!date.empty() && std::wcschr(L" :./-", date.back()))
-                    date.pop_back();
+                RemoveTimeSeparator(date);
                 time = true;
                 continue;
             }
@@ -38,6 +51,23 @@ std::wstring LongDateFormat(const std::wstring& format) {
 
 // POSIX locales expose a time pattern including seconds. Retain its hour cycle,
 // minute separators and AM/PM marker while removing the seconds field.
+size_t RemoveSeconds(std::wstring& format, size_t index, wchar_t specifier, locale_t locale) {
+    const size_t start = index - 1;
+    const size_t end = index + (specifier == L'S' ? 1 : 2);
+    // The separator immediately before seconds belongs to that field.
+    size_t separator = start;
+    while (separator && format[separator - 1] != L'%' && !iswalnum_l(format[separator - 1], locale))
+        --separator;
+    format.erase(separator, end - separator);
+    // Drop locale suffixes such as the Chinese seconds character.
+    const size_t next = format.find(L'%', separator);
+    const size_t literalEnd = next == std::wstring::npos ? format.size() : next;
+    const auto literal = format.substr(separator, literalEnd - separator);
+    if (literal.find_first_not_of(L" \t") != std::wstring::npos)
+        format.replace(separator, literal.size(), next == std::wstring::npos ? L"" : L" ");
+    return separator;
+}
+
 std::wstring MinuteFormat(std::wstring format, locale_t locale) {
     for (size_t index = 0; index + 1 < format.size(); ++index) {
         if (format[index] != L'%') continue;
@@ -51,20 +81,7 @@ std::wstring MinuteFormat(std::wstring format, locale_t locale) {
             format.replace(index - 1, 2, L"%H:%M");
         } else if (specifier == L'S' || ((specifier == L'E' || specifier == L'O') && index + 1 < format.size() &&
                                          format[index + 1] == L'S')) {
-            const size_t start = index - 1;
-            const size_t end = index + (specifier == L'S' ? 1 : 2);
-            // The separator immediately before seconds belongs to that field.
-            size_t separator = start;
-            while (separator && format[separator - 1] != L'%' && !iswalnum_l(format[separator - 1], locale))
-                --separator;
-            format.erase(separator, end - separator);
-            // Drop locale suffixes such as the Chinese seconds character.
-            const size_t next = format.find(L'%', separator);
-            const size_t literalEnd = next == std::wstring::npos ? format.size() : next;
-            const auto literal = format.substr(separator, literalEnd - separator);
-            if (literal.find_first_not_of(L" \t") != std::wstring::npos)
-                format.replace(separator, literal.size(), next == std::wstring::npos ? L"" : L" ");
-            index = separator;
+            index = RemoveSeconds(format, index, specifier, locale);
         }
     }
     return format;
@@ -114,7 +131,7 @@ DateTimeInsertionValue DateTimeInsertionClock() {
     FILETIME time;
     GetSystemTimePreciseAsFileTime(&time);
     value.unixTicks =
-        ((static_cast<uint64_t>(time.dwHighDateTime) << 32) | time.dwLowDateTime) - UINT64_C(116444736000000000);
+        ((static_cast<uint64_t>(time.dwHighDateTime) << 32) | time.dwLowDateTime) - WindowsToUnixEpochTicks;
     SYSTEMTIME local;
     GetLocalTime(&local);
     value.local.tm_year = local.wYear - 1900;
@@ -130,9 +147,8 @@ DateTimeInsertionValue DateTimeInsertionClock() {
     value.local.tm_yday = static_cast<int>(
         (std::chrono::sys_days(date) - std::chrono::sys_days(std::chrono::year(local.wYear) / 1 / 1)).count());
 #else
-    using Tick = std::chrono::duration<uint64_t, std::ratio<1, 10000000>>;
-    value.unixTicks = std::chrono::duration_cast<Tick>(std::chrono::system_clock::now().time_since_epoch()).count();
-    const auto seconds = static_cast<time_t>(value.unixTicks / 10000000);
+    value.unixTicks = std::chrono::duration_cast<UnixTick>(std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto seconds = static_cast<time_t>(value.unixTicks / TicksPerSecond);
     localtime_r(&seconds, &value.local);
 #endif
     return value;
@@ -143,19 +159,19 @@ wxString FormatDateTimeInsertion(DateTimeInsertion command, const DateTimeInsert
     uint64_t timestamp = value.unixTicks;
     switch (command) {
     case DateTimeInsertion::UnixSeconds:
-        timestamp /= 10000000;
+        timestamp /= TicksPerSecond;
         break;
     case DateTimeInsertion::UnixMilliseconds:
-        timestamp /= 10000;
+        timestamp /= TicksPerMillisecond;
         break;
     case DateTimeInsertion::UnixMicroseconds:
-        timestamp /= 10;
+        timestamp /= TicksPerMicrosecond;
         break;
     case DateTimeInsertion::UnixNanoseconds:
-        timestamp *= 100;
+        timestamp *= NanosecondsPerTick;
         break;
     default:
-        const auto seconds = static_cast<time_t>(value.unixTicks / 10000000);
+        const auto seconds = static_cast<time_t>(value.unixTicks / TicksPerSecond);
         std::tm time = value.local;
 #ifdef __WXMSW__
         if (command == DateTimeInsertion::UtcDateTime) gmtime_s(&time, &seconds);

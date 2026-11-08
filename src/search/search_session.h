@@ -47,7 +47,6 @@ struct ReplaceAllResult {
 class SearchSession final {
 public:
     explicit SearchSession(EditorControl& editor);
-    ~SearchSession();
     const SearchRequest& Request() const { return request_; }
     void Configure(SearchRequest request);
     FindResult Find(SearchDirection direction, bool extendSelection = false);
@@ -73,12 +72,8 @@ private:
     std::vector<wxString> recentReplace_;
     bool lastReplaceEmpty_ = false;
     bool hasFindText_ = false;
-    std::optional<size_t> matchCount_;
-    uint64_t markedRevision_ = 0;
-    bool bookmarkForFindAll_ = false;
     std::function<bool(SearchDirection)> confirmWrap_;
     void ClearFindAll();
-    void OnEditorState(wxCommandEvent& event);
     Scintilla::FindOption SearchFlags() const;
     bool UsesRegex() const;
     FindResult SelectTarget(bool wrapped);

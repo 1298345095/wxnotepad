@@ -120,7 +120,7 @@ public:
                 editor->Send(Message::Undo);
                 Require(!editor->Send(Message::GetModify), "undo after search must reach the original save point");
                 std::puts("PASS: exhausted and empty search preserve selection, document and editing history");
-                Require(frame->New(), "clean New must succeed while Find is open");
+                Require(frame->NewDocument(), "clean New must succeed while Find is open");
                 Require(dialog->IsShown(), "New must leave the modeless dialog available");
                 query->SetValue("one");
                 Click(dialog, wxID_FORWARD);

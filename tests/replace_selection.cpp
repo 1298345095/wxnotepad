@@ -57,6 +57,60 @@ public:
 #endif
     }
 };
+void SelectionExamples(EditorFrame* frame, EditorControl* editor, wxTextCtrl* query, wxTextCtrl* replacement,
+                       wxButton* button, wxWindow* dialog, wxCheckBox* regex, wxStaticText* result) {
+    const auto example = [frame, editor, regex, query, replacement, dialog, button,
+                          result](const char* before, intptr_t anchor, intptr_t caret, const char* pattern,
+                                  const char* with, bool regularExpression, const char* expected, size_t count,
+                                  intptr_t selectedStart, intptr_t selectedEnd) {
+        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(before));
+        editor->Send(Message::EmptyUndoBuffer);
+        editor->Send(Message::SetSavePoint);
+        editor->Send(Message::SetSel, anchor, caret);
+        if (regex->GetValue() != regularExpression) NativeSearch::Toggle(regex, regularExpression);
+        query->SetValue(wxString::FromUTF8(pattern));
+        replacement->SetValue(wxString::FromUTF8(with));
+        NativeSearch::Click(dialog, button->GetId());
+        if (NativeSearch::Text(editor) != expected || result->GetLabel() != wxString::Format("%zu replacements", count))
+            std::fprintf(stderr, "Pattern %s: [%s] / %s; expected [%s] / %zu\n", pattern,
+                         NativeSearch::Text(editor).c_str(), result->GetLabel().utf8_str().data(), expected, count);
+        Require(NativeSearch::Text(editor) == expected &&
+                    result->GetLabel() == wxString::Format("%zu replacements", count),
+                "selection replacement produces the pinned bytes and count");
+        NativeSearch::Selection(editor, selectedStart, selectedEnd, "selection range is repaired");
+        Require((editor->Send(Message::GetAnchor) > editor->Send(Message::GetCurrentPos)) == (anchor > caret),
+                "selection replacement preserves selection direction");
+        if (std::string(before) != expected) {
+            NativeSearch::Command(frame, wxID_UNDO);
+            Require(NativeSearch::Text(editor) == before && !editor->Send(Message::GetModify) &&
+                        !editor->Send(Message::CanUndo),
+                    "one Undo restores every selected edit");
+            NativeSearch::Command(frame, wxID_REDO);
+            Require(NativeSearch::Text(editor) == expected, "one Redo restores every selected edit");
+        } else {
+            Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+                    "unchanged selection replacements retain history and save point");
+        }
+    };
+    example("a a a a", 5, 2, "a", "XX", false, "a XX XX a", 2, 4, 7);
+    example("中\r\n文 中\r\n文 中\r\n文", 0, 17, "文", "X", false, "中\r\nX 中\r\nX 中\r\n文", 2, 0, 13);
+    example("中\r\n文 中\r\n文 中\r\n文", 9, 17, "(中)\\r\\n(文)", "$2:$1", true, "中\r\n文 文:中 中\r\n文", 1, 9, 16);
+    example("x 中文12 中文34 z", 19, 2, "(中文)([0-9]+)", "$2:$1", true, "x 12:中文 34:中文 z", 2, 11, 21);
+    example("aa aa aa", 3, 5, "aa", "", false, "aa  aa", 1, 3, 3);
+    example("abZ", 0, 2, "bZ|b", "X", true, "abZ", 0, 0, 2);
+    example("abZ", 0, 2, "(?=Z)", "_", true, "ab_Z", 1, 0, 3);
+    example("中中Z", 0, 6, "(?=中)", "_", true, "_中_中Z", 2, 1, 8);
+    example("a\nb\nz", 0, 4, "^", "", true, "a\nb\nz", 3, 0, 4);
+    example("a\nb\nz", 0, 4, "^", ">", true, ">a\n>b\n>z", 3, 1, 7);
+    example("one one", 0, 3, "one", "one", false, "one one", 1, 0, 3);
+    example("one one", 0, 3, "missing", "X", false, "one one", 0, 0, 3);
+    example("one one", 3, 3, "one", "X", false, "one one", 0, 3, 3);
+    example("abZ", 2, 0, "(?=Z)", "_", true, "ab_Z", 1, 0, 3);
+    example("ab", 1, 1, "(?=b)", "_", true, "a_b", 1, 1, 2);
+    std::puts("PASS: multiline/Unicode, growth/shrink, reversed and empty ranges, end boundary and "
+              "zero-width scope");
+}
+
 class SelectionReplaceApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -94,59 +148,7 @@ public:
                 auto* regex = wxDynamicCast(wxWindow::FindWindowByName("Regular expression", frame), wxCheckBox);
                 auto* result = wxDynamicCast(wxWindow::FindWindowByName("Replacement result", dialog), wxStaticText);
                 Require(regex && result, "selection replacement shares regex options and count feedback");
-                const auto example = [&](const char* before, intptr_t anchor, intptr_t caret, const char* pattern,
-                                         const char* with, bool regularExpression, const char* expected, size_t count,
-                                         intptr_t selectedStart, intptr_t selectedEnd) {
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(before));
-                    editor->Send(Message::EmptyUndoBuffer);
-                    editor->Send(Message::SetSavePoint);
-                    editor->Send(Message::SetSel, anchor, caret);
-                    if (regex->GetValue() != regularExpression) NativeSearch::Toggle(regex, regularExpression);
-                    query->SetValue(wxString::FromUTF8(pattern));
-                    replacement->SetValue(wxString::FromUTF8(with));
-                    NativeSearch::Click(dialog, button->GetId());
-                    if (NativeSearch::Text(editor) != expected ||
-                        result->GetLabel() != wxString::Format("%zu replacements", count))
-                        std::fprintf(stderr, "Pattern %s: [%s] / %s; expected [%s] / %zu\n", pattern,
-                                     NativeSearch::Text(editor).c_str(), result->GetLabel().utf8_str().data(), expected,
-                                     count);
-                    Require(NativeSearch::Text(editor) == expected &&
-                                result->GetLabel() == wxString::Format("%zu replacements", count),
-                            "selection replacement produces the pinned bytes and count");
-                    NativeSearch::Selection(editor, selectedStart, selectedEnd, "selection range is repaired");
-                    Require((editor->Send(Message::GetAnchor) > editor->Send(Message::GetCurrentPos)) ==
-                                (anchor > caret),
-                            "selection replacement preserves selection direction");
-                    if (std::string(before) != expected) {
-                        NativeSearch::Command(frame, wxID_UNDO);
-                        Require(NativeSearch::Text(editor) == before && !editor->Send(Message::GetModify) &&
-                                    !editor->Send(Message::CanUndo),
-                                "one Undo restores every selected edit");
-                        NativeSearch::Command(frame, wxID_REDO);
-                        Require(NativeSearch::Text(editor) == expected, "one Redo restores every selected edit");
-                    } else {
-                        Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
-                                "unchanged selection replacements retain history and save point");
-                    }
-                };
-                example("a a a a", 5, 2, "a", "XX", false, "a XX XX a", 2, 4, 7);
-                example("中\r\n文 中\r\n文 中\r\n文", 0, 17, "文", "X", false, "中\r\nX 中\r\nX 中\r\n文", 2, 0, 13);
-                example("中\r\n文 中\r\n文 中\r\n文", 9, 17, "(中)\\r\\n(文)", "$2:$1", true, "中\r\n文 文:中 中\r\n文",
-                        1, 9, 16);
-                example("x 中文12 中文34 z", 19, 2, "(中文)([0-9]+)", "$2:$1", true, "x 12:中文 34:中文 z", 2, 11, 21);
-                example("aa aa aa", 3, 5, "aa", "", false, "aa  aa", 1, 3, 3);
-                example("abZ", 0, 2, "bZ|b", "X", true, "abZ", 0, 0, 2);
-                example("abZ", 0, 2, "(?=Z)", "_", true, "ab_Z", 1, 0, 3);
-                example("中中Z", 0, 6, "(?=中)", "_", true, "_中_中Z", 2, 1, 8);
-                example("a\nb\nz", 0, 4, "^", "", true, "a\nb\nz", 3, 0, 4);
-                example("a\nb\nz", 0, 4, "^", ">", true, ">a\n>b\n>z", 3, 1, 7);
-                example("one one", 0, 3, "one", "one", false, "one one", 1, 0, 3);
-                example("one one", 0, 3, "missing", "X", false, "one one", 0, 0, 3);
-                example("one one", 3, 3, "one", "X", false, "one one", 0, 3, 3);
-                example("abZ", 2, 0, "(?=Z)", "_", true, "ab_Z", 1, 0, 3);
-                example("ab", 1, 1, "(?=b)", "_", true, "a_b", 1, 1, 2);
-                std::puts("PASS: multiline/Unicode, growth/shrink, reversed and empty ranges, end boundary and "
-                          "zero-width scope");
+                SelectionExamples(frame, editor, query, replacement, button, dialog, regex, result);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one"));
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);

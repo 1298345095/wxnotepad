@@ -20,6 +20,8 @@ public:
 
     GtkTextDragDrop(wxWindow& window, Callbacks callbacks);
     ~GtkTextDragDrop();
+    GtkTextDragDrop(const GtkTextDragDrop&) = delete;
+    GtkTextDragDrop& operator=(const GtkTextDragDrop&) = delete;
     wxDragResult Start(std::string_view text);
 
 private:

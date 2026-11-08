@@ -1,8 +1,35 @@
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <string>
+#include <string_view>
 
 using Scintilla::Message;
+
+namespace {
+std::string IndentPadding(EditorControl& editor) {
+    auto padding = editor.Send(Message::GetIndent);
+    char character = ' ';
+    if (editor.Send(Message::GetTabIndents)) {
+        if (!editor.Send(Message::GetUseTabs))
+            padding = editor.Send(Message::GetTabWidth);
+        else {
+            padding = 1;
+            character = '\t';
+        }
+    }
+    return std::string(static_cast<size_t>(padding), character);
+}
+
+void AppendClosingDelimiterLine(EditorControl& editor, intptr_t line, bool delimiter,
+                                std::string_view leadingWhitespace, std::string& insertion) {
+    const auto next = editor.Send(Message::GetCharAt, editor.Send(Message::PositionFromLine, line));
+    if (delimiter && (next == '}' || next == ']' || next == ')')) {
+        const auto eol = static_cast<Scintilla::EndOfLine>(editor.Send(Message::GetEOLMode));
+        insertion += eol == Scintilla::EndOfLine::Lf ? "\n" : eol == Scintilla::EndOfLine::Cr ? "\r" : "\r\n";
+        insertion += leadingWhitespace;
+    }
+}
+} // namespace
 
 void EditorControl::IndentLines(bool forwards) {
     if (!Send(Message::GetReadOnly) && Send(Message::GetSelectionEmpty) && Send(Message::GetSelections) == 1 &&
@@ -48,25 +75,12 @@ void EditorControl::AutoIndent() {
             insertion += " *";
             caret += 2;
         } else {
-            auto padding = Send(Message::GetIndent);
-            char character = ' ';
-            if (Send(Message::GetTabIndents)) {
-                if (!Send(Message::GetUseTabs))
-                    padding = Send(Message::GetTabWidth);
-                else {
-                    padding = 1;
-                    character = '\t';
-                }
-            }
-            insertion.append(static_cast<size_t>(padding), character);
-            caret += padding;
+            const auto padding = IndentPadding(*this);
+            insertion += padding;
+            caret += static_cast<intptr_t>(padding.size());
         }
-        const auto next = Send(Message::GetCharAt, Send(Message::PositionFromLine, line));
-        if (delimiter && (next == '}' || next == ']' || next == ')')) {
-            const auto eol = static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode));
-            insertion += eol == Scintilla::EndOfLine::Lf ? "\n" : eol == Scintilla::EndOfLine::Cr ? "\r" : "\r\n";
-            insertion.append(previous, 0, static_cast<size_t>(leading));
-        }
+        AppendClosingDelimiterLine(*this, line, delimiter,
+                                   std::string_view(previous.data(), static_cast<size_t>(leading)), insertion);
     }
     if (!insertion.empty()) {
         Send(Message::AddText, insertion.size(), reinterpret_cast<intptr_t>(insertion.data()));

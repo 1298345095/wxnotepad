@@ -86,7 +86,7 @@ public:
                     }
                     std::printf("PASS: %s, actual Enter/Undo/Redo and saved bytes\n", sample.name);
                 }
-                Require(frame->New(), "New must replace a saved LF document");
+                Require(frame->NewDocument(), "New must replace a saved LF document");
                 Key(frame->Editor(), WXK_RETURN);
                 const auto newPath = directory / "new.txt";
                 Require(frame->SaveFirst(Filename(newPath)).status == SaveStatus::Saved, "new document must save");

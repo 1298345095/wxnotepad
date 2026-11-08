@@ -16,8 +16,8 @@ from settings_process import Application
 @contextmanager
 def obstruct_publication(state, mode):
     if mode == "crt-reader":
-        # Control: ordinary Python readers deny delete but permit write;
-        # wxRenameFile can still succeed through its CopyFile fallback.
+        # Ordinary Python readers deny delete but permit write. Publication
+        # must wait for replacement instead of copying over the visible file.
         with state.open("rb"):
             yield
     elif mode in ("restricted-reader", "exclusive-reader"):
@@ -129,11 +129,15 @@ def main():
             try:
                 if mode != "none":
                     with obstruct_publication(folder / "state", mode):
+                        previous = (folder / "state").read_bytes() if mode != "directory" else None
                         command(folder, "1\nmenu\nView\tZoom In\n")
                         deadline = time.monotonic() + 5
                         while (folder / "command").exists() and time.monotonic() < deadline:
                             time.sleep(.01)
                         time.sleep(.25)
+                        if mode != "directory":
+                            assert (folder / "state").read_bytes() == previous, (
+                                "a blocked snapshot replacement preserves the complete previous publication")
                         print(f"CONTENDED {mode} " + json.dumps(observation_context(folder, app.process)), flush=True)
                     app.sequence = 1
                 print("BEFORE CLOSE " + json.dumps(observation_context(folder, app.process)), flush=True)

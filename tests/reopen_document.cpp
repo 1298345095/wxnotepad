@@ -2,6 +2,8 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
+#include "native_key_helpers.h"
+#include "native_scroll_helpers.h"
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <wx/file.h>
@@ -24,17 +26,105 @@ std::string Text(EditorControl& editor) {
     bytes.pop_back();
     return bytes;
 }
+void ReopenDisplacement(DocumentSession& document, EditorControl* editor, const wxString& path,
+                        const std::string& bytes) {
+    std::string wider;
+    for (int line = 0; line < 100; ++line)
+        wider += std::string(2000, 'y') + "\n";
+    Write(path, wider);
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+                editor->Send(Message::GetCurrentPos) == 60040 && editor->Send(Message::GetAnchor) == 60040,
+            "large line displacement must use the original saved line/column jump, clearing selection");
+    const auto caretY = editor->Send(Message::PointYFromPosition, 0, 60040);
+    Require(caretY >= 0 && caretY < editor->GetClientSize().y,
+            "the fallback jump must keep the restored caret visible");
+    Write(path, "short");
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+                editor->Send(Message::GetCurrentPos) == 5 && editor->Send(Message::GetAnchor) == 5 &&
+                !editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+            "a deleted saved line jumps to EOF and successful load clears history at its save point");
+    std::puts("PASS: changed disk content uses original fallback and EOF clipping");
+    Write(path, bytes);
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
+            "the displacement boundary fixture must load");
+    editor->Send(Message::SetSel, 6020, 6040);
+    std::string fewerLines = bytes;
+    for (size_t index = 0; index < 4; ++index)
+        fewerLines[index * 201 + 200] = 'x';
+    Write(path, fewerLines);
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+                editor->Send(Message::GetAnchor) == 6020 && editor->Send(Message::GetCurrentPos) == 6040,
+            "a displacement of exactly five in the original mixed line bases retains byte positions");
+    Write(path, bytes);
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened, "the five-line fixture must reload");
+    editor->Send(Message::SetSel, 6020, 6040);
+    fewerLines[4 * 201 + 200] = 'x';
+    Write(path, fewerLines);
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+                editor->Send(Message::GetAnchor) == 7045 && editor->Send(Message::GetCurrentPos) == 7045,
+            "removing five preceding newlines crosses the original fallback threshold");
+    Write(path, "abcdefghij");
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
+            "the short single-line fixture must load");
+    editor->Send(Message::SetSel, 2, 9);
+    Write(path, "tiny");
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+                editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 4,
+            "small line displacement lets the core clip each selection endpoint independently");
+    std::puts("PASS: exact displacement boundary and raw endpoint clipping");
+}
+
+void ReopenDecisions(DocumentSession& document, EditorControl* editor, const wxString& path) {
+    editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("dirty "));
+    editor->Send(Message::SetSel, 2, 7);
+    Write(path, "external\n");
+    const auto revision = editor->DocumentRevision();
+    Require(document.Open(path, [] { return false; }).status == OpenStatus::Cancelled &&
+                Text(*editor) == "dirty tiny" && editor->DocumentRevision() == revision &&
+                editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
+                editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 7 &&
+                document.Language() == SyntaxLanguage::Python,
+            "Cancel retains edited bytes, view, scheme and undo history");
+    Require(document.Open(std::nullopt, [] { return true; }).status == OpenStatus::Cancelled &&
+                document.Open(path + ".missing", [] { return true; }).status == OpenStatus::Failed &&
+                editor->DocumentRevision() == revision && editor->Send(Message::GetModify),
+            "a cancelled chooser or failed load retains the existing document");
+    Write(path, std::string(1, '\xff'));
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Failed && Text(*editor) == "dirty tiny" &&
+                editor->Send(Message::CanUndo),
+            "failed decoding retains edited bytes and history");
+    Write(path, "external\n");
+    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened && Text(*editor) == "external\n" &&
+                !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+            "Discard reloads disk bytes and clears the previous edit history");
+    editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("saved "));
+    editor->Send(Message::SetSel, 2, 7);
+    Write(path, "external replacement\n");
+    Require(document.Open(path, [&document] { return document.Save().status == SaveStatus::Saved; }).status ==
+                    OpenStatus::Opened &&
+                Text(*editor) == "saved external\n" && editor->Send(Message::GetAnchor) == 2 &&
+                editor->Send(Message::GetCurrentPos) == 7 && !editor->Send(Message::GetModify) &&
+                !editor->Send(Message::CanUndo),
+            "Save reloads the newly saved bytes rather than the stale pre-prompt read");
+    wxFile saved(path, wxFile::read);
+    std::string disk(static_cast<size_t>(saved.Length()), '\0');
+    Require(saved.Read(disk.data(), disk.size()) == disk.size() && saved.Close() && disk == "saved external\n",
+            "the independently read disk bytes must contain the Save decision's edited content");
+    std::puts("PASS: cancelled/failed reopen, Discard and Save retain original transaction semantics");
+}
+
 class ReopenApp final : public wxApp {
 public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
         auto* editor = frame->Editor();
         frame->ShowWithoutActivating();
-        CallAfter([this, frame, editor] {
+        NativeKeys::AfterPresentation(frame, [this, frame, editor](bool presented) {
             const wxString path = wxFileName::CreateTempFileName(
                                       TestFiles::Filename(TestFiles::TemporaryDirectory() / "wxnotepad-reopen-")) +
                                   ".cpp";
             try {
+                Require(presented, "the native reopen view is presented before viewport scenarios");
                 std::string bytes;
                 for (int line = 0; line < 100; ++line)
                     bytes += std::string(200, 'x') + "\n";
@@ -43,6 +133,8 @@ public:
                 Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
                         "initial Open must succeed");
                 document.SelectLanguage(SyntaxLanguage::Python);
+                Require(NativeScroll::WaitForHorizontalRange(editor, true, 120),
+                        "the initial long document supports the saved horizontal viewport");
                 editor->Send(Message::SetSel, 6020, 6040);
                 editor->Send(Message::SetFirstVisibleLine, 25);
                 editor->Send(Message::SetXOffset, 120);
@@ -54,91 +146,9 @@ public:
                             editor->Send(Message::GetXOffset) == 120,
                         "reopening the current path must preserve the effective scheme, selection and view");
                 std::puts("PASS: same-path reopen preserves the manual scheme, selection and viewport");
-                std::string wider;
-                for (int line = 0; line < 100; ++line)
-                    wider += std::string(2000, 'y') + "\n";
-                Write(path, wider);
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
-                            editor->Send(Message::GetCurrentPos) == 60040 && editor->Send(Message::GetAnchor) == 60040,
-                        "large line displacement must use the original saved line/column jump, clearing selection");
-                const auto caretY = editor->Send(Message::PointYFromPosition, 0, 60040);
-                Require(caretY >= 0 && caretY < editor->GetClientSize().y,
-                        "the fallback jump must keep the restored caret visible");
-                Write(path, "short");
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
-                            editor->Send(Message::GetCurrentPos) == 5 && editor->Send(Message::GetAnchor) == 5 &&
-                            !editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo) &&
-                            !editor->Send(Message::GetModify),
-                        "a deleted saved line jumps to EOF and successful load clears history at its save point");
-                std::puts("PASS: changed disk content uses original fallback and EOF clipping");
-                Write(path, bytes);
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
-                        "the displacement boundary fixture must load");
-                editor->Send(Message::SetSel, 6020, 6040);
-                std::string fewerLines = bytes;
-                for (size_t index = 0; index < 4; ++index)
-                    fewerLines[index * 201 + 200] = 'x';
-                Write(path, fewerLines);
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
-                            editor->Send(Message::GetAnchor) == 6020 && editor->Send(Message::GetCurrentPos) == 6040,
-                        "a displacement of exactly five in the original mixed line bases retains byte positions");
-                Write(path, bytes);
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
-                        "the five-line fixture must reload");
-                editor->Send(Message::SetSel, 6020, 6040);
-                fewerLines[4 * 201 + 200] = 'x';
-                Write(path, fewerLines);
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
-                            editor->Send(Message::GetAnchor) == 7045 && editor->Send(Message::GetCurrentPos) == 7045,
-                        "removing five preceding newlines crosses the original fallback threshold");
-                Write(path, "abcdefghij");
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
-                        "the short single-line fixture must load");
-                editor->Send(Message::SetSel, 2, 9);
-                Write(path, "tiny");
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
-                            editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 4,
-                        "small line displacement lets the core clip each selection endpoint independently");
-                std::puts("PASS: exact displacement boundary and raw endpoint clipping");
+                ReopenDisplacement(document, editor, path, bytes);
 
-                editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("dirty "));
-                editor->Send(Message::SetSel, 2, 7);
-                Write(path, "external\n");
-                const auto revision = editor->DocumentRevision();
-                Require(document.Open(path, [] { return false; }).status == OpenStatus::Cancelled &&
-                            Text(*editor) == "dirty tiny" && editor->DocumentRevision() == revision &&
-                            editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
-                            editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 7 &&
-                            document.Language() == SyntaxLanguage::Python,
-                        "Cancel retains edited bytes, view, scheme and undo history");
-                Require(document.Open(std::nullopt, [] { return true; }).status == OpenStatus::Cancelled &&
-                            document.Open(path + ".missing", [] { return true; }).status == OpenStatus::Failed &&
-                            editor->DocumentRevision() == revision && editor->Send(Message::GetModify),
-                        "a cancelled chooser or failed load retains the existing document");
-                Write(path, std::string(1, '\xff'));
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Failed &&
-                            Text(*editor) == "dirty tiny" && editor->Send(Message::CanUndo),
-                        "failed decoding retains edited bytes and history");
-                Write(path, "external\n");
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
-                            Text(*editor) == "external\n" && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo),
-                        "Discard reloads disk bytes and clears the previous edit history");
-                editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("saved "));
-                editor->Send(Message::SetSel, 2, 7);
-                Write(path, "external replacement\n");
-                Require(document.Open(path, [&] { return document.Save().status == SaveStatus::Saved; }).status ==
-                                OpenStatus::Opened &&
-                            Text(*editor) == "saved external\n" && editor->Send(Message::GetAnchor) == 2 &&
-                            editor->Send(Message::GetCurrentPos) == 7 && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo),
-                        "Save reloads the newly saved bytes rather than the stale pre-prompt read");
-                wxFile saved(path, wxFile::read);
-                std::string disk(static_cast<size_t>(saved.Length()), '\0');
-                Require(saved.Read(disk.data(), disk.size()) == disk.size() && saved.Close() &&
-                            disk == "saved external\n",
-                        "the independently read disk bytes must contain the Save decision's edited content");
-                std::puts("PASS: cancelled/failed reopen, Discard and Save retain original transaction semantics");
+                ReopenDecisions(document, editor, path);
 
 #ifdef __WXMSW__
                 Require(document.Open(path.Upper(), [] { return true; }).status == OpenStatus::Opened &&
@@ -179,10 +189,15 @@ public:
                 std::puts("PASS: application reopen keeps its language menu synchronized");
                 Write(path, bytes);
                 Require(frame->Open(path).status == OpenStatus::Opened, "frame viewport fixture must load");
+                Require(NativeScroll::WaitForHorizontalRange(editor, true, 120),
+                        "the frame long document supports the saved horizontal viewport");
                 editor->Send(Message::SetSel, 2, 7);
                 editor->Send(Message::SetFirstVisibleLine, 25);
                 editor->Send(Message::SetXOffset, 120);
-                Require(frame->Open(path).status == OpenStatus::Opened && editor->Send(Message::GetAnchor) == 2 &&
+                const auto reopened = frame->Open(path);
+                Require(editor->GetScrollRange(wxHORIZONTAL) - editor->GetScrollThumb(wxHORIZONTAL) >= 120,
+                        "reopen must restore a native range supporting the saved offset before the next paint");
+                Require(reopened.status == OpenStatus::Opened && editor->Send(Message::GetAnchor) == 2 &&
                             editor->Send(Message::GetCurrentPos) == 7 &&
                             editor->Send(Message::GetFirstVisibleLine) == 25 &&
                             editor->Send(Message::GetXOffset) == 120 && frame->GetMenuBar()->IsChecked(python) &&

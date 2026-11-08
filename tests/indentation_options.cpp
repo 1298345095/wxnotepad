@@ -72,7 +72,7 @@ public:
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Tabs as Spaces"));
                 Language(frame, "Python");
                 Check(editor, 7, 3, false);
-                Require(frame->New(), "empty New must succeed");
+                Require(frame->NewDocument(), "empty New must succeed");
                 Check(editor, 7, 3, true);
                 std::puts("PASS: original defaults, global inheritance, JSON defaults, partial override and New reset");
 
@@ -191,7 +191,7 @@ public:
                 editor->Send(Message::Redo);
                 Require(NativeSearch::Text(editor) == " \talpha\n!", "pending Redo remains usable after options");
                 editor->Send(Message::Undo);
-                Require(frame->New(), "saved New must reset overrides");
+                Require(frame->NewDocument(), "saved New must reset overrides");
                 Check(editor, 9, 5, false);
                 Reset(editor, " \tdata\n", 0, 0);
                 const auto firstJson = directory / "first.json";

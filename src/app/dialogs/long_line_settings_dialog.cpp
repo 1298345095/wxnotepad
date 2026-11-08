@@ -1,4 +1,5 @@
 #include "app/dialogs/long_line_settings_dialog.h"
+#include "settings/original_settings_constants.h"
 #include "app/dialogs/column_input.h"
 #include <wx/dialog.h>
 #include <wx/radiobut.h>
@@ -39,14 +40,14 @@ bool ShowLongLineSettingsDialog(wxWindow* parent, int& limit, int& mode) {
     dialog.CentreOnParent();
     dialog.Bind(
         wxEVT_BUTTON,
-        [&](wxCommandEvent&) {
+        [input, line, &limit, &mode, &dialog](wxCommandEvent&) {
             const auto number = ReadColumnInput(input->GetValue());
-            if (!number) {
+            if (!number.has_value()) {
                 input->SetFocus();
                 input->SelectAll();
                 return;
             }
-            limit = std::clamp(*number, 0, 4096);
+            limit = std::clamp(*number, 0, OriginalSettingLimits::MaxLongLineColumn);
             mode = line->GetValue() ? 1 : 2;
             dialog.EndModal(wxID_OK);
         },

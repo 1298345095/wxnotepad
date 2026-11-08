@@ -1,4 +1,6 @@
 #include "settings/settings_store.h"
+#include "search/search_limits.h"
+#include <ScintillaTypes.h>
 #include <wx/ffile.h>
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -58,6 +60,26 @@ wxString ConfigurationPath() {
     }
     return path;
 }
+wxString ParseDateTimeFormat(wxString value) {
+    value.Trim().Trim(false);
+    if (value.length() >= 2 &&
+        ((value.StartsWith("\"") && value.EndsWith("\"")) || (value.StartsWith("'") && value.EndsWith("'"))))
+        value = value.Mid(1, value.length() - 2);
+    // IniGetString's original WCHAR[256] reserves one UTF-16 unit for NUL.
+    wxString truncated;
+    size_t units = 0;
+    for (const wxUniChar character : value) {
+        if (units == 255) break;
+        const size_t count = character.GetValue() >= 0x10000 ? 2 : 1;
+        if (units + count > 255) {
+            truncated += wxUniChar(0xfffd);
+            break;
+        }
+        truncated += character;
+        units += count;
+    }
+    return truncated;
+}
 } // namespace
 
 SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
@@ -65,7 +87,13 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     LoadLines();
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
+    values.autoShrinkScrollWidth = ReadBool("AutoShrinkScrollWidth", defaults.autoShrinkScrollWidth, "wxnotepad");
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
+    values.showBookmarkMargin = ReadBool("ShowBookmarkMargin", defaults.showBookmarkMargin);
+    values.changeHistoryMarker = ReadInt("ChangeHistoryMarker", defaults.changeHistoryMarker);
+    values.matchBraces = ReadBool("MatchBraces", defaults.matchBraces);
+    values.showCodeFolding = ReadBool("ShowCodeFolding", defaults.showCodeFolding);
+    values.highlightCurrentBlock = ReadBool("HighlightCurrentBlock", defaults.highlightCurrentBlock);
     values.viewWhiteSpace = ReadBool("ViewWhiteSpace", defaults.viewWhiteSpace);
     values.showIndentGuides = ReadBool("ShowIndentGuides", defaults.showIndentGuides);
     values.simpleIndentGuides = ReadBool("SimpleIndentGuides", defaults.simpleIndentGuides, "Settings2");
@@ -85,14 +113,23 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.loadNFOasOEM = ReadBool("LoadNFOasOEM", defaults.encoding.loadNFOasOEM);
     values.encoding.noEncodingTags = ReadBool("NoEncodingTags", defaults.encoding.noEncodingTags);
     values.encoding.noFileVariables = ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
-    values.zoomLevel = std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), 10, 500);
+    values.zoomLevel =
+        std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
+    int caretStyle = ReadInt("CaretStyle", defaults.caret.lineWidth);
+    values.caret.blockAfterSelection = caretStyle >= 100;
+    caretStyle %= 100;
+    values.caret.overstrikeBlock = caretStyle >= 10;
+    values.caret.lineWidth = std::clamp(caretStyle % 10, 0, 3);
+    values.caret.blinkPeriod = ReadInt("CaretBlinkPeriod", defaults.caret.blinkPeriod);
     const int currentLine = ReadInt("HighlightCurrentLine", defaults.highlightCurrentLine);
     values.highlightCurrentLine = std::clamp(currentLine % 10, 0, 2) + (currentLine >= 10 ? 10 : 0);
-    values.longLinesLimit = std::clamp(ReadInt("LongLinesLimit", defaults.longLinesLimit), 0, 4096);
+    values.longLinesLimit =
+        std::clamp(ReadInt("LongLinesLimit", defaults.longLinesLimit), 0, OriginalSettingLimits::MaxLongLineColumn);
     values.markLongLines = ReadBool("MarkLongLines", defaults.markLongLines);
     values.longLineMode = std::clamp(ReadInt("LongLineMode", defaults.longLineMode), 1, 2);
     values.selectOption = ReadInt("SelectOption", defaults.selectOption);
     values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
+    values.markOccurrences = ReadInt("MarkOccurrences", defaults.markOccurrences);
     values.saveFindReplace = ReadBool("SaveFindReplace", defaults.saveFindReplace);
     values.findReplaceOption = ReadInt("FindReplaceOption", defaults.findReplaceOption);
     if (values.saveFindReplace) {
@@ -103,8 +140,10 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.lineSelection = ReadInt("LineSelection", defaults.lineSelection);
     values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", defaults.defaultEOLMode), 0, 2);
     values.warnLineEndings = ReadBool("WarnLineEndings", defaults.warnLineEndings);
-    values.globalTabs.tabWidth = std::clamp(ReadInt("TabWidth", defaults.globalTabs.tabWidth), 1, 256);
-    values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", defaults.globalTabs.indentWidth), 0, 256);
+    values.globalTabs.tabWidth =
+        std::clamp(ReadInt("TabWidth", defaults.globalTabs.tabWidth), 1, OriginalSettingLimits::MaxTabWidth);
+    values.globalTabs.indentWidth =
+        std::clamp(ReadInt("IndentWidth", defaults.globalTabs.indentWidth), 0, OriginalSettingLimits::MaxTabWidth);
     values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", defaults.globalTabs.tabsAsSpaces);
     values.tabIndents = ReadBool("TabIndents", defaults.tabIndents);
     values.autoIndent = ReadBool("AutoIndent", defaults.autoIndent);
@@ -114,8 +153,10 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.dateTimeLong = ReadDateTimeFormat("DateTimeLong");
     for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
         auto& tabs = values.schemeTabs[index];
-        tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, SchemeSections[index]), 1, 256);
-        tabs.indentWidth = std::clamp(ReadInt("IndentWidth", tabs.indentWidth, SchemeSections[index]), 0, 256);
+        tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, SchemeSections[index]), 1,
+                                   OriginalSettingLimits::MaxTabWidth);
+        tabs.indentWidth = std::clamp(ReadInt("IndentWidth", tabs.indentWidth, SchemeSections[index]), 0,
+                                      OriginalSettingLimits::MaxTabWidth);
         tabs.tabsAsSpaces = ReadInt("TabsAsSpaces", tabs.tabsAsSpaces, SchemeSections[index]) != 0;
         tabs.useGlobal = ReadInt("UseGlobalTabSettings", tabs.useGlobal, SchemeSections[index]) != 0;
     }
@@ -173,26 +214,8 @@ wxString SettingsStore::ReadDateTimeFormat(const wxString& key) const {
         line.Trim().Trim(false);
         if (line.StartsWith("[")) {
             section = line.CmpNoCase("[Settings2]") == 0;
-        } else if (section && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false).CmpNoCase(key) == 0) {
-            wxString value = line.AfterFirst('=').Trim().Trim(false);
-            if (value.length() >= 2 &&
-                ((value.StartsWith("\"") && value.EndsWith("\"")) || (value.StartsWith("'") && value.EndsWith("'"))))
-                value = value.Mid(1, value.length() - 2);
-            // IniGetString's original WCHAR[256] reserves one UTF-16 unit for NUL.
-            wxString truncated;
-            size_t units = 0;
-            for (const wxUniChar character : value) {
-                if (units == 255) break;
-                const size_t count = character.GetValue() >= 0x10000 ? 2 : 1;
-                if (units + count > 255) {
-                    truncated += wxUniChar(0xfffd);
-                    break;
-                }
-                truncated += character;
-                units += count;
-            }
-            return truncated;
-        }
+        } else if (section && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false).CmpNoCase(key) == 0)
+            return ParseDateTimeFormat(line.AfterFirst('='));
     }
     return {};
 }
@@ -234,7 +257,7 @@ std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName) co
             if (value.StartsWith("\"") && value.EndsWith("\"") && value.length() >= 2)
                 value = value.Mid(1, value.length() - 2);
             if (!value.empty()) history.push_back(value);
-            if (history.size() == 32) break;
+            if (history.size() == SearchLimits::HistoryEntries) break;
         }
     }
     return history;
@@ -247,7 +270,7 @@ void SettingsStore::WriteHistory(const wxString& sectionName, const std::vector<
         std::erase(merged, *item);
         merged.insert(merged.begin(), *item);
     }
-    if (merged.size() > 32) merged.resize(32);
+    if (merged.size() > SearchLimits::HistoryEntries) merged.resize(SearchLimits::HistoryEntries);
     bool section = false;
     for (size_t index = 0; index < lines_.size();) {
         wxString line = lines_[index];
@@ -301,7 +324,13 @@ bool SettingsStore::Save(bool explicitSave) {
     WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
     if (values.saveSettings || explicitSave) {
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
+        WriteBool("AutoShrinkScrollWidth", values.autoShrinkScrollWidth, defaults.autoShrinkScrollWidth, "wxnotepad");
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
+        WriteBool("ShowBookmarkMargin", values.showBookmarkMargin, defaults.showBookmarkMargin);
+        WriteInt("ChangeHistoryMarker", values.changeHistoryMarker, defaults.changeHistoryMarker);
+        WriteBool("MatchBraces", values.matchBraces, defaults.matchBraces);
+        WriteBool("ShowCodeFolding", values.showCodeFolding, defaults.showCodeFolding);
+        WriteBool("HighlightCurrentBlock", values.highlightCurrentBlock, defaults.highlightCurrentBlock);
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, defaults.viewWhiteSpace);
         WriteBool("ShowIndentGuides", values.showIndentGuides, defaults.showIndentGuides);
         WriteBool("ViewEOLs", values.viewEOLs, defaults.viewEOLs);
@@ -315,6 +344,10 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, defaults.encoding.loadNFOasOEM);
         WriteBool("NoEncodingTags", values.encoding.noEncodingTags, defaults.encoding.noEncodingTags);
         WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
+        WriteInt("CaretStyle",
+                 values.caret.lineWidth + 10 * values.caret.overstrikeBlock + 100 * values.caret.blockAfterSelection,
+                 defaults.caret.lineWidth);
+        WriteInt("CaretBlinkPeriod", values.caret.blinkPeriod, defaults.caret.blinkPeriod);
         WriteInt("HighlightCurrentLine", values.highlightCurrentLine, defaults.highlightCurrentLine);
         WriteInt("LongLinesLimit", values.longLinesLimit, defaults.longLinesLimit);
         WriteBool("MarkLongLines", values.markLongLines, defaults.markLongLines);
@@ -323,6 +356,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
         WriteInt("SelectOption", values.selectOption, defaults.selectOption);
         WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
+        WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);
         WriteBool("SaveFindReplace", values.saveFindReplace, defaults.saveFindReplace);
         WriteInt("FindReplaceOption", values.findReplaceOption, defaults.findReplaceOption);
         WriteInt("FindReplaceFlag", values.saveFindReplace ? values.findReplaceFlag : defaults.findReplaceFlag,

@@ -60,7 +60,8 @@ public:
                 const auto x = editor->Send(Message::PointXFromPosition, 0, 7);
                 const auto tabWidth = editor->Send(Message::GetTabWidth);
                 const auto eol = editor->Send(Message::GetEOLMode);
-                const auto fontSize = editor->Send(Message::StyleGetSizeFractional, 32);
+                const auto fontSize = editor->Send(Message::StyleGetSizeFractional,
+                                                   static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
                 const auto tabDraw = editor->Send(Message::GetTabDrawMode);
                 NativeSearch::Command(frame, id);
                 Require(item->IsChecked() && editor->Send(Message::GetViewWS) == 1,
@@ -69,7 +70,8 @@ public:
                             editor->Send(Message::GetCurrentPos) == 2 && !editor->Send(Message::GetModify) &&
                             !editor->Send(Message::CanUndo) && editor->Send(Message::GetEOLMode) == eol &&
                             editor->Send(Message::GetTabWidth) == tabWidth &&
-                            editor->Send(Message::StyleGetSizeFractional, 32) == fontSize &&
+                            editor->Send(Message::StyleGetSizeFractional,
+                                         static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == fontSize &&
                             editor->Send(Message::GetTabDrawMode) == tabDraw &&
                             editor->Send(Message::PointXFromPosition, 0, 7) == x,
                         "showing whitespace must preserve bytes, selection, save point, history and tab geometry");
@@ -130,7 +132,7 @@ public:
                 Require(editor->Send(Message::GetViewWS) == 1 && frame->DocumentEncoding() == FileEncoding::Utf8 &&
                             frame->DocumentHasBom() && !editor->Send(Message::GetModify),
                         "Save As and its automatic scheme change must preserve the view and document metadata");
-                Require(frame->New() && editor->Send(Message::GetViewWS) == 1 && item->IsChecked(),
+                Require(frame->NewDocument() && editor->Send(Message::GetViewWS) == 1 && item->IsChecked(),
                         "New must keep the current window's whitespace preference");
                 auto* fresh = new EditorFrame(settings_.get());
                 Require(fresh->Editor()->Send(Message::GetViewWS) == 0,

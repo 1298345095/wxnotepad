@@ -29,36 +29,35 @@ void Reset(EditorControl* editor, std::string_view text, intptr_t anchor, intptr
     editor->Send(Message::EmptyUndoBuffer);
     editor->Send(Message::SetSavePoint);
 }
-void Fixtures(EditorFrame* frame) {
+template <typename Fixture> void ConversionCase(EditorFrame* frame, const Fixture& fixture, bool reverse) {
     auto* editor = frame->Editor();
-    for (const auto& fixture : NumberRadixReference::fixtures) {
-        for (bool reverse : {false, true}) {
-            const auto before = static_cast<intptr_t>(fixture.before.size());
-            const auto after = static_cast<intptr_t>(fixture.after.size());
-            Reset(editor, fixture.before, reverse ? before : 0, reverse ? 0 : before);
-            Menu(frame, fixture.command);
-            if (TestEditor::Text(editor) != fixture.after)
-                std::fprintf(stderr, "%s: expected <%.*s>, got <%s>\n", fixture.command,
-                             static_cast<int>(fixture.after.size()), fixture.after.data(),
-                             TestEditor::Text(editor).c_str());
-            Require(TestEditor::Text(editor) == fixture.after, "conversion matches captured original bytes");
-            TestEditor::RequireSelection(editor, reverse ? after : 0, reverse ? 0 : after,
-                                         "converted endpoints match original direction");
-            Require(editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::CanRedo),
-                    "original replacement modifies history even when output is unchanged");
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::GetModify) &&
-                        !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
-                    "one Undo restores original bytes and save point");
-            TestEditor::RequireSelection(editor, reverse ? before : 0, reverse ? 0 : before,
-                                         "Undo restores original endpoints");
-            editor->Send(Message::Redo);
-            Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
-                    "one Redo restores converted bytes");
-            TestEditor::RequireSelection(editor, 0, 0, "Redo matches original collapsed selection");
-        }
-    }
+    const auto before = static_cast<intptr_t>(fixture.before.size());
+    const auto after = static_cast<intptr_t>(fixture.after.size());
+    Reset(editor, fixture.before, reverse ? before : 0, reverse ? 0 : before);
+    Menu(frame, fixture.command);
+    if (TestEditor::Text(editor) != fixture.after)
+        std::fprintf(stderr, "%s: expected <%.*s>, got <%s>\n", fixture.command, static_cast<int>(fixture.after.size()),
+                     fixture.after.data(), TestEditor::Text(editor).c_str());
+    Require(TestEditor::Text(editor) == fixture.after, "conversion matches captured original bytes");
+    TestEditor::RequireSelection(editor, reverse ? after : 0, reverse ? 0 : after,
+                                 "converted endpoints match original direction");
+    Require(editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+            "original replacement modifies history even when output is unchanged");
+    editor->Send(Message::Undo);
+    Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::GetModify) &&
+                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+            "one Undo restores original bytes and save point");
+    TestEditor::RequireSelection(editor, reverse ? before : 0, reverse ? 0 : before,
+                                 "Undo restores original endpoints");
+    editor->Send(Message::Redo);
+    Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+            "one Redo restores converted bytes");
+    TestEditor::RequireSelection(editor, 0, 0, "Redo matches original collapsed selection");
+}
+void Fixtures(EditorFrame* frame) {
+    for (const auto& fixture : NumberRadixReference::fixtures)
+        for (bool reverse : {false, true})
+            ConversionCase(frame, fixture, reverse);
     std::puts(
         "PASS: 80 original runtime fixtures: all radices, scanner quirks, wraparound, NUL, direction and history");
 }

@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include "native_paint_helpers.h"
 #include "app/dialogs/find_replace_dialog.h"
 #include <wx/textctrl.h>
 #include <wx/stattext.h>
@@ -20,9 +21,14 @@ public:
             try {
                 SearchSession search(*editor);
                 auto dialog = std::make_unique<FindReplaceDialog>(
-                    frame, *editor, search, [](const FindResult&) {}, [](wxKeyEvent& event) { event.Skip(); }, 0);
+                    frame, *editor, search,
+                    [](const FindResult&) {
+                        // These scenarios inspect editor state and dialog feedback directly.
+                    },
+                    [](wxKeyEvent& event) { event.Skip(); }, 0);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("a.c abc a+c"));
                 editor->Send(Message::SetSel, 0, 0);
+                NativePaint::Complete(editor);
                 dialog->Present(false, 0);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 auto* wildcard = wxDynamicCast(wxWindow::FindWindowByName("Wildcard search", frame), wxCheckBox);
@@ -37,7 +43,7 @@ public:
                     editor->Send(Message::EmptyUndoBuffer);
                     editor->Send(Message::SetSavePoint);
                     editor->Send(Message::SetSel, 0, 0);
-                    wxYield();
+                    NativePaint::Complete(editor);
                 };
                 const auto next = [&] { Click(query->GetParent(), wxID_FORWARD); };
                 load("a.c abc a+c\nac\nabbbc");

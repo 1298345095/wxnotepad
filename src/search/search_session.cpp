@@ -1,9 +1,8 @@
 #include "search/search_session.h"
+#include "search/search_limits.h"
 #include "search/find_text.h"
 #include "editor/editor_control.h"
-#include <array>
 #include <cstdint>
-#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -36,61 +35,67 @@ void AppendUtf8(std::string& output, unsigned value) {
         output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
     }
 }
+int ReadHexEscape(std::string_view input, size_t start, size_t count) {
+    if (start + count > input.size()) return -1;
+    int value = 0;
+    for (size_t index = start; index < start + count; ++index) {
+        const auto digit = HexDigit(input[index]);
+        if (digit < 0) return -1;
+        value = (value << 4) | digit;
+    }
+    return value;
+}
+
+void AppendUnicodeEscape(std::string_view input, size_t& index, int value, std::string& output) {
+    if (value < 0xd800 || value > 0xdbff || index + 2 >= input.size() || input[index + 1] != '\\' ||
+        input[index + 2] != 'u') {
+        AppendUtf8(output, value);
+        return;
+    }
+    const int second = ReadHexEscape(input, index + 3, 4);
+    if (second < 0 || (second >= 0xd800 && second <= 0xdbff)) {
+        AppendUtf8(output, value);
+        return;
+    }
+    index += 6;
+    if (second >= 0xdc00 && second <= 0xdfff) {
+        AppendUtf8(output, 0x10000 + ((value - 0xd800) << 10) + second - 0xdc00);
+    } else {
+        AppendUtf8(output, value);
+        AppendUtf8(output, second);
+    }
+}
+
+bool TransformEscape(std::string_view input, size_t& index, std::string& output) {
+    const char next = input[index + 1];
+    constexpr std::string_view escapes = "\\abefnrtv";
+    constexpr std::string_view values = "\\\a\b\x1b\f\n\r\t\v";
+    const auto found = escapes.find(next);
+    if (found != std::string_view::npos) {
+        output.push_back(values[found]);
+        ++index;
+        return true;
+    }
+    if (next != 'x' && next != 'u') return false;
+    const size_t digits = next == 'x' ? 2 : 4;
+    const int value = ReadHexEscape(input, index + 2, digits);
+    if (value < 0) return false;
+    index += digits + 1;
+    if (next == 'x')
+        output.push_back(static_cast<char>(value));
+    else
+        AppendUnicodeEscape(input, index, value, output);
+    return true;
+}
+
 std::string TransformBackslashes(const wxString& text, bool transform) {
     const auto utf8 = text.utf8_str();
     std::string input(utf8.data(), utf8.length());
     if (!transform) return input;
     std::string output;
-    const auto hex = [&](size_t start, size_t count) {
-        int value = 0;
-        if (start + count > input.size()) return -1;
-        for (size_t index = start; index < start + count; ++index) {
-            const auto digit = HexDigit(input[index]);
-            if (digit < 0) return -1;
-            value = (value << 4) | digit;
-        }
-        return value;
-    };
     for (size_t index = 0; index < input.size() && input[index]; ++index) {
         const char ch = input[index];
-        if (ch == '\\' && index + 1 < input.size()) {
-            const char next = input[index + 1];
-            const char* escapes = "\\abefnrtv";
-            const char* values = "\\\a\b\x1b\f\n\r\t\v";
-            const auto found = std::string_view(escapes).find(next);
-            if (found != std::string_view::npos) {
-                output.push_back(values[found]);
-                ++index;
-                continue;
-            }
-            if (next == 'x' || next == 'u') {
-                const size_t digits = next == 'x' ? 2 : 4;
-                const int value = hex(index + 2, digits);
-                if (value >= 0) {
-                    index += digits + 1;
-                    if (next == 'x') {
-                        output.push_back(static_cast<char>(value));
-                    } else if (value >= 0xd800 && value <= 0xdbff && index + 2 < input.size() &&
-                               input[index + 1] == '\\' && input[index + 2] == 'u') {
-                        const int second = hex(index + 3, 4);
-                        if (second >= 0 && !(second >= 0xd800 && second <= 0xdbff)) {
-                            index += 6;
-                            if (second >= 0xdc00 && second <= 0xdfff) {
-                                AppendUtf8(output, 0x10000 + ((value - 0xd800) << 10) + second - 0xdc00);
-                            } else {
-                                AppendUtf8(output, value);
-                                AppendUtf8(output, second);
-                            }
-                        } else {
-                            AppendUtf8(output, value);
-                        }
-                    } else {
-                        AppendUtf8(output, value);
-                    }
-                    continue;
-                }
-            }
-        }
+        if (ch == '\\' && index + 1 < input.size() && TransformEscape(input, index, output)) continue;
         output.push_back(ch);
     }
     return output;
@@ -183,27 +188,6 @@ private:
     bool started_ = false;
 };
 
-struct IndicatorRange {
-    intptr_t start;
-    intptr_t length;
-};
-struct OccurrenceMarking {
-    bool multiline;
-    bool bookmarks;
-};
-
-void MarkOccurrenceRanges(EditorControl& editor, std::span<const IndicatorRange> ranges, OccurrenceMarking marking) {
-    using Scintilla::Message;
-    for (const auto& range : ranges) {
-        editor.Send(Message::IndicatorFillRange, range.start, range.length);
-        if (!marking.bookmarks) continue;
-        auto line = editor.Send(Message::LineFromPosition, range.start);
-        const auto last = marking.multiline ? editor.Send(Message::LineFromPosition, range.start + range.length) : line;
-        for (; line <= last; ++line) {
-            if (!(editor.Send(Message::MarkerGet, line) & 1)) editor.Send(Message::MarkerAdd, line, 0);
-        }
-    }
-}
 } // namespace
 
 std::string SearchSession::QueryBytes() const {
@@ -220,15 +204,9 @@ bool SearchSession::UsesRegex() const {
 }
 
 SearchSession::SearchSession(EditorControl& editor) : editor_(editor) {
-    editor_.Bind(wxEVT_EDITOR_STATE_CHANGED, &SearchSession::OnEditorState, this);
-}
-
-SearchSession::~SearchSession() {
-    editor_.Unbind(wxEVT_EDITOR_STATE_CHANGED, &SearchSession::OnEditorState, this);
 }
 
 void SearchSession::Configure(SearchRequest request) {
-    if (request.query != request_.query || request.options != request_.options) ClearFindAll();
     request_ = std::move(request);
 }
 
@@ -245,11 +223,11 @@ void SearchSession::Remember(bool replacement) {
         size_t length = 0;
         for (const auto ch : text)
             length += ch.GetValue() > 0xffff ? 2 : 1;
-        if (text.empty() || length >= 2048) return;
+        if (text.empty() || length >= SearchLimits::HistoryTextUtf16Units) return;
         const auto escaped = EscapeFindText(text).text;
         std::erase(history, escaped);
         history.insert(history.begin(), escaped);
-        if (history.size() > 32) history.resize(32);
+        if (history.size() > SearchLimits::HistoryEntries) history.resize(SearchLimits::HistoryEntries);
     };
     if (!request_.query.empty()) {
         hasFindText_ = true;
@@ -262,83 +240,25 @@ void SearchSession::Remember(bool replacement) {
 }
 
 void SearchSession::ClearFindAll() {
-    if (matchCount_.has_value()) {
-        editor_.Send(Scintilla::Message::SetIndicatorCurrent, 8);
-        editor_.Send(Scintilla::Message::IndicatorClearRange, 0, editor_.Send(Scintilla::Message::GetLength));
-        matchCount_.reset();
-    }
+    if (editor_.Occurrences().FindAllCount().has_value()) editor_.Occurrences().Clear();
 }
 
 std::optional<size_t> SearchSession::MatchCount() {
-    if (markedRevision_ != editor_.DocumentRevision()) ClearFindAll();
-    return matchCount_;
-}
-
-void SearchSession::OnEditorState(wxCommandEvent& event) {
-    MatchCount();
-    event.Skip();
+    return editor_.Occurrences().FindAllCount();
 }
 
 FindAllResult SearchSession::FindAll() {
     using Scintilla::Message;
-    ClearFindAll();
-    // Ordinary invalidation retains Find All bookmarks; a new request replaces them.
-    if (bookmarkForFindAll_) editor_.Send(Message::MarkerDeleteAll, 0);
     const auto query = QueryBytes();
     if (!query.length()) return {FindStatus::EmptyQuery};
-    markedRevision_ = editor_.DocumentRevision();
-    matchCount_ = 0;
-    if (UsesRegex() && query.length() == 1 && (query.data()[0] == '^' || query.data()[0] == '$')) {
-        matchCount_ = static_cast<size_t>(editor_.Send(Message::GetLineCount) - (query.data()[0] == '^'));
-        return {FindStatus::Found, *matchCount_};
-    }
-    bookmarkForFindAll_ = request_.bookmarkMatchedLines;
-    editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
-    editor_.Send(Message::SetIndicatorCurrent, 8);
-    const auto limit = editor_.Send(Message::GetLength);
-    intptr_t start = 0;
     const bool multiline = request_.options.transformBackslashes && query.find_first_of("\r\n") != std::string::npos;
-    const bool searchForLineEnd = UsesRegex() && query.length() > 1 && query.data()[query.length() - 1] == '$' &&
-                                  query.data()[query.length() - 2] != '\\';
-    // Preserve EditMarkAll's 240-range cache, aggregation and bookmark coverage.
-    std::array<IndicatorRange, 240> ranges{};
-    size_t index = 0;
-    const auto markRanges = [&] {
-        MarkOccurrenceRanges(editor_, std::span(ranges.data(), index),
-                             {.multiline = multiline, .bookmarks = request_.bookmarkMatchedLines});
-        index = 0;
-    };
-    while (start < limit) {
-        editor_.Send(Message::SetTargetStart, start);
-        editor_.Send(Message::SetTargetEnd, limit);
-        const auto found =
-            editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data()));
-        if (found < 0) {
-            if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
-                ClearFindAll();
-                return {FindStatus::InvalidPattern};
-            }
-            break;
-        }
-        ++*matchCount_;
-        const auto end = editor_.Send(Message::GetTargetEnd);
-        // Empty matches count but have no visible range/bookmark; advance UTF-8.
-        if (end == found) {
-            start = editor_.Send(Message::PositionAfter, found);
-            if (start <= found) break;
-            continue;
-        }
-        if (index && found == start && !searchForLineEnd) {
-            ranges[index - 1].length += end - found;
-        } else {
-            ranges[index++] = {.start = found, .length = end - found};
-            if (index == ranges.size()) markRanges();
-        }
-        start = end;
+    editor_.Occurrences().FindAll(query, SearchFlags(), multiline, request_.bookmarkMatchedLines);
+    if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
+        ClearFindAll();
+        return {FindStatus::InvalidPattern};
     }
-    markRanges();
-    return {FindStatus::Found, *matchCount_};
+    return {FindStatus::Found, editor_.Occurrences().FindAllCount().value_or(0)};
 }
 
 void SearchSession::SetWrapConfirmation(std::function<bool(SearchDirection)> confirm) {
@@ -359,7 +279,7 @@ FindResult SearchSession::FindFrom(intptr_t start, SearchDirection direction, bo
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
     const auto length = editor_.Send(Message::GetLength);
-    const auto search = [&](intptr_t from, intptr_t to) {
+    const auto search = [this, &query](intptr_t from, intptr_t to) {
         editor_.Send(Message::SetTargetStart, from);
         editor_.Send(Message::SetTargetEnd, to);
         return editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) >= 0;
@@ -470,6 +390,7 @@ ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
                              .limit = editor_.Send(Message::GetLength)};
     intptr_t replacementEnd = cursor.position;
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
+    const auto replacementMessage = UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget;
     {
         DeferredUndoAction undo(editor_);
         // An initial empty document is eligible; original EditReplaceAll stops
@@ -492,8 +413,8 @@ ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
                 return {ReplaceAllStatus::ExpansionFailed, count, undo.Started()};
             if (effect == ReplacementEffect::Changed) {
                 undo.Begin();
-                const auto inserted = editor_.Send(UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget,
-                                                   replacement.size(), reinterpret_cast<intptr_t>(replacement.c_str()));
+                const auto inserted = editor_.Send(replacementMessage, replacement.size(),
+                                                   reinterpret_cast<intptr_t>(replacement.c_str()));
                 cursor.limit += inserted - (match.end - match.start);
                 cursor.position = match.start + inserted;
             } else {

@@ -276,7 +276,7 @@ void SavedBytes(EditorFrame* frame) {
                               : fields[0] == "cp936"         ? FileEncoding::Gbk
                                                              : FileEncoding::Utf8;
         const TestFiles::EncodedFixture fixture{"control", encoding, Unhex(fields[2]), Unhex(fields[3])};
-        const auto path = directory / std::filesystem::u8path("控制😀-" + std::to_string(count) + ".txt");
+        const auto path = directory / TestFiles::Utf8Path("控制😀-" + std::to_string(count) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);
         editor->Send(Message::SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), encoding).status == OpenStatus::Opened,

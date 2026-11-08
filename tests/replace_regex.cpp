@@ -262,7 +262,7 @@ public:
                 Require(Text(editor) == "12:中文\r\nlast\n" && !editor->Send(Message::GetModify),
                         "Redo must restore the saved expansion and savepoint");
                 std::filesystem::remove(path);
-                Require(frame->New(), "New must use the live empty document");
+                Require(frame->NewDocument(), "New must use the live empty document");
                 query->SetValue("^");
                 replacement->SetValue("X");
                 Click(dialog, wxID_REPLACE);
@@ -272,7 +272,7 @@ public:
                 std::puts("PASS: Save bytes, BOM/mixed EOL, savepoint Undo/Redo and live New document");
                 setup("", "^", "X");
                 Click(dialog, wxID_FORWARD);
-                Require(frame->New(), "New must also succeed when the old document is already empty");
+                Require(frame->NewDocument(), "New must also succeed when the old document is already empty");
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "X", "empty New uses the current original matching caret immediately");
                 Click(dialog, wxID_REPLACE);

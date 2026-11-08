@@ -26,9 +26,9 @@ bool ShowColumnWrapDialog(wxWindow* parent, int& column, int boundary) {
     dialog.CentreOnParent();
     dialog.Bind(
         wxEVT_BUTTON,
-        [&](wxCommandEvent&) {
+        [input, &column, &dialog](wxCommandEvent&) {
             const auto number = ReadColumnInput(input->GetValue());
-            if (!number) {
+            if (!number.has_value()) {
                 input->SetFocus();
                 input->SelectAll();
                 return;

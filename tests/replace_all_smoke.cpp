@@ -126,7 +126,7 @@ public:
                 unchanged("missing", "X", "0 replacements");
                 unchanged("one", "one", "3 replacements");
                 unchanged("", "X", "3 replacements");
-                Require(frame->New(), "New must succeed after a no-op replacement");
+                Require(frame->NewDocument(), "New must succeed after a no-op replacement");
                 query->SetValue("one");
                 Click(dialog, wxID_REPLACE_ALL);
                 Require(Text(editor).empty() && !editor->Send(Message::CanUndo) &&

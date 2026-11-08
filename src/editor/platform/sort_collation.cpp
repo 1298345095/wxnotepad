@@ -105,7 +105,7 @@ void AppendLevels(Levels& target, const Levels& source) {
         target[4] += source[4].substr(2);
     }
 }
-std::string LogicalKey(std::wstring_view text) {
+std::vector<Levels> CharacterLevels(std::wstring_view text) {
     static const SortData data;
     std::vector<Levels> characters;
     for (size_t i = 0; i < text.size(); ++i) {
@@ -115,30 +115,37 @@ std::string LogicalKey(std::wstring_view text) {
             codepoint = 0x10000 + ((codepoint - 0xd800) << 10) + (text[++i] - 0xdc00);
         characters.push_back(SplitKey(data.Key(codepoint)));
     }
+    return characters;
+}
+void AppendNumericLevels(Levels& result, const std::vector<Levels>& characters, size_t& i) {
+    // NLS numeric collation consumes at most 19 decimal digits per element.
+    const size_t start = i;
+    while (i < characters.size() && i - start < 19 && Decimal(characters[i]) >= 0 &&
+           characters[i][1] == characters[start][1] && characters[i][2] == characters[start][2] &&
+           characters[i][3] == characters[start][3])
+        ++i;
+    size_t significant = start;
+    while (significant < i && Decimal(characters[significant]) == 0)
+        ++significant;
+    result[0] += "\x0d\x02";
+    result[0].push_back(static_cast<char>(i - significant + 2));
+    size_t digit = significant;
+    if ((i - significant) % 2 != 0) result[0].push_back(static_cast<char>(0x22 + Decimal(characters[digit++])));
+    while (digit < i) {
+        result[0].push_back(
+            static_cast<char>(((Decimal(characters[digit]) + 2) << 4) + Decimal(characters[digit + 1]) + 2));
+        digit += 2;
+    }
+    result[0].push_back(static_cast<char>(254 - (significant - start)));
+    for (size_t index = start; index < i; ++index)
+        AppendLevels(result, characters[index]);
+}
+std::string LogicalKey(std::wstring_view text) {
+    const auto characters = CharacterLevels(text);
     Levels result;
     for (size_t i = 0; i < characters.size();) {
         if (Decimal(characters[i]) >= 0) {
-            // NLS numeric collation consumes at most 19 decimal digits per element.
-            const size_t start = i;
-            while (i < characters.size() && i - start < 19 && Decimal(characters[i]) >= 0 &&
-                   characters[i][1] == characters[start][1] && characters[i][2] == characters[start][2] &&
-                   characters[i][3] == characters[start][3])
-                ++i;
-            size_t significant = start;
-            while (significant < i && Decimal(characters[significant]) == 0)
-                ++significant;
-            result[0] += "\x0d\x02";
-            result[0].push_back(static_cast<char>(i - significant + 2));
-            size_t digit = significant;
-            if ((i - significant) % 2 != 0) result[0].push_back(static_cast<char>(0x22 + Decimal(characters[digit++])));
-            while (digit < i) {
-                result[0].push_back(
-                    static_cast<char>(((Decimal(characters[digit]) + 2) << 4) + Decimal(characters[digit + 1]) + 2));
-                digit += 2;
-            }
-            result[0].push_back(static_cast<char>(254 - (significant - start)));
-            for (size_t index = start; index < i; ++index)
-                AppendLevels(result, characters[index]);
+            AppendNumericLevels(result, characters, i);
         } else {
             AppendLevels(result, characters[i]);
             result[0] += characters[i][0];

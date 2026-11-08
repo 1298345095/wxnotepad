@@ -170,7 +170,7 @@ public:
                 Status(frame, "Ln 2, Col 6 | Sel 4");
                 std::puts("PASS: native Right, Shift+Right, mouse and Shift+click update live status");
                 std::exception_ptr dialogFailure;
-                CallAfter([&] {
+                CallAfter([frame, &dialogFailure] {
                     auto* dialog = wxDynamicCast(wxWindow::FindWindowByName("Go to line", frame), wxDialog);
                     try {
                         Require(dialog && dialog->IsModal(), "Go To Line must open its native dialog");
@@ -226,7 +226,7 @@ public:
                 Status(frame, "Ln 1, Col 1");
                 Require(frame->GetStatusBar()->GetStatusText().Contains("UTF-8 (BOM)"),
                         "Open retains encoding/BOM metadata");
-                Require(frame->New(), "clean New must succeed");
+                Require(frame->NewDocument(), "clean New must succeed");
                 Status(frame, "Ln 1, Col 1");
                 std::puts("PASS: cancelled/failed operations preserve real status; successful Open/New reset it");
                 const std::string wrapped = std::string(500, 'x') + "\nlast";

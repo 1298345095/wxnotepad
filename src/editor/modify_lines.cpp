@@ -15,28 +15,37 @@ struct ModifyLinesText {
     ModifyLinesText(const wxString& text, intptr_t firstLine, intptr_t lastLine, Scintilla::EndOfLine mode) {
         prefix = text.ToStdString(wxConvUTF8);
         prefix.resize(prefix.find('\0') == std::string::npos ? prefix.size() : prefix.find('\0'));
+        NormalizeLineEndings(mode);
+        ParseSubstitution(firstLine, lastLine);
+    }
+
+    void NormalizeLineEndings(Scintilla::EndOfLine mode) {
         // Original ConvertWinEditLineEndingsEx converts CRLF pairs only and
         // counts every separator, including lone CR and LF.
         size_t output = 0;
         for (size_t input = 0; input < prefix.size(); ++input) {
             char value = prefix[input];
-            if (value == '\r') {
-                ++lineCount;
-                if (input + 1 < prefix.size() && prefix[input + 1] == '\n') {
-                    if (mode == Scintilla::EndOfLine::CrLf) {
-                        prefix[output++] = value;
-                        value = '\n';
-                    } else {
-                        value = mode == Scintilla::EndOfLine::Lf ? '\n' : '\r';
-                    }
-                    ++input;
+            if (value != '\r') {
+                if (value == '\n') ++lineCount;
+                prefix[output++] = value;
+                continue;
+            }
+            ++lineCount;
+            if (input + 1 < prefix.size() && prefix[input + 1] == '\n') {
+                if (mode == Scintilla::EndOfLine::CrLf) {
+                    prefix[output++] = value;
+                    value = '\n';
+                } else {
+                    value = mode == Scintilla::EndOfLine::Lf ? '\n' : '\r';
                 }
-            } else if (value == '\n') {
-                ++lineCount;
+                ++input;
             }
             prefix[output++] = value;
         }
         prefix.resize(output);
+    }
+
+    void ParseSubstitution(intptr_t firstLine, intptr_t lastLine) {
         size_t position = 0;
         while ((position = prefix.find("$(", position)) != std::string::npos) {
             auto token = position + 2;
@@ -83,7 +92,7 @@ bool EditorControl::ModifyLines(const wxString& before, const wxString& after, b
     const auto mode = static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode));
     ModifyLinesText prefix(before, firstLine, lastLine, mode);
     ModifyLinesText suffix(after, firstLine, lastLine, mode);
-    const auto insert = [&](ModifyLinesText& field, intptr_t line, intptr_t position) {
+    const auto insert = [this](ModifyLinesText& field, intptr_t line, intptr_t position) {
         const auto text = field.InsertText(line);
         Send(Message::SetTargetRange, position, position);
         Send(Message::ReplaceTarget, text.size(), reinterpret_cast<intptr_t>(text.c_str()));

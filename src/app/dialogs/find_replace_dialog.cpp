@@ -1,4 +1,5 @@
 #include "app/dialogs/find_replace_dialog.h"
+#include "search/search_limits.h"
 #include "editor/editor_control.h"
 #include "search/find_text.h"
 #include <wx/button.h>
@@ -172,7 +173,8 @@ FindReplaceDialog::~FindReplaceDialog() {
 }
 
 void FindReplaceDialog::OnEditorState(wxCommandEvent& event) {
-    if (!search_.MatchCount() && (!findAllErrorRevision_ || *findAllErrorRevision_ != editor_.DocumentRevision())) {
+    if (!search_.MatchCount().has_value() &&
+        (!findAllErrorRevision_.has_value() || *findAllErrorRevision_ != editor_.DocumentRevision())) {
         findAllResult_->SetLabel("");
         findAllErrorRevision_.reset();
     }
@@ -242,13 +244,15 @@ bool FindReplaceDialog::SeedQuery(bool firstTime) {
     // Pinned Edit.cpp::CopySelectionAsFindText and Helpers.cpp::AddBackslashW.
     const auto length = editor_.Send(Scintilla::Message::GetSelText);
     wxString text;
-    if (length > 0 && length <= 1024 * 1024 && (selectionOptions_ & 2)) {
+    if (length > 0 && static_cast<uintptr_t>(length) <= SearchLimits::SelectionBytes &&
+        (selectionOptions_ & SelectOption_CopySelectionAsFindText)) {
         std::string bytes(static_cast<size_t>(length) + 1, '\0');
         editor_.Send(Scintilla::Message::GetSelText, 0, reinterpret_cast<intptr_t>(bytes.data()));
         text = wxString::FromUTF8(bytes.c_str());
     }
     const bool selected = !text.empty();
-    if (!selected && firstTime && (selectionOptions_ & 4) && wxTheClipboard->Open()) {
+    if (!selected && firstTime && (selectionOptions_ & SelectOption_CopyPasteBufferAsFindText) &&
+        wxTheClipboard->Open()) {
         wxTextDataObject data;
         if (wxTheClipboard->IsSupported(wxDF_UNICODETEXT) && wxTheClipboard->GetData(data)) {
             // Original EditGetClipboardTextW normalizes clipboard line endings
@@ -288,7 +292,7 @@ void FindReplaceDialog::ConfigureSearch() {
     request.bookmarkMatchedLines = bookmarkMatchedLines_->GetValue();
     search_.Configure(std::move(request));
     search_.Remember(replace_);
-    if (!search_.MatchCount()) {
+    if (!search_.MatchCount().has_value()) {
         findAllResult_->SetLabel("");
         findAllErrorRevision_.reset();
     }

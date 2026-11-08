@@ -39,35 +39,46 @@ std::string Convert(std::string_view text, UrlConversion command, size_t length)
 #else
 // The selection getter already maps NUL to space. Both original conversion
 // boundaries consume an invalid second continuation byte with its prefix.
+struct Utf8Sequence {
+    size_t consumed;
+    bool valid;
+};
+bool InvalidScalarPrefix(unsigned char first, unsigned char ch) {
+    return (first == 0xe0 && ch < 0xa0) || (first == 0xed && ch >= 0xa0) || (first == 0xf0 && ch < 0x90) ||
+           (first == 0xf4 && ch >= 0x90);
+}
+Utf8Sequence ReadUtf8Sequence(std::string_view text, size_t index) {
+    const auto first = static_cast<unsigned char>(text[index]);
+    const size_t width = first < 0x80                     ? 1
+                         : first >= 0xc2 && first <= 0xdf ? 2
+                         : first >= 0xe0 && first <= 0xef ? 3
+                         : first >= 0xf0 && first <= 0xf4 ? 4
+                                                          : 0;
+    size_t consumed = 1;
+    bool valid = width != 0;
+    while (valid && consumed < width) {
+        if (index + consumed == text.size()) {
+            valid = false;
+            break;
+        }
+        const auto ch = static_cast<unsigned char>(text[index + consumed]);
+        if (ch < 0x80 || ch > 0xbf) {
+            valid = false;
+            break;
+        }
+        if (consumed == 1 && InvalidScalarPrefix(first, ch)) {
+            ++consumed;
+            valid = false;
+            break;
+        }
+        ++consumed;
+    }
+    return {consumed, valid};
+}
 std::string ValidUtf8(std::string_view text) {
     std::string result;
     for (size_t index = 0; index < text.size();) {
-        const auto first = static_cast<unsigned char>(text[index]);
-        const size_t width = first < 0x80                     ? 1
-                             : first >= 0xc2 && first <= 0xdf ? 2
-                             : first >= 0xe0 && first <= 0xef ? 3
-                             : first >= 0xf0 && first <= 0xf4 ? 4
-                                                              : 0;
-        size_t consumed = 1;
-        bool valid = width != 0;
-        while (valid && consumed < width) {
-            if (index + consumed == text.size()) {
-                valid = false;
-                break;
-            }
-            const auto ch = static_cast<unsigned char>(text[index + consumed]);
-            if (ch < 0x80 || ch > 0xbf) {
-                valid = false;
-                break;
-            }
-            if (consumed == 1 && ((first == 0xe0 && ch < 0xa0) || (first == 0xed && ch >= 0xa0) ||
-                                  (first == 0xf0 && ch < 0x90) || (first == 0xf4 && ch >= 0x90))) {
-                ++consumed;
-                valid = false;
-                break;
-            }
-            ++consumed;
-        }
+        const auto [consumed, valid] = ReadUtf8Sequence(text, index);
         if (valid)
             result.append(text.substr(index, consumed));
         else
@@ -98,11 +109,9 @@ bool SchemeCharacter(char ch) {
     return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '+' || ch == '-' ||
            ch == '.';
 }
-std::string Encode(const std::string& text, bool component) {
-    if (component) return Escape(text, true);
+std::string ReadScheme(const std::string& text, size_t& prefixLength) {
     const auto colon = text.find(':');
     const auto prefix = std::string_view(text).substr(0, colon);
-    size_t prefixLength = 0;
     std::string scheme;
     if (colon != std::string::npos && colon > 1 && std::all_of(prefix.begin(), prefix.end(), SchemeCharacter)) {
         prefixLength = colon + 1;
@@ -110,19 +119,16 @@ std::string Encode(const std::string& text, bool component) {
         for (auto& ch : scheme)
             if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
     }
-    std::string result = scheme.empty() ? "" : scheme + ':';
-    auto rest = std::string_view(text).substr(prefixLength);
-    if (scheme == "mailto" || scheme == "about" || scheme == "javascript" || scheme == "vbscript" || scheme == "shell")
-        return result + Escape(rest, false, true, true);
-    const auto query = rest.find('?');
-    const auto fragment = rest.find('#');
-    std::string path(rest.substr(0, std::min(query, fragment)));
+    return scheme;
+}
+std::string EncodePath(const std::string& text, const std::string& scheme, size_t prefixLength, std::string path) {
     const bool normalize = scheme == "http" || scheme == "https" || scheme == "ftp" || scheme == "file" ||
                            scheme == "news" || scheme == "nntp" || scheme == "gopher" || scheme == "telnet";
     if (normalize) std::replace(path.begin(), path.end(), '\\', '/');
     if (scheme.empty() && !path.empty() && path.front() == '\\') path.front() = '/';
     const bool authority = path.starts_with("//") && (prefixLength || !text.starts_with("\\"));
     const bool drive = scheme == "file" && path.size() >= 4 && path[3] == ':';
+    std::string result;
     if (drive && authority) {
         result += "///";
         result += Escape(std::string_view(path).substr(2), false);
@@ -134,6 +140,19 @@ std::string Encode(const std::string& text, bool component) {
         const bool slash = !scheme.empty() && scheme != "file" && !path.starts_with('/');
         result += Escape(path, false, slash);
     }
+    return result;
+}
+std::string Encode(const std::string& text, bool component) {
+    if (component) return Escape(text, true);
+    size_t prefixLength = 0;
+    const auto scheme = ReadScheme(text, prefixLength);
+    std::string result = scheme.empty() ? "" : scheme + ':';
+    auto rest = std::string_view(text).substr(prefixLength);
+    if (scheme == "mailto" || scheme == "about" || scheme == "javascript" || scheme == "vbscript" || scheme == "shell")
+        return result + Escape(rest, false, true, true);
+    const auto query = rest.find('?');
+    const auto fragment = rest.find('#');
+    result += EncodePath(text, scheme, prefixLength, std::string(rest.substr(0, std::min(query, fragment))));
     if (query != std::string_view::npos)
         result += rest.substr(query, fragment > query ? fragment - query : std::string_view::npos);
     if (fragment != std::string_view::npos)
@@ -151,18 +170,20 @@ std::string Convert(std::string_view text, UrlConversion command, size_t length)
     if (command != UrlConversion::Decode) return Encode(input, command == UrlConversion::ComponentEncode);
     std::string bytes;
     for (size_t index = 0; index < input.size(); ++index) {
-        if (input[index] == '%' && index + 2 < input.size()) {
-            const int high = HexDigit(input[index + 1]);
-            const int low = HexDigit(input[index + 2]);
-            if (high >= 0 && low >= 0) {
-                const auto ch = static_cast<char>(high * 16 + low);
-                if (!ch) return std::string(OriginalAllocation(length), '\0');
-                bytes += ch;
-                index += 2;
-                continue;
-            }
+        if (input[index] != '%' || index + 2 >= input.size()) {
+            bytes += input[index];
+            continue;
         }
-        bytes += input[index];
+        const int high = HexDigit(input[index + 1]);
+        const int low = HexDigit(input[index + 2]);
+        if (high < 0 || low < 0) {
+            bytes += input[index];
+            continue;
+        }
+        const auto ch = static_cast<char>(high * 16 + low);
+        if (!ch) return std::string(OriginalAllocation(length), '\0');
+        bytes += ch;
+        index += 2;
     }
     return ValidUtf8(bytes);
 }

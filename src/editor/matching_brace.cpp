@@ -1,7 +1,42 @@
 #include "editor/editor_control.h"
+#include "editor/editor_core.h"
 #include <algorithm>
 
 using Scintilla::Message;
+
+void EditorControl::SetVisualBraceMatching(bool enabled) {
+    matchBraces_ = enabled;
+    if (enabled)
+        core_->UpdateVisualBraceMatching();
+    else
+        // Original toggle clears the decoration while retaining the guide.
+        Send(Message::BraceHighlight, static_cast<uintptr_t>(-1), -1);
+}
+
+void EditorControl::Core::UpdateVisualBraceMatching() {
+    if (!window_.matchBraces_) return;
+    // Original Notepad4.cpp::SCN_UPDATEUI at 89b8b36. Keep style/nesting
+    // decisions in the pinned core, including nonempty selections and UTF-8.
+    const auto isBrace = [](intptr_t ch) {
+        return ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == '{' || ch == '}' || ch == '<' || ch == '>';
+    };
+    auto position = WndProc(Message::GetCurrentPos, 0, 0);
+    if (!isBrace(WndProc(Message::GetCharAt, position, 0))) position = WndProc(Message::PositionBefore, position, 0);
+    if (!isBrace(WndProc(Message::GetCharAt, position, 0))) {
+        WndProc(Message::BraceHighlight, static_cast<uintptr_t>(-1), -1);
+        WndProc(Message::SetHighlightGuide, 0, 0);
+        return;
+    }
+    const auto match = WndProc(Message::BraceMatch, position, -1);
+    if (match >= 0) {
+        WndProc(Message::BraceHighlight, position, match);
+        const auto column = std::min(WndProc(Message::GetColumn, position, -1), WndProc(Message::GetColumn, match, -1));
+        WndProc(Message::SetHighlightGuide, column, 0);
+    } else {
+        WndProc(Message::BraceBadLight, position, 0);
+        WndProc(Message::SetHighlightGuide, 0, 0);
+    }
+}
 
 void EditorControl::MatchBrace(bool select) {
     // Notepad4.cpp::IDM_EDIT_FINDMATCHINGBRACE/IDM_EDIT_SELTOMATCHINGBRACE

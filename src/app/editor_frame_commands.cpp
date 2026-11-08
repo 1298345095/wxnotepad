@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
 #include "app/dialogs/long_line_settings_dialog.h"
 #include "app/dialogs/column_wrap_dialog.h"
@@ -30,7 +31,10 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     // Original Dialogs.cpp::ZoomLevelDlgProc and InitZoomLevelComboBox.
     wxDialog dialog(parent, wxID_ANY, "Zoom Level");
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Zoom level (10% to 500%):"), 0, wxALL, dialog.FromDIP(10));
+    contents->Add(new wxStaticText(
+                      &dialog, wxID_ANY,
+                      wxString::Format("Zoom level (%d%% to %d%%):", Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel)),
+                  0, wxALL, dialog.FromDIP(10));
     auto* input =
         new wxComboBox(&dialog, wxID_ANY, wxString::Format("%d%%", static_cast<int>(editor.Send(Message::GetZoom))));
     input->SetName("Zoom level");
@@ -40,11 +44,12 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL | wxAPPLY), 0, wxEXPAND | wxALL,
                   dialog.FromDIP(10));
-    const auto apply = [&](wxCommandEvent& event) {
+    const auto apply = [input, &editor, &dialog](wxCommandEvent& event) {
         const auto value = input->GetValue().ToStdString(wxConvUTF8);
         char* end = nullptr;
         const long level = std::strtol(value.c_str(), &end, 10);
-        if (end != value.c_str() && level >= 10 && level <= 500) editor.Send(Message::SetZoom, level);
+        if (end != value.c_str() && level >= Scintilla::MinZoomLevel && level <= Scintilla::MaxZoomLevel)
+            editor.Send(Message::SetZoom, level);
         // As in the original, invalid OK closes without changing zoom; Apply
         // keeps the dialog open, and Cancel retains any already applied zoom.
         if (event.GetId() == wxID_OK) dialog.EndModal(wxID_OK);
@@ -67,6 +72,14 @@ void EditorFrame::CreateMenus() {
     menus->Append(CreateLanguageMenu(), "&Language");
     menus->Append(CreateViewMenu(), "&View");
     SetMenuBar(menus);
+    // These original OEM shortcuts have no visible menu items.
+    const int selectionStart = wxWindow::NewControlId();
+    const int selectionEnd = wxWindow::NewControlId();
+    const wxAcceleratorEntry selectionKeys[] = {{wxACCEL_CTRL | wxACCEL_SHIFT, ',', selectionStart},
+                                                {wxACCEL_CTRL | wxACCEL_SHIFT, '.', selectionEnd}};
+    SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(std::size(selectionKeys)), selectionKeys));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->FocusSelectionBoundary(true); }, selectionStart);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->FocusSelectionBoundary(false); }, selectionEnd);
 }
 
 wxMenu* EditorFrame::CreateFileMenu() {
@@ -97,7 +110,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
         },
         openGbk);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { New(); }, wxID_NEW);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { NewDocument(); }, wxID_NEW);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -242,6 +255,15 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    AppendConversionCommands(edit);
+    AppendEnclosureCommands(edit);
+    AppendLineCleanupCommands(edit);
+    AppendLineLayoutCommands(edit);
+    AppendIndentationCommands(edit);
+    AppendWhitespaceCommands(edit);
+}
+
+void EditorFrame::AppendConversionCommands(wxMenu* edit) {
     auto* conversion = new wxMenu;
     // Pinned Notepad4's case commands use CustomCaseMapping values upper=1, lower=2.
     for (const auto& [label, mapping] :
@@ -304,6 +326,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
             id);
     }
     edit->AppendSubMenu(conversion, "Con&vert");
+}
+
+void EditorFrame::AppendEnclosureCommands(wxMenu* edit) {
     const int modifyLines = wxWindow::NewControlId();
     edit->Append(modifyLines, "&Modify Lines...\tAlt+M");
     Bind(
@@ -355,6 +380,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     addEnclosure("Triple &Double Quotes\tCtrl+6", "\"\"\"");
     addEnclosure("Triple &Backticks\tCtrl+9", "```");
     edit->AppendSubMenu(enclosure, "&Enclose Selection");
+}
+
+void EditorFrame::AppendLineCleanupCommands(wxMenu* edit) {
     const int stripLeading = wxWindow::NewControlId();
     const int stripTrailing = wxWindow::NewControlId();
     edit->Append(stripTrailing, "Strip &Trailing Blanks\tAlt+T");
@@ -404,6 +432,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
                              editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionStart)));
             },
             id);
+}
+
+void EditorFrame::AppendLineLayoutCommands(wxMenu* edit) {
     const int padSpaces = wxWindow::NewControlId();
     edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);
@@ -459,6 +490,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
             id);
+}
+
+void EditorFrame::AppendIndentationCommands(wxMenu* edit) {
     struct Conversion {
         const char* label;
         bool toTabs;
@@ -496,7 +530,8 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
             const auto* prefix = SyntaxFor(document_.Language()).lineComment;
             if (!prefix) return;
             const auto& preferences = settings_ ? settings_->values : defaults_;
-            if (!editor_->ToggleLineComments(prefix, (preferences.autoInsertMask & 256) != 0))
+            if (!editor_->ToggleLineComments(prefix,
+                                             (preferences.autoInsertMask & AutoInsertMask_SpaceAfterComment) != 0))
                 wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
                              wxOK | wxICON_WARNING, this);
         },
@@ -531,6 +566,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(false); }, moveDown);
     for (const int id : {moveUp, moveDown})
         Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+}
+
+void EditorFrame::AppendWhitespaceCommands(wxMenu* edit) {
     const int compressWhitespace = wxWindow::NewControlId();
     edit->Append(compressWhitespace, "Compress &Whitespace\tAlt+W");
     Bind(
@@ -605,6 +643,27 @@ void EditorFrame::AppendNavigationCommands(wxMenu* edit) {
     const int selectMatchingBrace = wxWindow::NewControlId();
     edit->Append(selectMatchingBrace, "Select to Matching B&race\tCtrl+Shift+B");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(true); }, selectMatchingBrace);
+    const auto addBlock = [this, edit](const char* label, BlockNavigation command) {
+        const int id = wxWindow::NewControlId();
+        edit->Append(id, label);
+        Bind(wxEVT_MENU, [this, command](wxCommandEvent&) { editor_->GoToBlock(command); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, id);
+    };
+    addBlock("Goto Blo&ck Start\tAlt+[", BlockNavigation::Start);
+    addBlock("Goto Bloc&k End\tAlt+]", BlockNavigation::End);
+    addBlock("Goto &Previous Block\tAlt+,", BlockNavigation::Previous);
+    addBlock("Goto &Next Block\tAlt+.", BlockNavigation::Next);
+    addBlock("Goto P&revious Sibling Block\tCtrl+Alt+,", BlockNavigation::PreviousSibling);
+    addBlock("Goto N&ext Sibling Block\tCtrl+Alt+.", BlockNavigation::NextSibling);
+    const int selectBlock = wxWindow::NewControlId();
+    edit->Append(selectBlock, "Select Lines in &Current Block\tAlt+Shift+]");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectCurrentBlockLines(); }, selectBlock);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        selectBlock);
     auto* bookmarks = new wxMenu;
     const int bookmarkToggle = wxWindow::NewControlId();
     const int bookmarkNext = wxWindow::NewControlId();
@@ -702,6 +761,32 @@ wxMenu* EditorFrame::CreateViewMenu() {
     view->AppendSeparator();
     AppendDisplayCommands(view);
     AppendCurrentLineCommands(view);
+    AppendCaretCommands(view);
+    auto* occurrences = new wxMenu;
+    for (const auto& [label, bit] : {std::pair{"&Off", 1}, std::pair{"Match &Case", 2},
+                                     std::pair{"Match &Whole Word Only", 4}, std::pair{"&Bookmark Matched Line", 8}}) {
+        const int id = wxWindow::NewControlId();
+        occurrences->AppendCheckItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, bit](wxCommandEvent&) { editor_->Occurrences().SetOptions(editor_->Occurrences().Options() ^ bit); },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, bit](wxUpdateUIEvent& event) {
+                const int options = editor_->Occurrences().Options();
+                event.Check(bit == 1 ? !(options & 1) : (options & bit) != 0);
+                event.Enable(bit == 1 || (options & 1));
+            },
+            id);
+    }
+    view->AppendSubMenu(occurrences, "Mark &Occurrences");
+    const int matchBraces = wxWindow::NewControlId();
+    view->AppendCheckItem(matchBraces, "Visual &Brace Matching\tCtrl+Shift+V");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching()); },
+        matchBraces);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->VisualBraceMatching()); }, matchBraces);
     view->AppendSeparator();
     AppendFoldCommands(view);
     AppendSettingsCommands(view);
@@ -753,7 +838,7 @@ void EditorFrame::AppendZoomCommands(wxMenu* view) {
     const int zoomLevel = wxWindow::NewControlId();
     zoom->Append(zoomLevel, "Zoom &Level...");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowZoomLevelDialog(this, *editor_); }, zoomLevel);
-    addZoom("&Reset Zoom\tCtrl+\\", Scintilla::Message::SetZoom, 100);
+    addZoom("&Reset Zoom\tCtrl+\\", Scintilla::Message::SetZoom, DisplayUnits::ZoomPercentScale);
     view->AppendSubMenu(zoom, "&Zoom");
 }
 
@@ -795,11 +880,33 @@ void EditorFrame::AppendDisplayCommands(wxMenu* view) {
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetWrapMode) != 0); }, wordWrap);
     const int lineNumbers = wxWindow::NewControlId();
+    const int shrinkScrollWidth = wxWindow::NewControlId();
+    view->AppendCheckItem(shrinkScrollWidth, "Auto-Shrink Horizontal Scrollbar");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetAutoShrinkScrollWidth(!editor_->AutoShrinkScrollWidth()); },
+        shrinkScrollWidth);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoShrinkScrollWidth()); },
+        shrinkScrollWidth);
     view->AppendCheckItem(lineNumbers, "Line &Numbers\tCtrl+Shift+N");
     Bind(
         wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible()); },
         lineNumbers);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->LineNumbersVisible()); }, lineNumbers);
+    const int bookmarkMargin = wxWindow::NewControlId();
+    view->AppendCheckItem(bookmarkMargin, "&Bookmark Margin\tCtrl+Shift+M");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetBookmarkMarginVisible(!editor_->BookmarkMarginVisible()); },
+        bookmarkMargin);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->BookmarkMarginVisible()); },
+        bookmarkMargin);
+    const int changeHistory = wxWindow::NewControlId();
+    view->AppendCheckItem(changeHistory, "Change &History Marker");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleChangeHistory(); }, changeHistory);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->ChangeHistoryOptions() != 0); },
+        changeHistory);
     const int whitespace = wxWindow::NewControlId();
     view->AppendCheckItem(whitespace, "Show &Whitespace\tCtrl+Shift+8");
     Bind(
@@ -881,17 +988,27 @@ void EditorFrame::ApplyWrapSymbols() {
 }
 
 void EditorFrame::AppendFoldCommands(wxMenu* view) {
+    const int show = wxWindow::NewControlId();
+    view->AppendCheckItem(show, "Show Code &Folding\tCtrl+Shift+Alt+F");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetCodeFoldingVisible(!editor_->CodeFoldingVisible()); }, show);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->CodeFoldingVisible()); }, show);
+    const int highlight = wxWindow::NewControlId();
+    view->AppendCheckItem(highlight, "Highlight Current &Block");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) { editor_->SetCurrentBlockHighlighted(!editor_->CurrentBlockHighlighted()); },
+        highlight);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->CurrentBlockHighlighted()); },
+        highlight);
     const auto addFoldCommand = [this, view](const wxString& label, uintptr_t action) {
         const int id = wxWindow::NewControlId();
         view->Append(id, label);
         Bind(
             wxEVT_MENU,
             [this, action](wxCommandEvent&) {
-                if (LanguageCanFold(document_.Language())) editor_->Send(Scintilla::Message::FoldAll, action);
+                if (editor_->CodeFoldingVisible()) editor_->Send(Scintilla::Message::FoldAll, action);
             },
-            id);
-        Bind(
-            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(LanguageCanFold(document_.Language())); },
             id);
     };
     addFoldCommand("&Collapse All", static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
@@ -931,6 +1048,69 @@ void EditorFrame::AppendCurrentLineCommands(wxMenu* view) {
     view->AppendSubMenu(currentLine, "Highlight C&urrent Line");
 }
 
+void EditorFrame::AppendCaretCommands(wxMenu* view) {
+    auto* caret = new wxMenu;
+    const int overstrike = wxWindow::NewControlId();
+    caret->AppendCheckItem(overstrike, "Block (&OVR Mode)");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto appearance = editor_->GetCaretAppearance();
+            appearance.overstrikeBlock = !appearance.overstrikeBlock;
+            editor_->SetCaretAppearance(appearance);
+        },
+        overstrike);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->GetCaretAppearance().overstrikeBlock); },
+        overstrike);
+    caret->AppendSeparator();
+    const char* modes[] = {"Block (&INS Mode)", "Line Width &1", "Line Width &2", "Line Width &3"};
+    for (int width = 0; width <= 3; ++width) {
+        const int id = wxWindow::NewControlId();
+        caret->AppendRadioItem(id, modes[width]);
+        Bind(
+            wxEVT_MENU,
+            [this, width](wxCommandEvent&) {
+                auto appearance = editor_->GetCaretAppearance();
+                appearance.lineWidth = width;
+                editor_->SetCaretAppearance(appearance);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, width](wxUpdateUIEvent& event) { event.Check(editor_->GetCaretAppearance().lineWidth == width); },
+            id);
+    }
+    caret->AppendSeparator();
+    const int blink = wxWindow::NewControlId();
+    caret->AppendCheckItem(blink, "&No Blink");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto appearance = editor_->GetCaretAppearance();
+            appearance.blinkPeriod = appearance.blinkPeriod == 0 ? -1 : 0;
+            editor_->SetCaretAppearance(appearance);
+        },
+        blink);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(editor_->GetCaretAppearance().blinkPeriod == 0); }, blink);
+    const int selection = wxWindow::NewControlId();
+    caret->AppendCheckItem(selection, "Draw Block Caret in &Selection");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto appearance = editor_->GetCaretAppearance();
+            appearance.blockAfterSelection = !appearance.blockAfterSelection;
+            editor_->SetCaretAppearance(appearance);
+        },
+        selection);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(!editor_->GetCaretAppearance().blockAfterSelection); }, selection);
+    view->AppendSubMenu(caret, "C&aret Style");
+}
+
 void EditorFrame::AppendSettingsCommands(wxMenu* view) {
     if (settings_) {
         view->AppendSeparator();
@@ -964,7 +1144,8 @@ void EditorFrame::AppendSettingsCommands(wxMenu* view) {
             wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
             saveFind);
         for (const auto& [label, bit] :
-             {std::pair{"Copy Selection As Find Text", 2}, std::pair{"Copy Paste Buffer As Find Text", 4}}) {
+             {std::pair{"Copy Selection As Find Text", SelectOption_CopySelectionAsFindText},
+              std::pair{"Copy Paste Buffer As Find Text", SelectOption_CopyPasteBufferAsFindText}}) {
             const int id = wxWindow::NewControlId();
             view->AppendCheckItem(id, label);
             Bind(wxEVT_MENU, [this, bit](wxCommandEvent&) { settings_->values.selectOption ^= bit; }, id);
@@ -980,6 +1161,27 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (HandleInsertionKey(event)) return true;
+    if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
+        if (event.ShiftDown() && !event.MetaDown())
+            editor_->SetCurrentLineHighlightMode(LineHighlightMode::BackgroundColor);
+        else if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
+            editor_->SplitLines();
+        return true;
+    }
+    if (HandleTabConversionKey(event) || HandleCaseConversionKey(event)) return true;
+    if (event.GetKeyCode() == 'T' && event.AltDown()) {
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
+        return true;
+    }
+    return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
+}
+
+bool EditorFrame::HandleInsertionKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F8 && event.ControlDown()) {
+        if (!event.AltDown() && !event.ShiftDown() && !event.MetaDown()) InsertEncodingIdentifier();
+        return true;
+    }
     if (event.GetKeyCode() == WXK_F9 && event.ControlDown() && event.ShiftDown()) {
         if (!event.AltDown() && !event.MetaDown()) InsertFileName(FileNamePart::FullPath);
         return true;
@@ -993,50 +1195,50 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         ShowInsertTagDialog(this, *editor_);
         return true;
     }
-    if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
-        if (event.ShiftDown() && !event.MetaDown())
-            editor_->SetCurrentLineHighlightMode(LineHighlightMode::BackgroundColor);
-        else if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
-            editor_->SplitLines();
-        return true;
-    }
     if (event.GetKeyCode() == WXK_F5 && event.ControlDown()) {
         if (!event.AltDown() && !event.MetaDown()) InsertDateTime(!event.ShiftDown());
         return true;
     }
-    if (HandleTabConversionKey(event)) return true;
-    if ((event.GetKeyCode() == 'X' || event.GetKeyCode() == 'C') && event.ControlDown() && event.AltDown()) {
-        if (!event.ShiftDown() && !event.MetaDown())
-            editor_->Send(Scintilla::Message::CustomCaseMapping, event.GetKeyCode() == 'X'
-                                                                     ? CustomCaseCommand::CharacterToHex
-                                                                     : CustomCaseCommand::HexToCharacter);
-        return true;
-    }
+    return false;
+}
+
+bool EditorFrame::HandleCaseConversionKey(const wxKeyEvent& event) {
     const int key = event.GetKeyCode();
-    if (event.ControlDown() && event.AltDown() && (key == 'E' || key == 'R')) {
-        if (!event.ShiftDown() && !event.MetaDown())
-            editor_->Send(Scintilla::Message::CustomCaseMapping,
-                          key == 'E' ? CustomCaseCommand::EscapeC : CustomCaseCommand::UnescapeC);
-        return true;
-    }
     if (event.AltDown() && event.ShiftDown() && (key == 'X' || key == 'H')) {
         if (!event.ControlDown() && !event.MetaDown())
             editor_->Send(Scintilla::Message::CustomCaseMapping,
                           key == 'X' ? CustomCaseCommand::EscapeHtml : CustomCaseCommand::UnescapeHtml);
         return true;
     }
-    if (event.ControlDown() && event.AltDown() && (key == 'U' || key == 'I' || key == 'O')) {
-        if (!event.ShiftDown() && !event.MetaDown())
-            editor_->Send(Scintilla::Message::CustomCaseMapping, key == 'U'   ? CustomCaseCommand::Invert
-                                                                 : key == 'I' ? CustomCaseCommand::Title
-                                                                              : CustomCaseCommand::Sentence);
-        return true;
+    if (!event.ControlDown() || !event.AltDown()) return false;
+    int mapping;
+    switch (key) {
+    case 'X':
+        mapping = CustomCaseCommand::CharacterToHex;
+        break;
+    case 'C':
+        mapping = CustomCaseCommand::HexToCharacter;
+        break;
+    case 'E':
+        mapping = CustomCaseCommand::EscapeC;
+        break;
+    case 'R':
+        mapping = CustomCaseCommand::UnescapeC;
+        break;
+    case 'U':
+        mapping = CustomCaseCommand::Invert;
+        break;
+    case 'I':
+        mapping = CustomCaseCommand::Title;
+        break;
+    case 'O':
+        mapping = CustomCaseCommand::Sentence;
+        break;
+    default:
+        return false;
     }
-    if (event.GetKeyCode() == 'T' && event.AltDown()) {
-        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
-        return true;
-    }
-    return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
+    if (!event.ShiftDown() && !event.MetaDown()) editor_->Send(Scintilla::Message::CustomCaseMapping, mapping);
+    return true;
 }
 
 void EditorFrame::InsertDateTime(bool shortDate) {
@@ -1071,6 +1273,16 @@ void EditorFrame::AppendFileNameCopyCommands(wxMenu* copy) {
 
 void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
     auto* insert = new wxMenu;
+    const int encoding = wxWindow::NewControlId();
+    insert->Append(encoding, "&Encoding Identifier\tCtrl+F8");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { InsertEncodingIdentifier(); }, encoding);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, encoding);
+    const int shebang = wxWindow::NewControlId();
+    insert->Append(shebang, "Script She&bang Line");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->InsertScriptShebangLine(SyntaxFor(document_.Language())); },
+        shebang);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, shebang);
     const int insertTag = wxWindow::NewControlId();
     insert->Append(insertTag, "&HTML/XML Tag...\tAlt+X");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowInsertTagDialog(this, *editor_); }, insertTag);
@@ -1128,6 +1340,11 @@ void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
     edit->AppendSubMenu(insert, "&Insert");
 }
 
+void EditorFrame::InsertEncodingIdentifier() {
+    const EncodingChoice encoding(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding());
+    editor_->InsertEncodingIdentifier(OriginalEncodingIdentifier(encoding), SyntaxFor(document_.Language()));
+}
+
 void EditorFrame::ConvertTabs(bool toTabs, bool onlyIndent) {
     if (!(toTabs ? editor_->SpacesToTabs(onlyIndent) : editor_->TabsToSpaces(onlyIndent)))
         wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
@@ -1162,6 +1379,7 @@ bool EditorFrame::HandleSearchKey(const wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
+    if (HandleBlockNavigationKey(event)) return true;
     if (event.GetKeyCode() == 'B' && event.ControlDown() && !event.AltDown() && !event.MetaDown())
         editor_->MatchBrace(event.ShiftDown());
     else if (event.GetKeyCode() == WXK_F2 && !event.MetaDown()) {
@@ -1180,7 +1398,47 @@ bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
     return true;
 }
 
+bool EditorFrame::HandleBlockNavigationKey(const wxKeyEvent& event) {
+    // The original OEM accelerators distinguish Shift and Ctrl exactly. Consume
+    // other Alt punctuation variants before native lookup can drop modifiers.
+    const int rawKey = event.GetKeyCode();
+    const int key = rawKey == '{' ? '[' : rawKey == '}' ? ']' : rawKey == '<' ? ',' : rawKey == '>' ? '.' : rawKey;
+    const bool punctuation = key == '[' || key == ']' || key == ',' || key == '.';
+    if (!punctuation || event.MetaDown()) return false;
+    if (event.AltDown()) {
+        HandleAltBlockNavigationKey(event, key);
+        return true;
+    }
+    if ((key == ',' || key == '.') && event.ControlDown() && event.ShiftDown()) {
+        // Original CMD_JUMP2SELSTART / CMD_JUMP2SELEND: change the active
+        // endpoint without changing the selected text or line-selection mode.
+        editor_->FocusSelectionBoundary(key == ',');
+        return true;
+    }
+    return false;
+}
+
+void EditorFrame::HandleAltBlockNavigationKey(const wxKeyEvent& event, int key) {
+    if (key == '[' && !event.ControlDown() && !event.ShiftDown())
+        editor_->GoToBlock(BlockNavigation::Start);
+    else if (key == ']' && !event.ControlDown()) {
+        if (event.ShiftDown())
+            editor_->SelectCurrentBlockLines();
+        else
+            editor_->GoToBlock(BlockNavigation::End);
+    } else if ((key == ',' || key == '.') && !event.ShiftDown()) {
+        const auto command = key == ','
+                                 ? (event.ControlDown() ? BlockNavigation::PreviousSibling : BlockNavigation::Previous)
+                                 : (event.ControlDown() ? BlockNavigation::NextSibling : BlockNavigation::Next);
+        editor_->GoToBlock(command);
+    }
+}
+
 bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == 'V' && event.ControlDown() && event.ShiftDown()) {
+        if (!event.AltDown() && !event.MetaDown()) editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching());
+        return true;
+    }
     if (event.GetKeyCode() == 'L' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
         !event.MetaDown()) {
         ToggleLongLineMarker();
@@ -1199,6 +1457,9 @@ bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
         editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible());
+    else if (event.GetKeyCode() == 'M' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
+             !event.MetaDown())
+        editor_->SetBookmarkMarginVisible(!editor_->BookmarkMarginVisible());
     else
         return false;
     return true;

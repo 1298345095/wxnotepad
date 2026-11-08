@@ -1,5 +1,7 @@
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
+#include "native_key_helpers.h"
+#include "native_scroll_helpers.h"
 #include <wx/dialog.h>
 #include <wx/ffile.h>
 #include <wx/filename.h>
@@ -22,6 +24,93 @@ void Layout(EditorFrame* frame) {
     }
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     wxYield();
+}
+void HorizontalRange(EditorControl* editor, bool overflow, const char* message) {
+    Require(NativeScroll::WaitForHorizontalRange(editor, overflow), message);
+}
+void AutomaticScrollWidth(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    const int command = frame->GetMenuBar()->FindMenuItem("View", "Auto-Shrink Horizontal Scrollbar");
+    Require(command != wxNOT_FOUND && !frame->GetMenuBar()->IsChecked(command),
+            "automatic horizontal shrinking is an opt-in native View command");
+    const std::string wide(2000, 'x');
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(wide.c_str()));
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    Layout(frame);
+    HorizontalRange(editor, true, "the long document grows the tracked scroll range");
+    const auto retained = editor->Send(Message::GetScrollWidth);
+    editor->Send(Message::SelectAll);
+    editor->Send(Message::Clear);
+    Layout(frame);
+    Require(editor->Send(Message::GetScrollWidth) >= retained,
+            "default deletion preserves original growth-only scroll width");
+    NativeSearch::Command(frame, command);
+    Layout(frame);
+    Require(frame->GetMenuBar()->IsChecked(command), "the native View command enables automatic shrinking");
+    HorizontalRange(editor, false, "enabling shrinking removes the empty document range");
+    editor->Send(Message::Undo);
+    Layout(frame);
+    HorizontalRange(editor, true, "Undo restores the long document range");
+    Require(NativeSearch::Text(editor) == wide && !editor->Send(Message::GetModify),
+            "automatic shrinking preserves text and save-point history");
+    editor->Send(Message::SetXOffset, 400);
+    editor->Send(Message::SelectAll);
+    editor->Send(Message::Clear);
+    Layout(frame);
+    HorizontalRange(editor, false, "deleting the long document automatically shrinks the scroll range");
+    Require(editor->Send(Message::GetXOffset) == 0 && editor->Send(Message::CanUndo),
+            "shrinking repairs stale horizontal offset without clearing undo history");
+    editor->Send(Message::Undo);
+    Layout(frame);
+    editor->Send(Message::Redo);
+    Layout(frame);
+    HorizontalRange(editor, false, "Redo repeats automatic shrinking after restoring a long line");
+    const auto twoLines = wide + "\r\n" + std::string(1000, 'x');
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(twoLines.c_str()));
+    Layout(frame);
+    HorizontalRange(editor, true, "multiple visible lines have a scroll range");
+    const auto widest = editor->Send(Message::GetScrollWidth);
+    editor->Send(Message::SetSel, 0, static_cast<intptr_t>(wide.size()));
+    editor->Send(Message::Clear);
+    Layout(frame);
+    HorizontalRange(editor, true, "a remaining long line retains horizontal scrolling");
+    Require(editor->Send(Message::GetScrollWidth) < widest * 3 / 4,
+            "deleting the widest line shrinks to the remaining visible long line");
+    const auto frameSize = frame->GetSize();
+    const int lineHeight = static_cast<int>(editor->Send(Message::TextHeight, 0));
+    const int adjustment = lineHeight - 2 - editor->GetClientSize().y % lineHeight;
+    frame->SetSize(frameSize + wxSize(0, adjustment));
+    Layout(frame);
+    const int rows = (editor->GetClientSize().y + lineHeight - 1) / lineHeight;
+    std::string bottom;
+    for (int row = 0; row < rows; ++row)
+        bottom += "short\r\n";
+    bottom += wide;
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bottom.c_str()));
+    Layout(frame);
+    const auto height = editor->GetClientSize().y;
+    const auto range = editor->GetScrollRange(wxHORIZONTAL);
+    for (int paint = 0; paint < 6; ++paint) {
+        editor->Refresh(false);
+        editor->Update();
+        wxYield();
+        Require(editor->GetClientSize().y == height && editor->GetScrollRange(wxHORIZONTAL) == range,
+                "a bottom-edge long line must not oscillate horizontal scrollbar visibility across paints");
+    }
+    frame->SetSize(frameSize);
+    Layout(frame);
+    NativeSearch::Command(frame, command);
+    Layout(frame);
+    const auto disabledWidth = editor->Send(Message::GetScrollWidth);
+    editor->Send(Message::SelectAll);
+    editor->Send(Message::Clear);
+    Layout(frame);
+    Require(!frame->GetMenuBar()->IsChecked(command) && editor->Send(Message::GetScrollWidth) >= disabledWidth,
+            "turning shrinking off restores original deletion behavior");
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("short"));
+    Layout(frame);
+    std::puts("PASS: native automatic-scroll-width toggle, deletion, remaining line, offset and Undo/Redo");
 }
 void Shortcut(EditorFrame* frame) {
 #ifdef __WXMSW__
@@ -72,6 +161,9 @@ void MouseSelect(EditorControl* editor, intptr_t position, bool extend) {
     wxYield();
 }
 struct Files {
+    Files() = default;
+    Files(const Files&) = delete;
+    Files& operator=(const Files&) = delete;
     wxString source = wxFileName::CreateTempFileName("wxnotepad-wrap-");
     wxString saved = source + ".saved";
     ~Files() {
@@ -92,10 +184,28 @@ public:
         auto* frame = new EditorFrame;
         frame->SetSize(500, 400);
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "the native view is presented before layout-dependent scenarios");
                 auto* editor = frame->Editor();
                 Layout(frame);
+                std::printf("blank horizontal range=%d thumb=%d offset=%d\n", editor->GetScrollRange(wxHORIZONTAL),
+                            editor->GetScrollThumb(wxHORIZONTAL), editor->GetScrollPos(wxHORIZONTAL));
+                Require(editor->GetScrollRange(wxHORIZONTAL) <= editor->GetScrollThumb(wxHORIZONTAL),
+                        "a new empty document must not create a horizontal scrollable range");
+                editor->Send(Message::SetSel, 0, 0);
+                Layout(frame);
+                HorizontalRange(editor, false, "moving the empty document caret does not create a scroll range");
+                const std::string wide(2000, 'x');
+                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(wide.c_str()));
+                Layout(frame);
+                HorizontalRange(editor, true, "an unwrapped long line has a usable native horizontal scroll range");
+                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("short"));
+                Layout(frame);
+                Require(editor->GetScrollRange(wxHORIZONTAL) <= editor->GetScrollThumb(wxHORIZONTAL) &&
+                            editor->Send(Message::GetXOffset) == 0,
+                        "replacing a wide document with short text resets its tracked scroll width");
+                AutomaticScrollWidth(frame);
                 const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
                 Require(wrap != wxNOT_FOUND, "View must expose Word Wrap");
                 Require(!frame->GetMenuBar()->IsChecked(wrap) && editor->Send(Message::GetWrapMode) == 0,
@@ -118,6 +228,8 @@ public:
                         "native menu enables core word wrapping");
                 Require(editor->Send(Message::WrapCount, 0) > 1 && editor->Send(Message::GetXOffset) == 0,
                         "wrapped text uses continuation rows without stale horizontal offset");
+                Require(editor->GetScrollRange(wxHORIZONTAL) <= editor->GetScrollThumb(wxHORIZONTAL),
+                        "wrapped text does not expose horizontal scrolling");
                 NativeSearch::Selection(editor, 6, 18, "wrapping retains selection byte positions");
                 Require(editor->Send(Message::GetLineCount) == 1 && NativeSearch::Text(editor) == text,
                         "wrapping preserves logical lines and bytes");
@@ -190,7 +302,7 @@ public:
                 }
                 editor->Send(Message::SetSavePoint);
                 NativeSearch::Command(frame, wrap);
-                Require(frame->New(), "New succeeds for a clean document");
+                Require(frame->NewDocument(), "New succeeds for a clean document");
                 Require(editor->Send(Message::GetWrapMode) != 0, "New retains wrapping in this window");
                 Require(frame->Open(files.source).status == OpenStatus::Opened, "Open the Unicode fixture");
                 const auto eol = editor->Send(Message::GetEOLMode);
@@ -255,13 +367,13 @@ private:
         NativeSearch::Command(frame, whitespace);
         frame->SetSize(500, 400);
         Layout(frame);
-        const auto foldWidth = editor->Send(Message::GetMarginWidthN, 1);
+        const auto foldWidth = editor->Send(Message::GetMarginWidthN, 2);
         editor->Send(Message::SetSel, 2, commentEnd);
         editor->Send(Message::ScrollCaret);
         NativeSearch::Command(frame, numbers);
         Layout(frame);
         Require(editor->Send(Message::GetMarginWidthN, 0) == 0 &&
-                    editor->Send(Message::GetMarginWidthN, 1) == foldWidth,
+                    editor->Send(Message::GetMarginWidthN, 2) == foldWidth,
                 "hiding numbers while wrapped preserves the fold margin");
         NativeSearch::Command(frame, numbers);
         Layout(frame);
@@ -287,7 +399,8 @@ private:
         const auto encoding = frame->DocumentEncoding();
         const auto eol = editor->Send(Message::GetEOLMode);
         const auto lexer = editor->Send(Message::GetLexer);
-        const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
+        const auto font =
+            editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
         class GoToLineResponder final : public wxModalDialogHook {
         public:
             explicit GoToLineResponder(EditorFrame* frame) : frame_(frame) { Register(); }
@@ -337,7 +450,8 @@ private:
                     !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
                     frame->DocumentEncoding() == encoding && editor->Send(Message::GetEOLMode) == eol &&
                     editor->Send(Message::GetLexer) == lexer &&
-                    editor->Send(Message::StyleGetSizeFractional, 32) == font,
+                    editor->Send(Message::StyleGetSizeFractional,
+                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == font,
                 "combined presentation and navigation preserve bytes, history, encoding, EOL, syntax and font");
         Require(frame->SaveAs(files.saved).status == SaveStatus::Saved && Bytes(files.saved) == source,
                 "the combined view saves byte-identical text");

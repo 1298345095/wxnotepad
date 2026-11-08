@@ -119,6 +119,24 @@ public:
     }
     int count = 0;
 };
+void Rectangles(EditorFrame* frame, const char* label) {
+    auto* editor = frame->Editor();
+    for (bool empty : {false, true}) {
+        TestEditor::ResetStream(editor, "a b\nc d");
+        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(Message::SetRectangularSelectionAnchor, 1);
+        editor->Send(Message::SetRectangularSelectionCaret, empty ? 1 : 6);
+        RectangleFeedback feedback;
+        Menu(frame, label);
+        Require(feedback.count == (empty ? 0 : 1) && TestEditor::Text(editor) == "a b\nc d" &&
+                    !editor->Send(Message::CanUndo) && editor->Send(Message::SelectionIsRectangle),
+                "URL rejects nonempty rectangles with notification after its empty-input gate");
+        Require(editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
+                    editor->Send(Message::GetRectangularSelectionCaret) == (empty ? 1 : 6),
+                "rectangle notification preserves endpoints");
+    }
+}
+
 void State(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const char* label : {"URL Encode", "URL Component Encode", "URL Decode"}) {
@@ -160,20 +178,7 @@ void State(EditorFrame* frame) {
         Require(TestEditor::Text(editor) == "Xa bY\nZa bW" && !editor->Send(Message::CanUndo),
                 "one Undo restores main-only multiple-selection edit");
         editor->Send(Message::SetMultipleSelection, 0);
-        for (bool empty : {false, true}) {
-            TestEditor::ResetStream(editor, "a b\nc d");
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, 1);
-            editor->Send(Message::SetRectangularSelectionCaret, empty ? 1 : 6);
-            RectangleFeedback feedback;
-            Menu(frame, label);
-            Require(feedback.count == (empty ? 0 : 1) && TestEditor::Text(editor) == "a b\nc d" &&
-                        !editor->Send(Message::CanUndo) && editor->Send(Message::SelectionIsRectangle),
-                    "URL rejects nonempty rectangles with notification after its empty-input gate");
-            Require(editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
-                        editor->Send(Message::GetRectangularSelectionCaret) == (empty ? 1 : 6),
-                    "rectangle notification preserves endpoints");
-        }
+        Rectangles(frame, label);
         TestEditor::ResetStream(editor, "Xa bY", 4, 1);
         editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
         editor->Send(Message::Undo);

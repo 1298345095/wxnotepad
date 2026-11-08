@@ -2,11 +2,14 @@
 
 #include "editor/editor_control.h"
 #include "editor/platform/core_headers.h"
+#include <span>
 #ifdef __WXGTK__
 class GtkTextDragDrop;
 #endif
 
 class EditorControl::Core final : public Scintilla::Internal::ScintillaBase {
+    friend struct EditorCoreObservation;
+
 public:
     Core(EditorControl& window, int selectionOptions);
     ~Core() override;
@@ -17,6 +20,7 @@ public:
     intptr_t SelectionCharacterCount();
 
     void Draw(wxDC& dc);
+    void RequestScrollWidthUpdate() noexcept { scrollWidthDirty_ = true; }
     void Resize();
     void UpdateWrapLayout();
     void DpiChanged();
@@ -32,13 +36,27 @@ public:
     void Mouse(wxMouseEvent& event);
     void CaptureLost();
     void SyncSystemCaret();
+#ifdef __WXMSW__
+    std::optional<intptr_t> ImeMessage(unsigned message, uintptr_t wParam, intptr_t& lParam);
+#endif
     void RepairFoldSelection();
+    void UpdateVisualBraceMatching();
 
 private:
     class TextDropTarget;
     void ShowDropFeedback(int x, int y);
     void ClearDropFeedback();
-    bool dropFeedback_ = false;
+#ifdef __WXMSW__
+    void DestroySystemCaret();
+    bool UsesInlineIme() const noexcept;
+    intptr_t InlineComposition(uintptr_t flags);
+    void InsertImeText(std::wstring_view text, Scintilla::CharacterSource source,
+                       std::span<const unsigned char> indicators = {});
+    bool imeComposing_ = false;
+    void* systemCaretBitmap_ = nullptr;
+    int systemCaretWidth_ = 0;
+    int systemCaretHeight_ = 0;
+#endif
 #ifdef __WXGTK__
     std::unique_ptr<GtkTextDragDrop> gtkDragDrop_;
 #endif
@@ -83,4 +101,6 @@ private:
     intptr_t countedEnd_ = -1;
     intptr_t selectedCharacters_ = 0;
     mutable bool selectionCountDirty_ = true;
+    mutable bool braceStyleChanged_ = false;
+    mutable bool scrollWidthDirty_ = true;
 };

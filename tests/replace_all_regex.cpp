@@ -161,7 +161,7 @@ public:
                 unchanged("[", "X", "Invalid regular expression");
                 unchanged("", "X", "Invalid regular expression");
                 unchanged("a", "$0", "1 replacements");
-                Require(frame->New(), "New must use the live document after no-op replacements");
+                Require(frame->NewDocument(), "New must use the live document after no-op replacements");
                 query->SetValue("[");
                 Click(dialog, wxID_REPLACE_ALL);
                 Require(Text(editor).empty() && !editor->Send(Message::CanUndo) &&

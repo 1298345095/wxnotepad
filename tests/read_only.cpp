@@ -64,7 +64,7 @@ void DocumentTransitions(EditorFrame* frame) {
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "old", 2, 1);
     editor->Send(Message::SetReadOnly, 1);
-    Require(frame->New() && !editor->Send(Message::GetReadOnly) && TestEditor::Text(editor).empty(),
+    Require(frame->NewDocument() && !editor->Send(Message::GetReadOnly) && TestEditor::Text(editor).empty(),
             "New clears editor protection before replacing the previous document");
     const auto source = TestFiles::TemporaryDirectory() / "read-only-中文.cpp";
     const auto other = TestFiles::TemporaryDirectory() / "other-中文.txt";
@@ -96,6 +96,10 @@ void FileProtection(EditorFrame* frame) {
     TestFiles::WriteBytes(source, "readonly\r\n");
     const auto permissions = std::filesystem::status(source).permissions();
     struct RestorePermissions {
+        RestorePermissions(const std::filesystem::path& source, std::filesystem::perms original)
+            : path(source), permissions(original) {}
+        RestorePermissions(const RestorePermissions&) = delete;
+        RestorePermissions& operator=(const RestorePermissions&) = delete;
         const std::filesystem::path& path;
         std::filesystem::perms permissions;
         bool pending = true;

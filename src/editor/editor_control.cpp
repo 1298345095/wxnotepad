@@ -1,17 +1,40 @@
 #include "editor/editor_control.h"
+#include "editor/display_units.h"
+#include "editor/editor_ids.h"
 #include "editor/platform/native_encoding.h"
 #include "editor/editor_core.h"
 #include "editor/platform/clipboard.h"
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
 #include <cmath>
-#ifdef __WXMSW__
-#include <wx/caret.h>
-#endif
 
 using Scintilla::Message;
 namespace core = Scintilla::Internal;
 wxDEFINE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
+
+namespace {
+bool HandleControlDelete(EditorControl& editor, const wxKeyEvent& event) {
+    if (!event.ControlDown() || event.ShiftDown() || event.AltDown() || event.MetaDown() ||
+        (event.GetKeyCode() != WXK_BACK && event.GetKeyCode() != WXK_DELETE))
+        return false;
+    // Notepad4 CMD_CTRLBACK/CMD_CTRLDEL precede the core key map.
+    const auto caret = editor.Send(Message::GetCurrentPos);
+    if (caret != editor.Send(Message::GetAnchor)) {
+        editor.Send(Message::SetSel, caret, caret);
+    } else {
+        const auto line = editor.Send(Message::LineFromPosition, caret);
+        const auto start = editor.Send(Message::PositionFromLine, line);
+        if (event.GetKeyCode() == WXK_BACK)
+            editor.Send(caret == start                                               ? Message::DeleteBack
+                        : caret <= editor.Send(Message::GetLineIndentPosition, line) ? Message::DelLineLeft
+                                                                                     : Message::DelWordLeft);
+        else
+            editor.Send(start == editor.Send(Message::GetLineEndPosition, line) ? Message::LineDelete
+                                                                                : Message::DelWordRight);
+    }
+    return true;
+}
+} // namespace
 
 EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
@@ -24,26 +47,41 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         return true;
     }();
     SetBackgroundStyle(wxBG_STYLE_PAINT);
-#ifdef __WXMSW__
-    SetCaret(new wxCaret(this, 1, 1));
-    GetCaret()->Show();
-#endif
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    occurrences_ = std::make_unique<OccurrenceMarking>(*this);
     // Original Notepad4.cpp::CreateEditControl current-line preferences.
     Send(Message::SetCaretLineVisibleAlways, 1);
     Send(Message::SetCaretLineHighlightSubLine, 1);
     SetCurrentLineHighlightMode(lineHighlightMode_);
     WXNOTE_TRACE("editor.create", "\ttarget=%p\thandle=%p", static_cast<void*>(this), GetHandle());
-    Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
-    Send(Message::SetMarginMaskN, 0, 0);
+    Send(Message::SetMarginTypeN, EditorMargin::LineNumber, static_cast<intptr_t>(Scintilla::MarginType::Number));
+    Send(Message::SetMarginMaskN, EditorMargin::LineNumber, 0);
     SetLineNumbersVisible(true);
-#ifdef __WXMSW__
-    // Use one native caret for display and for input methods on Windows.
-    Send(Message::SetCaretStyle, 0);
-#endif
+    Send(Message::SetMarginTypeN, EditorMargin::Bookmark, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
+    Send(Message::SetMarginMaskN, EditorMargin::Bookmark, ~Scintilla::MaskFolders);
+    Send(Message::SetMarginSensitiveN, EditorMargin::Bookmark, 1);
+    Send(Message::SetMarginCursorN, EditorMargin::Bookmark, static_cast<intptr_t>(Scintilla::CursorShape::Arrow));
+    SetBookmarkMarginVisible(false);
+    // Original Styles.cpp change-history defaults: saved green, modified blue.
+    for (const auto marker :
+         {Scintilla::MarkerOutline::HistoryRevertedToOrigin, Scintilla::MarkerOutline::HistorySaved,
+          Scintilla::MarkerOutline::HistoryModified, Scintilla::MarkerOutline::HistoryRevertedToModified}) {
+        const auto colour = marker <= Scintilla::MarkerOutline::HistorySaved ? 0xFF008000 : 0xFFFF8000;
+        Send(Message::MarkerSetForeTranslucent, static_cast<uintptr_t>(marker), colour);
+        Send(Message::MarkerSetBackTranslucent, static_cast<uintptr_t>(marker),
+             marker == Scintilla::MarkerOutline::HistoryRevertedToOrigin ||
+                     marker == Scintilla::MarkerOutline::HistoryRevertedToModified
+                 ? 0xFF000000 | Send(Message::StyleGetBack, static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber))
+                 : colour);
+    }
+    SetCurrentBlockHighlighted(true);
+    ApplyCaretAppearance();
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         core_->DpiChanged();
+        bookmarkMarginWidthDirty_ = true;
+        UpdateBookmarkMargin();
         SetCurrentLineHighlightMode(lineHighlightMode_);
+        ApplyCaretAppearance();
         Refresh(false);
         event.Skip();
     });
@@ -59,6 +97,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         WXNOTE_TRACE("editor.focus-out", "\ttarget=%p\tfocus=%p", static_cast<void*>(this),
                      static_cast<void*>(wxWindow::FindFocus()));
         Send(Message::SetFocus, 0);
+        core_->SyncSystemCaret();
         Refresh(false);
         event.Skip();
     });
@@ -128,7 +167,10 @@ void EditorControl::SetCurrentLineHighlightMode(LineHighlightMode mode) {
     // One rounding step preserves ScaleStylePixel's DPI * zoom scaling.
     const bool outline = mode == LineHighlightMode::OutlineFrame;
     const int width =
-        outline ? std::max(1, static_cast<int>(std::lround(2.0 * GetDPI().y * Send(Message::GetZoom) / 9600.0))) : 0;
+        outline
+            ? std::max(1, static_cast<int>(std::lround(2.0 * GetDPI().y * Send(Message::GetZoom) /
+                                                       (DisplayUnits::DefaultDpi * DisplayUnits::ZoomPercentScale))))
+            : 0;
     Send(Message::SetCaretLineFrame, width);
     Send(Message::SetCaretLineLayer, static_cast<uintptr_t>(Scintilla::Layer::UnderText));
     Send(Message::SetElementColour, element, outline ? 0x5AC3C0C2 : 0x5A00FFFF);
@@ -161,7 +203,7 @@ bool EditorControl::CopyAdd() {
     old->append("\r\n\r\n");
     old->append(added);
     core::SelectionText text;
-    text.Copy(*old, 65001, false, false);
+    text.Copy(*old, Scintilla::CpUtf8, false, false);
     EditorClipboard::Write(*GetParent(), text);
     return true;
 }
@@ -245,6 +287,12 @@ void EditorControl::JumpToPosition(intptr_t position) {
     Send(Message::ChooseCaretX);
 }
 
+void EditorControl::SetAutoShrinkScrollWidth(bool enabled) {
+    autoShrinkScrollWidth_ = enabled;
+    core_->RequestScrollWidthUpdate();
+    Refresh(false);
+}
+
 void EditorControl::ToggleWordWrap() {
     const auto mode = Send(Message::GetWrapMode) == static_cast<intptr_t>(Scintilla::Wrap::None)
                           ? Scintilla::Wrap::Word
@@ -260,6 +308,9 @@ void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
 }
 
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
+    if (occurrences_ &&
+        (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer))
+        occurrences_->Stop();
     core_->SelectionRevision();
     const auto result = core_->WndProc(message, wParam, lParam);
     if (message == Message::ClearAll) {
@@ -272,10 +323,16 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     }
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
-        message == Message::StyleSetItalic || message == Message::SetZoom)
+        message == Message::StyleSetItalic || message == Message::SetZoom) {
         lineNumberWidthDirty_ = true;
+        bookmarkMarginWidthDirty_ = true;
+        foldMarginWidthDirty_ = true;
+    }
     UpdateLineNumberMargin();
+    UpdateBookmarkMargin();
     if (message == Message::FoldAll) core_->RepairFoldSelection();
+    if (message == Message::SetZoom || message == Message::ZoomIn || message == Message::ZoomOut)
+        ApplyCaretAppearance();
     core_->SelectionRevision();
     return result;
 }
@@ -295,7 +352,75 @@ void EditorControl::SetLineNumbersVisible(bool visible) {
     Send(Message::ScrollCaret);
 }
 
+void EditorControl::SetBookmarkMarginVisible(bool visible) {
+    bookmarkMarginVisible_ = visible;
+    // Original Styles.cpp::Style_SetBookmark at 89b8b36.
+    Send(Message::MarkerDefine, 0,
+         static_cast<intptr_t>(visible ? Scintilla::MarkerSymbol::VerticalBookmark
+                                       : Scintilla::MarkerSymbol::Background));
+    Send(Message::MarkerSetBackTranslucent, 0, visible ? 0xFF408040 : 0x2800FF00);
+    if (visible) Send(Message::MarkerSetForeTranslucent, 0, 0xFF408040);
+    Send(Message::MarkerSetLayer, 0, static_cast<intptr_t>(Scintilla::Layer::OverText));
+    bookmarkMarginWidthDirty_ = true;
+    UpdateBookmarkMargin();
+}
+
+void EditorControl::UpdateBookmarkMargin() {
+    if (!bookmarkMarginWidthDirty_) return;
+    bookmarkMarginWidthDirty_ = false;
+    const auto width =
+        (bookmarkMarginVisible_ || changeHistoryOptions_ != 0) ? core_->WndProc(Message::TextHeight, 0, 0) - 2 : 0;
+    if (core_->WndProc(Message::GetMarginWidthN, EditorMargin::Bookmark, 0) != width) {
+        core_->WndProc(Message::SetMarginWidthN, EditorMargin::Bookmark, width);
+        core_->UpdateWrapLayout();
+    }
+}
+
+void EditorControl::SetChangeHistoryOptions(int options) {
+    changeHistoryOptions_ = options;
+    Send(Message::SetChangeHistory, static_cast<uintptr_t>(options));
+    bookmarkMarginWidthDirty_ = true;
+    UpdateBookmarkMargin();
+}
+
+void EditorControl::ToggleChangeHistory() {
+    // Notepad4.cpp::IDM_VIEW_CHANGE_HISTORY_MARKER. Never discard undo to enable it.
+    if (changeHistoryOptions_ != 0 || !Send(Message::CanUndo))
+        SetChangeHistoryOptions(changeHistoryOptions_ == 0
+                                    ? static_cast<int>(Scintilla::ChangeHistoryOption::Enabled) |
+                                          static_cast<int>(Scintilla::ChangeHistoryOption::Markers)
+                                    : static_cast<int>(Scintilla::ChangeHistoryOption::Disabled));
+}
+
+void EditorControl::SetCodeFoldingVisible(bool visible) {
+    codeFoldingVisible_ = visible;
+    foldMarginWidthDirty_ = true;
+    UpdateFoldMargin();
+    if (!visible) Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
+    core_->UpdateWrapLayout();
+}
+
+void EditorControl::UpdateFoldMargin() {
+    if (!foldMarginWidthDirty_) return;
+    foldMarginWidthDirty_ = false;
+    // Original Styles.cpp::UpdateFoldMarginWidth, default CodeFolding size 0.
+    const auto width = codeFoldingVisible_ ? core_->WndProc(Message::TextWidth,
+                                                            static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber),
+                                                            reinterpret_cast<intptr_t>("+_"))
+                                           : 0;
+    if (core_->WndProc(Message::GetMarginWidthN, EditorMargin::Folding, 0) != width) {
+        core_->WndProc(Message::SetMarginWidthN, EditorMargin::Folding, width);
+        core_->UpdateWrapLayout();
+    }
+}
+
+void EditorControl::SetCurrentBlockHighlighted(bool enabled) {
+    highlightCurrentBlock_ = enabled;
+    Send(Message::MarkerEnableHighlight, enabled);
+}
+
 void EditorControl::UpdateLineNumberMargin() {
+    UpdateFoldMargin();
     if (!lineNumberWidthDirty_) return;
     lineNumberWidthDirty_ = false;
     intptr_t width = 0;
@@ -304,10 +429,12 @@ void EditorControl::UpdateLineNumberMargin() {
         const std::string digits(std::to_string(count).size(), '9');
         // Like Notepad4's UpdateLineNumberWidth, measure the core's number style.
         // Use the required digit count and native DIP padding, without reading text.
-        width = core_->WndProc(Message::TextWidth, 33, reinterpret_cast<intptr_t>(digits.c_str())) + FromDIP(8);
+        width = core_->WndProc(Message::TextWidth, static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber),
+                               reinterpret_cast<intptr_t>(digits.c_str())) +
+                FromDIP(8);
     }
-    if (core_->WndProc(Message::GetMarginWidthN, 0, 0) != width) {
-        core_->WndProc(Message::SetMarginWidthN, 0, width);
+    if (core_->WndProc(Message::GetMarginWidthN, EditorMargin::LineNumber, 0) != width) {
+        core_->WndProc(Message::SetMarginWidthN, EditorMargin::LineNumber, width);
         // A changed text width invalidates wrapping. Reveal the caret against
         // the new display rows, rather than scrolling with the old layout.
         core_->UpdateWrapLayout();
@@ -328,24 +455,7 @@ void EditorControl::OnKeyDown(wxKeyEvent& event) {
                  static_cast<long long>(Send(Message::GetAnchor)),
                  static_cast<long long>(Send(Message::GetCurrentPos)));
     if (core_->Navigation(event)) return;
-    if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
-        (event.GetKeyCode() == WXK_BACK || event.GetKeyCode() == WXK_DELETE)) {
-        // Notepad4 CMD_CTRLBACK/CMD_CTRLDEL precede the core key map.
-        const auto caret = Send(Message::GetCurrentPos);
-        if (caret != Send(Message::GetAnchor)) {
-            Send(Message::SetSel, caret, caret);
-        } else {
-            const auto line = Send(Message::LineFromPosition, caret);
-            const auto start = Send(Message::PositionFromLine, line);
-            if (event.GetKeyCode() == WXK_BACK)
-                Send(caret == start                                        ? Message::DeleteBack
-                     : caret <= Send(Message::GetLineIndentPosition, line) ? Message::DelLineLeft
-                                                                           : Message::DelWordLeft);
-            else
-                Send(start == Send(Message::GetLineEndPosition, line) ? Message::LineDelete : Message::DelWordRight);
-        }
-        return;
-    }
+    if (HandleControlDelete(*this, event)) return;
     if (event.GetKeyCode() == WXK_TAB && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
         !event.MetaDown()) {
         IndentLines(false);
@@ -373,9 +483,8 @@ WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM
         WXNOTE_TRACE("clipboard.transfer", "\ttarget=%p\tformat=%llu", static_cast<void*>(this),
                      static_cast<unsigned long long>(wParam));
 #endif
-    if (core_ && (message == WM_IME_STARTCOMPOSITION || message == WM_IME_COMPOSITION || message == WM_IME_SETCONTEXT ||
-                  message == WM_INPUTLANGCHANGE)) {
-        core_->SyncSystemCaret();
+    if (core_) {
+        if (const auto result = core_->ImeMessage(message, wParam, lParam)) return *result;
     }
     return wxControl::MSWWindowProc(message, wParam, lParam);
 }

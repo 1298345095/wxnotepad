@@ -35,8 +35,11 @@ void SplitFixture(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "one two three" && !editor->Send(Message::CanUndo), "wide split is a no-op");
     TestEditor::RequireSelection(editor, 0, 13, "split retains selection");
     editor->SetLineNumbersVisible(false);
-    for (int margin = 0; margin < 5; ++margin)
-        editor->Send(Message::SetMarginWidthN, margin, 0);
+    // New/Open reapply retained preferences, so keep this measured text-only
+    // viewport through those transitions instead of clearing raw widths once.
+    editor->SetBookmarkMarginVisible(false);
+    editor->SetChangeHistoryOptions(0);
+    editor->SetCodeFoldingVisible(false);
     editor->Send(Message::SetMarginLeft, 0, 0);
     editor->Send(Message::SetMarginRight, 0, 0);
     const auto width = editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
@@ -60,7 +63,7 @@ void SplitFixture(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "one two \nthree", "split Redo restores breaks");
     frame->SetClientSize(900, 600);
 }
-void WaitFor(const std::function<bool()>& condition, const char* message) {
+template <typename Condition> void WaitFor(const Condition& condition, const char* message) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
     while (!condition() && std::chrono::steady_clock::now() < deadline) {
         wxYield();
@@ -84,7 +87,7 @@ void DialogKey(wxDialog* dialog, int key, const char* nativeName) {
             request.Write("front:Column Wrap");
         }
         WaitFor(
-            [&] {
+            [&focus] {
                 wxString pending;
                 wxFFile request(focus, "rb");
                 request.ReadAll(&pending);
@@ -97,7 +100,9 @@ void DialogKey(wxDialog* dialog, int key, const char* nativeName) {
         request.Write(wxString("key:") + nativeName);
     }
     WaitFor(
-        [&] { return released || !dialog->IsShown() || (key == WXK_TAB && wxWindow::FindFocus() != previousFocus); },
+        [&released, dialog, key, previousFocus] {
+            return released || !dialog->IsShown() || (key == WXK_TAB && wxWindow::FindFocus() != previousFocus);
+        },
         "native dialog key reaches its modal control");
 #endif
     wxYield();
@@ -105,7 +110,7 @@ void DialogKey(wxDialog* dialog, int key, const char* nativeName) {
 enum class DialogAction : uint8_t { Accept, Cancel, Return, Escape, Invalid, Tab };
 class WrapDriver final : public wxEvtHandler, public wxModalDialogHook {
 public:
-    WrapDriver(wxString expected = "80", wxString chosen = "6", DialogAction action = DialogAction::Accept)
+    explicit WrapDriver(wxString expected = "80", wxString chosen = "6", DialogAction action = DialogAction::Accept)
         : expected_(std::move(expected)), chosen_(std::move(chosen)), action_(action), deadline_(this) {
         Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
             failure = "Column Wrap native modal deadline expired";
@@ -123,35 +128,7 @@ public:
                 auto* input = wxDynamicCast(wxWindow::FindWindowByName("Boundary", dialog), wxTextCtrl);
                 observed = input && input->GetValue() == expected_;
                 if (input) input->SetValue(chosen_);
-                if (action_ == DialogAction::Invalid) {
-                    NativeSearch::Click(dialog, wxID_OK);
-                    Require(dialog->IsShown() && input->HasFocus(), "invalid input stays open and refocuses Boundary");
-                    NativeSearch::Click(dialog, wxID_CANCEL);
-                } else if (action_ == DialogAction::Return) {
-                    input->SetFocus();
-                    DialogKey(dialog, WXK_RETURN, "Return");
-                } else if (action_ == DialogAction::Escape) {
-                    DialogKey(dialog, WXK_ESCAPE, "Escape");
-                } else if (action_ == DialogAction::Tab) {
-                    input->SetFocus();
-                    bool ok = false, cancel = false;
-                    for (int i = 0; i < 5; ++i) {
-                        DialogKey(dialog, WXK_TAB, "Tab");
-                        auto* focused = wxWindow::FindFocus();
-                        ok |= focused && focused->GetId() == wxID_OK;
-                        cancel |= focused && focused->GetId() == wxID_CANCEL;
-                        if (ok && cancel && input->HasFocus()) break;
-                    }
-                    Require(ok && cancel && input->HasFocus(), "native Tab traverses Boundary, OK and Cancel");
-                    NativeSearch::Click(dialog, wxID_CANCEL);
-                } else {
-                    NativeSearch::Click(dialog, action_ == DialogAction::Cancel ? wxID_CANCEL : wxID_OK);
-                    if (action_ == DialogAction::Accept && dialog->IsShown()) {
-                        NativeSearch::Click(dialog, wxID_CANCEL);
-                        throw std::runtime_error(("original accepted boundary must close the native dialog: " + chosen_)
-                                                     .ToStdString(wxConvUTF8));
-                    }
-                }
+                ApplyAction(dialog, input);
             } catch (const std::exception& error) {
                 failure = error.what();
                 if (dialog->IsShown()) NativeSearch::Click(dialog, wxID_CANCEL);
@@ -169,6 +146,40 @@ public:
     std::string failure;
 
 private:
+    void TraverseControls(wxDialog* dialog, wxTextCtrl* input) {
+        input->SetFocus();
+        bool ok = false, cancel = false;
+        for (int i = 0; i < 5; ++i) {
+            DialogKey(dialog, WXK_TAB, "Tab");
+            auto* focused = wxWindow::FindFocus();
+            ok |= focused && focused->GetId() == wxID_OK;
+            cancel |= focused && focused->GetId() == wxID_CANCEL;
+            if (ok && cancel && input->HasFocus()) break;
+        }
+        Require(ok && cancel && input->HasFocus(), "native Tab traverses Boundary, OK and Cancel");
+        NativeSearch::Click(dialog, wxID_CANCEL);
+    }
+    void ApplyAction(wxDialog* dialog, wxTextCtrl* input) {
+        if (action_ == DialogAction::Invalid) {
+            NativeSearch::Click(dialog, wxID_OK);
+            Require(dialog->IsShown() && input->HasFocus(), "invalid input stays open and refocuses Boundary");
+            NativeSearch::Click(dialog, wxID_CANCEL);
+        } else if (action_ == DialogAction::Return) {
+            input->SetFocus();
+            DialogKey(dialog, WXK_RETURN, "Return");
+        } else if (action_ == DialogAction::Escape) {
+            DialogKey(dialog, WXK_ESCAPE, "Escape");
+        } else if (action_ == DialogAction::Tab) {
+            TraverseControls(dialog, input);
+        } else {
+            NativeSearch::Click(dialog, action_ == DialogAction::Cancel ? wxID_CANCEL : wxID_OK);
+            if (action_ == DialogAction::Accept && dialog->IsShown()) {
+                NativeSearch::Click(dialog, wxID_CANCEL);
+                throw std::runtime_error(
+                    ("original accepted boundary must close the native dialog: " + chosen_).ToStdString(wxConvUTF8));
+            }
+        }
+    }
     wxString expected_;
     wxString chosen_;
     DialogAction action_;
@@ -227,7 +238,7 @@ void ColumnCases(EditorControl* editor) {
         {"中 😀 尾", 0, 12, 3, "中\n😀\n尾", 0, 12},
         {"😀 x", 0, 6, 3, "😀\nx", 0, 6},
         {"中 x", 0, 5, 3, "中 x", 0, 5, false},
-        {"a b  c", 0, 7, 4, "a b\nc", 0, 6},
+        {"a\u00a0b  c", 0, 7, 4, "a\u00a0b\nc", 0, 6},
         {"a\vlong  b", 0, 9, 80, "a\vlong b", 0, 8},
         {"a  b", 2, 2, 1, "a  b", 2, 2, false},
     };
@@ -294,7 +305,7 @@ void DialogCases(EditorFrame* frame) {
     Dialog(frame, "2", wxString::FromUTF8("𝟞"), DialogAction::Accept);
     std::puts("PASS: native OK/Return/Cancel/Esc/Tab, invalid refocus, unsigned conversion, bounds and recall");
 }
-void SelectionAndProtection(EditorFrame* frame) {
+void ProtectedSelections(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (bool reverse : {false, true}) {
         TestEditor::ResetStream(editor, "a  b", reverse ? 4 : 1, reverse ? 1 : 4);
@@ -321,6 +332,9 @@ void SelectionAndProtection(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "a b\nc  d" && editor->Send(Message::GetSelections) == 1,
             "wrap uses main selection and repairs to one selection");
     TestEditor::RequireSelection(editor, 0, 3, "main wrap expands first line only");
+}
+void RectangleSelectionAndRecall(EditorFrame* frame) {
+    auto* editor = frame->Editor();
     struct Feedback final : wxModalDialogHook {
         Feedback() { Register(); }
         int Enter(wxDialog* dialog) override {
@@ -354,9 +368,13 @@ void SelectionAndProtection(EditorFrame* frame) {
         Require(!frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", name)),
                 "original wrap menus require a selection");
     editor->Send(Message::SetSavePoint);
-    Require(frame->New(), "new document resets wrap recall");
+    Require(frame->NewDocument(), "new document resets wrap recall");
     TestEditor::ResetStream(editor, "a b", 0, 3);
     Dialog(frame, "80", "2", DialogAction::Cancel);
+}
+void SelectionAndProtection(EditorFrame* frame) {
+    ProtectedSelections(frame);
+    RectangleSelectionAndRecall(frame);
     std::puts(
         "PASS: read-only, rectangle warnings/order, multiple selections, empty selection, pending Redo and New recall");
 }

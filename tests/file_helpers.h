@@ -51,6 +51,10 @@ inline wxString Filename(const std::filesystem::path& path) {
     return wxString::FromUTF8(path.string());
 #endif
 }
+inline std::filesystem::path Utf8Path(std::string_view text) {
+    // Runtime narrow inputs are UTF-8, independent of the Windows ANSI code page.
+    return std::filesystem::path(std::u8string(text.begin(), text.end()));
+}
 inline std::string Bytes(const std::filesystem::path& path) {
     std::ifstream input(path, std::ios::binary);
     if (!input.is_open()) throw std::runtime_error("saved file must exist");

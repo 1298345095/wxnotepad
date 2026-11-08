@@ -33,11 +33,12 @@ void Shortcut(EditorControl* editor, int key) {
 }
 auto DocumentState(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    return std::tuple(NativeSearch::Text(editor), editor->Send(Message::GetAnchor),
-                      editor->Send(Message::GetCurrentPos), editor->Send(Message::GetEOLMode),
-                      editor->Send(Message::GetModify), editor->Send(Message::CanUndo), editor->Send(Message::CanRedo),
-                      editor->Send(Message::GetLineCount), frame->DocumentEncoding(), frame->DocumentHasBom(),
-                      editor->Send(Message::StyleGetSizeFractional, 32));
+    return std::tuple(
+        NativeSearch::Text(editor), editor->Send(Message::GetAnchor), editor->Send(Message::GetCurrentPos),
+        editor->Send(Message::GetEOLMode), editor->Send(Message::GetModify), editor->Send(Message::CanUndo),
+        editor->Send(Message::CanRedo), editor->Send(Message::GetLineCount), frame->DocumentEncoding(),
+        frame->DocumentHasBom(),
+        editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)));
 }
 void Combined(EditorFrame* frame) {
     auto* editor = frame->Editor();
@@ -106,7 +107,8 @@ void Combined(EditorFrame* frame) {
     NativeSearch::Command(frame, numbers);
     NativeSearch::Command(frame, whitespace);
     editor->Send(Message::SetZoom, 100);
-    Require(frame->New() && editor->Send(Message::GetViewEOL) == 1 && editor->Send(Message::GetWrapVisualFlags) == 1,
+    Require(frame->NewDocument() && editor->Send(Message::GetViewEOL) == 1 &&
+                editor->Send(Message::GetWrapVisualFlags) == 1,
             "New preserves both current window preferences");
     for (const auto* language : {"C/C++", "Python", "JSON", "Plain Text", "Automatic"}) {
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));

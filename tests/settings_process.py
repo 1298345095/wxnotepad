@@ -83,35 +83,40 @@ def main():
         seed = executable_folder / "Notepad4.ini-default"
         seed.write_text("[Settings]\nWordWrap=invalid\nAutoIndent=invalid\nShowLineNumbers=1\nViewWhiteSpace=0\n"
                         "DefaultEOLMode=1\nWarnLineEndings=0\n"
-                        "UnrelatedSetting=keep\n[Styles]\nUnrelatedStyle=保留\n", encoding="utf-16")
+                        "UnrelatedSetting=keep\n[Styles]\nUnrelatedStyle=保留\n"
+                        "[wxnotepad]\nAutoShrinkScrollWidth=invalid\nUnrelatedCustom=keep\n", encoding="utf-16")
         startup = folder / "startup.txt"
         startup.write_bytes(b"settings survive\r\nstartup file loading\nlast")
         app = Application(executable, folder, environment)
         try:
             view(app.state, True, True, False)
+            assert app.state["auto_shrink_scroll_width"] == "0", app.state
             assert app.state["eol_mode"] == "2", app.state
             tabs(app.state, 4, 4, 1)
             assert app.state["auto_indent"] == "1", app.state
             app.named_menu("Language", "JSON")
             tabs(app.state, 2, 2, 0)
-            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent"):
+            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent", "Auto-Shrink Horizontal Scrollbar"):
                 app.menu(item)
             view(app.state, False, False, True)
+            assert app.state["auto_shrink_scroll_width"] == "1", app.state
             assert app.state["auto_indent"] == "0", app.state
             app.close()
             saved = (config_folder / "Notepad4.ini").read_bytes().decode("utf-16")
             assert "WordWrap=0" in saved and "ShowLineNumbers=0" in saved and "ViewWhiteSpace=1" in saved, repr(saved)
             assert "DefaultEOLMode=1" in saved and "WarnLineEndings=0" in saved, repr(saved)
             assert "AutoIndent=0" in saved, saved
+            assert "AutoShrinkScrollWidth=1" in saved and "UnrelatedCustom=keep" in saved, saved
         finally:
             app.stop()
         app = Application(executable, folder, environment, startup)
         try:
             view(app.state, False, False, True)
+            assert app.state["auto_shrink_scroll_width"] == "1", app.state
             assert app.state["eol_mode"] == "2", app.state
             assert app.state["auto_indent"] == "0", app.state
             app.menu("Save Settings On Exit")
-            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent"):
+            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent", "Auto-Shrink Horizontal Scrollbar"):
                 app.menu(item)
             view(app.state, True, True, False)
             app.close()
@@ -119,16 +124,17 @@ def main():
             app.stop()
         saved = (config_folder / "Notepad4.ini").read_text(encoding="utf-16")
         assert "SaveSettings=0" in saved and "WordWrap=0" in saved, saved
+        assert "AutoShrinkScrollWidth=1" in saved, saved
         assert "AutoIndent=0" in saved, saved
         assert "UnrelatedSetting=keep" in saved and "UnrelatedStyle=保留" in saved, saved
         assert "DefaultEOLMode=1" in saved and "WarnLineEndings=0" in saved, saved
         app = Application(executable, folder, environment)
         try:
             view(app.state, False, False, True)
-            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent"):
+            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent", "Auto-Shrink Horizontal Scrollbar"):
                 app.menu(item)
             app.menu("Save Settings Now")
-            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent"):
+            for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent", "Auto-Shrink Horizontal Scrollbar"):
                 app.menu(item)
             app.close()
         finally:
@@ -137,6 +143,7 @@ def main():
         try:
             view(app.state, True, True, False)
             assert app.state["auto_indent"] == "1", app.state
+            assert app.state["auto_shrink_scroll_width"] == "0", app.state
             app.close()
         finally:
             app.stop()
@@ -144,6 +151,7 @@ def main():
         assert "SaveSettings=0" in saved, saved
         assert "WordWrap=" not in saved and "ShowLineNumbers=" not in saved and "ViewWhiteSpace=" not in saved, saved
         assert "AutoIndent=" not in saved, saved
+        assert "AutoShrinkScrollWidth=" not in saved and "UnrelatedCustom=keep" in saved, saved
         assert "UnrelatedSetting=keep" in saved and "UnrelatedStyle=保留" in saved, saved
         assert "DefaultEOLMode=1" in saved and "WarnLineEndings=0" in saved, saved
         for value, mode in (("0", "0"), ("1", "2"), ("2", "1"), ("-1", "0"), ("99", "1"), ("invalid", "0"),

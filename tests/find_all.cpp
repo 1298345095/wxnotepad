@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "document/document_session.h"
 #include "native_search_helpers.h"
+#include "native_paint_helpers.h"
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/filename.h>
@@ -28,12 +29,14 @@ public:
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
                 editor->Send(Message::SetSel, 4, 7);
+                NativePaint::Complete(editor);
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 auto* action = wxDynamicCast(wxWindow::FindWindowByName("Find All", frame), wxButton);
                 Require(query && action, "native Find exposes Find All");
                 query->SetValue("one");
                 Click(query->GetParent(), action->GetId());
+                NativePaint::Complete(editor);
                 auto* result = wxDynamicCast(wxWindow::FindWindowByName("Find All result", frame), wxStaticText);
                 Require(result && result->GetLabel() == "3 matches", "Find All reports whole-document count");
                 Require(editor->Send(Message::IndicatorValueAt, 8, 0) &&
@@ -49,13 +52,17 @@ public:
                 auto* regex = wxDynamicCast(wxWindow::FindWindowByName("Regular expression", frame), wxCheckBox);
                 Require(bookmark && regex && !bookmark->GetValue(), "bookmark option defaults off");
                 const auto marked = [&](intptr_t pos) { return editor->Send(Message::IndicatorValueAt, 8, pos); };
-                const auto run = [&] { Click(query->GetParent(), action->GetId()); };
+                const auto run = [&] {
+                    NativePaint::Complete(editor);
+                    Click(query->GetParent(), action->GetId());
+                    NativePaint::Complete(editor);
+                };
                 const auto load = [&](const std::string& bytes) {
                     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
                     editor->Send(Message::MarkerDeleteAll, 0);
                     editor->Send(Message::EmptyUndoBuffer);
                     editor->Send(Message::SetSavePoint);
-                    wxYield();
+                    NativePaint::Complete(editor);
                 };
                 Toggle(bookmark, true);
                 run();
@@ -66,18 +73,20 @@ public:
                         "editing the query retains submitted Find All state until a dialog action");
                 editor->Send(Message::GotoPos, 0);
                 Click(query->GetParent(), wxID_FORWARD);
-                Require(!marked(0) && result->GetLabel().empty() && (editor->Send(Message::MarkerGet, 0) & 1),
-                        "submitting a changed query clears count and marks while retaining Find All bookmarks");
+                NativePaint::Complete(editor);
+                Require(
+                    marked(0) && !marked(4) && result->GetLabel().empty() && (editor->Send(Message::MarkerGet, 0) & 1),
+                    "changed-query FindNext replaces Find All with automatic selection marks and retains bookmarks");
                 Toggle(bookmark, false);
                 query->SetValue("one");
                 run();
-                Require(editor->Send(Message::MarkerNext, 0, 1) == -1,
-                        "next Find All without bookmarks clears the prior Find All bookmarks");
+                Require(editor->Send(Message::MarkerNext, 0, 1) == 0,
+                        "Find All without bookmarks retains markers after automatic selection takes channel ownership");
                 editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("!"));
-                wxYield();
+                NativePaint::Complete(editor);
                 Require(result->GetLabel().empty() && !marked(1), "edits invalidate count and occurrence marks");
                 editor->Send(Message::Undo);
-                wxYield();
+                NativePaint::Complete(editor);
                 run();
                 Require(editor->Send(Message::CanRedo), "marking preserves pending redo");
                 editor->Send(Message::Redo);
@@ -101,14 +110,14 @@ public:
                 query->SetValue("(");
                 run();
                 editor->Send(Message::ZoomIn);
-                wxYield();
+                NativePaint::Complete(editor);
                 Require(result->GetLabel() == "Invalid regular expression" && !marked(0),
                         "invalid patterns clear markings and retain error feedback across editor UI updates");
                 editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("!"));
-                wxYield();
+                NativePaint::Complete(editor);
                 Require(result->GetLabel().empty(), "document edits clear stale invalid-pattern feedback");
                 editor->Send(Message::Undo);
-                wxYield();
+                NativePaint::Complete(editor);
                 query->SetValue("absent");
                 run();
                 Require(result->GetLabel() == "0 matches", "no matches reports zero");
@@ -167,7 +176,7 @@ public:
                 wxRemoveFile(path);
                 Require(disk == "void f() {\n  needle();\n}\n", "Find All preserves independently read disk bytes");
                 document.New();
-                wxYield();
+                NativePaint::Complete(editor);
                 Require(result->GetLabel().empty() && editor->Send(Message::MarkerNext, 0, 1) == -1 && !marked(0),
                         "document replacement clears count, marks and bookmarks");
                 Toggle(regex, true);
@@ -175,7 +184,7 @@ public:
                 run();
                 Require(result->GetLabel() == "1 matches", "original dollar anchor counts an empty document");
                 document.New();
-                wxYield();
+                NativePaint::Complete(editor);
                 Require(result->GetLabel().empty(), "replacing an already empty document invalidates its count");
                 query->SetValue("");
                 Require(!action->IsEnabled(), "Find All disables on an empty query");

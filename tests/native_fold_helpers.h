@@ -1,26 +1,21 @@
 #pragma once
 
 #include "editor/editor_control.h"
+#include "native_paint_helpers.h"
 #include <wx/wx.h>
 #include <stdexcept>
 
 namespace NativeFold {
 using Scintilla::Message;
 inline void Paint(EditorControl* editor) {
-    for (int attempt = 0; attempt < 40; ++attempt) {
-        wxYield();
-        editor->Refresh(false);
-        editor->Update();
-        wxYield();
-        if (editor->Send(Message::GetEndStyled) == editor->Send(Message::GetLength)) return;
-        wxMilliSleep(10);
-    }
+    NativePaint::Complete(editor);
 }
 inline void MarginClick(EditorControl* editor, int line, const char* marginMessage) {
-    const auto width = editor->Send(Message::GetMarginWidthN, 1);
-    if (width != editor->FromDIP(16)) throw std::runtime_error(marginMessage);
+    const auto width = editor->Send(Message::GetMarginWidthN, 2);
+    if (width <= 0) throw std::runtime_error(marginMessage);
     const auto position = editor->Send(Message::PositionFromLine, line);
-    const int x = static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + width / 2);
+    const int x = static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) +
+                                   editor->Send(Message::GetMarginWidthN, 1) + width / 2);
     const int y = static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position) +
                                    editor->Send(Message::TextHeight, line) / 2);
     if (y < 0 || y >= editor->GetClientSize().y)
@@ -41,9 +36,8 @@ inline void MarginClick(EditorControl* editor, int line, const char* marginMessa
         event->button.y = y;
         event->button.button = 1;
         if (type == GDK_BUTTON_RELEASE) event->button.state = GDK_BUTTON1_MASK;
-        const auto* display = gtk_widget_get_display(widget);
-        gdk_event_set_device(event,
-                             gdk_seat_get_pointer(gdk_display_get_default_seat(const_cast<GdkDisplay*>(display))));
+        auto* display = gtk_widget_get_display(widget);
+        gdk_event_set_device(event, gdk_seat_get_pointer(gdk_display_get_default_seat(display)));
         gtk_widget_event(widget, event);
         gdk_event_free(event);
     }

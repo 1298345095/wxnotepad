@@ -1,5 +1,6 @@
 #pragma once
 
+#include "settings/original_settings_constants.h"
 #include "search/search_session.h"
 #include <wx/dialog.h>
 #include <functional>
@@ -17,8 +18,8 @@ class FindReplaceDialog final : public wxDialog {
 public:
     FindReplaceDialog(wxWindow* parent, EditorControl& editor, SearchSession& search,
                       std::function<void(const FindResult&)> reportFind, std::function<void(wxKeyEvent&)> onKey,
-                      int selectionOptions = 15);
-    void Present(bool replace, int selectionOptions = 15, bool toggle = false);
+                      int selectionOptions = SelectOption_Default);
+    void Present(bool replace, int selectionOptions = SelectOption_Default, bool toggle = false);
     ~FindReplaceDialog() override;
     void Find(SearchDirection direction, bool extendSelection = false);
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "native_search_helpers.h"
+#include "native_focus_helpers.h"
 #include "native_trace_helpers.h"
 #include <wx/eventfilter.h>
 #include <wx/ffile.h>
@@ -8,6 +9,7 @@
 #include <chrono>
 #include <algorithm>
 #include <functional>
+#include <memory>
 #ifdef __WXGTK__
 #include <gdk/gdkwayland.h>
 #include <wayland-client-core.h>
@@ -15,6 +17,20 @@
 
 // Native shortcuts target the caller's editor on the existing private display.
 namespace NativeKeys {
+inline int UnshiftedPunctuation(int key) {
+    switch (key) {
+    case '{':
+        return '[';
+    case '}':
+        return ']';
+    case '<':
+        return ',';
+    case '>':
+        return '.';
+    default:
+        return key;
+    }
+}
 inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)> callback) {
 #ifdef __WXGTK__
     auto* widget = GTK_WIDGET(window->GetHandle());
@@ -38,6 +54,9 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
                                                 wl_proxy_get_id(reinterpret_cast<wl_proxy*>(surface)),
                                                 static_cast<long long>(g_get_monotonic_time() + remaining)));
                 }
+            }
+            void StartWaiting(std::shared_ptr<Preparation> pending) {
+                pending_ = std::move(pending);
                 Start(10);
             }
             void Notify() override {
@@ -49,8 +68,10 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
                 }
                 if (!ready && std::chrono::steady_clock::now() < deadline_) return;
                 Stop();
+                // Retain the timer through Notify and the callback, then release
+                // the pending operation when this invocation returns.
+                auto completed = std::move(pending_);
                 auto callback = std::move(callback_);
-                delete this;
                 callback(ready);
             }
 
@@ -58,14 +79,39 @@ inline void AfterPresentation(wxTopLevelWindow* window, std::function<void(bool)
             std::function<void(bool)> callback_;
             std::chrono::steady_clock::time_point deadline_;
             wxString focusFile_;
+            std::shared_ptr<Preparation> pending_;
         };
-        new Preparation(window, std::move(callback));
+        auto preparation = std::make_shared<Preparation>(window, std::move(callback));
+        preparation->StartWaiting(preparation);
         return;
     }
 #endif
     wxTheApp->CallAfter([callback = std::move(callback)] { callback(true); });
 }
 
+class KeyRelease final : public wxEventFilter {
+public:
+    KeyRelease(int key, bool& received, bool* signal, wxWindow* intended = nullptr)
+        : key_(key), received_(received), signal_(signal), intended_(intended) {
+        wxEvtHandler::AddFilter(this);
+    }
+    ~KeyRelease() override { wxEvtHandler::RemoveFilter(this); }
+    int FilterEvent(wxEvent& event) override {
+        if (event.GetEventType() == wxEVT_KEY_UP &&
+            UnshiftedPunctuation(static_cast<wxKeyEvent&>(event).GetKeyCode()) == key_ &&
+            (!intended_ || event.GetEventObject() == intended_)) {
+            received_ = true;
+            if (signal_) *signal_ = true;
+        }
+        return Event_Skip;
+    }
+
+private:
+    int key_;
+    bool& received_;
+    bool* signal_;
+    wxWindow* intended_;
+};
 #ifdef __WXMSW__
 inline void DialogNavigation(wxDialog* dialog, int key) {
     BYTE previous[256];
@@ -108,15 +154,7 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
                 throw std::runtime_error("physical native Escape requires the current Windows input desktop");
             if (message.hwnd != owned && !IsChild(owned, message.hwnd))
                 throw std::runtime_error("native Escape focus must belong to the owned dialog");
-            const auto thread = GetCurrentThreadId();
-            const auto foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
-            const bool attached =
-                foregroundThread && foregroundThread != thread && AttachThreadInput(thread, foregroundThread, TRUE);
-            BringWindowToTop(owned);
-            SetForegroundWindow(owned);
-            SetActiveWindow(owned);
-            SetFocus(message.hwnd);
-            if (attached) AttachThreadInput(thread, foregroundThread, FALSE);
+            NativeFocus::Activate(owned, message.hwnd);
             const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(3);
             const auto ownsInput = [&] {
                 const auto focus = GetFocus();
@@ -150,38 +188,9 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
         }
     }
 }
-#else
-class KeyRelease final : public wxEventFilter {
-public:
-    KeyRelease(int key, bool& received, bool* signal) : key_(key), received_(received), signal_(signal) {
-        wxEvtHandler::AddFilter(this);
-    }
-    ~KeyRelease() override { wxEvtHandler::RemoveFilter(this); }
-    int FilterEvent(wxEvent& event) override {
-        if (event.GetEventType() == wxEVT_KEY_UP && static_cast<wxKeyEvent&>(event).GetKeyCode() == key_) {
-            received_ = true;
-            if (signal_) *signal_ = true;
-        }
-        return Event_Skip;
-    }
-
-private:
-    int key_;
-    bool& received_;
-    bool* signal_;
-};
 #endif
-inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
-                     bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad") {
-    const NativeTrace::Gesture trace(*frame->Editor(), key,
-                                     (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
-#ifdef __WXMSW__
-    const int nativeKey = key >= WXK_F1 && key <= WXK_F24 ? VK_F1 + key - WXK_F1 : key;
-    NativeSearch::WindowsShortcut(frame->Editor(), nativeKey,
-                                  {{VK_CONTROL, static_cast<BYTE>(control ? 0x80 : 0)},
-                                   {VK_MENU, static_cast<BYTE>(alt ? 0x80 : 0)},
-                                   {VK_SHIFT, static_cast<BYTE>(shift ? 0x80 : 0)}});
-#else
+#ifndef __WXMSW__
+inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString& focusFile) {
     using Clock = std::chrono::steady_clock;
     auto* editor = frame->Editor();
     editor->SetFocus();
@@ -190,7 +199,6 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     const bool wayland = GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget));
 #endif
     wxYield();
-    wxString focusFile;
     if (!wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile))
         throw std::runtime_error("native shortcuts require a private display");
     const auto focusDeadline = Clock::now() + std::chrono::seconds(3);
@@ -224,13 +232,60 @@ inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false
     }
     if (!acknowledged || !frame->IsActive() || !editor->HasFocus())
         throw std::runtime_error("private native input must activate the owned editor");
+}
+inline wxString KeyName(int key) {
+    if (key >= WXK_F1 && key <= WXK_F24) return wxString::Format("F%d", key - WXK_F1 + 1);
+    switch (key) {
+    case '[':
+        return "bracketleft";
+    case ']':
+        return "bracketright";
+    case ',':
+        return "comma";
+    case '.':
+        return "period";
+    default:
+        const auto letter = static_cast<char>(key >= 'A' && key <= 'Z' ? key + 'a' - 'A' : key);
+        return wxString::Format("%c", letter);
+    }
+}
+#endif
+inline void Shortcut(EditorFrame* frame, int key, bool control, bool alt = false, bool shift = false,
+                     bool* releaseSignal = nullptr, [[maybe_unused]] const wxString& focusName = "wxnotepad") {
+    const NativeTrace::Gesture trace(*frame->Editor(), key,
+                                     (control ? wxMOD_CONTROL : 0) | (alt ? wxMOD_ALT : 0) | (shift ? wxMOD_SHIFT : 0));
+#ifdef __WXMSW__
+    int nativeKey = key >= WXK_F1 && key <= WXK_F24 ? VK_F1 + key - WXK_F1 : key;
+    // Match wxMSW's layout lookup and OEM fallback for punctuation accelerators.
+    if (key == '[' || key == ']' || key == ',' || key == '.') {
+        const SHORT mapped = VkKeyScanW(static_cast<wchar_t>(key));
+        if (mapped != -1)
+            nativeKey = LOBYTE(mapped);
+        else
+            nativeKey = key == '[' ? VK_OEM_4 : key == ']' ? VK_OEM_6 : key == ',' ? VK_OEM_COMMA : VK_OEM_PERIOD;
+    }
+    NativeSearch::WindowsShortcut(frame->Editor(), nativeKey,
+                                  {{VK_CONTROL, static_cast<BYTE>(control ? 0x80 : 0)},
+                                   {VK_MENU, static_cast<BYTE>(alt ? 0x80 : 0)},
+                                   {VK_SHIFT, static_cast<BYTE>(shift ? 0x80 : 0)}});
+    if (key == '[' || key == ']' || key == ',' || key == '.') {
+        bool received = false;
+        KeyRelease observer(key, received, releaseSignal, frame->Editor());
+        const LPARAM flags = (LPARAM{KF_UP | KF_REPEAT | (alt ? KF_ALTDOWN : 0)} << 16) | 1;
+        SendMessageW(static_cast<HWND>(frame->Editor()->GetHandle()), alt ? WM_SYSKEYUP : WM_KEYUP, nativeKey, flags);
+        if (!received) throw std::runtime_error("native punctuation release must reach the intended editor");
+    }
+#else
+    using Clock = std::chrono::steady_clock;
+    auto* editor = frame->Editor();
+    wxString focusFile;
+    FocusEditor(frame, focusName, focusFile);
     bool received = false;
-    KeyRelease observer(key, received, releaseSignal);
+    const bool punctuation = key == '[' || key == ']' || key == ',' || key == '.';
+    KeyRelease observer(key, received, releaseSignal, punctuation ? editor : nullptr);
     {
         wxFFile file(focusFile, "wb");
-        const auto letter = static_cast<char>(key >= 'A' && key <= 'Z' ? key + 'a' - 'A' : key);
-        const wxString name = key >= WXK_F1 && key <= WXK_F24 ? wxString::Format("F%d", key - WXK_F1 + 1)
-                                                              : wxString::Format("%c", letter);
+        const auto name = KeyName(key);
         file.Write(NativeTrace::Request(wxString("key:") + (control ? "ctrl+" : "") + (alt ? "alt+" : "") +
                                         (shift ? "shift+" : "") + name));
     }

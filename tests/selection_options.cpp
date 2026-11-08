@@ -58,7 +58,7 @@ public:
                 const int option = wxAtoi(argv[1]);
                 Require(settings_->values.selectOption == option, "raw imported bits must survive unchanged");
                 Check(*frame->Editor(), option);
-                Require(frame->New(), "New must succeed");
+                Require(frame->NewDocument(), "New must succeed");
                 Check(*frame->Editor(), option);
                 const auto path = wxFileName(wxFileName(settings_->Path()).GetPath(), "sample.txt").GetFullPath();
                 Require(frame->Open(path).status == OpenStatus::Opened, "Open must succeed");

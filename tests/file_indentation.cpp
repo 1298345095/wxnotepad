@@ -100,7 +100,7 @@ public:
                             frame->Open(TestFiles::Filename(directory / "missing.txt")).status == OpenStatus::Failed,
                         "cancelled and failed Open preserve current overrides");
                 Check(frame->Editor(), 7, 7, false);
-                Require(frame->New(), "New succeeds");
+                Require(frame->NewDocument(), "New succeeds");
                 Check(frame->Editor(), 4, 4, false);
                 Require(frame->Editor()->Send(Message::GetTabIndents), "New restores global Tab Indents");
                 TabDialog::Show(frame, [](wxDialog* dialog) {
@@ -133,7 +133,7 @@ public:
                 Check(frame->Editor(), 2, 2, true);
                 Require(TestFiles::Bytes(directory / "saved.json") == "  alpha\n    beta\n  gamma\n",
                         "Save preserves whitespace bytes");
-                Require(frame->New(), "New after detection succeeds");
+                Require(frame->NewDocument(), "New after detection succeeds");
                 Check(frame->Editor(), 4, 4, false);
                 std::puts("PASS: variable grammar, clamping, beginning/end gates, partial precedence, ties, sampling "
                           "and transitions");

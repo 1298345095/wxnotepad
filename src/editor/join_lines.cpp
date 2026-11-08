@@ -4,6 +4,37 @@
 
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 
+namespace {
+bool IsLineEnd(char ch) {
+    return ch == '\r' || ch == '\n';
+}
+
+bool JoinParagraphText(const std::string& text, const char* eol, std::string& joined) {
+    joined.reserve(text.size());
+    bool modified = false;
+    for (size_t i = 0; i < text.size(); ++i) {
+        if (!IsLineEnd(text[i])) {
+            joined += text[i];
+            continue;
+        }
+        if (text[i] == '\r' && text[i + 1] == '\n') ++i;
+        if (!IsLineEnd(text[i + 1]) && text[i + 1] != '\0') {
+            joined += ' ';
+            modified = true;
+            continue;
+        }
+        while (IsLineEnd(text[i + 1])) {
+            ++i;
+            modified = true;
+        }
+        if (text[i + 1] == '\0') continue;
+        if (!joined.empty()) joined += eol;
+        joined += eol;
+    }
+    return modified;
+}
+} // namespace
+
 void EditorControl::JoinLines() {
     // Notepad4 89b8b36 Notepad4.cpp::IDM_EDIT_JOINLINES uses the main selection,
     // including rectangular mode, without expanding to whole lines.
@@ -25,31 +56,8 @@ bool EditorControl::JoinParagraphs() {
     const std::string text(bytes, static_cast<size_t>(length));
     const auto mode = static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode));
     const char* eol = mode == Scintilla::EndOfLine::CrLf ? "\r\n" : mode == Scintilla::EndOfLine::Cr ? "\r" : "\n";
-    const auto isEol = [](char ch) { return ch == '\r' || ch == '\n'; };
     std::string joined;
-    joined.reserve(text.size());
-    bool modified = false;
-    for (size_t i = 0; i < text.size(); ++i) {
-        if (isEol(text[i])) {
-            if (text[i] == '\r' && text[i + 1] == '\n') ++i;
-            if (!isEol(text[i + 1]) && text[i + 1] != '\0') {
-                joined += ' ';
-                modified = true;
-            } else {
-                while (isEol(text[i + 1])) {
-                    ++i;
-                    modified = true;
-                }
-                if (text[i + 1] != '\0') {
-                    if (!joined.empty()) joined += eol;
-                    joined += eol;
-                }
-            }
-        } else {
-            joined += text[i];
-        }
-    }
-    if (modified) {
+    if (JoinParagraphText(text, eol, joined)) {
         // Original EditReplaceRange replaces even identical bytes and repairs
         // the expanded selection in its original direction after the core call.
         const bool reversed = Send(Message::GetAnchor) > Send(Message::GetCurrentPos);

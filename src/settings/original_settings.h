@@ -1,6 +1,9 @@
 #pragma once
 
+#include "settings/original_settings_constants.h"
+#include "editor/display_units.h"
 #include "document/encoding/encoding_detection.h"
+#include "editor/caret_appearance.h"
 #include <wx/string.h>
 #include <array>
 #include <vector>
@@ -17,6 +20,11 @@ struct OriginalSettings {
     bool saveSettings = true;
     bool wordWrap = true;
     bool showLineNumbers = true;
+    bool showBookmarkMargin = false;
+    int changeHistoryMarker = 0;
+    bool matchBraces = true;
+    bool showCodeFolding = true;
+    bool highlightCurrentBlock = true;
     bool viewWhiteSpace = false;
     bool showIndentGuides = false;
     bool simpleIndentGuides = false;
@@ -25,13 +33,15 @@ struct OriginalSettings {
     bool fixLineEndings = false;
     bool fixTrailingBlanks = false;
     EncodingOptions encoding;
-    int zoomLevel = 100;
+    int zoomLevel = DisplayUnits::ZoomPercentScale;
+    CaretAppearance caret;
     int highlightCurrentLine = 12;
     int longLinesLimit = 80;
     bool markLongLines = false;
     int longLineMode = 1;
-    int selectOption = 15;
-    int autoInsertMask = 511;
+    int selectOption = SelectOption_Default;
+    int autoInsertMask = AutoInsertMask_Default;
+    int markOccurrences = 1;
     bool saveFindReplace = false;
     int findReplaceOption = 2;
     int findReplaceFlag = 0;
@@ -51,4 +61,6 @@ struct OriginalSettings {
     bool viewEOLs = false;
     bool showWordWrapSymbols = false;
     int wordWrapSymbols = 2;
+    // wxnotepad opt-in; false retains original growth-only width tracking.
+    bool autoShrinkScrollWidth = false;
 };

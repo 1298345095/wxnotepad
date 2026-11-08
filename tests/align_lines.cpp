@@ -7,7 +7,6 @@
 #include <wx/msgdlg.h>
 #include <array>
 #include <chrono>
-#include <functional>
 #include <vector>
 
 namespace {
@@ -69,7 +68,7 @@ void Paragraph(EditorControl* editor) {
     Require(TestEditor::Text(editor) == "12345678\na      b\nx y",
             "paragraph continuation uses the actual next line outside selection");
 }
-void WaitFor(const std::function<bool()>& condition, const char* message) {
+template <typename Condition> void WaitFor(const Condition& condition, const char* message) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
     while (!condition() && std::chrono::steady_clock::now() < deadline) {
         wxYield();
@@ -108,7 +107,7 @@ void NativeAltJ(EditorFrame* frame, bool& released) {
         file.Write(frame->IsActive() ? "focus:wxnotepad" : "front:wxnotepad");
     }
     WaitFor(
-        [&] {
+        [&focusFile, frame, editor] {
             wxString pending;
             wxFFile file(focusFile, "rb");
             file.ReadAll(&pending);
@@ -120,7 +119,7 @@ void NativeAltJ(EditorFrame* frame, bool& released) {
         wxFFile file(focusFile, "wb");
         file.Write("key:alt+j");
     }
-    WaitFor([&] { return released; }, "actual Alt+J key release reaches owned editor or dialog");
+    WaitFor([&released] { return released; }, "actual Alt+J key release reaches owned editor or dialog");
 #endif
 }
 class AlignmentDialogDriver final : public wxModalDialogHook {
@@ -257,7 +256,7 @@ void NativeProtectionAndRecall(EditorFrame* frame) {
         recalled = choice;
     }
     editor->Send(Message::SetSavePoint);
-    Require(frame->New(), "new document opens in the current frame");
+    Require(frame->NewDocument(), "new document opens in the current frame");
     Dialog(frame, AlignmentMode::JustifyParagraph, AlignmentMode::Right, wxID_CANCEL);
     Require(TestEditor::Text(editor).empty() && !editor->Send(Message::CanUndo),
             "empty document keeps alignment menu available and accepted recall survives New");
@@ -301,9 +300,13 @@ void OriginalEdges(EditorControl* editor) {
     editor->SetIndentationWidths(4, 4);
     editor->Send(Message::SetUseTabs, 0);
 
-    TestEditor::ResetStream(editor, "  a b   c\n    中\nOUTSIDE", 1, 19);
+    TestEditor::ResetStream(editor,
+                            "  a\xc2\xa0"
+                            "b   c\n    中\nOUTSIDE",
+                            1, 19);
     editor->AlignLines(AlignmentMode::Left);
-    Require(TestEditor::Text(editor) == "  a b c\n  中\nOUTSIDE",
+    Require(TestEditor::Text(editor) == "  a\xc2\xa0"
+                                        "b c\n  中\nOUTSIDE",
             "only ASCII spaces and Tabs split words; a next-line-start endpoint excludes its line");
     TestEditor::RequireSelection(editor, 0, 15, "excluded next line starts immediately after repaired selection");
     TestEditor::ResetStream(editor, "  \n\t\n", 0, 5);

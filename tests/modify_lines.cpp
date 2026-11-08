@@ -117,12 +117,12 @@ public:
 private:
     std::function<void(wxDialog*)> action_;
 };
-void Visit(EditorFrame* frame, const std::function<void(wxDialog*)>& action, bool native = false) {
+template <typename Action> void Visit(EditorFrame* frame, const Action& action, bool native = false) {
     const auto id = frame->GetMenuBar()->FindMenuItem("Edit", "Modify Lines...");
     Require(id != wxNOT_FOUND, "Edit menu exposes original Modify Lines dialog");
     bool opened = false;
     bool released = false;
-    DialogDriver driver([&](wxDialog* dialog) {
+    DialogDriver driver([&opened, &released, &action, native](wxDialog* dialog) {
 #ifndef __WXMSW__
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
         while (native && !released && std::chrono::steady_clock::now() < deadline) {
@@ -233,7 +233,7 @@ void NativeControls(EditorFrame* frame) {
     bool tabReachedSkip = false;
     Visit(
         frame,
-        [&](wxDialog* dialog) {
+        [&tabReachedSkip](wxDialog* dialog) {
             auto* prefix = Field(dialog, "Prefix text to lines");
             auto* suffix = Field(dialog, "Append text to lines");
             Require(prefix->GetValue() == "$(N):" && suffix->GetValue() == ":$(I)" && !Skip(dialog)->GetValue() &&
@@ -305,44 +305,43 @@ void NativeControls(EditorFrame* frame) {
     Require(!opened, "Alt+Shift+M and Ctrl+Alt+M do not invoke Modify Lines");
     std::puts("PASS: native Alt+M modifiers, Shift+Return/keypad Enter in both fields, six links and focus");
 }
-void ReturnAndCancel(EditorFrame* frame) {
+void ReturnAndCancelCase(EditorFrame* frame, bool keypad, const char* name, bool control) {
     auto* editor = frame->Editor();
-    for (const bool keypad : {false, true}) {
-        for (const char* name : {"Prefix text to lines", "Append text to lines"}) {
-            for (const bool control : {false, true}) {
-                TestEditor::ResetStream(editor, "x", 1, 1, Scintilla::EndOfLine::Lf);
-                bool closed = false;
-                Visit(frame, [&](wxDialog* dialog) {
-                    Field(dialog, "Prefix text to lines")->SetValue("[");
-                    Field(dialog, "Append text to lines")->SetValue("]");
-                    NativeSearch::Toggle(Skip(dialog), false);
-                    InputReturn(Field(dialog, name), false, control, keypad);
-                    closed = !dialog->IsShown();
-                    if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
-                });
-                Require(closed && TestEditor::Text(editor) == "[x]",
-                        "native Return or keypad Enter without Shift applies and closes from either field");
-                TestEditor::RequireSelection(editor, 2, 2, "Return acceptance preserves original caret adjustment");
-                Require(editor->HasFocus(), "Return acceptance restores native editor focus");
-                editor->Send(Message::Undo);
-                Require(TestEditor::Text(editor) == "x" && !editor->Send(Message::CanUndo) &&
-                            !editor->Send(Message::GetModify),
-                        "Return acceptance is one undo action back to the save point");
-                Visit(frame, [&](wxDialog* dialog) {
-                    Require(Field(dialog, "Prefix text to lines")->GetValue() == "[" &&
-                                Field(dialog, "Append text to lines")->GetValue() == "]" && !Skip(dialog)->GetValue(),
-                            "Return accepts prefix, suffix and checkbox recall");
-                    Field(dialog, name)->SetValue("discard");
-                    NativeSearch::Click(dialog, wxID_CANCEL);
-                    closed = !dialog->IsShown();
-                    if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
-                });
-                Require(closed && TestEditor::Text(editor) == "x" && editor->Send(Message::CanRedo) &&
-                            !editor->Send(Message::CanUndo),
-                        "native cancellation closes from either field and retains document and pending redo");
-            }
-        }
-    }
+    TestEditor::ResetStream(editor, "x", 1, 1, Scintilla::EndOfLine::Lf);
+    bool closed = false;
+    Visit(frame, [&closed, name, control, keypad](wxDialog* dialog) {
+        Field(dialog, "Prefix text to lines")->SetValue("[");
+        Field(dialog, "Append text to lines")->SetValue("]");
+        NativeSearch::Toggle(Skip(dialog), false);
+        InputReturn(Field(dialog, name), false, control, keypad);
+        closed = !dialog->IsShown();
+        if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
+    });
+    Require(closed && TestEditor::Text(editor) == "[x]",
+            "native Return or keypad Enter without Shift applies and closes from either field");
+    TestEditor::RequireSelection(editor, 2, 2, "Return acceptance preserves original caret adjustment");
+    Require(editor->HasFocus(), "Return acceptance restores native editor focus");
+    editor->Send(Message::Undo);
+    Require(TestEditor::Text(editor) == "x" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+            "Return acceptance is one undo action back to the save point");
+    Visit(frame, [&closed, name](wxDialog* dialog) {
+        Require(Field(dialog, "Prefix text to lines")->GetValue() == "[" &&
+                    Field(dialog, "Append text to lines")->GetValue() == "]" && !Skip(dialog)->GetValue(),
+                "Return accepts prefix, suffix and checkbox recall");
+        Field(dialog, name)->SetValue("discard");
+        NativeSearch::Click(dialog, wxID_CANCEL);
+        closed = !dialog->IsShown();
+        if (!closed) NativeSearch::Click(dialog, wxID_CANCEL);
+    });
+    Require(closed && TestEditor::Text(editor) == "x" && editor->Send(Message::CanRedo) &&
+                !editor->Send(Message::CanUndo),
+            "native cancellation closes from either field and retains document and pending redo");
+}
+void ReturnAndCancel(EditorFrame* frame) {
+    for (const bool keypad : {false, true})
+        for (const char* name : {"Prefix text to lines", "Append text to lines"})
+            for (const bool control : {false, true})
+                ReturnAndCancelCase(frame, keypad, name, control);
     std::puts("PASS: native Return/keypad Enter with or without Ctrl apply and recall; cancellation preserves history");
 }
 void NativeEolAndRecall(EditorFrame* frame) {
@@ -356,7 +355,7 @@ void NativeEolAndRecall(EditorFrame* frame) {
     bool first = true;
     for (const auto& fixture : fixtures) {
         TestEditor::ResetStream(frame->Editor(), "x", 1, 1, fixture.mode);
-        Visit(frame, [&](wxDialog* dialog) {
+        Visit(frame, [&first](wxDialog* dialog) {
             if (first) {
                 Require(Skip(dialog)->GetValue() &&
                             Field(dialog, "Prefix text to lines")->GetValue() == wxString::FromUTF8("中\n$(N):") &&
@@ -376,7 +375,7 @@ void NativeEolAndRecall(EditorFrame* frame) {
                     !frame->Editor()->Send(Message::CanUndo),
                 "native OK forms one undo action");
     }
-    Visit(frame, [&](wxDialog* dialog) {
+    Visit(frame, [](wxDialog* dialog) {
         Require(Field(dialog, "Prefix text to lines")->GetValue() == wxString::FromUTF8("中\n") &&
                     Field(dialog, "Append text to lines")->GetValue() == wxString::FromUTF8("\n文") &&
                     !Skip(dialog)->GetValue(),
@@ -389,7 +388,7 @@ void NativeEolAndRecall(EditorFrame* frame) {
     Require(TestEditor::Text(frame) == "x" && !frame->Editor()->Send(Message::CanUndo) &&
                 frame->Editor()->Send(Message::CanRedo) && !frame->Editor()->Send(Message::GetModify),
             "Cancel preserves document, save point and pending redo");
-    Visit(frame, [&](wxDialog* dialog) {
+    Visit(frame, [](wxDialog* dialog) {
         Require(Field(dialog, "Prefix text to lines")->GetValue() == wxString::FromUTF8("中\n") &&
                     !Skip(dialog)->GetValue(),
                 "Cancel retains previously accepted values");
@@ -400,8 +399,8 @@ void NativeEolAndRecall(EditorFrame* frame) {
     Require(TestEditor::Text(frame) == "x" && !frame->Editor()->Send(Message::CanUndo) &&
                 frame->Editor()->Send(Message::CanRedo),
             "both-empty OK closes and retains pending redo");
-    Require(frame->New(), "New retains current-window dialog recall");
-    Visit(frame, [&](wxDialog* dialog) {
+    Require(frame->NewDocument(), "New retains current-window dialog recall");
+    Visit(frame, [](wxDialog* dialog) {
         Require(Field(dialog, "Prefix text to lines")->IsEmpty() && Field(dialog, "Append text to lines")->IsEmpty(),
                 "accepted empty fields replace prior recall across New");
         NativeSearch::Click(dialog, wxID_CANCEL);
@@ -435,7 +434,7 @@ void Protection(EditorFrame* frame) {
     Require(!editor->ModifyLines("", ""), "rectangle rejection precedes the both-empty shortcut");
     {
         RectangleFeedback feedback;
-        Visit(frame, [&](wxDialog* dialog) {
+        Visit(frame, [](wxDialog* dialog) {
             Field(dialog, "Prefix text to lines")->Clear();
             Field(dialog, "Append text to lines")->Clear();
             InputReturn(Field(dialog, "Prefix text to lines"));
@@ -453,7 +452,7 @@ void Protection(EditorFrame* frame) {
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     const auto id = frame->GetMenuBar()->FindMenuItem("Edit", "Modify Lines...");
     Require(frame->GetMenuBar()->IsEnabled(id), "Modify Lines remains available for original core read-only behavior");
-    Visit(frame, [&](wxDialog* dialog) {
+    Visit(frame, [](wxDialog* dialog) {
         Field(dialog, "Prefix text to lines")->SetValue("[");
         Field(dialog, "Append text to lines")->SetValue("]");
         NativeSearch::Click(dialog, wxID_OK);
@@ -467,8 +466,8 @@ void Protection(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "\n\n" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
             "skipping every empty line leaves history at its save point");
     editor->Send(Message::SetSavePoint);
-    Require(frame->New(), "New succeeds after read-only fixture reset");
-    Visit(frame, [&](wxDialog* dialog) {
+    Require(frame->NewDocument(), "New succeeds after read-only fixture reset");
+    Visit(frame, [](wxDialog* dialog) {
         Require(Field(dialog, "Prefix text to lines")->GetValue() == "[" &&
                     Field(dialog, "Append text to lines")->GetValue() == "]",
                 "read-only OK accepts recall across New");
@@ -476,7 +475,7 @@ void Protection(EditorFrame* frame) {
     });
     auto* other = new EditorFrame;
     other->Show();
-    Visit(other, [&](wxDialog* dialog) {
+    Visit(other, [](wxDialog* dialog) {
         Require(Field(dialog, "Prefix text to lines")->IsEmpty() && Field(dialog, "Append text to lines")->IsEmpty() &&
                     !Skip(dialog)->GetValue(),
                 "another window starts with original empty defaults");
@@ -509,7 +508,7 @@ void SavedBytes(EditorFrame* frame) {
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "open original encoded Modify Lines fixture");
         frame->Editor()->Send(Message::SelectAll);
-        Visit(frame, [&](wxDialog* dialog) {
+        Visit(frame, [](wxDialog* dialog) {
             Field(dialog, "Prefix text to lines")->SetValue("$(N):");
             Field(dialog, "Append text to lines")->SetValue(":$(I)");
             NativeSearch::Toggle(Skip(dialog), false);

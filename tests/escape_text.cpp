@@ -60,39 +60,54 @@ void ReferenceFixtures(EditorFrame* frame) {
     std::puts(
         "PASS: 40 original escape byte fixtures including controls, limited C escapes, entities, Unicode and NUL");
 }
+template <typename Fixture> void PrepareSelectionState(EditorControl* editor, const Fixture& fixture) {
+    ResetBytes(editor, fixture.before);
+    const std::string_view kind = fixture.kind;
+    const auto length = fixture.before.size();
+    const auto firstEnd = fixture.before.find('\n');
+    editor->Send(Message::SetSel, kind == "reversed" ? length : 0, kind == "empty" || kind == "reversed" ? 0 : length);
+    if (kind == "multiple") {
+        editor->Send(Message::SetMultipleSelection, 1);
+        editor->Send(Message::SetSel, 0, firstEnd);
+        editor->Send(Message::AddSelection, firstEnd + 1, length);
+        editor->Send(Message::AddSelection, firstEnd, firstEnd);
+        editor->Send(Message::SetMainSelection, 0);
+    }
+    if (kind.starts_with("rectangle")) {
+        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(Message::SetRectangularSelectionAnchor, kind == "rectangle-reversed" ? length : 0);
+        editor->Send(Message::SetRectangularSelectionCaret, kind == "rectangle-reversed" ? 0 : length);
+        // Compare the same original byte ranges: native font metrics can
+        // put equal rectangle x positions at different character columns.
+        for (int index = 0; index < fixture.count; ++index) {
+            editor->Send(Message::SetSelectionNAnchor, index, fixture.initialRanges[index][0]);
+            editor->Send(Message::SetSelectionNCaret, index, fixture.initialRanges[index][1]);
+        }
+    }
+    if (kind == "pending" || kind == "readonly") {
+        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Message::Undo);
+        editor->Send(Message::SetSel, 0, length);
+    }
+    if (kind == "readonly") editor->Send(Message::SetReadOnly, 1);
+}
+template <typename Fixture> void DiagnoseSelectionState(EditorControl* editor, const Fixture& fixture) {
+    if (TestEditor::Text(editor) != fixture.after || editor->Send(Message::GetAnchor) != fixture.anchor ||
+        editor->Send(Message::GetCurrentPos) != fixture.caret) {
+        std::fprintf(stderr, "Original escape state mapping=%d kind=%s\n", fixture.mapping, fixture.kind);
+        for (const unsigned char byte : TestEditor::Text(editor))
+            std::fprintf(stderr, "%02x", byte);
+        std::fprintf(stderr, " actual; expected ");
+        for (const unsigned char byte : fixture.after)
+            std::fprintf(stderr, "%02x", byte);
+        std::fprintf(stderr, "\n");
+    }
+}
 void SelectionStates(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const auto& fixture : EscapeStateFixtures) {
-        ResetBytes(editor, fixture.before);
+        PrepareSelectionState(editor, fixture);
         const std::string_view kind = fixture.kind;
-        const auto length = fixture.before.size();
-        const auto firstEnd = fixture.before.find('\n');
-        editor->Send(Message::SetSel, kind == "reversed" ? length : 0,
-                     kind == "empty" || kind == "reversed" ? 0 : length);
-        if (kind == "multiple") {
-            editor->Send(Message::SetMultipleSelection, 1);
-            editor->Send(Message::SetSel, 0, firstEnd);
-            editor->Send(Message::AddSelection, firstEnd + 1, length);
-            editor->Send(Message::AddSelection, firstEnd, firstEnd);
-            editor->Send(Message::SetMainSelection, 0);
-        }
-        if (kind.starts_with("rectangle")) {
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, kind == "rectangle-reversed" ? length : 0);
-            editor->Send(Message::SetRectangularSelectionCaret, kind == "rectangle-reversed" ? 0 : length);
-            // Compare the same original byte ranges: native font metrics can
-            // put equal rectangle x positions at different character columns.
-            for (int index = 0; index < fixture.count; ++index) {
-                editor->Send(Message::SetSelectionNAnchor, index, fixture.initialRanges[index][0]);
-                editor->Send(Message::SetSelectionNCaret, index, fixture.initialRanges[index][1]);
-            }
-        }
-        if (kind == "pending" || kind == "readonly") {
-            editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-            editor->Send(Message::Undo);
-            editor->Send(Message::SetSel, 0, length);
-        }
-        if (kind == "readonly") editor->Send(Message::SetReadOnly, 1);
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", Label(fixture.mapping));
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(id) == (kind != "empty"),
@@ -102,16 +117,7 @@ void SelectionStates(EditorFrame* frame) {
             editor->Send(Message::CustomCaseMapping, fixture.mapping);
         else
             NativeSearch::Command(frame, id);
-        if (TestEditor::Text(editor) != fixture.after || editor->Send(Message::GetAnchor) != fixture.anchor ||
-            editor->Send(Message::GetCurrentPos) != fixture.caret) {
-            std::fprintf(stderr, "Original escape state mapping=%d kind=%s\n", fixture.mapping, fixture.kind);
-            for (const unsigned char byte : TestEditor::Text(editor))
-                std::fprintf(stderr, "%02x", byte);
-            std::fprintf(stderr, " actual; expected ");
-            for (const unsigned char byte : fixture.after)
-                std::fprintf(stderr, "%02x", byte);
-            std::fprintf(stderr, "\n");
-        }
+        DiagnoseSelectionState(editor, fixture);
         Require(TestEditor::Text(editor) == fixture.after, "selection conversion matches original literal bytes");
         TestEditor::RequireSelection(editor, fixture.anchor, fixture.caret,
                                      "original selection endpoints after escape");

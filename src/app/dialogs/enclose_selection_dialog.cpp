@@ -21,7 +21,7 @@ void ShowEncloseSelectionDialog(wxWindow* parent, EditorControl& editor, wxStrin
     wxDialog dialog(parent, wxID_ANY, "Enclose Selection", wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    const auto addInput = [&](const wxString& label, const wxString& name, const wxString& value) {
+    const auto addInput = [contents, &dialog](const wxString& label, const wxString& name, const wxString& value) {
         contents->Add(new wxStaticText(&dialog, wxID_ANY, label), 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
         auto display = value;
         display.Replace("\r\n", "\n");
@@ -40,7 +40,7 @@ void ShowEncloseSelectionDialog(wxWindow* parent, EditorControl& editor, wxStrin
     dialog.CentreOnParent();
     dialog.Bind(
         wxEVT_BUTTON,
-        [&](wxCommandEvent&) {
+        [prefix, suffix, &before, &after, &editor, &dialog](wxCommandEvent&) {
             before = WinEditText(prefix);
             after = WinEditText(suffix);
             if (!editor.EncloseSelection(before, after))

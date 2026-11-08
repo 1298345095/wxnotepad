@@ -36,6 +36,84 @@ void ConvertNumRadix(std::string& output, uint64_t num, unsigned radix) {
         output += buffer + index;
     }
 }
+uint64_t ReadHexadecimal(const char*& p) {
+    uint64_t value = 0;
+    while (*p) {
+        if (*p == '_') {
+            ++p;
+        } else {
+            const int hex = GetHexDigit(*p);
+            if (hex < 0) break;
+            value = (value << 4) | static_cast<unsigned>(hex);
+            ++p;
+        }
+    }
+    return value;
+}
+uint64_t ReadOctal(const char*& p) {
+    uint64_t value = 0;
+    while (*p) {
+        if (*p >= '0' && *p <= '7') {
+            value <<= 3;
+            value += (*p++ - '0');
+        } else if (*p == '_') {
+            ++p;
+        } else {
+            break;
+        }
+    }
+    return value;
+}
+uint64_t ReadBinary(const char*& p) {
+    uint64_t value = 0;
+    while (*p) {
+        if (*p == '0') {
+            value <<= 1;
+            ++p;
+        } else if (*p == '1') {
+            value <<= 1;
+            value |= 1;
+            ++p;
+        } else if (*p == '_') {
+            ++p;
+        } else {
+            break;
+        }
+    }
+    return value;
+}
+uint64_t ReadDecimal(const char*& p) {
+    uint64_t value = *p++ - '0';
+    while (*p) {
+        if (*p >= '0' && *p <= '9') {
+            value *= 10;
+            value += (*p++ - '0');
+        } else if (*p == '_') {
+            ++p;
+        } else {
+            break;
+        }
+    }
+    return value;
+}
+void ConvertLeadingZero(std::string& output, const char*& p, unsigned radix) {
+    ++p;
+    const char prefix = static_cast<char>(*p | 0x20);
+    if (prefix == 'x' && radix != 16) {
+        ++p;
+        ConvertNumRadix(output, ReadHexadecimal(p), radix);
+    } else if (prefix == 'o' && radix != 8) {
+        ++p;
+        ConvertNumRadix(output, ReadOctal(p), radix);
+    } else if (prefix == 'b' && radix != 2) {
+        ++p;
+        ConvertNumRadix(output, ReadBinary(p), radix);
+    } else if ((*p >= '0' && *p <= '9') && radix != 10) {
+        ConvertNumRadix(output, ReadDecimal(p), radix);
+    } else {
+        output += '0';
+    }
+}
 } // namespace
 
 bool EditorControl::ConvertNumberRadix(unsigned radix) {
@@ -48,84 +126,11 @@ bool EditorControl::ConvertNumberRadix(unsigned radix) {
     // Preserve the pinned EditConvertNumRadix scanner, including unsigned wrap,
     // incomplete prefixes, underscores and the already-matching radix shortcut.
     const char* p = input.c_str();
-    uint64_t value = 0;
     while (*p) {
         if (*p == '0') {
-            value = 0;
-            ++p;
-            const char prefix = static_cast<char>(*p | 0x20);
-            if (prefix == 'x' && radix != 16) {
-                ++p;
-                while (*p) {
-                    if (*p == '_') {
-                        ++p;
-                    } else {
-                        const int hex = GetHexDigit(*p);
-                        if (hex < 0) break;
-                        value = (value << 4) | static_cast<unsigned>(hex);
-                        ++p;
-                    }
-                }
-                ConvertNumRadix(output, value, radix);
-            } else if (prefix == 'o' && radix != 8) {
-                ++p;
-                while (*p) {
-                    if (*p >= '0' && *p <= '7') {
-                        value <<= 3;
-                        value += (*p++ - '0');
-                    } else if (*p == '_') {
-                        ++p;
-                    } else {
-                        break;
-                    }
-                }
-                ConvertNumRadix(output, value, radix);
-            } else if (prefix == 'b' && radix != 2) {
-                ++p;
-                while (*p) {
-                    if (*p == '0') {
-                        value <<= 1;
-                        ++p;
-                    } else if (*p == '1') {
-                        value <<= 1;
-                        value |= 1;
-                        ++p;
-                    } else if (*p == '_') {
-                        ++p;
-                    } else {
-                        break;
-                    }
-                }
-                ConvertNumRadix(output, value, radix);
-            } else if ((*p >= '0' && *p <= '9') && radix != 10) {
-                value = *p++ - '0';
-                while (*p) {
-                    if (*p >= '0' && *p <= '9') {
-                        value *= 10;
-                        value += (*p++ - '0');
-                    } else if (*p == '_') {
-                        ++p;
-                    } else {
-                        break;
-                    }
-                }
-                ConvertNumRadix(output, value, radix);
-            } else {
-                output += '0';
-            }
+            ConvertLeadingZero(output, p, radix);
         } else if ((*p >= '1' && *p <= '9') && radix != 10) {
-            value = *p++ - '0';
-            while (*p) {
-                if (*p >= '0' && *p <= '9') {
-                    value *= 10;
-                    value += (*p++ - '0');
-                } else if (*p == '_') {
-                    ++p;
-                } else {
-                    break;
-                }
-            }
-            ConvertNumRadix(output, value, radix);
+            ConvertNumRadix(output, ReadDecimal(p), radix);
         } else if (IsAlphaNumeric(*p) || *p == '_') {
             do {
                 output += *p++;

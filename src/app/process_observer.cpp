@@ -1,4 +1,5 @@
 #include "app/process_observer.h"
+#include "editor/editor_ids.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "diagnostics/trace.h"
@@ -9,19 +10,38 @@
 #include <wx/log.h>
 #include <cstdio>
 #include <utility>
+#ifdef __WXMSW__
+#include <windows.h>
+#endif
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
 
-#ifdef WXNOTEPAD_DIAGNOSTICS
 namespace {
+#ifdef WXNOTEPAD_DIAGNOSTICS
 unsigned long long DiagnosticRequest(const wxString& sequence) {
     unsigned long long value = 0;
     sequence.ToULongLong(&value);
     return value;
 }
-} // namespace
 #endif
+
+void DispatchObservedCommand(EditorFrame& frame, const wxString& operation, const wxString& source, wxString& result) {
+    result = "failed";
+    if (operation == "open" && !source.empty())
+        result = frame.Open(source).status == OpenStatus::Opened ? "ok" : "failed";
+    if (operation == "save") result = frame.Save().status == SaveStatus::Saved ? "ok" : "failed";
+    if (operation == "close") result = "ok";
+    if (operation == "menu") {
+        const int id = frame.GetMenuBar()->FindMenuItem(source.BeforeFirst('\t'), source.AfterFirst('\t'));
+        if (id != wxNOT_FOUND) {
+            wxCommandEvent event(wxEVT_MENU, id);
+            result = frame.GetEventHandler()->ProcessEvent(event) ? "ok" : "failed";
+            frame.UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        }
+    }
+}
+} // namespace
 
 ProcessObserver::ProcessObserver(EditorFrame& frame, wxString directory)
     : frame_(&frame), observation_(std::move(directory)), observer_(this) {
@@ -89,18 +109,40 @@ void ProcessObserver::Publish() {
             frame_->Editor()->AutoIndentEnabled()) +
         "document_status\t" + frame_->GetStatusBar()->GetStatusText() + "\n" +
         wxString::Format(
-            "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\n",
+            "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\n"
+            "caret_style\t%lld\ncaret_width\t%lld\ncaret_period\t%lld\n"
+            "mark_occurrences\t%d\ncode_folding\t%d\nmatch_braces\t%d\ncurrent_block\t%d\nfold_margin\t%lld\n",
             static_cast<int>(frame_->Editor()->GetLineSelectionMode()),
             static_cast<int>(frame_->Editor()->GetCurrentLineHighlightMode()),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine)));
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine)),
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretStyle)),
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretWidth)),
+            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretPeriod)),
+            frame_->Editor()->Occurrences().Options(), frame_->Editor()->CodeFoldingVisible(),
+            frame_->Editor()->VisualBraceMatching(), frame_->Editor()->CurrentBlockHighlighted(),
+            static_cast<long long>(
+                frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, EditorMargin::Folding))) +
+        wxString::Format("bookmark_margin\t%d\nchange_history\t%lld\nauto_shrink_scroll_width\t%d\n",
+                         frame_->Editor()->BookmarkMarginVisible(),
+                         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetChangeHistory)),
+                         frame_->Editor()->AutoShrinkScrollWidth());
     // A reader can temporarily deny replacement on Windows. IPC errors must
     // stay out of wxLogGui: its deferred modal dialog can outlive the frame.
     const wxLogNull noGuiLog;
     wxFFile state(observation_ + "/state.tmp", "wb");
     const bool written = state.IsOpened() && state.Write(contents);
     const bool closed = state.IsOpened() && state.Close();
-    const bool published =
-        written && closed && wxRenameFile(observation_ + "/state.tmp", observation_ + "/state", true);
+    bool published = false;
+    if (written && closed) {
+        // wxRenameFile can fall back to copying over an open destination. Readers
+        // must see a complete old or new snapshot, so retry a failed rename.
+#ifdef __WXMSW__
+        published = MoveFileExW((observation_ + "/state.tmp").wc_str(), (observation_ + "/state").wc_str(),
+                                MOVEFILE_REPLACE_EXISTING) != 0;
+#else
+        published = ::rename((observation_ + "/state.tmp").utf8_str(), (observation_ + "/state").utf8_str()) == 0;
+#endif
+    }
     if (!published && !publishPending_) {
         const unsigned long error = wxSysErrorCode();
         const char* stage = !written ? "write" : !closed ? "close" : "rename";
@@ -158,20 +200,7 @@ void ProcessObserver::Observe() {
         WXNOTE_TRACE("observer.request", "\ttarget=%p\trequest=%llu", static_cast<void*>(frame_),
                      DiagnosticRequest(sequence_));
         const auto& operation = command->operation;
-        const auto& source = command->source;
-        result_ = "failed";
-        if (operation == "open" && !source.empty())
-            result_ = frame_->Open(source).status == OpenStatus::Opened ? "ok" : "failed";
-        if (operation == "save") result_ = frame_->Save().status == SaveStatus::Saved ? "ok" : "failed";
-        if (operation == "close") result_ = "ok";
-        if (operation == "menu") {
-            const int id = frame_->GetMenuBar()->FindMenuItem(source.BeforeFirst('\t'), source.AfterFirst('\t'));
-            if (id != wxNOT_FOUND) {
-                wxCommandEvent event(wxEVT_MENU, id);
-                result_ = frame_->GetEventHandler()->ProcessEvent(event) ? "ok" : "failed";
-                frame_->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-            }
-        }
+        DispatchObservedCommand(*frame_, operation, command->source, result_);
         Publish();
         WXNOTE_TRACE("observer.ack", "\ttarget=%p\trequest=%llu\tok=%d", static_cast<void*>(frame_),
                      DiagnosticRequest(sequence_), result_ == "ok");

@@ -87,6 +87,50 @@ void SwitchDialog(wxWindow* link) {
 #endif
     wxYield();
 }
+void SelectionLimits(EditorFrame* frame, EditorControl* editor, wxTextCtrl* query, wxDialog* dialog, wxCheckBox* regex,
+                     wxCheckBox* transform, bool selectionOnly_) {
+    using Scintilla::Message;
+    const std::string special = "a[.]\\b";
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(special.c_str()));
+    editor->Send(Message::SetSel, 0, special.size());
+    NativeSearch::Command(frame, wxID_REPLACE);
+    Require(query->GetValue() == "a[.]\\b" && !transform->GetValue(),
+            "selection punctuation and a plain backslash must remain unchanged");
+    NativeSearch::Click(dialog, wxID_CANCEL);
+    const std::string boundary = std::string(1024 * 1024 - 3, 'x') + "中";
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(boundary.c_str()));
+    editor->Send(Message::SetSel, 0, boundary.size());
+    NativeSearch::Command(frame, wxID_REPLACE);
+    const auto boundaryQuery = query->GetValue();
+    const auto boundaryUtf8 = boundaryQuery.utf8_str();
+    const std::string queryBytes(boundaryUtf8.data(), boundaryUtf8.length());
+    const auto difference = std::mismatch(boundary.cbegin(), boundary.cend(), queryBytes.cbegin(), queryBytes.cend());
+    const auto firstDifference = static_cast<size_t>(std::distance(boundary.cbegin(), difference.first));
+    const bool utf8Suffix = boundaryQuery.EndsWith(wxString::FromUTF8("中"));
+    std::fprintf(stderr,
+                 "Boundary selection bytes=%lld query bytes=%zu exact=%d first_difference=%zu "
+                 "suffix_utf8=%d regex=%d transform=%d selection_only=%d\n",
+                 static_cast<long long>(editor->Send(Message::GetSelText)), queryBytes.size(), queryBytes == boundary,
+                 firstDifference, utf8Suffix, regex->GetValue(), transform->GetValue(), selectionOnly_);
+    Require(queryBytes.size() == 1024 * 1024 && utf8Suffix && queryBytes == boundary,
+            "selection limit must include exactly one MiB of UTF-8 bytes");
+    NativeSearch::Click(dialog, wxID_CANCEL);
+    const std::string tooLong = boundary + "!";
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(tooLong.c_str()));
+    editor->Send(Message::SetSel, 0, tooLong.size());
+    if (!selectionOnly_) {
+        ClipboardGesture(editor);
+        Require(wxTheClipboard->Open(), "test must publish selection-limit fallback");
+        wxTheClipboard->SetData(new wxTextDataObject("clipboard fallback"));
+        wxTheClipboard->Close();
+    }
+    NativeSearch::Command(frame, wxID_REPLACE);
+    Require(query->GetValue() == (selectionOnly_ ? "stored" : "clipboard fallback") && Focused(query),
+            "over-limit selection must use the enabled original fallback and focus query");
+    Require(NativeSearch::Text(editor) == tooLong, "limit checks must retain original editor bytes");
+    std::puts("PASS: literal punctuation/backslash and exact UTF-8 selection-length boundary");
+}
+
 class SeedingApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -197,47 +241,7 @@ public:
                         "regex seeding must retain regex punctuation and escaping without enabling transform");
                 std::puts("PASS: clipboard, existing-dialog reopen, Ctrl+H switch and regex seeding rules");
                 NativeSearch::Click(dialog, wxID_CANCEL);
-                const std::string special = "a[.]\\b";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(special.c_str()));
-                editor->Send(Message::SetSel, 0, special.size());
-                NativeSearch::Command(frame, wxID_REPLACE);
-                Require(query->GetValue() == "a[.]\\b" && !transform->GetValue(),
-                        "selection punctuation and a plain backslash must remain unchanged");
-                NativeSearch::Click(dialog, wxID_CANCEL);
-                const std::string boundary = std::string(1024 * 1024 - 3, 'x') + "中";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(boundary.c_str()));
-                editor->Send(Message::SetSel, 0, boundary.size());
-                NativeSearch::Command(frame, wxID_REPLACE);
-                const auto boundaryQuery = query->GetValue();
-                const auto boundaryUtf8 = boundaryQuery.utf8_str();
-                const std::string queryBytes(boundaryUtf8.data(), boundaryUtf8.length());
-                const auto difference =
-                    std::mismatch(boundary.cbegin(), boundary.cend(), queryBytes.cbegin(), queryBytes.cend());
-                const auto firstDifference = static_cast<size_t>(std::distance(boundary.cbegin(), difference.first));
-                const bool utf8Suffix = boundaryQuery.EndsWith(wxString::FromUTF8("中"));
-                std::fprintf(stderr,
-                             "Boundary selection bytes=%lld query bytes=%zu exact=%d first_difference=%zu "
-                             "suffix_utf8=%d regex=%d transform=%d selection_only=%d\n",
-                             static_cast<long long>(editor->Send(Message::GetSelText)), queryBytes.size(),
-                             queryBytes == boundary, firstDifference, utf8Suffix, regex->GetValue(),
-                             transform->GetValue(), selectionOnly_);
-                Require(queryBytes.size() == 1024 * 1024 && utf8Suffix && queryBytes == boundary,
-                        "selection limit must include exactly one MiB of UTF-8 bytes");
-                NativeSearch::Click(dialog, wxID_CANCEL);
-                const std::string tooLong = boundary + "!";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(tooLong.c_str()));
-                editor->Send(Message::SetSel, 0, tooLong.size());
-                if (!selectionOnly_) {
-                    ClipboardGesture(editor);
-                    Require(wxTheClipboard->Open(), "test must publish selection-limit fallback");
-                    wxTheClipboard->SetData(new wxTextDataObject("clipboard fallback"));
-                    wxTheClipboard->Close();
-                }
-                NativeSearch::Command(frame, wxID_REPLACE);
-                Require(query->GetValue() == (selectionOnly_ ? "stored" : "clipboard fallback") && Focused(query),
-                        "over-limit selection must use the enabled original fallback and focus query");
-                Require(NativeSearch::Text(editor) == tooLong, "limit checks must retain original editor bytes");
-                std::puts("PASS: literal punctuation/backslash and exact UTF-8 selection-length boundary");
+                SelectionLimits(frame, editor, query, dialog, regex, transform, selectionOnly_);
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

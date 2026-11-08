@@ -1,4 +1,6 @@
 #include "editor/editor_core.h"
+#include "editor/display_units.h"
+#include "editor/editor_ids.h"
 #include "editor/platform/native_encoding.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/custom_case.h"
@@ -9,11 +11,6 @@
 #include <wx/settings.h>
 #include <chrono>
 #include <cmath>
-#ifdef __WXMSW__
-#include <wx/caret.h>
-#include <imm.h>
-#include <cwchar>
-#endif
 
 using Scintilla::Message;
 namespace core = Scintilla::Internal;
@@ -57,6 +54,83 @@ std::optional<Scintilla::Keys> CoreKeyCode(int code) {
         return std::nullopt;
     }
 }
+
+bool HandleClipboardKey(EditorControl& window, const wxKeyEvent& event) {
+    if (event.AltDown()) return false;
+    switch (event.GetKeyCode()) {
+    case WXK_INSERT:
+        if (!event.ControlDown() || event.ShiftDown()) return false;
+        window.Copy();
+        return true;
+    case WXK_DELETE:
+        if (!event.ShiftDown() || event.ControlDown()) return false;
+        window.Cut();
+        return true;
+    case 'C':
+        if (!event.ControlDown()) return false;
+        if (event.ShiftDown())
+            window.CopyLine();
+        else
+            window.Copy();
+        return true;
+    case 'X':
+        if (!event.ControlDown()) return false;
+        if (event.ShiftDown())
+            window.CutLine();
+        else
+            window.Cut();
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool HandleControlKey(EditorControl& window, const wxKeyEvent& event) {
+    switch (event.GetKeyCode()) {
+    case '\\':
+        if (event.ShiftDown()) return false;
+        window.Send(Message::SetZoom, DisplayUnits::ZoomPercentScale);
+        return true;
+    case WXK_TAB: {
+        if (event.ShiftDown()) return false;
+        const auto useTabs = window.Send(Message::GetUseTabs);
+        const auto tabIndents = window.Send(Message::GetTabIndents);
+        window.Send(Message::SetTabIndents, 0);
+        window.Send(Message::SetUseTabs, 1);
+        window.Send(Message::Tab);
+        window.Send(Message::SetUseTabs, useTabs);
+        window.Send(Message::SetTabIndents, tabIndents);
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+Message ApplicationKeyCommand(const wxKeyEvent& event) {
+    if (event.AltDown() && !event.ControlDown() && !event.ShiftDown()) {
+        if (event.GetKeyCode() == 'D') return Message::SelectionDuplicate;
+        if (event.GetKeyCode() == 'S') return Message::LineTranspose;
+    }
+    if (!event.ControlDown() || event.AltDown()) return Message{};
+    switch (event.GetKeyCode()) {
+    case '+':
+    case '=':
+    case WXK_NUMPAD_ADD:
+        return event.ShiftDown() ? Message{} : Message::ZoomIn;
+    case '-':
+    case WXK_NUMPAD_SUBTRACT:
+        return event.ShiftDown() ? Message{} : Message::ZoomOut;
+    case 'D':
+        return event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
+    case 'Y':
+        return event.ShiftDown() ? Message::Undo : Message::Redo;
+    case 'Z':
+        return event.ShiftDown() ? Message::Redo : Message::Undo;
+    default:
+        return Message{};
+    }
+}
 } // namespace
 
 class EditorControl::Core::TextDropTarget final : public wxDropTarget {
@@ -97,11 +171,16 @@ private:
 };
 
 intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_t lParam) {
+    if (message == Message::SetLexer || message == Message::ClearDocumentStyle || message == Message::Colourise)
+        braceStyleChanged_ = true;
     // Original ScintillaWin::WndProc reports message failures through GetStatus.
     // Read-only enclosure can intentionally attempt a target beyond EOF after
     // the preceding insertion was rejected, then continue selection repair.
     try {
-        return ScintillaBase::WndProc(message, wParam, lParam);
+        const auto result = ScintillaBase::WndProc(message, wParam, lParam);
+        if ((message == Message::SetText || message == Message::ClearAll) && !pdoc->IsReadOnly())
+            ScintillaBase::WndProc(Message::SetScrollWidth, 1, 0);
+        return result;
     } catch (const std::bad_alloc&) {
         errorStatus = Scintilla::Status::BadAlloc;
     } catch (const core::Failure& failure) {
@@ -141,30 +220,35 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
                 ((static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) | static_cast<uintptr_t>(Scintilla::KeyMod::Shift))
                  << 16),
             static_cast<intptr_t>(Message::ParaDownExtend));
-    WndProc(Message::SetCodePage, 65001, 0);
+    WndProc(Message::SetCodePage, Scintilla::CpUtf8, 0);
     // Match unconfigured Notepad4 on every host; saving preserves actual EOLs.
     WndProc(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf), 0);
-    WndProc(Message::StyleSetFont, 32, reinterpret_cast<intptr_t>(core::Platform::DefaultFont()));
-    WndProc(Message::StyleSetSize, 32, 12);
-    WndProc(Message::StyleSetBack, 32, 0xFFFFFF);
+    const auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+    WndProc(Message::StyleSetFont, defaultStyle, reinterpret_cast<intptr_t>(core::Platform::DefaultFont()));
+    WndProc(Message::StyleSetSize, defaultStyle, core::Platform::DefaultFontSize());
+    WndProc(Message::StyleSetBack, defaultStyle, 0xFFFFFF);
     WndProc(Message::StyleClearAll, 0, 0);
     // Original Mark Occurrences indicator and default bookmark background.
-    WndProc(Message::IndicSetStyle, 8, static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox));
-    WndProc(Message::IndicSetFore, 8, wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT).GetRGB());
-    WndProc(Message::IndicSetAlpha, 8, 25);
+    WndProc(Message::IndicSetStyle, EditorIndicator::Occurrence,
+            static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox));
+    WndProc(Message::IndicSetFore, EditorIndicator::Occurrence,
+            wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT).GetRGB());
+    WndProc(Message::IndicSetAlpha, EditorIndicator::Occurrence, 25);
     WndProc(Message::MarkerDefine, 0, static_cast<intptr_t>(Scintilla::MarkerSymbol::Background));
     WndProc(Message::MarkerSetBackTranslucent, 0, 0x2800FF00);
     WndProc(Message::MarkerSetLayer, 0, static_cast<intptr_t>(Scintilla::Layer::OverText));
-    WndProc(Message::SetCaretStyle, 1, 0);
-    WndProc(Message::SetMarginWidthN, 1, 0);
+    WndProc(Message::SetCaretStyle, static_cast<uintptr_t>(Scintilla::CaretStyle::Line), 0);
+    WndProc(Message::SetMarginWidthN, EditorMargin::Bookmark, 0);
+    WndProc(Message::SetScrollWidth, 1, 0);
     WndProc(Message::SetScrollWidthTracking, 1, 0);
-    // Notepad4 CreateEditor: SelectOption_EnableMultipleSelection is bit 1.
-    WndProc(Message::SetMultipleSelection, selectionOptions & 1, 0);
+#ifdef __WXMSW__
+    WndProc(Message::SetIMEInteraction, static_cast<uintptr_t>(Scintilla::IMEInteraction::Inline), 0);
+#endif
+    WndProc(Message::SetMultipleSelection, selectionOptions & SelectOption_EnableMultipleSelection, 0);
     WndProc(Message::SetAdditionalSelectionTyping, 1, 0);
     WndProc(Message::SetMultiPaste, static_cast<uintptr_t>(Scintilla::MultiPaste::Each), 0);
     WndProc(Message::SetVirtualSpaceOptions, static_cast<uintptr_t>(Scintilla::VirtualSpace::RectangularSelection), 0);
-    // EditNewText: SelectOption_UndoRedoRememberSelection is bit 8.
-    const auto history = (selectionOptions & 8)
+    const auto history = (selectionOptions & SelectOption_UndoRedoRememberSelection)
                              ? static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
                                    static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll)
                              : 0;
@@ -187,6 +271,9 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
 }
 
 EditorControl::Core::~Core() {
+#ifdef __WXMSW__
+    DestroySystemCaret();
+#endif
 #ifdef __WXGTK__
     gtkDragDrop_.reset();
 #endif
@@ -224,13 +311,32 @@ void EditorControl::Core::Draw(wxDC& dc) {
     window_.UpdateLineNumberMargin();
     auto surface = core::Surface::Allocate(Scintilla::Technology::Default);
     surface->Init(&dc, &window_);
-    surface->SetMode({65001});
+    surface->SetMode({Scintilla::CpUtf8});
     const auto size = window_.GetClientSize();
     rcPaint = core::PRectangle(0, 0, size.x, size.y);
     paintState = PaintState::painting;
     paintingAllText = true;
+    const bool shrink = window_.AutoShrinkScrollWidth() && scrollWidthDirty_ && !Wrapping();
+    if (shrink) {
+        scrollWidthDirty_ = false;
+        view.lineWidthMaxSeen = 0;
+    }
     Paint(surface.get(), rcPaint);
     paintState = PaintState::notPainting;
+    if (shrink && view.lineWidthMaxSeen < scrollWidth) {
+        // Reuse the core's normal visible-line measurements, avoiding a full
+        // document scan on each edit. Offscreen lines grow the range when shown.
+        scrollWidth = std::max(1, view.lineWidthMaxSeen);
+        const int page = static_cast<int>(GetTextRectangle().Width());
+        HorizontalScrollTo(std::min(xOffset, std::max(0, scrollWidth - page + 1)));
+        SetScrollBars();
+    }
+    // Style-only notifications do not queue UpdateUI in the pinned core.
+    // Refresh after its real styling/paint pass, then redraw changed overlays.
+    if (braceStyleChanged_) {
+        braceStyleChanged_ = false;
+        UpdateVisualBraceMatching();
+    }
     UpdateSystemCaret();
 }
 
@@ -245,13 +351,12 @@ void EditorControl::Core::UpdateWrapLayout() {
 }
 
 void EditorControl::Core::DpiChanged() {
-    if (WndProc(Message::GetMarginWidthN, 1, 0) > 0) {
-        WndProc(Message::SetMarginWidthN, 1, window_.FromDIP(16));
-        for (int marker = 25; marker <= 31; ++marker)
-            WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
-    }
+    for (int marker = static_cast<int>(Scintilla::MarkerOutline::FolderEnd);
+         marker <= static_cast<int>(Scintilla::MarkerOutline::FolderOpen); ++marker)
+        WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
     InvalidateStyleRedraw();
     window_.lineNumberWidthDirty_ = true;
+    window_.foldMarginWidthDirty_ = true;
     window_.UpdateLineNumberMargin();
     ChangeSize();
 }
@@ -328,7 +433,7 @@ void EditorControl::Core::Scroll(wxScrollWinEvent& event) {
     int position = event.GetPosition();
     const int current = vertical ? static_cast<int>(topLine) : xOffset;
     const int line = vertical ? 1 : std::max(1, static_cast<int>(vs.spaceWidth));
-    const int page = vertical ? static_cast<int>(LinesOnScreen()) : window_.GetClientSize().x;
+    const int page = vertical ? static_cast<int>(LinesOnScreen()) : static_cast<int>(GetTextRectangle().Width());
     const auto type = event.GetEventType();
     if (type == wxEVT_SCROLLWIN_LINEUP)
         position = current - line;
@@ -344,8 +449,10 @@ void EditorControl::Core::Scroll(wxScrollWinEvent& event) {
         position = vertical ? static_cast<int>(MaxScrollPos()) : scrollWidth;
     if (vertical)
         ScrollTo(position);
-    else
-        HorizontalScrollTo(std::clamp(position, 0, std::max(0, scrollWidth - window_.GetClientSize().x)));
+    else {
+        const int maximum = horizontalScrollBarVisible && !Wrapping() ? std::max(0, scrollWidth - page + 1) : 0;
+        HorizontalScrollTo(std::clamp(position, 0, maximum));
+    }
 }
 
 void EditorControl::Core::Wheel(wxMouseEvent& event) {
@@ -423,39 +530,15 @@ void EditorControl::Core::RepairFoldSelection() {
 }
 
 void EditorControl::Core::ShowDropFeedback(int x, int y) {
-#ifdef __WXMSW__
-    if (!dropFeedback_) {
-        // The ordinary Windows caret is native; an unfocused drop target
-        // still needs the original core's insertion marker.
-        window_.GetCaret()->Hide();
-        WndProc(Message::SetCaretStyle, 1, 0);
-    }
-#endif
-    dropFeedback_ = true;
     SetDragPosition(SPositionFromLocation(core::Point(x, y), false, false, UserVirtualSpace()));
 }
 
 void EditorControl::Core::ClearDropFeedback() {
     SetDragPosition(core::SelectionPosition(Sci::invalidPosition));
-#ifdef __WXMSW__
-    if (dropFeedback_) {
-        WndProc(Message::SetCaretStyle, 0, 0);
-        window_.GetCaret()->Show();
-        UpdateSystemCaret();
-    }
-#endif
-    dropFeedback_ = false;
 }
 
 bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
-    if (!event.AltDown() && ((event.GetKeyCode() == WXK_INSERT && event.ControlDown() && !event.ShiftDown()) ||
-                             (event.GetKeyCode() == WXK_DELETE && event.ShiftDown() && !event.ControlDown()))) {
-        if (event.GetKeyCode() == WXK_INSERT)
-            window_.Copy();
-        else
-            window_.Cut();
-        return true;
-    }
+    if (HandleClipboardKey(window_, event)) return true;
     if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers()) {
         // CMD_ESCAPE cancels completion UI, not the core's selection modes.
         if (window_.Send(Message::AutoCActive))
@@ -467,76 +550,21 @@ bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
     // IDR_MAINWND accelerators in pinned Notepad4.rc precede KeyMap.cxx.
     // Keep application commands on their original keys, rather than exposing
     // unrelated core defaults such as Ctrl+L (LineCut) or Ctrl+T (transpose).
-    Message applicationCommand{};
     if (event.ControlDown() && !event.AltDown()) {
-        switch (event.GetKeyCode()) {
-        case '+':
-        case '=':
-        case WXK_NUMPAD_ADD:
-            if (!event.ShiftDown()) applicationCommand = Message::ZoomIn;
-            break;
-        case '-':
-        case WXK_NUMPAD_SUBTRACT:
-            if (!event.ShiftDown()) applicationCommand = Message::ZoomOut;
-            break;
-        case '\\':
-            if (!event.ShiftDown()) {
-                window_.Send(Message::SetZoom, 100);
-                return true;
-            }
-            break;
-        case WXK_TAB:
-            if (!event.ShiftDown()) {
-                const auto useTabs = window_.Send(Message::GetUseTabs);
-                const auto tabIndents = window_.Send(Message::GetTabIndents);
-                window_.Send(Message::SetTabIndents, 0);
-                window_.Send(Message::SetUseTabs, 1);
-                window_.Send(Message::Tab);
-                window_.Send(Message::SetUseTabs, useTabs);
-                window_.Send(Message::SetTabIndents, tabIndents);
-                return true;
-            }
-            break;
-        case 'C':
-        case 'X':
-            if (event.ShiftDown()) {
-                if (event.GetKeyCode() == 'C')
-                    window_.CopyLine();
-                else
-                    window_.CutLine();
-            } else if (event.GetKeyCode() == 'C')
-                window_.Copy();
-            else
-                window_.Cut();
-            return true;
-        case 'D':
-            applicationCommand = event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
-            break;
-        case 'Y':
-            applicationCommand = event.ShiftDown() ? Message::Undo : Message::Redo;
-            break;
-        case 'Z':
-            applicationCommand = event.ShiftDown() ? Message::Redo : Message::Undo;
-            break;
-        case 'U':
+        if (HandleControlKey(window_, event)) return true;
+        if (event.GetKeyCode() == 'U') {
             window_.Send(Message::CustomCaseMapping,
                          static_cast<uintptr_t>(event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower));
             return true;
-        case 'V':
-            if (!event.ShiftDown() && !event.MetaDown()) {
-                // The original application accelerator consumes disabled Ctrl+V.
-                // Direct SCI_PASTE retains its separate selection repair.
-                if (CanPaste()) window_.Send(Message::Paste);
-                return true;
-            }
-            break;
-        default:
-            break;
         }
-    } else if (event.AltDown() && !event.ControlDown() && !event.ShiftDown()) {
-        if (event.GetKeyCode() == 'D') applicationCommand = Message::SelectionDuplicate;
-        if (event.GetKeyCode() == 'S') applicationCommand = Message::LineTranspose;
+        if (event.GetKeyCode() == 'V' && !event.ShiftDown() && !event.MetaDown()) {
+            // The original application accelerator consumes disabled Ctrl+V.
+            // Direct SCI_PASTE retains its separate selection repair.
+            if (CanPaste()) window_.Send(Message::Paste);
+            return true;
+        }
     }
+    const auto applicationCommand = ApplicationKeyCommand(event);
     if (applicationCommand != Message{}) {
         window_.Send(applicationCommand);
         return true;
@@ -549,39 +577,11 @@ void EditorControl::Core::NotifyCaretMove() const noexcept {
     // notifications are forwarded through NotifyParent.
 }
 
+#ifndef __WXMSW__
 void EditorControl::Core::UpdateSystemCaret() {
-#ifdef __WXMSW__
-    if (!window_.HasFocus() || !window_.GetCaret()) return;
-    const auto point = PointMainCaret();
-    const int height = std::max(1, vs.lineHeight);
-    window_.GetCaret()->SetSize(1, height);
-    window_.GetCaret()->Move(static_cast<int>(point.x), static_cast<int>(point.y));
-    const auto window = static_cast<HWND>(window_.GetHandle());
-    if (const auto context = ImmGetContext(window)) {
-        // Microsoft Pinyin needs explicit IMM forms in addition to the
-        // system caret. All positions are in the editor's client coordinates.
-        COMPOSITIONFORM composition{};
-        composition.dwStyle = CFS_POINT;
-        composition.ptCurrentPos = {static_cast<LONG>(point.x), static_cast<LONG>(point.y)};
-        ::GetClientRect(window, &composition.rcArea);
-        ImmSetCompositionWindow(context, &composition);
-        CANDIDATEFORM candidate{};
-        candidate.dwStyle = CFS_EXCLUDE;
-        candidate.ptCurrentPos = {static_cast<LONG>(point.x), static_cast<LONG>(point.y) + height};
-        candidate.rcArea = {static_cast<LONG>(point.x), static_cast<LONG>(point.y), static_cast<LONG>(point.x) + 1,
-                            static_cast<LONG>(point.y) + height};
-        ImmSetCandidateWindow(context, &candidate);
-        LOGFONTW font{};
-        font.lfHeight = -height;
-        font.lfWeight = FW_NORMAL;
-        font.lfCharSet = DEFAULT_CHARSET;
-        const auto name = wxString::FromUTF8(core::Platform::DefaultFont()).ToStdWstring();
-        std::wcsncpy(font.lfFaceName, name.c_str(), LF_FACESIZE - 1);
-        ImmSetCompositionFontW(context, &font);
-        ImmReleaseContext(window, context);
-    }
-#endif
+    // Linux input methods use the wx host; the original core paints its caret.
 }
+#endif
 
 void EditorControl::Core::SetHorizontalScrollPos() {
     window_.SetScrollPos(wxHORIZONTAL, xOffset);
@@ -591,7 +591,13 @@ void EditorControl::Core::SetHorizontalScrollPos() {
 bool EditorControl::Core::ModifyScrollBars(Sci::Line maximum, Sci::Line page) {
     const auto before = window_.GetClientSize();
     window_.SetScrollbar(wxVERTICAL, static_cast<int>(topLine), static_cast<int>(page), static_cast<int>(maximum + 1));
-    window_.SetScrollbar(wxHORIZONTAL, xOffset, window_.GetClientSize().x, scrollWidth);
+    // ScintillaWin::GetHorizontalScrollRange uses the text viewport and an
+    // inclusive document endpoint; wx's range is an item count.
+    const int pageWidth = static_cast<int>(GetTextRectangle().Width());
+    const int documentEnd = std::max({scrollWidth, pageWidth - 1, 0});
+    const int horizontalPage = horizontalScrollBarVisible && !Wrapping() ? pageWidth : documentEnd + 1;
+    window_.SetScrollbar(wxHORIZONTAL, xOffset, horizontalPage, documentEnd + 1);
+    if (scrollWidth < horizontalPage) HorizontalScrollTo(0);
     return before != window_.GetClientSize();
 }
 
@@ -660,6 +666,23 @@ void EditorControl::Core::NotifyChange() const noexcept {
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
+    if (notification.nmhdr.code == Scintilla::Notification::Modified &&
+        (static_cast<unsigned>(notification.modificationType) &
+         static_cast<unsigned>(Scintilla::ModificationFlags::DeleteText)))
+        scrollWidthDirty_ = true;
+    if (notification.nmhdr.code == Scintilla::Notification::UpdateUI && window_.occurrences_)
+        window_.occurrences_->Update(notification.updated);
+    // Original bookmark-margin clicks use the clicked line and keep the caret.
+    if (notification.nmhdr.code == Scintilla::Notification::MarginClick && notification.margin == 1 &&
+        window_.BookmarkMarginVisible()) {
+        const auto line = window_.Send(Message::LineFromPosition, notification.position);
+        window_.Send((window_.Send(Message::MarkerGet, line) & 1) ? Message::MarkerDelete : Message::MarkerAdd, line,
+                     0);
+    }
+    if (notification.nmhdr.code == Scintilla::Notification::Modified &&
+        (static_cast<unsigned>(notification.modificationType) &
+         static_cast<unsigned>(Scintilla::ModificationFlags::ChangeStyle | Scintilla::ModificationFlags::LexerState)))
+        braceStyleChanged_ = true;
     // Notepad4.cpp SCN_CHARADDED: ignore tentative/multiple-selection typing.
     // The pinned CRLF condition handles CR, after the complete EOL is inserted.
     if (notification.nmhdr.code == Scintilla::Notification::CharAdded && !notification.listType &&
@@ -667,8 +690,17 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         (pdoc->eolMode != Scintilla::EndOfLine::CrLf || notification.ch != '\n'))
         window_.AutoIndent();
     SelectionRevision();
+    if (notification.nmhdr.code == Scintilla::Notification::UpdateUI &&
+        (static_cast<unsigned>(notification.updated) &
+         ~static_cast<unsigned>(Scintilla::Update::VScroll | Scintilla::Update::HScroll))) {
+        // The pinned NotifyParent virtual is const. EditorControl owns this
+        // mutable Core, and brace decoration updates use its normal WndProc path.
+        const_cast<Core*>(this)->UpdateVisualBraceMatching();
+    }
     if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
         window_.lineNumberWidthDirty_ = true;
+        window_.bookmarkMarginWidthDirty_ = true;
+        window_.foldMarginWidthDirty_ = true;
         window_.SetCurrentLineHighlightMode(window_.GetCurrentLineHighlightMode());
     }
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&
@@ -685,9 +717,9 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
         notification.nmhdr.code == Scintilla::Notification::SavePointLeft ||
         notification.nmhdr.code == Scintilla::Notification::Zoom) {
-        auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());
+        auto event = std::make_unique<wxCommandEvent>(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());
         event->SetEventObject(&window_);
-        wxQueueEvent(&window_, event);
+        wxQueueEvent(&window_, event.release());
     }
 }
 
@@ -774,10 +806,11 @@ bool EditorControl::Core::HaveMouseCapture() const noexcept {
 }
 
 void EditorControl::Core::UpdateBaseElements() noexcept {
+    // Element colours are supplied by the editor's configured style scheme.
 }
 
 bool EditorControl::Core::ValidCodePage(int codepage) const noexcept {
-    return codepage == 65001;
+    return codepage == Scintilla::CpUtf8;
 }
 
 std::string EditorControl::Core::UTF8FromEncoded(std::string_view text) const {
@@ -793,4 +826,5 @@ intptr_t EditorControl::Core::DefWndProc(Message, uintptr_t, intptr_t) {
 }
 
 void SCICALL EditorControl::Core::CreateCallTipWindow(core::PRectangle) noexcept {
+    // Call-tip popup windows are outside the currently supported host UI.
 }

@@ -130,7 +130,7 @@ void CountAndDefault(const std::filesystem::path& directory, SettingsStore& sett
                         !editor->Send(Message::GetModify),
                     "Save As must preserve bytes and append the chosen ending");
         }
-        Require(frame->New() &&
+        Require(frame->NewDocument() &&
                     editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(configured == 0   ? EndOfLine::CrLf
                                                                                : configured == 1 ? EndOfLine::Lf
                                                                                                  : EndOfLine::Cr),

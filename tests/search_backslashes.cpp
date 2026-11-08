@@ -151,7 +151,7 @@ public:
                 SearchSession nativeSearch(*editor);
                 FindResult nativeResult{FindStatus::NotFound};
                 auto ownedDialog = std::make_unique<FindReplaceDialog>(
-                    frame, *editor, nativeSearch, [&](const FindResult& result) { nativeResult = result; },
+                    frame, *editor, nativeSearch, [&nativeResult](const FindResult& result) { nativeResult = result; },
                     [](wxKeyEvent& event) { event.Skip(); }, 0);
                 auto* dialog = ownedDialog.get();
                 dialog->Present(false, 0);
@@ -201,7 +201,7 @@ public:
                 SearchSession seededSearch(*editor);
                 FindResult seededResult{FindStatus::NotFound};
                 auto ownedSeededDialog = std::make_unique<FindReplaceDialog>(
-                    frame, *editor, seededSearch, [&](const FindResult& result) { seededResult = result; },
+                    frame, *editor, seededSearch, [&seededResult](const FindResult& result) { seededResult = result; },
                     [](wxKeyEvent& event) { event.Skip(); }, 2);
                 auto* seededDialog = ownedSeededDialog.get();
                 seededDialog->Present(false, 2);

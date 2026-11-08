@@ -85,6 +85,91 @@ wxString WriteSafely(const wxString& destination, const std::string& bytes, Pend
     return {};
 }
 
+wxString PrepareSaveCopy(const wxString& destination) {
+    // Original Save Copy opens/creates the destination before cleanup and
+    // legacy-loss confirmation. Cancel keeps a new empty file, while an
+    // existing file retains its bytes.
+    wxLogNull quiet;
+    wxFile file;
+    if (wxDirExists(destination)) return "Choose a file as the save destination.";
+    const bool opened =
+        wxFileExists(destination) ? file.Open(destination, wxFile::read_write) : file.Create(destination, false);
+    if (!opened || !file.Close()) return "Could not open the destination for writing.";
+    return {};
+}
+
+std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncoding encoding, bool bom,
+                                                    const GbkLossDecision& decideLoss) {
+    if (encoding == FileEncoding::Gbk) {
+        if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, "The document contains invalid UTF-8."};
+        const auto encoded = EncodeGbk(bytes);
+        if (encoded.loss && (!decideLoss || decideLoss() != GbkLossChoice::Replace))
+            return SaveResult{SaveStatus::Cancelled, {}};
+        bytes = encoded.bytes;
+    } else if (encoding == FileEncoding::Utf16Le) {
+        auto encoded = EncodeUtf16Le(bytes);
+        if (!encoded) return SaveResult{SaveStatus::Failed, "The document could not be encoded as UTF-16LE."};
+        bytes = std::move(*encoded);
+        if (bom) bytes.insert(0, "\xff\xfe");
+    } else if (bom)
+        bytes.insert(0, "\xef\xbb\xbf");
+    return bytes;
+}
+
+void FixPositionsAfterEolConversion(EditorControl& editor) {
+    using Scintilla::Message;
+    const auto length = editor.Send(Message::GetLength);
+    auto caret = editor.Send(Message::GetCurrentPos);
+    const auto anchor = editor.Send(Message::GetAnchor);
+    const auto fixPosition = [&editor](intptr_t position) {
+        return editor.Send(Message::PositionAfter, editor.Send(Message::PositionBefore, position));
+    };
+    if (caret > 0 && caret < length) {
+        const auto fixed = fixPosition(caret);
+        if (fixed != caret) {
+            editor.Send(Message::SetCurrentPos, fixed);
+            caret = fixed;
+        }
+    }
+    if (anchor != caret && anchor > 0 && anchor < length) {
+        const auto fixed = fixPosition(anchor);
+        if (fixed != anchor) editor.Send(Message::SetAnchor, fixed);
+    }
+}
+
+void EnsureConsistentLineEndings(EditorControl& editor) {
+    using Scintilla::Message;
+    constexpr uintptr_t maxSmallFileSize = (1U << 31) - 16;
+    const auto lines = static_cast<uintptr_t>(editor.Send(Message::GetLineCount));
+    const auto actions = static_cast<uintptr_t>(editor.Send(Message::GetUndoActions));
+    const auto mode = static_cast<uintptr_t>(editor.Send(Message::GetEOLMode));
+    const bool large =
+        editor.Send(Message::GetDocumentOptions) & static_cast<intptr_t>(Scintilla::DocumentOption::TextLarge);
+    if (lines >= 2 && lines + actions < maxSmallFileSize &&
+        (mode != static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf) || large ||
+         static_cast<uintptr_t>(editor.Send(Message::GetLength)) + lines < maxSmallFileSize)) {
+        editor.Send(Message::ConvertEOLs, mode);
+        FixPositionsAfterEolConversion(editor);
+    }
+}
+
+void StripTrailingBlanks(EditorControl& editor) {
+    using Scintilla::Message;
+    editor.Send(Message::BeginUndoAction);
+    const auto lines = editor.Send(Message::GetLineCount);
+    for (intptr_t line = 0; line < lines; ++line) {
+        const auto start = editor.Send(Message::PositionFromLine, line);
+        const auto end = editor.Send(Message::GetLineEndPosition, line);
+        auto position = end;
+        while (position >= start) {
+            const auto ch = editor.Send(Message::GetCharAt, --position);
+            if (ch != ' ' && ch != '\t') break;
+        }
+        if (++position < end) editor.Send(Message::DeleteRange, position, end - position);
+    }
+    editor.Send(Message::EndUndoAction);
+}
+
 struct LoadedDocument {
     std::string text;
     FileEncoding encoding;
@@ -138,6 +223,7 @@ struct ReloadView {
     intptr_t visibleTop;
     intptr_t documentTop;
     intptr_t xOffset;
+    intptr_t scrollWidth;
 };
 
 ReloadView CaptureReloadView(EditorControl& editor) {
@@ -148,11 +234,21 @@ ReloadView CaptureReloadView(EditorControl& editor) {
     const auto column = editor.Send(Message::GetColumn, caret, line);
     const auto visibleTop = editor.Send(Message::GetFirstVisibleLine);
     const auto documentTop = editor.Send(Message::DocLineFromVisible, visibleTop);
-    return {caret, anchor, line, column, visibleTop, documentTop, editor.Send(Message::GetXOffset)};
+    return {caret,
+            anchor,
+            line,
+            column,
+            visibleTop,
+            documentTop,
+            editor.Send(Message::GetXOffset),
+            editor.Send(Message::GetScrollWidth)};
 }
 
 void RestoreReloadView(EditorControl& editor, const ReloadView& view) {
     using Scintilla::Message;
+    // ClearAll resets width tracking. Restore the current file's measured range
+    // before its view, so native layout cannot clamp the saved offset before paint.
+    editor.Send(Message::SetScrollWidth, static_cast<uintptr_t>(view.scrollWidth));
     editor.Send(Message::SetSel, view.anchor, view.caret);
     // Original FileLoad compares the saved one-based line against the restored
     // zero-based line, then uses EditJumpTo/EditSelectEx.
@@ -226,16 +322,8 @@ SaveResult DocumentSession::SaveCopy(const std::optional<wxString>& destination,
 SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
                                    std::optional<SaveFileType> fileType, bool copy) {
     if (copy) {
-        // Original Save Copy opens/creates the destination before cleanup and
-        // legacy-loss confirmation. Cancel keeps a new empty file, while an
-        // existing file retains its bytes. Ordinary Save/Save As retain their
-        // existing safe-write preparation.
-        wxLogNull quiet;
-        wxFile file;
-        if (wxDirExists(destination)) return {SaveStatus::Failed, "Choose a file as the save destination."};
-        const bool opened =
-            wxFileExists(destination) ? file.Open(destination, wxFile::read_write) : file.Create(destination, false);
-        if (!opened || !file.Close()) return {SaveStatus::Failed, "Could not open the destination for writing."};
+        const auto error = PrepareSaveCopy(destination);
+        if (!error.empty()) return {SaveStatus::Failed, error};
     }
     PendingSave temporary;
     // Original EditSaveFile opens the destination before changing text. Prepare
@@ -250,19 +338,9 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
     std::string bytes(length + 1, '\0');
     editor_.Send(Scintilla::Message::GetText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     bytes.resize(length);
-    if (encoding_ == FileEncoding::Gbk) {
-        if (!IsUtf8(bytes)) return {SaveStatus::Failed, "The document contains invalid UTF-8."};
-        const auto encoded = EncodeGbk(bytes);
-        if (encoded.loss && (!decideLoss || decideLoss() != GbkLossChoice::Replace)) return {SaveStatus::Cancelled, {}};
-        bytes = encoded.bytes;
-    } else if (encoding_ == FileEncoding::Utf16Le) {
-        auto encoded = EncodeUtf16Le(bytes);
-        if (!encoded) return {SaveStatus::Failed, "The document could not be encoded as UTF-16LE."};
-        bytes = std::move(*encoded);
-        if (hasBom_) bytes.insert(0, "\xff\xfe");
-    } else if (hasBom_)
-        bytes.insert(0, "\xef\xbb\xbf");
-    const auto error = WriteSafely(destination, bytes, temporary);
+    const auto encoded = EncodeForSave(std::move(bytes), encoding_, hasBom_, decideLoss);
+    if (const auto* result = std::get_if<SaveResult>(&encoded)) return *result;
+    const auto error = WriteSafely(destination, std::get<std::string>(encoded), temporary);
     if (!error.empty()) return {SaveStatus::Failed, error};
     // Original EditSaveFile/FileSave leave the live identity, scheme and save
     // point alone for Save Copy; optional cleanup above remains in its history.
@@ -292,55 +370,11 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
 }
 
 void DocumentSession::ApplySaveCleanup() {
-    using Scintilla::Message;
     // Adapted from pinned Notepad4 EditEnsureConsistentLineEndings,
     // EditFixPositions and EditStripTrailingBlanks(true), in their save order.
     // See licenses/Notepad4.txt.
-    if (saveCleanup_.fixLineEndings) {
-        constexpr uintptr_t maxSmallFileSize = (1U << 31) - 16;
-        const auto lines = static_cast<uintptr_t>(editor_.Send(Message::GetLineCount));
-        const auto actions = static_cast<uintptr_t>(editor_.Send(Message::GetUndoActions));
-        const auto mode = static_cast<uintptr_t>(editor_.Send(Message::GetEOLMode));
-        const bool large =
-            editor_.Send(Message::GetDocumentOptions) & static_cast<intptr_t>(Scintilla::DocumentOption::TextLarge);
-        if (lines >= 2 && lines + actions < maxSmallFileSize &&
-            (mode != static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf) || large ||
-             static_cast<uintptr_t>(editor_.Send(Message::GetLength)) + lines < maxSmallFileSize)) {
-            editor_.Send(Message::ConvertEOLs, mode);
-            const auto length = editor_.Send(Message::GetLength);
-            auto caret = editor_.Send(Message::GetCurrentPos);
-            const auto anchor = editor_.Send(Message::GetAnchor);
-            const auto fixPosition = [&](intptr_t position) {
-                return editor_.Send(Message::PositionAfter, editor_.Send(Message::PositionBefore, position));
-            };
-            if (caret > 0 && caret < length) {
-                const auto fixed = fixPosition(caret);
-                if (fixed != caret) {
-                    editor_.Send(Message::SetCurrentPos, fixed);
-                    caret = fixed;
-                }
-            }
-            if (anchor != caret && anchor > 0 && anchor < length) {
-                const auto fixed = fixPosition(anchor);
-                if (fixed != anchor) editor_.Send(Message::SetAnchor, fixed);
-            }
-        }
-    }
-    if (saveCleanup_.fixTrailingBlanks) {
-        editor_.Send(Message::BeginUndoAction);
-        const auto lines = editor_.Send(Message::GetLineCount);
-        for (intptr_t line = 0; line < lines; ++line) {
-            const auto start = editor_.Send(Message::PositionFromLine, line);
-            const auto end = editor_.Send(Message::GetLineEndPosition, line);
-            auto position = end;
-            while (position >= start) {
-                const auto ch = editor_.Send(Message::GetCharAt, --position);
-                if (ch != ' ' && ch != '\t') break;
-            }
-            if (++position < end) editor_.Send(Message::DeleteRange, position, end - position);
-        }
-        editor_.Send(Message::EndUndoAction);
-    }
+    if (saveCleanup_.fixLineEndings) EnsureConsistentLineEndings(editor_);
+    if (saveCleanup_.fixTrailingBlanks) StripTrailingBlanks(editor_);
 }
 
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
@@ -389,6 +423,8 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
                                     bool keepLanguage) {
     const auto lineEndings = CountLineEndings(bytes);
     editor_.Send(Scintilla::Message::SetReadOnly, 0);
+    const auto changeHistory = editor_.Send(Scintilla::Message::GetChangeHistory);
+    editor_.Send(Scintilla::Message::SetChangeHistory, 0);
     const auto selectionHistory = editor_.Send(Scintilla::Message::GetUndoSelectionHistory);
     editor_.Send(Scintilla::Message::SetUndoSelectionHistory, 0);
     editor_.Send(Scintilla::Message::SetUndoCollection, 0);
@@ -401,6 +437,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     editor_.Send(Scintilla::Message::GotoPos, 0);
     editor_.Send(Scintilla::Message::SetXOffset, 0);
     editor_.Send(Scintilla::Message::SetSavePoint);
+    editor_.Send(Scintilla::Message::SetChangeHistory, changeHistory);
     editor_.Send(Scintilla::Message::SetUndoSelectionHistory, selectionHistory);
     path_ = path;
     RefreshReadOnlyFile();

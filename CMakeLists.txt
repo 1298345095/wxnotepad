@@ -41,11 +41,13 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/caret_appearance.cpp
     src/editor/date_time.cpp
     src/editor/align_lines.cpp
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
     src/editor/block_comments.cpp
+    src/editor/block_navigation.cpp
     src/editor/enclose_selection.cpp
     src/editor/url_conversion.cpp
     src/editor/compress_whitespace.cpp
@@ -62,6 +64,7 @@ add_library(editor_runtime STATIC
     src/editor/strip_characters.cpp
     src/editor/tab_conversion.cpp
     src/editor/number_radix.cpp
+    src/editor/occurrence_marking.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
@@ -119,6 +122,7 @@ add_library(app_shell STATIC
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
+    target_sources(editor_runtime PRIVATE src/editor/platform/windows_ime.cpp)
     target_link_libraries(editor_features PRIVATE advapi32)
     target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32)
     target_link_libraries(app_shell PRIVATE shell32 ole32)
@@ -200,6 +204,12 @@ if(BUILD_TESTING)
     add_test(NAME original_current_line_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/current_line_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_current_line_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME original_caret_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/caret_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_caret_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME original_visual_brace_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/visual_brace_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_visual_brace_preference PROPERTIES TIMEOUT 60)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
@@ -212,7 +222,20 @@ if(BUILD_TESTING)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
     add_editor_test(date_time original_date_time_insertion 60)
+    add_editor_test(caret_appearance original_caret_appearance 60)
+    if(WIN32)
+        add_test(NAME original_caret_dpi96 COMMAND caret_appearance)
+        set_tests_properties(original_caret_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_CARET_DPI96=1")
+    endif()
     add_editor_test(special_insert original_special_insertion 60)
+    add_editor_test(header_insert original_header_insertion 90)
+    target_compile_definitions(header_insert PRIVATE
+        "HEADER_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/header_reference.tsv\"")
+    add_test(NAME original_header_insertion_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/header_insert_process.py" "$<TARGET_FILE:wxnotepad>"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/header_saved.tsv")
+    set_tests_properties(original_header_insertion_process PROPERTIES TIMEOUT 180)
     target_compile_definitions(special_insert PRIVATE
         "SPECIAL_INSERT_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_reference.tsv\""
         "SPECIAL_INSERT_STATES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/special_insert_states.tsv\""
@@ -296,6 +319,21 @@ if(BUILD_TESTING)
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(current_line original_current_line_highlight 60)
+    add_editor_test(bookmark_history original_bookmark_history 90)
+    target_compile_definitions(bookmark_history PRIVATE
+        "BOOKMARK_HISTORY_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/bookmark_history_reference.tsv\""
+        "BOOKMARK_HISTORY_FILES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/bookmark_history_files.tsv\"")
+    add_test(NAME original_bookmark_history_preference COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/bookmark_history_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_bookmark_history_preference PROPERTIES TIMEOUT 90)
+    if(WIN32)
+        add_test(NAME original_bookmark_history_dpi96 COMMAND bookmark_history)
+        set_tests_properties(original_bookmark_history_dpi96 PROPERTIES TIMEOUT 90
+            ENVIRONMENT "WXNOTEPAD_BOOKMARK_DPI96=1")
+    endif()
+    add_editor_test(visual_brace original_visual_brace_matching 90)
+    target_include_directories(visual_brace PRIVATE src/editor/platform
+        "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     if(WIN32)
         add_test(NAME original_current_line_dpi96 COMMAND current_line)
         set_tests_properties(original_current_line_dpi96 PROPERTIES TIMEOUT 60
@@ -333,6 +371,7 @@ if(BUILD_TESTING)
         set_tests_properties(word_wrap_view PROPERTIES TIMEOUT_SIGNAL_NAME SIGQUIT)
     endif()
     add_editor_test(navigation_bindings original_navigation_bindings 60)
+    add_editor_test(block_navigation original_block_navigation 120)
     add_editor_test(matching_brace original_matching_brace_commands 60)
     target_include_directories(font_smoke PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
@@ -342,6 +381,9 @@ if(BUILD_TESTING)
     if(WIN32)
         add_editor_test(ime_smoke windows_ime_geometry 30)
         target_link_libraries(ime_smoke PRIVATE imm32)
+        add_editor_test(ime_input windows_inline_ime_input 45)
+        target_link_libraries(ime_input PRIVATE imm32 comctl32)
+        set_tests_properties(windows_inline_ime_input PROPERTIES SKIP_RETURN_CODE 77)
         add_test(NAME windows_dpi_awareness COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_dpi.py" "$<TARGET_FILE:wxnotepad>")
         set_tests_properties(windows_dpi_awareness PROPERTIES TIMEOUT 20)
@@ -372,6 +414,15 @@ if(BUILD_TESTING)
     add_editor_test(fold_cpp cpp_fold_margin 60)
     add_editor_test(search_folds folded_search_replace 60)
     add_editor_test(fold_all fold_all_commands 60)
+    add_editor_test(fold_view original_folding_view 60)
+    if(WIN32)
+        add_test(NAME original_folding_view_dpi96 COMMAND fold_view)
+        set_tests_properties(original_folding_view_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_FOLDING_DPI96=1")
+    endif()
+    add_test(NAME original_folding_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/folding_view_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_folding_settings PROPERTIES TIMEOUT 90)
     add_editor_test(line_numbers line_number_view 60)
     add_editor_test(whitespace_view visible_whitespace 30)
     add_editor_test(guides original_guides_and_long_lines 90)
@@ -391,6 +442,11 @@ if(BUILD_TESTING)
     add_editor_test(eol_smoke loaded_eol_input 30)
     add_editor_test(eol_conversion convert_line_endings 60)
     add_editor_test(open_native open_new_native 60)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+        # Preserve timeout stacks through the existing Linux core/GDB collector.
+        set_tests_properties(open_new_native PROPERTIES
+            TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+    endif()
     add_editor_test(save_smoke save_existing 30)
     add_editor_test(save_native save_as_native 60)
     add_editor_test(search_smoke find_literal_next 30)
@@ -401,6 +457,10 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_settings_process.py" "$<TARGET_FILE:search_settings>")
     set_tests_properties(original_search_settings PROPERTIES TIMEOUT 90)
     add_editor_test(find_all original_find_all 30)
+    add_editor_test(occurrence_marking original_occurrence_marking 30)
+    add_test(NAME original_occurrence_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/occurrence_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_occurrence_settings PROPERTIES TIMEOUT 60)
     add_editor_test(bookmarks original_bookmark_commands 30)
     add_editor_test(search_options_smoke find_literal_options 30)
     add_editor_test(replace_smoke replace_literal_one 30)

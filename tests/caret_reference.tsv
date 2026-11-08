@@ -1,0 +1,10 @@
+# Original Notepad4 89b8b36, captured by tests/reference_capture/capture_caret_fixtures.py
+# input packed style, input blink period, queried core style, canonical packed style
+1	-1	1	1
+0	0	2	0
+113	275	273	113
+999	-7	273	113
+-1	-1	2	0
+104	0	257	103
+2147483647	2147483647	273	113
+-2147483648	-2147483648	2	0

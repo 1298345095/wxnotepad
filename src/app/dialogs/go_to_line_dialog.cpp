@@ -37,7 +37,7 @@ void ShowGoToLineDialog(wxWindow* parent, EditorControl& editor) {
     dialog.SetSizerAndFit(contents);
     dialog.Bind(
         wxEVT_BUTTON,
-        [&](wxCommandEvent&) {
+        [input, column, &editor, &dialog](wxCommandEvent&) {
             const auto result = GoToLocation(editor, input->GetValue(), column->GetValue());
             if (result == GoToResult::Moved) {
                 dialog.EndModal(wxID_OK);

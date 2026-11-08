@@ -25,13 +25,15 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
     wxDialog dialog(parent, wxID_ANY, "Tab Settings");
     auto* layout = new wxBoxSizer(wxVERTICAL);
     auto* groups = new wxBoxSizer(wxHORIZONTAL);
-    const auto addGroup = [&](const wxString& name, const OriginalTabs& value, wxCheckBox** inherit,
-                              const wxString& inheritLabel) {
+    const auto addGroup = [groups, &dialog](const wxString& name, const OriginalTabs& value, wxCheckBox** inherit,
+                                            const wxString& inheritLabel) {
         auto* box = new wxStaticBoxSizer(wxVERTICAL, &dialog, name);
         auto* owner = box->GetStaticBox();
-        auto* tab = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 256);
+        auto* tab = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1,
+                                   OriginalSettingLimits::MaxTabWidth);
         tab->SetName(name + " Tab Width");
-        auto* indent = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 256);
+        auto* indent = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0,
+                                      OriginalSettingLimits::MaxTabWidth);
         indent->SetName(name + " Indentation Width");
         auto* spaces = new wxCheckBox(owner, wxID_ANY, "Tabs as Spaces");
         spaces->SetName(name + " Tabs as Spaces");
@@ -60,7 +62,8 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
     useGlobal->SetValue(scheme.useGlobal);
     useScheme->SetValue(!indentation.HasFileSettings());
     bool synchronizing = false;
-    const auto sync = [&](bool fromGlobal) {
+    const auto sync = [&synchronizing, useGlobal, useScheme, schemeControls, global, initialScheme, file,
+                       initialFile](bool fromGlobal) {
         if (synchronizing) return;
         synchronizing = true;
         if (fromGlobal)
@@ -68,7 +71,7 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
         file.Set(useScheme->GetValue() ? schemeControls.Read() : initialFile, !useScheme->GetValue());
         synchronizing = false;
     };
-    const auto changed = [&](int id) {
+    const auto changed = [global, schemeControls, useGlobal, useScheme, sync](int id) {
         if (id == global.tab->GetId() || id == global.indent->GetId() || id == global.spaces->GetId() ||
             id == useGlobal->GetId())
             sync(true);
@@ -76,9 +79,9 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
                  id == schemeControls.spaces->GetId() || id == useScheme->GetId())
             sync(false);
     };
-    dialog.Bind(wxEVT_CHECKBOX, [&](wxCommandEvent& event) { changed(event.GetId()); });
-    dialog.Bind(wxEVT_SPINCTRL, [&](wxSpinEvent& event) { changed(event.GetId()); });
-    dialog.Bind(wxEVT_TEXT, [&](wxCommandEvent& event) { changed(event.GetId()); });
+    dialog.Bind(wxEVT_CHECKBOX, [changed](wxCommandEvent& event) { changed(event.GetId()); });
+    dialog.Bind(wxEVT_SPINCTRL, [changed](wxSpinEvent& event) { changed(event.GetId()); });
+    dialog.Bind(wxEVT_TEXT, [changed](wxCommandEvent& event) { changed(event.GetId()); });
     sync(true);
     layout->Add(groups, 0, wxEXPAND);
     auto* tabIndents = new wxCheckBox(&dialog, wxID_ANY, "Tab Indents");

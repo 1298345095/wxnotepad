@@ -21,6 +21,10 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                          : SyntaxDetectionOptions{}),
       search_(*editor_) {
     const auto& preferences = settings ? settings->values : defaults_;
+    editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
+    editor_->Occurrences().SetOptions(preferences.markOccurrences);
+    editor_->SetCodeFoldingVisible(preferences.showCodeFolding);
+    editor_->SetCurrentBlockHighlighted(preferences.highlightCurrentBlock);
     ApplyIndentationGuides(*editor_, document_.Language(), preferences.showIndentGuides,
                            preferences.simpleIndentGuides);
     editor_->Send(Scintilla::Message::SetEdgeColumn,
@@ -42,10 +46,14 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
         warnLineEndings_ = settings->values.warnLineEndings;
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
+        editor_->SetCaretAppearance(settings->values.caret);
         editor_->SetCurrentLineHighlightMode(
             static_cast<LineHighlightMode>(settings->values.highlightCurrentLine % 10));
         editor_->Send(Scintilla::Message::SetCaretLineHighlightSubLine, settings->values.highlightCurrentLine >= 10);
         editor_->SetLineNumbersVisible(settings->values.showLineNumbers);
+        editor_->SetBookmarkMarginVisible(settings->values.showBookmarkMargin);
+        editor_->SetChangeHistoryOptions(settings->values.changeHistoryMarker);
+        editor_->SetVisualBraceMatching(settings->values.matchBraces);
         editor_->Send(Scintilla::Message::SetViewEOL, settings->values.viewEOLs);
         showWordWrapSymbols_ = settings->values.showWordWrapSymbols;
         wordWrapSymbols_ = settings->values.wordWrapSymbols;
@@ -90,7 +98,13 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.markLongLines = editor_->Send(Scintilla::Message::GetEdgeMode) != 0;
     settings_->values.showIndentGuides = editor_->Send(Scintilla::Message::GetIndentationGuides) != 0;
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+    settings_->values.autoShrinkScrollWidth = editor_->AutoShrinkScrollWidth();
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
+    settings_->values.showBookmarkMargin = editor_->BookmarkMarginVisible();
+    settings_->values.changeHistoryMarker = editor_->ChangeHistoryOptions();
+    settings_->values.matchBraces = editor_->VisualBraceMatching();
+    settings_->values.showCodeFolding = editor_->CodeFoldingVisible();
+    settings_->values.highlightCurrentBlock = editor_->CurrentBlockHighlighted();
     settings_->values.viewWhiteSpace = editor_->Send(Scintilla::Message::GetViewWS) != 0;
     settings_->values.viewEOLs = editor_->Send(Scintilla::Message::GetViewEOL) != 0;
     settings_->values.showWordWrapSymbols = showWordWrapSymbols_;
@@ -100,11 +114,13 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
     settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
+    settings_->values.caret = editor_->GetCaretAppearance();
     settings_->values.highlightCurrentLine =
         static_cast<int>(editor_->GetCurrentLineHighlightMode()) +
         10 * static_cast<int>(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
     CaptureSearchSettings(search_, settings_->values);
     settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
+    settings_->values.markOccurrences = editor_->Occurrences().Options();
     return settings_->Save(explicitSave);
 }
 
@@ -125,8 +141,9 @@ void EditorFrame::ShowFind(bool replace) {
     if (!findDialog_)
         findDialog_ = new FindReplaceDialog(
             this, *editor_, search_, [this](const FindResult& result) { ReportFind(result); },
-            [this](wxKeyEvent& event) { OnSearchKey(event); }, settings_ ? settings_->values.selectOption : 15);
-    findDialog_->Present(replace, settings_ ? settings_->values.selectOption : 15);
+            [this](wxKeyEvent& event) { OnSearchKey(event); },
+            settings_ ? settings_->values.selectOption : SelectOption_Default);
+    findDialog_->Present(replace, settings_ ? settings_->values.selectOption : SelectOption_Default);
 }
 
 void EditorFrame::FindNext() {
@@ -338,7 +355,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
     return Open(dialog.Choose(), encoding);
 }
 
-bool EditorFrame::New() {
+bool EditorFrame::NewDocument() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
     editor_->Send(Scintilla::Message::SetEdgeColumn,
@@ -352,24 +369,7 @@ bool EditorFrame::New() {
 
 bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (!editor_->Send(Scintilla::Message::GetModify)) return true;
-    // Pinned Notepad4 FileSave/IsASpace: only short ASCII-whitespace Untitled
-    // documents bypass the lifecycle prompt; explicit Save still writes them.
-    if (document_.Path().empty()) {
-        const auto length = editor_->Send(Scintilla::Message::GetLength);
-        if (length < 2048) {
-            const auto* bytes =
-                reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));
-            bool whitespaceOnly = true;
-            for (intptr_t index = 0; bytes && index < length; ++index) {
-                const char ch = bytes[index];
-                if (!(ch == ' ' || (ch >= 0x09 && ch <= 0x0d))) {
-                    whitespaceOnly = false;
-                    break;
-                }
-            }
-            if (whitespaceOnly) return true;
-        }
-    }
+    if (CanDiscardUntitledWhitespace()) return true;
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);
@@ -389,6 +389,20 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (result.status == SaveStatus::Failed)
         wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
     return result.status == SaveStatus::Saved;
+}
+
+bool EditorFrame::CanDiscardUntitledWhitespace() const {
+    // Pinned Notepad4 FileSave/IsASpace: only short ASCII-whitespace Untitled
+    // documents bypass the lifecycle prompt; explicit Save still writes them.
+    if (!document_.Path().empty()) return false;
+    const auto length = editor_->Send(Scintilla::Message::GetLength);
+    if (length >= 2048) return false;
+    const auto* bytes = reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));
+    for (intptr_t index = 0; bytes && index < length; ++index) {
+        const char ch = bytes[index];
+        if (!(ch == ' ' || (ch >= 0x09 && ch <= 0x0d))) return false;
+    }
+    return true;
 }
 
 GbkLossChoice EditorFrame::ConfirmGbkLoss() {

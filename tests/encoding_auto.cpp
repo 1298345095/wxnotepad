@@ -64,9 +64,11 @@ public:
                 check("bom-utf8.txt", "\xef\xbb\xbf# coding: gbk\n中文\n", "# coding: gbk\n中文\n", FileEncoding::Utf8,
                       true);
                 check("weak-ascii.txt", "# coding: utf8\nplain\n", "# coding: utf8\nplain\n", FileEncoding::Gbk, false,
-                      {}, {}, FileEncoding::Gbk);
-                check("weak-utf8.txt", "中文\n", "中文\n", FileEncoding::Utf8, false, {}, {}, FileEncoding::Gbk);
-                check("weak-utf16.txt", "plain", "plain", FileEncoding::Utf8, false, {}, {}, FileEncoding::Utf16Le);
+                      {}, {}, EncodingChoice(FileEncoding::Gbk));
+                check("weak-utf8.txt", "中文\n", "中文\n", FileEncoding::Utf8, false, {}, {},
+                      EncodingChoice(FileEncoding::Gbk));
+                check("weak-utf16.txt", "plain", "plain", FileEncoding::Utf8, false, {}, {},
+                      EncodingChoice(FileEncoding::Utf16Le));
                 const auto empty = directory / "empty-reload.txt";
                 std::ofstream(empty, std::ios::binary).close();
                 DocumentSession emptyReload(*editor);

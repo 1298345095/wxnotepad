@@ -154,39 +154,40 @@ void Rectangle(EditorControl* editor, intptr_t anchor, intptr_t caret, intptr_t 
     editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, anchorVirtual);
     editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, caretVirtual);
 }
+void RectangleDirection(EditorFrame* frame, bool reverse, bool merge) {
+    auto* editor = frame->Editor();
+    Reset(editor, "A\nlong\nA\nlong\nTAIL", 0, 0);
+    Rectangle(editor, reverse ? 12 : 1, reverse ? 1 : 12);
+    Command(frame, merge);
+    const char* after = merge ? "A  \nlong\nTAIL" : "TAIL";
+    Require(TestEditor::Text(editor) == after,
+            "rectangle reuses padding then compares complete lines, retaining original order");
+    if (merge) {
+        Require(editor->Send(Message::SelectionIsRectangle) &&
+                    editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 7 : 1) &&
+                    editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 1 : 7),
+                "original rectangle endpoint columns and vertical direction restored over result lines");
+    } else {
+        Require(!editor->Send(Message::SelectionIsRectangle), "empty replacement collapses rectangle to stream");
+        Range(editor, 0, 0);
+    }
+    editor->Send(Message::Undo);
+    Require(TestEditor::Text(editor) == "A\nlong\nA\nlong\nTAIL" && !editor->Send(Message::CanUndo) &&
+                !editor->Send(Message::GetModify),
+            "one Undo combines rectangle padding and duplicate replacement");
+    Require(editor->Send(Message::SelectionIsRectangle) &&
+                editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 12 : 1) &&
+                editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 1 : 12),
+            "core Undo restores original rectangular selection");
+    editor->Send(Message::Redo);
+    Require(TestEditor::Text(editor) == after, "Redo restores padding plus duplicate replacement");
+}
 void Rectangles(EditorFrame* frame) {
     auto* editor = frame->Editor();
     editor->SetIndentationWidths(4, 4);
-    for (const bool reverse : {false, true}) {
-        for (const bool merge : {true, false}) {
-            Reset(editor, "A\nlong\nA\nlong\nTAIL", 0, 0);
-            Rectangle(editor, reverse ? 12 : 1, reverse ? 1 : 12);
-            Command(frame, merge);
-            const char* after = merge ? "A  \nlong\nTAIL" : "TAIL";
-            Require(TestEditor::Text(editor) == after,
-                    "rectangle reuses padding then compares complete lines, retaining original order");
-            if (merge) {
-                Require(editor->Send(Message::SelectionIsRectangle) &&
-                            editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 7 : 1) &&
-                            editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 1 : 7),
-                        "original rectangle endpoint columns and vertical direction restored over result lines");
-            } else {
-                Require(!editor->Send(Message::SelectionIsRectangle),
-                        "empty replacement collapses rectangle to stream");
-                Range(editor, 0, 0);
-            }
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == "A\nlong\nA\nlong\nTAIL" && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::GetModify),
-                    "one Undo combines rectangle padding and duplicate replacement");
-            Require(editor->Send(Message::SelectionIsRectangle) &&
-                        editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 12 : 1) &&
-                        editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 1 : 12),
-                    "core Undo restores original rectangular selection");
-            editor->Send(Message::Redo);
-            Require(TestEditor::Text(editor) == after, "Redo restores padding plus duplicate replacement");
-        }
-    }
+    for (const bool reverse : {false, true})
+        for (const bool merge : {true, false})
+            RectangleDirection(frame, reverse, merge);
     Reset(editor, "AB\n\nA\nAB", 0, 0);
     Rectangle(editor, 0, 8, 0, 2);
     Command(frame, true);

@@ -1,6 +1,8 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "native_search_helpers.h"
+#include "native_key_helpers.h"
+#include "native_scroll_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/modalhook.h>
 #include <wx/textctrl.h>
@@ -105,8 +107,9 @@ public:
         settings_ = std::make_unique<SettingsStore>();
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame, scenario] {
+        NativeKeys::AfterPresentation(frame, [this, frame, scenario](bool presented) {
             try {
+                Require(presented, "the native search view is presented before synchronous layout checks");
                 using Scintilla::Message;
                 Feedback feedback;
                 if (!scenario.empty()) {
@@ -176,6 +179,8 @@ public:
                 editor->Send(Message::SetWrapMode, 0);
                 editor->Send(Message::SetSel, lines.size(), lines.size() - 20);
                 editor->Send(Message::SetFirstVisibleLine, 20);
+                Require(NativeScroll::WaitForHorizontalRange(editor, true, 80),
+                        "the real long-line scroll range is ready before observing cancellation state");
                 editor->Send(Message::SetXOffset, 80);
                 query->SetFocus();
                 wxYield();

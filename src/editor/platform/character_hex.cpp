@@ -4,38 +4,43 @@
 #include <cstdio>
 
 namespace {
+bool InvalidScalarPrefix(unsigned char first, unsigned char next) {
+    return (first == 0xe0 && next < 0xa0) || (first == 0xed && next >= 0xa0) || (first == 0xf0 && next < 0x90) ||
+           (first == 0xf4 && next >= 0x90);
+}
+uint32_t ReadUtf8Scalar(std::string_view text, size_t& position) {
+    const auto first = static_cast<unsigned char>(text[position++]);
+    if (first < 0x80) return first;
+    const int width = first >= 0xc2 && first <= 0xdf   ? 2
+                      : first >= 0xe0 && first <= 0xef ? 3
+                      : first >= 0xf0 && first <= 0xf4 ? 4
+                                                       : 0;
+    uint32_t value = width ? first & (0x7f >> width) : 0xfffd;
+    bool valid = width != 0;
+    for (int index = 1; valid && index < width; ++index) {
+        if (position == text.size() || (static_cast<unsigned char>(text[position]) & 0xc0) != 0x80) {
+            valid = false;
+            break;
+        }
+        const auto next = static_cast<unsigned char>(text[position++]);
+        value = (value << 6) | (next & 0x3f);
+        if (index == 1 && InvalidScalarPrefix(first, next)) valid = false;
+    }
+    return valid ? value : 0xfffd;
+}
+void AppendUtf16Scalar(std::u16string& result, uint32_t value) {
+    if (value >= 0x10000) {
+        result += static_cast<char16_t>(0xd800 + ((value - 0x10000) >> 10));
+        value = 0xdc00 + (value & 0x3ff);
+    }
+    result += static_cast<char16_t>(value);
+}
 std::u16string Utf16(std::string_view text) {
     // Match MultiByteToWideChar(CP_UTF8, 0): consume an invalid continuation
     // prefix, including the second byte when its scalar range is invalid.
     std::u16string result;
     for (size_t position = 0; position < text.size();) {
-        const auto first = static_cast<unsigned char>(text[position++]);
-        uint32_t value = first;
-        if (first >= 0x80) {
-            const int width = first >= 0xc2 && first <= 0xdf   ? 2
-                              : first >= 0xe0 && first <= 0xef ? 3
-                              : first >= 0xf0 && first <= 0xf4 ? 4
-                                                               : 0;
-            value = width ? first & (0x7f >> width) : 0xfffd;
-            bool valid = width != 0;
-            for (int index = 1; valid && index < width; ++index) {
-                if (position == text.size() || (static_cast<unsigned char>(text[position]) & 0xc0) != 0x80) {
-                    valid = false;
-                    break;
-                }
-                const auto next = static_cast<unsigned char>(text[position++]);
-                value = (value << 6) | (next & 0x3f);
-                if (index == 1 && ((first == 0xe0 && next < 0xa0) || (first == 0xed && next >= 0xa0) ||
-                                   (first == 0xf0 && next < 0x90) || (first == 0xf4 && next >= 0x90)))
-                    valid = false;
-            }
-            if (!valid) value = 0xfffd;
-        }
-        if (value >= 0x10000) {
-            result += static_cast<char16_t>(0xd800 + ((value - 0x10000) >> 10));
-            value = 0xdc00 + (value & 0x3ff);
-        }
-        result += static_cast<char16_t>(value);
+        AppendUtf16Scalar(result, ReadUtf8Scalar(text, position));
     }
     return result;
 }
@@ -44,6 +49,34 @@ int HexDigit(char16_t character) {
     if (character >= 'A' && character <= 'F') return character - 'A' + 10;
     if (character >= 'a' && character <= 'f') return character - 'a' + 10;
     return -1;
+}
+bool ReadHexEscape(std::u16string_view input, size_t& position, uint32_t& unit) {
+    if (position == input.size()) return false;
+    if (!((unit == '\\' && (input[position] == 'x' || input[position] == 'u' || input[position] == 'U')) ||
+          (unit == 'U' && input[position] == '+')))
+        return false;
+    const auto form = input[position];
+    const unsigned minimum = form == 'x' ? 2 : form == 'U' ? 8 : 4;
+    const unsigned maximum = form == 'U' ? 8 : form == '+' ? 6 : 4;
+    size_t end = position + 1;
+    uint32_t value = 0;
+    unsigned count = 0;
+    while (end < input.size() && count < maximum) {
+        const int digit = HexDigit(input[end]);
+        if (digit < 0) break;
+        value = (value << 4) | digit;
+        ++end;
+        ++count;
+    }
+    if (count & 1) {
+        --end;
+        --count;
+        value >>= 4;
+    }
+    if (count < minimum || value > 0x10ffff) return false;
+    position = end;
+    unit = value;
+    return true;
 }
 std::string Utf8(std::u16string_view text) {
     std::string result;
@@ -98,38 +131,8 @@ std::string HexToCharacter(std::string_view text) {
     bool changed = false;
     for (size_t position = 0; position < input.size();) {
         uint32_t unit = input[position++];
-        if (position < input.size() &&
-            ((unit == '\\' && (input[position] == 'x' || input[position] == 'u' || input[position] == 'U')) ||
-             (unit == 'U' && input[position] == '+'))) {
-            const auto form = input[position];
-            const unsigned minimum = form == 'x' ? 2 : form == 'U' ? 8 : 4;
-            const unsigned maximum = form == 'U' ? 8 : form == '+' ? 6 : 4;
-            size_t end = position + 1;
-            uint32_t value = 0;
-            unsigned count = 0;
-            while (end < input.size() && count < maximum) {
-                const int digit = HexDigit(input[end]);
-                if (digit < 0) break;
-                value = (value << 4) | digit;
-                ++end;
-                ++count;
-            }
-            if (count & 1) {
-                --end;
-                --count;
-                value >>= 4;
-            }
-            if (count >= minimum && value <= 0x10ffff) {
-                changed = true;
-                position = end;
-                unit = value;
-                if (unit >= 0x10000) {
-                    result += static_cast<char16_t>(0xd800 + ((unit - 0x10000) >> 10));
-                    unit = 0xdc00 + (unit & 0x3ff);
-                }
-            }
-        }
-        result += static_cast<char16_t>(unit);
+        if (ReadHexEscape(input, position, unit)) changed = true;
+        AppendUtf16Scalar(result, unit);
     }
     return changed ? Utf8(result) : std::string(text);
 }

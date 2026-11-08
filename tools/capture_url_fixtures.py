@@ -10,24 +10,7 @@ import subprocess
 import time
 
 
-def capture(executable: Path, output: Path) -> None:
-    user = c.WinDLL("user32", use_last_error=True)
-    kernel = c.WinDLL("kernel32", use_last_error=True)
-    send = user.SendMessageW
-    send.argtypes = [w.HWND, w.UINT, c.c_size_t, c.c_ssize_t]
-    send.restype = c.c_ssize_t
-    kernel.OpenProcess.argtypes = [w.DWORD, w.BOOL, w.DWORD]
-    kernel.OpenProcess.restype = w.HANDLE
-    kernel.VirtualAllocEx.argtypes = [w.HANDLE, c.c_void_p, c.c_size_t, w.DWORD, w.DWORD]
-    kernel.VirtualAllocEx.restype = c.c_void_p
-    kernel.WriteProcessMemory.argtypes = [w.HANDLE, c.c_void_p, c.c_void_p, c.c_size_t, c.c_void_p]
-    kernel.ReadProcessMemory.argtypes = [w.HANDLE, c.c_void_p, c.c_void_p, c.c_size_t, c.c_void_p]
-    kernel.VirtualFreeEx.argtypes = [w.HANDLE, c.c_void_p, c.c_size_t, w.DWORD]
-    kernel.CloseHandle.argtypes = [w.HANDLE]
-    startup = subprocess.STARTUPINFO()
-    startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    startup.wShowWindow = 0
-    process = subprocess.Popen([str(executable), "/ns", "/n"], startupinfo=startup)
+def find_editor_windows(user, process):
     callback = c.WINFUNCTYPE(w.BOOL, w.HWND, c.c_ssize_t)
     windows = []
 
@@ -64,7 +47,28 @@ def capture(executable: Path, output: Path) -> None:
     if len(children) != 1:
         process.terminate()
         raise RuntimeError(f"expected owned original Scintilla: {children}")
-    editor = children[0]
+    return frame, children[0]
+
+
+def capture(executable: Path, output: Path) -> None:
+    user = c.WinDLL("user32", use_last_error=True)
+    kernel = c.WinDLL("kernel32", use_last_error=True)
+    send = user.SendMessageW
+    send.argtypes = [w.HWND, w.UINT, c.c_size_t, c.c_ssize_t]
+    send.restype = c.c_ssize_t
+    kernel.OpenProcess.argtypes = [w.DWORD, w.BOOL, w.DWORD]
+    kernel.OpenProcess.restype = w.HANDLE
+    kernel.VirtualAllocEx.argtypes = [w.HANDLE, c.c_void_p, c.c_size_t, w.DWORD, w.DWORD]
+    kernel.VirtualAllocEx.restype = c.c_void_p
+    kernel.WriteProcessMemory.argtypes = [w.HANDLE, c.c_void_p, c.c_void_p, c.c_size_t, c.c_void_p]
+    kernel.ReadProcessMemory.argtypes = [w.HANDLE, c.c_void_p, c.c_void_p, c.c_size_t, c.c_void_p]
+    kernel.VirtualFreeEx.argtypes = [w.HANDLE, c.c_void_p, c.c_size_t, w.DWORD]
+    kernel.CloseHandle.argtypes = [w.HANDLE]
+    startup = subprocess.STARTUPINFO()
+    startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startup.wShowWindow = 0
+    process = subprocess.Popen([str(executable), "/ns", "/n"], startupinfo=startup)
+    frame, editor = find_editor_windows(user, process)
     handle = kernel.OpenProcess(0x38, False, process.pid)
     memory = kernel.VirtualAllocEx(handle, None, 65536, 0x3000, 0x04)
     if not memory:

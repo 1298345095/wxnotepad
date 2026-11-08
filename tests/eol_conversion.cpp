@@ -1,5 +1,6 @@
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
+#include "native_key_helpers.h"
 #include "file_helpers.h"
 #include <wx/statusbr.h>
 #include <filesystem>
@@ -168,7 +169,8 @@ void Files(EditorFrame* frame, const std::filesystem::path& directory) {
                 editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
                 NativeSearch::Text(editor) == "中\nnext\nlast",
             "cancelled and failed Open must retain converted text and insertion preference");
-    Require(frame->New() && editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf) &&
+    Require(frame->NewDocument() &&
+                editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf) &&
                 NativeSearch::Text(editor).empty() && frame->GetStatusBar()->GetStatusText().Contains("EOL: CRLF"),
             "successful New must restore the existing CRLF default and status");
     std::puts("PASS: cancelled/failed file operations retain mode; New restores the original default");
@@ -203,9 +205,10 @@ public:
         settings_->values.wordWrap = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-eol-conversion");
             try {
+                Require(presented, "private compositor presents the editor before native conversion scenarios");
                 auto* editor = frame->Editor();
                 struct Mode {
                     const char* label;

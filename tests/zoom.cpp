@@ -43,7 +43,7 @@ void Wheel(EditorControl* editor, int rotation, bool control = false, bool shift
 }
 void Level(EditorFrame* frame, const wxString& value, int button, bool applyFirst = false) {
     bool observed = false;
-    wxTheApp->CallAfter([&] {
+    wxTheApp->CallAfter([&observed, value, button, applyFirst] {
         for (auto* window : wxTopLevelWindows) {
             auto* dialog = wxDynamicCast(window, wxDialog);
             if (!dialog || dialog->GetTitle() != "Zoom Level") continue;
@@ -207,7 +207,8 @@ public:
                 editor->Send(Message::SetFirstVisibleLine, 0);
                 editor->Send(Message::SetXOffset, 0);
                 char font[100]{};
-                editor->Send(Message::StyleGetFont, 32, reinterpret_cast<intptr_t>(font));
+                editor->Send(Message::StyleGetFont, static_cast<uintptr_t>(Scintilla::StylesCommon::Default),
+                             reinterpret_cast<intptr_t>(font));
                 intptr_t normalHeight = 0;
                 for (const auto [zoom, points] : {std::pair{100, 12}, {200, 24}, {50, 6}, {175, 21}, {100, 12}}) {
                     editor->Send(Message::SetZoom, zoom);
@@ -231,10 +232,12 @@ public:
                         Require(editor->Send(Message::PositionFromPointClose, x + 1, y + height / 2) == position,
                                 "hit testing follows zoomed text coordinates and margin offset");
                     }
-                    Require(editor->Send(Message::StyleGetSize, 32) == 12 && Text(editor) == bytes &&
-                                editor->DocumentRevision() == revision && editor->Send(Message::GetAnchor) == 3 &&
-                                editor->Send(Message::GetCurrentPos) == 9 && editor->Send(Message::CanUndo) &&
-                                editor->Send(Message::CanRedo) && editor->Send(Message::GetModify),
+                    Require(editor->Send(Message::StyleGetSize,
+                                         static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == 12 &&
+                                Text(editor) == bytes && editor->DocumentRevision() == revision &&
+                                editor->Send(Message::GetAnchor) == 3 && editor->Send(Message::GetCurrentPos) == 9 &&
+                                editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
+                                editor->Send(Message::GetModify),
                             "zoom preserves base point size, bytes, selection, save point and undo/redo state");
                     std::printf("PASS: zoom=%d native_points=%d dpi=%d height=%lld margin=%lld text/hit geometry\n",
                                 zoom, points, editor->GetDPI().y, static_cast<long long>(height),
