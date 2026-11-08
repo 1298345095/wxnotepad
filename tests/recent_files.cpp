@@ -10,6 +10,7 @@
 #include <wx/textctrl.h>
 #include <wx/timer.h>
 #include <wx/listctrl.h>
+#include <wx/weakref.h>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -340,7 +341,12 @@ public:
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
+            // Destroy is deferred: release the native watcher before removing its directory.
+            wxWeakRef<EditorFrame> closing = frame;
             frame->Destroy();
+            while (closing)
+                ProcessIdle();
+            std::puts("recent-files: frame destroyed, removing fixture");
             std::filesystem::remove_all(directory);
             ExitMainLoop();
         });
