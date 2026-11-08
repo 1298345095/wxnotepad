@@ -36,6 +36,8 @@ void ModifiedRevert(EditorFrame* frame, int revert, const std::filesystem::path&
     editor->Send(Message::Undo);
     Require(editor->Send(Message::GetModify) && editor->Send(Message::CanRedo),
             "cancel fixture has a modified document and a separate redo action");
+    // Deliver the edits' queued UI state before taking the cancellation snapshot.
+    wxTheApp->ProcessPendingEvents();
     Require(NativeScroll::WaitForHorizontalRange(editor, true, 120), "long lines provide a horizontal viewport");
     editor->Send(Message::SetSel, 6040, 6020);
     editor->Send(Message::SetFirstVisibleLine, 25);
