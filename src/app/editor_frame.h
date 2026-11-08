@@ -28,6 +28,8 @@ public:
     OpenResult Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding = std::nullopt);
     OpenResult Open();
     OpenResult OpenAs(FileEncoding encoding);
+    OpenResult Revert();
+    OpenResult ReloadCurrentFile(bool followEnd = false);
     bool DocumentHasUtf8Bom() const { return document_.HasUtf8Bom(); }
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
@@ -41,6 +43,7 @@ private:
     DocumentSession document_;
     int automaticLanguageId_;
     int saveCopyId_;
+    int revertId_;
     wxString lastSaveCopyDirectory_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
@@ -115,6 +118,9 @@ private:
     void UpdatePositionStatus();
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
+    OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
+                        std::optional<FileEncoding> encoding = std::nullopt,
+                        std::optional<EncodingChoice> weakEncoding = std::nullopt);
     bool CanDiscardUntitledWhitespace() const;
     GbkLossChoice ConfirmGbkLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);

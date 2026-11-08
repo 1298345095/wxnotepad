@@ -98,6 +98,17 @@ wxMenu* EditorFrame::CreateFileMenu() {
     const int readOnly = wxWindow::NewControlId();
     mode->AppendCheckItem(readOnly, "&Read Only Mode\tF10");
     file->AppendSubMenu(mode, "File &Mode");
+    revertId_ = wxWindow::NewControlId();
+    file->Append(revertId_, "&Revert\tF5");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto result = Revert();
+            if (result.status == OpenStatus::Failed)
+                wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+        },
+        revertId_);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, revertId_);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleReadOnlyMode(); }, readOnly);
     Bind(
         wxEVT_UPDATE_UI,
@@ -1492,6 +1503,11 @@ bool EditorFrame::HandleDisplayKey(const wxKeyEvent& event, int whitespace, int 
 }
 
 bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F5 && !event.HasAnyModifiers()) {
+        wxCommandEvent command(wxEVT_MENU, revertId_);
+        GetEventHandler()->ProcessEvent(command);
+        return true;
+    }
     if (event.GetKeyCode() == WXK_F10) {
         if (!event.HasAnyModifiers()) ToggleReadOnlyMode();
         return true;
