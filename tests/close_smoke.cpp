@@ -29,6 +29,7 @@ void TraceFrame(const char* transition, const EditorFrame* frame) {
 }
 EditorFrame* NewFrame() {
     auto* frame = new EditorFrame;
+    frame->SetFileWatchingOptions({.mode = FileWatchingMode::None});
     TraceFrame("created", frame);
     frame->Bind(wxEVT_DESTROY, [frame](wxWindowDestroyEvent& event) {
         if (event.GetEventObject() == frame) TraceFrame("destroy event", frame);
