@@ -22,7 +22,11 @@ class Application:
         self.process = subprocess.Popen(arguments, env=environment, stderr=sys.stderr)
         self.state = wait_state(folder, self.process, lambda s: s["sequence"] == "0")
 
-    def menu(self, item, menu="View"):
+    def menu(self, item, menu=None):
+        if menu is None:
+            menu = "Settings" if item in {"Auto Indent", "Auto-Shrink Horizontal Scrollbar", "Insert Tabs as Spaces",
+                                          "Tab Settings...", "Long Line Settings...", "Save Settings On Exit",
+                                          "Save Settings Now", "Remember Search Options"} else "View"
         self.named_menu(menu, item)
 
     def named_menu(self, menu, item):
@@ -94,7 +98,7 @@ def main():
             assert app.state["eol_mode"] == "2", app.state
             tabs(app.state, 4, 4, 1)
             assert app.state["auto_indent"] == "1", app.state
-            app.named_menu("Language", "JSON")
+            app.named_menu("Scheme", "JSON")
             tabs(app.state, 2, 2, 0)
             for item in ("Word Wrap", "Line Numbers", "Show Whitespace", "Auto Indent", "Auto-Shrink Horizontal Scrollbar"):
                 app.menu(item)
@@ -173,11 +177,11 @@ def main():
         try:
             tabs(app.state, 7, 3, 0, 0, 3)
             assert app.state["auto_indent"] == "0", app.state
-            app.named_menu("Language", "Python")
+            app.named_menu("Scheme", "Python")
             tabs(app.state, 9, 0, 1, 0, 3)
-            app.named_menu("Language", "JSON")
+            app.named_menu("Scheme", "JSON")
             tabs(app.state, 7, 3, 0, 0, 3)
-            app.named_menu("Language", "C/C++")
+            app.named_menu("Scheme", "C/C++")
             tabs(app.state, 256, 0, 1, 0, 3)
             app.close()
         finally:

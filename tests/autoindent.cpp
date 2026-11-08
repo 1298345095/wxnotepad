@@ -54,7 +54,7 @@ public:
                         "Enter and indentation form one undo step");
                 std::puts("PASS: default leading whitespace and newline history");
                 for (const auto* language : {"Plain Text", "C/C++", "Python"}) {
-                    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+                    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
                     editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
                     Case(editor, " \tword", 6, 6, " \tword\n \t", 9);
                     Case(editor, "  {}", 3, 3, "  {\n  \t\n  }", 7);
@@ -76,7 +76,7 @@ public:
                     Case(editor, "", 0, 0, "\n", 1);
                 }
                 std::puts("PASS: delivered schemes preserve delimiter, colon, comment, whitespace and selection rules");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "JSON"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "JSON"));
                 Case(editor, "{}", 1, 1, "{\n  \n}", 4);
                 editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf));
                 Case(editor, "[]", 1, 1, "[\r\n  \r\n]", 5);
@@ -91,10 +91,10 @@ public:
                 Case(editor, "{", 1, 1, "{\r   ", 5);
                 editor->Send(Message::SetIndent, 0);
                 Case(editor, "{", 1, 1, "{\r", 2);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Auto Indent"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Auto Indent"));
                 Require(!editor->AutoIndentEnabled(), "Auto Indent menu disables the original option");
                 Case(editor, " \t{}", 3, 3, " \t{\r}", 4);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Auto Indent"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Auto Indent"));
                 Require(editor->AutoIndentEnabled(), "Auto Indent menu enables the original option");
                 std::puts("PASS: JSON defaults, CRLF/LF/CR, independent widths and enabled/disabled options");
             } catch (const std::exception& error) {

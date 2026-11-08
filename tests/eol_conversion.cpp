@@ -15,8 +15,13 @@ using TestFiles::Filename;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
+wxString EolLabel(const char* mode) {
+    return wxString(mode) == "CRLF" ? "Windows (CR+LF)"
+           : wxString(mode) == "LF" ? "Unix/macOS (LF)"
+                                    : "Classic Mac OS (CR)";
+}
 void Convert(EditorFrame* frame, const char* mode) {
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", wxString("Convert to ") + mode));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("File", EolLabel(mode)));
 }
 void Load(EditorControl* editor, const char* text) {
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
@@ -76,7 +81,7 @@ void History(EditorFrame* frame) {
 }
 void FoldedSelection(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const int language = frame->GetMenuBar()->FindMenuItem("Language", "C/C++");
+    const int language = frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++");
     NativeSearch::Command(frame, language);
     std::string source = "void outer() {\r\n  中文(); //";
     for (int word = 0; word < 100; ++word)
@@ -222,7 +227,7 @@ public:
                     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文\r\nsecond\nthird\rlast"));
                     editor->Send(Message::EmptyUndoBuffer);
                     editor->Send(Message::SetSavePoint);
-                    const int id = frame->GetMenuBar()->FindMenuItem("Edit", wxString("Convert to ") + mode.label);
+                    const int id = frame->GetMenuBar()->FindMenuItem("File", EolLabel(mode.label));
                     Require(id != wxNOT_FOUND, "Edit must offer CRLF, LF and CR conversion commands");
                     NativeSearch::Command(frame, id);
                     if (NativeSearch::Text(editor) != mode.expected)
@@ -237,8 +242,7 @@ public:
                     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                     Require(frame->GetMenuBar()->FindItem(id)->IsChecked(), "chosen conversion must be checked");
                     for (const auto& other : modes) {
-                        const int otherId =
-                            frame->GetMenuBar()->FindMenuItem("Edit", wxString("Convert to ") + other.label);
+                        const int otherId = frame->GetMenuBar()->FindMenuItem("File", EolLabel(other.label));
                         Require(otherId != wxNOT_FOUND && frame->GetMenuBar()->FindItem(otherId)->IsCheckable() &&
                                     frame->GetMenuBar()->FindItem(otherId)->IsChecked() == (other.mode == mode.mode),
                                 "conversion commands must be mutually exclusive checked items");

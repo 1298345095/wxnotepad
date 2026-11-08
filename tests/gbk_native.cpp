@@ -167,7 +167,7 @@ public:
                             frame->GetStatusBar()->GetStatusText().Contains("GBK"),
                         "native explicit open must record and display GBK");
                 Append(frame, "¥☃😀𝄞");
-                const auto python = frame->GetMenuBar()->FindMenuItem("Language", "Python");
+                const auto python = frame->GetMenuBar()->FindMenuItem("Scheme", "Python");
                 Command(frame, python);
                 const auto rich = Text(frame);
                 NativeDriver cancelAs(wxID_CANCEL);

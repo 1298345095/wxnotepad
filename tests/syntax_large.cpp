@@ -57,7 +57,7 @@ public:
                             editor->Send(Message::GetStyleIndexAt, 0) == SCE_C_WORD2 &&
                             frame->GetStatusBar()->GetStatusText().Contains("C/C++"),
                         "a supported document above 32 MiB must retain its normal language, lexer and token styles");
-                const int plain = frame->GetMenuBar()->FindMenuItem("Language", "Plain Text");
+                const int plain = frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text");
                 wxCommandEvent choose(wxEVT_MENU, plain);
                 Require(frame->GetEventHandler()->ProcessEvent(choose), "real Plain Text menu must be handled");
                 Paint(editor);

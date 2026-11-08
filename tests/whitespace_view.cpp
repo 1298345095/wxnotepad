@@ -96,7 +96,7 @@ public:
                 Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify),
                         "Undo must return directly to the original save point");
                 for (const auto* language : {"C/C++", "Plain Text", "Python", "JSON", "Automatic"}) {
-                    const int languageId = frame->GetMenuBar()->FindMenuItem("Language", language);
+                    const int languageId = frame->GetMenuBar()->FindMenuItem("Scheme", language);
                     Require(languageId != wxNOT_FOUND, "the supported language command must exist");
                     NativeSearch::Command(frame, languageId);
                     Require(editor->Send(Message::GetViewWS) == 1 && item->IsChecked(),
@@ -105,7 +105,7 @@ public:
                         Require(editor->Send(Message::GetLexer) == SCLEX_NULL,
                                 "showing whitespace must not enable a lexer for Plain Text");
                 }
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("int main() {\n\t return 0;  \n}\n"));
                 NativeFold::Paint(editor);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));

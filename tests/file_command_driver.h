@@ -32,10 +32,14 @@ public:
                 if (!IsWindowVisible(window)) return TRUE;
                 wchar_t title[256]{};
                 GetWindowTextW(window, title, 256);
-                if (wxString(title) == "Save changes?" || wxString(title) == "Read only file") {
+                if (wxString(title) == "Save changes?" || wxString(title) == "Read only file" ||
+                    wxString(title) == "Revert") {
                     driver.Observe("confirmation response begin");
                     ++driver.prompts;
-                    const int button = driver.choice_ == wxID_YES ? IDYES : driver.choice_ == wxID_NO ? IDNO : IDCANCEL;
+                    const int button = driver.choice_ == wxID_OK    ? IDOK
+                                       : driver.choice_ == wxID_YES ? IDYES
+                                       : driver.choice_ == wxID_NO  ? IDNO
+                                                                    : IDCANCEL;
                     SendMessageW(window, WM_USER + 102, button, 0); // TDM_CLICK_BUTTON
                     driver.Observe("confirmation response end");
                 } else if (driver.IsChooserTitle(title)) {
@@ -74,12 +78,13 @@ public:
             }
             if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
             const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
-            if (title == "Save changes?" || title == "Read only file") {
+            if (title == "Save changes?" || title == "Read only file" || title == "Revert") {
                 Observe("confirmation response begin");
                 ++prompts;
-                Respond(widget, choice_ == wxID_YES  ? GTK_RESPONSE_YES
-                                : choice_ == wxID_NO ? GTK_RESPONSE_NO
-                                                     : GTK_RESPONSE_CANCEL);
+                Respond(widget, choice_ == wxID_OK    ? GTK_RESPONSE_OK
+                                : choice_ == wxID_YES ? GTK_RESPONSE_YES
+                                : choice_ == wxID_NO  ? GTK_RESPONSE_NO
+                                                      : GTK_RESPONSE_CANCEL);
                 Observe("confirmation response end");
             } else if (IsErrorTitle(title)) {
                 ++errors;

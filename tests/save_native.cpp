@@ -208,10 +208,10 @@ public:
                 }
                 Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "source must open");
                 const auto choose = [frame](const char* language) {
-                    Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+                    Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
                 };
                 const auto hasOverride = [frame](const char* language) {
-                    return frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", language)) &&
+                    return frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", language)) &&
                            frame->GetStatusBar()->GetStatusText().Contains("override");
                 };
                 choose("C/C++");

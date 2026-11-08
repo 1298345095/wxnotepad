@@ -47,7 +47,7 @@ void MenuAndShortcut(EditorFrame* frame) {
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsChecked(command) && editor->Send(Message::GetMarginWidthN, 0) > 0,
             "a fresh window must show a checked line-number margin for logical line 1");
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     const auto foldWidth = editor->Send(Message::GetMarginWidthN, 2);
     NativeSearch::Command(frame, command);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -203,7 +203,7 @@ void FileTransitions(EditorFrame* frame, SettingsStore* settings) {
     Require(frame->Open(originalPath).status == OpenStatus::Opened && editor->Send(Message::GetLineCount) == 101 &&
                 editor->Send(Message::GetMarginWidthN, 0) == 0,
             "Open must retain the window's hidden line-number setting");
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Python"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Python"));
     Require(editor->Send(Message::GetMarginWidthN, 0) == 0, "language changes must retain hidden line numbers");
     Require(frame->SaveAs(savedPath).status == SaveStatus::Saved && editor->Send(Message::GetMarginWidthN, 0) == 0,
             "Save As must retain hidden line numbers");
