@@ -203,11 +203,19 @@ public:
                 Require(decision.prompts == 4 && !frame->Editor()->Send(Scintilla::Message::GetModify),
                         "Yes reloads dirty content without an additional save question");
                 std::puts("PASS: actual native Yes/No questions cover clean and dirty reload decisions");
+                options.mode = FileWatchingMode::ShowMessage;
+                frame->SetFileWatchingOptions(options);
                 TestEditor::Append(frame, "saved locally");
                 Require(frame->Save().status == SaveStatus::Saved, "application save succeeds");
                 Pause(200);
                 Require(decision.prompts == 4 && TestFiles::Bytes(path) == "approved dirty reload\nsaved locally",
                         "own save refreshes baseline and produces no prompt");
+                const auto modified = std::filesystem::last_write_time(path);
+                Require(frame->UpdateFileTime(), "application timestamp-only update succeeds");
+                Pause(200);
+                Require(decision.prompts == 4 && std::filesystem::last_write_time(path) > modified &&
+                            TestFiles::Bytes(path) == "approved dirty reload\nsaved locally",
+                        "timestamp-only update refreshes baseline and produces no self-change question");
                 options.mode = FileWatchingMode::None;
                 frame->SetFileWatchingOptions(options);
                 Peer(TestFiles::Filename(path), "off mode external content\n");
