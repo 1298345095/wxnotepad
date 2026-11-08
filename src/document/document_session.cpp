@@ -435,7 +435,7 @@ bool DocumentSession::UpdateFileTime() {
     }
     CloseHandle(file);
 #else
-    const int file = ::open(path_.utf8_str(), O_RDWR | O_CREAT, 0666);
+    const int file = ::open(path_.utf8_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     if (file < 0) return false;
     // Preserve access time; ctime follows the filesystem's metadata-update rules.
     const timespec times[]{{0, UTIME_OMIT}, {0, UTIME_NOW}};
