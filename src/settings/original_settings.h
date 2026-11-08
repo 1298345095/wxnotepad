@@ -45,6 +45,11 @@ struct OriginalSettings {
     int autoInsertMask = AutoInsertMask_Default;
     int markOccurrences = 1;
     bool saveFindReplace = false;
+    bool saveRecentFiles = false;
+    int maxRecentFiles = OriginalSettingLimits::MinRecentFiles;
+    bool relativeFileMRU = true;
+    bool portableMyDocs = true;
+    std::vector<wxString> recentFiles;
     int findReplaceOption = 2;
     int findReplaceFlag = 0;
     std::vector<wxString> recentFind;

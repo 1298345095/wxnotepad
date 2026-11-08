@@ -37,6 +37,7 @@ public:
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
     bool NewDocument();
+    void ShowRecentFiles();
     void SetFileWatchingOptions(const FileWatchingOptions& options);
     const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
     bool NewWindow();
@@ -53,6 +54,9 @@ private:
     FileChangeMonitor fileChangeMonitor_;
     int automaticLanguageId_;
     int saveCopyId_;
+    int recentFilesId_;
+    void AppendRecentFilesCommand(wxMenu* file);
+    void RecordRecentFile();
     int revertId_;
     wxString lastSaveCopyDirectory_;
     SearchSession search_;

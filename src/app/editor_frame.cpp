@@ -4,8 +4,10 @@
 #include "app/dialogs/document_dialogs.h"
 #include "app/dialogs/find_replace_dialog.h"
 #include "app/dialogs/search_feedback_dialog.h"
+#include "app/dialogs/recent_files_dialog.h"
 #include "settings/settings_store.h"
 #include "settings/search_settings.h"
+#include "settings/recent_files.h"
 #include "diagnostics/trace.h"
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
@@ -265,8 +267,11 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
                                   SaveFileType fileType, SaveTimeMode timeMode) {
     const auto result = document_.SaveFirst(
         destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
-    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
-    if (result.status == SaveStatus::Saved) RefreshFileWatching();
+    if (result.status == SaveStatus::Saved) {
+        RecordRecentFile();
+        indentation_.Apply(*editor_, document_.Language());
+        RefreshFileWatching();
+    }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -284,7 +289,10 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode tim
             return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
         const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, timeMode);
-        if (result.status == SaveStatus::Saved) RefreshFileWatching();
+        if (result.status == SaveStatus::Saved) {
+            RecordRecentFile();
+            RefreshFileWatching();
+        }
         UpdateDocumentState();
         return result;
     }
@@ -297,8 +305,11 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
                                SaveFileType fileType, SaveTimeMode timeMode) {
     const auto result = document_.SaveAs(
         destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
-    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
-    if (result.status == SaveStatus::Saved) RefreshFileWatching();
+    if (result.status == SaveStatus::Saved) {
+        RecordRecentFile();
+        indentation_.Apply(*editor_, document_.Language());
+        RefreshFileWatching();
+    }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -359,6 +370,7 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
                       document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
     });
     if (result.status == OpenStatus::Opened) {
+        RecordRecentFile();
         RefreshFileWatching();
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
@@ -367,6 +379,41 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
     }
     UpdateDocumentState();
     return result;
+}
+
+void EditorFrame::RecordRecentFile() {
+    if (settings_)
+        settings_->AddRecentFile(document_.Path());
+    else
+        RecentFiles::Add(defaults_.recentFiles, document_.Path(), RecentFiles::MinimumCapacity);
+}
+
+void EditorFrame::ShowRecentFiles() {
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    if (preferences.recentFiles.empty() || !ConfirmDiscardChanges("opening recent files")) return;
+    RecentFilesDialog dialog(
+        this, preferences,
+        [this] {
+            if (settings_)
+                settings_->ClearRecentFiles(document_.Path());
+            else {
+                defaults_.recentFiles.clear();
+                RecordRecentFile();
+            }
+        },
+        [this](size_t index) {
+            if (settings_)
+                settings_->RemoveRecentFile(index);
+            else
+                defaults_.recentFiles.erase(defaults_.recentFiles.begin() + static_cast<std::ptrdiff_t>(index));
+        });
+    const auto selected = dialog.Choose();
+    if (selected) {
+        const auto result = LoadFile(selected, [] { return true; });
+        if (result.status == OpenStatus::Failed)
+            wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+    }
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
 
 OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
