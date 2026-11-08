@@ -146,7 +146,7 @@ public:
                 const std::string longLine(500, 'x');
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(longLine.c_str()));
                 editor->Send(Message::SetSel, 0, 500);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Python"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Python"));
                 Status(frame, "Ln 1, Col 501 | Sel 500");
                 for (int field : {0, 1}) {
                     auto* status = frame->GetStatusBar();
@@ -184,7 +184,7 @@ public:
                         if (dialog && dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
                     }
                 });
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Go To Line..."));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Search", "Goto Line..."));
                 if (dialogFailure) std::rethrow_exception(dialogFailure);
                 Status(frame, "Ln 3, Col 1");
                 editor->Send(Message::EmptyUndoBuffer);
@@ -238,7 +238,7 @@ public:
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Word Wrap"));
                 const std::string folded = "void outer() {\n  call();\n}\nvoid other() {\n  untouched();\n}\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(folded.c_str()));
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 NativeFold::Paint(editor);
                 editor->Send(Message::GotoPos, 0);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));

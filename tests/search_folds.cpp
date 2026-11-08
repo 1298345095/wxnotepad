@@ -46,7 +46,7 @@ FoldSearchControls FindFoldedMatches(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const std::string fixture = "void outer() {\n  if (true) {\n    needle();\n  }\n}\n";
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(fixture.c_str()));
-    auto* cpp = frame->GetMenuBar()->FindItem(frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    auto* cpp = frame->GetMenuBar()->FindItem(frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     Require(cpp, "C++ language menu must exist");
     Command(frame, cpp->GetId());
     editor->Send(Message::Colourise, 0, -1);

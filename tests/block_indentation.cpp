@@ -185,7 +185,7 @@ void DialogTraversal(EditorFrame* frame) {
     }
     Require(found, "application Find dialog was shown");
     DialogTabs goTo("Go To Line");
-    Menu(frame, "Go To Line...");
+    Menu(frame, "Goto Line...");
     goTo.Stop();
     if (!goTo.error.empty()) std::fprintf(stderr, "Go To Line: %s\n", goTo.error.c_str());
     Require(goTo.checked && goTo.error.empty(), "Go To Line retains native Tab/Shift+Tab focus traversal");
@@ -361,7 +361,7 @@ public:
                 editor->ToggleWordWrap();
                 const std::string folded = "void f() {\n  call();\n}\nafter();\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(folded.c_str()));
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Paint(editor);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
                 Require(!editor->Send(Message::GetLineVisible, 1), "fixture includes folded logical text");

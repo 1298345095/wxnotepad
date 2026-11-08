@@ -270,7 +270,7 @@ public:
                 std::puts("PASS: both directions, No Wrap, no match, only match and independent suppression");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one one"));
                 editor->Send(Message::SetSel, 5, 1);
-                const int selectNext = frame->GetMenuBar()->FindMenuItem("Edit", "Select to Next");
+                const int selectNext = frame->GetMenuBar()->FindMenuItem("Search", "Select to Next");
                 Require(selectNext != wxNOT_FOUND, "original Select to Next command must be available");
                 NativeSearch::Command(frame, selectNext);
                 Require(editor->Send(Message::GetAnchor) == 1 && editor->Send(Message::GetCurrentPos) == 11,
@@ -281,7 +281,7 @@ public:
                         "extended search never wraps even when normal wrapping is suppressed");
                 Require(editor->Send(Message::GetAnchor) == 1 && editor->Send(Message::GetCurrentPos) == 11,
                         "failed extended search retains the selection");
-                const int selectPrevious = frame->GetMenuBar()->FindMenuItem("Edit", "Select to Previous");
+                const int selectPrevious = frame->GetMenuBar()->FindMenuItem("Search", "Select to Previous");
                 Require(selectPrevious != wxNOT_FOUND, "original Select to Previous command must be available");
                 editor->Send(Message::SetSel, 10, 5);
                 NativeSearch::Command(frame, selectPrevious);
