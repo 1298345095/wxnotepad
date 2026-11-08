@@ -44,63 +44,63 @@ void Pause(int milliseconds) {
         wxMilliSleep(10);
     }
 }
-void ChooseMode(EditorFrame* frame, FileWatchingMode chosen, bool accept = true, int flags = 0, bool reset = false) {
-    class Driver final : public wxModalDialogHook {
-    public:
-        Driver(FileWatchingOptions expected, FileWatchingMode chosen, bool accept, int flags, bool reset)
-            : expected_(expected), chosen_(chosen), accept_(accept), flags_(flags), reset_(reset) {
-            Register();
-        }
-        std::exception_ptr failure;
-        int Enter(wxDialog* dialog) override {
-            if (dialog->GetTitle() != "File Change Notification") return wxID_NONE;
-            wxTheApp->CallAfter([this, dialog] {
-                try {
-                    ApplyChoice(dialog);
-                } catch (...) {
-                    failure = std::current_exception();
-                    if (dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
-                }
-            });
-            return wxID_NONE;
-        }
-
-    private:
-        void ApplyChoice(wxDialog* dialog) {
-            wxRadioBox* choices = nullptr;
-            for (auto* child : dialog->GetChildren())
-                if (auto* radio = wxDynamicCast(child, wxRadioBox)) choices = radio;
-            Require(choices && choices->GetCount() == 3 && choices->GetSelection() == static_cast<int>(expected_.mode),
-                    "native settings dialog reflects all three original modes and the applied selection");
-            ApplyCheckboxes(dialog);
-            choices->SetSelection(static_cast<int>(chosen_));
-            NativeSearch::Click(dialog, accept_ ? wxID_OK : wxID_CANCEL);
-        }
-        void ApplyCheckboxes(wxDialog* dialog) {
-            int checkboxes = 0;
-            for (auto* child : dialog->GetChildren()) {
-                if (auto* checkbox = wxDynamicCast(child, wxCheckBox)) {
-                    Require(checkbox->IsEnabled(), "original monitoring options remain enabled in every mode");
-                    const wxString labels[] = {"&Monitor continuously updated file (e.g. log file).",
-                                               "&Keep at document end after reloading.",
-                                               "&Reset if a new file is opened."};
-                    Require(checkboxes < 3 && checkbox->GetLabel() == labels[checkboxes],
-                            "native dialog offers the original three option labels");
-                    const bool expected =
-                        checkboxes == 2 ? expected_.resetOnNewFile : (expected_.flags & (1 << checkboxes)) != 0;
-                    Require(checkbox->GetValue() == expected, "native dialog reflects applied option values");
-                    checkbox->SetValue(checkboxes == 2 ? reset_ : (flags_ & (1 << checkboxes)) != 0);
-                    ++checkboxes;
-                }
+class FileWatchingDialogDriver final : public wxModalDialogHook {
+public:
+    FileWatchingDialogDriver(FileWatchingOptions expected, FileWatchingMode chosen, bool accept, int flags, bool reset)
+        : expected_(expected), chosen_(chosen), accept_(accept), flags_(flags), reset_(reset) {
+        Register();
+    }
+    std::exception_ptr failure;
+    int Enter(wxDialog* dialog) override {
+        if (dialog->GetTitle() != "File Change Notification") return wxID_NONE;
+        wxTheApp->CallAfter([this, dialog] {
+            try {
+                ApplyChoice(dialog);
+            } catch (...) {
+                failure = std::current_exception();
+                if (dialog->IsModal()) dialog->EndModal(wxID_CANCEL);
             }
-            Require(checkboxes == 3, "native dialog offers log, keep-at-end and reset options");
+        });
+        return wxID_NONE;
+    }
+
+private:
+    void ApplyChoice(wxDialog* dialog) {
+        wxRadioBox* choices = nullptr;
+        for (auto* child : dialog->GetChildren())
+            if (auto* radio = wxDynamicCast(child, wxRadioBox)) choices = radio;
+        Require(choices && choices->GetCount() == 3 && choices->GetSelection() == static_cast<int>(expected_.mode),
+                "native settings dialog reflects all three original modes and the applied selection");
+        ApplyCheckboxes(dialog);
+        choices->SetSelection(static_cast<int>(chosen_));
+        NativeSearch::Click(dialog, accept_ ? wxID_OK : wxID_CANCEL);
+    }
+    void ApplyCheckboxes(wxDialog* dialog) {
+        int checkboxes = 0;
+        for (auto* child : dialog->GetChildren()) {
+            if (auto* checkbox = wxDynamicCast(child, wxCheckBox)) {
+                Require(checkbox->IsEnabled(), "original monitoring options remain enabled in every mode");
+                const wxString labels[] = {"&Monitor continuously updated file (e.g. log file).",
+                                           "&Keep at document end after reloading.", "&Reset if a new file is opened."};
+                Require(checkboxes < 3 && checkbox->GetLabel() == labels[checkboxes],
+                        "native dialog offers the original three option labels");
+                const bool expected =
+                    checkboxes == 2 ? expected_.resetOnNewFile : (expected_.flags & (1 << checkboxes)) != 0;
+                Require(checkbox->GetValue() == expected, "native dialog reflects applied option values");
+                checkbox->SetValue(checkboxes == 2 ? reset_ : (flags_ & (1 << checkboxes)) != 0);
+                ++checkboxes;
+            }
         }
-        FileWatchingOptions expected_;
-        FileWatchingMode chosen_;
-        bool accept_;
-        int flags_;
-        bool reset_;
-    } driver(frame->FileWatching(), chosen, accept, flags, reset);
+        Require(checkboxes == 3, "native dialog offers log, keep-at-end and reset options");
+    }
+    FileWatchingOptions expected_;
+    FileWatchingMode chosen_;
+    bool accept_;
+    int flags_;
+    bool reset_;
+};
+void ChooseMode(EditorFrame* frame, FileWatchingMode chosen, bool accept = true, int flags = 0, bool reset = false) {
+    FileWatchingDialogDriver driver(frame->FileWatching(), chosen, accept, flags, reset);
     int id = frame->GetMenuBar()->FindMenuItem("Settings", "File Change Notification...");
     if (id == wxNOT_FOUND) id = frame->GetMenuBar()->FindMenuItem("View", "File Change Notification...");
     Require(id != wxNOT_FOUND, "native file change settings menu exists");
