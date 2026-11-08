@@ -3,9 +3,11 @@
 #include "editor/editor_control.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
+#include "native_key_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <wx/menu.h>
+#include <wx/accel.h>
 #include <wx/filename.h>
 #include <wx/process.h>
 #include <wx/stdpaths.h>
@@ -101,6 +103,11 @@ void Parent(EditorFrame* frame) {
     const auto bom = frame->DocumentHasBom();
     const int item = frame->GetMenuBar()->FindMenuItem("File", "New Window");
     Require(item != wxNOT_FOUND, "File > New Window must exist");
+    const auto* entry = frame->GetMenuBar()->GetMenu(0)->FindItemByPosition(1);
+    Require(entry && entry->GetId() == item, "New Window must follow New in the native File menu");
+    const std::unique_ptr<wxAcceleratorEntry> accelerator(entry->GetAccel());
+    Require(accelerator && accelerator->GetFlags() == wxACCEL_ALT && accelerator->GetKeyCode() == 'N',
+            "New Window must expose the native Alt+N accelerator");
     Require(wxSetWorkingDirectory(Name(Directory() / "changed working")),
             "test must change the parent's current directory");
     for (const wxString scenario : {"normal", "edge", "maximized"}) {
@@ -124,8 +131,10 @@ void Parent(EditorFrame* frame) {
             Wait([&] { return frame->IsMaximized(); }, "parent must maximize before relaunch");
         }
         wxYield();
-        wxCommandEvent event(wxEVT_MENU, item);
-        Require(frame->GetEventHandler()->ProcessEvent(event), "New Window menu must run");
+        if (scenario == "maximized")
+            NativeKeys::Shortcut(frame, 'N', false, true);
+        else
+            NativeSearch::Command(frame, item);
         const auto marker = Directory() / (scenario.ToStdString() + "-ready");
         Wait([&] { return std::filesystem::exists(marker); }, "a real blank child must finish its independent save");
         long childPid = 0;
