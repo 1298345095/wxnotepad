@@ -164,6 +164,8 @@ public:
 class RecentFilesApp final : public wxApp {
 public:
     bool OnInit() override {
+        // Keep the blocking native command visible in CTest's timeout output.
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
         SetExitOnFrameDelete(false);
         if (argc > 1 && argv[1] == "--history") {
             CallAfter([this] {
@@ -177,6 +179,7 @@ public:
                     const int recent = frame->GetMenuBar()->FindMenuItem("File", "Recent (History)...");
                     Require(frame->GetMenuBar()->IsEnabled(recent) == !expected.empty(), "restart menu availability");
                     HistorySnapshot snapshot;
+                    std::puts("recent-files: restart chooser");
                     frame->ShowRecentFiles();
                     snapshot.Stop();
                     if (snapshot.paths != expected) {
@@ -202,8 +205,10 @@ public:
             settings.values.recentFiles.clear();
             settings.values.warnLineEndings = false;
             settings.values.saveRecentFiles = false;
+            std::puts("recent-files: construct frame");
             auto* frame = new EditorFrame(&settings);
             try {
+                std::puts("recent-files: file actions");
                 std::filesystem::create_directory(directory);
                 const auto first = directory / "first.txt";
                 std::ofstream(first) << "first";
@@ -249,6 +254,7 @@ public:
                             settings.values.maxRecentFiles == capacity,
                         "remember menu toggles shared preference without changing capacity");
                 ChangeRememberHistory changeRemember;
+                std::puts("recent-files: menu and chooser preference coherence");
                 frame->ShowRecentFiles();
                 changeRemember.Stop();
                 Require(changeRemember.initiallyRemembered && !frame->GetMenuBar()->IsChecked(remember) &&
@@ -256,11 +262,13 @@ public:
                         "dialog reads menu preference and Cancel updates the same menu check state without changing "
                         "capacity");
                 CancelHistory cancel;
+                std::puts("recent-files: cancel chooser and retain options");
                 frame->ShowRecentFiles();
                 cancel.Stop();
                 Require(cancel.visited && settings.values.saveRecentFiles && settings.values.maxRecentFiles == 32,
                         "Cancel must retain remember preference and minimum history capacity");
                 ClearHistory clear;
+                std::puts("recent-files: clear history");
                 frame->ShowRecentFiles();
                 clear.Stop();
                 Require(clear.cleared &&
@@ -272,6 +280,7 @@ public:
                 RemoveMissing remove;
                 NativeDialogs::FileCommandDriver errors(NativeDialogs::FileDialogProfile::Open, wxID_NO);
                 SelectHistory missing(0, true);
+                std::puts("recent-files: remove missing entry");
                 frame->ShowRecentFiles();
                 missing.Stop();
                 errors.Stop();
@@ -288,6 +297,7 @@ public:
                 TestEditor::Append(frame, " changed");
                 NativeDialogs::FileCommandDriver saveBeforeCancel(NativeDialogs::FileDialogProfile::Open, wxID_YES);
                 CancelHistory savedCancel;
+                std::puts("recent-files: save before chooser cancel");
                 frame->ShowRecentFiles();
                 savedCancel.Stop();
                 saveBeforeCancel.Stop();
@@ -298,6 +308,7 @@ public:
                 TestEditor::Append(frame, " discarded");
                 NativeDialogs::FileCommandDriver discardBeforeOpen(NativeDialogs::FileDialogProfile::Open, wxID_NO);
                 SelectHistory chooseFirst(1);
+                std::puts("recent-files: discard before selected open");
                 frame->ShowRecentFiles();
                 chooseFirst.Stop();
                 discardBeforeOpen.Stop();
@@ -308,6 +319,7 @@ public:
                 wxKeyEvent historyKey(wxEVT_CHAR_HOOK);
                 historyKey.m_keyCode = 'H';
                 historyKey.SetAltDown(true);
+                std::puts("recent-files: Alt+H chooser");
                 frame->GetEventHandler()->ProcessEvent(historyKey);
                 shortcut.Stop();
                 Require(shortcut.visited && shortcut.paths == settings.values.recentFiles,
@@ -315,6 +327,7 @@ public:
                 TestEditor::Append(frame, " pending");
                 NativeDialogs::FileCommandDriver cancelDecision(NativeDialogs::FileDialogProfile::Open, wxID_CANCEL);
                 HistorySnapshot notOpened;
+                std::puts("recent-files: cancel save decision");
                 frame->ShowRecentFiles();
                 cancelDecision.Stop();
                 notOpened.Stop();
