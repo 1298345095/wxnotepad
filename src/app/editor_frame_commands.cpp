@@ -97,6 +97,16 @@ void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
 wxMenu* EditorFrame::CreateFileMenu() {
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
+    const int newWindow = wxWindow::NewControlId();
+    file->Append(newWindow, "New &Window\tAlt+N");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!NewWindow())
+                wxMessageBox("Could not start another wxnotepad process.", "Could not open new window",
+                             wxOK | wxICON_ERROR, this);
+        },
+        newWindow);
     file->Append(wxID_OPEN, "&Open...\tCtrl+O");
     const int openGbk = wxWindow::NewControlId();
     file->Append(openGbk, "Open As &GBK...");
@@ -1623,6 +1633,13 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoShrinkScrollWidth()); },
         shrinkScrollWidth);
     view->AppendSubMenu(appearance, "Appea&rance");
+    const int fileChanges = wxWindow::NewControlId();
+    view->AppendCheckItem(fileChanges, "File &Change Notification...\tAlt+F5");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFileChangeNotificationOptions(); }, fileChanges);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(fileWatchingOptions_.mode != FileWatchingMode::None); },
+        fileChanges);
     if (settings_) {
         auto* other = new wxMenu;
         const int saveFind = wxWindow::NewControlId();

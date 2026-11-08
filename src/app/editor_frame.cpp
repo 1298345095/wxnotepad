@@ -19,12 +19,18 @@
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
       editor_(new EditorControl(this, settings ? settings->values.selectOption : OriginalSettings{}.selectOption)),
-      settings_(settings), indentation_(settings ? settings->values : defaults_),
+      settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
+      indentation_(settings ? settings->values : defaults_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
                          : SyntaxDetectionOptions{}),
-      search_(*editor_) {
+      fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
+      fileChangeMonitor_(*this, [this] { HandleFileChange(); }), search_(*editor_) {
     const auto& preferences = settings ? settings->values : defaults_;
+    Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+        if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
+        event.Skip();
+    });
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
     editor_->Occurrences().SetOptions(preferences.markOccurrences);
     editor_->SetCodeFoldingVisible(preferences.showCodeFolding);
@@ -84,6 +90,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
             return;
         }
         SaveSettings(false);
+        fileChangeMonitor_.Stop();
         WXNOTE_TRACE("close.destroy-deferred", "\ttarget=%p", static_cast<void*>(this));
         Destroy();
     });
@@ -117,6 +124,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.defaultEOLMode = defaultEolMode_;
     settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
     settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
+    settings_->values.fileWatching = fileWatchingOptions_;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
     settings_->values.caret = editor_->GetCaretAppearance();
     settings_->values.highlightCurrentLine =
@@ -259,6 +267,7 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
     const auto result = document_.SaveFirst(
         destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
+    if (result.status == SaveStatus::Saved) RefreshFileWatching();
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -276,6 +285,7 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode tim
             return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
         const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, timeMode);
+        if (result.status == SaveStatus::Saved) RefreshFileWatching();
         UpdateDocumentState();
         return result;
     }
@@ -289,13 +299,16 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
     const auto result = document_.SaveAs(
         destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
+    if (result.status == SaveStatus::Saved) RefreshFileWatching();
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
 }
 
 bool EditorFrame::UpdateFileTime() {
-    return document_.UpdateFileTime();
+    const bool updated = document_.UpdateFileTime();
+    if (updated) RefreshFileWatching();
+    return updated;
 }
 
 SaveResult EditorFrame::SaveAs() {
@@ -351,6 +364,7 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
         },
         decisionTiming);
     if (result.status == OpenStatus::Opened) {
+        RefreshFileWatching();
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
             ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
@@ -434,6 +448,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::NewDocument() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    RefreshFileWatching();
     editor_->Send(Scintilla::Message::SetEdgeColumn,
                   settings_ ? settings_->values.longLinesLimit : defaults_.longLinesLimit);
     wrapColumn_ = 0;
