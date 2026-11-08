@@ -149,7 +149,8 @@ public:
                 for (const int style : {SCE_JSON_PROPERTYNAME, SCE_JSON_STRING_DQ, SCE_JSON_ESCAPECHAR,
                                         SCE_JSON_KEYWORD, SCE_JSON_NUMBER, SCE_JSON_OPERATOR}) {
                     Require(editor->Send(Message::StyleGetSizeFractional, style) ==
-                                    editor->Send(Message::StyleGetSizeFractional, 32) &&
+                                    editor->Send(Message::StyleGetSizeFractional,
+                                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) &&
                                 editor->Send(Message::StyleGetBack, style) == 0xFFFFFF &&
                                 !editor->Send(Message::StyleGetBold, style),
                             "JSON styles must inherit native size and use the light background");

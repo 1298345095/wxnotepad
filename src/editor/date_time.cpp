@@ -13,6 +13,15 @@
 
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 namespace {
+constexpr uint64_t TicksPerSecond = 10'000'000;
+constexpr uint64_t TicksPerMillisecond = TicksPerSecond / std::milli::den;
+constexpr uint64_t TicksPerMicrosecond = TicksPerSecond / std::micro::den;
+constexpr uint64_t NanosecondsPerTick = std::nano::den / TicksPerSecond;
+using UnixTick = std::chrono::duration<uint64_t, std::ratio<1, TicksPerSecond>>;
+#ifdef __WXMSW__
+constexpr uint64_t WindowsToUnixEpochTicks = UINT64_C(116444736000000000);
+#endif
+
 #ifndef __WXMSW__
 void RemoveTimeSeparator(std::wstring& date) {
     while (!date.empty() && std::wcschr(L" :./-", date.back()))
@@ -122,7 +131,7 @@ DateTimeInsertionValue DateTimeInsertionClock() {
     FILETIME time;
     GetSystemTimePreciseAsFileTime(&time);
     value.unixTicks =
-        ((static_cast<uint64_t>(time.dwHighDateTime) << 32) | time.dwLowDateTime) - UINT64_C(116444736000000000);
+        ((static_cast<uint64_t>(time.dwHighDateTime) << 32) | time.dwLowDateTime) - WindowsToUnixEpochTicks;
     SYSTEMTIME local;
     GetLocalTime(&local);
     value.local.tm_year = local.wYear - 1900;
@@ -138,9 +147,8 @@ DateTimeInsertionValue DateTimeInsertionClock() {
     value.local.tm_yday = static_cast<int>(
         (std::chrono::sys_days(date) - std::chrono::sys_days(std::chrono::year(local.wYear) / 1 / 1)).count());
 #else
-    using Tick = std::chrono::duration<uint64_t, std::ratio<1, 10000000>>;
-    value.unixTicks = std::chrono::duration_cast<Tick>(std::chrono::system_clock::now().time_since_epoch()).count();
-    const auto seconds = static_cast<time_t>(value.unixTicks / 10000000);
+    value.unixTicks = std::chrono::duration_cast<UnixTick>(std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto seconds = static_cast<time_t>(value.unixTicks / TicksPerSecond);
     localtime_r(&seconds, &value.local);
 #endif
     return value;
@@ -151,19 +159,19 @@ wxString FormatDateTimeInsertion(DateTimeInsertion command, const DateTimeInsert
     uint64_t timestamp = value.unixTicks;
     switch (command) {
     case DateTimeInsertion::UnixSeconds:
-        timestamp /= 10000000;
+        timestamp /= TicksPerSecond;
         break;
     case DateTimeInsertion::UnixMilliseconds:
-        timestamp /= 10000;
+        timestamp /= TicksPerMillisecond;
         break;
     case DateTimeInsertion::UnixMicroseconds:
-        timestamp /= 10;
+        timestamp /= TicksPerMicrosecond;
         break;
     case DateTimeInsertion::UnixNanoseconds:
-        timestamp *= 100;
+        timestamp *= NanosecondsPerTick;
         break;
     default:
-        const auto seconds = static_cast<time_t>(value.unixTicks / 10000000);
+        const auto seconds = static_cast<time_t>(value.unixTicks / TicksPerSecond);
         std::tm time = value.local;
 #ifdef __WXMSW__
         if (command == DateTimeInsertion::UtcDateTime) gmtime_s(&time, &seconds);

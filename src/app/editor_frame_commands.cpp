@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
 #include "app/dialogs/long_line_settings_dialog.h"
 #include "app/dialogs/column_wrap_dialog.h"
@@ -30,7 +31,10 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     // Original Dialogs.cpp::ZoomLevelDlgProc and InitZoomLevelComboBox.
     wxDialog dialog(parent, wxID_ANY, "Zoom Level");
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Zoom level (10% to 500%):"), 0, wxALL, dialog.FromDIP(10));
+    contents->Add(new wxStaticText(
+                      &dialog, wxID_ANY,
+                      wxString::Format("Zoom level (%d%% to %d%%):", Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel)),
+                  0, wxALL, dialog.FromDIP(10));
     auto* input =
         new wxComboBox(&dialog, wxID_ANY, wxString::Format("%d%%", static_cast<int>(editor.Send(Message::GetZoom))));
     input->SetName("Zoom level");
@@ -44,7 +48,8 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
         const auto value = input->GetValue().ToStdString(wxConvUTF8);
         char* end = nullptr;
         const long level = std::strtol(value.c_str(), &end, 10);
-        if (end != value.c_str() && level >= 10 && level <= 500) editor.Send(Message::SetZoom, level);
+        if (end != value.c_str() && level >= Scintilla::MinZoomLevel && level <= Scintilla::MaxZoomLevel)
+            editor.Send(Message::SetZoom, level);
         // As in the original, invalid OK closes without changing zoom; Apply
         // keeps the dialog open, and Cancel retains any already applied zoom.
         if (event.GetId() == wxID_OK) dialog.EndModal(wxID_OK);
@@ -525,7 +530,8 @@ void EditorFrame::AppendIndentationCommands(wxMenu* edit) {
             const auto* prefix = SyntaxFor(document_.Language()).lineComment;
             if (!prefix) return;
             const auto& preferences = settings_ ? settings_->values : defaults_;
-            if (!editor_->ToggleLineComments(prefix, (preferences.autoInsertMask & 256) != 0))
+            if (!editor_->ToggleLineComments(prefix,
+                                             (preferences.autoInsertMask & AutoInsertMask_SpaceAfterComment) != 0))
                 wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
                              wxOK | wxICON_WARNING, this);
         },
@@ -832,7 +838,7 @@ void EditorFrame::AppendZoomCommands(wxMenu* view) {
     const int zoomLevel = wxWindow::NewControlId();
     zoom->Append(zoomLevel, "Zoom &Level...");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowZoomLevelDialog(this, *editor_); }, zoomLevel);
-    addZoom("&Reset Zoom\tCtrl+\\", Scintilla::Message::SetZoom, 100);
+    addZoom("&Reset Zoom\tCtrl+\\", Scintilla::Message::SetZoom, DisplayUnits::ZoomPercentScale);
     view->AppendSubMenu(zoom, "&Zoom");
 }
 
@@ -1138,7 +1144,8 @@ void EditorFrame::AppendSettingsCommands(wxMenu* view) {
             wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
             saveFind);
         for (const auto& [label, bit] :
-             {std::pair{"Copy Selection As Find Text", 2}, std::pair{"Copy Paste Buffer As Find Text", 4}}) {
+             {std::pair{"Copy Selection As Find Text", SelectOption_CopySelectionAsFindText},
+              std::pair{"Copy Paste Buffer As Find Text", SelectOption_CopyPasteBufferAsFindText}}) {
             const int id = wxWindow::NewControlId();
             view->AppendCheckItem(id, label);
             Bind(wxEVT_MENU, [this, bit](wxCommandEvent&) { settings_->values.selectOption ^= bit; }, id);

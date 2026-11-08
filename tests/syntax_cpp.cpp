@@ -112,9 +112,10 @@ public:
                             editor->Send(Message::StyleGetBold, SCE_C_INTERFACE),
                         "original default palette and all grouped styles must be installed");
                 for (const int style : {SCE_C_WORD, SCE_C_COMMENT, SCE_C_STRING, SCE_C_NUMBER, SCE_C_PREPROCESSOR}) {
-                    Require(Font(editor, style) == Font(editor, 32) &&
+                    Require(Font(editor, style) == Font(editor, static_cast<int>(Scintilla::StylesCommon::Default)) &&
                                 editor->Send(Message::StyleGetSizeFractional, style) ==
-                                    editor->Send(Message::StyleGetSizeFractional, 32) &&
+                                    editor->Send(Message::StyleGetSizeFractional,
+                                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) &&
                                 editor->Send(Message::StyleGetBack, style) == 0xFFFFFF,
                             "syntax must inherit the native font and point size on explicit light background");
                 }

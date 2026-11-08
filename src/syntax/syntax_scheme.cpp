@@ -1,4 +1,5 @@
 #include "syntax/syntax_scheme.h"
+#include "editor/editor_ids.h"
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <span>
@@ -43,9 +44,9 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
     using Scintilla::Message;
     const auto& definition = SyntaxFor(language);
     const bool fold = definition.canFold;
-    editor.Send(Message::SetMarginTypeN, 2, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
-    editor.Send(Message::SetMarginMaskN, 2, Scintilla::MaskFolders);
-    editor.Send(Message::SetMarginSensitiveN, 2, true);
+    editor.Send(Message::SetMarginTypeN, EditorMargin::Folding, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
+    editor.Send(Message::SetMarginMaskN, EditorMargin::Folding, Scintilla::MaskFolders);
+    editor.Send(Message::SetMarginSensitiveN, EditorMargin::Folding, true);
     editor.SetCodeFoldingVisible(editor.CodeFoldingVisible());
     constexpr auto automatic = static_cast<uintptr_t>(Scintilla::AutomaticFold::Show) |
                                static_cast<uintptr_t>(Scintilla::AutomaticFold::Click) |
@@ -61,10 +62,13 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
                                                Scintilla::MarkerSymbol::BoxPlus,
                                                Scintilla::MarkerSymbol::BoxMinus};
     for (size_t index = 0; index < std::size(folders); ++index) {
-        const size_t marker = 25 + index;
+        const size_t marker = static_cast<size_t>(Scintilla::MarkerOutline::FolderEnd) + index;
         editor.Send(Message::MarkerDefine, marker, static_cast<intptr_t>(folders[index]));
         editor.Send(Message::MarkerSetForeTranslucent, marker,
-                    0xFF000000U | Colour(marker == 25 || marker == 30 ? 0xADD8E6 : 0xFFFFFF));
+                    0xFF000000U | Colour(marker == static_cast<size_t>(Scintilla::MarkerOutline::FolderEnd) ||
+                                                 marker == static_cast<size_t>(Scintilla::MarkerOutline::Folder)
+                                             ? 0xADD8E6
+                                             : 0xFFFFFF));
         editor.Send(Message::MarkerSetBackTranslucent, marker, 0xFF000000U | Colour(0x8080FF));
         editor.Send(Message::MarkerSetBackSelectedTranslucent, marker, 0xFF000000U | Colour(0xFF0000));
         editor.Send(Message::MarkerSetStrokeWidth, marker, editor.FromDIP(100));
@@ -73,14 +77,15 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
     editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("fold"),
                 reinterpret_cast<intptr_t>(fold ? "1" : "0"));
     // Keep the native font/point size already installed on STYLE_DEFAULT.
-    editor.Send(Message::StyleSetFore, 32, Colour(0x000000));
-    editor.Send(Message::StyleSetBack, 32, Colour(0xFFFFFF));
+    editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(Scintilla::StylesCommon::Default), Colour(0x000000));
+    editor.Send(Message::StyleSetBack, static_cast<uintptr_t>(Scintilla::StylesCommon::Default), Colour(0xFFFFFF));
     editor.Send(Message::StyleClearAll);
     // Original stlDefault.cpp / Styles.cpp: brace feedback uses independent
     // translucent overlays, preserving the current font and DPI settings.
-    editor.Send(Message::BraceHighlightIndicator, 1, 9);
-    editor.Send(Message::BraceBadLightIndicator, 1, 10);
-    for (const auto [indicator, colour] : {std::pair{9, 0x02EA0A}, std::pair{10, 0xFF0000}}) {
+    editor.Send(Message::BraceHighlightIndicator, 1, EditorIndicator::BraceMatch);
+    editor.Send(Message::BraceBadLightIndicator, 1, EditorIndicator::BraceError);
+    for (const auto [indicator, colour] :
+         {std::pair{EditorIndicator::BraceMatch, 0x02EA0A}, std::pair{EditorIndicator::BraceError, 0xFF0000}}) {
         editor.Send(Message::IndicSetStyle, indicator, static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox));
         editor.Send(Message::IndicSetFore, indicator, Colour(colour));
         editor.Send(Message::IndicSetAlpha, indicator, 50);
@@ -94,7 +99,7 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
     InstallStyles(editor, definition.styles);
-    editor.Send(Message::StyleSetFore, 37, Colour(0xFF8000));
+    editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(Scintilla::StylesCommon::IndentGuide), Colour(0xFF8000));
     ApplyLongLineColour(editor);
     const auto guides = editor.Send(Message::GetIndentationGuides);
     if (guides != 0) ApplyIndentationGuides(editor, language, true, guides == 1);

@@ -141,8 +141,9 @@ void EditorFrame::ShowFind(bool replace) {
     if (!findDialog_)
         findDialog_ = new FindReplaceDialog(
             this, *editor_, search_, [this](const FindResult& result) { ReportFind(result); },
-            [this](wxKeyEvent& event) { OnSearchKey(event); }, settings_ ? settings_->values.selectOption : 15);
-    findDialog_->Present(replace, settings_ ? settings_->values.selectOption : 15);
+            [this](wxKeyEvent& event) { OnSearchKey(event); },
+            settings_ ? settings_->values.selectOption : SelectOption_Default);
+    findDialog_->Present(replace, settings_ ? settings_->values.selectOption : SelectOption_Default);
 }
 
 void EditorFrame::FindNext() {

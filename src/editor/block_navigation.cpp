@@ -4,8 +4,8 @@
 
 namespace {
 using Scintilla::Message;
-constexpr intptr_t FoldHeader = 0x2000;
-constexpr intptr_t FoldNumber = 0xFFF;
+constexpr auto FoldHeader = static_cast<intptr_t>(Scintilla::FoldLevel::HeaderFlag);
+constexpr auto FoldNumber = static_cast<intptr_t>(Scintilla::FoldLevel::NumberMask);
 
 intptr_t PreviousBlock(EditorControl& editor, intptr_t current, intptr_t line, intptr_t level, bool sibling) {
     auto candidate = current - 1;
@@ -96,7 +96,7 @@ void EditorControl::SelectCurrentBlockLines() {
     const auto anchor = Send(Message::GetAnchor);
     const auto current = Send(Message::LineFromPosition, caret);
     auto start = current;
-    if (!(Send(Message::GetFoldLevel, start) & 0x2000)) {
+    if (!(Send(Message::GetFoldLevel, start) & FoldHeader)) {
         start = Send(Message::GetFoldParent, start);
         if (start < 0) {
             Send(Message::SelectAll);

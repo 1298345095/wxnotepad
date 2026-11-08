@@ -1,4 +1,6 @@
 #include "editor/editor_core.h"
+#include "editor/display_units.h"
+#include "editor/editor_ids.h"
 #include "editor/platform/native_encoding.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/custom_case.h"
@@ -87,7 +89,7 @@ bool HandleControlKey(EditorControl& window, const wxKeyEvent& event) {
     switch (event.GetKeyCode()) {
     case '\\':
         if (event.ShiftDown()) return false;
-        window.Send(Message::SetZoom, 100);
+        window.Send(Message::SetZoom, DisplayUnits::ZoomPercentScale);
         return true;
     case WXK_TAB: {
         if (event.ShiftDown()) return false;
@@ -218,34 +220,35 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
                 ((static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) | static_cast<uintptr_t>(Scintilla::KeyMod::Shift))
                  << 16),
             static_cast<intptr_t>(Message::ParaDownExtend));
-    WndProc(Message::SetCodePage, 65001, 0);
+    WndProc(Message::SetCodePage, Scintilla::CpUtf8, 0);
     // Match unconfigured Notepad4 on every host; saving preserves actual EOLs.
     WndProc(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf), 0);
-    WndProc(Message::StyleSetFont, 32, reinterpret_cast<intptr_t>(core::Platform::DefaultFont()));
-    WndProc(Message::StyleSetSize, 32, 12);
-    WndProc(Message::StyleSetBack, 32, 0xFFFFFF);
+    const auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+    WndProc(Message::StyleSetFont, defaultStyle, reinterpret_cast<intptr_t>(core::Platform::DefaultFont()));
+    WndProc(Message::StyleSetSize, defaultStyle, core::Platform::DefaultFontSize());
+    WndProc(Message::StyleSetBack, defaultStyle, 0xFFFFFF);
     WndProc(Message::StyleClearAll, 0, 0);
     // Original Mark Occurrences indicator and default bookmark background.
-    WndProc(Message::IndicSetStyle, 8, static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox));
-    WndProc(Message::IndicSetFore, 8, wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT).GetRGB());
-    WndProc(Message::IndicSetAlpha, 8, 25);
+    WndProc(Message::IndicSetStyle, EditorIndicator::Occurrence,
+            static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox));
+    WndProc(Message::IndicSetFore, EditorIndicator::Occurrence,
+            wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT).GetRGB());
+    WndProc(Message::IndicSetAlpha, EditorIndicator::Occurrence, 25);
     WndProc(Message::MarkerDefine, 0, static_cast<intptr_t>(Scintilla::MarkerSymbol::Background));
     WndProc(Message::MarkerSetBackTranslucent, 0, 0x2800FF00);
     WndProc(Message::MarkerSetLayer, 0, static_cast<intptr_t>(Scintilla::Layer::OverText));
-    WndProc(Message::SetCaretStyle, 1, 0);
-    WndProc(Message::SetMarginWidthN, 1, 0);
+    WndProc(Message::SetCaretStyle, static_cast<uintptr_t>(Scintilla::CaretStyle::Line), 0);
+    WndProc(Message::SetMarginWidthN, EditorMargin::Bookmark, 0);
     WndProc(Message::SetScrollWidth, 1, 0);
     WndProc(Message::SetScrollWidthTracking, 1, 0);
 #ifdef __WXMSW__
     WndProc(Message::SetIMEInteraction, static_cast<uintptr_t>(Scintilla::IMEInteraction::Inline), 0);
 #endif
-    // Notepad4 CreateEditor: SelectOption_EnableMultipleSelection is bit 1.
-    WndProc(Message::SetMultipleSelection, selectionOptions & 1, 0);
+    WndProc(Message::SetMultipleSelection, selectionOptions & SelectOption_EnableMultipleSelection, 0);
     WndProc(Message::SetAdditionalSelectionTyping, 1, 0);
     WndProc(Message::SetMultiPaste, static_cast<uintptr_t>(Scintilla::MultiPaste::Each), 0);
     WndProc(Message::SetVirtualSpaceOptions, static_cast<uintptr_t>(Scintilla::VirtualSpace::RectangularSelection), 0);
-    // EditNewText: SelectOption_UndoRedoRememberSelection is bit 8.
-    const auto history = (selectionOptions & 8)
+    const auto history = (selectionOptions & SelectOption_UndoRedoRememberSelection)
                              ? static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
                                    static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll)
                              : 0;
@@ -308,7 +311,7 @@ void EditorControl::Core::Draw(wxDC& dc) {
     window_.UpdateLineNumberMargin();
     auto surface = core::Surface::Allocate(Scintilla::Technology::Default);
     surface->Init(&dc, &window_);
-    surface->SetMode({65001});
+    surface->SetMode({Scintilla::CpUtf8});
     const auto size = window_.GetClientSize();
     rcPaint = core::PRectangle(0, 0, size.x, size.y);
     paintState = PaintState::painting;
@@ -348,7 +351,8 @@ void EditorControl::Core::UpdateWrapLayout() {
 }
 
 void EditorControl::Core::DpiChanged() {
-    for (int marker = 25; marker <= 31; ++marker)
+    for (int marker = static_cast<int>(Scintilla::MarkerOutline::FolderEnd);
+         marker <= static_cast<int>(Scintilla::MarkerOutline::FolderOpen); ++marker)
         WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
     InvalidateStyleRedraw();
     window_.lineNumberWidthDirty_ = true;
@@ -806,7 +810,7 @@ void EditorControl::Core::UpdateBaseElements() noexcept {
 }
 
 bool EditorControl::Core::ValidCodePage(int codepage) const noexcept {
-    return codepage == 65001;
+    return codepage == Scintilla::CpUtf8;
 }
 
 std::string EditorControl::Core::UTF8FromEncoded(std::string_view text) const {

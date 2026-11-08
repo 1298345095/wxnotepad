@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "editor/display_units.h"
 #include "editor/editor_core.h"
 #include <wx/caret.h>
 #include <wx/settings.h>
@@ -14,8 +15,10 @@ void EditorControl::ApplyCaretAppearance() {
     // Notepad4 89b8b36 Styles.cpp::Style_UpdateCaret. The original core owns
     // selection placement, Unicode block geometry, overstrike and blink drawing.
     const auto& appearance = caretAppearance_;
-    const int style = (appearance.lineWidth ? 1 : 2) | (appearance.overstrikeBlock ? 16 : 0) |
-                      (appearance.blockAfterSelection ? 256 : 0);
+    const int style =
+        static_cast<int>(appearance.lineWidth ? Scintilla::CaretStyle::Line : Scintilla::CaretStyle::Block) |
+        (appearance.overstrikeBlock ? static_cast<int>(Scintilla::CaretStyle::OverstrikeBlock) : 0) |
+        (appearance.blockAfterSelection ? static_cast<int>(Scintilla::CaretStyle::BlockAfter) : 0);
     core_->WndProc(Scintilla::Message::SetCaretStyle, style, 0);
     if (appearance.lineWidth) {
         int width = appearance.lineWidth;
@@ -26,8 +29,9 @@ void EditorControl::ApplyCaretAppearance() {
         else {
 #endif
             if (width == 1) {
-                width =
-                    std::max(1, static_cast<int>(std::lround(GetDPI().y * Send(Scintilla::Message::GetZoom) / 9600.0)));
+                width = std::max(1, static_cast<int>(std::lround(GetDPI().y * Send(Scintilla::Message::GetZoom) /
+                                                                 static_cast<double>(DisplayUnits::DefaultDpi *
+                                                                                     DisplayUnits::ZoomPercentScale))));
             }
 #ifdef __WXMSW__
         }

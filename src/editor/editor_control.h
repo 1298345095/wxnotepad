@@ -1,5 +1,6 @@
 #pragma once
 
+#include "settings/original_settings_constants.h"
 #include "editor/align_lines.h"
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
@@ -29,7 +30,7 @@ enum class BlockNavigation { Start, End, Previous, Next, PreviousSibling, NextSi
 // Commands use the pinned core's public message API; no mirrored wx text exists.
 class EditorControl final : public wxControl {
 public:
-    explicit EditorControl(wxWindow* parent, int selectionOptions = 15);
+    explicit EditorControl(wxWindow* parent, int selectionOptions = SelectOption_Default);
     ~EditorControl() override;
     intptr_t Send(Scintilla::Message message, uintptr_t wParam = 0, intptr_t lParam = 0);
     uint64_t DocumentRevision() const { return documentRevision_; }

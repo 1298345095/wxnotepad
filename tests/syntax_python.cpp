@@ -115,9 +115,10 @@ public:
                             editor->Send(Message::StyleGetFore, SCE_PY_NUMBER) == 0x0000FF,
                         "original Python light palette and grouped styles must be installed");
                 for (const int style : {SCE_PY_WORD, SCE_PY_STRING_DQ, SCE_PY_TRIPLE_STRING_DQ, SCE_PY_FMTSTRING_DQ}) {
-                    Require(Font(editor, style) == Font(editor, 32) &&
+                    Require(Font(editor, style) == Font(editor, static_cast<int>(Scintilla::StylesCommon::Default)) &&
                                 editor->Send(Message::StyleGetSizeFractional, style) ==
-                                    editor->Send(Message::StyleGetSizeFractional, 32) &&
+                                    editor->Send(Message::StyleGetSizeFractional,
+                                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) &&
                                 editor->Send(Message::StyleGetBack, style) == 0xFFFFFF,
                             "Python styles must retain native font, size and light background");
                 }

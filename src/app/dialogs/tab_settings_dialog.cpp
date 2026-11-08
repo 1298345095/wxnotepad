@@ -29,9 +29,11 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
                                             const wxString& inheritLabel) {
         auto* box = new wxStaticBoxSizer(wxVERTICAL, &dialog, name);
         auto* owner = box->GetStaticBox();
-        auto* tab = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 256);
+        auto* tab = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1,
+                                   OriginalSettingLimits::MaxTabWidth);
         tab->SetName(name + " Tab Width");
-        auto* indent = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 256);
+        auto* indent = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0,
+                                      OriginalSettingLimits::MaxTabWidth);
         indent->SetName(name + " Indentation Width");
         auto* spaces = new wxCheckBox(owner, wxID_ANY, "Tabs as Spaces");
         spaces->SetName(name + " Tabs as Spaces");

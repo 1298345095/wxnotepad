@@ -32,7 +32,8 @@ void Command(EditorFrame* frame, const char* label) {
 }
 void Guides(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const auto fontSize = editor->Send(Message::StyleGetSizeFractional, 32);
+    const auto fontSize =
+        editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
     Require(editor->Send(Message::GetIndentationGuides) == 0, "guides default to hidden");
     Command(frame, "Indentation Guides");
     Require(editor->Send(Message::GetIndentationGuides) == 2, "plain text enables original look-forward guides");
@@ -47,7 +48,9 @@ void Guides(EditorFrame* frame) {
                     editor->Send(Message::StyleGetBack, 37) == 0xFFFFFF,
                 "scheme installation applies original guide default foreground and inherited background");
     }
-    Require(editor->Send(Message::StyleGetSizeFractional, 32) == fontSize && editor->GetDPI().x > 0,
+    Require(editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) ==
+                    fontSize &&
+                editor->GetDPI().x > 0,
             "guide styles preserve native base font and current DPI");
     Command(frame, "Indentation Guides");
     Require(editor->Send(Message::GetIndentationGuides) == 0, "second native guide command hides them");

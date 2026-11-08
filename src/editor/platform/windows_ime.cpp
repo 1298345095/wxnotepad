@@ -2,6 +2,7 @@
 // Copyright 1998-2003 by Neil Hodgson. See licenses/Scintilla.txt
 // and licenses/Notepad4.txt for redistribution terms.
 #include "editor/editor_core.h"
+#include "editor/display_units.h"
 #include <imm.h>
 #include <cwchar>
 
@@ -223,7 +224,8 @@ void EditorControl::Core::UpdateSystemCaret() {
     // Use the original ScintillaWin character-height calculation, not line leading.
     const auto& style = vs.styles[pdoc->StyleIndexAt(sel.MainCaret())];
     const int sizeZoomed = core::GetFontSizeZoomed(style.size, vs.zoomLevel);
-    font.lfHeight = -MulDiv(sizeZoomed, window_.GetDPI().y, 72 * 100);
+    font.lfHeight =
+        -MulDiv(sizeZoomed, window_.GetDPI().y, DisplayUnits::PointsPerInch * Scintilla::FontSizeMultiplier);
     font.lfWeight = static_cast<LONG>(style.weight);
     font.lfItalic = style.italic;
     font.lfCharSet = DEFAULT_CHARSET;

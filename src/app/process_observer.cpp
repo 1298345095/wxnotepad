@@ -1,4 +1,5 @@
 #include "app/process_observer.h"
+#include "editor/editor_ids.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "diagnostics/trace.h"
@@ -119,7 +120,8 @@ void ProcessObserver::Publish() {
             static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretPeriod)),
             frame_->Editor()->Occurrences().Options(), frame_->Editor()->CodeFoldingVisible(),
             frame_->Editor()->VisualBraceMatching(), frame_->Editor()->CurrentBlockHighlighted(),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, 2))) +
+            static_cast<long long>(
+                frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, EditorMargin::Folding))) +
         wxString::Format("bookmark_margin\t%d\nchange_history\t%lld\nauto_shrink_scroll_width\t%d\n",
                          frame_->Editor()->BookmarkMarginVisible(),
                          static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetChangeHistory)),

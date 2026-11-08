@@ -1,6 +1,7 @@
 // wx rendering and window adapter for the pinned Notepad4 Scintilla core.
 // Basic LTR rendering is supported; complex layout and popup UI are not implemented.
 #include "core_headers.h"
+#include "editor/display_units.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
@@ -96,7 +97,7 @@ public:
         p->owned_ = std::move(dc);
         return p;
     }
-    void SetMode(SurfaceMode m) noexcept override { utf8_ = m.codePage == 65001; }
+    void SetMode(SurfaceMode m) noexcept override { utf8_ = m.codePage == Scintilla::CpUtf8; }
     void SetRenderingParams(void*, void*) noexcept override {
         // wxDC owns native rendering parameters; DirectWrite overrides do not apply.
     }
@@ -107,7 +108,7 @@ public:
     }
     bool SupportsFeature(Scintilla::Supports) const noexcept override { return false; }
     bool Initialised() const noexcept override { return dc_ != nullptr; }
-    int LogPixelsY() const noexcept override { return dc_ ? dc_->GetPPI().y : 96; }
+    int LogPixelsY() const noexcept override { return dc_ ? dc_->GetPPI().y : DisplayUnits::DefaultDpi; }
     int PixelDivisions() const noexcept override { return 1; }
     int DeviceHeightFont(int points) const noexcept override { return points; }
     void SCICALL LineDraw(Point a, Point b, Stroke s) override {
@@ -458,7 +459,7 @@ void SCICALL Menu::Show(Point, const Window&) noexcept {
     // Original-core popup menus are outside the currently supported host UI.
 }
 int64_t QueryPerformanceFrequency() noexcept {
-    return 1000000000;
+    return std::nano::den;
 }
 int64_t QueryPerformanceCounter() noexcept {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch())

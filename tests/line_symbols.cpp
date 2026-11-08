@@ -33,11 +33,12 @@ void Shortcut(EditorControl* editor, int key) {
 }
 auto DocumentState(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    return std::tuple(NativeSearch::Text(editor), editor->Send(Message::GetAnchor),
-                      editor->Send(Message::GetCurrentPos), editor->Send(Message::GetEOLMode),
-                      editor->Send(Message::GetModify), editor->Send(Message::CanUndo), editor->Send(Message::CanRedo),
-                      editor->Send(Message::GetLineCount), frame->DocumentEncoding(), frame->DocumentHasBom(),
-                      editor->Send(Message::StyleGetSizeFractional, 32));
+    return std::tuple(
+        NativeSearch::Text(editor), editor->Send(Message::GetAnchor), editor->Send(Message::GetCurrentPos),
+        editor->Send(Message::GetEOLMode), editor->Send(Message::GetModify), editor->Send(Message::CanUndo),
+        editor->Send(Message::CanRedo), editor->Send(Message::GetLineCount), frame->DocumentEncoding(),
+        frame->DocumentHasBom(),
+        editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)));
 }
 void Combined(EditorFrame* frame) {
     auto* editor = frame->Editor();

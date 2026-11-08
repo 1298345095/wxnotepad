@@ -214,7 +214,8 @@ void WrapAndLifecycle(EditorFrame* frame, PixelReader& pixels) {
     Require((editor->GetDPI().y == 144 && normal == 3 && wide == 6) ||
                 (editor->GetDPI().y == 96 && normal == 2 && wide == 4),
             "original frame scales once with actual window DPI and zoom");
-    Require(editor->Send(Message::StyleGetSize, 32) == 12, "highlight keeps delivered native 12-point base font");
+    Require(editor->Send(Message::StyleGetSize, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == 12,
+            "highlight keeps delivered native 12-point base font");
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
     TestEditor::ResetStream(editor, "int main() {\n    return 0;\n}\nlast\n");
     editor->Send(Message::Colourise, 0, -1);

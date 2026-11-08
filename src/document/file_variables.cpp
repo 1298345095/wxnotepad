@@ -1,4 +1,5 @@
 #include "document/file_variables.h"
+#include "settings/original_settings_constants.h"
 #include <algorithm>
 #include <climits>
 #include <cstdlib>
@@ -66,10 +67,10 @@ std::optional<std::string> StringVariable(std::string_view text, std::string_vie
 }
 void ReadLocalVariables(std::string_view window, OriginalFileVariables& variables) {
     if (const auto width = IntegerVariable(window, "tab-width"); width.has_value())
-        variables.tabWidth = std::clamp(*width, 1, 256);
+        variables.tabWidth = std::clamp(*width, 1, OriginalSettingLimits::MaxTabWidth);
     auto indent = IntegerVariable(window, "*basic-indent");
     if (!indent.has_value()) indent = IntegerVariable(window, "*basic-offset");
-    if (indent.has_value()) variables.indentWidth = std::clamp(*indent, 0, 256);
+    if (indent.has_value()) variables.indentWidth = std::clamp(*indent, 0, OriginalSettingLimits::MaxTabWidth);
     if (const auto tabs = IntegerVariable(window, "indent-tabs-mode"); tabs.has_value())
         variables.tabsAsSpaces = *tabs == 0;
     if (const auto tabs = IntegerVariable(window, "*tab-always-indent"); tabs.has_value())
@@ -78,7 +79,7 @@ void ReadLocalVariables(std::string_view window, OriginalFileVariables& variable
                     variables.tabsAsSpaces.has_value() || variables.tabIndents.has_value();
     variables.any |= IntegerVariable(window, "truncate-lines").has_value();
     if (const auto boundary = IntegerVariable(window, "fill-column"); boundary.has_value())
-        variables.longLinesLimit = std::clamp(*boundary, 0, 4096);
+        variables.longLinesLimit = std::clamp(*boundary, 0, OriginalSettingLimits::MaxLongLineColumn);
     variables.any |= variables.longLinesLimit.has_value();
     variables.any |= StringVariable(window, "mode").has_value();
     if (variables.tabWidth.has_value() && !variables.indentWidth.has_value())

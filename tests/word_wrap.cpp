@@ -399,7 +399,8 @@ private:
         const auto encoding = frame->DocumentEncoding();
         const auto eol = editor->Send(Message::GetEOLMode);
         const auto lexer = editor->Send(Message::GetLexer);
-        const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
+        const auto font =
+            editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
         class GoToLineResponder final : public wxModalDialogHook {
         public:
             explicit GoToLineResponder(EditorFrame* frame) : frame_(frame) { Register(); }
@@ -449,7 +450,8 @@ private:
                     !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
                     frame->DocumentEncoding() == encoding && editor->Send(Message::GetEOLMode) == eol &&
                     editor->Send(Message::GetLexer) == lexer &&
-                    editor->Send(Message::StyleGetSizeFractional, 32) == font,
+                    editor->Send(Message::StyleGetSizeFractional,
+                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == font,
                 "combined presentation and navigation preserve bytes, history, encoding, EOL, syntax and font");
         Require(frame->SaveAs(files.saved).status == SaveStatus::Saved && Bytes(files.saved) == source,
                 "the combined view saves byte-identical text");

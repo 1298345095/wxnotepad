@@ -60,7 +60,8 @@ public:
                 const auto x = editor->Send(Message::PointXFromPosition, 0, 7);
                 const auto tabWidth = editor->Send(Message::GetTabWidth);
                 const auto eol = editor->Send(Message::GetEOLMode);
-                const auto fontSize = editor->Send(Message::StyleGetSizeFractional, 32);
+                const auto fontSize = editor->Send(Message::StyleGetSizeFractional,
+                                                   static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
                 const auto tabDraw = editor->Send(Message::GetTabDrawMode);
                 NativeSearch::Command(frame, id);
                 Require(item->IsChecked() && editor->Send(Message::GetViewWS) == 1,
@@ -69,7 +70,8 @@ public:
                             editor->Send(Message::GetCurrentPos) == 2 && !editor->Send(Message::GetModify) &&
                             !editor->Send(Message::CanUndo) && editor->Send(Message::GetEOLMode) == eol &&
                             editor->Send(Message::GetTabWidth) == tabWidth &&
-                            editor->Send(Message::StyleGetSizeFractional, 32) == fontSize &&
+                            editor->Send(Message::StyleGetSizeFractional,
+                                         static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == fontSize &&
                             editor->Send(Message::GetTabDrawMode) == tabDraw &&
                             editor->Send(Message::PointXFromPosition, 0, 7) == x,
                         "showing whitespace must preserve bytes, selection, save point, history and tab geometry");

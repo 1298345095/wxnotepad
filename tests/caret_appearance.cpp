@@ -297,7 +297,8 @@ void BlinkAndLifecycle(EditorFrame* frame, PaintRows& paint) {
 
 void ZoomAndDpi(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const auto size = editor->Send(Message::StyleGetSizeFractional, 32);
+    const auto size =
+        editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
     const auto quality = editor->Send(Message::GetFontQuality);
     const int dpi = editor->GetDPI().y;
     int systemWidth = 1;
@@ -324,7 +325,8 @@ void ZoomAndDpi(EditorFrame* frame) {
         }
     }
     editor->Send(Message::SetZoom, 100);
-    Require(editor->Send(Message::StyleGetSizeFractional, 32) == size &&
+    Require(editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) ==
+                    size &&
                 editor->Send(Message::GetFontQuality) == quality,
             "caret width scaling preserves native font point size and clarity");
     std::puts("PASS: original width distinction, native DPI/zoom and preserved font settings");

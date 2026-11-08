@@ -1,4 +1,5 @@
 #include "search/search_session.h"
+#include "search/search_limits.h"
 #include "search/find_text.h"
 #include "editor/editor_control.h"
 #include <cstdint>
@@ -222,11 +223,11 @@ void SearchSession::Remember(bool replacement) {
         size_t length = 0;
         for (const auto ch : text)
             length += ch.GetValue() > 0xffff ? 2 : 1;
-        if (text.empty() || length >= 2048) return;
+        if (text.empty() || length >= SearchLimits::HistoryTextUtf16Units) return;
         const auto escaped = EscapeFindText(text).text;
         std::erase(history, escaped);
         history.insert(history.begin(), escaped);
-        if (history.size() > 32) history.resize(32);
+        if (history.size() > SearchLimits::HistoryEntries) history.resize(SearchLimits::HistoryEntries);
     };
     if (!request_.query.empty()) {
         hasFindText_ = true;

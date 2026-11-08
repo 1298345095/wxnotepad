@@ -1,4 +1,5 @@
 #include "editor/occurrence_marking.h"
+#include "editor/editor_ids.h"
 #include "editor/editor_control.h"
 #include <ScintillaStructures.h>
 #include <algorithm>
@@ -99,7 +100,7 @@ void OccurrenceMarking::Reset(unsigned flags, std::string text) {
     const bool hadResult = matchCount_ || (flags_ & FromFindAll);
     timer_.Stop();
     if (matchCount_) {
-        editor_.Send(Message::SetIndicatorCurrent, 8);
+        editor_.Send(Message::SetIndicatorCurrent, EditorIndicator::Occurrence);
         editor_.Send(Message::IndicatorClearRange, 0, editor_.Send(Message::GetLength));
     }
     if ((bookmarkLine_ >= 0 || bookmarkForFindAll_) && ((flags | flags_) & Bookmark) &&
@@ -226,7 +227,7 @@ void OccurrenceMarking::Continue() {
     auto stop = position;
     std::array<Range, 240> ranges{};
     size_t index = 0;
-    editor_.Send(Message::SetIndicatorCurrent, 8);
+    editor_.Send(Message::SetIndicatorCurrent, EditorIndicator::Occurrence);
     const auto mark = [this, &ranges, &index] {
         MarkRanges(editor_, ranges, index, flags_, bookmarkLine_);
         index = 0;

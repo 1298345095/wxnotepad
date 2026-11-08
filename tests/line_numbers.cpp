@@ -88,10 +88,19 @@ void MarginGeometry(EditorFrame* frame) {
                     static_cast<long long>(before), static_cast<long long>(after));
     }
     const auto normalWidth = editor->Send(Message::GetMarginWidthN, 0);
-    editor->Send(Message::StyleSetSize, 33, 24);
-    Require(editor->Send(Message::GetMarginWidthN, 0) > normalWidth && editor->Send(Message::StyleGetSize, 32) == 12,
+    const auto numberStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber);
+    const auto linkStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Link);
+    const auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+    const auto linkSize = editor->Send(Message::StyleGetSize, linkStyle);
+    editor->Send(Message::StyleSetSize, linkStyle, 24);
+    Require(editor->Send(Message::GetMarginWidthN, 0) == normalWidth,
+            "link font metrics must not affect the line-number margin");
+    editor->Send(Message::StyleSetSize, numberStyle, 24);
+    Require(editor->Send(Message::GetMarginWidthN, 0) > normalWidth &&
+                editor->Send(Message::StyleGetSize, defaultStyle) == 12,
             "the margin must follow its current font metrics without changing the text font");
-    editor->Send(Message::StyleSetSize, 33, 12);
+    editor->Send(Message::StyleSetSize, numberStyle, 12);
+    editor->Send(Message::StyleSetSize, linkStyle, linkSize);
     Require(editor->Send(Message::GetMarginWidthN, 0) == normalWidth,
             "restoring the number font must restore the measured width");
     std::printf("PASS: font-dependent geometry at DPI %d, scale %g\n", editor->GetDPI().y, editor->GetDPIScaleFactor());

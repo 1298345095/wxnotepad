@@ -157,7 +157,8 @@ void ReferenceInsertion(EditorFrame* frame, const std::vector<std::string>& fiel
                         const std::vector<std::string>& expected) {
     auto* editor = frame->Editor();
     PrepareSelection(editor, fields);
-    const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
+    const auto font =
+        editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
     const auto zoom = editor->Send(Message::GetZoom);
     const auto codec = frame->DocumentEncoding();
     const auto bom = frame->DocumentHasBom();
@@ -178,7 +179,9 @@ void ReferenceInsertion(EditorFrame* frame, const std::vector<std::string>& fiel
         throw;
     }
     Require(editor->Send(Message::GetEOLMode) == std::stoi(fields[2]) && frame->DocumentEncoding() == codec &&
-                frame->DocumentHasBom() == bom && editor->Send(Message::StyleGetSizeFractional, 32) == font &&
+                frame->DocumentHasBom() == bom &&
+                editor->Send(Message::StyleGetSizeFractional,
+                             static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == font &&
                 editor->Send(Message::GetZoom) == zoom,
             "header insertion retains encoding, BOM, EOL, font and zoom metadata");
 }

@@ -1,4 +1,6 @@
 #include "editor/editor_control.h"
+#include "editor/display_units.h"
+#include "editor/editor_ids.h"
 #include "editor/platform/native_encoding.h"
 #include "editor/editor_core.h"
 #include "editor/platform/clipboard.h"
@@ -52,20 +54,25 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     Send(Message::SetCaretLineHighlightSubLine, 1);
     SetCurrentLineHighlightMode(lineHighlightMode_);
     WXNOTE_TRACE("editor.create", "\ttarget=%p\thandle=%p", static_cast<void*>(this), GetHandle());
-    Send(Message::SetMarginTypeN, 0, static_cast<intptr_t>(Scintilla::MarginType::Number));
-    Send(Message::SetMarginMaskN, 0, 0);
+    Send(Message::SetMarginTypeN, EditorMargin::LineNumber, static_cast<intptr_t>(Scintilla::MarginType::Number));
+    Send(Message::SetMarginMaskN, EditorMargin::LineNumber, 0);
     SetLineNumbersVisible(true);
-    Send(Message::SetMarginTypeN, 1, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
-    Send(Message::SetMarginMaskN, 1, 0x1FFFFFF);
-    Send(Message::SetMarginSensitiveN, 1, 1);
-    Send(Message::SetMarginCursorN, 1, static_cast<intptr_t>(Scintilla::CursorShape::Arrow));
+    Send(Message::SetMarginTypeN, EditorMargin::Bookmark, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
+    Send(Message::SetMarginMaskN, EditorMargin::Bookmark, ~Scintilla::MaskFolders);
+    Send(Message::SetMarginSensitiveN, EditorMargin::Bookmark, 1);
+    Send(Message::SetMarginCursorN, EditorMargin::Bookmark, static_cast<intptr_t>(Scintilla::CursorShape::Arrow));
     SetBookmarkMarginVisible(false);
     // Original Styles.cpp change-history defaults: saved green, modified blue.
-    for (const int marker : {21, 22, 23, 24}) {
-        const auto colour = marker <= 22 ? 0xFF008000 : 0xFFFF8000;
-        Send(Message::MarkerSetForeTranslucent, marker, colour);
-        Send(Message::MarkerSetBackTranslucent, marker,
-             marker == 21 || marker == 24 ? 0xFF000000 | Send(Message::StyleGetBack, 33) : colour);
+    for (const auto marker :
+         {Scintilla::MarkerOutline::HistoryRevertedToOrigin, Scintilla::MarkerOutline::HistorySaved,
+          Scintilla::MarkerOutline::HistoryModified, Scintilla::MarkerOutline::HistoryRevertedToModified}) {
+        const auto colour = marker <= Scintilla::MarkerOutline::HistorySaved ? 0xFF008000 : 0xFFFF8000;
+        Send(Message::MarkerSetForeTranslucent, static_cast<uintptr_t>(marker), colour);
+        Send(Message::MarkerSetBackTranslucent, static_cast<uintptr_t>(marker),
+             marker == Scintilla::MarkerOutline::HistoryRevertedToOrigin ||
+                     marker == Scintilla::MarkerOutline::HistoryRevertedToModified
+                 ? 0xFF000000 | Send(Message::StyleGetBack, static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber))
+                 : colour);
     }
     SetCurrentBlockHighlighted(true);
     ApplyCaretAppearance();
@@ -160,7 +167,10 @@ void EditorControl::SetCurrentLineHighlightMode(LineHighlightMode mode) {
     // One rounding step preserves ScaleStylePixel's DPI * zoom scaling.
     const bool outline = mode == LineHighlightMode::OutlineFrame;
     const int width =
-        outline ? std::max(1, static_cast<int>(std::lround(2.0 * GetDPI().y * Send(Message::GetZoom) / 9600.0))) : 0;
+        outline
+            ? std::max(1, static_cast<int>(std::lround(2.0 * GetDPI().y * Send(Message::GetZoom) /
+                                                       (DisplayUnits::DefaultDpi * DisplayUnits::ZoomPercentScale))))
+            : 0;
     Send(Message::SetCaretLineFrame, width);
     Send(Message::SetCaretLineLayer, static_cast<uintptr_t>(Scintilla::Layer::UnderText));
     Send(Message::SetElementColour, element, outline ? 0x5AC3C0C2 : 0x5A00FFFF);
@@ -193,7 +203,7 @@ bool EditorControl::CopyAdd() {
     old->append("\r\n\r\n");
     old->append(added);
     core::SelectionText text;
-    text.Copy(*old, 65001, false, false);
+    text.Copy(*old, Scintilla::CpUtf8, false, false);
     EditorClipboard::Write(*GetParent(), text);
     return true;
 }
@@ -360,8 +370,8 @@ void EditorControl::UpdateBookmarkMargin() {
     bookmarkMarginWidthDirty_ = false;
     const auto width =
         (bookmarkMarginVisible_ || changeHistoryOptions_ != 0) ? core_->WndProc(Message::TextHeight, 0, 0) - 2 : 0;
-    if (core_->WndProc(Message::GetMarginWidthN, 1, 0) != width) {
-        core_->WndProc(Message::SetMarginWidthN, 1, width);
+    if (core_->WndProc(Message::GetMarginWidthN, EditorMargin::Bookmark, 0) != width) {
+        core_->WndProc(Message::SetMarginWidthN, EditorMargin::Bookmark, width);
         core_->UpdateWrapLayout();
     }
 }
@@ -376,7 +386,10 @@ void EditorControl::SetChangeHistoryOptions(int options) {
 void EditorControl::ToggleChangeHistory() {
     // Notepad4.cpp::IDM_VIEW_CHANGE_HISTORY_MARKER. Never discard undo to enable it.
     if (changeHistoryOptions_ != 0 || !Send(Message::CanUndo))
-        SetChangeHistoryOptions(changeHistoryOptions_ == 0 ? 3 : 0);
+        SetChangeHistoryOptions(changeHistoryOptions_ == 0
+                                    ? static_cast<int>(Scintilla::ChangeHistoryOption::Enabled) |
+                                          static_cast<int>(Scintilla::ChangeHistoryOption::Markers)
+                                    : static_cast<int>(Scintilla::ChangeHistoryOption::Disabled));
 }
 
 void EditorControl::SetCodeFoldingVisible(bool visible) {
@@ -395,8 +408,8 @@ void EditorControl::UpdateFoldMargin() {
                                                             static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber),
                                                             reinterpret_cast<intptr_t>("+_"))
                                            : 0;
-    if (core_->WndProc(Message::GetMarginWidthN, 2, 0) != width) {
-        core_->WndProc(Message::SetMarginWidthN, 2, width);
+    if (core_->WndProc(Message::GetMarginWidthN, EditorMargin::Folding, 0) != width) {
+        core_->WndProc(Message::SetMarginWidthN, EditorMargin::Folding, width);
         core_->UpdateWrapLayout();
     }
 }
@@ -416,10 +429,12 @@ void EditorControl::UpdateLineNumberMargin() {
         const std::string digits(std::to_string(count).size(), '9');
         // Like Notepad4's UpdateLineNumberWidth, measure the core's number style.
         // Use the required digit count and native DIP padding, without reading text.
-        width = core_->WndProc(Message::TextWidth, 33, reinterpret_cast<intptr_t>(digits.c_str())) + FromDIP(8);
+        width = core_->WndProc(Message::TextWidth, static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber),
+                               reinterpret_cast<intptr_t>(digits.c_str())) +
+                FromDIP(8);
     }
-    if (core_->WndProc(Message::GetMarginWidthN, 0, 0) != width) {
-        core_->WndProc(Message::SetMarginWidthN, 0, width);
+    if (core_->WndProc(Message::GetMarginWidthN, EditorMargin::LineNumber, 0) != width) {
+        core_->WndProc(Message::SetMarginWidthN, EditorMargin::LineNumber, width);
         // A changed text width invalidates wrapping. Reveal the caret against
         // the new display rows, rather than scrolling with the old layout.
         core_->UpdateWrapLayout();

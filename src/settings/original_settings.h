@@ -1,5 +1,7 @@
 #pragma once
 
+#include "settings/original_settings_constants.h"
+#include "editor/display_units.h"
 #include "document/encoding/encoding_detection.h"
 #include "editor/caret_appearance.h"
 #include <wx/string.h>
@@ -31,14 +33,14 @@ struct OriginalSettings {
     bool fixLineEndings = false;
     bool fixTrailingBlanks = false;
     EncodingOptions encoding;
-    int zoomLevel = 100;
+    int zoomLevel = DisplayUnits::ZoomPercentScale;
     CaretAppearance caret;
     int highlightCurrentLine = 12;
     int longLinesLimit = 80;
     bool markLongLines = false;
     int longLineMode = 1;
-    int selectOption = 15;
-    int autoInsertMask = 511;
+    int selectOption = SelectOption_Default;
+    int autoInsertMask = AutoInsertMask_Default;
     int markOccurrences = 1;
     bool saveFindReplace = false;
     int findReplaceOption = 2;

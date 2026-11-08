@@ -1,4 +1,6 @@
 #include "settings/settings_store.h"
+#include "search/search_limits.h"
+#include <ScintillaTypes.h>
 #include <wx/ffile.h>
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -111,7 +113,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.loadNFOasOEM = ReadBool("LoadNFOasOEM", defaults.encoding.loadNFOasOEM);
     values.encoding.noEncodingTags = ReadBool("NoEncodingTags", defaults.encoding.noEncodingTags);
     values.encoding.noFileVariables = ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
-    values.zoomLevel = std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), 10, 500);
+    values.zoomLevel =
+        std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
     int caretStyle = ReadInt("CaretStyle", defaults.caret.lineWidth);
     values.caret.blockAfterSelection = caretStyle >= 100;
     caretStyle %= 100;
@@ -120,7 +123,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.caret.blinkPeriod = ReadInt("CaretBlinkPeriod", defaults.caret.blinkPeriod);
     const int currentLine = ReadInt("HighlightCurrentLine", defaults.highlightCurrentLine);
     values.highlightCurrentLine = std::clamp(currentLine % 10, 0, 2) + (currentLine >= 10 ? 10 : 0);
-    values.longLinesLimit = std::clamp(ReadInt("LongLinesLimit", defaults.longLinesLimit), 0, 4096);
+    values.longLinesLimit =
+        std::clamp(ReadInt("LongLinesLimit", defaults.longLinesLimit), 0, OriginalSettingLimits::MaxLongLineColumn);
     values.markLongLines = ReadBool("MarkLongLines", defaults.markLongLines);
     values.longLineMode = std::clamp(ReadInt("LongLineMode", defaults.longLineMode), 1, 2);
     values.selectOption = ReadInt("SelectOption", defaults.selectOption);
@@ -136,8 +140,10 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.lineSelection = ReadInt("LineSelection", defaults.lineSelection);
     values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", defaults.defaultEOLMode), 0, 2);
     values.warnLineEndings = ReadBool("WarnLineEndings", defaults.warnLineEndings);
-    values.globalTabs.tabWidth = std::clamp(ReadInt("TabWidth", defaults.globalTabs.tabWidth), 1, 256);
-    values.globalTabs.indentWidth = std::clamp(ReadInt("IndentWidth", defaults.globalTabs.indentWidth), 0, 256);
+    values.globalTabs.tabWidth =
+        std::clamp(ReadInt("TabWidth", defaults.globalTabs.tabWidth), 1, OriginalSettingLimits::MaxTabWidth);
+    values.globalTabs.indentWidth =
+        std::clamp(ReadInt("IndentWidth", defaults.globalTabs.indentWidth), 0, OriginalSettingLimits::MaxTabWidth);
     values.globalTabs.tabsAsSpaces = ReadBool("TabsAsSpaces", defaults.globalTabs.tabsAsSpaces);
     values.tabIndents = ReadBool("TabIndents", defaults.tabIndents);
     values.autoIndent = ReadBool("AutoIndent", defaults.autoIndent);
@@ -147,8 +153,10 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.dateTimeLong = ReadDateTimeFormat("DateTimeLong");
     for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
         auto& tabs = values.schemeTabs[index];
-        tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, SchemeSections[index]), 1, 256);
-        tabs.indentWidth = std::clamp(ReadInt("IndentWidth", tabs.indentWidth, SchemeSections[index]), 0, 256);
+        tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, SchemeSections[index]), 1,
+                                   OriginalSettingLimits::MaxTabWidth);
+        tabs.indentWidth = std::clamp(ReadInt("IndentWidth", tabs.indentWidth, SchemeSections[index]), 0,
+                                      OriginalSettingLimits::MaxTabWidth);
         tabs.tabsAsSpaces = ReadInt("TabsAsSpaces", tabs.tabsAsSpaces, SchemeSections[index]) != 0;
         tabs.useGlobal = ReadInt("UseGlobalTabSettings", tabs.useGlobal, SchemeSections[index]) != 0;
     }
@@ -249,7 +257,7 @@ std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName) co
             if (value.StartsWith("\"") && value.EndsWith("\"") && value.length() >= 2)
                 value = value.Mid(1, value.length() - 2);
             if (!value.empty()) history.push_back(value);
-            if (history.size() == 32) break;
+            if (history.size() == SearchLimits::HistoryEntries) break;
         }
     }
     return history;
@@ -262,7 +270,7 @@ void SettingsStore::WriteHistory(const wxString& sectionName, const std::vector<
         std::erase(merged, *item);
         merged.insert(merged.begin(), *item);
     }
-    if (merged.size() > 32) merged.resize(32);
+    if (merged.size() > SearchLimits::HistoryEntries) merged.resize(SearchLimits::HistoryEntries);
     bool section = false;
     for (size_t index = 0; index < lines_.size();) {
         wxString line = lines_[index];
