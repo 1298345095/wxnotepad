@@ -29,7 +29,9 @@ void Peer(const wxString& path, const wxString& text, const wxString& action = "
     const wxString arguments[] = {wxStandardPaths::Get().GetExecutablePath(), "--peer", path, text, action};
     const wchar_t* argv[] = {arguments[0].wc_str(), arguments[1].wc_str(), arguments[2].wc_str(),
                              arguments[3].wc_str(), arguments[4].wc_str(), nullptr};
-    Require(wxExecute(argv, wxEXEC_SYNC) == 0, "independent file writer must finish");
+    // Running the independent writer must preserve the observed application's
+    // native window enablement and focus.
+    Require(wxExecute(argv, wxEXEC_SYNC | wxEXEC_NODISABLE) == 0, "independent file writer must finish");
 }
 void Pause(int milliseconds) {
     const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
@@ -136,6 +138,8 @@ public:
 class FileChangeApp final : public wxApp {
 public:
     bool OnInit() override {
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
+        std::setvbuf(stderr, nullptr, _IONBF, 0);
         if (argc == 5 && wxString(argv[1]) == "--peer") {
             const auto path = TestFiles::Utf8Path(wxString(argv[2]).ToStdString(wxConvUTF8));
             const auto action = wxString(argv[4]);
@@ -148,8 +152,8 @@ public:
                 const auto target = action == "replace" ? std::filesystem::path(path).concat(".peer") : path;
                 {
                     std::ofstream output(target, std::ios::binary);
-                    const auto text = wxString(argv[3]).ToUTF8();
-                    output.write(text.data(), static_cast<std::streamsize>(text.length()));
+                    const auto text = wxString(argv[3]).ToStdString(wxConvUTF8);
+                    output.write(text.data(), static_cast<std::streamsize>(text.size()));
                 }
                 if (action == "replace" && !wxRenameFile(TestFiles::Filename(target), TestFiles::Filename(path), true))
                     throw std::runtime_error("independent replacement must succeed");
@@ -171,11 +175,13 @@ public:
                 std::ofstream(path, std::ios::binary) << "original\n";
                 Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "fixture opens");
                 frame->Show();
+                ChangeDecision decision;
                 Peer(TestFiles::Filename(path), "external replacement\n");
+                Require(TestFiles::Bytes(path) == "external replacement\n",
+                        "independent writer must produce the requested fixture bytes");
                 Wait([&] { return TestEditor::Text(frame->Editor()) == "external replacement\n"; });
                 Require(!frame->Editor()->Send(Scintilla::Message::GetModify), "automatic reload is clean");
                 std::puts("PASS: independent process change automatically reloads clean content");
-                ChangeDecision decision;
                 auto options = frame->FileWatching();
                 options.mode = FileWatchingMode::ShowMessage;
                 frame->SetFileWatchingOptions(options);
