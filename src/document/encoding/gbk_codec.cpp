@@ -71,7 +71,7 @@ std::optional<std::string> DecodeGbk(std::string_view bytes) {
             wide += *decoded;
         else {
             const auto decodedPua = DecodePuaPair(piece);
-            if (!decodedPua) return std::nullopt;
+            if (!decodedPua.has_value()) return std::nullopt;
             wide += *decodedPua;
         }
         offset += length;

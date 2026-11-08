@@ -816,7 +816,9 @@ class DragApp final : public wxApp {
 public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
-        std::unique_ptr<wxLog>{wxLog::SetActiveTarget(new wxLogStderr)};
+        {
+            const std::unique_ptr<wxLog> previousLog(wxLog::SetActiveTarget(new wxLogStderr));
+        }
 #ifdef __WXGTK__
         if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &privateControl_)) ObserveNativeDrags(&privateControl_);
 #endif
