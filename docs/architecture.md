@@ -287,7 +287,7 @@ lexer ID, consumed keyword lists and attributes, lexer properties, style data an
 fold capability. Comment delimiters and the original inclusive comment-style
 marker live in the same descriptor. Block-comment removal reads current styles
 and searches original inner delimiters; insertion reuses selection enclosure.
-Iterate these descriptors for the Language menu, extension
+Iterate these descriptors for the Scheme menu, extension
 selection and scheme installation. Keep Automatic as a session choice, distinct
 from Plain Text, which is an actual scheme.
 
