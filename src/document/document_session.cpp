@@ -138,6 +138,7 @@ struct ReloadView {
     intptr_t visibleTop;
     intptr_t documentTop;
     intptr_t xOffset;
+    intptr_t scrollWidth;
 };
 
 ReloadView CaptureReloadView(EditorControl& editor) {
@@ -148,11 +149,21 @@ ReloadView CaptureReloadView(EditorControl& editor) {
     const auto column = editor.Send(Message::GetColumn, caret, line);
     const auto visibleTop = editor.Send(Message::GetFirstVisibleLine);
     const auto documentTop = editor.Send(Message::DocLineFromVisible, visibleTop);
-    return {caret, anchor, line, column, visibleTop, documentTop, editor.Send(Message::GetXOffset)};
+    return {caret,
+            anchor,
+            line,
+            column,
+            visibleTop,
+            documentTop,
+            editor.Send(Message::GetXOffset),
+            editor.Send(Message::GetScrollWidth)};
 }
 
 void RestoreReloadView(EditorControl& editor, const ReloadView& view) {
     using Scintilla::Message;
+    // ClearAll resets width tracking. Restore the current file's measured range
+    // before its view, so native layout cannot clamp the saved offset before paint.
+    editor.Send(Message::SetScrollWidth, static_cast<uintptr_t>(view.scrollWidth));
     editor.Send(Message::SetSel, view.anchor, view.caret);
     // Original FileLoad compares the saved one-based line against the restored
     // zero-based line, then uses EditJumpTo/EditSelectEx.

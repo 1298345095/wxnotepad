@@ -2,6 +2,8 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
 #include "file_helpers.h"
+#include "native_key_helpers.h"
+#include "native_scroll_helpers.h"
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <wx/file.h>
@@ -30,11 +32,12 @@ public:
         auto* frame = new EditorFrame;
         auto* editor = frame->Editor();
         frame->ShowWithoutActivating();
-        CallAfter([this, frame, editor] {
+        NativeKeys::AfterPresentation(frame, [this, frame, editor](bool presented) {
             const wxString path = wxFileName::CreateTempFileName(
                                       TestFiles::Filename(TestFiles::TemporaryDirectory() / "wxnotepad-reopen-")) +
                                   ".cpp";
             try {
+                Require(presented, "the native reopen view is presented before viewport scenarios");
                 std::string bytes;
                 for (int line = 0; line < 100; ++line)
                     bytes += std::string(200, 'x') + "\n";
@@ -43,6 +46,8 @@ public:
                 Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
                         "initial Open must succeed");
                 document.SelectLanguage(SyntaxLanguage::Python);
+                Require(NativeScroll::WaitForHorizontalRange(editor, true, 120),
+                        "the initial long document supports the saved horizontal viewport");
                 editor->Send(Message::SetSel, 6020, 6040);
                 editor->Send(Message::SetFirstVisibleLine, 25);
                 editor->Send(Message::SetXOffset, 120);
@@ -179,10 +184,15 @@ public:
                 std::puts("PASS: application reopen keeps its language menu synchronized");
                 Write(path, bytes);
                 Require(frame->Open(path).status == OpenStatus::Opened, "frame viewport fixture must load");
+                Require(NativeScroll::WaitForHorizontalRange(editor, true, 120),
+                        "the frame long document supports the saved horizontal viewport");
                 editor->Send(Message::SetSel, 2, 7);
                 editor->Send(Message::SetFirstVisibleLine, 25);
                 editor->Send(Message::SetXOffset, 120);
-                Require(frame->Open(path).status == OpenStatus::Opened && editor->Send(Message::GetAnchor) == 2 &&
+                const auto reopened = frame->Open(path);
+                Require(editor->GetScrollRange(wxHORIZONTAL) - editor->GetScrollThumb(wxHORIZONTAL) >= 120,
+                        "reopen must restore a native range supporting the saved offset before the next paint");
+                Require(reopened.status == OpenStatus::Opened && editor->Send(Message::GetAnchor) == 2 &&
                             editor->Send(Message::GetCurrentPos) == 7 &&
                             editor->Send(Message::GetFirstVisibleLine) == 25 &&
                             editor->Send(Message::GetXOffset) == 120 && frame->GetMenuBar()->IsChecked(python) &&
