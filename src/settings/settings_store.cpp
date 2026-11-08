@@ -118,6 +118,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.fileWatching.checkInterval = ReadInt("FileCheckInterval", defaults.fileWatching.checkInterval, "Settings2");
     values.fileWatching.autoReloadDelay =
         ReadInt("AutoReloadTimeout", defaults.fileWatching.autoReloadDelay, "Settings2");
+    values.fileWatching.flags = ReadInt("FileWatchingOption", defaults.fileWatching.flags);
+    values.fileWatching.resetOnNewFile = ReadBool("ResetFileWatching", defaults.fileWatching.resetOnNewFile);
     values.encoding.defaultEncoding =
         NormalizeEncodingSetting(ReadInt("DefaultEncoding", defaults.encoding.defaultEncoding));
     values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", defaults.encoding.skipUnicodeDetection);
@@ -427,6 +429,8 @@ bool SettingsStore::Save(bool explicitSave) {
                  "Settings2");
         WriteInt("AutoReloadTimeout", values.fileWatching.autoReloadDelay, defaults.fileWatching.autoReloadDelay,
                  "Settings2");
+        WriteInt("FileWatchingOption", values.fileWatching.flags, defaults.fileWatching.flags);
+        WriteBool("ResetFileWatching", values.fileWatching.resetOnNewFile, defaults.fileWatching.resetOnNewFile);
         WriteInt("SelectOption", values.selectOption, defaults.selectOption);
         WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
         WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);

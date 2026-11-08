@@ -35,7 +35,7 @@ void FileChangeMonitor::Refresh(const wxString& path, const FileWatchingOptions&
     directory_ = wxFileName(path).GetPath();
     // Startup Open runs in wxApp::OnInit. Inotify needs an active event loop;
     // the first timer check installs it once that loop runs.
-    if (wxEventLoopBase::GetActive()) InstallWatch();
+    if (!(options_.flags & FileWatchingOption_LogFile) && wxEventLoopBase::GetActive()) InstallWatch();
     checkTimer_.Start(std::max(options_.checkInterval, 1));
 }
 
@@ -59,14 +59,16 @@ FileChangeMonitor::Identity FileChangeMonitor::ReadIdentity() const {
 }
 
 void FileChangeMonitor::Check() {
-    if (!watcher_) InstallWatch();
-    if (!notified_) return;
+    if (!(options_.flags & FileWatchingOption_LogFile)) {
+        if (!watcher_) InstallWatch();
+        if (!notified_) return;
+    }
     notified_ = false;
     if (ReadIdentity() == baseline_) return;
     // One change owns one pending decision. Further writes are read together
     // after the original fixed delay, rather than restarting that delay.
     checkTimer_.Stop();
-    watcher_->RemoveAll();
+    if (watcher_) watcher_->RemoveAll();
     if (options_.mode == FileWatchingMode::AutoReload)
         reloadTimer_.StartOnce(std::max(options_.autoReloadDelay, 1));
     else

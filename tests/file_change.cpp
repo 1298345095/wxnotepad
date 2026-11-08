@@ -8,9 +8,12 @@
 #include <wx/wx.h>
 #include <wx/stdpaths.h>
 #include <wx/radiobox.h>
+#include <wx/checkbox.h>
+#include <wx/listbox.h>
 #include <filesystem>
 #include <fstream>
 #include <chrono>
+#include <thread>
 #include <stdexcept>
 
 namespace {
@@ -25,13 +28,14 @@ template <typename Predicate> void Wait(Predicate predicate) {
     }
     Require(predicate(), "external change must reach the live document");
 }
-void Peer(const wxString& path, const wxString& text, const wxString& action = "write") {
+void Peer(const wxString& path, const wxString& text, const wxString& action = "write", bool asynchronous = false) {
     const wxString arguments[] = {wxStandardPaths::Get().GetExecutablePath(), "--peer", path, text, action};
     const wchar_t* argv[] = {arguments[0].wc_str(), arguments[1].wc_str(), arguments[2].wc_str(),
                              arguments[3].wc_str(), arguments[4].wc_str(), nullptr};
     // Running the independent writer must preserve the observed application's
     // native window enablement and focus.
-    Require(wxExecute(argv, wxEXEC_SYNC | wxEXEC_NODISABLE) == 0, "independent file writer must finish");
+    const auto result = wxExecute(argv, asynchronous ? wxEXEC_ASYNC : wxEXEC_SYNC | wxEXEC_NODISABLE);
+    Require(asynchronous ? result > 0 : result == 0, "independent file writer must start or finish");
 }
 void Pause(int milliseconds) {
     const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
@@ -40,11 +44,11 @@ void Pause(int milliseconds) {
         wxMilliSleep(10);
     }
 }
-void ChooseMode(EditorFrame* frame, FileWatchingMode chosen, bool accept = true) {
+void ChooseMode(EditorFrame* frame, FileWatchingMode chosen, bool accept = true, int flags = 0, bool reset = false) {
     class Driver final : public wxModalDialogHook {
     public:
-        Driver(FileWatchingMode expected, FileWatchingMode chosen, bool accept)
-            : expected_(expected), chosen_(chosen), accept_(accept) {
+        Driver(FileWatchingOptions expected, FileWatchingMode chosen, bool accept, int flags, bool reset)
+            : expected_(expected), chosen_(chosen), accept_(accept), flags_(flags), reset_(reset) {
             Register();
         }
         std::exception_ptr failure;
@@ -56,8 +60,25 @@ void ChooseMode(EditorFrame* frame, FileWatchingMode chosen, bool accept = true)
                     for (auto* child : dialog->GetChildren())
                         if (auto* radio = wxDynamicCast(child, wxRadioBox)) choices = radio;
                     Require(choices && choices->GetCount() == 3 &&
-                                choices->GetSelection() == static_cast<int>(expected_),
+                                choices->GetSelection() == static_cast<int>(expected_.mode),
                             "native settings dialog reflects all three original modes and the applied selection");
+                    int checkboxes = 0;
+                    for (auto* child : dialog->GetChildren()) {
+                        if (auto* checkbox = wxDynamicCast(child, wxCheckBox)) {
+                            Require(checkbox->IsEnabled(), "original monitoring options remain enabled in every mode");
+                            const wxString labels[] = {"&Monitor continuously updated file (e.g. log file).",
+                                                       "&Keep at document end after reloading.",
+                                                       "&Reset if a new file is opened."};
+                            Require(checkboxes < 3 && checkbox->GetLabel() == labels[checkboxes],
+                                    "native dialog offers the original three option labels");
+                            const bool expected =
+                                checkboxes == 2 ? expected_.resetOnNewFile : (expected_.flags & (1 << checkboxes)) != 0;
+                            Require(checkbox->GetValue() == expected, "native dialog reflects applied option values");
+                            checkbox->SetValue(checkboxes == 2 ? reset_ : (flags_ & (1 << checkboxes)) != 0);
+                            ++checkboxes;
+                        }
+                    }
+                    Require(checkboxes == 3, "native dialog offers log, keep-at-end and reset options");
                     choices->SetSelection(static_cast<int>(chosen_));
                     NativeSearch::Click(dialog, accept_ ? wxID_OK : wxID_CANCEL);
                 } catch (...) {
@@ -69,9 +90,12 @@ void ChooseMode(EditorFrame* frame, FileWatchingMode chosen, bool accept = true)
         }
 
     private:
-        FileWatchingMode expected_, chosen_;
+        FileWatchingOptions expected_;
+        FileWatchingMode chosen_;
         bool accept_;
-    } driver(frame->FileWatching().mode, chosen, accept);
+        int flags_;
+        bool reset_;
+    } driver(frame->FileWatching(), chosen, accept, flags, reset);
     int id = frame->GetMenuBar()->FindMenuItem("Settings", "File Change Notification...");
     if (id == wxNOT_FOUND) id = frame->GetMenuBar()->FindMenuItem("View", "File Change Notification...");
     Require(id != wxNOT_FOUND, "native file change settings menu exists");
@@ -143,7 +167,19 @@ public:
         if (argc == 5 && wxString(argv[1]) == "--peer") {
             const auto path = TestFiles::Utf8Path(wxString(argv[2]).ToStdString(wxConvUTF8));
             const auto action = wxString(argv[4]);
-            if (action == "block") {
+            if (action == "stream") {
+                std::ofstream output(path, std::ios::binary);
+                output << "entry 1\n" << std::flush;
+                std::ofstream(std::filesystem::path(path).concat(".ready")) << "ready";
+                std::this_thread::sleep_for(std::chrono::milliseconds(400));
+                for (int i = 2; i <= 12; ++i) {
+                    output << "entry " << i << '\n' << std::flush;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(400));
+                output.close();
+                std::ofstream(std::filesystem::path(path).concat(".done")) << "done";
+            } else if (action == "block") {
                 std::filesystem::remove(path);
                 std::filesystem::create_directory(path);
             } else if (action == "remove") {
@@ -290,6 +326,13 @@ public:
                 decision.Stop();
                 ChooseMode(frame, FileWatchingMode::None, false);
                 Require(frame->FileWatching().mode == FileWatchingMode::ShowMessage, "Cancel retains applied mode");
+                ChooseMode(frame, FileWatchingMode::ShowMessage, true, 3, true);
+                Require(frame->FileWatching().flags == 3 && frame->FileWatching().resetOnNewFile,
+                        "native options applies both original flags and Reset");
+                ChooseMode(frame, FileWatchingMode::None, false);
+                Require(frame->FileWatching().mode == FileWatchingMode::ShowMessage &&
+                            frame->FileWatching().flags == 3 && frame->FileWatching().resetOnNewFile,
+                        "Cancel retains applied mode and all three options");
                 for (auto mode :
                      {FileWatchingMode::None, FileWatchingMode::ShowMessage, FileWatchingMode::AutoReload}) {
                     ChooseMode(frame, mode);
@@ -343,20 +386,173 @@ public:
                         "first named save succeeds");
                 Peer(TestFiles::Filename(firstSave), "first named external content\n");
                 Wait([&] { return TestEditor::Text(frame->Editor()) == "first named external content\n"; });
+                options.flags = FileWatchingOption_LogFile | FileWatchingOption_KeepAtEnd;
+                frame->SetFileWatchingOptions(options);
+                frame->Editor()->Send(Scintilla::Message::GotoPos, 1);
+                Peer(TestFiles::Filename(firstSave), "replacement\nnew tail", "replace");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "replacement\nnew tail"; });
+                Require(frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == 20 &&
+                            !frame->Editor()->Send(Scintilla::Message::CanUndo),
+                        "Keep at end follows replacement from a non-tail caret with original reload undo behavior");
+                frame->Editor()->Send(Scintilla::Message::GotoPos, 0);
+                Peer(TestFiles::Filename(firstSave), "x");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "x"; });
+                Require(frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == 1,
+                        "Keep at end follows truncation");
+                options.flags = FileWatchingOption_LogFile;
+                frame->SetFileWatchingOptions(options);
+                Peer(TestFiles::Filename(firstSave), "head\nlast");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "head\nlast"; });
+                Require(frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == 9,
+                        "log mode without Keep at end follows an old final-line caret during growth");
+                frame->Editor()->Send(Scintilla::Message::GotoPos, 1);
+                Peer(TestFiles::Filename(firstSave), "changed head\nchanged last", "replace");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "changed head\nchanged last"; });
+                Require(frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == 1,
+                        "log mode without Keep at end preserves a non-tail caret during replacement");
+                Peer(TestFiles::Filename(firstSave), "x");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "x"; });
+                options.flags = FileWatchingOption_LogFile | FileWatchingOption_KeepAtEnd;
+                std::puts("PASS: log Keep at end follows replacement and truncation with full-reload undo behavior");
+                options.resetOnNewFile = true;
+                frame->SetFileWatchingOptions(options);
+                TestEditor::Append(frame, "unsaved log edits");
+                {
+                    class CancelDiscard final : public wxModalDialogHook {
+                    public:
+                        CancelDiscard() { Register(); }
+                        int Enter(wxDialog* dialog) override {
+                            return dialog->GetTitle() == "Save changes?" ? wxID_CANCEL : wxID_NONE;
+                        }
+                    } cancel;
+                    Require(!frame->NewDocument() &&
+                                frame->Open(TestFiles::Filename(firstSave)).status == OpenStatus::Cancelled &&
+                                frame->FileWatching().mode == FileWatchingMode::AutoReload &&
+                                TestEditor::Text(frame->Editor()) == "xunsaved log edits",
+                            "canceling a dirty New/Open preserves live text and active log monitoring");
+                }
+                Require(frame->ReloadCurrentFile().status == OpenStatus::Opened &&
+                            frame->FileWatching().mode == FileWatchingMode::AutoReload,
+                        "reloading the same document preserves monitoring with Reset enabled");
+                const auto beforeManualReload = decision.prompts;
+                std::ofstream(firstSave, std::ios::binary) << "manual encoding reload\n";
+                Require(frame->ReloadAsUtf8().status == OpenStatus::Opened &&
+                            frame->FileWatching().mode == FileWatchingMode::AutoReload,
+                        "quick encoding reload preserves active monitoring with Reset enabled");
+                TestEditor::Append(frame, "local after manual reload");
+                Pause(200);
+                Require(decision.prompts == beforeManualReload,
+                        "quick encoding reload refreshes the watch baseline before subsequent live edits");
+                frame->ReloadCurrentFile();
+                {
+                    class AcceptEncoding final : public wxModalDialogHook {
+                    public:
+                        AcceptEncoding() { Register(); }
+                        int Enter(wxDialog* dialog) override {
+                            if (dialog->GetTitle() != "Reload With Encoding") return wxID_NONE;
+                            for (auto* child : dialog->GetChildren())
+                                if (auto* choices = wxDynamicCast(child, wxListBox)) choices->SetSelection(0);
+                            return wxID_OK;
+                        }
+                    } accept;
+                    std::ofstream(firstSave, std::ios::binary) << "x";
+                    Require(frame->ReloadWithEncoding().status == OpenStatus::Opened &&
+                                frame->FileWatching().mode == FileWatchingMode::AutoReload,
+                            "explicit encoding reload preserves active monitoring with Reset enabled");
+                }
+                TestEditor::Append(frame, "local after explicit reload");
+                Pause(200);
+                Require(decision.prompts == beforeManualReload,
+                        "explicit encoding reload refreshes the active watch baseline");
+                frame->ReloadCurrentFile();
+                Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
+                            frame->Open(TestFiles::Filename(directory / "missing.txt")).status == OpenStatus::Failed &&
+                            frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
+                            frame->SaveAs(TestFiles::Filename(directory / "missing" / "new.txt")).status ==
+                                SaveStatus::Failed &&
+                            frame->FileWatching().mode == FileWatchingMode::AutoReload,
+                        "canceled and failed Open/Save As retain monitoring");
+                Peer(TestFiles::Filename(firstSave), "retained after failed transition\n");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "retained after failed transition\n"; });
+                Require(frame->Open(TestFiles::Filename(firstSave)).status == OpenStatus::Opened &&
+                            frame->FileWatching().mode == FileWatchingMode::None && frame->FileWatching().flags == 3 &&
+                            frame->FileWatching().resetOnNewFile,
+                        "successful Open resets mode and retains original option bits");
+                frame->SetFileWatchingOptions(options);
+                Require(frame->Save().status == SaveStatus::Saved &&
+                            frame->FileWatching().mode == FileWatchingMode::AutoReload,
+                        "ordinary Save preserves monitoring");
+                const auto resetSave = directory / "reset-save.txt";
+                Require(frame->SaveAs(TestFiles::Filename(resetSave)).status == SaveStatus::Saved &&
+                            frame->FileWatching().mode == FileWatchingMode::None,
+                        "successful Save As resets monitoring");
+                frame->SetFileWatchingOptions(options);
+                Require(frame->NewDocument() && frame->FileWatching().mode == FileWatchingMode::None,
+                        "successful New resets monitoring");
+                frame->SetFileWatchingOptions(options);
+                Require(frame->SaveFirst(TestFiles::Filename(firstSave)).status == SaveStatus::Saved &&
+                            frame->FileWatching().mode == FileWatchingMode::AutoReload,
+                        "first named Save preserves monitoring like original Untitled save");
+                options.resetOnNewFile = false;
+                frame->SetFileWatchingOptions(options);
+                Peer(TestFiles::Filename(firstSave), "x");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "x"; });
+                std::puts("PASS: Reset applies at successful Open/New/Save As; failures, cancellation, first save, "
+                          "Save and reload preserve monitoring");
+                const auto stream = directory / "stream.txt";
+                const auto streamPrompts = decision.prompts;
+                Peer(TestFiles::Filename(stream), "", "stream", true);
+                Wait([&] { return std::filesystem::exists(std::filesystem::path(stream).concat(".ready")); });
+                options.autoReloadDelay = 120;
+                frame->SetFileWatchingOptions(options);
+                Require(frame->Open(TestFiles::Filename(stream)).status == OpenStatus::Opened,
+                        "actively written log opens while the writer holds its file handle");
+                Pause(800);
+                const auto during = TestEditor::Text(frame->Editor());
+                Require(during.starts_with("entry 1\nentry 2\n") && during.find("entry 12\n") == std::string::npos,
+                        "log polling reloads during continuous writes without extending the original delay");
+                Wait([&] { return TestEditor::Text(frame->Editor()).ends_with("entry 12\n"); });
+                Wait([&] { return std::filesystem::exists(std::filesystem::path(stream).concat(".done")); });
+                Peer(TestFiles::Filename(stream), "after continuous writer\n");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "after continuous writer\n"; });
+                Require(decision.prompts == streamPrompts &&
+                            frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == 24,
+                        "log monitoring resumes after completed reloads with no duplicate native decisions");
+                std::puts("PASS: live writer held open, repeated delayed full reloads and subsequent writer remain "
+                          "detectable");
+                TestEditor::Append(frame, "dirty live log");
+                decision.choice = wxID_NO;
+                Peer(TestFiles::Filename(stream), "declined dirty log\n");
+                Wait([&] { return decision.prompts == streamPrompts + 1; });
+                Require(TestEditor::Text(frame->Editor()) == "after continuous writer\ndirty live log" &&
+                            frame->Editor()->Send(Scintilla::Message::GetModify),
+                        "modified log still asks and No retains live edits");
+                decision.choice = wxID_YES;
+                Peer(TestFiles::Filename(stream), "approved dirty log\n");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "approved dirty log\n"; });
+                Require(decision.prompts == streamPrompts + 2 && !frame->Editor()->Send(Scintilla::Message::GetModify),
+                        "modified log Yes performs one clean full reload");
+                decision.choice = wxID_NO;
+                Peer(TestFiles::Filename(stream), "", "remove");
+                Wait([&] { return decision.prompts == streamPrompts + 3; });
+                Require(TestEditor::Text(frame->Editor()) == "approved dirty log\n",
+                        "deleted log No retains live text");
+                Peer(TestFiles::Filename(stream), "after continuous writer\n");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "after continuous writer\n"; });
+                std::puts("PASS: log mode retains native dirty Yes/No and deleted-file decisions");
                 const auto count = decision.prompts;
                 options.autoReloadDelay = 300;
                 frame->SetFileWatchingOptions(options);
-                Peer(TestFiles::Filename(firstSave), "pending disabled reload\n");
+                Peer(TestFiles::Filename(stream), "pending disabled reload\n");
                 Pause(50);
                 options.mode = FileWatchingMode::None;
                 frame->SetFileWatchingOptions(options);
                 Pause(350);
-                Require(TestEditor::Text(frame->Editor()) == "first named external content\n" &&
-                            decision.prompts == count,
+                Require(TestEditor::Text(frame->Editor()) == "after continuous writer\n" && decision.prompts == count,
                         "disabling monitoring cancels an already delayed change");
                 options.mode = FileWatchingMode::AutoReload;
                 frame->SetFileWatchingOptions(options);
-                Peer(TestFiles::Filename(firstSave), "pending closing reload\n");
+                Peer(TestFiles::Filename(stream), "pending closing reload\n");
                 Pause(50);
                 frame->Close();
                 frame = nullptr;
@@ -367,7 +563,10 @@ public:
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
-            if (frame) frame->Destroy();
+            if (frame) {
+                frame->SetFileWatchingOptions({FileWatchingMode::None});
+                frame->Destroy();
+            }
             std::filesystem::remove_all(directory);
             ExitMainLoop();
         });

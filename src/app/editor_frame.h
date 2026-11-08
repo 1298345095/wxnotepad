@@ -146,7 +146,7 @@ private:
     OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                         std::optional<FileEncoding> encoding = std::nullopt,
                         std::optional<EncodingChoice> weakEncoding = std::nullopt,
-                        OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead);
+                        OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead, bool reload = false);
     bool CanDiscardUntitledWhitespace() const;
     GbkLossChoice ConfirmGbkLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);

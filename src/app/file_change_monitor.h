@@ -10,7 +10,8 @@
 class wxWindow;
 
 // Directory notifications are only a signal to compare the current file's
-// last-write/size identity, as in the pinned InstallFileWatching/WatchTimerProc.
+// last-write/size identity. Log mode polls that identity on each timer tick,
+// as in the pinned InstallFileWatching/WatchTimerProc.
 class FileChangeMonitor final : public wxEvtHandler {
 public:
     FileChangeMonitor(wxWindow& owner, std::function<void()> decide);
