@@ -155,7 +155,20 @@ wxMenu* EditorFrame::CreateFileMenu() {
         },
         saveCopyId_);
     Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, saveCopyId_);
+    AppendRecentFilesCommand(file);
     return file;
+}
+
+void EditorFrame::AppendRecentFilesCommand(wxMenu* file) {
+    recentFilesId_ = wxWindow::NewControlId();
+    file->Append(recentFilesId_, "Recent (History)...\tAlt+H");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowRecentFiles(); }, recentFilesId_);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Enable(!(settings_ ? settings_->values : defaults_).recentFiles.empty());
+        },
+        recentFilesId_);
 }
 
 wxMenu* EditorFrame::CreateEditMenu() {

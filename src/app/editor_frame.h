@@ -32,6 +32,7 @@ public:
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
     bool NewDocument();
+    void ShowRecentFiles();
 
 private:
     EditorControl* editor_;
@@ -41,6 +42,12 @@ private:
     DocumentSession document_;
     int automaticLanguageId_;
     int saveCopyId_;
+    int recentFilesId_;
+    void AppendRecentFilesCommand(wxMenu* file);
+    void RecordRecentFile();
+    OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
+                        std::optional<FileEncoding> encoding = std::nullopt,
+                        std::optional<EncodingChoice> weakEncoding = std::nullopt);
     wxString lastSaveCopyDirectory_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;

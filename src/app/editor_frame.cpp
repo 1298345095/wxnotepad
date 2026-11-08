@@ -4,8 +4,10 @@
 #include "app/dialogs/document_dialogs.h"
 #include "app/dialogs/find_replace_dialog.h"
 #include "app/dialogs/search_feedback_dialog.h"
+#include "app/dialogs/recent_files_dialog.h"
 #include "settings/settings_store.h"
 #include "settings/search_settings.h"
+#include "settings/recent_files.h"
 #include "diagnostics/trace.h"
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
@@ -254,7 +256,10 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
                                   SaveFileType fileType) {
     const auto result =
         document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
-    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
+    if (result.status == SaveStatus::Saved) {
+        RecordRecentFile();
+        indentation_.Apply(*editor_, document_.Language());
+    }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -272,6 +277,7 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
             return SaveAs(chosen->path, decideLoss, chosen->type);
         }
         const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+        if (result.status == SaveStatus::Saved) RecordRecentFile();
         UpdateDocumentState();
         return result;
     }
@@ -284,7 +290,10 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
                                SaveFileType fileType) {
     const auto result =
         document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
-    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
+    if (result.status == SaveStatus::Saved) {
+        RecordRecentFile();
+        indentation_.Apply(*editor_, document_.Language());
+    }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -327,15 +336,19 @@ SaveResult EditorFrame::SaveCopy() {
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
-    const auto result = document_.Open(
-        source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding, std::nullopt,
-        [this] {
-            indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
-            const auto& preferences = settings_ ? settings_->values : defaults_;
-            editor_->Send(Scintilla::Message::SetEdgeColumn,
-                          document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
-        });
+    return LoadFile(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
+}
+
+OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
+                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding) {
+    const auto result = document_.Open(source, beforeReplace, encoding, weakEncoding, [this] {
+        indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+        const auto& preferences = settings_ ? settings_->values : defaults_;
+        editor_->Send(Scintilla::Message::SetEdgeColumn,
+                      document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
+    });
     if (result.status == OpenStatus::Opened) {
+        RecordRecentFile();
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
             ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
@@ -343,6 +356,41 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     }
     UpdateDocumentState();
     return result;
+}
+
+void EditorFrame::RecordRecentFile() {
+    if (settings_)
+        settings_->AddRecentFile(document_.Path());
+    else
+        RecentFiles::Add(defaults_.recentFiles, document_.Path(), RecentFiles::MinimumCapacity);
+}
+
+void EditorFrame::ShowRecentFiles() {
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    if (preferences.recentFiles.empty() || !ConfirmDiscardChanges("opening recent files")) return;
+    RecentFilesDialog dialog(
+        this, preferences,
+        [this] {
+            if (settings_)
+                settings_->ClearRecentFiles(document_.Path());
+            else {
+                defaults_.recentFiles.clear();
+                RecordRecentFile();
+            }
+        },
+        [this](size_t index) {
+            if (settings_)
+                settings_->RemoveRecentFile(index);
+            else
+                defaults_.recentFiles.erase(defaults_.recentFiles.begin() + static_cast<std::ptrdiff_t>(index));
+        });
+    const auto selected = dialog.Choose();
+    if (selected) {
+        const auto result = LoadFile(selected, [] { return true; });
+        if (result.status == OpenStatus::Failed)
+            wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+    }
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
 
 OpenResult EditorFrame::Open() {

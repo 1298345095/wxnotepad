@@ -106,8 +106,10 @@ add_library(app_shell STATIC
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
+    src/app/dialogs/recent_files_dialog.cpp
     src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
+    src/settings/recent_files.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
@@ -182,6 +184,12 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_settings_lifecycle PROPERTIES TIMEOUT 60)
     add_gui_program(settings_read_failure tests/settings_read_failure.cpp app_shell)
+    add_gui_program(recent_files tests/recent_files.cpp app_shell)
+    add_test(NAME original_recent_files COMMAND recent_files)
+    set_tests_properties(original_recent_files PROPERTIES TIMEOUT 60)
+    add_test(NAME original_recent_files_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/recent_files_process.py" "$<TARGET_FILE:wxnotepad>" "$<TARGET_FILE:recent_files>")
+    set_tests_properties(original_recent_files_process PROPERTIES TIMEOUT 60)
     add_test(NAME settings_read_failure_preserves_file COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_read_failure_process.py" "$<TARGET_FILE:settings_read_failure>")
     set_tests_properties(settings_read_failure_preserves_file PROPERTIES TIMEOUT 30)
