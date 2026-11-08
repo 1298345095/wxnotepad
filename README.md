@@ -155,10 +155,10 @@ the title and save point.
 
 File → New Window / Alt+N starts a separate blank process using the saved startup
 settings. The current document, selection and undo history stay in the parent.
-The child keeps the parent's normal window size and maximized state; Windows
-offsets it by 10 pixels, wrapping to the monitor origin at the work-area edge.
-Linux leaves top-level placement to the compositor. Internal relaunches pass
-`--window-position x,y,width,height,maximized` without a startup file or observer.
+The child requests the parent's normal window size and maximized state. Windows
+uses its exact normal rectangle with a 10-pixel offset, wrapping to the monitor
+origin at the work-area edge. Linux leaves placement and native decorations to
+the compositor. See the [platform validation record](docs/observations/new-window.md).
 
 File → Save with Original Time preserves the destination's writable file times
 through the normal save flow. Update File Time changes the named backing file's

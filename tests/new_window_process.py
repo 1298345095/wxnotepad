@@ -13,6 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", type=Path)
     parser.add_argument("--installed-directory", type=Path)
+    parser.add_argument("--scenario", choices=("all", "normal", "maximized"), default="all")
     args = parser.parse_args()
     source = args.executable.resolve()
     with ExitStack() as stack:
@@ -21,6 +22,7 @@ def main():
         executable_folder = folder
         config_folder = folder
         environment = dict(os.environ, WXNOTEPAD_NEW_WINDOW_TEST=str(folder),
+                           WXNOTEPAD_NEW_WINDOW_TEST_MODE=args.scenario,
                            PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         if args.installed_directory:
             executable_folder = Path(stack.enter_context(tempfile.TemporaryDirectory(
@@ -39,8 +41,15 @@ def main():
                                  "--startup-file", str(folder / "parent.txt")],
                                 env=environment, cwd=folder / "startup working 中文", timeout=30, check=False)
         failure = folder / "failure.txt"
+        if result.returncode == 77:
+            print("SKIP: " + (folder / "skip.txt").read_text(encoding="utf-8"), flush=True)
+            raise SystemExit(77)
         assert result.returncode == 0, failure.read_text(encoding="utf-8") if failure.exists() else result.returncode
-        for scenario in ("normal", "maximized") + (("edge",) if sys.platform == "win32" else ()):
+        scenarios = [] if args.scenario == "maximized" else ["normal", "accelerator"] + (
+            ["edge"] if sys.platform == "win32" else [])
+        if args.scenario != "normal":
+            scenarios.append("maximized")
+        for scenario in scenarios:
             assert (folder / f"{scenario}-child.txt").read_bytes() == b"independent child"
         assert (folder / "parent.txt").read_text(encoding="utf-16") == "parent document"
         assert not (folder / "parent-observation").exists()
