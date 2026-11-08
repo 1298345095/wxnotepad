@@ -16,6 +16,7 @@ public:
         std::function<void(int, int)> showFeedback;
         std::function<void()> clearFeedback;
         std::function<void(int, int, std::string_view, bool)> dropText;
+        std::function<void(const wxString&)> dropFile;
     };
 
     GtkTextDragDrop(wxWindow& window, Callbacks callbacks);

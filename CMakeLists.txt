@@ -106,8 +106,10 @@ add_library(app_shell STATIC
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
+    src/app/dialogs/recent_files_dialog.cpp
     src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
+    src/settings/recent_files.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
@@ -120,6 +122,7 @@ add_library(app_shell STATIC
     src/app/file_change_monitor.cpp
     src/app/editor_frame_file_watching.cpp
     src/app/editor_frame_commands.cpp
+    src/app/new_window.cpp
     src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
@@ -187,6 +190,12 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/file_watching_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_file_watching_settings PROPERTIES TIMEOUT 60)
     add_gui_program(settings_read_failure tests/settings_read_failure.cpp app_shell)
+    add_gui_program(recent_files tests/recent_files.cpp app_shell)
+    add_test(NAME original_recent_files COMMAND recent_files)
+    set_tests_properties(original_recent_files PROPERTIES TIMEOUT 60)
+    add_test(NAME original_recent_files_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/recent_files_process.py" "$<TARGET_FILE:wxnotepad>" "$<TARGET_FILE:recent_files>")
+    set_tests_properties(original_recent_files_process PROPERTIES TIMEOUT 60)
     add_test(NAME settings_read_failure_preserves_file COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_read_failure_process.py" "$<TARGET_FILE:settings_read_failure>")
     set_tests_properties(settings_read_failure_preserves_file PROPERTIES TIMEOUT 30)
@@ -226,6 +235,10 @@ if(BUILD_TESTING)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+    add_gui_program(new_window tests/new_window.cpp app_shell)
+    add_test(NAME original_new_window COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/new_window_process.py" "$<TARGET_FILE:new_window>")
+    set_tests_properties(original_new_window PROPERTIES TIMEOUT 45)
     add_editor_test(menu_hierarchy original_menu_hierarchy 60)
     add_editor_test(date_time original_date_time_insertion 60)
     add_editor_test(caret_appearance original_caret_appearance 60)
@@ -316,7 +329,9 @@ if(BUILD_TESTING)
     add_editor_test(encoding_auto automatic_encoding_decisions 30)
     add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
     add_editor_test(editor_smoke editor_input_undo 30)
-    add_gui_program(stream_drag tests/stream_drag.cpp editor_runtime)
+    add_gui_program(stream_drag tests/stream_drag.cpp app_shell)
+    add_test(NAME native_file_drop COMMAND stream_drag --file-drop)
+    set_tests_properties(native_file_drop PROPERTIES TIMEOUT 90)
     add_test(NAME native_stream_drag COMMAND stream_drag)
     set_tests_properties(native_stream_drag PROPERTIES TIMEOUT 90)
     if(UNIX AND NOT APPLE)
@@ -452,6 +467,7 @@ if(BUILD_TESTING)
     add_editor_test(eol_smoke loaded_eol_input 30)
     add_editor_test(eol_conversion convert_line_endings 60)
     add_editor_test(open_native open_new_native 60)
+    add_editor_test(file_drop file_drop_open 60)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
         # Preserve timeout stacks through the existing Linux core/GDB collector.
         set_tests_properties(open_new_native PROPERTIES

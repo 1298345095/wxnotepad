@@ -37,12 +37,16 @@ public:
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
     bool NewDocument();
+    void ShowRecentFiles();
     void SetFileWatchingOptions(const FileWatchingOptions& options);
     const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
+    bool NewWindow();
 
 private:
     EditorControl* editor_;
     SettingsStore* settings_;
+    const wxString launchWorkingDirectory_;
+    wxSize normalWindowSize_;
     OriginalSettings defaults_;
     IndentationSettings indentation_;
     DocumentSession document_;
@@ -50,6 +54,9 @@ private:
     FileChangeMonitor fileChangeMonitor_;
     int automaticLanguageId_;
     int saveCopyId_;
+    int recentFilesId_;
+    void AppendRecentFilesCommand(wxMenu* file);
+    void RecordRecentFile();
     int revertId_;
     wxString lastSaveCopyDirectory_;
     SearchSession search_;
@@ -130,6 +137,7 @@ private:
     void UpdatePositionStatus();
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
+    void OnDropFiles(wxDropFilesEvent& event);
     OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                         std::optional<FileEncoding> encoding = std::nullopt,
                         std::optional<EncodingChoice> weakEncoding = std::nullopt);

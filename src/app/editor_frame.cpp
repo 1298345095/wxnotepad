@@ -4,8 +4,10 @@
 #include "app/dialogs/document_dialogs.h"
 #include "app/dialogs/find_replace_dialog.h"
 #include "app/dialogs/search_feedback_dialog.h"
+#include "app/dialogs/recent_files_dialog.h"
 #include "settings/settings_store.h"
 #include "settings/search_settings.h"
+#include "settings/recent_files.h"
 #include "diagnostics/trace.h"
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
@@ -15,13 +17,18 @@
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
       editor_(new EditorControl(this, settings ? settings->values.selectOption : OriginalSettings{}.selectOption)),
-      settings_(settings), indentation_(settings ? settings->values : defaults_),
+      settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
+      indentation_(settings ? settings->values : defaults_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
                          : SyntaxDetectionOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { HandleFileChange(); }), search_(*editor_) {
     const auto& preferences = settings ? settings->values : defaults_;
+    Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+        if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
+        event.Skip();
+    });
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
     editor_->Occurrences().SetOptions(preferences.markOccurrences);
     editor_->SetCodeFoldingVisible(preferences.showCodeFolding);
@@ -72,6 +79,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         event.Skip();
     });
     Bind(wxEVT_EDITOR_STATE_CHANGED, [this](wxCommandEvent&) { UpdateDocumentState(); });
+    editor_->Bind(wxEVT_DROP_FILES, &EditorFrame::OnDropFiles, this);
+    Bind(wxEVT_DROP_FILES, &EditorFrame::OnDropFiles, this);
+    DragAcceptFiles(true);
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
         WXNOTE_TRACE("close.request", "\ttarget=%p\tcan_veto=%d\tdirty=%d", static_cast<void*>(this), event.CanVeto(),
                      editor_->Send(Scintilla::Message::GetModify) != 0);
@@ -257,8 +267,11 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
                                   SaveFileType fileType, SaveTimeMode timeMode) {
     const auto result = document_.SaveFirst(
         destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
-    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
-    if (result.status == SaveStatus::Saved) RefreshFileWatching();
+    if (result.status == SaveStatus::Saved) {
+        RecordRecentFile();
+        indentation_.Apply(*editor_, document_.Language());
+        RefreshFileWatching();
+    }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -276,7 +289,10 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode tim
             return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
         const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, timeMode);
-        if (result.status == SaveStatus::Saved) RefreshFileWatching();
+        if (result.status == SaveStatus::Saved) {
+            RecordRecentFile();
+            RefreshFileWatching();
+        }
         UpdateDocumentState();
         return result;
     }
@@ -289,8 +305,9 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
                                SaveFileType fileType, SaveTimeMode timeMode) {
     const auto result = document_.SaveAs(
         destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
-    if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
     if (result.status == SaveStatus::Saved) {
+        RecordRecentFile();
+        indentation_.Apply(*editor_, document_.Language());
         if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
         RefreshFileWatching();
     }
@@ -359,6 +376,7 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
                       document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
     });
     if (result.status == OpenStatus::Opened) {
+        RecordRecentFile();
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
             ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
@@ -366,6 +384,41 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
     }
     UpdateDocumentState();
     return result;
+}
+
+void EditorFrame::RecordRecentFile() {
+    if (settings_)
+        settings_->AddRecentFile(document_.Path());
+    else
+        RecentFiles::Add(defaults_.recentFiles, document_.Path(), RecentFiles::MinimumCapacity);
+}
+
+void EditorFrame::ShowRecentFiles() {
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    if (preferences.recentFiles.empty() || !ConfirmDiscardChanges("opening recent files")) return;
+    RecentFilesDialog dialog(
+        this, preferences,
+        [this] {
+            if (settings_)
+                settings_->ClearRecentFiles(document_.Path());
+            else {
+                defaults_.recentFiles.clear();
+                RecordRecentFile();
+            }
+        },
+        [this](size_t index) {
+            if (settings_)
+                settings_->RemoveRecentFile(index);
+            else
+                defaults_.recentFiles.erase(defaults_.recentFiles.begin() + static_cast<std::ptrdiff_t>(index));
+        });
+    const auto selected = dialog.Choose();
+    if (selected) {
+        const auto result = LoadFile(selected, [] { return true; });
+        if (result.status == OpenStatus::Failed)
+            wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+    }
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
 
 OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
@@ -390,6 +443,26 @@ OpenResult EditorFrame::Revert() {
 OpenResult EditorFrame::Open() {
     OpenFileDialog dialog(this);
     return Open(dialog.Choose());
+}
+
+void EditorFrame::OnDropFiles(wxDropFilesEvent& event) {
+    if (event.GetNumberOfFiles() == 0) return;
+    auto path = event.GetFiles()[0];
+#ifdef __WXMSW__
+    // Original MsgDropFiles: Visual Studio supplies {UUID}|project|path.
+    const auto separator = path.find_last_of('|');
+    if (separator != wxString::npos) path = path.Mid(separator + 1);
+#endif
+    if (IsIconized()) Iconize(false);
+    std::optional<wxString> source = path;
+    if (wxDirExists(path)) {
+        OpenFileDialog dialog(this);
+        dialog.SetDirectory(path);
+        source = dialog.Choose();
+    }
+    const auto result = Open(source);
+    if (result.status == OpenStatus::Failed)
+        wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
 }
 
 OpenResult EditorFrame::OpenAs(FileEncoding encoding) {

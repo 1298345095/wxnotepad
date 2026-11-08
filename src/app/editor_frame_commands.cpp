@@ -79,6 +79,16 @@ void EditorFrame::CreateMenus() {
 wxMenu* EditorFrame::CreateFileMenu() {
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
+    const int newWindow = wxWindow::NewControlId();
+    file->Append(newWindow, "New &Window\tAlt+N");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!NewWindow())
+                wxMessageBox("Could not start another wxnotepad process.", "Could not open new window",
+                             wxOK | wxICON_ERROR, this);
+        },
+        newWindow);
     file->Append(wxID_OPEN, "&Open...\tCtrl+O");
     const int openGbk = wxWindow::NewControlId();
     file->Append(openGbk, "Open As &GBK...");
@@ -183,7 +193,20 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->AppendSubMenu(endings, "Line Endin&gs");
     file->AppendSeparator();
     file->Append(updateTime, "Update File Time");
+    AppendRecentFilesCommand(file);
     return file;
+}
+
+void EditorFrame::AppendRecentFilesCommand(wxMenu* file) {
+    recentFilesId_ = wxWindow::NewControlId();
+    file->Append(recentFilesId_, "Recent (&History)...\tAlt+H");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowRecentFiles(); }, recentFilesId_);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Enable(!(settings_ ? settings_->values : defaults_).recentFiles.empty());
+        },
+        recentFilesId_);
 }
 
 wxMenu* EditorFrame::CreateEditMenu() {
@@ -1492,6 +1515,11 @@ bool EditorFrame::HandleDisplayKey(const wxKeyEvent& event, int whitespace, int 
 }
 
 bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == 'H' && event.AltDown() && !event.ControlDown() && !event.ShiftDown() &&
+        !event.MetaDown()) {
+        ShowRecentFiles();
+        return true;
+    }
     if (event.GetKeyCode() == WXK_F5 && !event.HasAnyModifiers()) {
         wxCommandEvent command(wxEVT_MENU, revertId_);
         GetEventHandler()->ProcessEvent(command);
@@ -1620,6 +1648,15 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         Bind(
             wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
             saveFind);
+        const int saveRecent = wxWindow::NewControlId();
+        other->AppendCheckItem(saveRecent, "Remember &Recent Files");
+        Bind(
+            wxEVT_MENU,
+            [this](wxCommandEvent&) { settings_->values.saveRecentFiles = !settings_->values.saveRecentFiles; },
+            saveRecent);
+        Bind(
+            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveRecentFiles); },
+            saveRecent);
         view->AppendSubMenu(other, "Other Sett&ings");
     }
     AppendSettingsCommands(view);
