@@ -290,7 +290,10 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
     const auto result = document_.SaveAs(
         destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
-    if (result.status == SaveStatus::Saved) RefreshFileWatching();
+    if (result.status == SaveStatus::Saved) {
+        if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
+        RefreshFileWatching();
+    }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
@@ -339,7 +342,12 @@ SaveResult EditorFrame::SaveCopy() {
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
-    return LoadFile(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
+    const auto result = LoadFile(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
+    if (result.status == OpenStatus::Opened) {
+        if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
+        RefreshFileWatching();
+    }
+    return result;
 }
 
 OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
@@ -351,7 +359,6 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
                       document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
     });
     if (result.status == OpenStatus::Opened) {
-        RefreshFileWatching();
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
             ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
@@ -366,6 +373,7 @@ OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
     const auto result = LoadFile(
         document_.Path(), [] { return true; }, std::nullopt,
         EncodingChoice(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding()));
+    if (result.status == OpenStatus::Opened) RefreshFileWatching();
     if (result.status == OpenStatus::Opened && followEnd) editor_->Send(Scintilla::Message::DocumentEnd);
     return result;
 }
@@ -392,6 +400,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::NewDocument() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
     RefreshFileWatching();
     editor_->Send(Scintilla::Message::SetEdgeColumn,
                   settings_ ? settings_->values.longLinesLimit : defaults_.longLinesLimit);
