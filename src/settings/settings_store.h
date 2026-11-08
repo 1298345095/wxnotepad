@@ -24,7 +24,8 @@ private:
     bool ReadBool(const wxString& key, bool fallback, const wxString& sectionName = "Settings") const;
     int ReadInt(const wxString& key, int fallback, const wxString& sectionName = "Settings") const;
     wxString ReadDateTimeFormat(const wxString& key) const;
-    std::vector<wxString> ReadHistory(const wxString& sectionName, size_t capacity) const;
+    std::vector<wxString> ReadHistory(const wxString& sectionName, size_t capacity,
+                                      bool preserveWhitespace = false) const;
     std::vector<wxString> ReadRecentFiles() const;
     void WriteRecentFiles(const std::vector<wxString>& history);
     void WriteHistory(const wxString& sectionName, const std::vector<wxString>& history);

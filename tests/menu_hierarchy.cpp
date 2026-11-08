@@ -45,6 +45,12 @@ void CheckMenu(EditorFrame* frame) {
           {"Character to Hex", "Hex to Character", "Escape C Chars", "Unescape C Chars"});
     Order(Submenu(bar->GetMenu(0), "Line Endings"),
           {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)", "Default..."});
+    // Notepad4.rc at 89b8b36: CMD_RELOADUTF8, separator, IDM_RECODE_SELECT,
+    // after filtering commands whose encoding capabilities are not delivered.
+    auto* reload = Submenu(bar->GetMenu(0), "Reload");
+    Order(reload, {"As UTF-8", "With Encoding..."});
+    Require(reload->GetMenuItemCount() == 3 && reload->FindItemByPosition(1)->IsSeparator(),
+            "Reload retains the original separator between quick reload and the encoding chooser");
     Order(bar->GetMenu(2),
           {"Find...", "Find Next", "Find Previous", "Replace...", "Find Matching Brace", "Select to Matching Brace",
            "Select Lines in Current Block", "Select to Next", "Select to Previous", "Bookmarks", "Goto"});

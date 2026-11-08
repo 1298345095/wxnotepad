@@ -11,10 +11,6 @@
 #include "diagnostics/trace.h"
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
-#include <wx/dialog.h>
-#include <wx/listbox.h>
-#include <wx/sizer.h>
-#include <wx/stattext.h>
 #include <wx/statusbr.h>
 #include <wx/filename.h>
 
@@ -452,33 +448,12 @@ OpenResult EditorFrame::ReloadWithEncoding() {
         wxMessageBox("Recoding requires reloading file from disk, unsaved changes will be lost!", "Reload Encoding",
                      wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
         return {OpenStatus::Cancelled, {}};
-    const wxString choices[] = {"UTF-8", "UTF-16LE", "GBK (CP936)"};
-    wxDialog dialog(this, wxID_ANY, "Reload With Encoding");
-    auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Select source &encoding to reload file:"), 0, wxALL,
-                  dialog.FromDIP(10));
-    auto* source = new wxListBox(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-                                 static_cast<int>(std::size(choices)), choices);
-    source->SetName("Source encoding");
     // Original IDM_RECODE_SELECT maps the BOM variants to their source codec.
     // Native ANSI maps to CPI_NONE: the user must select an explicit source.
-    if (!document_.IsDefaultEncoding()) source->SetSelection(static_cast<int>(document_.Encoding()));
-    contents->Add(source, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
-    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    auto* accept = dialog.FindWindow(wxID_OK);
-    accept->Enable(source->GetSelection() != wxNOT_FOUND);
-    dialog.Bind(wxEVT_LISTBOX,
-                [source, accept](wxCommandEvent&) { accept->Enable(source->GetSelection() != wxNOT_FOUND); });
-    dialog.Bind(wxEVT_LISTBOX_DCLICK, [&dialog, source](wxCommandEvent&) {
-        if (source->GetSelection() != wxNOT_FOUND) dialog.EndModal(wxID_OK);
-    });
-    dialog.SetSizerAndFit(contents);
-    dialog.CentreOnParent();
-    source->SetFocus();
-    if (dialog.ShowModal() != wxID_OK) return {OpenStatus::Cancelled, {}};
-    return LoadFile(
-        document_.Path(), [] { return true; }, static_cast<FileEncoding>(source->GetSelection()), std::nullopt,
-        OpenDecisionTiming::AfterRead, true);
+    const auto encoding = ChooseReloadEncoding(
+        this, document_.IsDefaultEncoding() ? std::nullopt : std::optional<FileEncoding>(document_.Encoding()));
+    if (!encoding) return {OpenStatus::Cancelled, {}};
+    return LoadFile(document_.Path(), [] { return true; }, encoding, std::nullopt, OpenDecisionTiming::AfterRead, true);
 }
 
 OpenResult EditorFrame::ReloadAsUtf8() {

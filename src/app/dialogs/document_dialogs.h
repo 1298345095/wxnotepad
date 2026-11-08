@@ -1,6 +1,7 @@
 #pragma once
 
 #include "document/document_session.h"
+#include "settings/file_watching_options.h"
 #include <wx/dialog.h>
 #include <wx/filedlg.h>
 
@@ -24,6 +25,8 @@ public:
 
 std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
                                              const wxString& path, const SaveFileLocation& initial = {});
+std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial);
+std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, const FileWatchingOptions& initial);
 
 struct LineEndingOptions {
     int defaultMode;
