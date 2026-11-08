@@ -90,6 +90,24 @@ def main():
             assert "SaveRecentFiles=81" in ini.read_text(encoding="utf-16")
         finally:
             app.stop()
+        app = Application(executable, folder, environment)
+        try:
+            app.named_menu("Settings", "Remember Recent Files")
+            app.close()
+            assert "SaveRecentFiles=80" in ini.read_text(encoding="utf-16")
+            assert history() == [path.name for path in expected], history()
+            restart([])
+        finally:
+            app.stop()
+        app = Application(executable, folder, environment)
+        try:
+            app.named_menu("Settings", "Remember Recent Files")
+            app.close()
+            assert "SaveRecentFiles=81" in ini.read_text(encoding="utf-16")
+            restart(expected)
+        finally:
+            app.stop()
+        print("PASS: native Remember Recent Files menu changes only encoded remember bit and retains capacity/history")
         ini.write_text("[Settings]\nSaveRecentFiles=3\n[Recent Files]\n" + entries, encoding="utf-16")
         restart(fixtures[:32])
         print("PASS: encoded capacity40 loads/evicts forty entries; encoded3 uses original minimum32")

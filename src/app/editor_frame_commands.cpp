@@ -1648,6 +1648,15 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         Bind(
             wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveFindReplace); },
             saveFind);
+        const int saveRecent = wxWindow::NewControlId();
+        other->AppendCheckItem(saveRecent, "Remember &Recent Files");
+        Bind(
+            wxEVT_MENU,
+            [this](wxCommandEvent&) { settings_->values.saveRecentFiles = !settings_->values.saveRecentFiles; },
+            saveRecent);
+        Bind(
+            wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(settings_->values.saveRecentFiles); },
+            saveRecent);
         view->AppendSubMenu(other, "Other Sett&ings");
     }
     AppendSettingsCommands(view);
