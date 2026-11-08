@@ -254,9 +254,9 @@ void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
 }
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
-                                  SaveFileType fileType) {
-    const auto result =
-        document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+                                  SaveFileType fileType, SaveTimeMode timeMode) {
+    const auto result = document_.SaveFirst(
+        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
     if (result.status == SaveStatus::Saved) RefreshFileWatching();
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -264,7 +264,7 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
     return result;
 }
 
-SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
+SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode timeMode) {
     if (!document_.Path().empty()) {
         if (document_.RefreshReadOnlyFile()) {
             UpdateDocumentState();
@@ -272,28 +272,34 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
                              wxYES_NO | wxICON_WARNING, this) != wxYES)
                 return {SaveStatus::Cancelled, {}};
             const auto chosen = ChooseSaveFile(this, "Save As", document_.Language(), document_.Path());
-            if (!chosen) return SaveAs(std::nullopt, decideLoss);
-            return SaveAs(chosen->path, decideLoss, chosen->type);
+            if (!chosen) return SaveAs(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
+            return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
-        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, timeMode);
         if (result.status == SaveStatus::Saved) RefreshFileWatching();
         UpdateDocumentState();
         return result;
     }
     const auto chosen = ChooseSaveFile(this, "Save file", document_.Language(), document_.Path());
-    if (!chosen) return SaveFirst(std::nullopt, decideLoss);
-    return SaveFirst(chosen->path, decideLoss, chosen->type);
+    if (!chosen) return SaveFirst(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
+    return SaveFirst(chosen->path, decideLoss, chosen->type, timeMode);
 }
 
 SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
-                               SaveFileType fileType) {
-    const auto result =
-        document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+                               SaveFileType fileType, SaveTimeMode timeMode) {
+    const auto result = document_.SaveAs(
+        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
     if (result.status == SaveStatus::Saved) RefreshFileWatching();
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
+}
+
+bool EditorFrame::UpdateFileTime() {
+    const bool updated = document_.UpdateFileTime();
+    if (updated) RefreshFileWatching();
+    return updated;
 }
 
 SaveResult EditorFrame::SaveAs() {
