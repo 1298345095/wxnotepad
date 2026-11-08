@@ -204,7 +204,7 @@ public:
                             !editor->Send(Message::IndicatorValueAt, 8, lastNeedle + 3) && Text(editor) == large &&
                             !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
                         "original incremental marking reaches beyond 1 MiB without changing large-document state");
-                Require(frame->New(), "new document succeeds");
+                Require(frame->NewDocument(), "new document succeeds");
                 NativePaint::Complete(editor);
                 Ranges(editor, {}, "new document stops and clears occurrence work");
                 load("one one", 0, 3);

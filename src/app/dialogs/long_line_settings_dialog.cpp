@@ -39,9 +39,9 @@ bool ShowLongLineSettingsDialog(wxWindow* parent, int& limit, int& mode) {
     dialog.CentreOnParent();
     dialog.Bind(
         wxEVT_BUTTON,
-        [&](wxCommandEvent&) {
+        [input, line, &limit, &mode, &dialog](wxCommandEvent&) {
             const auto number = ReadColumnInput(input->GetValue());
-            if (!number) {
+            if (!number.has_value()) {
                 input->SetFocus();
                 input->SelectAll();
                 return;

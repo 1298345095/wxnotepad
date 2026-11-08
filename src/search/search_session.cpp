@@ -34,61 +34,67 @@ void AppendUtf8(std::string& output, unsigned value) {
         output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
     }
 }
+int ReadHexEscape(std::string_view input, size_t start, size_t count) {
+    if (start + count > input.size()) return -1;
+    int value = 0;
+    for (size_t index = start; index < start + count; ++index) {
+        const auto digit = HexDigit(input[index]);
+        if (digit < 0) return -1;
+        value = (value << 4) | digit;
+    }
+    return value;
+}
+
+void AppendUnicodeEscape(std::string_view input, size_t& index, int value, std::string& output) {
+    if (value < 0xd800 || value > 0xdbff || index + 2 >= input.size() || input[index + 1] != '\\' ||
+        input[index + 2] != 'u') {
+        AppendUtf8(output, value);
+        return;
+    }
+    const int second = ReadHexEscape(input, index + 3, 4);
+    if (second < 0 || (second >= 0xd800 && second <= 0xdbff)) {
+        AppendUtf8(output, value);
+        return;
+    }
+    index += 6;
+    if (second >= 0xdc00 && second <= 0xdfff) {
+        AppendUtf8(output, 0x10000 + ((value - 0xd800) << 10) + second - 0xdc00);
+    } else {
+        AppendUtf8(output, value);
+        AppendUtf8(output, second);
+    }
+}
+
+bool TransformEscape(std::string_view input, size_t& index, std::string& output) {
+    const char next = input[index + 1];
+    constexpr std::string_view escapes = "\\abefnrtv";
+    constexpr std::string_view values = "\\\a\b\x1b\f\n\r\t\v";
+    const auto found = escapes.find(next);
+    if (found != std::string_view::npos) {
+        output.push_back(values[found]);
+        ++index;
+        return true;
+    }
+    if (next != 'x' && next != 'u') return false;
+    const size_t digits = next == 'x' ? 2 : 4;
+    const int value = ReadHexEscape(input, index + 2, digits);
+    if (value < 0) return false;
+    index += digits + 1;
+    if (next == 'x')
+        output.push_back(static_cast<char>(value));
+    else
+        AppendUnicodeEscape(input, index, value, output);
+    return true;
+}
+
 std::string TransformBackslashes(const wxString& text, bool transform) {
     const auto utf8 = text.utf8_str();
     std::string input(utf8.data(), utf8.length());
     if (!transform) return input;
     std::string output;
-    const auto hex = [&](size_t start, size_t count) {
-        int value = 0;
-        if (start + count > input.size()) return -1;
-        for (size_t index = start; index < start + count; ++index) {
-            const auto digit = HexDigit(input[index]);
-            if (digit < 0) return -1;
-            value = (value << 4) | digit;
-        }
-        return value;
-    };
     for (size_t index = 0; index < input.size() && input[index]; ++index) {
         const char ch = input[index];
-        if (ch == '\\' && index + 1 < input.size()) {
-            const char next = input[index + 1];
-            const char* escapes = "\\abefnrtv";
-            const char* values = "\\\a\b\x1b\f\n\r\t\v";
-            const auto found = std::string_view(escapes).find(next);
-            if (found != std::string_view::npos) {
-                output.push_back(values[found]);
-                ++index;
-                continue;
-            }
-            if (next == 'x' || next == 'u') {
-                const size_t digits = next == 'x' ? 2 : 4;
-                const int value = hex(index + 2, digits);
-                if (value >= 0) {
-                    index += digits + 1;
-                    if (next == 'x') {
-                        output.push_back(static_cast<char>(value));
-                    } else if (value >= 0xd800 && value <= 0xdbff && index + 2 < input.size() &&
-                               input[index + 1] == '\\' && input[index + 2] == 'u') {
-                        const int second = hex(index + 3, 4);
-                        if (second >= 0 && !(second >= 0xd800 && second <= 0xdbff)) {
-                            index += 6;
-                            if (second >= 0xdc00 && second <= 0xdfff) {
-                                AppendUtf8(output, 0x10000 + ((value - 0xd800) << 10) + second - 0xdc00);
-                            } else {
-                                AppendUtf8(output, value);
-                                AppendUtf8(output, second);
-                            }
-                        } else {
-                            AppendUtf8(output, value);
-                        }
-                    } else {
-                        AppendUtf8(output, value);
-                    }
-                    continue;
-                }
-            }
-        }
+        if (ch == '\\' && index + 1 < input.size() && TransformEscape(input, index, output)) continue;
         output.push_back(ch);
     }
     return output;
@@ -199,8 +205,6 @@ bool SearchSession::UsesRegex() const {
 SearchSession::SearchSession(EditorControl& editor) : editor_(editor) {
 }
 
-SearchSession::~SearchSession() = default;
-
 void SearchSession::Configure(SearchRequest request) {
     request_ = std::move(request);
 }
@@ -274,7 +278,7 @@ FindResult SearchSession::FindFrom(intptr_t start, SearchDirection direction, bo
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
     editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
     const auto length = editor_.Send(Message::GetLength);
-    const auto search = [&](intptr_t from, intptr_t to) {
+    const auto search = [this, &query](intptr_t from, intptr_t to) {
         editor_.Send(Message::SetTargetStart, from);
         editor_.Send(Message::SetTargetEnd, to);
         return editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) >= 0;
@@ -385,6 +389,7 @@ ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
                              .limit = editor_.Send(Message::GetLength)};
     intptr_t replacementEnd = cursor.position;
     editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
+    const auto replacementMessage = UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget;
     {
         DeferredUndoAction undo(editor_);
         // An initial empty document is eligible; original EditReplaceAll stops
@@ -407,8 +412,8 @@ ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
                 return {ReplaceAllStatus::ExpansionFailed, count, undo.Started()};
             if (effect == ReplacementEffect::Changed) {
                 undo.Begin();
-                const auto inserted = editor_.Send(UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget,
-                                                   replacement.size(), reinterpret_cast<intptr_t>(replacement.c_str()));
+                const auto inserted = editor_.Send(replacementMessage, replacement.size(),
+                                                   reinterpret_cast<intptr_t>(replacement.c_str()));
                 cursor.limit += inserted - (match.end - match.start);
                 cursor.position = match.start + inserted;
             } else {

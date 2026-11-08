@@ -60,6 +60,22 @@ class WxSurface final : public Surface {
     void StrokeSet(Stroke s) {
         dc_->SetPen(wxPen(Color(s.colour), std::max(1, static_cast<int>(std::lround(s.width)))));
     }
+#ifdef __WXGTK__
+    std::vector<PangoLogAttr> CursorPositions(const wxString& characters, std::string_view text,
+                                              const wxArrayInt& extents) const {
+        if (!utf8_ || extents.empty() ||
+            std::none_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; }))
+            return {};
+        // wxGTK 3.3.3's Cairo extents compact Pango cursor clusters, then pad
+        // to the character count. Expand those same cursor boundaries while
+        // retaining the native DC's font, DPI and measured cluster advances.
+        const auto utf8 = characters.utf8_str();
+        std::vector<PangoLogAttr> positions(characters.length() + 1);
+        pango_get_log_attrs(utf8.data(), static_cast<int>(utf8.length()), 0, pango_language_get_default(),
+                            positions.data(), static_cast<int>(positions.size()));
+        return positions;
+    }
+#endif
 
 public:
     void Init(WindowID id) noexcept override {
@@ -81,7 +97,9 @@ public:
         return p;
     }
     void SetMode(SurfaceMode m) noexcept override { utf8_ = m.codePage == 65001; }
-    void SetRenderingParams(void*, void*) noexcept override {}
+    void SetRenderingParams(void*, void*) noexcept override {
+        // wxDC owns native rendering parameters; DirectWrite overrides do not apply.
+    }
     void Release() noexcept override {
         clips_.clear();
         owned_.reset();
@@ -242,18 +260,8 @@ public:
         const auto characters = String(text);
         dc_->GetPartialTextExtents(characters, extents);
 #ifdef __WXGTK__
-        std::vector<PangoLogAttr> cursorPositions;
+        const auto cursorPositions = CursorPositions(characters, text, extents);
         size_t cursorExtent = 0;
-        if (utf8_ && !extents.empty() &&
-            std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; })) {
-            // wxGTK 3.3.3's Cairo extents compact Pango cursor clusters, then pad
-            // to the character count. Expand those same cursor boundaries while
-            // retaining the native DC's font, DPI and measured cluster advances.
-            const auto utf8 = characters.utf8_str();
-            cursorPositions.resize(characters.length() + 1);
-            pango_get_log_attrs(utf8.data(), static_cast<int>(utf8.length()), 0, pango_language_get_default(),
-                                cursorPositions.data(), static_cast<int>(cursorPositions.size()));
-        }
 #endif
         size_t character = 0;
         for (size_t byte = 0; byte < text.size();) {
@@ -307,8 +315,12 @@ public:
         clips_.push_back(std::make_unique<wxDCClipper>(*dc_, Rect(r)));
     }
     void PopClip() noexcept override { clips_.pop_back(); }
-    void FlushCachedState() noexcept override {}
-    void FlushDrawing() noexcept override {}
+    void FlushCachedState() noexcept override {
+        // All drawing state is applied directly to the wxDC.
+    }
+    void FlushDrawing() noexcept override {
+        // wxDC drawing is synchronous and has no adapter-owned command buffer.
+    }
 };
 std::unique_ptr<Surface> Surface::Allocate(Scintilla::Technology) {
     return std::make_unique<WxSurface>();
@@ -373,7 +385,9 @@ public:
             }
         });
     }
-    void SetAverageCharWidth(int, double) noexcept override {}
+    void SetAverageCharWidth(int, double) noexcept override {
+        // The native list box handles character sizing; popup sizing uses fixed rows.
+    }
     void SetVisibleRows(int rows) noexcept override { rows_ = rows; }
     int GetVisibleRows() const noexcept override { return rows_; }
     PRectangle GetDesiredRect() override { return PRectangle(0, 0, 240, rows_ * 22); }
@@ -387,9 +401,15 @@ public:
     }
     int GetSelection() const noexcept override { return list_ ? list_->GetSelection() : -1; }
     std::string GetValue(int n) const override { return list_ ? list_->GetString(n).ToStdString(wxConvUTF8) : ""; }
-    void RegisterImage(int, const char*) override {}
-    void RegisterRGBAImage(int, int, int, const unsigned char*) override {}
-    void ClearRegisteredImages() noexcept override {}
+    void RegisterImage(int, const char*) override {
+        // The wx list box displays text items without registered image decoration.
+    }
+    void RegisterRGBAImage(int, int, int, const unsigned char*) override {
+        // The wx list box displays text items without RGBA image decoration.
+    }
+    void ClearRegisteredImages() noexcept override {
+        // The text-only list box retains no registered image resources.
+    }
     void SetDelegate(IListBoxDelegate* d) noexcept override { delegate_ = d; }
     void SetList(const char* value, char separator, char) override {
         if (list_) {
@@ -398,7 +418,9 @@ public:
                 list_->Append(s);
         }
     }
-    void SCICALL SetOptions(const ListOptions&) noexcept override {}
+    void SCICALL SetOptions(const ListOptions&) noexcept override {
+        // Native list-box presentation currently uses the toolkit's default options.
+    }
 };
 std::unique_ptr<ListBox> ListBox::Allocate() {
     return std::make_unique<WxListBox>();
@@ -427,10 +449,13 @@ void Editor::EndBatchUpdate() noexcept {
     }
 }
 void Menu::CreatePopUp() noexcept {
+    // Original-core popup menus are outside the currently supported host UI.
 }
 void Menu::Destroy() noexcept {
+    // This original-core menu adapter owns no host menu resources.
 }
 void SCICALL Menu::Show(Point, const Window&) noexcept {
+    // Original-core popup menus are outside the currently supported host UI.
 }
 int64_t QueryPerformanceFrequency() noexcept {
     return 1000000000;

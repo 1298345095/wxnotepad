@@ -117,7 +117,7 @@ void History(EditorFrame* frame) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("File", "Read Only Mode"));
     check("read-only-released");
     editor->Send(Message::SetSavePoint);
-    Require(frame->New(), "native clean New succeeds");
+    Require(frame->NewDocument(), "native clean New succeeds");
     check("new");
     editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("abc"));
     check("modified-before-delete");

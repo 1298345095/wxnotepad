@@ -14,6 +14,11 @@
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 namespace {
 #ifndef __WXMSW__
+void RemoveTimeSeparator(std::wstring& date) {
+    while (!date.empty() && std::wcschr(L" :./-", date.back()))
+        date.pop_back();
+}
+
 std::wstring LongDateFormat(const std::wstring& format) {
     std::wstring date;
     bool time = false;
@@ -23,8 +28,7 @@ std::wstring LongDateFormat(const std::wstring& format) {
             if ((format[index] == L'E' || format[index] == L'O') && index + 1 < format.size()) ++index;
             const auto specifier = format[index++];
             if (std::wcschr(L"HIklMpPrRsSTXzZ", specifier)) {
-                while (!date.empty() && std::wcschr(L" :./-", date.back()))
-                    date.pop_back();
+                RemoveTimeSeparator(date);
                 time = true;
                 continue;
             }
@@ -38,6 +42,23 @@ std::wstring LongDateFormat(const std::wstring& format) {
 
 // POSIX locales expose a time pattern including seconds. Retain its hour cycle,
 // minute separators and AM/PM marker while removing the seconds field.
+size_t RemoveSeconds(std::wstring& format, size_t index, wchar_t specifier, locale_t locale) {
+    const size_t start = index - 1;
+    const size_t end = index + (specifier == L'S' ? 1 : 2);
+    // The separator immediately before seconds belongs to that field.
+    size_t separator = start;
+    while (separator && format[separator - 1] != L'%' && !iswalnum_l(format[separator - 1], locale))
+        --separator;
+    format.erase(separator, end - separator);
+    // Drop locale suffixes such as the Chinese seconds character.
+    const size_t next = format.find(L'%', separator);
+    const size_t literalEnd = next == std::wstring::npos ? format.size() : next;
+    const auto literal = format.substr(separator, literalEnd - separator);
+    if (literal.find_first_not_of(L" \t") != std::wstring::npos)
+        format.replace(separator, literal.size(), next == std::wstring::npos ? L"" : L" ");
+    return separator;
+}
+
 std::wstring MinuteFormat(std::wstring format, locale_t locale) {
     for (size_t index = 0; index + 1 < format.size(); ++index) {
         if (format[index] != L'%') continue;
@@ -51,20 +72,7 @@ std::wstring MinuteFormat(std::wstring format, locale_t locale) {
             format.replace(index - 1, 2, L"%H:%M");
         } else if (specifier == L'S' || ((specifier == L'E' || specifier == L'O') && index + 1 < format.size() &&
                                          format[index + 1] == L'S')) {
-            const size_t start = index - 1;
-            const size_t end = index + (specifier == L'S' ? 1 : 2);
-            // The separator immediately before seconds belongs to that field.
-            size_t separator = start;
-            while (separator && format[separator - 1] != L'%' && !iswalnum_l(format[separator - 1], locale))
-                --separator;
-            format.erase(separator, end - separator);
-            // Drop locale suffixes such as the Chinese seconds character.
-            const size_t next = format.find(L'%', separator);
-            const size_t literalEnd = next == std::wstring::npos ? format.size() : next;
-            const auto literal = format.substr(separator, literalEnd - separator);
-            if (literal.find_first_not_of(L" \t") != std::wstring::npos)
-                format.replace(separator, literal.size(), next == std::wstring::npos ? L"" : L" ");
-            index = separator;
+            index = RemoveSeconds(format, index, specifier, locale);
         }
     }
     return format;

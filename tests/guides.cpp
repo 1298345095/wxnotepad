@@ -117,7 +117,7 @@ private:
 };
 void LongLineDialog(EditorFrame* frame, const wxString& expected, const wxString& chosen, int mode = 1,
                     bool accept = true, bool valid = true) {
-    LimitDriver driver("Long Lines Settings", [&](wxDialog* dialog) {
+    LimitDriver driver("Long Lines Settings", [&expected, &chosen, mode, accept, valid](wxDialog* dialog) {
         auto* limit = wxDynamicCast(wxWindow::FindWindowByName("Long line limit", dialog), wxTextCtrl);
         auto* line = wxDynamicCast(wxWindow::FindWindowByName("Edge line", dialog), wxRadioButton);
         auto* background = wxDynamicCast(wxWindow::FindWindowByName("Background color", dialog), wxRadioButton);
@@ -138,7 +138,7 @@ void LongLineDialog(EditorFrame* frame, const wxString& expected, const wxString
     Require(driver.seen, "original long-line settings opens a native dialog");
 }
 void WrapSeed(EditorFrame* frame, const wxString& expected) {
-    LimitDriver driver("Column Wrap", [&](wxDialog* dialog) {
+    LimitDriver driver("Column Wrap", [&expected](wxDialog* dialog) {
         auto* input = wxDynamicCast(wxWindow::FindWindowByName("Boundary", dialog), wxTextCtrl);
         Require(input != nullptr, "Column Wrap exposes its native boundary control");
         if (input->GetValue() != expected)
@@ -157,7 +157,7 @@ void DialogKey(wxDialog* dialog, int key, const char* name) {
     static_cast<void>(name);
     NativeKeys::DialogNavigation(dialog, key);
 #else
-    const auto wait = [](const std::function<bool()>& condition) {
+    const auto wait = [](const auto& condition) {
         const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(3);
         while (!condition() && std::chrono::steady_clock::now() < until) {
             wxYield();
@@ -167,12 +167,12 @@ void DialogKey(wxDialog* dialog, int key, const char* name) {
     };
     wxString path;
     Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &path), "dialog navigation uses private native display");
-    const auto request = [&](const wxString& command) {
+    const auto request = [&path, &wait](const wxString& command) {
         {
             wxFFile output(path, "wb");
             output.Write(command);
         }
-        wait([&] {
+        wait([&path] {
             wxFFile input(path, "rb");
             wxString pending;
             return input.ReadAll(&pending) && pending.empty();
@@ -181,14 +181,16 @@ void DialogKey(wxDialog* dialog, int key, const char* name) {
     request("front:Long Lines Settings");
     auto* previous = wxWindow::FindFocus();
     request(wxString("key:") + name);
-    wait([&] { return !dialog->IsShown() || (key == WXK_TAB && wxWindow::FindFocus() != previous); });
+    wait([dialog, key, previous] {
+        return !dialog->IsShown() || (key == WXK_TAB && wxWindow::FindFocus() != previous);
+    });
 #endif
     wxYield();
 }
 void DialogNavigation(EditorFrame* frame) {
     const auto boundary = frame->Editor()->Send(Message::GetEdgeColumn);
     for (const int key : {WXK_RETURN, WXK_ESCAPE, WXK_TAB}) {
-        LimitDriver driver("Long Lines Settings", [&](wxDialog* dialog) {
+        LimitDriver driver("Long Lines Settings", [key](wxDialog* dialog) {
             auto* input = wxDynamicCast(wxWindow::FindWindowByName("Long line limit", dialog), wxTextCtrl);
             Require(input != nullptr, "keyboard navigation starts in native limit control");
             input->SetValue("19");
@@ -272,15 +274,15 @@ void DialogAndModeline(EditorFrame* frame) {
                 editor->Send(Message::GetEOLMode) == eol && frame->DocumentPath() == TestFiles::Filename(path) &&
                 frame->DocumentEncoding() == FileEncoding::Utf8,
             "display settings preserve document metadata/history");
-    Require(frame->New() && editor->Send(Message::GetEdgeColumn) == 0,
+    Require(frame->NewDocument() && editor->Send(Message::GetEdgeColumn) == 0,
             "New initializes current boundary from updated global");
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
                 editor->Send(Message::GetEdgeColumn) == 22,
             "reopen reparses original fill-column");
-    Require(frame->New(), "create separate Column Wrap recall document");
+    Require(frame->NewDocument(), "create separate Column Wrap recall document");
     TestEditor::ResetStream(editor, "one two", 0, 7);
     {
-        LimitDriver driver("Column Wrap", [&](wxDialog* dialog) {
+        LimitDriver driver("Column Wrap", [](wxDialog* dialog) {
             auto* input = wxDynamicCast(wxWindow::FindWindowByName("Boundary", dialog), wxTextCtrl);
             Require(input && input->GetValue() == "0", "New resets Column Wrap recall to current global boundary");
             input->SetValue("7");
@@ -292,7 +294,7 @@ void DialogAndModeline(EditorFrame* frame) {
     LongLineDialog(frame, "0", "35");
     WrapSeed(frame, "7");
     editor->Send(Message::SetSavePoint);
-    Require(frame->New(), "New resets accepted Column Wrap recall");
+    Require(frame->NewDocument(), "New resets accepted Column Wrap recall");
     TestEditor::ResetStream(editor, "one two", 0, 7);
     WrapSeed(frame, "35");
     DialogNavigation(frame);
@@ -369,7 +371,7 @@ void SavedHistoryAndViews(EditorFrame* frame) {
                                          "saved Redo observes encoded edit after display actions"});
     }
     TestEditor::RequireVirtualRectangleUnchanged(
-        editor, [&] { DisplayInvariant(frame); }, "display actions preserve rectangular virtual space");
+        editor, [frame] { DisplayInvariant(frame); }, "display actions preserve rectangular virtual space");
 }
 void Preferences(EditorFrame* frame, int guides, int edge, int column, const wxString& action) {
     auto* editor = frame->Editor();

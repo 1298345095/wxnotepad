@@ -40,7 +40,7 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL | wxAPPLY), 0, wxEXPAND | wxALL,
                   dialog.FromDIP(10));
-    const auto apply = [&](wxCommandEvent& event) {
+    const auto apply = [input, &editor, &dialog](wxCommandEvent& event) {
         const auto value = input->GetValue().ToStdString(wxConvUTF8);
         char* end = nullptr;
         const long level = std::strtol(value.c_str(), &end, 10);
@@ -105,7 +105,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
         },
         openGbk);
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { New(); }, wxID_NEW);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { NewDocument(); }, wxID_NEW);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -250,6 +250,15 @@ wxMenu* EditorFrame::CreateEditMenu() {
 }
 
 void EditorFrame::AppendEditingCommands(wxMenu* edit) {
+    AppendConversionCommands(edit);
+    AppendEnclosureCommands(edit);
+    AppendLineCleanupCommands(edit);
+    AppendLineLayoutCommands(edit);
+    AppendIndentationCommands(edit);
+    AppendWhitespaceCommands(edit);
+}
+
+void EditorFrame::AppendConversionCommands(wxMenu* edit) {
     auto* conversion = new wxMenu;
     // Pinned Notepad4's case commands use CustomCaseMapping values upper=1, lower=2.
     for (const auto& [label, mapping] :
@@ -312,6 +321,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
             id);
     }
     edit->AppendSubMenu(conversion, "Con&vert");
+}
+
+void EditorFrame::AppendEnclosureCommands(wxMenu* edit) {
     const int modifyLines = wxWindow::NewControlId();
     edit->Append(modifyLines, "&Modify Lines...\tAlt+M");
     Bind(
@@ -363,6 +375,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     addEnclosure("Triple &Double Quotes\tCtrl+6", "\"\"\"");
     addEnclosure("Triple &Backticks\tCtrl+9", "```");
     edit->AppendSubMenu(enclosure, "&Enclose Selection");
+}
+
+void EditorFrame::AppendLineCleanupCommands(wxMenu* edit) {
     const int stripLeading = wxWindow::NewControlId();
     const int stripTrailing = wxWindow::NewControlId();
     edit->Append(stripTrailing, "Strip &Trailing Blanks\tAlt+T");
@@ -412,6 +427,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
                              editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionStart)));
             },
             id);
+}
+
+void EditorFrame::AppendLineLayoutCommands(wxMenu* edit) {
     const int padSpaces = wxWindow::NewControlId();
     edit->Append(padSpaces, "&Pad With Spaces\tAlt+P");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->PadWithSpaces(); }, padSpaces);
@@ -467,6 +485,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
             id);
+}
+
+void EditorFrame::AppendIndentationCommands(wxMenu* edit) {
     struct Conversion {
         const char* label;
         bool toTabs;
@@ -539,6 +560,9 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MoveLines(false); }, moveDown);
     for (const int id : {moveUp, moveDown})
         Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
+}
+
+void EditorFrame::AppendWhitespaceCommands(wxMenu* edit) {
     const int compressWhitespace = wxWindow::NewControlId();
     edit->Append(compressWhitespace, "Compress &Whitespace\tAlt+W");
     Bind(
@@ -1130,6 +1154,23 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (HandleInsertionKey(event)) return true;
+    if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
+        if (event.ShiftDown() && !event.MetaDown())
+            editor_->SetCurrentLineHighlightMode(LineHighlightMode::BackgroundColor);
+        else if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
+            editor_->SplitLines();
+        return true;
+    }
+    if (HandleTabConversionKey(event) || HandleCaseConversionKey(event)) return true;
+    if (event.GetKeyCode() == 'T' && event.AltDown()) {
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
+        return true;
+    }
+    return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
+}
+
+bool EditorFrame::HandleInsertionKey(const wxKeyEvent& event) {
     if (event.GetKeyCode() == WXK_F8 && event.ControlDown()) {
         if (!event.AltDown() && !event.ShiftDown() && !event.MetaDown()) InsertEncodingIdentifier();
         return true;
@@ -1147,50 +1188,50 @@ bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
         ShowInsertTagDialog(this, *editor_);
         return true;
     }
-    if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
-        if (event.ShiftDown() && !event.MetaDown())
-            editor_->SetCurrentLineHighlightMode(LineHighlightMode::BackgroundColor);
-        else if (!event.ShiftDown() && !event.MetaDown() && !editor_->Send(Scintilla::Message::GetSelectionEmpty))
-            editor_->SplitLines();
-        return true;
-    }
     if (event.GetKeyCode() == WXK_F5 && event.ControlDown()) {
         if (!event.AltDown() && !event.MetaDown()) InsertDateTime(!event.ShiftDown());
         return true;
     }
-    if (HandleTabConversionKey(event)) return true;
-    if ((event.GetKeyCode() == 'X' || event.GetKeyCode() == 'C') && event.ControlDown() && event.AltDown()) {
-        if (!event.ShiftDown() && !event.MetaDown())
-            editor_->Send(Scintilla::Message::CustomCaseMapping, event.GetKeyCode() == 'X'
-                                                                     ? CustomCaseCommand::CharacterToHex
-                                                                     : CustomCaseCommand::HexToCharacter);
-        return true;
-    }
+    return false;
+}
+
+bool EditorFrame::HandleCaseConversionKey(const wxKeyEvent& event) {
     const int key = event.GetKeyCode();
-    if (event.ControlDown() && event.AltDown() && (key == 'E' || key == 'R')) {
-        if (!event.ShiftDown() && !event.MetaDown())
-            editor_->Send(Scintilla::Message::CustomCaseMapping,
-                          key == 'E' ? CustomCaseCommand::EscapeC : CustomCaseCommand::UnescapeC);
-        return true;
-    }
     if (event.AltDown() && event.ShiftDown() && (key == 'X' || key == 'H')) {
         if (!event.ControlDown() && !event.MetaDown())
             editor_->Send(Scintilla::Message::CustomCaseMapping,
                           key == 'X' ? CustomCaseCommand::EscapeHtml : CustomCaseCommand::UnescapeHtml);
         return true;
     }
-    if (event.ControlDown() && event.AltDown() && (key == 'U' || key == 'I' || key == 'O')) {
-        if (!event.ShiftDown() && !event.MetaDown())
-            editor_->Send(Scintilla::Message::CustomCaseMapping, key == 'U'   ? CustomCaseCommand::Invert
-                                                                 : key == 'I' ? CustomCaseCommand::Title
-                                                                              : CustomCaseCommand::Sentence);
-        return true;
+    if (!event.ControlDown() || !event.AltDown()) return false;
+    int mapping;
+    switch (key) {
+    case 'X':
+        mapping = CustomCaseCommand::CharacterToHex;
+        break;
+    case 'C':
+        mapping = CustomCaseCommand::HexToCharacter;
+        break;
+    case 'E':
+        mapping = CustomCaseCommand::EscapeC;
+        break;
+    case 'R':
+        mapping = CustomCaseCommand::UnescapeC;
+        break;
+    case 'U':
+        mapping = CustomCaseCommand::Invert;
+        break;
+    case 'I':
+        mapping = CustomCaseCommand::Title;
+        break;
+    case 'O':
+        mapping = CustomCaseCommand::Sentence;
+        break;
+    default:
+        return false;
     }
-    if (event.GetKeyCode() == 'T' && event.AltDown()) {
-        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) editor_->StripTrailingBlanks();
-        return true;
-    }
-    return HandleSearchKey(event) || HandleNavigationKey(event) || HandleViewKey(event) || HandleDocumentKey(event);
+    if (!event.ShiftDown() && !event.MetaDown()) editor_->Send(Scintilla::Message::CustomCaseMapping, mapping);
+    return true;
 }
 
 void EditorFrame::InsertDateTime(bool shortDate) {
@@ -1331,35 +1372,7 @@ bool EditorFrame::HandleSearchKey(const wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
-    // The original OEM accelerators distinguish Shift and Ctrl exactly. Consume
-    // other Alt punctuation variants before native lookup can drop modifiers.
-    const int rawKey = event.GetKeyCode();
-    const int key = rawKey == '{' ? '[' : rawKey == '}' ? ']' : rawKey == '<' ? ',' : rawKey == '>' ? '.' : rawKey;
-    const bool punctuation = key == '[' || key == ']' || key == ',' || key == '.';
-    if (punctuation && !event.MetaDown()) {
-        if (event.AltDown()) {
-            if (key == '[' && !event.ControlDown() && !event.ShiftDown())
-                editor_->GoToBlock(BlockNavigation::Start);
-            else if (key == ']' && !event.ControlDown()) {
-                if (event.ShiftDown())
-                    editor_->SelectCurrentBlockLines();
-                else
-                    editor_->GoToBlock(BlockNavigation::End);
-            } else if ((key == ',' || key == '.') && !event.ShiftDown()) {
-                const auto command =
-                    key == ',' ? (event.ControlDown() ? BlockNavigation::PreviousSibling : BlockNavigation::Previous)
-                               : (event.ControlDown() ? BlockNavigation::NextSibling : BlockNavigation::Next);
-                editor_->GoToBlock(command);
-            }
-            return true;
-        }
-        if ((key == ',' || key == '.') && event.ControlDown() && event.ShiftDown()) {
-            // Original CMD_JUMP2SELSTART / CMD_JUMP2SELEND: change the active
-            // endpoint without changing the selected text or line-selection mode.
-            editor_->FocusSelectionBoundary(key == ',');
-            return true;
-        }
-    }
+    if (HandleBlockNavigationKey(event)) return true;
     if (event.GetKeyCode() == 'B' && event.ControlDown() && !event.AltDown() && !event.MetaDown())
         editor_->MatchBrace(event.ShiftDown());
     else if (event.GetKeyCode() == WXK_F2 && !event.MetaDown()) {
@@ -1376,6 +1389,42 @@ bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
     else
         return false;
     return true;
+}
+
+bool EditorFrame::HandleBlockNavigationKey(const wxKeyEvent& event) {
+    // The original OEM accelerators distinguish Shift and Ctrl exactly. Consume
+    // other Alt punctuation variants before native lookup can drop modifiers.
+    const int rawKey = event.GetKeyCode();
+    const int key = rawKey == '{' ? '[' : rawKey == '}' ? ']' : rawKey == '<' ? ',' : rawKey == '>' ? '.' : rawKey;
+    const bool punctuation = key == '[' || key == ']' || key == ',' || key == '.';
+    if (!punctuation || event.MetaDown()) return false;
+    if (event.AltDown()) {
+        HandleAltBlockNavigationKey(event, key);
+        return true;
+    }
+    if ((key == ',' || key == '.') && event.ControlDown() && event.ShiftDown()) {
+        // Original CMD_JUMP2SELSTART / CMD_JUMP2SELEND: change the active
+        // endpoint without changing the selected text or line-selection mode.
+        editor_->FocusSelectionBoundary(key == ',');
+        return true;
+    }
+    return false;
+}
+
+void EditorFrame::HandleAltBlockNavigationKey(const wxKeyEvent& event, int key) {
+    if (key == '[' && !event.ControlDown() && !event.ShiftDown())
+        editor_->GoToBlock(BlockNavigation::Start);
+    else if (key == ']' && !event.ControlDown()) {
+        if (event.ShiftDown())
+            editor_->SelectCurrentBlockLines();
+        else
+            editor_->GoToBlock(BlockNavigation::End);
+    } else if ((key == ',' || key == '.') && !event.ShiftDown()) {
+        const auto command = key == ','
+                                 ? (event.ControlDown() ? BlockNavigation::PreviousSibling : BlockNavigation::Previous)
+                                 : (event.ControlDown() ? BlockNavigation::NextSibling : BlockNavigation::Next);
+        editor_->GoToBlock(command);
+    }
 }
 
 bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {

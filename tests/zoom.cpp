@@ -43,7 +43,7 @@ void Wheel(EditorControl* editor, int rotation, bool control = false, bool shift
 }
 void Level(EditorFrame* frame, const wxString& value, int button, bool applyFirst = false) {
     bool observed = false;
-    wxTheApp->CallAfter([&] {
+    wxTheApp->CallAfter([&observed, value, button, applyFirst] {
         for (auto* window : wxTopLevelWindows) {
             auto* dialog = wxDynamicCast(window, wxDialog);
             if (!dialog || dialog->GetTitle() != "Zoom Level") continue;

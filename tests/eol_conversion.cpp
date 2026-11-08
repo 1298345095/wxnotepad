@@ -169,7 +169,8 @@ void Files(EditorFrame* frame, const std::filesystem::path& directory) {
                 editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
                 NativeSearch::Text(editor) == "中\nnext\nlast",
             "cancelled and failed Open must retain converted text and insertion preference");
-    Require(frame->New() && editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf) &&
+    Require(frame->NewDocument() &&
+                editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf) &&
                 NativeSearch::Text(editor).empty() && frame->GetStatusBar()->GetStatusText().Contains("EOL: CRLF"),
             "successful New must restore the existing CRLF default and status");
     std::puts("PASS: cancelled/failed file operations retain mode; New restores the original default");

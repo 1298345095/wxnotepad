@@ -46,7 +46,7 @@ inline void Complete(EditorControl* editor) {
 }
 inline std::vector<wxColour> Read(EditorControl* editor, const wxRect& area) {
     std::vector<wxColour> pixels;
-    const auto sample = [&](wxDC& dc) {
+    const auto sample = [&area, &pixels](wxDC& dc) {
         for (int y = area.y; y < area.GetBottom() + 1; ++y) {
             for (int x = area.x; x < area.GetRight() + 1; ++x) {
                 int nativeX = x;

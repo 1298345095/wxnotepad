@@ -22,14 +22,14 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
     wxDialog dialog(parent, wxID_ANY, "Modify Lines", wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    const auto addInput = [&](const wxString& label, const wxString& name, const wxString& value) {
+    const auto addInput = [contents, &dialog](const wxString& label, const wxString& name, const wxString& value) {
         contents->Add(new wxStaticText(&dialog, wxID_ANY, label), 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
         auto display = value;
         display.Replace("\r\n", "\n");
         auto* input = new wxTextCtrl(&dialog, wxID_ANY, display, wxDefaultPosition, dialog.FromDIP(wxSize(400, 65)),
                                      wxTE_MULTILINE | wxTE_PROCESS_ENTER);
         input->SetName(name);
-        input->Bind(wxEVT_KEY_DOWN, [&](wxKeyEvent& event) {
+        input->Bind(wxEVT_KEY_DOWN, [&dialog](wxKeyEvent& event) {
             // Original Helpers.cpp::MultilineEditProc accepts Return unless Shift is down.
             if ((event.GetKeyCode() == WXK_RETURN || event.GetKeyCode() == WXK_NUMPAD_ENTER) && !event.ShiftDown()) {
                 wxCommandEvent accept(wxEVT_BUTTON, wxID_OK);
@@ -45,7 +45,7 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
     auto* suffix = addInput("&Append text to lines:", "Append text to lines", after);
     auto* focused = prefix;
     for (auto* input : {prefix, suffix}) {
-        input->Bind(wxEVT_SET_FOCUS, [&, input](wxFocusEvent& event) {
+        input->Bind(wxEVT_SET_FOCUS, [&focused, input](wxFocusEvent& event) {
             focused = input;
             event.Skip();
         });
@@ -67,7 +67,7 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
             link->Create(&dialog, wxID_ANY, token, token, wxDefaultPosition, wxDefaultSize, wxHL_ALIGN_LEFT);
             link->SetName(token);
             controls->Add(link, 0, wxRIGHT, dialog.FromDIP(10));
-            link->Bind(wxEVT_HYPERLINK, [&, token](wxHyperlinkEvent&) {
+            link->Bind(wxEVT_HYPERLINK, [&focused, &dialog, token](wxHyperlinkEvent&) {
                 focused->SetSelection(-1, -1);
                 focused->WriteText(token);
                 dialog.CallAfter([field = focused] { field->SetFocus(); });
@@ -87,7 +87,7 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
     dialog.CentreOnParent();
     dialog.Bind(
         wxEVT_BUTTON,
-        [&](wxCommandEvent&) {
+        [prefix, suffix, skip, &before, &after, &skipEmpty, &editor, &dialog](wxCommandEvent&) {
             before = WinEditText(prefix);
             after = WinEditText(suffix);
             skipEmpty = skip->GetValue();

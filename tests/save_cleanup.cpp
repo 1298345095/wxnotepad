@@ -77,63 +77,71 @@ void Defaults(EditorFrame* frame) {
         Require(NativeSearch::Text(editor) == source &&
                     editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf),
                 "changing the original default mode must retain current document text and insertion mode");
-        Require(frame->New() && editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode.second),
+        Require(frame->NewDocument() && editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode.second),
                 "the default line ending selector must apply to the next New document in original order");
     }
     Options(frame, false, false, false, 1);
-    Require(frame->New() && editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf),
+    Require(frame->NewDocument() &&
+                editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf),
             "Cancel must retain the configured default mode");
     std::puts("PASS: default EOL selector order, current document retention, next-New application and Cancel");
 }
+struct Policy {
+    bool fix;
+    bool strip;
+    const char* expected;
+};
+
+void CheckPolicy(EditorFrame* frame, const std::filesystem::path& directory, const std::string& source,
+                 const Policy& policy) {
+    auto* editor = frame->Editor();
+    Options(frame, policy.fix, policy.strip);
+    Load(editor, source);
+    editor->Send(Message::SetSel, source.size(), 1);
+    const auto output = directory / "policy.txt";
+    const auto result = frame->SaveAs(Filename(output));
+    if (result.status != SaveStatus::Saved || NativeSearch::Text(editor) != policy.expected ||
+        Bytes(output) != policy.expected)
+        std::fprintf(stderr, "Policy fix=%d strip=%d status=%d length=%zu expected=%zu error=%s\n", policy.fix,
+                     policy.strip, static_cast<int>(result.status), NativeSearch::Text(editor).size(),
+                     std::string(policy.expected).size(), result.error.utf8_str().data());
+    Require(result.status == SaveStatus::Saved && Bytes(output) == policy.expected &&
+                NativeSearch::Text(editor) == policy.expected,
+            "each cleanup policy must independently change buffer and disk only as originally configured");
+    Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
+                editor->Send(Message::GetAnchor) == static_cast<intptr_t>(std::string(policy.expected).size()) &&
+                editor->Send(Message::GetCurrentPos) == 1 && !editor->Send(Message::GetModify),
+            "cleanup must retain EOL mode, reversed selection and establish the final save point");
+    Require(frame->Save().status == SaveStatus::Saved && !editor->Send(Message::GetModify),
+            "repeat Save must remain clean");
+    if (policy.strip) {
+        editor->Send(Message::Undo);
+        Require(NativeSearch::Text(editor) == (policy.fix ? "a \t\nb \t\nc \t" : source),
+                "first Undo must restore the independent trailing-blank cleanup");
+    }
+    if (policy.fix) {
+        editor->Send(Message::Undo);
+        Require(NativeSearch::Text(editor) == source, "second Undo must restore the independent EOL cleanup");
+    }
+    Require(!editor->Send(Message::CanUndo), "repeat Save must not add undo actions");
+    if (policy.fix || policy.strip) {
+        Require(editor->Send(Message::GetModify), "Undo away from the successful cleanup save point must be dirty");
+        if (policy.fix) editor->Send(Message::Redo);
+        if (policy.strip) editor->Send(Message::Redo);
+        Require(!editor->Send(Message::GetModify) && NativeSearch::Text(editor) == policy.expected,
+                "Redo to the cleanup save point must restore clean final text");
+    }
+}
+
 void Policies(EditorFrame* frame, const std::filesystem::path& directory) {
     auto* editor = frame->Editor();
     const std::string source = "a \t\r\nb \t\nc \t";
-    struct Policy {
-        bool fix;
-        bool strip;
-        const char* expected;
-    };
     const Policy policies[] = {{false, false, "a \t\r\nb \t\nc \t"},
                                {true, false, "a \t\nb \t\nc \t"},
                                {false, true, "a\r\nb\nc"},
                                {true, true, "a\nb\nc"}};
     for (const auto& policy : policies) {
-        Options(frame, policy.fix, policy.strip);
-        Load(editor, source);
-        editor->Send(Message::SetSel, source.size(), 1);
-        const auto output = directory / "policy.txt";
-        const auto result = frame->SaveAs(Filename(output));
-        if (result.status != SaveStatus::Saved || NativeSearch::Text(editor) != policy.expected ||
-            Bytes(output) != policy.expected)
-            std::fprintf(stderr, "Policy fix=%d strip=%d status=%d length=%zu expected=%zu error=%s\n", policy.fix,
-                         policy.strip, static_cast<int>(result.status), NativeSearch::Text(editor).size(),
-                         std::string(policy.expected).size(), result.error.utf8_str().data());
-        Require(result.status == SaveStatus::Saved && Bytes(output) == policy.expected &&
-                    NativeSearch::Text(editor) == policy.expected,
-                "each cleanup policy must independently change buffer and disk only as originally configured");
-        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
-                    editor->Send(Message::GetAnchor) == static_cast<intptr_t>(std::string(policy.expected).size()) &&
-                    editor->Send(Message::GetCurrentPos) == 1 && !editor->Send(Message::GetModify),
-                "cleanup must retain EOL mode, reversed selection and establish the final save point");
-        Require(frame->Save().status == SaveStatus::Saved && !editor->Send(Message::GetModify),
-                "repeat Save must remain clean");
-        if (policy.strip) {
-            editor->Send(Message::Undo);
-            Require(NativeSearch::Text(editor) == (policy.fix ? "a \t\nb \t\nc \t" : source),
-                    "first Undo must restore the independent trailing-blank cleanup");
-        }
-        if (policy.fix) {
-            editor->Send(Message::Undo);
-            Require(NativeSearch::Text(editor) == source, "second Undo must restore the independent EOL cleanup");
-        }
-        Require(!editor->Send(Message::CanUndo), "repeat Save must not add undo actions");
-        if (policy.fix || policy.strip) {
-            Require(editor->Send(Message::GetModify), "Undo away from the successful cleanup save point must be dirty");
-            if (policy.fix) editor->Send(Message::Redo);
-            if (policy.strip) editor->Send(Message::Redo);
-            Require(!editor->Send(Message::GetModify) && NativeSearch::Text(editor) == policy.expected,
-                    "Redo to the cleanup save point must restore clean final text");
-        }
+        CheckPolicy(frame, directory, source, policy);
     }
     Options(frame, false, false);
     Options(frame, true, true, false);
@@ -238,7 +246,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
     bool sawCleaned = false;
     Require(frame->SaveAs(
                      Filename(output),
-                     [&] {
+                     [&sawCleaned, editor] {
                          sawCleaned = NativeSearch::Text(editor) == "中\n😀\nlast";
                          return GbkLossChoice::Cancel;
                      }).status == SaveStatus::Cancelled &&
@@ -261,7 +269,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
     const auto preserved = directory / "preserved.txt";
     Require(frame->SaveAs(
                      Filename(lateFailure),
-                     [&] {
+                     [&lateFailure, &preserved] {
                          Require(Bytes(lateFailure) == "original",
                                  "safe preflight must not truncate the destination before the prompt");
                          std::filesystem::rename(lateFailure, preserved);

@@ -41,7 +41,7 @@ bool ShowSortLinesDialog(wxWindow* parent, unsigned& options, bool rectangular) 
         contents->Add(boxes[i], 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(i == 0 || i == 3 || i == 6 ? 14 : 8));
     }
     boxes[6]->Enable(rectangular);
-    const auto updateMode = [&] {
+    const auto updateMode = [radios, boxes] {
         const bool enabled = !radios[3]->GetValue();
         for (size_t i = 0; i < 6; ++i)
             boxes[i]->Enable(enabled);
@@ -50,8 +50,8 @@ bool ShowSortLinesDialog(wxWindow* parent, unsigned& options, bool rectangular) 
     if (options & SortOption::Shuffle) updateMode();
     if (options & SortOption::RemoveDuplicate) boxes[0]->Enable(false);
     for (auto* radio : radios)
-        radio->Bind(wxEVT_RADIOBUTTON, [&](wxCommandEvent&) { updateMode(); });
-    boxes[1]->Bind(wxEVT_CHECKBOX, [&](wxCommandEvent&) { boxes[0]->Enable(!boxes[1]->GetValue()); });
+        radio->Bind(wxEVT_RADIOBUTTON, [updateMode](wxCommandEvent&) { updateMode(); });
+    boxes[1]->Bind(wxEVT_CHECKBOX, [boxes](wxCommandEvent&) { boxes[0]->Enable(!boxes[1]->GetValue()); });
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     dialog.SetSizerAndFit(contents);
     dialog.CentreOnParent();

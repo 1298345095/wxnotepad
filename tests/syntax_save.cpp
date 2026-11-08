@@ -59,23 +59,7 @@ public:
             if (stage_ == 0) {
                 stage_ = 1;
                 ++choosers;
-                const auto* current = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(widget));
-                GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
-                initialType = wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(filters->data)));
-                Require(g_slist_length(filters) == 5 && current == filters->data &&
-                            initialType.StartsWith(current_ + " (") &&
-                            wxString::FromUTF8(gtk_file_filter_get_name(
-                                GTK_FILE_FILTER(g_slist_last(filters)->data))) == "All Files (*)",
-                        "native save types must initially select current scheme first, with All Files last");
-                GSList* remaining = filters->next;
-                for (const auto* name : {"Plain Text", "C/C++", "Python", "JSON"}) {
-                    if (current_ == name) continue;
-                    Require(remaining && wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(remaining->data)))
-                                             .StartsWith(wxString(name) + " ("),
-                            "remaining native file types must follow catalog order without duplicates");
-                    remaining = remaining->next;
-                }
-                g_slist_free(filters);
+                VerifyFilters(widget);
                 if (!type_.empty()) NativeDialogs::ChooseFileType(widget, type_);
                 NativeDialogs::ChooseFile(widget, path_);
             } else if (stage_ == 1 && !path_.empty() && NativeDialogs::CanAcceptFile(widget, path_)) {
@@ -88,6 +72,26 @@ public:
     }
 
 private:
+#ifdef __WXGTK__
+    void VerifyFilters(GtkWidget* widget) {
+        const auto* current = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(widget));
+        GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
+        initialType = wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(filters->data)));
+        Require(g_slist_length(filters) == 5 && current == filters->data && initialType.StartsWith(current_ + " (") &&
+                    wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(g_slist_last(filters)->data))) ==
+                        "All Files (*)",
+                "native save types must initially select current scheme first, with All Files last");
+        GSList* remaining = filters->next;
+        for (const auto* name : {"Plain Text", "C/C++", "Python", "JSON"}) {
+            if (current_ == name) continue;
+            Require(remaining && wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(remaining->data)))
+                                     .StartsWith(wxString(name) + " ("),
+                    "remaining native file types must follow catalog order without duplicates");
+            remaining = remaining->next;
+        }
+        g_slist_free(filters);
+    }
+#endif
     wxString path_;
     wxString type_;
     wxString current_;

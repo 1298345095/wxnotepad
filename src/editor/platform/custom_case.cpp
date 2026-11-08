@@ -84,6 +84,24 @@ bool SentenceTerminator(uint32_t ch) {
     return ch == '\r' || ch == '\n' || ch == '.' || ch == ';' || ch == '!' || ch == '?' || ch == 0x85 || ch == 0x2028 ||
            ch == 0x2029;
 }
+wxString MapSentenceOrInvert(const wxString& input, int command) {
+    wxString output;
+    bool newSentence = true;
+    for (const auto character : input) {
+        const uint32_t ch = character.GetValue();
+        uint32_t mapped = ch;
+        if (command == CustomCaseCommand::Invert) {
+            mapped = Invert(ch);
+        } else if (SentenceTerminator(ch)) {
+            newSentence = true;
+        } else if (newSentence && AlphaNumeric(ch)) {
+            if (Lower(ch)) mapped = Invert(ch);
+            newSentence = false;
+        }
+        output += wxUniChar(mapped);
+    }
+    return output;
+}
 } // namespace
 
 std::string MapCustomCase(std::string_view text, int command) {
@@ -100,20 +118,7 @@ std::string MapCustomCase(std::string_view text, int command) {
     } else {
         if (command == CustomCaseCommand::Sentence) input = LinguisticMap(input, false);
         if (command != CustomCaseCommand::Invert && command != CustomCaseCommand::Sentence) return std::string(text);
-        bool newSentence = true;
-        for (const auto character : input) {
-            const uint32_t ch = character.GetValue();
-            uint32_t mapped = ch;
-            if (command == CustomCaseCommand::Invert) {
-                mapped = Invert(ch);
-            } else if (SentenceTerminator(ch)) {
-                newSentence = true;
-            } else if (newSentence && AlphaNumeric(ch)) {
-                if (Lower(ch)) mapped = Invert(ch);
-                newSentence = false;
-            }
-            output += wxUniChar(mapped);
-        }
+        output = MapSentenceOrInvert(input, command);
     }
     // Edit.cpp:1596 uses StrIsEmpty and wcscmp after mapping the full selection.
     // Invert's original WCHAR loop has no corresponding NUL-sensitive gate.

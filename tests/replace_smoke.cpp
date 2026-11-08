@@ -147,7 +147,7 @@ public:
                             editor->Send(Message::CanRedo),
                         "no-match Replace must preserve redo history");
                 Selection(editor, 0, 3, "no-match Replace must preserve the selection");
-                Require(frame->New(), "New must work with the clean Replace view open");
+                Require(frame->NewDocument(), "New must work with the clean Replace view open");
                 query->SetValue("one");
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor).empty() && !editor->Send(Message::CanUndo),

@@ -23,10 +23,15 @@ void EditorControl::ApplyCaretAppearance() {
         DWORD systemWidth = 0;
         if (SystemParametersInfoW(SPI_GETCARETWIDTH, 0, &systemWidth, 0) && systemWidth > static_cast<DWORD>(width))
             width = static_cast<int>(systemWidth);
-        else
+        else {
 #endif
-            if (width == 1)
-            width = std::max(1, static_cast<int>(std::lround(GetDPI().y * Send(Scintilla::Message::GetZoom) / 9600.0)));
+            if (width == 1) {
+                width =
+                    std::max(1, static_cast<int>(std::lround(GetDPI().y * Send(Scintilla::Message::GetZoom) / 9600.0)));
+            }
+#ifdef __WXMSW__
+        }
+#endif
         core_->WndProc(Scintilla::Message::SetCaretWidth, width, 0);
     }
     int period = appearance.blinkPeriod;

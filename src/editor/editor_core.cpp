@@ -52,6 +52,83 @@ std::optional<Scintilla::Keys> CoreKeyCode(int code) {
         return std::nullopt;
     }
 }
+
+bool HandleClipboardKey(EditorControl& window, const wxKeyEvent& event) {
+    if (event.AltDown()) return false;
+    switch (event.GetKeyCode()) {
+    case WXK_INSERT:
+        if (!event.ControlDown() || event.ShiftDown()) return false;
+        window.Copy();
+        return true;
+    case WXK_DELETE:
+        if (!event.ShiftDown() || event.ControlDown()) return false;
+        window.Cut();
+        return true;
+    case 'C':
+        if (!event.ControlDown()) return false;
+        if (event.ShiftDown())
+            window.CopyLine();
+        else
+            window.Copy();
+        return true;
+    case 'X':
+        if (!event.ControlDown()) return false;
+        if (event.ShiftDown())
+            window.CutLine();
+        else
+            window.Cut();
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool HandleControlKey(EditorControl& window, const wxKeyEvent& event) {
+    switch (event.GetKeyCode()) {
+    case '\\':
+        if (event.ShiftDown()) return false;
+        window.Send(Message::SetZoom, 100);
+        return true;
+    case WXK_TAB: {
+        if (event.ShiftDown()) return false;
+        const auto useTabs = window.Send(Message::GetUseTabs);
+        const auto tabIndents = window.Send(Message::GetTabIndents);
+        window.Send(Message::SetTabIndents, 0);
+        window.Send(Message::SetUseTabs, 1);
+        window.Send(Message::Tab);
+        window.Send(Message::SetUseTabs, useTabs);
+        window.Send(Message::SetTabIndents, tabIndents);
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+Message ApplicationKeyCommand(const wxKeyEvent& event) {
+    if (event.AltDown() && !event.ControlDown() && !event.ShiftDown()) {
+        if (event.GetKeyCode() == 'D') return Message::SelectionDuplicate;
+        if (event.GetKeyCode() == 'S') return Message::LineTranspose;
+    }
+    if (!event.ControlDown() || event.AltDown()) return Message{};
+    switch (event.GetKeyCode()) {
+    case '+':
+    case '=':
+    case WXK_NUMPAD_ADD:
+        return event.ShiftDown() ? Message{} : Message::ZoomIn;
+    case '-':
+    case WXK_NUMPAD_SUBTRACT:
+        return event.ShiftDown() ? Message{} : Message::ZoomOut;
+    case 'D':
+        return event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
+    case 'Y':
+        return event.ShiftDown() ? Message::Undo : Message::Redo;
+    case 'Z':
+        return event.ShiftDown() ? Message::Redo : Message::Undo;
+    default:
+        return Message{};
+    }
+}
 } // namespace
 
 class EditorControl::Core::TextDropTarget final : public wxDropTarget {
@@ -457,14 +534,7 @@ void EditorControl::Core::ClearDropFeedback() {
 }
 
 bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
-    if (!event.AltDown() && ((event.GetKeyCode() == WXK_INSERT && event.ControlDown() && !event.ShiftDown()) ||
-                             (event.GetKeyCode() == WXK_DELETE && event.ShiftDown() && !event.ControlDown()))) {
-        if (event.GetKeyCode() == WXK_INSERT)
-            window_.Copy();
-        else
-            window_.Cut();
-        return true;
-    }
+    if (HandleClipboardKey(window_, event)) return true;
     if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers()) {
         // CMD_ESCAPE cancels completion UI, not the core's selection modes.
         if (window_.Send(Message::AutoCActive))
@@ -476,76 +546,21 @@ bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
     // IDR_MAINWND accelerators in pinned Notepad4.rc precede KeyMap.cxx.
     // Keep application commands on their original keys, rather than exposing
     // unrelated core defaults such as Ctrl+L (LineCut) or Ctrl+T (transpose).
-    Message applicationCommand{};
     if (event.ControlDown() && !event.AltDown()) {
-        switch (event.GetKeyCode()) {
-        case '+':
-        case '=':
-        case WXK_NUMPAD_ADD:
-            if (!event.ShiftDown()) applicationCommand = Message::ZoomIn;
-            break;
-        case '-':
-        case WXK_NUMPAD_SUBTRACT:
-            if (!event.ShiftDown()) applicationCommand = Message::ZoomOut;
-            break;
-        case '\\':
-            if (!event.ShiftDown()) {
-                window_.Send(Message::SetZoom, 100);
-                return true;
-            }
-            break;
-        case WXK_TAB:
-            if (!event.ShiftDown()) {
-                const auto useTabs = window_.Send(Message::GetUseTabs);
-                const auto tabIndents = window_.Send(Message::GetTabIndents);
-                window_.Send(Message::SetTabIndents, 0);
-                window_.Send(Message::SetUseTabs, 1);
-                window_.Send(Message::Tab);
-                window_.Send(Message::SetUseTabs, useTabs);
-                window_.Send(Message::SetTabIndents, tabIndents);
-                return true;
-            }
-            break;
-        case 'C':
-        case 'X':
-            if (event.ShiftDown()) {
-                if (event.GetKeyCode() == 'C')
-                    window_.CopyLine();
-                else
-                    window_.CutLine();
-            } else if (event.GetKeyCode() == 'C')
-                window_.Copy();
-            else
-                window_.Cut();
-            return true;
-        case 'D':
-            applicationCommand = event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
-            break;
-        case 'Y':
-            applicationCommand = event.ShiftDown() ? Message::Undo : Message::Redo;
-            break;
-        case 'Z':
-            applicationCommand = event.ShiftDown() ? Message::Redo : Message::Undo;
-            break;
-        case 'U':
+        if (HandleControlKey(window_, event)) return true;
+        if (event.GetKeyCode() == 'U') {
             window_.Send(Message::CustomCaseMapping,
                          static_cast<uintptr_t>(event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower));
             return true;
-        case 'V':
-            if (!event.ShiftDown() && !event.MetaDown()) {
-                // The original application accelerator consumes disabled Ctrl+V.
-                // Direct SCI_PASTE retains its separate selection repair.
-                if (CanPaste()) window_.Send(Message::Paste);
-                return true;
-            }
-            break;
-        default:
-            break;
         }
-    } else if (event.AltDown() && !event.ControlDown() && !event.ShiftDown()) {
-        if (event.GetKeyCode() == 'D') applicationCommand = Message::SelectionDuplicate;
-        if (event.GetKeyCode() == 'S') applicationCommand = Message::LineTranspose;
+        if (event.GetKeyCode() == 'V' && !event.ShiftDown() && !event.MetaDown()) {
+            // The original application accelerator consumes disabled Ctrl+V.
+            // Direct SCI_PASTE retains its separate selection repair.
+            if (CanPaste()) window_.Send(Message::Paste);
+            return true;
+        }
     }
+    const auto applicationCommand = ApplicationKeyCommand(event);
     if (applicationCommand != Message{}) {
         window_.Send(applicationCommand);
         return true;
@@ -560,6 +575,7 @@ void EditorControl::Core::NotifyCaretMove() const noexcept {
 
 #ifndef __WXMSW__
 void EditorControl::Core::UpdateSystemCaret() {
+    // Linux input methods use the wx host; the original core paints its caret.
 }
 #endif
 
@@ -672,8 +688,11 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
     SelectionRevision();
     if (notification.nmhdr.code == Scintilla::Notification::UpdateUI &&
         (static_cast<unsigned>(notification.updated) &
-         ~static_cast<unsigned>(Scintilla::Update::VScroll | Scintilla::Update::HScroll)))
+         ~static_cast<unsigned>(Scintilla::Update::VScroll | Scintilla::Update::HScroll))) {
+        // The pinned NotifyParent virtual is const. EditorControl owns this
+        // mutable Core, and brace decoration updates use its normal WndProc path.
         const_cast<Core*>(this)->UpdateVisualBraceMatching();
+    }
     if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
         window_.lineNumberWidthDirty_ = true;
         window_.bookmarkMarginWidthDirty_ = true;
@@ -694,9 +713,9 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         notification.nmhdr.code == Scintilla::Notification::SavePointReached ||
         notification.nmhdr.code == Scintilla::Notification::SavePointLeft ||
         notification.nmhdr.code == Scintilla::Notification::Zoom) {
-        auto* event = new wxCommandEvent(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());
+        auto event = std::make_unique<wxCommandEvent>(wxEVT_EDITOR_STATE_CHANGED, window_.GetId());
         event->SetEventObject(&window_);
-        wxQueueEvent(&window_, event);
+        wxQueueEvent(&window_, event.release());
     }
 }
 
@@ -783,6 +802,7 @@ bool EditorControl::Core::HaveMouseCapture() const noexcept {
 }
 
 void EditorControl::Core::UpdateBaseElements() noexcept {
+    // Element colours are supplied by the editor's configured style scheme.
 }
 
 bool EditorControl::Core::ValidCodePage(int codepage) const noexcept {
@@ -802,4 +822,5 @@ intptr_t EditorControl::Core::DefWndProc(Message, uintptr_t, intptr_t) {
 }
 
 void SCICALL EditorControl::Core::CreateCallTipWindow(core::PRectangle) noexcept {
+    // Call-tip popup windows are outside the currently supported host UI.
 }

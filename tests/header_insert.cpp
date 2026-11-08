@@ -110,6 +110,78 @@ void RejectedAnsiOpen(EditorFrame* frame, const std::filesystem::path& path, con
         Require(editor->Send(messages[index]) == before[index],
                 "rejected native ANSI Open preserves selection, history, protection, EOL and language");
 }
+void OpenReferenceEncoding(EditorFrame* frame, const std::filesystem::path& directory,
+                           const std::vector<std::string>& fields, bool promotedAnsi) {
+    const auto& encoding = fields[1];
+    const auto path = directory / "reference.txt";
+    std::string bytes = "A\r\nB\r\nC";
+    if (encoding == "utf8bom") bytes = "\xef\xbb\xbf" + bytes;
+    if (encoding.starts_with("utf16")) bytes = std::string("A\0\r\0\n\0B\0\r\0\n\0C\0", 14);
+    if (encoding == "utf16bom") bytes = "\xff\xfe" + bytes;
+    TestFiles::WriteBytes(path, bytes);
+    auto* editor = frame->Editor();
+    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(Message::SetSavePoint);
+    const auto opened =
+        frame->Open(TestFiles::Filename(path), encoding == "ansi"
+                                                   ? std::nullopt
+                                                   : std::optional{encoding.starts_with("utf16") ? FileEncoding::Utf16Le
+                                                                   : encoding == "gbk"           ? FileEncoding::Gbk
+                                                                                                 : FileEncoding::Utf8});
+    if (opened.status != OpenStatus::Opened) {
+#ifdef __WXMSW__
+        std::fprintf(stderr, "Header host ACP=%u OEM=%u\n", GetACP(), GetOEMCP());
+#else
+        std::fprintf(stderr, "Header host locale=%s\n", wxLocale::GetSystemEncodingName().utf8_string().c_str());
+#endif
+        std::fprintf(stderr, "Header Open: %s/%s/%s/%s/%s status=%d error=%s\n", fields[0].c_str(), encoding.c_str(),
+                     fields[2].c_str(), fields[3].c_str(), fields[4].c_str(), static_cast<int>(opened.status),
+                     opened.error.utf8_string().c_str());
+    }
+    Require(opened.status == OpenStatus::Opened,
+            "captured encoding identity opens through the application document interface");
+    if (promotedAnsi)
+        Require(frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentHasBom(),
+                "UTF-8 native context promotes the ANSI load choice to explicit UTF-8 without BOM");
+}
+void SelectReferenceLanguage(EditorFrame* frame, const std::string& language) {
+    const char* label = language == "Python" ? "Python"
+                        : language == "Cpp"  ? "C/C++"
+                        : language == "Json" ? "JSON"
+                                             : "Plain Text";
+    const int id = frame->GetMenuBar()->FindMenuItem("Language", label);
+    Require(id != wxNOT_FOUND, "captured language is available in the native menu");
+    NativeSearch::Command(frame, id);
+}
+void ReferenceInsertion(EditorFrame* frame, const std::vector<std::string>& fields,
+                        const std::vector<std::string>& expected) {
+    auto* editor = frame->Editor();
+    PrepareSelection(editor, fields);
+    const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
+    const auto zoom = editor->Send(Message::GetZoom);
+    const auto codec = frame->DocumentEncoding();
+    const auto bom = frame->DocumentHasBom();
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    const int id = InsertId(frame, fields[4] == "encoding" ? "Encoding Identifier" : "Script Shebang Line");
+    Require(frame->GetMenuBar()->FindItem(id)->IsEnabled(),
+            "original header entries stay enabled for protected and rectangular selections");
+    NativeSearch::Command(frame, id);
+    try {
+        State(editor, expected, 10);
+        editor->Send(Message::Undo);
+        State(editor, expected, 16);
+        editor->Send(Message::Redo);
+        State(editor, expected, 22);
+    } catch (...) {
+        std::fprintf(stderr, "Header reference: %s/%s/%s/%s/%s\n", fields[0].c_str(), fields[1].c_str(),
+                     fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
+        throw;
+    }
+    Require(editor->Send(Message::GetEOLMode) == std::stoi(fields[2]) && frame->DocumentEncoding() == codec &&
+                frame->DocumentHasBom() == bom && editor->Send(Message::StyleGetSizeFractional, 32) == font &&
+                editor->Send(Message::GetZoom) == zoom,
+            "header insertion retains encoding, BOM, EOL, font and zoom metadata");
+}
 void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) {
     std::filesystem::create_directories(directory);
     std::ifstream stream(std::filesystem::u8path(HEADER_REFERENCE));
@@ -148,7 +220,6 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
         const auto& encoding = fields[1];
         const bool promotedAnsi = nativeUtf8 && encoding == "ansi";
         const auto& expected = promotedAnsi ? utf8References.at(key(fields)) : fields;
-        auto* editor = frame->Editor();
         if (unmigratedNativeAnsi && encoding == "ansi") {
             try {
                 RejectedAnsiOpen(frame, directory / "unmigrated-ansi.txt", fields, nativePage);
@@ -161,74 +232,15 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
             continue;
         }
         if (encoding != previousEncoding) {
-            const auto path = directory / "reference.txt";
-            std::string bytes = "A\r\nB\r\nC";
-            if (encoding == "utf8bom") bytes = "\xef\xbb\xbf" + bytes;
-            if (encoding.starts_with("utf16")) bytes = std::string("A\0\r\0\n\0B\0\r\0\n\0C\0", 14);
-            if (encoding == "utf16bom") bytes = "\xff\xfe" + bytes;
-            TestFiles::WriteBytes(path, bytes);
-            editor->Send(Message::SetReadOnly, 0);
-            editor->Send(Message::SetSavePoint);
-            const auto opened =
-                frame->Open(TestFiles::Filename(path),
-                            encoding == "ansi" ? std::nullopt
-                                               : std::optional{encoding.starts_with("utf16") ? FileEncoding::Utf16Le
-                                                               : encoding == "gbk"           ? FileEncoding::Gbk
-                                                                                             : FileEncoding::Utf8});
-            if (opened.status != OpenStatus::Opened) {
-#ifdef __WXMSW__
-                std::fprintf(stderr, "Header host ACP=%u OEM=%u\n", GetACP(), GetOEMCP());
-#else
-                std::fprintf(stderr, "Header host locale=%s\n",
-                             wxLocale::GetSystemEncodingName().utf8_string().c_str());
-#endif
-                std::fprintf(stderr, "Header Open: %s/%s/%s/%s/%s status=%d error=%s\n", fields[0].c_str(),
-                             encoding.c_str(), fields[2].c_str(), fields[3].c_str(), fields[4].c_str(),
-                             static_cast<int>(opened.status), opened.error.utf8_string().c_str());
-            }
-            Require(opened.status == OpenStatus::Opened,
-                    "captured encoding identity opens through the application document interface");
+            OpenReferenceEncoding(frame, directory, fields, promotedAnsi);
             previousEncoding = encoding;
             previousLanguage.clear();
-            if (promotedAnsi)
-                Require(frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentHasBom(),
-                        "UTF-8 native context promotes the ANSI load choice to explicit UTF-8 without BOM");
         }
         if (previousLanguage != fields[0]) {
-            const char* label = fields[0] == "Python" ? "Python"
-                                : fields[0] == "Cpp"  ? "C/C++"
-                                : fields[0] == "Json" ? "JSON"
-                                                      : "Plain Text";
-            const int id = frame->GetMenuBar()->FindMenuItem("Language", label);
-            Require(id != wxNOT_FOUND, "captured language is available in the native menu");
-            NativeSearch::Command(frame, id);
+            SelectReferenceLanguage(frame, fields[0]);
             previousLanguage = fields[0];
         }
-        PrepareSelection(editor, fields);
-        const auto font = editor->Send(Message::StyleGetSizeFractional, 32);
-        const auto zoom = editor->Send(Message::GetZoom);
-        const auto codec = frame->DocumentEncoding();
-        const auto bom = frame->DocumentHasBom();
-        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-        const int id = InsertId(frame, fields[4] == "encoding" ? "Encoding Identifier" : "Script Shebang Line");
-        Require(frame->GetMenuBar()->FindItem(id)->IsEnabled(),
-                "original header entries stay enabled for protected and rectangular selections");
-        NativeSearch::Command(frame, id);
-        try {
-            State(editor, expected, 10);
-            editor->Send(Message::Undo);
-            State(editor, expected, 16);
-            editor->Send(Message::Redo);
-            State(editor, expected, 22);
-        } catch (...) {
-            std::fprintf(stderr, "Header reference: %s/%s/%s/%s/%s\n", fields[0].c_str(), fields[1].c_str(),
-                         fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
-            throw;
-        }
-        Require(editor->Send(Message::GetEOLMode) == std::stoi(fields[2]) && frame->DocumentEncoding() == codec &&
-                    frame->DocumentHasBom() == bom && editor->Send(Message::StyleGetSizeFractional, 32) == font &&
-                    editor->Send(Message::GetZoom) == zoom,
-                "header insertion retains encoding, BOM, EOL, font and zoom metadata");
+        ReferenceInsertion(frame, fields, expected);
         ++count;
     }
     Require(count + rejected == 1248 && rejected == (unmigratedNativeAnsi ? 216U : 0U),
@@ -241,7 +253,7 @@ void KeyCases(EditorFrame* frame) {
     auto* editor = frame->Editor();
     editor->Send(Message::SetReadOnly, 0);
     editor->Send(Message::SetSavePoint);
-    Require(frame->New(), "fresh UTF-8 document is available for the native Ctrl+F8 shortcut");
+    Require(frame->NewDocument(), "fresh UTF-8 document is available for the native Ctrl+F8 shortcut");
     TestEditor::ResetStream(editor, "AoldZ", 4, 1);
     NativeKeys::Shortcut(frame, WXK_F8, true);
     Require(TestEditor::Text(editor) == "AUTF-8Z", "native Ctrl+F8 invokes encoding insertion on the owned editor");

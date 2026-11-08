@@ -149,6 +149,48 @@ def verify_saved_bytes(scratch, sample):
         require(actual.read(1) == b"", "Saved document contains unexpected trailing bytes")
 
 
+def observe_editing(folder, process, state, scratch, sample, row):
+    kind = row["kind"]
+    stamp = row["timestamps"]
+    if kind == "operations":
+        stamp["open_begin"] = time.perf_counter()
+        command(folder, 1, "open", scratch)
+        state = wait_state(folder, process, lambda s: s["sequence"] == "1")
+        stamp["open_observed"] = time.perf_counter()
+        require(state["result"] == "ok" and int(state["length"]) == sample.stat().st_size, state)
+        row["open_observed_ms"] = (stamp["open_observed"] - stamp["open_begin"]) * 1000
+        time.sleep(QUIET)
+        row["memory"]["opened"] = memory(process.pid)
+        stamp["opened_memory"] = time.perf_counter()
+    stamp["edit_begin"] = time.perf_counter()
+    native_edit(process, state)
+    state = wait_state(folder, process, lambda s: s["dirty"] == "1")
+    stamp["edit_observed"] = time.perf_counter()
+    require(int(state["length"]) == (sample.stat().st_size if sample else 0) + 1, state)
+    row["edit_observed_ms"] = (stamp["edit_observed"] - stamp["edit_begin"]) * 1000
+    if kind == "startup":
+        row["launch_to_native_edit_observed_ms"] = (stamp["edit_observed"] - stamp["spawn_begin"]) * 1000
+    if kind == "operations":
+        time.sleep(QUIET)
+        row["memory"]["edited"] = memory(process.pid)
+        stamp["edited_memory"] = time.perf_counter()
+        stamp["save_begin"] = time.perf_counter()
+        command(folder, 2, "save")
+        state = wait_state(folder, process, lambda s: s["sequence"] == "2")
+        stamp["save_observed"] = time.perf_counter()
+        require(state["result"] == "ok" and state["dirty"] == "0", state)
+        row["save_observed_ms"] = (stamp["save_observed"] - stamp["save_begin"]) * 1000
+        time.sleep(QUIET)
+        row["memory"]["saved"] = memory(process.pid)
+        stamp["saved_memory"] = time.perf_counter()
+        # Independent full-content comparison only after all timing/memory.
+        verify_saved_bytes(scratch, sample)
+        row["output_sha256"] = digest(scratch)
+        row["output_bytes"] = scratch.stat().st_size
+        row["content_verified"] = True
+    return state
+
+
 def observe(executable, work, kind, sample, run, topmost):
     folder = work / f"{kind}-{sample.stem if sample else 'empty'}-{run}"
     folder.mkdir()
@@ -178,42 +220,7 @@ def observe(executable, work, kind, sample, run, topmost):
             row["memory"]["idle"] = memory(process.pid)
             stamp["idle_memory"] = time.perf_counter()
         else:
-            if kind == "operations":
-                stamp["open_begin"] = time.perf_counter()
-                command(folder, 1, "open", scratch)
-                state = wait_state(folder, process, lambda s: s["sequence"] == "1")
-                stamp["open_observed"] = time.perf_counter()
-                require(state["result"] == "ok" and int(state["length"]) == sample.stat().st_size, state)
-                row["open_observed_ms"] = (stamp["open_observed"] - stamp["open_begin"]) * 1000
-                time.sleep(QUIET)
-                row["memory"]["opened"] = memory(process.pid)
-                stamp["opened_memory"] = time.perf_counter()
-            stamp["edit_begin"] = time.perf_counter()
-            native_edit(process, state)
-            state = wait_state(folder, process, lambda s: s["dirty"] == "1")
-            stamp["edit_observed"] = time.perf_counter()
-            require(int(state["length"]) == (sample.stat().st_size if sample else 0) + 1, state)
-            row["edit_observed_ms"] = (stamp["edit_observed"] - stamp["edit_begin"]) * 1000
-            if kind == "startup":
-                row["launch_to_native_edit_observed_ms"] = (stamp["edit_observed"] - stamp["spawn_begin"]) * 1000
-            if kind == "operations":
-                time.sleep(QUIET)
-                row["memory"]["edited"] = memory(process.pid)
-                stamp["edited_memory"] = time.perf_counter()
-                stamp["save_begin"] = time.perf_counter()
-                command(folder, 2, "save")
-                state = wait_state(folder, process, lambda s: s["sequence"] == "2")
-                stamp["save_observed"] = time.perf_counter()
-                require(state["result"] == "ok" and state["dirty"] == "0", state)
-                row["save_observed_ms"] = (stamp["save_observed"] - stamp["save_begin"]) * 1000
-                time.sleep(QUIET)
-                row["memory"]["saved"] = memory(process.pid)
-                stamp["saved_memory"] = time.perf_counter()
-                # Independent full-content comparison only after all timing/memory.
-                verify_saved_bytes(scratch, sample)
-                row["output_sha256"] = digest(scratch)
-                row["output_bytes"] = scratch.stat().st_size
-                row["content_verified"] = True
+            state = observe_editing(folder, process, state, scratch, sample, row)
         row["final_state"] = state
         row["status"] = "ok"
     except Exception as error:
@@ -243,6 +250,21 @@ def summarize(rows):
                            for stage, counters in values[0]["memory"].items()}
         result[name] = entry
     return result
+
+
+def observe_batch(executable, output, args, samples, report):
+    for kind, count, cases in (("startup", args.startup_count, [None, samples["small"]]),
+                               ("idle", args.idle_count, [None, samples["small"]]),
+                               ("operations", args.operation_count, [samples["10MiB"], samples["100MiB"]])):
+        for sample in cases:
+            for run in range(1, count + 1):
+                row = observe(executable, output, kind, sample, run, args.owned_topmost)
+                report["rows"].append(row)
+                print(kind, row["case"], run, row["status"], row.get("error", ""), flush=True)
+                report["summary"] = summarize(report["rows"])
+                (output / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+                if row["status"] != "ok":
+                    raise SystemExit("Batch stopped on failed observation; raw row retained")
 
 
 def main():
@@ -290,18 +312,7 @@ def main():
                                   if line.startswith("model name"))
         report["mem_total"] = Path("/proc/meminfo").read_text().splitlines()[0]
         report["os_release"] = Path("/etc/os-release").read_text()
-    for kind, count, cases in (("startup", args.startup_count, [None, samples["small"]]),
-                               ("idle", args.idle_count, [None, samples["small"]]),
-                               ("operations", args.operation_count, [samples["10MiB"], samples["100MiB"]])):
-        for sample in cases:
-            for run in range(1, count + 1):
-                row = observe(executable, output, kind, sample, run, args.owned_topmost)
-                report["rows"].append(row)
-                print(kind, row["case"], run, row["status"], row.get("error", ""), flush=True)
-                report["summary"] = summarize(report["rows"])
-                (output / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-                if row["status"] != "ok":
-                    raise SystemExit("Batch stopped on failed observation; raw row retained")
+    observe_batch(executable, output, args, samples, report)
     raise SystemExit(any(row["status"] != "ok" for row in report["rows"]))
 
 

@@ -48,6 +48,15 @@ std::optional<std::string> Encode(const wxMBConv& converter, const std::wstring&
     result.resize(written);
     return result;
 }
+
+std::optional<wchar_t> DecodePuaPair(std::string_view bytes) {
+    if (bytes.size() != 2) return std::nullopt;
+    const unsigned pair = (static_cast<unsigned char>(bytes[0]) << 8) | static_cast<unsigned char>(bytes[1]);
+    for (const auto& range : puaRanges) {
+        if (pair >= range.first && pair <= range.last) return static_cast<wchar_t>(range.unicode + pair - range.first);
+    }
+    return std::nullopt;
+}
 } // namespace
 std::optional<std::string> DecodeGbk(std::string_view bytes) {
     const wxCSConv cp936("CP936");
@@ -61,16 +70,9 @@ std::optional<std::string> DecodeGbk(std::string_view bytes) {
         if (const auto decoded = Decode(cp936, piece))
             wide += *decoded;
         else {
-            if (length != 2) return std::nullopt;
-            const unsigned pair = (lead << 8) | static_cast<unsigned char>(piece[1]);
-            const PuaRange* found = nullptr;
-            for (const auto& range : puaRanges)
-                if (pair >= range.first && pair <= range.last) {
-                    found = &range;
-                    break;
-                }
-            if (!found) return std::nullopt;
-            wide += static_cast<wchar_t>(found->unicode + pair - found->first);
+            const auto decodedPua = DecodePuaPair(piece);
+            if (!decodedPua) return std::nullopt;
+            wide += *decodedPua;
         }
         offset += length;
     }

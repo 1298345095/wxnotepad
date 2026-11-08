@@ -149,7 +149,7 @@ void Rectangle(EditorControl* editor, intptr_t anchor, intptr_t caret) {
     editor->Send(Message::SetRectangularSelectionAnchor, anchor);
     editor->Send(Message::SetRectangularSelectionCaret, caret);
 }
-void ShapedSelections(EditorFrame* frame) {
+void RectangleDuplication(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const bool reverse : {false, true}) {
         TestEditor::ResetStream(editor, "ABC\nDEF", 0, 0, Scintilla::EndOfLine::Lf);
@@ -178,7 +178,9 @@ void ShapedSelections(EditorFrame* frame) {
             "transpose uses main rectangle caret line and collapses shape");
     TestEditor::RequireSelection(editor, 4, 4, "transpose rectangle ends at logical line start");
     History(editor, "ABC\nDEF", "DEF\nABC");
-
+}
+void MultipleSelectionDuplication(EditorFrame* frame) {
+    auto* editor = frame->Editor();
     for (const bool line : {false, true}) {
         TestEditor::ResetStream(editor, "AB\nCD", 0, 1, Scintilla::EndOfLine::Lf);
         editor->Send(Message::SetMultipleSelection, 1);
@@ -202,7 +204,9 @@ void ShapedSelections(EditorFrame* frame) {
     TestEditor::RequireSelection(editor, 3, 3, "multiple-selection transpose collapses at original computed start");
     History(editor, "AB\nCD", "CD\nAB");
     editor->Send(Message::SetMultipleSelection, 0);
-
+}
+void VirtualSpaceDuplication(EditorFrame* frame) {
+    auto* editor = frame->Editor();
     for (const char* label : {"Duplicate Selection", "Duplicate Line"}) {
         TestEditor::ResetStream(editor, "AB\nCD", 2, 2, Scintilla::EndOfLine::Lf);
         editor->Send(Message::SetVirtualSpaceOptions, static_cast<uintptr_t>(Scintilla::VirtualSpace::UserAccessible));
@@ -247,6 +251,11 @@ void ShapedSelections(EditorFrame* frame) {
     Require(editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
                 editor->Send(Message::GetRectangularSelectionCaret) == 10,
             "empty rectangle extends over inserted physical lines at original column");
+}
+void ShapedSelections(EditorFrame* frame) {
+    RectangleDuplication(frame);
+    MultipleSelectionDuplication(frame);
+    VirtualSpaceDuplication(frame);
     std::puts("PASS: rectangle/multiple/virtual selections, exact endpoints and grouped history");
 }
 void WrappedLines(EditorFrame* frame) {

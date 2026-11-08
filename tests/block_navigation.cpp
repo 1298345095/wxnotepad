@@ -45,6 +45,47 @@ void Visible(EditorControl* editor) {
     Require(x >= 0 && x < editor->GetClientSize().x && y >= 0 && y < editor->GetClientSize().y,
             "block navigation reveals its actual target on both axes");
 }
+void ReferenceCase(EditorFrame* frame, const int* commands, const int* modeIds, const BlockReference::Document& source,
+                   const BlockReference::Fixture& row, FileEncoding encoding, bool bom) {
+    auto* editor = frame->Editor();
+    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
+    editor->Send(Message::SetSelectionMode, 0);
+    NativeSearch::Command(frame, modeIds[row.mode]);
+    editor->Send(Message::SetSel, row.anchor, row.caret);
+    if (row.setup == 1) {
+        editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Contract));
+        editor->Send(Message::SetSel, row.anchor, row.caret);
+    } else if (row.setup == 2)
+        editor->Send(Message::SetReadOnly, 1);
+    else if (row.setup == 3) {
+        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(Message::SetRectangularSelectionAnchor, row.anchor);
+        editor->Send(Message::SetRectangularSelectionCaret, row.caret);
+        editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 3);
+        editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 2);
+    } else if (row.setup == 4)
+        editor->Send(Message::AddSelection, 0, 0);
+    const auto beforeCaret = editor->Send(Message::GetCurrentPos);
+    const auto undo = editor->Send(Message::CanUndo);
+    const auto redo = editor->Send(Message::CanRedo);
+    NativeSearch::Command(frame, commands[row.command]);
+    Position(editor, row);
+    Require(NativeSearch::Text(editor) == source.text && !editor->Send(Message::GetModify) &&
+                editor->Send(Message::CanUndo) == undo && editor->Send(Message::CanRedo) == redo &&
+                frame->DocumentEncoding() == encoding && frame->DocumentHasBom() == bom,
+            "block commands preserve bytes, encoding, save point and undo/redo availability");
+    for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line) {
+        if (editor->Send(Message::GetLineVisible, line) != row.visible[line] - '0') {
+            std::fprintf(stderr, "visibility doc=%d command=%d setup=%d line=%lld\n", row.document, row.command,
+                         row.setup, static_cast<long long>(line));
+            throw std::runtime_error("block command must reproduce original folded-line visibility");
+        }
+        Require(editor->Send(Message::GetFoldExpanded, line) == row.expanded[line] - '0',
+                "block commands reproduce original expanded headers and retain unrelated folds");
+    }
+    if (row.command < 6 && beforeCaret != row.expectedCaret) Visible(editor);
+}
 void ReferenceCases(EditorFrame* frame, const int* commands) {
     auto* editor = frame->Editor();
     const int modeIds[] = {frame->GetMenuBar()->FindMenuItem("Edit", "None"),
@@ -75,43 +116,7 @@ void ReferenceCases(EditorFrame* frame, const int* commands) {
                 "original fixture's styling and first-line fold header are ready after history setup");
         for (const auto& row : BlockReference::fixtures) {
             if (row.document != static_cast<int>(document)) continue;
-            editor->Send(Message::SetReadOnly, 0);
-            editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
-            editor->Send(Message::SetSelectionMode, 0);
-            NativeSearch::Command(frame, modeIds[row.mode]);
-            editor->Send(Message::SetSel, row.anchor, row.caret);
-            if (row.setup == 1) {
-                editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Contract));
-                editor->Send(Message::SetSel, row.anchor, row.caret);
-            } else if (row.setup == 2)
-                editor->Send(Message::SetReadOnly, 1);
-            else if (row.setup == 3) {
-                editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-                editor->Send(Message::SetRectangularSelectionAnchor, row.anchor);
-                editor->Send(Message::SetRectangularSelectionCaret, row.caret);
-                editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 3);
-                editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 2);
-            } else if (row.setup == 4)
-                editor->Send(Message::AddSelection, 0, 0);
-            const auto beforeCaret = editor->Send(Message::GetCurrentPos);
-            const auto undo = editor->Send(Message::CanUndo);
-            const auto redo = editor->Send(Message::CanRedo);
-            NativeSearch::Command(frame, commands[row.command]);
-            Position(editor, row);
-            Require(NativeSearch::Text(editor) == source.text && !editor->Send(Message::GetModify) &&
-                        editor->Send(Message::CanUndo) == undo && editor->Send(Message::CanRedo) == redo &&
-                        frame->DocumentEncoding() == encoding && frame->DocumentHasBom() == bom,
-                    "block commands preserve bytes, encoding, save point and undo/redo availability");
-            for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line) {
-                if (editor->Send(Message::GetLineVisible, line) != row.visible[line] - '0') {
-                    std::fprintf(stderr, "visibility doc=%d command=%d setup=%d line=%lld\n", row.document, row.command,
-                                 row.setup, static_cast<long long>(line));
-                    throw std::runtime_error("block command must reproduce original folded-line visibility");
-                }
-                Require(editor->Send(Message::GetFoldExpanded, line) == row.expanded[line] - '0',
-                        "block commands reproduce original expanded headers and retain unrelated folds");
-            }
-            if (row.command < 6 && beforeCaret != row.expectedCaret) Visible(editor);
+            ReferenceCase(frame, commands, modeIds, source, row, encoding, bom);
         }
         editor->Send(Message::SetReadOnly, 0);
         editor->Send(Message::Redo);
@@ -127,19 +132,31 @@ void ReferenceCases(EditorFrame* frame, const int* commands) {
     std::puts("PASS: original block navigation/selection runtime fixtures, folding, visibility and preserved document "
               "history");
 }
+void LoadKeyboardFixture(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    editor->Send(Message::SetReadOnly, 0);
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    editor->Send(Message::SetSelectionMode, 0);
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(BlockReference::documents[0].text));
+    editor->Send(Message::SetTabWidth, 4);
+    editor->Send(Message::Colourise, 0, -1);
+    editor->SetLineSelectionMode(LineSelectionMode::VisualStudio);
+    editor->Send(Message::SetSel, 27, 27);
+}
+void ExcludedShortcut(EditorFrame* frame, int key, bool control, bool shift) {
+    auto* editor = frame->Editor();
+    const bool valid = key == '[' ? !control && !shift : key == ']' ? !control : !shift;
+    if (valid) return;
+    LoadKeyboardFixture(frame);
+    NativeKeys::Shortcut(frame, key, control, true, shift);
+    Require(editor->Send(Message::GetAnchor) == 27 && editor->Send(Message::GetCurrentPos) == 27 &&
+                editor->Send(Message::GetSelectionMode) == 0 &&
+                NativeSearch::Text(editor) == BlockReference::documents[0].text,
+            "additional native Ctrl/Shift modifiers must follow original no-command routing");
+}
 void KeyboardCases(EditorFrame* frame, const int* commands) {
     auto* editor = frame->Editor();
     const int keys[] = {'[', ']', ',', '.', ',', '.', ']'};
-    const auto load = [&] {
-        editor->Send(Message::SetReadOnly, 0);
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
-        editor->Send(Message::SetSelectionMode, 0);
-        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(BlockReference::documents[0].text));
-        editor->Send(Message::SetTabWidth, 4);
-        editor->Send(Message::Colourise, 0, -1);
-        editor->SetLineSelectionMode(LineSelectionMode::VisualStudio);
-        editor->Send(Message::SetSel, 27, 27);
-    };
     for (size_t index = 0; index < std::size(keys); ++index) {
         const bool control = index == 4 || index == 5;
         const bool shift = index == 6;
@@ -149,7 +166,7 @@ void KeyboardCases(EditorFrame* frame, const int* commands) {
                     accelerator->GetFlags() ==
                         (wxACCEL_ALT | (control ? wxACCEL_CTRL : 0) | (shift ? wxACCEL_SHIFT : 0)),
                 "block menu accelerators reproduce original punctuation and exact modifiers");
-        load();
+        LoadKeyboardFixture(frame);
         NativeKeys::Shortcut(frame, keys[index], control, true, shift);
         const auto row = std::find_if(std::begin(BlockReference::fixtures), std::end(BlockReference::fixtures),
                                       [index](const auto& row) {
@@ -164,18 +181,11 @@ void KeyboardCases(EditorFrame* frame, const int* commands) {
     for (const int key : {'[', ']', ',', '.'}) {
         for (const bool control : {false, true}) {
             for (const bool shift : {false, true}) {
-                const bool valid = key == '[' ? !control && !shift : key == ']' ? !control : !shift;
-                if (valid) continue;
-                load();
-                NativeKeys::Shortcut(frame, key, control, true, shift);
-                Require(editor->Send(Message::GetAnchor) == 27 && editor->Send(Message::GetCurrentPos) == 27 &&
-                            editor->Send(Message::GetSelectionMode) == 0 &&
-                            NativeSearch::Text(editor) == BlockReference::documents[0].text,
-                        "additional native Ctrl/Shift modifiers must follow original no-command routing");
+                ExcludedShortcut(frame, key, control, shift);
             }
         }
     }
-    load();
+    LoadKeyboardFixture(frame);
     editor->Send(Message::SetSel, 2, 27);
     NativeKeys::Shortcut(frame, ',', true, false, true);
     Require(editor->Send(Message::GetAnchor) == 27 && editor->Send(Message::GetCurrentPos) == 2,

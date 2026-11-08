@@ -16,6 +16,9 @@ import tempfile
 import time
 import threading
 
+WESTON_LOG = "weston.log"
+SWITCH_WINDOW_KEY = "super+Tab"
+
 backend, *command = sys.argv[1:]
 if backend not in ("x11", "wayland") or not command:
     raise SystemExit("Expected x11|wayland followed by a test command")
@@ -104,7 +107,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
     environment.pop("WAYLAND_DISPLAY", None)
     environment.pop("WAYLAND_SOCKET", None)
     weston = test = None
-    log = open(runtime / "weston.log", "w", encoding="utf-8")
+    log = open(runtime / WESTON_LOG, "w", encoding="utf-8")
     try:
         weston_window = None
         if backend == "wayland":
@@ -119,7 +122,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                 time.sleep(.05)
             window = None
             while window is None and time.monotonic() < deadline:
-                window = re.search(r"x11 output .* window id (\d+)", (runtime / "weston.log").read_text(encoding="utf-8"))
+                window = re.search(r"x11 output .* window id (\d+)", (runtime / WESTON_LOG).read_text(encoding="utf-8"))
                 if window is None: time.sleep(.05)
             if window is None: raise RuntimeError("Private Weston X window was not published")
             weston_window = window.group(1)
@@ -149,7 +152,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         xdo("windowraise", windows[0])
                         xdo("windowfocus", "--sync", windows[0])
                     else:
-                        xdo("key", "--clearmodifiers", "super+Tab")
+                        xdo("key", "--clearmodifiers", SWITCH_WINDOW_KEY)
                     time.sleep(.3)
                 if request == "geometry":
                     acknowledge(focus)
@@ -198,7 +201,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                         if mapped_toplevel(scene, int(process), int(surface)):
                             if time.monotonic() < deadline:
                                 if kind == "activate":
-                                    xdo("key", "--clearmodifiers", "super+Tab")
+                                    xdo("key", "--clearmodifiers", SWITCH_WINDOW_KEY)
                                 acknowledge(focus)
                             break
                         time.sleep(min(.03, max(0, deadline - time.monotonic())))
@@ -292,7 +295,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     # the next gesture, as for key and gesture requests above.
                     acknowledge(focus)
                     xdo("windowfocus", "--sync", weston_window)
-                    xdo("key", "--clearmodifiers", "super+Tab")
+                    xdo("key", "--clearmodifiers", SWITCH_WINDOW_KEY)
                 last_switch = time.monotonic()
             time.sleep(.03)
         result = test.returncode
@@ -303,7 +306,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
         if os.environ.get("WXNOTEPAD_DISPLAY_LOG_DIR"):
             artifacts = Path(os.environ["WXNOTEPAD_DISPLAY_LOG_DIR"])
             artifacts.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(runtime / "weston.log", artifacts / f"{backend}-{os.getpid()}-weston.log")
+            shutil.copyfile(runtime / WESTON_LOG, artifacts / f"{backend}-{os.getpid()}-weston.log")
         if weston is not None:
-            print((runtime / "weston.log").read_text(encoding="utf-8")[-1500:], flush=True)
+            print((runtime / WESTON_LOG).read_text(encoding="utf-8")[-1500:], flush=True)
     raise SystemExit(result)

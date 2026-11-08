@@ -51,13 +51,13 @@ void Edit(wxTextCtrl* input, const wxString& value) {
 #endif
     wxYield();
 }
-int Dialog(EditorFrame* frame, int id, const std::function<void(wxDialog*)>& action, bool shortcut = false,
-           bool rectangle = false) {
+template <typename Action>
+int Dialog(EditorFrame* frame, int id, const Action& action, bool shortcut = false, bool rectangle = false) {
     bool observed = false;
     bool released = false;
     std::exception_ptr failure;
     TagDriver driver(
-        [&](wxDialog* dialog) {
+        [&observed, &released, &failure, &action, shortcut](wxDialog* dialog) {
             observed = true;
             try {
 #ifndef __WXMSW__
@@ -239,7 +239,7 @@ void ScannerCaptures(EditorFrame* frame, int id) {
     for (const char* language : {"Plain Text", "C/C++", "Python", "JSON"}) {
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
         TestEditor::ResetStream(editor, "x", 0, 1);
-        Dialog(frame, id, [&](wxDialog* dialog) {
+        Dialog(frame, id, [language](wxDialog* dialog) {
             auto* opening = Field(dialog, "Opening tag");
             auto* closing = Field(dialog, "Closing tag");
             std::ifstream input{std::filesystem::path(TAG_REFERENCE_FIXTURES)};
@@ -301,6 +301,38 @@ void CloseWindow(wxDialog* dialog) {
 #endif
     wxYield();
 }
+void PrepareOriginalState(EditorControl* editor, const std::string& kind) {
+    using Scintilla::Message;
+    editor->Send(Message::SetMultipleSelection, 0);
+    TestEditor::ResetStream(editor, "A中😀B\nlast", kind == "reverse" ? 8 : 1,
+                            kind == "reverse" || kind == "caret" ? 1 : 8);
+    if (kind == "multiline") editor->Send(Message::SetSel, 14, 0);
+    if (kind == "multiple") {
+        editor->Send(Message::SetMultipleSelection, 1);
+        editor->Send(Message::AddSelection, 10, 14);
+        editor->Send(Message::SetMainSelection, 1);
+    }
+    if (kind == "virtual") {
+        editor->Send(Message::SetSel, 14, 14);
+        editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 2);
+        editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 4);
+    }
+    if (kind.starts_with("rectangle")) {
+        TestEditor::ResetStream(editor, "xxx\nxxx", 1, 7);
+        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(Message::SetRectangularSelectionAnchor, kind == "rectangle-reverse" ? 7 : 1);
+        editor->Send(Message::SetRectangularSelectionCaret, kind == "rectangle-reverse" ? 1 : 7);
+        editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 2);
+        editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 4);
+    }
+    if (kind == "readonly" || kind == "cancel" || kind == "close" || kind == "empty") {
+        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Message::SetSel, 1, 8);
+        editor->Send(Message::Undo);
+        editor->Send(Message::SetSel, 1, 8);
+    }
+    if (kind == "readonly") editor->Send(Message::SetReadOnly, 1);
+}
 void OriginalStates(EditorFrame* frame, int id) {
     using Scintilla::Message;
     std::ifstream input{std::filesystem::path(TAG_STATE_REFERENCE_FIXTURES)};
@@ -313,7 +345,7 @@ void OriginalStates(EditorFrame* frame, int id) {
         references.emplace(line.substr(0, separator), line.substr(separator + 1));
     }
     auto* editor = frame->Editor();
-    const auto check = [&](const std::string& kind, const char* stage) {
+    const auto check = [editor, &references](const std::string& kind, const char* stage) {
         const auto actual = Snapshot(editor);
         const auto expected = references.at(kind + '\t' + stage);
         if (actual != expected)
@@ -324,40 +356,12 @@ void OriginalStates(EditorFrame* frame, int id) {
     };
     for (const std::string kind : {"caret", "normal", "reverse", "multiline", "multiple", "virtual", "rectangle",
                                    "rectangle-reverse", "readonly", "cancel", "close", "empty"}) {
-        editor->Send(Message::SetMultipleSelection, 0);
-        TestEditor::ResetStream(editor, "A中😀B\nlast", kind == "reverse" ? 8 : 1,
-                                kind == "reverse" || kind == "caret" ? 1 : 8);
-        if (kind == "multiline") editor->Send(Message::SetSel, 14, 0);
-        if (kind == "multiple") {
-            editor->Send(Message::SetMultipleSelection, 1);
-            editor->Send(Message::AddSelection, 10, 14);
-            editor->Send(Message::SetMainSelection, 1);
-        }
-        if (kind == "virtual") {
-            editor->Send(Message::SetSel, 14, 14);
-            editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 2);
-            editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 4);
-        }
+        PrepareOriginalState(editor, kind);
         const bool rectangle = kind.starts_with("rectangle");
-        if (rectangle) {
-            TestEditor::ResetStream(editor, "xxx\nxxx", 1, 7);
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, kind == "rectangle-reverse" ? 7 : 1);
-            editor->Send(Message::SetRectangularSelectionCaret, kind == "rectangle-reverse" ? 1 : 7);
-            editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 2);
-            editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 4);
-        }
-        if (kind == "readonly" || kind == "cancel" || kind == "close" || kind == "empty") {
-            editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-            editor->Send(Message::SetSel, 1, 8);
-            editor->Send(Message::Undo);
-            editor->Send(Message::SetSel, 1, 8);
-        }
-        if (kind == "readonly") editor->Send(Message::SetReadOnly, 1);
         check(kind, "before");
         const int warnings = Dialog(
             frame, id,
-            [&](wxDialog* dialog) {
+            [&kind](wxDialog* dialog) {
                 Edit(Field(dialog, "Opening tag"), kind == "empty" ? wxString{} : wxString::FromUTF8("<DiV a=\"😀\">"));
                 Edit(Field(dialog, "Closing tag"), kind == "empty" ? "" : "</MANUAL>");
                 if (kind == "close")

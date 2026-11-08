@@ -95,7 +95,7 @@ public:
                         frame->Editor()->Send(Scintilla::Message::Undo);
                         Require(!frame->Editor()->Send(Scintilla::Message::GetModify),
                                 "failure must preserve Undo to save point");
-                        Require(frame->New() && frame->DocumentEncoding() == FileEncoding::Utf8 &&
+                        Require(frame->NewDocument() && frame->DocumentEncoding() == FileEncoding::Utf8 &&
                                     !frame->DocumentHasBom(),
                                 "New must reset UTF8/no-BOM metadata");
                     }

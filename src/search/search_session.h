@@ -47,7 +47,6 @@ struct ReplaceAllResult {
 class SearchSession final {
 public:
     explicit SearchSession(EditorControl& editor);
-    ~SearchSession();
     const SearchRequest& Request() const { return request_; }
     void Configure(SearchRequest request);
     FindResult Find(SearchDirection direction, bool extendSelection = false);

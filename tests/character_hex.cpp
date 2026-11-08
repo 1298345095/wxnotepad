@@ -55,95 +55,103 @@ void ReferenceFixtures(EditorFrame* frame) {
     }
     std::puts("PASS: 18 independent original Character/Hex byte fixtures, endpoints and Undo/Redo");
 }
+void RectangleConversion(EditorFrame* frame, bool encode, int id, const char* rectangle, bool reverse) {
+    auto* editor = frame->Editor();
+    TestEditor::ResetStream(editor, rectangle);
+    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+    editor->Send(Message::SetRectangularSelectionAnchor, reverse ? std::string_view(rectangle).size() : 0);
+    editor->Send(Message::SetRectangularSelectionCaret, reverse ? 0 : std::string_view(rectangle).size());
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(editor) == (encode ? "\\x41\n\\x42" : "A\nB") && editor->Send(Message::GetSelections) == 2,
+            "rectangle converts original rows independently");
+    TestEditor::RequireSelection(editor, reverse ? (encode ? 5 : 2) : (encode ? 4 : 1),
+                                 reverse ? (encode ? 4 : 1) : (encode ? 5 : 2),
+                                 "rectangle matches original automatic endpoint movement");
+    editor->Send(Message::Undo);
+    Require(TestEditor::Text(editor) == rectangle && !editor->Send(Message::GetModify),
+            "rectangle conversion shares one Undo group");
+}
+void RectangleConversions(EditorFrame* frame, bool encode, int id) {
+    auto* editor = frame->Editor();
+    const char* rectangle = encode ? "A\nB" : "\\x41\n\\x42";
+    for (const bool reverse : {false, true})
+        RectangleConversion(frame, encode, id, rectangle, reverse);
+    TestEditor::RequireVirtualRectangleUnchanged(
+        editor, [frame, id] { NativeSearch::Command(frame, id); },
+        "virtual rectangle retains original columns and history");
+}
+void StreamConversionStates(EditorFrame* frame, bool encode) {
+    auto* editor = frame->Editor();
+    const int mapping = encode ? 40202 : 40203;
+    const char* label = encode ? "Character to Hex" : "Hex to Character";
+    const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
+    const std::string before = encode ? "A x B" : "\\x41 x \\x42";
+    const std::string after = encode ? "\\x41\\x20\\x78\\x20\\x42" : "A x B";
+    TestEditor::ResetStream(editor, before.c_str());
+    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Message::Undo);
+    editor->Send(Message::SetSel, before.size(), 0);
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(editor) == after && editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
+                !editor->Send(Message::CanRedo),
+            "changed conversion replaces pending redo and leaves save point");
+    TestEditor::RequireSelection(editor, static_cast<intptr_t>(after.size()), 0,
+                                 "reversed selection retains original direction");
+    editor->Send(Message::Undo);
+    Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify),
+            "one Undo restores reversed conversion and save point");
+
+    TestEditor::ResetStream(editor, before.c_str());
+    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Message::Undo);
+    editor->Send(Message::SetSel, before.size(), 0);
+    editor->Send(Message::SetReadOnly, 1);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(frame->GetMenuBar()->IsEnabled(id), "original read-only selection retains menu availability");
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify) &&
+                !editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+            "read-only conversion retains bytes save point and original disabled history commands");
+    TestEditor::RequireSelection(editor, 0, 0, "read-only conversion matches original rejected-insertion repair");
+    editor->Send(Message::SetReadOnly, 0);
+    Require(editor->Send(Message::CanRedo), "leaving read-only mode reveals original pending redo");
+    editor->Send(Message::Redo);
+    Require(TestEditor::Text(editor) == before + "!", "read-only conversion preserves executable redo");
+
+    TestEditor::ResetStream(editor, before.c_str(), 1, 1);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(!frame->GetMenuBar()->IsEnabled(id), "empty selection disables original hex command");
+    editor->Send(Message::CustomCaseMapping, mapping);
+    Require(TestEditor::Text(editor) == before && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+            "empty conversion preserves text and history");
+    TestEditor::RequireSelection(editor, 1, 1, "empty conversion preserves caret");
+
+    const int size = encode ? 1 : 4;
+    TestEditor::ResetStream(editor, before.c_str(), 0, size);
+    editor->Send(Message::SetMultipleSelection, 1);
+    editor->Send(Message::AddSelection, before.size() - size, static_cast<intptr_t>(before.size()));
+    editor->Send(Message::AddSelection, size + 1, size + 1);
+    editor->Send(Message::SetMainSelection, 0);
+    NativeSearch::Command(frame, id);
+    Require(TestEditor::Text(editor) == (encode ? "\\x41 x \\x42" : "A x B") &&
+                editor->Send(Message::GetSelections) == 3 && editor->Send(Message::GetMainSelection) == 0,
+            "multiple forward reversed and empty ranges convert independently");
+    const std::array<intptr_t, 6> endpoints =
+        encode ? std::array<intptr_t, 6>{0, 4, 11, 7, 5, 5} : std::array<intptr_t, 6>{0, 1, 5, 4, 2, 2};
+    for (size_t index = 0; index < 3; ++index)
+        Require(editor->Send(Message::GetSelectionNAnchor, index) == endpoints[2 * index] &&
+                    editor->Send(Message::GetSelectionNCaret, index) == endpoints[2 * index + 1],
+                "multiple endpoints match independently captured original state");
+    editor->Send(Message::Undo);
+    Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify),
+            "multiple conversions share one Undo group");
+
+    RectangleConversions(frame, encode, id);
+}
 void SelectionAndHistory(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    for (const bool encode : {true, false}) {
-        const int mapping = encode ? 40202 : 40203;
-        const char* label = encode ? "Character to Hex" : "Hex to Character";
-        const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
-        const std::string before = encode ? "A x B" : "\\x41 x \\x42";
-        const std::string after = encode ? "\\x41\\x20\\x78\\x20\\x42" : "A x B";
-        TestEditor::ResetStream(editor, before.c_str());
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, before.size(), 0);
-        NativeSearch::Command(frame, id);
-        Require(TestEditor::Text(editor) == after && editor->Send(Message::GetModify) &&
-                    editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
-                "changed conversion replaces pending redo and leaves save point");
-        TestEditor::RequireSelection(editor, static_cast<intptr_t>(after.size()), 0,
-                                     "reversed selection retains original direction");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify),
-                "one Undo restores reversed conversion and save point");
-
-        TestEditor::ResetStream(editor, before.c_str());
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, before.size(), 0);
-        editor->Send(Message::SetReadOnly, 1);
-        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-        Require(frame->GetMenuBar()->IsEnabled(id), "original read-only selection retains menu availability");
-        NativeSearch::Command(frame, id);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
-                "read-only conversion retains bytes save point and original disabled history commands");
-        TestEditor::RequireSelection(editor, 0, 0, "read-only conversion matches original rejected-insertion repair");
-        editor->Send(Message::SetReadOnly, 0);
-        Require(editor->Send(Message::CanRedo), "leaving read-only mode reveals original pending redo");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == before + "!", "read-only conversion preserves executable redo");
-
-        TestEditor::ResetStream(editor, before.c_str(), 1, 1);
-        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-        Require(!frame->GetMenuBar()->IsEnabled(id), "empty selection disables original hex command");
-        editor->Send(Message::CustomCaseMapping, mapping);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
-                "empty conversion preserves text and history");
-        TestEditor::RequireSelection(editor, 1, 1, "empty conversion preserves caret");
-
-        const int size = encode ? 1 : 4;
-        TestEditor::ResetStream(editor, before.c_str(), 0, size);
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::AddSelection, before.size() - size, static_cast<intptr_t>(before.size()));
-        editor->Send(Message::AddSelection, size + 1, size + 1);
-        editor->Send(Message::SetMainSelection, 0);
-        NativeSearch::Command(frame, id);
-        Require(TestEditor::Text(editor) == (encode ? "\\x41 x \\x42" : "A x B") &&
-                    editor->Send(Message::GetSelections) == 3 && editor->Send(Message::GetMainSelection) == 0,
-                "multiple forward reversed and empty ranges convert independently");
-        const std::array<intptr_t, 6> endpoints =
-            encode ? std::array<intptr_t, 6>{0, 4, 11, 7, 5, 5} : std::array<intptr_t, 6>{0, 1, 5, 4, 2, 2};
-        for (size_t index = 0; index < 3; ++index)
-            Require(editor->Send(Message::GetSelectionNAnchor, index) == endpoints[2 * index] &&
-                        editor->Send(Message::GetSelectionNCaret, index) == endpoints[2 * index + 1],
-                    "multiple endpoints match independently captured original state");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify),
-                "multiple conversions share one Undo group");
-
-        const char* rectangle = encode ? "A\nB" : "\\x41\n\\x42";
-        for (const bool reverse : {false, true}) {
-            TestEditor::ResetStream(editor, rectangle);
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, reverse ? std::string_view(rectangle).size() : 0);
-            editor->Send(Message::SetRectangularSelectionCaret, reverse ? 0 : std::string_view(rectangle).size());
-            NativeSearch::Command(frame, id);
-            Require(TestEditor::Text(editor) == (encode ? "\\x41\n\\x42" : "A\nB") &&
-                        editor->Send(Message::GetSelections) == 2,
-                    "rectangle converts original rows independently");
-            TestEditor::RequireSelection(editor, reverse ? (encode ? 5 : 2) : (encode ? 4 : 1),
-                                         reverse ? (encode ? 4 : 1) : (encode ? 5 : 2),
-                                         "rectangle matches original automatic endpoint movement");
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == rectangle && !editor->Send(Message::GetModify),
-                    "rectangle conversion shares one Undo group");
-        }
-        TestEditor::RequireVirtualRectangleUnchanged(
-            editor, [frame, id] { NativeSearch::Command(frame, id); },
-            "virtual rectangle retains original columns and history");
-    }
+    for (const bool encode : {true, false})
+        StreamConversionStates(frame, encode);
     TestEditor::ResetStream(editor, "literal \\x4 \\u12ZZ", 18, 0);
     const auto original = TestEditor::Text(editor);
     editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));

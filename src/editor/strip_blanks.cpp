@@ -6,6 +6,16 @@
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 
 namespace {
+void StripTrailingLineBlanks(EditorControl& editor, intptr_t line, intptr_t start) {
+    using Scintilla::Message;
+    const auto end = editor.Send(Message::GetLineEndPosition, line);
+    auto position = end;
+    while (position >= start) {
+        const auto ch = editor.Send(Message::GetCharAt, --position);
+        if (ch != ' ' && ch != '\t') break;
+    }
+    if (++position < end) editor.Send(Message::DeleteRange, position, end - position);
+}
 void StripSelectedBlanks(EditorControl& editor, bool leading) {
     using Scintilla::Message;
     // EditReplaceAllInSelection searches through EOF with real line anchors,
@@ -62,13 +72,7 @@ void StripBlanks(EditorControl& editor, bool leading) {
             const auto end = editor.Send(Message::GetLineIndentPosition, line);
             if (end > start) editor.Send(Message::DeleteRange, start, end - start);
         } else {
-            const auto end = editor.Send(Message::GetLineEndPosition, line);
-            auto position = end;
-            while (position >= start) {
-                const auto ch = editor.Send(Message::GetCharAt, --position);
-                if (ch != ' ' && ch != '\t') break;
-            }
-            if (++position < end) editor.Send(Message::DeleteRange, position, end - position);
+            StripTrailingLineBlanks(editor, line, start);
         }
     }
     editor.Send(Message::EndUndoAction);

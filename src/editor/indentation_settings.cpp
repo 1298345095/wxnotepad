@@ -6,6 +6,15 @@
 #include <string_view>
 
 namespace {
+int CountLeadingSpaces(std::string_view text, size_t& position) {
+    int indent = 1;
+    while (position < text.size() && text[position] == ' ') {
+        ++position;
+        ++indent;
+    }
+    if ((indent & 1) && position < text.size() && text[position] == '*') --indent;
+    return indent;
+}
 // Scalar port of Notepad4 89b8b36 Edit.cpp::EditDetectIndentation (SciTE-derived).
 // Keep its 1 MiB sample, delta counts, Javadoc correction and lowest-index ties.
 int DetectIndentation(std::string_view text) {
@@ -20,14 +29,8 @@ int DetectIndentation(std::string_view text) {
             ++counts[9];
             break;
         case ' ': {
-            int indent = 1;
-            while (position < text.size() && text[position] == ' ') {
-                ++position;
-                ++indent;
-            }
-            if ((indent & 1) && position < text.size() && text[position] == '*') {
-                if (--indent == 0) break;
-            }
+            const int indent = CountLeadingSpaces(text, position);
+            if (indent == 0) break;
             if (indent != previousIndent) {
                 const int delta = std::abs(indent - previousIndent);
                 previousIndent = indent;
@@ -59,7 +62,7 @@ OriginalTabs IndentationSettings::Effective(SyntaxLanguage language) const {
         tabs.tabWidth = fileWidths_->tabWidth;
         tabs.indentWidth = fileWidths_->indentWidth;
     }
-    if (fileSpaces_) tabs.tabsAsSpaces = *fileSpaces_;
+    if (fileSpaces_.has_value()) tabs.tabsAsSpaces = *fileSpaces_;
     return tabs;
 }
 
@@ -82,10 +85,10 @@ void IndentationSettings::Reset(EditorControl& editor, SyntaxLanguage language) 
 
 void IndentationSettings::Load(EditorControl& editor, SyntaxLanguage language, const OriginalFileVariables& variables) {
     SetFileSettings(std::nullopt);
-    if (variables.tabWidth) fileWidths_ = OriginalTabs{*variables.tabWidth, *variables.indentWidth};
+    if (variables.tabWidth.has_value()) fileWidths_ = OriginalTabs{*variables.tabWidth, *variables.indentWidth};
     fileSpaces_ = variables.tabsAsSpaces;
     fileTabIndents_ = variables.tabIndents;
-    if (preferences_.detectIndentation && !(fileWidths_ && fileSpaces_)) {
+    if (preferences_.detectIndentation && !(fileWidths_.has_value() && fileSpaces_.has_value())) {
         const auto length = editor.Send(Scintilla::Message::GetLength);
         const auto* bytes = reinterpret_cast<const char*>(editor.Send(Scintilla::Message::GetRangePointer, 0, length));
         const int width = length ? DetectIndentation({bytes, static_cast<size_t>(length)}) : 0;

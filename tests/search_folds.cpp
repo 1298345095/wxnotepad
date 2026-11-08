@@ -18,6 +18,144 @@ using namespace NativeSearch;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+const std::string nested = "void outer() {\n  if (true) {\n    needle();\n  }\n  if (true) {\n"
+                           "    middle();\n  }\n  tail();\n  if (true) {\n    spare();\n  }\n}\n"
+                           "void other() {\n  needle();\n}\n";
+
+void Collapse(EditorControl* editor) {
+    editor->Send(Message::GotoPos, 0);
+    editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
+                                       static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
+}
+void Load(EditorControl* editor, const std::string& bytes) {
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
+    editor->Send(Message::ClearDocumentStyle);
+    editor->Send(Message::Colourise, 0, -1);
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    Collapse(editor);
+}
+struct FoldSearchControls {
+    EditorControl* editor;
+    wxTextCtrl* query;
+    wxDialog* dialog;
+    wxCheckBox* regex;
+};
+
+FoldSearchControls FindFoldedMatches(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    const std::string fixture = "void outer() {\n  if (true) {\n    needle();\n  }\n}\n";
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(fixture.c_str()));
+    auto* cpp = frame->GetMenuBar()->FindItem(frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    Require(cpp, "C++ language menu must exist");
+    Command(frame, cpp->GetId());
+    editor->Send(Message::Colourise, 0, -1);
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Contract));
+    Require(!editor->Send(Message::GetLineVisible, 2), "fixture match must begin hidden");
+    editor->Send(Message::GotoPos, 0);
+    Command(frame, wxID_FIND);
+    auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
+    Require(query, "native Find must expose the query");
+    query->SetValue("needle");
+    NativeF3(query);
+    Selection(editor, 33, 39, "Find must retain the hidden match byte range");
+    Require(editor->Send(Message::GetLineVisible, 2), "Find must reveal the hidden matched line");
+    Require(Text(editor) == fixture && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+            "revealing a match must preserve bytes, savepoint and history");
+    std::puts("PASS: native Find reveals a folded match without editing");
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(nested.c_str()));
+    editor->Send(Message::ClearDocumentStyle);
+    editor->Send(Message::Colourise, 0, -1);
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    editor->Send(Message::GotoPos, 0);
+    editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
+                                       static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
+    auto* regex = wxDynamicCast(wxWindow::FindWindowByName("Regular expression", frame), wxCheckBox);
+    Require(regex, "native Find must expose regex mode");
+    Toggle(regex, true);
+    query->SetValue("if \\(true\\) \\{[\\s\\S]*?tail\\(\\);");
+    auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
+    Click(dialog, wxID_FORWARD);
+    Selection(editor, 17, 88, "multiline regex must retain its complete byte range");
+    for (int line = 1; line <= 7; ++line)
+        Require(editor->Send(Message::GetLineVisible, line), "every line in a multiline match must be visible");
+    Require(!editor->Send(Message::GetFoldExpanded, 8) && !editor->Send(Message::GetLineVisible, 9) &&
+                !editor->Send(Message::GetFoldExpanded, 12) && !editor->Send(Message::GetLineVisible, 13),
+            "unrelated nested and top-level folds must stay collapsed");
+    Require(Text(editor) == nested && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+            "revealing a multiline match must preserve bytes, savepoint and history");
+    std::puts("PASS: complete multiline range visible, unrelated folds preserved");
+    Collapse(editor);
+    Click(dialog, wxID_BACKWARD);
+    Selection(editor, 0, 0, "original backward line search cannot find the multiline regex");
+    Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
+            "original backward multiline failure remains distinct from wrap success");
+    Require(!editor->Send(Message::GetLineVisible, 2) && !editor->Send(Message::GetLineVisible, 5),
+            "unsuccessful original backward search preserves collapsed folds");
+    for (const bool regularExpression : {false, true}) {
+        Toggle(regex, regularExpression);
+        query->SetValue(regularExpression ? "(needle)" : "needle");
+        Collapse(editor);
+        Click(dialog, wxID_FORWARD);
+        Selection(editor, 33, 39, "Next must find the first hidden literal or regex match");
+        Require(editor->Send(Message::GetLineVisible, 2) && !editor->Send(Message::GetLineVisible, 5) &&
+                    !editor->Send(Message::GetLineVisible, 9) && !editor->Send(Message::GetLineVisible, 13),
+                "Next must open only ancestors of its current match");
+        Click(dialog, wxID_FORWARD);
+        Selection(editor, 139, 145, "Next must find the second hidden match");
+        Require(editor->Send(Message::GetLineVisible, 13), "second match must be revealed");
+        Click(dialog, wxID_FORWARD);
+        Selection(editor, 33, 39, "Next must wrap across folded document text");
+        Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "Next must report wrap");
+        Collapse(editor);
+        Click(dialog, wxID_BACKWARD);
+        Selection(editor, 139, 145, "Previous must wrap to the final hidden match");
+        Require(editor->Send(Message::GetLineVisible, 13) && !editor->Send(Message::GetLineVisible, 2),
+                "backward wrap must retain an unrelated collapsed outer block");
+        Click(dialog, wxID_BACKWARD);
+        Selection(editor, 33, 39, "Previous must find the first hidden match");
+    }
+    std::puts("PASS: literal/regex Next, Previous and wrap preserve unrelated nested folds");
+    auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
+    Require(wrap, "native Find must expose wrap");
+    query->SetValue("(?=needle)");
+    Toggle(wrap, false);
+    Collapse(editor);
+    Click(dialog, wxID_FORWARD);
+    Selection(editor, 33, 33, "zero-width hidden match must retain its byte position");
+    Require(editor->Send(Message::GetLineVisible, 2), "zero-width match line must be visible");
+    Click(dialog, wxID_FORWARD);
+    Selection(editor, 33, 33, "original zero-width Next repeats its selection after unfolding");
+    editor->Send(Message::GotoPos, 34);
+    Click(dialog, wxID_FORWARD);
+    Selection(editor, 139, 139, "moving the caret resumes at the next hidden empty match");
+    Click(dialog, wxID_BACKWARD);
+    Selection(editor, 33, 33, "original backward target clips the current lookahead and finds the prior one");
+    Toggle(wrap, true);
+    Click(dialog, wxID_BACKWARD);
+    Selection(editor, 139, 139, "zero-width Previous must wrap to the final match");
+    Require(Text(editor) == nested && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+            "all search directions and empty matches must preserve editing history");
+    std::puts("PASS: hidden empty matches follow original target resumption and backward context");
+    std::string distant;
+    for (int line = 0; line < 80; ++line)
+        distant += "// pad\n";
+    distant += nested;
+    Load(editor, distant);
+    Toggle(regex, false);
+    query->SetValue("needle");
+    Click(dialog, wxID_FORWARD);
+    Selection(editor, 593, 599, "distant folded match must retain its range");
+    const auto caretY = editor->Send(Message::PointYFromPosition, 0, 599);
+    Require(caretY >= 0 && caretY < editor->GetClientSize().y && editor->Send(Message::GetLineVisible, 82),
+            "Find must scroll the distant revealed selection into the viewport");
+    std::puts("PASS: distant folded match is scrolled into the native viewport");
+    return {editor, query, dialog, regex};
+}
+
 class FoldSearchApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -26,141 +164,13 @@ public:
         CallAfter([this, frame] {
             try {
                 NativeSearch::AcceptFeedback feedback;
-                auto* editor = frame->Editor();
-                const std::string fixture = "void outer() {\n  if (true) {\n    needle();\n  }\n}\n";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(fixture.c_str()));
-                auto* cpp = frame->GetMenuBar()->FindItem(frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
-                Require(cpp, "C++ language menu must exist");
-                Command(frame, cpp->GetId());
-                editor->Send(Message::Colourise, 0, -1);
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Contract));
-                Require(!editor->Send(Message::GetLineVisible, 2), "fixture match must begin hidden");
-                editor->Send(Message::GotoPos, 0);
-                Command(frame, wxID_FIND);
-                auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
-                Require(query, "native Find must expose the query");
-                query->SetValue("needle");
-                NativeF3(query);
-                Selection(editor, 33, 39, "Find must retain the hidden match byte range");
-                Require(editor->Send(Message::GetLineVisible, 2), "Find must reveal the hidden matched line");
-                Require(Text(editor) == fixture && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
-                        "revealing a match must preserve bytes, savepoint and history");
-                std::puts("PASS: native Find reveals a folded match without editing");
-                const std::string nested = "void outer() {\n  if (true) {\n    needle();\n  }\n  if (true) {\n"
-                                           "    middle();\n  }\n  tail();\n  if (true) {\n    spare();\n  }\n}\n"
-                                           "void other() {\n  needle();\n}\n";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(nested.c_str()));
-                editor->Send(Message::ClearDocumentStyle);
-                editor->Send(Message::Colourise, 0, -1);
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::GotoPos, 0);
-                editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
-                                                   static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
-                auto* regex = wxDynamicCast(wxWindow::FindWindowByName("Regular expression", frame), wxCheckBox);
-                Require(regex, "native Find must expose regex mode");
-                Toggle(regex, true);
-                query->SetValue("if \\(true\\) \\{[\\s\\S]*?tail\\(\\);");
-                auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
-                Click(dialog, wxID_FORWARD);
-                Selection(editor, 17, 88, "multiline regex must retain its complete byte range");
-                for (int line = 1; line <= 7; ++line)
-                    Require(editor->Send(Message::GetLineVisible, line),
-                            "every line in a multiline match must be visible");
-                Require(!editor->Send(Message::GetFoldExpanded, 8) && !editor->Send(Message::GetLineVisible, 9) &&
-                            !editor->Send(Message::GetFoldExpanded, 12) && !editor->Send(Message::GetLineVisible, 13),
-                        "unrelated nested and top-level folds must stay collapsed");
-                Require(Text(editor) == nested && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
-                        "revealing a multiline match must preserve bytes, savepoint and history");
-                std::puts("PASS: complete multiline range visible, unrelated folds preserved");
-                const auto collapse = [&] {
-                    editor->Send(Message::GotoPos, 0);
-                    editor->Send(Message::FoldAll,
-                                 static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
-                                     static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
-                };
-                const auto load = [&](const std::string& bytes) {
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
-                    editor->Send(Message::ClearDocumentStyle);
-                    editor->Send(Message::Colourise, 0, -1);
-                    editor->Send(Message::EmptyUndoBuffer);
-                    editor->Send(Message::SetSavePoint);
-                    collapse();
-                };
-                collapse();
-                Click(dialog, wxID_BACKWARD);
-                Selection(editor, 0, 0, "original backward line search cannot find the multiline regex");
-                Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
-                        "original backward multiline failure remains distinct from wrap success");
-                Require(!editor->Send(Message::GetLineVisible, 2) && !editor->Send(Message::GetLineVisible, 5),
-                        "unsuccessful original backward search preserves collapsed folds");
-                for (const bool regularExpression : {false, true}) {
-                    Toggle(regex, regularExpression);
-                    query->SetValue(regularExpression ? "(needle)" : "needle");
-                    collapse();
-                    Click(dialog, wxID_FORWARD);
-                    Selection(editor, 33, 39, "Next must find the first hidden literal or regex match");
-                    Require(editor->Send(Message::GetLineVisible, 2) && !editor->Send(Message::GetLineVisible, 5) &&
-                                !editor->Send(Message::GetLineVisible, 9) && !editor->Send(Message::GetLineVisible, 13),
-                            "Next must open only ancestors of its current match");
-                    Click(dialog, wxID_FORWARD);
-                    Selection(editor, 139, 145, "Next must find the second hidden match");
-                    Require(editor->Send(Message::GetLineVisible, 13), "second match must be revealed");
-                    Click(dialog, wxID_FORWARD);
-                    Selection(editor, 33, 39, "Next must wrap across folded document text");
-                    Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "Next must report wrap");
-                    collapse();
-                    Click(dialog, wxID_BACKWARD);
-                    Selection(editor, 139, 145, "Previous must wrap to the final hidden match");
-                    Require(editor->Send(Message::GetLineVisible, 13) && !editor->Send(Message::GetLineVisible, 2),
-                            "backward wrap must retain an unrelated collapsed outer block");
-                    Click(dialog, wxID_BACKWARD);
-                    Selection(editor, 33, 39, "Previous must find the first hidden match");
-                }
-                std::puts("PASS: literal/regex Next, Previous and wrap preserve unrelated nested folds");
-                auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
-                Require(wrap, "native Find must expose wrap");
-                query->SetValue("(?=needle)");
-                Toggle(wrap, false);
-                collapse();
-                Click(dialog, wxID_FORWARD);
-                Selection(editor, 33, 33, "zero-width hidden match must retain its byte position");
-                Require(editor->Send(Message::GetLineVisible, 2), "zero-width match line must be visible");
-                Click(dialog, wxID_FORWARD);
-                Selection(editor, 33, 33, "original zero-width Next repeats its selection after unfolding");
-                editor->Send(Message::GotoPos, 34);
-                Click(dialog, wxID_FORWARD);
-                Selection(editor, 139, 139, "moving the caret resumes at the next hidden empty match");
-                Click(dialog, wxID_BACKWARD);
-                Selection(editor, 33, 33,
-                          "original backward target clips the current lookahead and finds the prior one");
-                Toggle(wrap, true);
-                Click(dialog, wxID_BACKWARD);
-                Selection(editor, 139, 139, "zero-width Previous must wrap to the final match");
-                Require(Text(editor) == nested && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
-                        "all search directions and empty matches must preserve editing history");
-                std::puts("PASS: hidden empty matches follow original target resumption and backward context");
-                std::string distant;
-                for (int line = 0; line < 80; ++line)
-                    distant += "// pad\n";
-                distant += nested;
-                load(distant);
-                Toggle(regex, false);
-                query->SetValue("needle");
-                Click(dialog, wxID_FORWARD);
-                Selection(editor, 593, 599, "distant folded match must retain its range");
-                const auto caretY = editor->Send(Message::PointYFromPosition, 0, 599);
-                Require(caretY >= 0 && caretY < editor->GetClientSize().y && editor->Send(Message::GetLineVisible, 82),
-                        "Find must scroll the distant revealed selection into the viewport");
-                std::puts("PASS: distant folded match is scrolled into the native viewport");
+                auto [editor, query, dialog, regex] = FindFoldedMatches(frame);
                 Command(frame, wxID_REPLACE);
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
                 auto* result = wxDynamicCast(wxWindow::FindWindowByName("Replacement result", frame), wxStaticText);
                 Require(replacement && result, "native Replace must expose replacement text and count");
                 {
-                    load(nested);
+                    Load(editor, nested);
                     const auto path = TestFiles::TemporaryDirectory() /
                                       ("wxnotepad-single-noop-" + std::to_string(wxGetProcessId()) + ".cpp");
 #ifdef __WXMSW__
@@ -172,7 +182,7 @@ public:
                     editor->Send(Message::GotoPos, 151);
                     editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
                     Command(frame, wxID_UNDO);
-                    collapse();
+                    Collapse(editor);
                     query->SetValue("needle");
                     replacement->SetValue("needle");
                     Click(dialog, wxID_FORWARD);
@@ -197,11 +207,11 @@ public:
                     std::filesystem::remove(path);
                     std::puts("PASS: literal single no-op Replace preserves saved bytes, history and unrelated folds");
                 }
-                load(nested);
+                Load(editor, nested);
                 editor->Send(Message::GotoPos, 151);
                 editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
                 Command(frame, wxID_UNDO);
-                collapse();
+                Collapse(editor);
                 editor->Send(Message::SetSel, 151, 0);
                 query->SetValue("needle");
                 replacement->SetValue("needle");
@@ -222,7 +232,7 @@ public:
                             !editor->Send(Message::GetFoldExpanded, 12),
                         "capture no-op Replace All must retain collapsed folds and editing history");
                 std::puts("PASS: literal/capture no-op replacement preserves collapsed folds and redo");
-                load(nested);
+                Load(editor, nested);
                 query->SetValue("(needle)");
                 replacement->SetValue("$1X");
                 Click(dialog, wxID_FORWARD);
@@ -239,7 +249,7 @@ public:
                 Command(frame, wxID_REDO);
                 Require(Text(editor) == one, "single replacement Redo must restore capture bytes");
                 std::puts("PASS: single capture replacement and following hidden match retain Undo/Redo");
-                load(nested);
+                Load(editor, nested);
                 Toggle(regex, false);
                 query->SetValue("needle");
                 replacement->SetValue("needleX");
@@ -252,7 +262,7 @@ public:
                 Require(Text(editor) == nested && !editor->Send(Message::GetModify),
                         "literal single replacement must preserve Undo/savepoint behavior");
                 Toggle(regex, true);
-                load(nested);
+                Load(editor, nested);
                 query->SetValue("(needle)");
                 replacement->SetValue("$1\\n    extra");
                 Click(dialog, wxID_FORWARD);
@@ -278,8 +288,9 @@ public:
                     const std::string& expected;
                     const char* count;
                 };
-                const auto replaceAll = [&](const ReplacementCase& example) {
-                    load(nested);
+                const auto replaceAll = [frame, editor, query, replacement, dialog,
+                                         result](const ReplacementCase& example) {
+                    Load(editor, nested);
                     query->SetValue(example.find);
                     replacement->SetValue(example.with);
                     Click(dialog, wxID_REPLACE_ALL);

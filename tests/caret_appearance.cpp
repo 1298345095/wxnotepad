@@ -358,7 +358,8 @@ void SavedDocument(EditorFrame* frame) {
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
                 editor->Send(Message::GetCaretStyle) == 18 && editor->Send(Message::GetCaretPeriod) == 0,
             "same-path reopen retains the selected block and No Blink");
-    Require(frame->New() && editor->Send(Message::GetCaretStyle) == 18 && editor->Send(Message::GetCaretPeriod) == 0,
+    Require(frame->NewDocument() && editor->Send(Message::GetCaretStyle) == 18 &&
+                editor->Send(Message::GetCaretPeriod) == 0,
             "New retains caret preferences after reopening and editing");
     std::filesystem::remove(path);
     std::filesystem::remove(directory);

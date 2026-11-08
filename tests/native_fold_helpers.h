@@ -36,9 +36,8 @@ inline void MarginClick(EditorControl* editor, int line, const char* marginMessa
         event->button.y = y;
         event->button.button = 1;
         if (type == GDK_BUTTON_RELEASE) event->button.state = GDK_BUTTON1_MASK;
-        const auto* display = gtk_widget_get_display(widget);
-        gdk_event_set_device(event,
-                             gdk_seat_get_pointer(gdk_display_get_default_seat(const_cast<GdkDisplay*>(display))));
+        auto* display = gtk_widget_get_display(widget);
+        gdk_event_set_device(event, gdk_seat_get_pointer(gdk_display_get_default_seat(display)));
         gtk_widget_event(widget, event);
         gdk_event_free(event);
     }

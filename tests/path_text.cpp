@@ -122,7 +122,7 @@ void SelectionCases(EditorFrame* frame, const std::filesystem::path& directory) 
 }
 void IdentityCases(EditorFrame* frame, const std::filesystem::path& directory) {
     frame->Editor()->Send(Message::SetSavePoint);
-    Require(frame->New(), "create actual untitled document");
+    Require(frame->NewDocument(), "create actual untitled document");
     for (const char* label : {"File Name", "File Name and Extension", "Full Path Name"})
         CheckInsertion(frame, label, "Untitled");
     Require(frame->SaveFirst(std::nullopt).status == SaveStatus::Cancelled && frame->DocumentPath().empty(),

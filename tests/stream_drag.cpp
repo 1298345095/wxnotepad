@@ -1,5 +1,6 @@
 #include "editor/editor_control.h"
 #include "native_paint_helpers.h"
+#include "native_focus_helpers.h"
 #include <wx/wx.h>
 #include <wx/dnd.h>
 #include <wx/ffile.h>
@@ -12,6 +13,7 @@
 #include <stdexcept>
 #include <thread>
 #include <functional>
+#include <memory>
 #include <string_view>
 #ifdef __WXMSW__
 #include <windows.h>
@@ -68,6 +70,29 @@ void PublishDragState(const wxString& path, const wxString& state) {
     Require(file.IsOpened() && file.Write(state) && file.Close() && wxRenameFile(path + ".tmp", path, true),
             "publish owned native drag readiness");
 }
+using DragContextOwner = std::unique_ptr<GdkDragContext, decltype(&g_object_unref)>;
+struct SourceStatus {
+    wxString control;
+    wxString identity;
+    DragContextOwner context;
+};
+
+gboolean ObserveSourceAction(gpointer value) {
+    const auto& source = *static_cast<SourceStatus*>(value);
+    const auto phase = ReadDragState(source.control + ".drag-phase");
+    if (phase != source.identity + ":start" && phase != source.identity + ":target") return G_SOURCE_REMOVE;
+    const auto target = ReadDragState(source.control + ".drag-motion");
+    if (target.StartsWith(source.identity + ":target:")) {
+        const auto action = static_cast<unsigned int>(gdk_drag_context_get_selected_action(source.context.get()));
+        const auto status = source.identity + wxString::Format(":target:%u", action);
+        if (action != 0 && target == status) {
+            PublishDragState(source.control + ".drag-action", status);
+            std::fprintf(stderr, "Native drag gesture=%s observed=source-selected-action\n", status.utf8_str().data());
+            return G_SOURCE_REMOVE;
+        }
+    }
+    return G_SOURCE_CONTINUE;
+}
 void ObserveNativeDrags(wxString* control) {
     // A handled drag-motion stops signal emission before connect_after handlers.
     // The idle runs after the native handler has returned and sent its status,
@@ -79,6 +104,10 @@ void ObserveNativeDrags(wxString* control) {
         const char* event;
     };
     static const auto queue = +[](const Observation& observation) {
+        auto pending = std::make_unique<Observation>(
+            observation.path, observation.phase,
+            observation.target ? static_cast<GdkDragContext*>(g_object_ref(observation.target)) : nullptr,
+            observation.event);
         g_idle_add_full(
             G_PRIORITY_DEFAULT_IDLE,
             +[](gpointer value) -> gboolean {
@@ -94,14 +123,10 @@ void ObserveNativeDrags(wxString* control) {
                              observation.event);
                 return G_SOURCE_REMOVE;
             },
-            new Observation{observation.path, observation.phase,
-                            observation.target ? static_cast<GdkDragContext*>(g_object_ref(observation.target))
-                                               : nullptr,
-                            observation.event},
+            pending.release(),
             +[](gpointer value) {
-                auto* observation = static_cast<Observation*>(value);
-                if (observation->target) g_object_unref(observation->target);
-                delete observation;
+                const std::unique_ptr<Observation> completed(static_cast<Observation*>(value));
+                if (completed->target) g_object_unref(completed->target);
             });
     };
     // GtkWidget registers these signals during class initialization.
@@ -127,38 +152,13 @@ void ObserveNativeDrags(wxString* control) {
             const auto phase = ReadDragState(control + ".drag-phase");
             if (!phase.EndsWith(":start")) return TRUE;
             queue({control + ".drag-started", phase, nullptr, "source-started"});
-            struct SourceStatus {
-                wxString control;
-                wxString identity;
-                GdkDragContext* context;
-            };
             auto* context = static_cast<GdkDragContext*>(g_value_get_object(arguments + 1));
+            auto source = std::make_unique<SourceStatus>(
+                control, phase.BeforeLast(':'),
+                DragContextOwner(static_cast<GdkDragContext*>(g_object_ref(context)), &g_object_unref));
             g_timeout_add_full(
-                G_PRIORITY_DEFAULT, 10,
-                +[](gpointer value) -> gboolean {
-                    const auto& source = *static_cast<SourceStatus*>(value);
-                    const auto phase = ReadDragState(source.control + ".drag-phase");
-                    if (phase != source.identity + ":start" && phase != source.identity + ":target")
-                        return G_SOURCE_REMOVE;
-                    const auto target = ReadDragState(source.control + ".drag-motion");
-                    if (target.StartsWith(source.identity + ":target:")) {
-                        const auto action =
-                            static_cast<unsigned int>(gdk_drag_context_get_selected_action(source.context));
-                        const auto status = source.identity + wxString::Format(":target:%u", action);
-                        if (action != 0 && target == status) {
-                            PublishDragState(source.control + ".drag-action", status);
-                            std::fprintf(stderr, "Native drag gesture=%s observed=source-selected-action\n",
-                                         status.utf8_str().data());
-                            return G_SOURCE_REMOVE;
-                        }
-                    }
-                    return G_SOURCE_CONTINUE;
-                },
-                new SourceStatus{control, phase.BeforeLast(':'), static_cast<GdkDragContext*>(g_object_ref(context))},
-                +[](gpointer value) {
-                    auto* source = static_cast<SourceStatus*>(value);
-                    g_object_unref(source->context);
-                    delete source;
+                G_PRIORITY_DEFAULT, 10, ObserveSourceAction, source.release(), +[](gpointer value) {
+                    const std::unique_ptr<SourceStatus> completed(static_cast<SourceStatus*>(value));
                 });
             return TRUE;
         },
@@ -498,6 +498,8 @@ public:
             Wait(20);
         Require(wxFileExists(directory + "/ready"), "independent native peer must become ready");
     }
+    PeerProcess(const PeerProcess&) = delete;
+    PeerProcess& operator=(const PeerProcess&) = delete;
     ~PeerProcess() {
         wxFFile quit(directory + "/quit", "wb");
         quit.Close();
@@ -574,11 +576,247 @@ std::pair<wxPoint, wxPoint> WaylandOrigins(EditorControl* editor, const wxString
     return {};
 #endif
 }
+void SelfDrags(wxFrame* frame, EditorControl* editor) {
+    using Scintilla::Message;
+    NativePaint::Complete(editor);
+    editor->Send(Message::SetXOffset, 0);
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one two three"));
+    editor->Send(Message::SetSel, 0, 3);
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+#ifdef __WXMSW__
+    const auto owned = static_cast<HWND>(frame->GetHandle());
+    const auto intended = static_cast<HWND>(editor->GetHandle());
+    NativeFocus::Activate(owned, intended);
+    Require(GetForegroundWindow() == owned && GetFocus() == intended,
+            "native self drag requires the owned editor foreground and focus");
+#endif
+    Drag(frame, At(editor, 1), At(editor, 13));
+    Require(Text(editor) == " two threeone", "native self drag must move stream text");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "one two three" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+            "native move must be one undo action returning to save point");
+    std::puts("PASS: native stream move and one-step undo");
+    editor->Send(Message::SetSel, 0, 3);
+    Drag(frame, At(editor, 1), At(editor, 13), "ctrl");
+    if (Text(editor) != "one two threeone")
+        std::fprintf(stderr, "Observed Ctrl drag text: <%s>\n", Text(editor).c_str());
+    Require(Text(editor) == "one two threeone", "Ctrl native drag must copy stream text");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "one two three", "copy must undo in one action");
+    editor->Send(Message::SetSel, 0, 3);
+    Drag(frame, At(editor, 1), At(editor, 2));
+    Require(Text(editor) == "one two three" && !editor->Send(Message::CanUndo),
+            "moving inside the source selection must be a no-op");
+    editor->Send(Message::SetSel, 0, 3);
+    Drag(frame, At(editor, 1), At(editor, 13), {}, true);
+    Require(Text(editor) == "one two three" && !editor->Send(Message::GetModify) &&
+                editor->Send(Message::GetSelectionStart) == 0 && editor->Send(Message::GetSelectionEnd) == 3 &&
+                !editor->HasCapture(),
+            "cancelled native drag must preserve source text, selection, save point and release capture");
+    std::puts("PASS: Ctrl copy, self-drop and cancelled drag");
+}
+void IncomingPeerDrags(wxFrame* frame, EditorControl* editor, NativePeer* peer) {
+    using Scintilla::Message;
+    peer->Assign(wxString::FromUTF8("中😀\nline"));
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("left right"));
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    editor->Send(Message::SetReadOnly, 1);
+    Drag(frame, wxPoint(810, 10), At(editor, 5), {}, false, 200, {}, true);
+    peer->WaitForSource();
+    peer->PrintSourceState();
+    Require(Text(editor) == "left right" && peer->value == wxString::FromUTF8("中😀\nline") &&
+                !editor->Send(Message::GetModify),
+            "read-only drop must reject transfer and preserve native peer source");
+    editor->Send(Message::SetReadOnly, 0);
+    peer->Assign(wxString::FromUTF8("中😀\nline"));
+#ifdef __WXGTK__
+    // Process the threshold motion after the old driver's fixed
+    // release window, before GTK initializes this native source.
+    bool delayed = false;
+    const auto delayHandler =
+        g_signal_connect(peer->GetConnectWidget(), "motion-notify-event",
+                         G_CALLBACK(+[](GtkWidget*, GdkEventMotion* event, gpointer value) -> gboolean {
+                             auto& delayed = *static_cast<bool*>(value);
+                             if (!delayed && (event->state & GDK_BUTTON1_MASK)) {
+                                 delayed = true;
+                                 g_usleep(600000);
+                             }
+                             return FALSE;
+                         }),
+                         &delayed);
+#endif
+    Drag(frame, wxPoint(810, 10), At(editor, 5));
+#ifdef __WXGTK__
+    g_signal_handler_disconnect(peer->GetConnectWidget(), delayHandler);
+    Require(delayed, "incoming native move must exercise slow source initialization");
+#endif
+    peer->WaitForSource();
+    peer->PrintSourceState();
+    if (Text(editor) != "left 中😀\r\nlineright" || !peer->value.empty()) {
+        peer->PrintSourceState();
+        PrintBytes("Incoming peer target", Text(editor));
+        PrintBytes("Incoming peer recorded source", peer->value.ToStdString(wxConvUTF8));
+        PrintBytes("Incoming peer native source", peer->CurrentValue().ToStdString(wxConvUTF8));
+    }
+    Require(Text(editor) == "left 中😀\r\nlineright" && peer->value.empty(),
+            "native peer move must transfer Unicode and normalize multiline text");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "left right" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+            "native peer insertion must undo once to the save point");
+    std::puts("PASS: read-only rejection and incoming Unicode/multiline native peer move");
+}
+void OutgoingPeerDrags(wxFrame* frame, EditorControl* editor, NativePeer* peer) {
+    using Scintilla::Message;
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中😀\r\nline tail"));
+    editor->Send(Message::SetSel, 0, 13);
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    Drag(frame, At(editor, 3), wxPoint(850, 40));
+    auto received = peer->value;
+    received.Replace("\r\n", "\n");
+    Require(Text(editor) == " tail" && received == wxString::FromUTF8("中😀\nline"),
+            "completed native peer move must remove only the selected Unicode stream");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "中😀\r\nline tail" && !editor->Send(Message::GetModify),
+            "external move deletion must undo once to the save point");
+    editor->Send(Message::SetSel, 0, 13);
+    peer->Assign({});
+    Drag(frame, At(editor, 3), wxPoint(850, 40), "ctrl");
+    Require(Text(editor) == "中😀\r\nline tail" && !peer->value.empty() && !editor->Send(Message::CanUndo),
+            "completed native peer copy must preserve the source and its undo history");
+    std::puts("PASS: outgoing native peer move/copy and source undo");
+    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(Message::SetSel, 0, 13);
+    peer->Assign({});
+    Drag(frame, At(editor, 3), wxPoint(850, 40));
+    Require(Text(editor) == "中😀\r\nline tail" && !peer->value.empty() && !editor->Send(Message::CanUndo) &&
+                !editor->Send(Message::GetModify),
+            "read-only source must retain its text and history after a completed native transfer");
+    editor->Send(Message::SetReadOnly, 0);
+    std::puts("PASS: original read-only source retention");
+}
+void DragScrollCancellation(wxFrame* frame, EditorControl* editor) {
+    using Scintilla::Message;
+    std::string lines;
+    for (int index = 0; index < 120; ++index)
+        lines += "line\r\n";
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(lines.c_str()));
+    editor->Send(Message::SetSel, 0, 4);
+    Drag(frame, At(editor, 1), wxPoint(100, 690), {}, true, 1200);
+    Require(editor->Send(Message::GetFirstVisibleLine) > 0 && Text(editor) == lines,
+            "native insertion feedback must scroll the viewport while cancellation preserves text");
+    std::puts("PASS: insertion feedback scrolling and cancellation");
+}
+void IndependentOutgoingDrags(wxFrame* frame, EditorControl* editor, PeerProcess& independent, wxPoint editorOrigin,
+                              wxPoint peerOrigin, bool wayland) {
+    using Scintilla::Message;
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中😀\r\nline tail"));
+    editor->Send(Message::GotoPos, 0);
+    editor->Send(Message::SetSel, 0, 13);
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    Drag(frame, At(editor, 3) + editorOrigin, peerOrigin + wxPoint(100, 100), {}, false, 300, wayland ? "" : "peer");
+    auto transferred = independent.Value();
+    transferred.Replace("\r\n", "\n");
+    Require(Text(editor) == " tail" && transferred == wxString::FromUTF8("中😀\nline"),
+            "separate native application must receive Unicode stream move before source deletion");
+    if (!wayland) Front(frame, "main");
+    editor->Send(Message::Undo);
+    Require(Text(editor) == "中😀\r\nline tail" && !editor->Send(Message::GetModify),
+            "inter-application move must undo source deletion once");
+    independent.Seed({});
+    editor->Send(Message::SetSel, 0, 13);
+    Drag(frame, At(editor, 3) + editorOrigin, peerOrigin + wxPoint(100, 100), "ctrl", false, 300,
+         wayland ? "" : "peer");
+    transferred = independent.Value();
+    transferred.Replace("\r\n", "\n");
+    Require(Text(editor) == "中😀\r\nline tail" && transferred == wxString::FromUTF8("中😀\nline") &&
+                !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+            "separate native application's copy must preserve the editor source and history");
+    if (!wayland) Front(frame, "main");
+    independent.Seed({});
+    editor->Send(Message::SetSel, 0, 13);
+    Drag(frame, At(editor, 3) + editorOrigin, peerOrigin + wxPoint(100, 100), {}, true, 300, wayland ? "" : "peer");
+    const auto cancelledPeer = independent.Value();
+    if (Text(editor) != "中😀\r\nline tail" || !cancelledPeer.empty() || editor->Send(Message::CanUndo) ||
+        editor->Send(Message::GetModify) || editor->Send(Message::GetSelectionStart) != 0 ||
+        editor->Send(Message::GetSelectionEnd) != 13) {
+        PrintBytes("Cancelled external drag source", Text(editor));
+        PrintBytes("Cancelled external drag target", cancelledPeer.ToStdString(wxConvUTF8));
+        std::fprintf(stderr, "Cancelled source undo=%lld modified=%lld selection=%lld,%lld\n",
+                     static_cast<long long>(editor->Send(Message::CanUndo)),
+                     static_cast<long long>(editor->Send(Message::GetModify)),
+                     static_cast<long long>(editor->Send(Message::GetSelectionStart)),
+                     static_cast<long long>(editor->Send(Message::GetSelectionEnd)));
+    }
+    Require(Text(editor) == "中😀\r\nline tail" && cancelledPeer.empty() && !editor->Send(Message::CanUndo) &&
+                !editor->Send(Message::GetModify) && editor->Send(Message::GetSelectionStart) == 0 &&
+                editor->Send(Message::GetSelectionEnd) == 13,
+            "cancelled inter-application drag must preserve source and leave the peer unchanged");
+    std::puts("PASS: inter-application native copy and cancellation");
+}
+void IndependentIncomingDrag(wxFrame* frame, EditorControl* editor, PeerProcess& independent, wxPoint editorOrigin,
+                             wxPoint peerOrigin, bool wayland) {
+    using Scintilla::Message;
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("left right"));
+    editor->Send(Message::GotoPos, 0);
+    independent.Seed();
+    if (!wayland) Front(frame, "peer");
+    Drag(frame, peerOrigin + wxPoint(10, 10), At(editor, 5) + editorOrigin, {}, false, 300, wayland ? "" : "main");
+    // The injected button release does not establish the other
+    // process's native drag completion. Observe its acknowledgement first.
+    const auto remainingSource = independent.Value();
+    if (Text(editor) != "left 中😀\r\nlineright" || !remainingSource.empty()) {
+        independent.PrintSourceState();
+        PrintBytes("External peer move target", Text(editor));
+        PrintBytes("External peer remaining source", remainingSource.ToStdString(wxConvUTF8));
+    }
+    Require(Text(editor) == "left 中😀\r\nlineright" && remainingSource.empty(),
+            "separate native application's completed move must insert Unicode and remove its source");
+    std::puts("PASS: inter-application Unicode/multiline native moves in both directions");
+}
+void IndependentProcessDrags(wxFrame* frame, EditorControl* editor) {
+    using Scintilla::Message;
+    wxString backend;
+    const bool wayland = wxGetEnv("GDK_BACKEND", &backend) && backend == "wayland";
+    if (wayland) {
+        frame->ShowFullScreen(false);
+        frame->SetClientSize(760, 700);
+        editor->SetSize(0, 0, 760, 700);
+        Wait(300);
+    }
+    PeerProcess independent;
+    wxPoint editorOrigin;
+    wxPoint peerOrigin;
+    if (wayland) {
+        auto origins = WaylandOrigins(editor, independent.directory);
+        wxString control;
+        wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control);
+        {
+            wxFFile request(control, "wb");
+            request.Write(
+                wxString::Format("move-peer:%d,%d,%d,%d", origins.second.x + 100, origins.second.y + 100, 950, 192));
+        }
+        WaitForDriver(control);
+        origins = WaylandOrigins(editor, independent.directory);
+        editorOrigin = origins.first;
+        peerOrigin = origins.second;
+        Require(peerOrigin.x >= editorOrigin.x + editor->GetSize().x,
+                "native compositor must leave both owned transfer clients visible");
+        std::fprintf(stderr, "Native client origins: editor=%d,%d peer=%d,%d\n", editorOrigin.x, editorOrigin.y,
+                     peerOrigin.x, peerOrigin.y);
+    } else
+        Front(frame, "main");
+    IndependentOutgoingDrags(frame, editor, independent, editorOrigin, peerOrigin, wayland);
+    IndependentIncomingDrag(frame, editor, independent, editorOrigin, peerOrigin, wayland);
+}
 class DragApp final : public wxApp {
 public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
-        delete wxLog::SetActiveTarget(new wxLogStderr);
+        std::unique_ptr<wxLog>{wxLog::SetActiveTarget(new wxLogStderr)};
 #ifdef __WXGTK__
         if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &privateControl_)) ObserveNativeDrags(&privateControl_);
 #endif
@@ -595,32 +833,7 @@ public:
         }
         const bool delayOffset = argc == 3 && argv[1] == "--peer-delayed-offset";
         if (argc == 3 && (argv[1] == "--peer" || delayOffset)) {
-            const wxString directory = argv[2];
-            auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad stream drag peer");
-            auto* peer = new NativePeer(frame);
-            peer->changed = [peer, directory] {
-                wxFFile value(directory + "/value", "wb");
-                value.Write(peer->CurrentValue(), wxConvUTF8);
-            };
-            wxString backend;
-            if (wxGetEnv("GDK_BACKEND", &backend) && backend == "wayland") {
-                frame->SetClientSize(600, 700);
-                frame->Show();
-            } else
-                frame->ShowFullScreen(true);
-            timer_.SetOwner(this);
-            offsetDelay_.Start();
-            Bind(wxEVT_TIMER, [this, frame, peer, directory, delayOffset](wxTimerEvent&) {
-                UpdatePeer(frame, peer, directory, delayOffset);
-            });
-            timer_.Start(30);
-            CallAfter([frame, peer, directory] {
-                frame->Raise();
-                peer->SetFocus();
-                peer->changed();
-                wxFFile ready(directory + "/ready", "wb");
-            });
-            return true;
+            return InitPeer(argv[2], delayOffset);
         }
         auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad stream drag main");
         auto* editor = new EditorControl(frame);
@@ -631,221 +844,11 @@ public:
         peer->SetSize(800, 0, 600, 700);
         CallAfter([this, frame, editor, peer] {
             try {
-                using Scintilla::Message;
-                NativePaint::Complete(editor);
-                editor->Send(Message::SetXOffset, 0);
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one two three"));
-                editor->Send(Message::SetSel, 0, 3);
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                Drag(frame, At(editor, 1), At(editor, 13));
-                Require(Text(editor) == " two threeone", "native self drag must move stream text");
-                editor->Send(Message::Undo);
-                Require(Text(editor) == "one two three" && !editor->Send(Message::CanUndo) &&
-                            !editor->Send(Message::GetModify),
-                        "native move must be one undo action returning to save point");
-                std::puts("PASS: native stream move and one-step undo");
-                editor->Send(Message::SetSel, 0, 3);
-                Drag(frame, At(editor, 1), At(editor, 13), "ctrl");
-                if (Text(editor) != "one two threeone")
-                    std::fprintf(stderr, "Observed Ctrl drag text: <%s>\n", Text(editor).c_str());
-                Require(Text(editor) == "one two threeone", "Ctrl native drag must copy stream text");
-                editor->Send(Message::Undo);
-                Require(Text(editor) == "one two three", "copy must undo in one action");
-                editor->Send(Message::SetSel, 0, 3);
-                Drag(frame, At(editor, 1), At(editor, 2));
-                Require(Text(editor) == "one two three" && !editor->Send(Message::CanUndo),
-                        "moving inside the source selection must be a no-op");
-                editor->Send(Message::SetSel, 0, 3);
-                Drag(frame, At(editor, 1), At(editor, 13), {}, true);
-                Require(Text(editor) == "one two three" && !editor->Send(Message::GetModify) &&
-                            editor->Send(Message::GetSelectionStart) == 0 &&
-                            editor->Send(Message::GetSelectionEnd) == 3 && !editor->HasCapture(),
-                        "cancelled native drag must preserve source text, selection, save point and release capture");
-                std::puts("PASS: Ctrl copy, self-drop and cancelled drag");
-
-                peer->Assign(wxString::FromUTF8("中😀\nline"));
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("left right"));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::SetReadOnly, 1);
-                Drag(frame, wxPoint(810, 10), At(editor, 5), {}, false, 200, {}, true);
-                peer->WaitForSource();
-                peer->PrintSourceState();
-                Require(Text(editor) == "left right" && peer->value == wxString::FromUTF8("中😀\nline") &&
-                            !editor->Send(Message::GetModify),
-                        "read-only drop must reject transfer and preserve native peer source");
-                editor->Send(Message::SetReadOnly, 0);
-                peer->Assign(wxString::FromUTF8("中😀\nline"));
-#ifdef __WXGTK__
-                // Process the threshold motion after the old driver's fixed
-                // release window, before GTK initializes this native source.
-                bool delayed = false;
-                const auto delayHandler =
-                    g_signal_connect(peer->GetConnectWidget(), "motion-notify-event",
-                                     G_CALLBACK(+[](GtkWidget*, GdkEventMotion* event, gpointer value) -> gboolean {
-                                         auto& delayed = *static_cast<bool*>(value);
-                                         if (!delayed && (event->state & GDK_BUTTON1_MASK)) {
-                                             delayed = true;
-                                             g_usleep(600000);
-                                         }
-                                         return FALSE;
-                                     }),
-                                     &delayed);
-#endif
-                Drag(frame, wxPoint(810, 10), At(editor, 5));
-#ifdef __WXGTK__
-                g_signal_handler_disconnect(peer->GetConnectWidget(), delayHandler);
-                Require(delayed, "incoming native move must exercise slow source initialization");
-#endif
-                peer->WaitForSource();
-                peer->PrintSourceState();
-                if (Text(editor) != "left 中😀\r\nlineright" || !peer->value.empty()) {
-                    peer->PrintSourceState();
-                    PrintBytes("Incoming peer target", Text(editor));
-                    PrintBytes("Incoming peer recorded source", peer->value.ToStdString(wxConvUTF8));
-                    PrintBytes("Incoming peer native source", peer->CurrentValue().ToStdString(wxConvUTF8));
-                }
-                Require(Text(editor) == "left 中😀\r\nlineright" && peer->value.empty(),
-                        "native peer move must transfer Unicode and normalize multiline text");
-                editor->Send(Message::Undo);
-                Require(Text(editor) == "left right" && !editor->Send(Message::CanUndo) &&
-                            !editor->Send(Message::GetModify),
-                        "native peer insertion must undo once to the save point");
-                std::puts("PASS: read-only rejection and incoming Unicode/multiline native peer move");
-
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中😀\r\nline tail"));
-                editor->Send(Message::SetSel, 0, 13);
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                Drag(frame, At(editor, 3), wxPoint(850, 40));
-                auto received = peer->value;
-                received.Replace("\r\n", "\n");
-                Require(Text(editor) == " tail" && received == wxString::FromUTF8("中😀\nline"),
-                        "completed native peer move must remove only the selected Unicode stream");
-                editor->Send(Message::Undo);
-                Require(Text(editor) == "中😀\r\nline tail" && !editor->Send(Message::GetModify),
-                        "external move deletion must undo once to the save point");
-                editor->Send(Message::SetSel, 0, 13);
-                peer->Assign({});
-                Drag(frame, At(editor, 3), wxPoint(850, 40), "ctrl");
-                Require(Text(editor) == "中😀\r\nline tail" && !peer->value.empty() && !editor->Send(Message::CanUndo),
-                        "completed native peer copy must preserve the source and its undo history");
-                std::puts("PASS: outgoing native peer move/copy and source undo");
-                editor->Send(Message::SetReadOnly, 1);
-                editor->Send(Message::SetSel, 0, 13);
-                peer->Assign({});
-                Drag(frame, At(editor, 3), wxPoint(850, 40));
-                Require(Text(editor) == "中😀\r\nline tail" && !peer->value.empty() &&
-                            !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
-                        "read-only source must retain its text and history after a completed native transfer");
-                editor->Send(Message::SetReadOnly, 0);
-                std::puts("PASS: original read-only source retention");
-
-                std::string lines;
-                for (int index = 0; index < 120; ++index)
-                    lines += "line\r\n";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(lines.c_str()));
-                editor->Send(Message::SetSel, 0, 4);
-                Drag(frame, At(editor, 1), wxPoint(100, 690), {}, true, 1200);
-                Require(editor->Send(Message::GetFirstVisibleLine) > 0 && Text(editor) == lines,
-                        "native insertion feedback must scroll the viewport while cancellation preserves text");
-                std::puts("PASS: insertion feedback scrolling and cancellation");
-
-                wxString backend;
-                const bool wayland = wxGetEnv("GDK_BACKEND", &backend) && backend == "wayland";
-                if (wayland) {
-                    frame->ShowFullScreen(false);
-                    frame->SetClientSize(760, 700);
-                    editor->SetSize(0, 0, 760, 700);
-                    Wait(300);
-                }
-                PeerProcess independent;
-                wxPoint editorOrigin;
-                wxPoint peerOrigin;
-                if (wayland) {
-                    auto origins = WaylandOrigins(editor, independent.directory);
-                    wxString control;
-                    wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control);
-                    {
-                        wxFFile request(control, "wb");
-                        request.Write(wxString::Format("move-peer:%d,%d,%d,%d", origins.second.x + 100,
-                                                       origins.second.y + 100, 950, 192));
-                    }
-                    WaitForDriver(control);
-                    origins = WaylandOrigins(editor, independent.directory);
-                    editorOrigin = origins.first;
-                    peerOrigin = origins.second;
-                    Require(peerOrigin.x >= editorOrigin.x + editor->GetSize().x,
-                            "native compositor must leave both owned transfer clients visible");
-                    std::fprintf(stderr, "Native client origins: editor=%d,%d peer=%d,%d\n", editorOrigin.x,
-                                 editorOrigin.y, peerOrigin.x, peerOrigin.y);
-                } else
-                    Front(frame, "main");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中😀\r\nline tail"));
-                editor->Send(Message::GotoPos, 0);
-                editor->Send(Message::SetSel, 0, 13);
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                Drag(frame, At(editor, 3) + editorOrigin, peerOrigin + wxPoint(100, 100), {}, false, 300,
-                     wayland ? "" : "peer");
-                auto transferred = independent.Value();
-                transferred.Replace("\r\n", "\n");
-                Require(Text(editor) == " tail" && transferred == wxString::FromUTF8("中😀\nline"),
-                        "separate native application must receive Unicode stream move before source deletion");
-                if (!wayland) Front(frame, "main");
-                editor->Send(Message::Undo);
-                Require(Text(editor) == "中😀\r\nline tail" && !editor->Send(Message::GetModify),
-                        "inter-application move must undo source deletion once");
-                independent.Seed({});
-                editor->Send(Message::SetSel, 0, 13);
-                Drag(frame, At(editor, 3) + editorOrigin, peerOrigin + wxPoint(100, 100), "ctrl", false, 300,
-                     wayland ? "" : "peer");
-                transferred = independent.Value();
-                transferred.Replace("\r\n", "\n");
-                Require(Text(editor) == "中😀\r\nline tail" && transferred == wxString::FromUTF8("中😀\nline") &&
-                            !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
-                        "separate native application's copy must preserve the editor source and history");
-                if (!wayland) Front(frame, "main");
-                independent.Seed({});
-                editor->Send(Message::SetSel, 0, 13);
-                Drag(frame, At(editor, 3) + editorOrigin, peerOrigin + wxPoint(100, 100), {}, true, 300,
-                     wayland ? "" : "peer");
-                const auto cancelledPeer = independent.Value();
-                if (Text(editor) != "中😀\r\nline tail" || !cancelledPeer.empty() || editor->Send(Message::CanUndo) ||
-                    editor->Send(Message::GetModify) || editor->Send(Message::GetSelectionStart) != 0 ||
-                    editor->Send(Message::GetSelectionEnd) != 13) {
-                    PrintBytes("Cancelled external drag source", Text(editor));
-                    PrintBytes("Cancelled external drag target", cancelledPeer.ToStdString(wxConvUTF8));
-                    std::fprintf(stderr, "Cancelled source undo=%lld modified=%lld selection=%lld,%lld\n",
-                                 static_cast<long long>(editor->Send(Message::CanUndo)),
-                                 static_cast<long long>(editor->Send(Message::GetModify)),
-                                 static_cast<long long>(editor->Send(Message::GetSelectionStart)),
-                                 static_cast<long long>(editor->Send(Message::GetSelectionEnd)));
-                }
-                Require(Text(editor) == "中😀\r\nline tail" && cancelledPeer.empty() &&
-                            !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify) &&
-                            editor->Send(Message::GetSelectionStart) == 0 &&
-                            editor->Send(Message::GetSelectionEnd) == 13,
-                        "cancelled inter-application drag must preserve source and leave the peer unchanged");
-                std::puts("PASS: inter-application native copy and cancellation");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("left right"));
-                editor->Send(Message::GotoPos, 0);
-                independent.Seed();
-                if (!wayland) Front(frame, "peer");
-                Drag(frame, peerOrigin + wxPoint(10, 10), At(editor, 5) + editorOrigin, {}, false, 300,
-                     wayland ? "" : "main");
-                // The injected button release does not establish the other
-                // process's native drag completion. Observe its acknowledgement first.
-                const auto remainingSource = independent.Value();
-                if (Text(editor) != "left 中😀\r\nlineright" || !remainingSource.empty()) {
-                    independent.PrintSourceState();
-                    PrintBytes("External peer move target", Text(editor));
-                    PrintBytes("External peer remaining source", remainingSource.ToStdString(wxConvUTF8));
-                }
-                Require(Text(editor) == "left 中😀\r\nlineright" && remainingSource.empty(),
-                        "separate native application's completed move must insert Unicode and remove its source");
-                std::puts("PASS: inter-application Unicode/multiline native moves in both directions");
+                SelfDrags(frame, editor);
+                IncomingPeerDrags(frame, editor, peer);
+                OutgoingPeerDrags(frame, editor, peer);
+                DragScrollCancellation(frame, editor);
+                IndependentProcessDrags(frame, editor);
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 result_ = 1;
@@ -862,6 +865,34 @@ public:
     }
 
 private:
+    bool InitPeer(const wxString& directory, bool delayOffset) {
+        auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad stream drag peer");
+        auto* peer = new NativePeer(frame);
+        peer->changed = [peer, directory] {
+            wxFFile value(directory + "/value", "wb");
+            value.Write(peer->CurrentValue(), wxConvUTF8);
+        };
+        wxString backend;
+        if (wxGetEnv("GDK_BACKEND", &backend) && backend == "wayland") {
+            frame->SetClientSize(600, 700);
+            frame->Show();
+        } else
+            frame->ShowFullScreen(true);
+        timer_.SetOwner(this);
+        offsetDelay_.Start();
+        Bind(wxEVT_TIMER, [this, frame, peer, directory, delayOffset](wxTimerEvent&) {
+            UpdatePeer(frame, peer, directory, delayOffset);
+        });
+        timer_.Start(30);
+        CallAfter([frame, peer, directory] {
+            frame->Raise();
+            peer->SetFocus();
+            peer->changed();
+            wxFFile ready(directory + "/ready", "wb");
+        });
+        return true;
+    }
+
     bool InitInputStateProbe() {
         auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad stream drag main");
         frame->Show();

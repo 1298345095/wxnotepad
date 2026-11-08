@@ -183,6 +183,69 @@ bool MaybeBinary(std::string_view bytes, bool& binary) {
     return adjacent;
 }
 
+#ifndef __WXMSW__
+struct Utf16Statistics {
+    bool controls = false;
+    bool reverseControls = false;
+    int lowVariation = 0;
+    int highVariation = 0;
+};
+
+std::optional<Utf16Statistics> ExamineUtf16Bytes(std::string_view bytes) {
+    // The original consumes the result flags, even when IsTextUnicode returns
+    // false. Test its Unicode control characters rather than an encoding label
+    // guessed by a converter. Check the same leading 256 UTF-16 code units.
+    Utf16Statistics statistics;
+    int previousLow = 0;
+    int previousHigh = 0;
+    unsigned crossLineEndings = 0;
+    size_t examined = std::min<size_t>(bytes.size(), 512);
+    if (bytes.size() <= 512 && bytes.size() > 2 && bytes.back() == '\0') examined -= 2;
+    for (size_t offset = 0; offset < examined; offset += 2) {
+        const unsigned unit =
+            static_cast<unsigned char>(bytes[offset]) | (static_cast<unsigned char>(bytes[offset + 1]) << 8);
+        if (unit == 0 || unit == 0xffff || unit == 0xfffe || unit == 0xa0d) return std::nullopt;
+        statistics.controls |= unit == 9 || unit == 10 || unit == 13 || unit == 32 || unit == 0x3000;
+        statistics.reverseControls |= unit == 0x900 || unit == 0xa00 || unit == 0xd00 || unit == 0x2000;
+        const int low = static_cast<int>(unit & 0xff);
+        const int high = static_cast<int>(unit >> 8);
+        crossLineEndings += (previousHigh == 10 && low == 13) || (previousHigh == 13 && low == 10);
+        statistics.lowVariation += std::abs(low - previousLow);
+        statistics.highVariation += std::abs(high - previousHigh);
+        previousLow = low;
+        previousHigh = high;
+    }
+    crossLineEndings += (previousHigh == 10 && previousLow == 13) || (previousHigh == 13 && previousLow == 10);
+    if (crossLineEndings && crossLineEndings >= std::min<size_t>(bytes.size(), 512) / 40) return std::nullopt;
+    return statistics;
+}
+
+bool IsDbcsLead(unsigned char ch, unsigned native) {
+    if (native == 936 || native == 949 || native == 950) return ch >= 0x81 && ch <= 0xfe;
+    if (native == 932) return (ch >= 0x81 && ch <= 0x9f) || (ch >= 0xe0 && ch <= 0xfc);
+    if (native == 1361) return (ch >= 0x84 && ch <= 0xd3) || (ch >= 0xd8 && ch <= 0xde) || (ch >= 0xe0 && ch <= 0xf9);
+    return false;
+}
+
+int DbcsVariationFactor(std::string_view bytes, unsigned native) {
+    unsigned leadCount = 0;
+    for (size_t offset = 0; offset < std::min<size_t>(bytes.size(), 512); ++offset) {
+        if (IsDbcsLead(static_cast<unsigned char>(bytes[offset]), native)) {
+            ++leadCount;
+            ++offset;
+        }
+    }
+    // Native RtlIsTextUnicode compares byte variation with this DBCS-adjusted
+    // factor. Previous bytes start at zero; UTF-8/native SBCS uses factor three.
+    int factor = 3;
+    if (leadCount) {
+        const auto base = static_cast<uint32_t>(std::min<size_t>(bytes.size() / 2, 256) / 2) - 1;
+        factor = leadCount < base / 3 ? 3 : leadCount < 2 * base / 3 ? 2 : 1;
+    }
+    return factor;
+}
+#endif
+
 int UnicodeFallback(std::string_view bytes, bool skipWithoutNull, unsigned native) {
     if (skipWithoutNull && bytes.substr(0, 4096).find('\0') == std::string_view::npos &&
         (bytes.size() <= 4096 || bytes.substr(bytes.size() - 4096).find('\0') == std::string_view::npos))
@@ -195,57 +258,12 @@ int UnicodeFallback(std::string_view bytes, bool skipWithoutNull, unsigned nativ
     if ((flags & IS_TEXT_UNICODE_UNICODE_MASK) && DecodeUtf16Le(bytes)) return 4;
     if (flags & IS_TEXT_UNICODE_REVERSE_MASK) return 5;
 #else
-    // The original consumes the result flags, even when IsTextUnicode returns
-    // false. Test its Unicode control characters rather than an encoding label
-    // guessed by a converter. Check the same leading 256 UTF-16 code units.
-    bool controls = false;
-    bool reverseControls = false;
-    int lowVariation = 0;
-    int highVariation = 0;
-    int previousLow = 0;
-    int previousHigh = 0;
-    unsigned crossLineEndings = 0;
-    size_t examined = std::min<size_t>(bytes.size(), 512);
-    if (bytes.size() <= 512 && bytes.size() > 2 && bytes.back() == '\0') examined -= 2;
-    for (size_t offset = 0; offset < examined; offset += 2) {
-        const unsigned unit =
-            static_cast<unsigned char>(bytes[offset]) | (static_cast<unsigned char>(bytes[offset + 1]) << 8);
-        if (unit == 0 || unit == 0xffff || unit == 0xfffe || unit == 0xa0d) return 0;
-        controls |= unit == 9 || unit == 10 || unit == 13 || unit == 32 || unit == 0x3000;
-        reverseControls |= unit == 0x900 || unit == 0xa00 || unit == 0xd00 || unit == 0x2000;
-        const int low = static_cast<int>(unit & 0xff);
-        const int high = static_cast<int>(unit >> 8);
-        crossLineEndings += (previousHigh == 10 && low == 13) || (previousHigh == 13 && low == 10);
-        lowVariation += std::abs(low - previousLow);
-        highVariation += std::abs(high - previousHigh);
-        previousLow = low;
-        previousHigh = high;
-    }
-    crossLineEndings += (previousHigh == 10 && previousLow == 13) || (previousHigh == 13 && previousLow == 10);
-    if (crossLineEndings && crossLineEndings >= std::min<size_t>(bytes.size(), 512) / 40) return 0;
-    const auto dbcsLead = [native](unsigned char ch) {
-        if (native == 936 || native == 949 || native == 950) return ch >= 0x81 && ch <= 0xfe;
-        if (native == 932) return (ch >= 0x81 && ch <= 0x9f) || (ch >= 0xe0 && ch <= 0xfc);
-        if (native == 1361)
-            return (ch >= 0x84 && ch <= 0xd3) || (ch >= 0xd8 && ch <= 0xde) || (ch >= 0xe0 && ch <= 0xf9);
-        return false;
-    };
-    unsigned leadCount = 0;
-    for (size_t offset = 0; offset < std::min<size_t>(bytes.size(), 512); ++offset) {
-        if (dbcsLead(static_cast<unsigned char>(bytes[offset]))) {
-            ++leadCount;
-            ++offset;
-        }
-    }
-    // Native RtlIsTextUnicode compares byte variation with this DBCS-adjusted
-    // factor. Previous bytes start at zero; UTF-8/native SBCS uses factor three.
-    int factor = 3;
-    if (leadCount) {
-        const auto base = static_cast<uint32_t>(std::min<size_t>(bytes.size() / 2, 256) / 2) - 1;
-        factor = leadCount < base / 3 ? 3 : leadCount < 2 * base / 3 ? 2 : 1;
-    }
-    if ((controls || factor * highVariation < lowVariation) && DecodeUtf16Le(bytes)) return 4;
-    if (reverseControls || factor * lowVariation < highVariation) return 5;
+    const auto statistics = ExamineUtf16Bytes(bytes);
+    if (!statistics.has_value()) return 0;
+    const auto factor = DbcsVariationFactor(bytes, native);
+    if ((statistics->controls || factor * statistics->highVariation < statistics->lowVariation) && DecodeUtf16Le(bytes))
+        return 4;
+    if (statistics->reverseControls || factor * statistics->lowVariation < statistics->highVariation) return 5;
 #endif
     return 0;
 }
@@ -303,6 +321,34 @@ int LegacyFileEncoding(std::string_view bytes, const EncodingCandidates& candida
     }
     return -1;
 }
+
+DetectedEncoding AsciiChoice(int index, bool empty, const EncodingOptions& options, unsigned native, unsigned legacy,
+                             unsigned oem) {
+    if (!empty && index == 7) index = 6;
+    if (index == 0 && (options.loadANSIasUTF8 || options.loadASCIIasUTF8 || native == 65001))
+        index = CodePageIndex(native);
+    return Choice(index, legacy, oem, index == 0);
+}
+
+std::optional<DetectedEncoding> DetectSignatureEncoding(std::string_view bytes,
+                                                        std::optional<FileEncoding> explicitEncoding, unsigned legacy,
+                                                        unsigned oem) {
+    constexpr size_t maxConvertedSize = (1U << 30) - 16;
+    if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == FileEncoding::Utf8)) {
+        return DetectedEncoding{explicitEncoding,
+                                *explicitEncoding == FileEncoding::Utf16Le
+                                    ? bytes.starts_with("\xff\xfe")
+                                    : *explicitEncoding == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf"),
+                                {}};
+    }
+    if (bytes.size() < maxConvertedSize && bytes.size() % 2 == 0) {
+        if (bytes.starts_with("\xff\xfe")) return Choice(2, legacy, oem);
+        if (bytes.starts_with("\xfe\xff")) return Choice(3, legacy, oem);
+    }
+    if (bytes.starts_with("\xef\xbb\xbf")) return Choice(7, legacy, oem);
+    if (bytes.size() >= maxConvertedSize) return Choice(IsUtf8(bytes) ? 6 : 0, legacy, oem);
+    return std::nullopt;
+}
 } // namespace
 
 std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding) {
@@ -359,7 +405,7 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
     const auto native = NativeCodePage();
     const auto legacy = LegacyCodePage(native);
     const auto oem = OemCodePage(native);
-    const auto choose = [=](int index, bool systemDefault = false) {
+    const auto choose = [legacy, oem](int index, bool systemDefault = false) {
         return Choice(index, legacy, oem, systemDefault);
     };
     EncodingCandidates candidates{.strong = explicitEncoding ? EncodingIndex(*explicitEncoding) : -1,
@@ -367,27 +413,9 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
                                   .fallback = DefaultEncoding(options.defaultEncoding),
                                   .preferred = PreferredEncoding(path, bytes, options)};
 
-    const auto asciiChoice = [&](int index, bool empty) {
-        if (!empty && index == 7) index = 6;
-        if (index == 0 && (options.loadANSIasUTF8 || options.loadASCIIasUTF8 || native == 65001))
-            index = CodePageIndex(native);
-        return choose(index, index == 0);
-    };
-    if (bytes.empty()) return asciiChoice(EmptyFileEncoding(candidates, options.loadASCIIasUTF8), true);
-    constexpr size_t maxConvertedSize = (1U << 30) - 16;
-    if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == FileEncoding::Utf8)) {
-        return {explicitEncoding,
-                *explicitEncoding == FileEncoding::Utf16Le
-                    ? bytes.starts_with("\xff\xfe")
-                    : *explicitEncoding == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf"),
-                {}};
-    }
-    if (bytes.size() < maxConvertedSize && bytes.size() % 2 == 0) {
-        if (bytes.starts_with("\xff\xfe")) return choose(2);
-        if (bytes.starts_with("\xfe\xff")) return choose(3);
-    }
-    if (bytes.starts_with("\xef\xbb\xbf")) return choose(7);
-    if (bytes.size() >= maxConvertedSize) return choose(IsUtf8(bytes) ? 6 : 0);
+    if (bytes.empty())
+        return AsciiChoice(EmptyFileEncoding(candidates, options.loadASCIIasUTF8), true, options, native, legacy, oem);
+    if (const auto signature = DetectSignatureEncoding(bytes, explicitEncoding, legacy, oem)) return *signature;
     const auto variables = ReadFileVariables(bytes, options);
     candidates.declared = variables.encoding;
     if (bytes.size() % 2 == 0 && !variables.any) {
@@ -396,7 +424,7 @@ DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
     }
     const bool ascii = std::all_of(bytes.begin(), bytes.end(), [](unsigned char ch) { return ch < 128; });
     if (ascii) {
-        return asciiChoice(AsciiFileEncoding(candidates, options.loadASCIIasUTF8), false);
+        return AsciiChoice(AsciiFileEncoding(candidates, options.loadASCIIasUTF8), false, options, native, legacy, oem);
     }
     if (IsUtf8(bytes)) return choose(6);
     const int legacyChoice = LegacyFileEncoding(bytes, candidates, oem);

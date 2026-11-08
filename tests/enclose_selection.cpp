@@ -354,7 +354,7 @@ void Recall(EditorFrame* frame) {
     TestEditor::ResetStream(frame->Editor(), "cat");
     Dialog(frame, "", "", "[", "]", wxID_OK);
     frame->Editor()->Send(Message::SetSavePoint);
-    Require(frame->New(), "new document opens in current window");
+    Require(frame->NewDocument(), "new document opens in current window");
     Dialog(frame, "[", "]", "discard", "discard", wxID_CANCEL);
     auto* other = new EditorFrame;
     other->Show();

@@ -172,7 +172,8 @@ FindReplaceDialog::~FindReplaceDialog() {
 }
 
 void FindReplaceDialog::OnEditorState(wxCommandEvent& event) {
-    if (!search_.MatchCount() && (!findAllErrorRevision_ || *findAllErrorRevision_ != editor_.DocumentRevision())) {
+    if (!search_.MatchCount().has_value() &&
+        (!findAllErrorRevision_.has_value() || *findAllErrorRevision_ != editor_.DocumentRevision())) {
         findAllResult_->SetLabel("");
         findAllErrorRevision_.reset();
     }
@@ -288,7 +289,7 @@ void FindReplaceDialog::ConfigureSearch() {
     request.bookmarkMatchedLines = bookmarkMatchedLines_->GetValue();
     search_.Configure(std::move(request));
     search_.Remember(replace_);
-    if (!search_.MatchCount()) {
+    if (!search_.MatchCount().has_value()) {
         findAllResult_->SetLabel("");
         findAllErrorRevision_.reset();
     }

@@ -144,7 +144,7 @@ public:
                 Require(matchCase->GetValue() && wholeWord->GetValue() &&
                             query->GetValue() == wxString::FromUTF8("Straße"),
                         "reopening Find must retain independent session options and query");
-                Require(frame->New(), "clean New must succeed with search options active");
+                Require(frame->NewDocument(), "clean New must succeed with search options active");
                 Require(matchCase->GetValue() && wholeWord->GetValue(), "New must retain session search options");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("Straße2 Straße"));
                 editor->Send(Message::GotoPos, 0);

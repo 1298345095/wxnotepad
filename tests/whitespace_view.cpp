@@ -130,7 +130,7 @@ public:
                 Require(editor->Send(Message::GetViewWS) == 1 && frame->DocumentEncoding() == FileEncoding::Utf8 &&
                             frame->DocumentHasBom() && !editor->Send(Message::GetModify),
                         "Save As and its automatic scheme change must preserve the view and document metadata");
-                Require(frame->New() && editor->Send(Message::GetViewWS) == 1 && item->IsChecked(),
+                Require(frame->NewDocument() && editor->Send(Message::GetViewWS) == 1 && item->IsChecked(),
                         "New must keep the current window's whitespace preference");
                 auto* fresh = new EditorFrame(settings_.get());
                 Require(fresh->Editor()->Send(Message::GetViewWS) == 0,

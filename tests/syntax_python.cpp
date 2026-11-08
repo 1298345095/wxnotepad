@@ -182,7 +182,7 @@ public:
                 Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: CRLF",
                         "unnamed text must support manual Python selection");
                 Command(frame, wxID_UNDO);
-                Require(frame->New(), "clean unnamed document must reset");
+                Require(frame->NewDocument(), "clean unnamed document must reset");
                 std::puts("PASS: extensions, native menu choices, transitions and Save As language reidentification");
 
                 const std::string triple = "doc = \"\"\"中文\ninside\n\"\"\"\nreturn 42\n";

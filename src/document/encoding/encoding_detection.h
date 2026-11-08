@@ -9,7 +9,7 @@ struct EncodingChoice {
     FileEncoding encoding;
     bool bom;
     bool systemDefault;
-    EncodingChoice(FileEncoding value, bool hasBom = false, bool nativeDefault = false)
+    explicit EncodingChoice(FileEncoding value, bool hasBom = false, bool nativeDefault = false)
         : encoding(value), bom(hasBom), systemDefault(nativeDefault) {}
 };
 // Original Settings fields, not a second configuration source.

@@ -16,15 +16,31 @@
 #include <gtk/gtk.h>
 #endif
 
-#ifdef WXNOTEPAD_DIAGNOSTICS
 namespace {
+#ifdef WXNOTEPAD_DIAGNOSTICS
 unsigned long long DiagnosticRequest(const wxString& sequence) {
     unsigned long long value = 0;
     sequence.ToULongLong(&value);
     return value;
 }
-} // namespace
 #endif
+
+void DispatchObservedCommand(EditorFrame& frame, const wxString& operation, const wxString& source, wxString& result) {
+    result = "failed";
+    if (operation == "open" && !source.empty())
+        result = frame.Open(source).status == OpenStatus::Opened ? "ok" : "failed";
+    if (operation == "save") result = frame.Save().status == SaveStatus::Saved ? "ok" : "failed";
+    if (operation == "close") result = "ok";
+    if (operation == "menu") {
+        const int id = frame.GetMenuBar()->FindMenuItem(source.BeforeFirst('\t'), source.AfterFirst('\t'));
+        if (id != wxNOT_FOUND) {
+            wxCommandEvent event(wxEVT_MENU, id);
+            result = frame.GetEventHandler()->ProcessEvent(event) ? "ok" : "failed";
+            frame.UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        }
+    }
+}
+} // namespace
 
 ProcessObserver::ProcessObserver(EditorFrame& frame, wxString directory)
     : frame_(&frame), observation_(std::move(directory)), observer_(this) {
@@ -182,20 +198,7 @@ void ProcessObserver::Observe() {
         WXNOTE_TRACE("observer.request", "\ttarget=%p\trequest=%llu", static_cast<void*>(frame_),
                      DiagnosticRequest(sequence_));
         const auto& operation = command->operation;
-        const auto& source = command->source;
-        result_ = "failed";
-        if (operation == "open" && !source.empty())
-            result_ = frame_->Open(source).status == OpenStatus::Opened ? "ok" : "failed";
-        if (operation == "save") result_ = frame_->Save().status == SaveStatus::Saved ? "ok" : "failed";
-        if (operation == "close") result_ = "ok";
-        if (operation == "menu") {
-            const int id = frame_->GetMenuBar()->FindMenuItem(source.BeforeFirst('\t'), source.AfterFirst('\t'));
-            if (id != wxNOT_FOUND) {
-                wxCommandEvent event(wxEVT_MENU, id);
-                result_ = frame_->GetEventHandler()->ProcessEvent(event) ? "ok" : "failed";
-                frame_->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-            }
-        }
+        DispatchObservedCommand(*frame_, operation, command->source, result_);
         Publish();
         WXNOTE_TRACE("observer.ack", "\ttarget=%p\trequest=%llu\tok=%d", static_cast<void*>(frame_),
                      DiagnosticRequest(sequence_), result_ == "ok");

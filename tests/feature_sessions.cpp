@@ -21,6 +21,9 @@ std::filesystem::path NativePath(const wxString& path) {
 #endif
 }
 struct Files {
+    Files() = default;
+    Files(const Files&) = delete;
+    Files& operator=(const Files&) = delete;
     wxString base = wxFileName::CreateTempFileName("wxnotepad-sessions-");
     wxString cpp = base + ".cpp";
     wxString json = base + ".json";

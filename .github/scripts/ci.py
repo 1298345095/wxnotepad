@@ -235,7 +235,7 @@ def bundle():
         encoding='utf-8')
 
 
-def main():
+def argument_parser():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     for name in ('metadata', 'dependencies', 'bundle'):
@@ -257,6 +257,11 @@ def main():
     coverage.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
     diagnostic = commands.add_parser('diagnostic-test')
     diagnostic.add_argument('--backend', choices=('windows', 'x11', 'wayland'), required=True)
+    return parser
+
+
+def main():
+    parser = argument_parser()
     arguments = parser.parse_args()
     if getattr(arguments, 'jobs', 1) < 1:
         parser.error('--jobs must be positive')

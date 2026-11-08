@@ -354,7 +354,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
     return Open(dialog.Choose(), encoding);
 }
 
-bool EditorFrame::New() {
+bool EditorFrame::NewDocument() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
     editor_->Send(Scintilla::Message::SetEdgeColumn,
@@ -368,24 +368,7 @@ bool EditorFrame::New() {
 
 bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (!editor_->Send(Scintilla::Message::GetModify)) return true;
-    // Pinned Notepad4 FileSave/IsASpace: only short ASCII-whitespace Untitled
-    // documents bypass the lifecycle prompt; explicit Save still writes them.
-    if (document_.Path().empty()) {
-        const auto length = editor_->Send(Scintilla::Message::GetLength);
-        if (length < 2048) {
-            const auto* bytes =
-                reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));
-            bool whitespaceOnly = true;
-            for (intptr_t index = 0; bytes && index < length; ++index) {
-                const char ch = bytes[index];
-                if (!(ch == ' ' || (ch >= 0x09 && ch <= 0x0d))) {
-                    whitespaceOnly = false;
-                    break;
-                }
-            }
-            if (whitespaceOnly) return true;
-        }
-    }
+    if (CanDiscardUntitledWhitespace()) return true;
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);
@@ -405,6 +388,20 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (result.status == SaveStatus::Failed)
         wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
     return result.status == SaveStatus::Saved;
+}
+
+bool EditorFrame::CanDiscardUntitledWhitespace() const {
+    // Pinned Notepad4 FileSave/IsASpace: only short ASCII-whitespace Untitled
+    // documents bypass the lifecycle prompt; explicit Save still writes them.
+    if (!document_.Path().empty()) return false;
+    const auto length = editor_->Send(Scintilla::Message::GetLength);
+    if (length >= 2048) return false;
+    const auto* bytes = reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));
+    for (intptr_t index = 0; bytes && index < length; ++index) {
+        const char ch = bytes[index];
+        if (!(ch == ' ' || (ch >= 0x09 && ch <= 0x0d))) return false;
+    }
+    return true;
 }
 
 GbkLossChoice EditorFrame::ConfirmGbkLoss() {

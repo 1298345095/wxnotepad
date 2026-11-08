@@ -161,6 +161,9 @@ void MouseSelect(EditorControl* editor, intptr_t position, bool extend) {
     wxYield();
 }
 struct Files {
+    Files() = default;
+    Files(const Files&) = delete;
+    Files& operator=(const Files&) = delete;
     wxString source = wxFileName::CreateTempFileName("wxnotepad-wrap-");
     wxString saved = source + ".saved";
     ~Files() {
@@ -299,7 +302,7 @@ public:
                 }
                 editor->Send(Message::SetSavePoint);
                 NativeSearch::Command(frame, wrap);
-                Require(frame->New(), "New succeeds for a clean document");
+                Require(frame->NewDocument(), "New succeeds for a clean document");
                 Require(editor->Send(Message::GetWrapMode) != 0, "New retains wrapping in this window");
                 Require(frame->Open(files.source).status == OpenStatus::Opened, "Open the Unicode fixture");
                 const auto eol = editor->Send(Message::GetEOLMode);

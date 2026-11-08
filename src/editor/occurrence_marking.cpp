@@ -60,14 +60,28 @@ bool CaseSensitiveSelection(const std::string& text) {
             unsigned index = CaseSensitivityIndex[block & 0x7f];
             block = index ^ (block >> 1);
             index &= ((block - 0x40) >> 8) & 0x3f;
-            if (index) {
-                ch &= 0xff;
-                index = CaseSensitivityIndex[120 + (index << 3) + (ch >> 5)];
-                if ((CaseSensitivityMask[index] >> (ch & 31)) & 1) return true;
-            }
+            if (!index) continue;
+            ch &= 0xff;
+            index = CaseSensitivityIndex[120 + (index << 3) + (ch >> 5)];
+            if ((CaseSensitivityMask[index] >> (ch & 31)) & 1) return true;
         }
     }
     return false;
+}
+
+void MarkRanges(EditorControl& editor, const std::array<Range, 240>& ranges, size_t count, unsigned flags,
+                intptr_t& bookmarkLine) {
+    for (size_t i = 0; i < count; ++i) {
+        const auto& range = ranges[i];
+        editor.Send(Message::IndicatorFillRange, range.start, range.length);
+        if (!(flags & Bookmark)) continue;
+        auto line = editor.Send(Message::LineFromPosition, range.start);
+        const auto last = flags & Multiline ? editor.Send(Message::LineFromPosition, range.start + range.length) : line;
+        line = std::max(line, bookmarkLine + 1);
+        for (; line <= last; ++line)
+            editor.Send(Message::MarkerAdd, line, 0);
+        bookmarkLine = last;
+    }
 }
 } // namespace
 
@@ -133,13 +147,12 @@ void OccurrenceMarking::Update(Scintilla::Update updated) {
             ignoreSelectionUpdate_ = false;
             return;
         }
-        if (options_ & 1) {
-            if (editor_.Send(Message::GetSelectionEmpty)) {
-                if (matchCount_) Clear();
-            } else {
-                MarkSelection(value & static_cast<unsigned>(Scintilla::Update::Content));
-            }
+        if (!(options_ & 1)) return;
+        if (!editor_.Send(Message::GetSelectionEmpty)) {
+            MarkSelection(value & static_cast<unsigned>(Scintilla::Update::Content));
+            return;
         }
+        if (matchCount_) Clear();
     } else if ((value & static_cast<unsigned>(Scintilla::Update::Content)) && matchCount_) {
         MarkSelection(true);
     }
@@ -214,19 +227,8 @@ void OccurrenceMarking::Continue() {
     std::array<Range, 240> ranges{};
     size_t index = 0;
     editor_.Send(Message::SetIndicatorCurrent, 8);
-    const auto mark = [&] {
-        for (size_t i = 0; i < index; ++i) {
-            const auto& range = ranges[i];
-            editor_.Send(Message::IndicatorFillRange, range.start, range.length);
-            if (!(flags_ & Bookmark)) continue;
-            auto line = editor_.Send(Message::LineFromPosition, range.start);
-            const auto last =
-                flags_ & Multiline ? editor_.Send(Message::LineFromPosition, range.start + range.length) : line;
-            line = std::max(line, bookmarkLine_ + 1);
-            for (; line <= last; ++line)
-                editor_.Send(Message::MarkerAdd, line, 0);
-            bookmarkLine_ = last;
-        }
+    const auto mark = [this, &ranges, &index] {
+        MarkRanges(editor_, ranges, index, flags_, bookmarkLine_);
         index = 0;
     };
     while (position < limit && std::chrono::duration<double, std::milli>(Clock::now() - begin).count() < TimeSlot) {

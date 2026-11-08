@@ -119,20 +119,37 @@ private:
     bool sampled_ = false;
     wxColour colour_;
 };
-PaintObservation* paintObservation = nullptr;
 #endif
-wxColour Pixel(EditorControl* editor, int x, int y) {
+class PixelReader {
+public:
+    explicit PixelReader(EditorControl* editor)
 #ifdef __WXGTK__
-    const auto colour = paintObservation->Read(x, y);
+        : observation_(editor)
 #else
-    Paint(editor);
-    wxClientDC pixels(editor);
-    wxColour colour;
-    Require(pixels.GetPixel(x, y, &colour), "read the actual owned editor's painted background");
+        : editor_(editor)
 #endif
-    std::printf("sample %d,%d=%u,%u,%u\n", x, y, colour.Red(), colour.Green(), colour.Blue());
-    return colour;
-}
+    {
+    }
+    wxColour Read(int x, int y) {
+#ifdef __WXGTK__
+        const auto colour = observation_.Read(x, y);
+#else
+        Paint(editor_);
+        wxClientDC pixels(editor_);
+        wxColour colour;
+        Require(pixels.GetPixel(x, y, &colour), "read the actual owned editor's painted background");
+#endif
+        std::printf("sample %d,%d=%u,%u,%u\n", x, y, colour.Red(), colour.Green(), colour.Blue());
+        return colour;
+    }
+
+private:
+#ifdef __WXGTK__
+    PaintObservation observation_;
+#else
+    EditorControl* editor_;
+#endif
+};
 bool Yellow(wxColour colour) {
     return colour.Red() == 255 && colour.Green() == 255 && colour.Blue() >= 164 && colour.Blue() <= 166;
 }
@@ -140,7 +157,7 @@ bool Gray(wxColour colour) {
     return colour.Red() >= 232 && colour.Red() <= 234 && colour.Green() >= 232 && colour.Green() <= 234 &&
            colour.Blue() >= 233 && colour.Blue() <= 235;
 }
-void WrapAndLifecycle(EditorFrame* frame) {
+void WrapAndLifecycle(EditorFrame* frame, PixelReader& pixels) {
     auto* editor = frame->Editor();
     const std::string line = std::string(220, ' ') + "end\nnext\nlast";
     TestEditor::ResetStream(editor, line.c_str());
@@ -150,27 +167,27 @@ void WrapAndLifecycle(EditorFrame* frame) {
     Require(editor->Send(Message::WrapCount, 0) > 2, "fixture has multiple native wrapped display rows");
     Menu(frame, "Background Color");
     const int height = static_cast<int>(editor->Send(Message::TextHeight, 0));
-    Require(Yellow(Pixel(editor, 200, height / 2)) && !Yellow(Pixel(editor, 200, height + height / 2)),
+    Require(Yellow(pixels.Read(200, height / 2)) && !Yellow(pixels.Read(200, height + height / 2)),
             "subline mode paints only the active wrapped display row");
     Menu(frame, "Highlight Subline");
-    Require(Yellow(Pixel(editor, 200, height / 2)) && Yellow(Pixel(editor, 200, height + height / 2)),
+    Require(Yellow(pixels.Read(200, height / 2)) && Yellow(pixels.Read(200, height + height / 2)),
             "whole-line mode paints all wrapped rows of the caret's logical line");
     Menu(frame, "Highlight Subline");
     const auto secondRow = editor->Send(Message::PositionFromPointClose, editor->FromDIP(70), height + height / 2);
     editor->Send(Message::GotoPos, secondRow);
-    Require(!Yellow(Pixel(editor, 200, height / 2)) && Yellow(Pixel(editor, 200, height + height / 2)),
+    Require(!Yellow(pixels.Read(200, height / 2)) && Yellow(pixels.Read(200, height + height / 2)),
             "subline highlight follows caret between wrapped rows");
     auto* sibling = new wxButton(frame, wxID_ANY, "owned focus target", wxPoint(250, 170));
     sibling->SetFocus();
     wxYield();
-    Require(Yellow(Pixel(editor, 200, height + height / 2)), "highlight remains visible after native focus transfer");
+    Require(Yellow(pixels.Read(200, height + height / 2)), "highlight remains visible after native focus transfer");
     sibling->Destroy();
     editor->Send(Message::GotoPos, 0);
     Menu(frame, "Outline Frame");
-    Require(Gray(Pixel(editor, 200, 0)) && Gray(Pixel(editor, 200, height - 1)),
+    Require(Gray(pixels.Read(200, 0)) && Gray(pixels.Read(200, height - 1)),
             "subline outline paints top and bottom borders around only the active display row");
     Menu(frame, "Highlight Subline");
-    Require(Gray(Pixel(editor, 200, 0)) && !Gray(Pixel(editor, 200, height - 1)),
+    Require(Gray(pixels.Read(200, 0)) && !Gray(pixels.Read(200, height - 1)),
             "logical-line outline omits internal wrapped-row borders");
     Menu(frame, "Highlight Subline");
     editor->Send(Message::SetReadOnly, 1);
@@ -211,7 +228,7 @@ void WrapAndLifecycle(EditorFrame* frame) {
     Menu(frame, "Outline Frame");
     Require(editor->Send(Message::GetCaretLineFrame) == normal && !editor->Send(Message::GetModify),
             "scrolling folded code retains the current-line style without editing");
-    Require(frame->New(), "clean document can be replaced by New");
+    Require(frame->NewDocument(), "clean document can be replaced by New");
     Require(editor->Send(Message::GetCaretLineFrame) == normal &&
                 editor->Send(Message::GetElementIsSet, static_cast<uintptr_t>(Scintilla::Element::CaretLineBack)),
             "New retains the chosen highlight");
@@ -280,14 +297,13 @@ public:
             try {
                 Require(presented, "private compositor must present the owned editor before native scenarios");
                 auto* editor = frame->Editor();
+                PixelReader pixels(editor);
 #ifdef __WXGTK__
-                PaintObservation observation(editor);
-                paintObservation = &observation;
                 // Native keyboard activation follows the widget's first real paint.
-                observation.Read(0, 0);
+                pixels.Read(0, 0);
 #endif
                 Modes(frame);
-                WrapAndLifecycle(frame);
+                WrapAndLifecycle(frame, pixels);
                 SavedState(frame);
                 // Public editor messages isolate the real widget's alpha rendering
                 // before the original menu/default behavior is restored.
@@ -299,7 +315,7 @@ public:
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(""));
                 editor->Send(Message::SetSavePoint);
                 const int y = static_cast<int>(editor->Send(Message::TextHeight, 0)) / 2;
-                const auto colour = Pixel(editor, 200, y);
+                const auto colour = pixels.Read(200, y);
                 std::printf("current-line pixel=%u,%u,%u at 200,%d dpi=%d\n", colour.Red(), colour.Green(),
                             colour.Blue(), y, editor->GetDPI().y);
                 Require(colour.Red() == 255 && colour.Green() == 255 && colour.Blue() >= 164 && colour.Blue() <= 166,

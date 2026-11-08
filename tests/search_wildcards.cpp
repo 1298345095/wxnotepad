@@ -21,7 +21,11 @@ public:
             try {
                 SearchSession search(*editor);
                 auto dialog = std::make_unique<FindReplaceDialog>(
-                    frame, *editor, search, [](const FindResult&) {}, [](wxKeyEvent& event) { event.Skip(); }, 0);
+                    frame, *editor, search,
+                    [](const FindResult&) {
+                        // These scenarios inspect editor state and dialog feedback directly.
+                    },
+                    [](wxKeyEvent& event) { event.Skip(); }, 0);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("a.c abc a+c"));
                 editor->Send(Message::SetSel, 0, 0);
                 NativePaint::Complete(editor);

@@ -169,6 +169,9 @@ void NativeAlt(EditorFrame* frame, bool merge, bool control = false, bool shift 
     });
     editor->PushEventHandler(&observer);
     struct RemoveObserver {
+        explicit RemoveObserver(EditorControl* control) : editor(control) {}
+        RemoveObserver(const RemoveObserver&) = delete;
+        RemoveObserver& operator=(const RemoveObserver&) = delete;
         EditorControl* editor;
         ~RemoveObserver() { editor->PopEventHandler(false); }
     } removeObserver{editor};

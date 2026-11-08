@@ -58,15 +58,49 @@ void Add(EditorFrame* frame, const std::string& text) {
 using NativeDialogs::FileCommandDriver;
 using NativeDialogs::FileDialogProfile;
 
+struct Sample {
+    const char* name;
+    std::string bytes;
+    bool prompt;
+    bool named = false;
+};
+void CheckWhitespaceTransition(const std::filesystem::path& directory, const std::filesystem::path& source,
+                               const Sample& sample, const char* action) {
+    auto* candidate = NewFrame();
+    if (sample.named)
+        Require(candidate->SaveFirst(Filename(directory / "named-whitespace.txt")).status == SaveStatus::Saved,
+                "named whitespace fixture must save");
+    if (sample.bytes.empty()) {
+        Add(candidate, "x");
+        candidate->Editor()->Send(Scintilla::Message::ClearAll);
+    } else
+        Add(candidate, sample.bytes);
+    const auto path = candidate->DocumentPath();
+    Require(candidate->Editor()->Send(Scintilla::Message::GetModify), "sample must be modified");
+    FileCommandDriver driver(FileDialogProfile::Save, wxID_CANCEL, {}, Trace);
+    const bool closing = std::string_view(action) == "Close";
+    const bool opening = std::string_view(action) == "Open";
+    const bool completed = closing   ? CloseFrame(candidate)
+                           : opening ? candidate->Open(Filename(source)).status == OpenStatus::Opened
+                                     : candidate->NewDocument();
+    driver.Stop();
+    if (completed == sample.prompt || driver.prompts != (sample.prompt ? 1 : 0))
+        throw std::runtime_error(std::string(action) + " prompt mismatch: " + sample.name);
+    if (sample.prompt) {
+        Require(Text(candidate) == sample.bytes && candidate->DocumentPath() == path &&
+                    candidate->Editor()->Send(Scintilla::Message::GetModify) &&
+                    candidate->Editor()->Send(Scintilla::Message::CanUndo),
+                "Cancel must preserve bytes, path, dirty state and history");
+    } else if (!closing) {
+        Require(Text(candidate) == (opening ? "opened" : "") &&
+                    !candidate->Editor()->Send(Scintilla::Message::GetModify),
+                "successful replacement must establish the new document");
+    }
+    if (!closing || sample.prompt) DestroyFrame(candidate);
+}
 void CheckWhitespacePrompts(const std::filesystem::path& directory) {
     const auto source = directory / "open-whitespace.txt";
     std::ofstream(source, std::ios::binary) << "opened";
-    struct Sample {
-        const char* name;
-        std::string bytes;
-        bool prompt;
-        bool named = false;
-    };
     const Sample samples[] = {
         {"2047 spaces", std::string(2047, ' '), false},
         {"2048 spaces", std::string(2048, ' '), true},
@@ -84,37 +118,7 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
     };
     for (const auto& sample : samples) {
         for (const auto* action : {"New", "Open", "Close"}) {
-            auto* candidate = NewFrame();
-            if (sample.named)
-                Require(candidate->SaveFirst(Filename(directory / "named-whitespace.txt")).status == SaveStatus::Saved,
-                        "named whitespace fixture must save");
-            if (sample.bytes.empty()) {
-                Add(candidate, "x");
-                candidate->Editor()->Send(Scintilla::Message::ClearAll);
-            } else
-                Add(candidate, sample.bytes);
-            const auto path = candidate->DocumentPath();
-            Require(candidate->Editor()->Send(Scintilla::Message::GetModify), "sample must be modified");
-            FileCommandDriver driver(FileDialogProfile::Save, wxID_CANCEL, {}, Trace);
-            const bool closing = std::string_view(action) == "Close";
-            const bool opening = std::string_view(action) == "Open";
-            const bool completed = closing   ? CloseFrame(candidate)
-                                   : opening ? candidate->Open(Filename(source)).status == OpenStatus::Opened
-                                             : candidate->New();
-            driver.Stop();
-            if (completed == sample.prompt || driver.prompts != (sample.prompt ? 1 : 0))
-                throw std::runtime_error(std::string(action) + " prompt mismatch: " + sample.name);
-            if (sample.prompt) {
-                Require(Text(candidate) == sample.bytes && candidate->DocumentPath() == path &&
-                            candidate->Editor()->Send(Scintilla::Message::GetModify) &&
-                            candidate->Editor()->Send(Scintilla::Message::CanUndo),
-                        "Cancel must preserve bytes, path, dirty state and history");
-            } else if (!closing) {
-                Require(Text(candidate) == (opening ? "opened" : "") &&
-                            !candidate->Editor()->Send(Scintilla::Message::GetModify),
-                        "successful replacement must establish the new document");
-            }
-            if (!closing || sample.prompt) DestroyFrame(candidate);
+            CheckWhitespaceTransition(directory, source, sample, action);
         }
         std::printf("PASS: New/Open/Close whitespace rule: %s\n", sample.name);
     }

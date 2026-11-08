@@ -106,7 +106,8 @@ void Combined(EditorFrame* frame) {
     NativeSearch::Command(frame, numbers);
     NativeSearch::Command(frame, whitespace);
     editor->Send(Message::SetZoom, 100);
-    Require(frame->New() && editor->Send(Message::GetViewEOL) == 1 && editor->Send(Message::GetWrapVisualFlags) == 1,
+    Require(frame->NewDocument() && editor->Send(Message::GetViewEOL) == 1 &&
+                editor->Send(Message::GetWrapVisualFlags) == 1,
             "New preserves both current window preferences");
     for (const auto* language : {"C/C++", "Python", "JSON", "Plain Text", "Automatic"}) {
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));

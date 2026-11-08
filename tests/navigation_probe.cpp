@@ -67,6 +67,18 @@ public:
     }
 
 private:
+#ifdef __WXGTK__
+    static int VisibleCursorPixels(GdkPixbuf* image) {
+        const auto* pixels = gdk_pixbuf_get_pixels(image);
+        const int channels = gdk_pixbuf_get_n_channels(image);
+        const int stride = gdk_pixbuf_get_rowstride(image);
+        int visible = 0;
+        for (int y = 0; y < gdk_pixbuf_get_height(image); ++y)
+            for (int x = 0; x < gdk_pixbuf_get_width(image); ++x)
+                if (!gdk_pixbuf_get_has_alpha(image) || pixels[y * stride + x * channels + channels - 1]) ++visible;
+        return visible;
+    }
+#endif
     wxFrame* frame_ = nullptr;
     EditorControl* editor_ = nullptr;
     wxTimer timer_;
@@ -87,12 +99,7 @@ private:
         auto* image = cursor ? gdk_cursor_get_image(cursor) : nullptr;
         int visible = 0;
         if (image) {
-            const auto* pixels = gdk_pixbuf_get_pixels(image);
-            const int channels = gdk_pixbuf_get_n_channels(image);
-            const int stride = gdk_pixbuf_get_rowstride(image);
-            for (int y = 0; y < gdk_pixbuf_get_height(image); ++y)
-                for (int x = 0; x < gdk_pixbuf_get_width(image); ++x)
-                    if (!gdk_pixbuf_get_has_alpha(image) || pixels[y * stride + x * channels + channels - 1]) ++visible;
+            visible = VisibleCursorPixels(image);
             g_object_unref(image);
         }
         output << "cursor-nontransparent=" << visible << '\n';

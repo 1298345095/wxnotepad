@@ -38,7 +38,7 @@ void ShowInsertTagDialog(wxWindow* parent, EditorControl& editor) {
     wxDialog dialog(parent, wxID_ANY, "Insert HTML/XML Tag", wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    const auto field = [&](const char* label, const char* name, const char* initial) {
+    const auto field = [contents, &dialog](const char* label, const char* name, const char* initial) {
         contents->Add(new wxStaticText(&dialog, wxID_ANY, label), 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
         auto* input = new wxTextCtrl(&dialog, wxID_ANY, initial, wxDefaultPosition, dialog.FromDIP(wxSize(400, 65)),
                                      wxTE_MULTILINE | wxTE_PROCESS_ENTER);
@@ -55,7 +55,7 @@ void ShowInsertTagDialog(wxWindow* parent, EditorControl& editor) {
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     dialog.SetSizerAndFit(contents);
     dialog.SetMinSize(dialog.GetSize());
-    const auto accept = [&] {
+    const auto accept = [opening, closing, &editor, &dialog] {
         auto before = opening->GetValue();
         auto after = closing->GetValue();
         before.Replace("\n", "\r\n");
@@ -65,9 +65,9 @@ void ShowInsertTagDialog(wxWindow* parent, EditorControl& editor) {
                          wxOK | wxICON_WARNING, &dialog);
         dialog.EndModal(wxID_OK);
     };
-    dialog.Bind(wxEVT_BUTTON, [&](wxCommandEvent&) { accept(); }, wxID_OK);
+    dialog.Bind(wxEVT_BUTTON, [accept](wxCommandEvent&) { accept(); }, wxID_OK);
     for (auto* input : {opening, closing}) {
-        input->Bind(wxEVT_KEY_DOWN, [&](wxKeyEvent& event) {
+        input->Bind(wxEVT_KEY_DOWN, [accept](wxKeyEvent& event) {
             // Original MultilineEditProc accepts Enter; Shift+Enter inserts a line break.
             if (event.GetKeyCode() == WXK_RETURN && !event.ShiftDown())
                 accept();

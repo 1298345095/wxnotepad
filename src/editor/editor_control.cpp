@@ -10,6 +10,30 @@ using Scintilla::Message;
 namespace core = Scintilla::Internal;
 wxDEFINE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 
+namespace {
+bool HandleControlDelete(EditorControl& editor, const wxKeyEvent& event) {
+    if (!event.ControlDown() || event.ShiftDown() || event.AltDown() || event.MetaDown() ||
+        (event.GetKeyCode() != WXK_BACK && event.GetKeyCode() != WXK_DELETE))
+        return false;
+    // Notepad4 CMD_CTRLBACK/CMD_CTRLDEL precede the core key map.
+    const auto caret = editor.Send(Message::GetCurrentPos);
+    if (caret != editor.Send(Message::GetAnchor)) {
+        editor.Send(Message::SetSel, caret, caret);
+    } else {
+        const auto line = editor.Send(Message::LineFromPosition, caret);
+        const auto start = editor.Send(Message::PositionFromLine, line);
+        if (event.GetKeyCode() == WXK_BACK)
+            editor.Send(caret == start                                               ? Message::DeleteBack
+                        : caret <= editor.Send(Message::GetLineIndentPosition, line) ? Message::DelLineLeft
+                                                                                     : Message::DelWordLeft);
+        else
+            editor.Send(start == editor.Send(Message::GetLineEndPosition, line) ? Message::LineDelete
+                                                                                : Message::DelWordRight);
+    }
+    return true;
+}
+} // namespace
+
 EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                 wxBORDER_SIMPLE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
@@ -416,24 +440,7 @@ void EditorControl::OnKeyDown(wxKeyEvent& event) {
                  static_cast<long long>(Send(Message::GetAnchor)),
                  static_cast<long long>(Send(Message::GetCurrentPos)));
     if (core_->Navigation(event)) return;
-    if (event.ControlDown() && !event.ShiftDown() && !event.AltDown() && !event.MetaDown() &&
-        (event.GetKeyCode() == WXK_BACK || event.GetKeyCode() == WXK_DELETE)) {
-        // Notepad4 CMD_CTRLBACK/CMD_CTRLDEL precede the core key map.
-        const auto caret = Send(Message::GetCurrentPos);
-        if (caret != Send(Message::GetAnchor)) {
-            Send(Message::SetSel, caret, caret);
-        } else {
-            const auto line = Send(Message::LineFromPosition, caret);
-            const auto start = Send(Message::PositionFromLine, line);
-            if (event.GetKeyCode() == WXK_BACK)
-                Send(caret == start                                        ? Message::DeleteBack
-                     : caret <= Send(Message::GetLineIndentPosition, line) ? Message::DelLineLeft
-                                                                           : Message::DelWordLeft);
-            else
-                Send(start == Send(Message::GetLineEndPosition, line) ? Message::LineDelete : Message::DelWordRight);
-        }
-        return;
-    }
+    if (HandleControlDelete(*this, event)) return;
     if (event.GetKeyCode() == WXK_TAB && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
         !event.MetaDown()) {
         IndentLines(false);

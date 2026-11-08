@@ -124,43 +124,52 @@ public:
                 wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(dialog))) != title_)
                 continue;
             Stop();
-            try {
-                wxWindow* line = nullptr;
-                wxWindow* column = nullptr;
-                if (title_ == "Go To Line") {
-                    for (auto* window : wxTopLevelWindows) {
-                        if (window->GetHandle() != dialog) continue;
-                        line = wxWindow::FindWindowByName("Go to line number", window);
-                        column = wxWindow::FindWindowByName("Go to column number", window);
-                    }
-                    Require(line && column, "Go To Line exposes its original line and column inputs");
-                    line->SetFocus();
-                    wxYield();
-                }
-                DialogTab(dialog, false);
-                if (column)
-                    Require(gtk_window_get_focus(GTK_WINDOW(dialog)) == column->GetHandle(),
-                            "Tab moves from Go To Line to its Column input");
-                DialogTab(dialog, true);
-                if (line)
-                    Require(gtk_window_get_focus(GTK_WINDOW(dialog)) == line->GetHandle(),
-                            "Shift+Tab returns from Column to Line");
-                checked = true;
-            } catch (const std::exception& failure) {
-                error = failure.what();
-            }
-            if (GTK_IS_DIALOG(dialog)) {
-                NativeDialogs::Respond(dialog, GTK_RESPONSE_CANCEL);
-            } else {
-                for (auto* window : wxTopLevelWindows)
-                    if (window->GetHandle() == dialog) NativeSearch::Click(window, wxID_CANCEL);
-            }
+            CheckTraversal(dialog);
+            Dismiss(dialog);
             break;
         }
         g_list_free(windows);
     }
 
 private:
+    static void GoToInputs(GtkWidget* dialog, wxWindow*& line, wxWindow*& column) {
+        for (auto* window : wxTopLevelWindows) {
+            if (window->GetHandle() != dialog) continue;
+            line = wxWindow::FindWindowByName("Go to line number", window);
+            column = wxWindow::FindWindowByName("Go to column number", window);
+        }
+    }
+    void CheckTraversal(GtkWidget* dialog) {
+        try {
+            wxWindow* line = nullptr;
+            wxWindow* column = nullptr;
+            if (title_ == "Go To Line") {
+                GoToInputs(dialog, line, column);
+                Require(line && column, "Go To Line exposes its original line and column inputs");
+                line->SetFocus();
+                wxYield();
+            }
+            DialogTab(dialog, false);
+            if (column)
+                Require(gtk_window_get_focus(GTK_WINDOW(dialog)) == column->GetHandle(),
+                        "Tab moves from Go To Line to its Column input");
+            DialogTab(dialog, true);
+            if (line)
+                Require(gtk_window_get_focus(GTK_WINDOW(dialog)) == line->GetHandle(),
+                        "Shift+Tab returns from Column to Line");
+            checked = true;
+        } catch (const std::exception& failure) {
+            error = failure.what();
+        }
+    }
+    static void Dismiss(GtkWidget* dialog) {
+        if (GTK_IS_DIALOG(dialog)) {
+            NativeDialogs::Respond(dialog, GTK_RESPONSE_CANCEL);
+        } else {
+            for (auto* window : wxTopLevelWindows)
+                if (window->GetHandle() == dialog) NativeSearch::Click(window, wxID_CANCEL);
+        }
+    }
     wxString title_;
 };
 void DialogTraversal(EditorFrame* frame) {

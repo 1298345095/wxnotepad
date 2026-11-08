@@ -25,6 +25,12 @@ void ReplaceUnits(EditorControl& editor, intptr_t start, intptr_t end, std::wstr
     const auto resultEnd = start + static_cast<intptr_t>(bytes.size());
     editor.Send(Message::SetSel, backwards ? resultEnd : start, backwards ? start : resultEnd);
 }
+
+bool FlushTabStop(std::wstring& output, std::wstring& spaces, wchar_t unit, wchar_t next) {
+    output += spaces.size() > 1 || next == L' ' || next == L'\t' ? L'\t' : unit;
+    spaces.clear();
+    return unit != output.back();
+}
 } // namespace
 
 bool EditorControl::TabsToSpaces(bool onlyIndent) {
@@ -82,10 +88,9 @@ bool EditorControl::SpacesToTabs(bool onlyIndent) {
             spaces += unit;
             if (spaces.size() == static_cast<size_t>(tabWidth - column % tabWidth) || unit == L'\t') {
                 const auto next = index + 1 < input.size() ? input[index + 1] : L'\0';
-                output += spaces.size() > 1 || next == L' ' || next == L'\t' ? L'\t' : unit;
+                const bool changed = FlushTabStop(output, spaces, unit, next);
                 column = 0;
-                spaces.clear();
-                modified = modified || unit != output.back();
+                modified = modified || changed;
             }
         } else {
             column += static_cast<intptr_t>(spaces.size()) + 1;

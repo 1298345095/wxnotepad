@@ -182,7 +182,7 @@ void Lifecycle(EditorFrame* frame, int toggle) {
                     !editor->Send(Message::CanUndo),
                 "syntax/highlighting changes refresh stationary context and preserve font/zoom/selection/history");
     }
-    Require(frame->New(), "clean original fixture can be replaced through New");
+    Require(frame->NewDocument(), "clean original fixture can be replaced through New");
     Expect(editor, -1, -1, 34, 0);
     editor->Send(Message::ClearAll);
     Expect(editor, -1, -1, 34, 0);

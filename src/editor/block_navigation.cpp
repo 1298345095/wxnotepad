@@ -2,6 +2,49 @@
 #include <ScintillaTypes.h>
 #include <ScintillaStructures.h>
 
+namespace {
+using Scintilla::Message;
+constexpr intptr_t FoldHeader = 0x2000;
+constexpr intptr_t FoldNumber = 0xFFF;
+
+intptr_t PreviousBlock(EditorControl& editor, intptr_t current, intptr_t line, intptr_t level, bool sibling) {
+    auto candidate = current - 1;
+    intptr_t first = -1;
+    level &= FoldNumber;
+    while (candidate >= 0) {
+        const auto candidateLevel = editor.Send(Message::GetFoldLevel, candidate);
+        if (!(candidateLevel & FoldHeader) || candidate == line) {
+            --candidate;
+            continue;
+        }
+        if (!sibling || level >= (candidateLevel & FoldNumber)) return candidate;
+        if (first < 0) first = candidate;
+        candidate = editor.Send(Message::GetFoldParent, candidate);
+    }
+    return sibling && first >= 0 ? first : line;
+}
+
+intptr_t NextBlock(EditorControl& editor, intptr_t current, intptr_t line, intptr_t level, bool sibling) {
+    const auto count = editor.Send(Message::GetLineCount);
+    if (line >= 0) line = editor.Send(Message::GetLastChild, line, -1);
+    auto candidate = current + 1;
+    intptr_t first = -1;
+    if (sibling && line > 0 && (level & FoldHeader)) candidate = line + 1;
+    level &= FoldNumber;
+    while (candidate < count) {
+        const auto candidateLevel = editor.Send(Message::GetFoldLevel, candidate);
+        if (!(candidateLevel & FoldHeader)) {
+            ++candidate;
+            continue;
+        }
+        if (!sibling || level >= (candidateLevel & FoldNumber)) return candidate;
+        if (first < 0) first = candidate;
+        candidate = editor.Send(Message::GetLastChild, candidate, candidateLevel) + 1;
+    }
+    return sibling && first >= 0 ? first : line;
+}
+} // namespace
+
 void EditorControl::FocusSelectionBoundary(bool start) {
     using Scintilla::Message;
     const auto anchor = Send(Message::GetAnchor);
@@ -20,10 +63,8 @@ void EditorControl::GoToBlock(BlockNavigation command) {
     const auto position = Send(Message::GetCurrentPos);
     const auto current = Send(Message::LineFromPosition, position);
     auto line = current;
-    auto level = Send(Message::GetFoldLevel, line);
-    constexpr intptr_t header = 0x2000;
-    constexpr intptr_t number = 0xFFF;
-    if (!(level & header)) line = Send(Message::GetFoldParent, line);
+    const auto level = Send(Message::GetFoldLevel, line);
+    if (!(level & FoldHeader)) line = Send(Message::GetFoldParent, line);
     switch (command) {
     case BlockNavigation::Start:
         break;
@@ -32,59 +73,12 @@ void EditorControl::GoToBlock(BlockNavigation command) {
         break;
     case BlockNavigation::Previous:
     case BlockNavigation::PreviousSibling: {
-        bool sibling = command == BlockNavigation::PreviousSibling;
-        auto candidate = current - 1;
-        intptr_t first = -1;
-        level &= number;
-        while (candidate >= 0) {
-            const auto candidateLevel = Send(Message::GetFoldLevel, candidate);
-            if ((candidateLevel & header) && candidate != line) {
-                if (sibling) {
-                    if (first < 0) first = candidate;
-                    if (level >= (candidateLevel & number)) {
-                        line = candidate;
-                        sibling = false;
-                        break;
-                    }
-                    candidate = Send(Message::GetFoldParent, candidate);
-                    continue;
-                }
-                line = candidate;
-                break;
-            }
-            --candidate;
-        }
-        if (sibling && first >= 0) line = first;
+        line = PreviousBlock(*this, current, line, level, command == BlockNavigation::PreviousSibling);
         break;
     }
     case BlockNavigation::Next:
     case BlockNavigation::NextSibling: {
-        const auto count = Send(Message::GetLineCount);
-        if (line >= 0) line = Send(Message::GetLastChild, line, -1);
-        bool sibling = command == BlockNavigation::NextSibling;
-        auto candidate = current + 1;
-        intptr_t first = -1;
-        if (sibling && line > 0 && (level & header)) candidate = line + 1;
-        level &= number;
-        while (candidate < count) {
-            const auto candidateLevel = Send(Message::GetFoldLevel, candidate);
-            if (candidateLevel & header) {
-                if (sibling) {
-                    if (first < 0) first = candidate;
-                    if (level >= (candidateLevel & number)) {
-                        line = candidate;
-                        sibling = false;
-                        break;
-                    }
-                    candidate = Send(Message::GetLastChild, candidate, candidateLevel);
-                } else {
-                    line = candidate;
-                    break;
-                }
-            }
-            ++candidate;
-        }
-        if (sibling && first >= 0) line = first;
+        line = NextBlock(*this, current, line, level, command == BlockNavigation::NextSibling);
         break;
     }
     }

@@ -16,7 +16,7 @@ namespace {
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-void WaitFor(const std::function<bool()>& condition, const char* message) {
+template <typename Condition> void WaitFor(const Condition& condition, const char* message) {
     const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(4);
     while (!condition() && std::chrono::steady_clock::now() < end) {
         wxYield();
@@ -42,7 +42,7 @@ void NativeKey(wxWindow* window, int key, const char* name, bool alt = false, bo
             file.Write("front:" + dialog->GetTitle());
         }
         WaitFor(
-            [&] {
+            [&path] {
                 wxString pending;
                 wxFFile file(path, "rb");
                 file.ReadAll(&pending);
@@ -57,7 +57,7 @@ void NativeKey(wxWindow* window, int key, const char* name, bool alt = false, bo
         wxFFile file(path, "wb");
         file.Write(wxString("key:") + name);
     }
-    WaitFor([&] { return released; }, "native key release reaches the owned window");
+    WaitFor([&released] { return released; }, "native key release reaches the owned window");
 #endif
 }
 class SortDialogDriver final : public wxModalDialogHook, private wxTimer {
@@ -107,10 +107,12 @@ void Choose(wxRadioButton* radio) {
 #endif
     wxYield();
 }
-void Dialog(EditorFrame* frame, const std::function<void(wxDialog*)>& action, bool native = false) {
+template <typename Action> void Dialog(EditorFrame* frame, const Action& action, bool native = false) {
     bool openingReleased = false;
-    SortDialogDriver driver([&](wxDialog* dialog) {
-        if (native) WaitFor([&] { return openingReleased; }, "opening Alt+O is released before dialog navigation");
+    SortDialogDriver driver([native, &openingReleased, &action](wxDialog* dialog) {
+        if (native)
+            WaitFor([&openingReleased] { return openingReleased; },
+                    "opening Alt+O is released before dialog navigation");
         action(dialog);
     });
     if (native) {
@@ -124,7 +126,7 @@ void Dialog(EditorFrame* frame, const std::function<void(wxDialog*)>& action, bo
             file.Write(frame->IsActive() ? "focus:wxnotepad" : "front:wxnotepad");
         }
         WaitFor(
-            [&] {
+            [&path, frame] {
                 wxString pending;
                 wxFFile file(path, "rb");
                 file.ReadAll(&pending);

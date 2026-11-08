@@ -58,31 +58,7 @@ public:
         EnumThreadWindows(
             GetCurrentThreadId(),
             [](HWND window, LPARAM data) -> BOOL {
-                auto& driver = *reinterpret_cast<NativeDriver*>(data);
-                if (!IsWindowVisible(window)) return TRUE;
-                wchar_t title[256]{};
-                GetWindowTextW(window, title, 256);
-                wchar_t ownerTitle[256]{};
-                GetWindowTextW(GetWindow(window, GW_OWNER), ownerTitle, 256);
-                if (wxString(title) == "Save As" || wxString(title) == "Save file" || wxString(title) == "Save Copy") {
-                    if (!driver.stage_++) {
-                        if (wxString(title) == "Save Copy")
-                            ++driver.copyChoosers;
-                        else
-                            ++driver.choosers;
-                        if (!driver.selectedType.empty()) NativeDialogs::ChooseFileType(window, driver.selectedType);
-                        NativeDialogs::ChooseFile(window, driver.destination_);
-                    } else if (driver.cancelChooser_)
-                        SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
-                } else if (wxString(ownerTitle) == "Save As" || wxString(ownerTitle) == "Save file") {
-                    ++driver.confirmations;
-                    if (!driver.replace_) driver.cancelChooser_ = true;
-                    SendMessageW(window, WM_USER + 102, driver.replace_ ? IDYES : IDNO, 0); // TDM_CLICK_BUTTON
-                } else if (wxString(title) == "Could not save file") {
-                    ++driver.errors;
-                    SendMessageW(window, WM_USER + 102, IDOK, 0);
-                }
-                return TRUE;
+                return reinterpret_cast<NativeDriver*>(data)->HandleWindow(window);
             },
             reinterpret_cast<LPARAM>(this));
 #elif defined(__WXGTK__)
@@ -90,42 +66,76 @@ public:
         for (GList* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget)) continue;
-            if (GTK_IS_FILE_CHOOSER(widget)) {
-                if (stage_ == 0) {
-                    stage_ = 1;
-                    if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Save Copy")
-                        ++copyChoosers;
-                    else
-                        ++choosers;
-                    if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
-                    NativeDialogs::ChooseFile(widget, destination_);
-                } else if (cancelChooser_)
-                    Respond(widget, GTK_RESPONSE_CANCEL);
-                else if (stage_ == 1 && !destination_.empty() && NativeDialogs::CanAcceptFile(widget, destination_)) {
-                    stage_ = 2;
-                    Respond(widget, GTK_RESPONSE_ACCEPT);
-                }
-            } else if (GTK_IS_MESSAGE_DIALOG(widget)) {
-                if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not save file") {
-                    ++errors;
-                    Respond(widget, GTK_RESPONSE_OK);
-                } else {
-                    ++confirmations;
-                    if (!replace_) cancelChooser_ = true;
-                    if (blockWrites_)
-                        std::filesystem::permissions(std::filesystem::path(destination_.ToStdString()).parent_path(),
-                                                     std::filesystem::perms::owner_read |
-                                                         std::filesystem::perms::owner_exec);
-                    Require(Click(widget, replace_ ? "Replace" : "Cancel"),
-                            "overwrite confirmation must expose Replace/Cancel");
-                }
-            }
+            if (GTK_IS_FILE_CHOOSER(widget))
+                HandleChooser(widget);
+            else if (GTK_IS_MESSAGE_DIALOG(widget))
+                HandleMessage(widget);
         }
         g_list_free(windows);
 #endif
     }
 
 private:
+#ifdef __WXGTK__
+    void HandleChooser(GtkWidget* widget) {
+        if (stage_ == 0) {
+            stage_ = 1;
+            if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Save Copy")
+                ++copyChoosers;
+            else
+                ++choosers;
+            if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
+            NativeDialogs::ChooseFile(widget, destination_);
+        } else if (cancelChooser_)
+            Respond(widget, GTK_RESPONSE_CANCEL);
+        else if (stage_ == 1 && !destination_.empty() && NativeDialogs::CanAcceptFile(widget, destination_)) {
+            stage_ = 2;
+            Respond(widget, GTK_RESPONSE_ACCEPT);
+        }
+    }
+    void HandleMessage(GtkWidget* widget) {
+        if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not save file") {
+            ++errors;
+            Respond(widget, GTK_RESPONSE_OK);
+        } else {
+            ++confirmations;
+            if (!replace_) cancelChooser_ = true;
+            if (blockWrites_)
+                std::filesystem::permissions(std::filesystem::path(destination_.ToStdString()).parent_path(),
+                                             std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec);
+            Require(Click(widget, replace_ ? "Replace" : "Cancel"),
+                    "overwrite confirmation must expose Replace/Cancel");
+        }
+    }
+#endif
+#ifdef __WXMSW__
+    BOOL HandleWindow(HWND window) {
+        if (!IsWindowVisible(window)) return TRUE;
+        wchar_t title[256]{};
+        GetWindowTextW(window, title, 256);
+        wchar_t ownerTitle[256]{};
+        GetWindowTextW(GetWindow(window, GW_OWNER), ownerTitle, 256);
+        if (wxString(title) == "Save As" || wxString(title) == "Save file" || wxString(title) == "Save Copy") {
+            if (!stage_++) {
+                if (wxString(title) == "Save Copy")
+                    ++copyChoosers;
+                else
+                    ++choosers;
+                if (!selectedType.empty()) NativeDialogs::ChooseFileType(window, selectedType);
+                NativeDialogs::ChooseFile(window, destination_);
+            } else if (cancelChooser_)
+                SendMessageW(window, WM_COMMAND, IDCANCEL, 0);
+        } else if (wxString(ownerTitle) == "Save As" || wxString(ownerTitle) == "Save file") {
+            ++confirmations;
+            if (!replace_) cancelChooser_ = true;
+            SendMessageW(window, WM_USER + 102, replace_ ? IDYES : IDNO, 0); // TDM_CLICK_BUTTON
+        } else if (wxString(title) == "Could not save file") {
+            ++errors;
+            SendMessageW(window, WM_USER + 102, IDOK, 0);
+        }
+        return TRUE;
+    }
+#endif
     wxString destination_;
     bool replace_;
     bool blockWrites_;
@@ -207,15 +217,15 @@ public:
                 choose("C/C++");
                 Append(frame, "pending");
                 Require(frame->GetMenuBar()->FindItem(wxID_SAVEAS), "File menu must expose Save As");
-                const auto* saveAccelerator = frame->GetMenuBar()->FindItem(wxID_SAVE)->GetAccel();
+                const std::unique_ptr<wxAcceleratorEntry> saveAccelerator(
+                    frame->GetMenuBar()->FindItem(wxID_SAVE)->GetAccel());
                 Require(saveAccelerator && saveAccelerator->GetKeyCode() == 'S' &&
                             saveAccelerator->GetFlags() == wxACCEL_CTRL,
                         "Save must bind Ctrl+S");
-                delete saveAccelerator;
-                const auto* accelerator = frame->GetMenuBar()->FindItem(wxID_SAVEAS)->GetAccel();
+                const std::unique_ptr<wxAcceleratorEntry> accelerator(
+                    frame->GetMenuBar()->FindItem(wxID_SAVEAS)->GetAccel());
                 Require(accelerator && accelerator->GetKeyCode() == WXK_F6 && accelerator->GetFlags() == wxACCEL_NORMAL,
                         "Save As must bind unmodified F6");
-                delete accelerator;
                 NativeDriver cancel;
                 Shortcut(frame, WXK_F6);
                 cancel.Stop();

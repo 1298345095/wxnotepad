@@ -31,7 +31,7 @@ public:
     bool DocumentHasUtf8Bom() const { return document_.HasUtf8Bom(); }
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
-    bool New();
+    bool NewDocument();
 
 private:
     EditorControl* editor_;
@@ -63,6 +63,12 @@ private:
     wxMenu* CreateLanguageMenu();
     wxMenu* CreateViewMenu();
     void AppendEditingCommands(wxMenu* edit);
+    void AppendConversionCommands(wxMenu* edit);
+    void AppendEnclosureCommands(wxMenu* edit);
+    void AppendLineCleanupCommands(wxMenu* edit);
+    void AppendLineLayoutCommands(wxMenu* edit);
+    void AppendIndentationCommands(wxMenu* edit);
+    void AppendWhitespaceCommands(wxMenu* edit);
     void AppendDateTimeCommands(wxMenu* edit);
     void InsertDateTime(bool shortDate);
     void InsertEncodingIdentifier();
@@ -83,10 +89,14 @@ private:
     void AppendFoldCommands(wxMenu* view);
     void AppendSettingsCommands(wxMenu* view);
     bool HandleCommandKey(const wxKeyEvent& event);
+    bool HandleInsertionKey(const wxKeyEvent& event);
+    bool HandleCaseConversionKey(const wxKeyEvent& event);
     bool HandleTabConversionKey(const wxKeyEvent& event);
     void ConvertTabs(bool toTabs, bool onlyIndent);
     bool HandleSearchKey(const wxKeyEvent& event);
     bool HandleNavigationKey(const wxKeyEvent& event);
+    bool HandleBlockNavigationKey(const wxKeyEvent& event);
+    void HandleAltBlockNavigationKey(const wxKeyEvent& event, int key);
     bool HandleViewKey(const wxKeyEvent& event);
     bool HandleDisplayKey(const wxKeyEvent& event, int whitespace, int eol, int symbols);
     bool HandleDocumentKey(const wxKeyEvent& event);
@@ -105,6 +115,7 @@ private:
     void UpdatePositionStatus();
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
+    bool CanDiscardUntitledWhitespace() const;
     GbkLossChoice ConfirmGbkLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);
     bool SaveSettings(bool explicitSave);

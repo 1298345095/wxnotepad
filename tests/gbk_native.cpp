@@ -83,42 +83,53 @@ public:
         for (GList* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget)) continue;
-            if (GTK_IS_FILE_CHOOSER(widget)) {
-                if (stage_ == 0) {
-                    stage_ = 1;
-                    ++choosers;
-                    if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
-                    NativeDialogs::ChooseFile(widget, path_);
-                } else if (stage_ == 1 && !path_.empty() && NativeDialogs::CanAcceptFile(widget, path_)) {
-                    stage_ = 2;
-                    Respond(widget, GTK_RESPONSE_ACCEPT);
-                }
-            } else if (GTK_IS_MESSAGE_DIALOG(widget)) {
-                const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
-                if (title == "GBK character loss") {
-                    ++losses;
-                    const auto label = [widget](int response) {
-                        auto* button = gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), response);
-                        Require(button && GTK_IS_BUTTON(button), "native loss button must exist");
-                        return wxString::FromUTF8(gtk_button_get_label(GTK_BUTTON(button)));
-                    };
-                    Require(label(GTK_RESPONSE_OK).Contains("OK") && label(GTK_RESPONSE_CANCEL).Contains("Cancel"),
-                            "native loss choices must be original OK/Cancel");
-                    Require(!gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_YES) &&
-                                !gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_NO),
-                            "native loss prompt must not offer a UTF8 alternative");
-                    Respond(widget, choice_ == wxID_OK ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
-                } else if (title == "Could not save file" || title == "Could not open file") {
-                    ++errors;
-                    Respond(widget, GTK_RESPONSE_OK);
-                }
-            }
+            HandleWidget(widget);
         }
         g_list_free(windows);
 #endif
     }
 
 private:
+#ifdef __WXGTK__
+    void HandleWidget(GtkWidget* widget) {
+        if (GTK_IS_FILE_CHOOSER(widget)) {
+            HandleFileChooser(widget);
+        } else if (GTK_IS_MESSAGE_DIALOG(widget)) {
+            HandleMessageDialog(widget);
+        }
+    }
+    void HandleFileChooser(GtkWidget* widget) {
+        if (stage_ == 0) {
+            stage_ = 1;
+            ++choosers;
+            if (!selectedType.empty()) NativeDialogs::ChooseFileType(widget, selectedType);
+            NativeDialogs::ChooseFile(widget, path_);
+        } else if (stage_ == 1 && !path_.empty() && NativeDialogs::CanAcceptFile(widget, path_)) {
+            stage_ = 2;
+            Respond(widget, GTK_RESPONSE_ACCEPT);
+        }
+    }
+    void HandleMessageDialog(GtkWidget* widget) {
+        const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
+        if (title == "GBK character loss") {
+            ++losses;
+            const auto label = [widget](int response) {
+                auto* button = gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), response);
+                Require(button && GTK_IS_BUTTON(button), "native loss button must exist");
+                return wxString::FromUTF8(gtk_button_get_label(GTK_BUTTON(button)));
+            };
+            Require(label(GTK_RESPONSE_OK).Contains("OK") && label(GTK_RESPONSE_CANCEL).Contains("Cancel"),
+                    "native loss choices must be original OK/Cancel");
+            Require(!gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_YES) &&
+                        !gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_NO),
+                    "native loss prompt must not offer a UTF8 alternative");
+            Respond(widget, choice_ == wxID_OK ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
+        } else if (title == "Could not save file" || title == "Could not open file") {
+            ++errors;
+            Respond(widget, GTK_RESPONSE_OK);
+        }
+    }
+#endif
     int choice_, stage_ = 0;
     wxString path_;
 };

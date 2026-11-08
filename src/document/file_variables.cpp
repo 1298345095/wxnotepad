@@ -64,6 +64,38 @@ std::optional<std::string> StringVariable(std::string_view text, std::string_vie
         result.pop_back();
     return result;
 }
+void ReadLocalVariables(std::string_view window, OriginalFileVariables& variables) {
+    if (const auto width = IntegerVariable(window, "tab-width"); width.has_value())
+        variables.tabWidth = std::clamp(*width, 1, 256);
+    auto indent = IntegerVariable(window, "*basic-indent");
+    if (!indent.has_value()) indent = IntegerVariable(window, "*basic-offset");
+    if (indent.has_value()) variables.indentWidth = std::clamp(*indent, 0, 256);
+    if (const auto tabs = IntegerVariable(window, "indent-tabs-mode"); tabs.has_value())
+        variables.tabsAsSpaces = *tabs == 0;
+    if (const auto tabs = IntegerVariable(window, "*tab-always-indent"); tabs.has_value())
+        variables.tabIndents = *tabs != 0;
+    variables.any = variables.tabWidth.has_value() || variables.indentWidth.has_value() ||
+                    variables.tabsAsSpaces.has_value() || variables.tabIndents.has_value();
+    variables.any |= IntegerVariable(window, "truncate-lines").has_value();
+    if (const auto boundary = IntegerVariable(window, "fill-column"); boundary.has_value())
+        variables.longLinesLimit = std::clamp(*boundary, 0, 4096);
+    variables.any |= variables.longLinesLimit.has_value();
+    variables.any |= StringVariable(window, "mode").has_value();
+    if (variables.tabWidth.has_value() && !variables.indentWidth.has_value())
+        variables.indentWidth = variables.tabWidth;
+    if (variables.indentWidth.has_value() && !variables.tabWidth.has_value())
+        variables.tabWidth = variables.indentWidth;
+}
+
+void ReadEncodingVariable(std::string_view window, OriginalFileVariables& variables) {
+    for (const auto key : {"encoding", "charset", "coding", "fileencoding", "/*!40101 SET NAMES "}) {
+        if (auto name = StringVariable(window, key)) {
+            variables.encodingName = std::move(name);
+            variables.any = true;
+            return;
+        }
+    }
+}
 } // namespace
 
 OriginalFileVariables ReadOriginalFileVariables(std::string_view bytes, bool noFileVariables, bool noEncodingTags) {
@@ -73,32 +105,9 @@ OriginalFileVariables ReadOriginalFileVariables(std::string_view bytes, bool noF
         OriginalFileVariables variables;
         if (!noFileVariables) {
             if (IntegerVariable(window, "enable-local-variables") == 0) return {};
-            if (const auto width = IntegerVariable(window, "tab-width"))
-                variables.tabWidth = std::clamp(*width, 1, 256);
-            auto indent = IntegerVariable(window, "*basic-indent");
-            if (!indent) indent = IntegerVariable(window, "*basic-offset");
-            if (indent) variables.indentWidth = std::clamp(*indent, 0, 256);
-            if (const auto tabs = IntegerVariable(window, "indent-tabs-mode")) variables.tabsAsSpaces = *tabs == 0;
-            if (const auto tabs = IntegerVariable(window, "*tab-always-indent")) variables.tabIndents = *tabs != 0;
-            variables.any =
-                variables.tabWidth || variables.indentWidth || variables.tabsAsSpaces || variables.tabIndents;
-            variables.any |= IntegerVariable(window, "truncate-lines").has_value();
-            if (const auto boundary = IntegerVariable(window, "fill-column"))
-                variables.longLinesLimit = std::clamp(*boundary, 0, 4096);
-            variables.any |= variables.longLinesLimit.has_value();
-            variables.any |= StringVariable(window, "mode").has_value();
-            if (variables.tabWidth && !variables.indentWidth) variables.indentWidth = variables.tabWidth;
-            if (variables.indentWidth && !variables.tabWidth) variables.tabWidth = variables.indentWidth;
+            ReadLocalVariables(window, variables);
         }
-        if (!utf8Signature && !noEncodingTags) {
-            for (const auto key : {"encoding", "charset", "coding", "fileencoding", "/*!40101 SET NAMES "}) {
-                if (auto name = StringVariable(window, key)) {
-                    variables.encodingName = std::move(name);
-                    variables.any = true;
-                    break;
-                }
-            }
-        }
+        if (!utf8Signature && !noEncodingTags) ReadEncodingVariable(window, variables);
         if (variables.any) return variables;
         if (bytes.size() <= 512) break;
     }

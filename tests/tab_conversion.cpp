@@ -57,16 +57,60 @@ void Range(EditorControl* editor, intptr_t anchor, intptr_t caret) {
     Require(editor->Send(Message::GetAnchor) == anchor && editor->Send(Message::GetCurrentPos) == caret,
             "result selection matches original expanded range and direction");
 }
+struct ConversionFixture {
+    const char* command;
+    int width;
+    const char* before;
+    const char* after;
+};
+
+void CheckConversion(EditorFrame* frame, const ConversionFixture& fixture, bool backwards) {
+    auto* editor = frame->Editor();
+    const auto beforeLength = static_cast<intptr_t>(std::char_traits<char>::length(fixture.before));
+    const auto afterLength = static_cast<intptr_t>(std::char_traits<char>::length(fixture.after));
+    TestEditor::ResetStream(editor, fixture.before, backwards ? beforeLength : 0, backwards ? 0 : beforeLength);
+    editor->Send(Message::SetTabWidth, fixture.width);
+    Menu(frame, fixture.command);
+    if (TestEditor::Text(editor) != fixture.after)
+        std::fprintf(stderr, "%s width %d: expected <%s>, got <%s>\n", fixture.command, fixture.width, fixture.after,
+                     TestEditor::Text(editor).c_str());
+    Require(TestEditor::Text(editor) == fixture.after, "conversion matches literal original output");
+    Range(editor, backwards ? afterLength : 0, backwards ? 0 : afterLength);
+    if (std::string(fixture.before) != fixture.after) {
+        Require(editor->Send(Message::GetModify), "changed conversion leaves save point");
+        editor->Send(Message::Undo);
+        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
+                    !editor->Send(Message::GetModify),
+                "one Undo restores original bytes and save point");
+        editor->Send(Message::Redo);
+        Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+                "one Redo restores the entire conversion");
+    } else {
+        Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+                "unchanged conversion retains history and save point");
+    }
+}
+
+void SelectionBoundaries(EditorFrame* frame, bool backwards) {
+    auto* editor = frame->Editor();
+    TestEditor::ResetStream(editor, "xx\tA\n \tBtail", backwards ? 8 : 2, backwards ? 2 : 8);
+    Menu(frame, "Untabify Selection");
+    Require(TestEditor::Text(editor) == "xx  A\n    Btail", "first line expands but exact final byte boundary remains");
+    Range(editor, backwards ? 11 : 0, backwards ? 0 : 11);
+    TestEditor::ResetStream(editor, "    A\n    Btail", backwards ? 9 : 2, backwards ? 2 : 9);
+    Menu(frame, "Tabify Selection");
+    Require(TestEditor::Text(editor) == "\tA\n    Btail", "partial final space run flushes literally");
+    Range(editor, backwards ? 6 : 0, backwards ? 0 : 6);
+    TestEditor::ResetStream(editor, "xx\tA\n \tBtail", backwards ? 5 : 2, backwards ? 2 : 5);
+    Menu(frame, "Untabify Selection");
+    Require(TestEditor::Text(editor) == "xx  A\n \tBtail", "end at line start excludes all next-line text");
+    Range(editor, backwards ? 6 : 0, backwards ? 0 : 6);
+}
+
 void Conversions(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    struct Fixture {
-        const char* command;
-        int width;
-        const char* before;
-        const char* after;
-    };
     // Literal results from the pinned EditSpacesToTabs/EditTabsToSpaces rules.
-    const Fixture fixtures[] = {
+    const ConversionFixture fixtures[] = {
         {"Tabify Selection", 4, "abc d", "abc d"},
         {"Tabify Selection", 4, "abc  d", "abc\t d"},
         {"Tabify Selection", 4, " \t  X\t Y\r\n    Z\n \r  ", "\t  X\t Y\r\n\tZ\n \r  "},
@@ -83,46 +127,12 @@ void Conversions(EditorFrame* frame) {
     };
     for (const auto& fixture : fixtures) {
         for (bool backwards : {false, true}) {
-            const auto beforeLength = static_cast<intptr_t>(std::char_traits<char>::length(fixture.before));
-            const auto afterLength = static_cast<intptr_t>(std::char_traits<char>::length(fixture.after));
-            TestEditor::ResetStream(editor, fixture.before, backwards ? beforeLength : 0, backwards ? 0 : beforeLength);
-            editor->Send(Message::SetTabWidth, fixture.width);
-            Menu(frame, fixture.command);
-            if (TestEditor::Text(editor) != fixture.after)
-                std::fprintf(stderr, "%s width %d: expected <%s>, got <%s>\n", fixture.command, fixture.width,
-                             fixture.after, TestEditor::Text(editor).c_str());
-            Require(TestEditor::Text(editor) == fixture.after, "conversion matches literal original output");
-            Range(editor, backwards ? afterLength : 0, backwards ? 0 : afterLength);
-            if (std::string(fixture.before) != fixture.after) {
-                Require(editor->Send(Message::GetModify), "changed conversion leaves save point");
-                editor->Send(Message::Undo);
-                Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
-                            !editor->Send(Message::GetModify),
-                        "one Undo restores original bytes and save point");
-                editor->Send(Message::Redo);
-                Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
-                        "one Redo restores the entire conversion");
-            } else {
-                Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
-                        "unchanged conversion retains history and save point");
-            }
+            CheckConversion(frame, fixture, backwards);
         }
     }
     editor->Send(Message::SetTabWidth, 4);
     for (bool backwards : {false, true}) {
-        TestEditor::ResetStream(editor, "xx\tA\n \tBtail", backwards ? 8 : 2, backwards ? 2 : 8);
-        Menu(frame, "Untabify Selection");
-        Require(TestEditor::Text(editor) == "xx  A\n    Btail",
-                "first line expands but exact final byte boundary remains");
-        Range(editor, backwards ? 11 : 0, backwards ? 0 : 11);
-        TestEditor::ResetStream(editor, "    A\n    Btail", backwards ? 9 : 2, backwards ? 2 : 9);
-        Menu(frame, "Tabify Selection");
-        Require(TestEditor::Text(editor) == "\tA\n    Btail", "partial final space run flushes literally");
-        Range(editor, backwards ? 6 : 0, backwards ? 0 : 6);
-        TestEditor::ResetStream(editor, "xx\tA\n \tBtail", backwards ? 5 : 2, backwards ? 2 : 5);
-        Menu(frame, "Untabify Selection");
-        Require(TestEditor::Text(editor) == "xx  A\n \tBtail", "end at line start excludes all next-line text");
-        Range(editor, backwards ? 6 : 0, backwards ? 0 : 6);
+        SelectionBoundaries(frame, backwards);
     }
     std::puts("PASS: literal tab stops, partial runs, existing Tabs, mixed EOLs, UTF-16 units, exact boundaries, "
               "direction and Undo/Redo");

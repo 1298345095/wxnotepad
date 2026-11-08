@@ -294,7 +294,7 @@ public:
                 Require(regex->GetValue() && wholeWord->GetValue() && matchCase->GetValue() &&
                             query->GetValue() == wxString::FromUTF8("文"),
                         "reopening Find must retain regex, query and independent session options");
-                Require(frame->New(), "New must replace the clean document while regex Find remains open");
+                Require(frame->NewDocument(), "New must replace the clean document while regex Find remains open");
                 query->SetValue("^");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 0, "New must search the current empty document");
