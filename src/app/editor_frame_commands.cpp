@@ -640,6 +640,18 @@ void EditorFrame::AppendLineCommands(wxMenu* edit) {
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
             id);
+    Bind(wxEVT_CHAR_HOOK, [this, modifyLines, transposeLines](wxKeyEvent& event) {
+        const int key = event.GetKeyCode();
+        if (!event.AltDown() || (key != 'M' && key != 'S')) {
+            event.Skip();
+            return;
+        }
+        // Original command accelerators take priority over Scheme/Search mnemonics.
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) {
+            wxCommandEvent command(wxEVT_MENU, key == 'M' ? modifyLines : transposeLines);
+            GetEventHandler()->ProcessEvent(command);
+        }
+    });
 }
 
 void EditorFrame::AppendSearchCommands(wxMenu* edit) {

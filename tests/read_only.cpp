@@ -162,12 +162,17 @@ void CommandOutcomes(EditorFrame* frame) {
         editor->Send(Message::SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         const bool eolCommand = label.starts_with("Convert to ");
-        const wxString menuLabel = label == "Convert to CRLF"       ? "Windows (CR+LF)"
-                                   : label == "Convert to LF"       ? "Unix/macOS (LF)"
-                                   : label == "Convert to CR"       ? "Classic Mac OS (CR)"
-                                   : label == "Duplicate Selection" ? "Duplicate"
-                                   : label == "Transpose Lines"     ? "Transpose"
-                                                                    : wxString::FromUTF8(label);
+        wxString menuLabel = wxString::FromUTF8(label);
+        if (label == "Convert to CRLF")
+            menuLabel = "Windows (CR+LF)";
+        else if (label == "Convert to LF")
+            menuLabel = "Unix/macOS (LF)";
+        else if (label == "Convert to CR")
+            menuLabel = "Classic Mac OS (CR)";
+        else if (label == "Duplicate Selection")
+            menuLabel = "Duplicate";
+        else if (label == "Transpose Lines")
+            menuLabel = "Transpose";
         const int id = frame->GetMenuBar()->FindMenuItem(eolCommand ? "File" : "Edit", menuLabel);
         Require(id != wxNOT_FOUND && frame->GetMenuBar()->IsEnabled(id) == enabled,
                 "original nonempty/capability-based editing menu remains enabled during protection");
