@@ -60,7 +60,7 @@ def main():
             app.close()
         finally:
             app.stop()
-    print("PASS: original AutoReload/1000/1000 defaults and all three modes survive independent process restarts")
+    print("PASS: original AutoReload/1000/1000/flags-clear/reset-off defaults, all modes and option bits survive restarts")
     print("PASS: startup-file Open installs monitoring when the native event loop starts")
 
 

@@ -393,6 +393,20 @@ public:
                 Wait([&] { return TestEditor::Text(frame->Editor()) == "x"; });
                 Require(frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == 1,
                         "Keep at end follows truncation");
+                options.flags = FileWatchingOption_LogFile;
+                frame->SetFileWatchingOptions(options);
+                Peer(TestFiles::Filename(firstSave), "head\nlast");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "head\nlast"; });
+                Require(frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == 9,
+                        "log mode without Keep at end follows an old final-line caret during growth");
+                frame->Editor()->Send(Scintilla::Message::GotoPos, 1);
+                Peer(TestFiles::Filename(firstSave), "changed head\nchanged last", "replace");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "changed head\nchanged last"; });
+                Require(frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == 1,
+                        "log mode without Keep at end preserves a non-tail caret during replacement");
+                Peer(TestFiles::Filename(firstSave), "x");
+                Wait([&] { return TestEditor::Text(frame->Editor()) == "x"; });
+                options.flags = FileWatchingOption_LogFile | FileWatchingOption_KeepAtEnd;
                 std::puts("PASS: log Keep at end follows replacement and truncation with full-reload undo behavior");
                 options.resetOnNewFile = true;
                 frame->SetFileWatchingOptions(options);
