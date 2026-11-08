@@ -32,6 +32,8 @@ public:
     OpenResult Open();
     OpenResult OpenAs(FileEncoding encoding);
     OpenResult Revert();
+    OpenResult ReloadWithEncoding();
+    OpenResult ReloadAsUtf8();
     OpenResult ReloadCurrentFile(bool followEnd = false);
     bool DocumentHasUtf8Bom() const { return document_.HasUtf8Bom(); }
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
@@ -54,6 +56,8 @@ private:
     FileChangeMonitor fileChangeMonitor_;
     int automaticLanguageId_;
     int saveCopyId_;
+    int reloadEncodingId_;
+    int reloadUtf8Id_;
     int recentFilesId_;
     void AppendRecentFilesCommand(wxMenu* file);
     void RecordRecentFile();
@@ -76,6 +80,7 @@ private:
     void ApplyWrapSymbols();
     void CreateMenus();
     wxMenu* CreateFileMenu();
+    void AppendReloadEncodingCommands(wxMenu* reload);
     wxMenu* CreateEditMenu();
     wxMenu* CreateLanguageMenu();
     wxMenu* CreateViewMenu();
@@ -140,7 +145,8 @@ private:
     void OnDropFiles(wxDropFilesEvent& event);
     OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                         std::optional<FileEncoding> encoding = std::nullopt,
-                        std::optional<EncodingChoice> weakEncoding = std::nullopt);
+                        std::optional<EncodingChoice> weakEncoding = std::nullopt,
+                        OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead);
     bool CanDiscardUntitledWhitespace() const;
     GbkLossChoice ConfirmGbkLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);

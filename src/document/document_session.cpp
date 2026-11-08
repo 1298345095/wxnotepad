@@ -455,7 +455,8 @@ void DocumentSession::ApplySaveCleanup() {
 
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                                  std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
-                                 const std::function<void()>& configureLoadedDocument) {
+                                 const std::function<void()>& configureLoadedDocument,
+                                 OpenDecisionTiming decisionTiming) {
     if (!source) return {OpenStatus::Cancelled, {}};
     // Notepad4 FileLoad compares the supplied spelling before canonicalizing the
     // load path. Do not turn distinct spellings or file-system aliases into reloads.
@@ -471,13 +472,15 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     loadPath.Normalize(wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE | wxPATH_NORM_LONG |
                        wxPATH_NORM_SHORTCUT);
     wxLogNull quiet;
+    const bool wasModified = editor_.Send(Scintilla::Message::GetModify);
+    if (decisionTiming == OpenDecisionTiming::BeforeRead && !beforeReplace()) return {OpenStatus::Cancelled, {}};
     auto candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
     if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
-    const bool wasModified = editor_.Send(Scintilla::Message::GetModify);
-    if (!beforeReplace()) return {OpenStatus::Cancelled, {}};
+    if (decisionTiming == OpenDecisionTiming::AfterRead && !beforeReplace()) return {OpenStatus::Cancelled, {}};
     // Save may have rewritten the selected source (including a newly chosen
     // first-save destination). Read it again after that explicit Save succeeds.
-    if (wasModified && !editor_.Send(Scintilla::Message::GetModify)) {
+    if (decisionTiming == OpenDecisionTiming::AfterRead && wasModified &&
+        !editor_.Send(Scintilla::Message::GetModify)) {
         // Release the old decoded text before allocating another whole-file read.
         candidate.emplace<wxString>();
         candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
