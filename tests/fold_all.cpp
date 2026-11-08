@@ -95,7 +95,7 @@ void LanguageFoldCommands(EditorFrame* frame, int collapse, int expand) {
     };
     for (const auto& language : languages) {
         editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(language.source));
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language.name));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language.name));
         Paint(editor);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         const bool capable = editor->Send(Message::GetMarginWidthN, 2) > 0;
@@ -131,7 +131,7 @@ void LanguageFoldCommands(EditorFrame* frame, int collapse, int expand) {
         }
         std::printf("PASS: %s nested, empty and header-free documents use native fold commands\n", language.name);
     }
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(collapse) && frame->GetMenuBar()->IsEnabled(expand),
             "Plain Text must retain the original preference-based native fold command gate");
@@ -147,7 +147,7 @@ public:
                 auto* editor = frame->Editor();
                 const std::string source = "void outer() {\n  if (true) {\n    call();\n  }\n  tail();\n}\nafter();\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Paint(editor);
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);

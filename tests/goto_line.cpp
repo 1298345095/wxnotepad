@@ -110,8 +110,8 @@ void LogicalLineNavigation(EditorFrame* frame) {
 #endif
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one\r\n\xE4\xB8\xAD\xE6\x96\x87\nlast"));
     editor->Send(Message::SetSel, 1, 7);
-    const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Go To Line...");
-    Require(id != wxNOT_FOUND, "Edit must expose Go To Line");
+    const int id = frame->GetMenuBar()->FindMenuItem("Search", "Goto Line...");
+    Require(id != wxNOT_FOUND, "Search exposes the original navigation commands");
     Dialog(frame, id, [](wxDialog* dialog, wxTextCtrl* input) {
         Require(input->GetValue() == "2", "dialog must start with the current logical line");
         auto* range = wxDynamicCast(wxWindow::FindWindowByName("Go to line range", dialog), wxStaticText);
@@ -182,7 +182,7 @@ void LogicalLineNavigation(EditorFrame* frame) {
 }
 void ColumnAndPositionNavigation(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Go To Line...");
+    const int id = frame->GetMenuBar()->FindMenuItem("Search", "Goto Line...");
     const std::string columns = "\tA\xE4\xB8\xAD\xF0\x9F\x98\x80Z\r\nnext\n";
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(columns.c_str()));
     editor->Send(Message::SetTabWidth, 4);
@@ -262,11 +262,11 @@ void ColumnAndPositionNavigation(EditorFrame* frame) {
 }
 void FoldedNavigationHistory(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Go To Line...");
+    const int id = frame->GetMenuBar()->FindMenuItem("Search", "Goto Line...");
     const std::string folded =
         "void outer() {\n  if (true) {\n    call();\n  }\n}\nvoid other() {\n  untouched();\n}\n";
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(folded.c_str()));
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     NativeFold::Paint(editor);
     editor->Send(Message::GotoPos, 0);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
@@ -332,7 +332,7 @@ void FoldedNavigationHistory(EditorFrame* frame) {
 }
 void ScrolledAndWrappedNavigation(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Go To Line...");
+    const int id = frame->GetMenuBar()->FindMenuItem("Search", "Goto Line...");
     std::string manyLines;
     for (int line = 0; line < 150; ++line)
         manyLines += "row\n";

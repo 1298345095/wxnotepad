@@ -98,7 +98,7 @@ public:
                 auto* editor = frame->Editor();
                 const std::string source = "void outer() {\n  if (true) {\n    call();\n  }\n  tail();\n}\nafter();\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Paint(editor);
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
@@ -190,7 +190,7 @@ public:
                 MarginClick(editor, 0);
                 Require(frame->Save().status == SaveStatus::Saved && !editor->Send(Message::GetFoldExpanded, 0),
                         "unchanged-language Save must preserve collapsed folds");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Require(!editor->Send(Message::GetFoldExpanded, 0), "repeated language selection must preserve folds");
                 Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
                             frame->Open(filename + ".missing").status == OpenStatus::Failed &&
@@ -200,10 +200,10 @@ public:
                 Require(std::string(std::istreambuf_iterator<char>(saved), {}) == source,
                         "folding and Save must retain independent disk bytes");
                 saved.close();
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
                 Require(editor->Send(Message::GetMarginWidthN, 2) > 0 && editor->Send(Message::GetLineVisible, 2),
                         "Plain Text must retain the original folding margin and reveal old contracted text");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Paint(editor);
                 Require(editor->Send(Message::GetFoldExpanded, 0) && editor->Send(Message::GetLineVisible, 2),
                         "changing back to C++ must start expanded");
@@ -226,7 +226,7 @@ public:
                 for (int line = 0; line < 40; ++line)
                     scrolled += "suffix();\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(scrolled.c_str()));
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 editor->Send(Message::SetFirstVisibleLine, 38);
                 Paint(editor);
                 MarginClick(editor, 41);

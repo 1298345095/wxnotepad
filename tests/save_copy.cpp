@@ -219,7 +219,7 @@ void Identity(EditorFrame* frame, const std::filesystem::path& directory) {
                                  "one\r\ntwo\nthree\r";
     TestFiles::WriteBytes(source, original);
     Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "copy source must open");
-    const auto language = frame->GetMenuBar()->FindMenuItem("Language", "C/C++");
+    const auto language = frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++");
     NativeSearch::Command(frame, language);
     TestEditor::Append(frame, "中文!");
     auto* editor = frame->Editor();
@@ -283,7 +283,7 @@ void RememberDirectory(EditorFrame* frame, const std::filesystem::path& director
     menu.Stop();
     Require(menu.choosers == 1 && Bytes(output) == Bytes(directory / "source.txt") &&
                 frame->DocumentPath() == Filename(directory / "source.txt") &&
-                frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "C/C++")),
+                frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++")),
             "real Save Copy menu command must write through native chooser and retain original identity");
     const auto existing = remembered / "overwrite.txt";
     TestFiles::WriteBytes(existing, "keep");

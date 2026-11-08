@@ -178,11 +178,11 @@ public:
                     Require(marked != cleared, "native paint changes at the unselected occurrence when marking is off");
                     Command(frame, off);
                 }
-                Command(frame, menus->FindMenuItem("Language", "C/C++"));
+                Command(frame, menus->FindMenuItem("Scheme", "C/C++"));
                 Ranges(editor, {{0, 3}, {4, 7}}, "syntax changes preserve occurrence channel 8");
                 load("one one\none", 0, 3);
                 editor->Send(Message::MarkerAdd, 1, 0);
-                Command(frame, menus->FindMenuItem("Edit", "Goto Next"));
+                Command(frame, menus->FindMenuItem("Search", "Goto Next"));
                 Ranges(editor, {{0, 3}, {4, 7}, {8, 11}},
                        "bookmark navigation skips one original occurrence selection refresh");
                 Require(editor->Send(Message::GetSelectionEmpty) && editor->Send(Message::GetCurrentPos) == 8,

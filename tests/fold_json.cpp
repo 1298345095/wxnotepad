@@ -34,7 +34,7 @@ public:
                 const std::string source = "{\n  \"items\": [\n    {\n      \"text\": \"{ [ \\\" } ]\"\n    },\n    "
                                            "2\n  ],\n  \"tail\": true\n}\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "JSON"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "JSON"));
                 Paint(editor);
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
@@ -112,13 +112,13 @@ public:
                 MarginClick(editor, 1);
                 Require(frame->Save().status == SaveStatus::Saved && !editor->Send(Message::GetFoldExpanded, 1),
                         "unchanged-language Save must preserve JSON folds");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "JSON"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "JSON"));
                 Require(!editor->Send(Message::GetFoldExpanded, 1),
                         "choosing JSON again must preserve its nested fold state");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
                 Require(editor->Send(Message::GetMarginWidthN, 2) > 0 && editor->Send(Message::GetLineVisible, 3),
                         "Plain Text must retain the original fold margin and reveal old contracted JSON text");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "JSON"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "JSON"));
                 Paint(editor);
                 Require(Header(editor, 0) && Header(editor, 1) && Header(editor, 2) &&
                             editor->Send(Message::GetFoldExpanded, 1) && editor->Send(Message::GetLineVisible, 3),

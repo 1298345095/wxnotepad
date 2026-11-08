@@ -36,7 +36,7 @@ void Case(EditorFrame* frame, int command, const std::string& text, intptr_t anc
             "brace command must preserve document bytes, save point and empty edit history");
 }
 void Language(EditorFrame* frame, const char* name) {
-    const int id = frame->GetMenuBar()->FindMenuItem("Language", name);
+    const int id = frame->GetMenuBar()->FindMenuItem("Scheme", name);
     Require(id != wxNOT_FOUND, "supported language must be present in its native menu");
     NativeSearch::Command(frame, id);
 }
@@ -69,7 +69,7 @@ void Shortcut(EditorControl* editor, bool shift) {
 }
 std::pair<int, int> BasicBraceCases(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const int find = frame->GetMenuBar()->FindMenuItem("Edit", "Find Matching Brace");
+    const int find = frame->GetMenuBar()->FindMenuItem("Search", "Find Matching Brace");
     Require(find != wxNOT_FOUND, "native Edit menu must expose Find Matching Brace");
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("(a(b)c)"));
     editor->Send(Message::GotoPos, 2);
@@ -77,7 +77,7 @@ std::pair<int, int> BasicBraceCases(EditorFrame* frame) {
     Require(editor->Send(Message::GetCurrentPos) == 4 && editor->Send(Message::GetAnchor) == 4,
             "Find Matching Brace navigates to the nested closing delimiter");
     std::puts("PASS: native menu navigates to the matching nested brace");
-    const int select = frame->GetMenuBar()->FindMenuItem("Edit", "Select to Matching Brace");
+    const int select = frame->GetMenuBar()->FindMenuItem("Search", "Select to Matching Brace");
     Require(select != wxNOT_FOUND, "native Edit menu must expose Select to Matching Brace");
     editor->Send(Message::SetSel, 0, 2);
     NativeSearch::Command(frame, select);

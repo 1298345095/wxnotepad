@@ -92,7 +92,7 @@ public:
                      false);
                 Require(!frame->Editor()->Send(Message::GetTabIndents), "file Tab Indents variable applies");
                 for (const auto* language : {"JSON", "Python", "C/C++", "Plain Text"}) {
-                    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+                    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
                     Check(frame->Editor(), 7, 7, false);
                     Require(!frame->Editor()->Send(Message::GetTabIndents), "language changes retain file Tab Indents");
                 }
@@ -107,7 +107,7 @@ public:
                     TabDialog::Toggle(TabDialog::Option(dialog, "Detect Indentation"), true);
                 });
                 open("tabs.txt", "root\n\tone\n\t\ttwo\n", 4, 4, false);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "JSON"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "JSON"));
                 Check(frame->Editor(), 2, 2, false);
                 open("mixed.txt", " \talpha\n", 1, 1, true);
                 open("lower-tie.txt", " a\nroot\n  b\n", 1, 1, true);
@@ -124,7 +124,7 @@ public:
                 open("sample-limit.txt", std::string(1024 * 1024, 'x') + "\n  alpha\n  beta\n", 4, 4, false);
                 open("detected.txt", "  alpha\n    beta\n  gamma\n", 2, 2, true);
                 for (const auto* language : {"JSON", "Python", "Plain Text"}) {
-                    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+                    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
                     Check(frame->Editor(), 2, 2, true);
                 }
                 Require(frame->SaveAs(TestFiles::Filename(directory / "saved.json"), {}, SaveType::AllFiles).status ==
