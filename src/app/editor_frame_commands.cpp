@@ -79,8 +79,9 @@ void EditorFrame::CreateMenus() {
 void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
     reloadEncodingId_ = wxWindow::NewControlId();
     reloadUtf8Id_ = wxWindow::NewControlId();
-    reload->Append(reloadEncodingId_, "With &Encoding...\tF8");
     reload->Append(reloadUtf8Id_, "As &UTF-8\tShift+F8");
+    reload->AppendSeparator();
+    reload->Append(reloadEncodingId_, "With &Encoding...\tF8");
     for (const int id : {reloadEncodingId_, reloadUtf8Id_})
         Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, id);
     for (const int id : {reloadEncodingId_, reloadUtf8Id_})

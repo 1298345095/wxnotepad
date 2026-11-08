@@ -259,7 +259,8 @@ void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback, co
     WriteInt(key, value, fallback, sectionName);
 }
 
-std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName, size_t capacity) const {
+std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName, size_t capacity,
+                                                 bool preserveWhitespace) const {
     std::vector<wxString> history;
     bool section = false;
     for (const auto& raw : lines_) {
@@ -268,9 +269,13 @@ std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName, si
         if (line.StartsWith("[")) {
             section = line.CmpNoCase("[" + sectionName + "]") == 0;
         } else if (section && !line.StartsWith(";") && !line.StartsWith("#") && line.Contains('=')) {
-            wxString value = line.AfterFirst('=').Trim().Trim(false);
-            if (value.StartsWith("\"") && value.EndsWith("\"") && value.length() >= 2)
-                value = value.Mid(1, value.length() - 2);
+            wxString value = raw.AfterFirst('=');
+            wxString trimmed = value;
+            trimmed.Trim().Trim(false);
+            if (trimmed.StartsWith("\"") && trimmed.EndsWith("\"") && trimmed.length() >= 2)
+                value = trimmed.Mid(1, trimmed.length() - 2);
+            else if (!preserveWhitespace)
+                value = trimmed;
             if (!value.empty()) history.push_back(value);
             if (history.size() == capacity) break;
         }
@@ -279,7 +284,7 @@ std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName, si
 }
 
 std::vector<wxString> SettingsStore::ReadRecentFiles() const {
-    auto history = ReadHistory("Recent Files", recentFileCapacity_);
+    auto history = ReadHistory("Recent Files", recentFileCapacity_, true);
     for (auto& path : history)
         path = RecentFiles::ExpandPath(path);
     return history;
@@ -299,8 +304,9 @@ void SettingsStore::WriteRecentFiles(const std::vector<wxString>& history) {
     if (history.empty()) return;
     lines_.push_back("[Recent Files]");
     for (size_t index = 0; index < history.size(); ++index)
-        lines_.push_back(wxString::Format("%02zu=", index + 1) +
-                         RecentFiles::PortablePath(history[index], values.relativeFileMRU, values.portableMyDocs));
+        lines_.push_back(wxString::Format("%02zu=\"", index + 1) +
+                         RecentFiles::PortablePath(history[index], values.relativeFileMRU, values.portableMyDocs) +
+                         "\"");
 }
 
 void SettingsStore::AddRecentFile(const wxString& path) {

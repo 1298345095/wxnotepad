@@ -32,13 +32,14 @@ def main():
             assert "[Recent Files]" in saved and "first.txt" in saved, saved
             assert "SaveRecentFiles=65" in saved and "UnrelatedSetting=keep" in saved and "UnrelatedStyle=keep" in saved, saved
             if os.name != "nt" or source.drive.lower() != Path(os.environ["WINDIR"]).drive.lower():
-                assert any(line in saved for line in ("01=first.txt", "01=.\\first.txt", "01=./first.txt")), saved
+                assert any(line in saved for line in ('01="first.txt"', '01=".\\first.txt"', '01="./first.txt"')), saved
         finally:
             app.stop()
         def history():
             document = configparser.ConfigParser(interpolation=None)
             document.read(folder / "Notepad4.ini", encoding="utf-16")
-            return [Path(value.replace("\\", os.sep)).name for value in document["Recent Files"].values()]
+            return [Path(value.removeprefix('"').removesuffix('"').replace("\\", os.sep)).name
+                    for value in document["Recent Files"].values()]
 
         def restart(paths):
             result = subprocess.run([str(probe), "--history", *(str(path) for path in paths)], env=environment,
@@ -46,6 +47,38 @@ def main():
             assert result.returncode == 0, result.stdout
 
         restart([first])
+        if os.name != "nt":
+            # POSIX keeps this final space as part of the filename. The literal
+            # bytes distinguish it from the otherwise identical unspaced path.
+            spaced = folder / "report "
+            spaced.write_bytes(b"trailing-space document")
+            (folder / "report").write_bytes(b"different unspaced document")
+            ini = folder / "Notepad4.ini"
+            ini.write_text("[Settings]\nSaveSettings=0\nSaveRecentFiles=65\n"
+                           "[Recent Files]\n01=report \n", encoding="utf-16")
+            restart([spaced])
+            app = Application(executable, folder, environment, first)
+            try:
+                app.close()
+                restart([first, spaced])
+                assert '02="report "' in ini.read_text(encoding="utf-16"), repr(ini.read_bytes())
+                assert spaced.read_bytes() == b"trailing-space document"
+                assert (folder / "report").read_bytes() == b"different unspaced document"
+            finally:
+                app.stop()
+            ini.write_text("[Settings]\nSaveSettings=0\nSaveRecentFiles=65\n"
+                           "[Recent Files]\n01=first.txt\n", encoding="utf-16")
+            app = Application(executable, folder, environment, spaced)
+            try:
+                assert app.state["length"] == "23", app.state
+                app.close()
+                restart([spaced, first])
+                assert '01="report "' in ini.read_text(encoding="utf-16"), repr(ini.read_bytes())
+            finally:
+                app.stop()
+            ini.write_text("[Settings]\nSaveSettings=0\nSaveRecentFiles=65\n"
+                           "[Recent Files]\n01=first.txt\n", encoding="utf-16")
+            print("PASS: literal POSIX trailing-space filenames survive legacy INI load, merge-save and restart")
         second, third = folder / "second.txt", folder / "third.txt"
         second.write_bytes(b"second")
         third.write_bytes(b"third")

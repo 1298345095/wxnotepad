@@ -1,11 +1,8 @@
 #include "app/editor_frame.h"
+#include "app/dialogs/document_dialogs.h"
 #include "editor/editor_control.h"
-#include <wx/dialog.h>
-#include <wx/checkbox.h>
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
-#include <wx/radiobox.h>
-#include <wx/sizer.h>
 
 void EditorFrame::SetFileWatchingOptions(const FileWatchingOptions& options) {
     fileWatchingOptions_ = options;
@@ -17,31 +14,7 @@ void EditorFrame::RefreshFileWatching() {
 }
 
 void EditorFrame::ShowFileChangeNotificationOptions() {
-    wxDialog dialog(this, wxID_ANY, "File Change Notification");
-    auto* layout = new wxBoxSizer(wxVERTICAL);
-    const wxString choices[] = {"&None.", "&Show message.", "&Auto-reload (unmodified)."};
-    auto* mode =
-        new wxRadioBox(&dialog, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 3, choices, 1, wxRA_SPECIFY_COLS);
-    mode->SetSelection(static_cast<int>(fileWatchingOptions_.mode));
-    layout->Add(mode, 1, wxEXPAND | wxALL, dialog.FromDIP(10));
-    auto* log = new wxCheckBox(&dialog, wxID_ANY, "&Monitor continuously updated file (e.g. log file).");
-    auto* keepEnd = new wxCheckBox(&dialog, wxID_ANY, "&Keep at document end after reloading.");
-    auto* reset = new wxCheckBox(&dialog, wxID_ANY, "&Reset if a new file is opened.");
-    log->SetValue(fileWatchingOptions_.flags & FileWatchingOption_LogFile);
-    keepEnd->SetValue(fileWatchingOptions_.flags & FileWatchingOption_KeepAtEnd);
-    reset->SetValue(fileWatchingOptions_.resetOnNewFile);
-    for (auto* checkbox : {log, keepEnd, reset})
-        layout->Add(checkbox, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(10));
-    layout->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
-    dialog.SetSizerAndFit(layout);
-    dialog.CentreOnParent();
-    if (dialog.ShowModal() != wxID_OK) return;
-    auto options = fileWatchingOptions_;
-    options.mode = static_cast<FileWatchingMode>(mode->GetSelection());
-    options.flags =
-        (log->GetValue() ? FileWatchingOption_LogFile : 0) | (keepEnd->GetValue() ? FileWatchingOption_KeepAtEnd : 0);
-    options.resetOnNewFile = reset->GetValue();
-    SetFileWatchingOptions(options);
+    if (const auto options = ChooseFileWatchingOptions(this, fileWatchingOptions_)) SetFileWatchingOptions(*options);
 }
 
 void EditorFrame::HandleFileChange() {
