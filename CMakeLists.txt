@@ -445,6 +445,10 @@ if(BUILD_TESTING)
     add_editor_test(eol_smoke loaded_eol_input 30)
     add_editor_test(eol_conversion convert_line_endings 60)
     add_editor_test(open_native open_new_native 60)
+    add_editor_test(reload_encoding reload_encoding_commands 60)
+    add_test(NAME reload_encoding_native_keys COMMAND reload_encoding)
+    set_tests_properties(reload_encoding_native_keys PROPERTIES TIMEOUT 60
+        ENVIRONMENT "WXNOTEPAD_RELOAD_NATIVE_KEYS=1")
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
         # Preserve timeout stacks through the existing Linux core/GDB collector.
         set_tests_properties(open_new_native PROPERTIES

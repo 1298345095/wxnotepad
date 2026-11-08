@@ -29,6 +29,8 @@ public:
     OpenResult Open();
     OpenResult OpenAs(FileEncoding encoding);
     OpenResult Revert();
+    OpenResult ReloadWithEncoding();
+    OpenResult ReloadAsUtf8();
     OpenResult ReloadCurrentFile(bool followEnd = false);
     bool DocumentHasUtf8Bom() const { return document_.HasUtf8Bom(); }
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
@@ -43,6 +45,8 @@ private:
     DocumentSession document_;
     int automaticLanguageId_;
     int saveCopyId_;
+    int reloadEncodingId_;
+    int reloadUtf8Id_;
     int revertId_;
     wxString lastSaveCopyDirectory_;
     SearchSession search_;
@@ -62,6 +66,7 @@ private:
     void ApplyWrapSymbols();
     void CreateMenus();
     wxMenu* CreateFileMenu();
+    void AppendReloadEncodingCommands(wxMenu* reload);
     wxMenu* CreateEditMenu();
     wxMenu* CreateLanguageMenu();
     wxMenu* CreateViewMenu();
