@@ -270,7 +270,7 @@ void BlinkAndLifecycle(EditorFrame* frame, PaintRows& paint) {
             "native focus return restores chosen width and No Blink");
     other->Destroy();
     for (const char* language : {"C/C++", "Python", "JSON", "Plain Text"})
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
     Require(editor->Send(Message::GetCaretStyle) == 273 && editor->Send(Message::GetCaretPeriod) == 0,
             "language changes retain chosen caret flags and period");
 #ifdef __WXMSW__

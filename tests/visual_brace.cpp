@@ -30,7 +30,7 @@ void Reference(EditorFrame* frame) {
     auto* editor = frame->Editor();
     size_t language = 0;
     for (const auto* name : {"Plain Text", "C/C++", "Python", "JSON"}) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", name));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", name));
         for (const auto& fixture : BraceReference::fixtures) {
             editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(fixture.text));
             editor->Send(Message::SetSel, fixture.anchor, fixture.caret);
@@ -113,7 +113,7 @@ void BraceAppearance(EditorFrame* frame, int toggle) {
                     editor->Send(Message::IndicGetOutlineAlpha, indicator) == 200,
                 "brace indicators use original light round-box green/red alpha50 outline200 styles");
     }
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
     editor->SetCurrentLineHighlightMode(LineHighlightMode::None);
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("  (x)  y"));
     editor->Send(Message::GotoPos, 2);
@@ -173,7 +173,7 @@ void Lifecycle(EditorFrame* frame, int toggle) {
     const std::string originalFont(font);
     const auto dpi = editor->GetDPI();
     for (const auto* language : {"C/C++", "Plain Text", "Python", "JSON", "Plain Text"}) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
         Expect(editor, 0, std::string_view(language) == "Plain Text" ? 2 : 4, 34, 0);
         editor->Send(Message::StyleGetFont, 0, reinterpret_cast<intptr_t>(font));
         Require(editor->Send(Message::StyleGetSizeFractional, 0) == 1450 && editor->Send(Message::GetZoom) == 150 &&

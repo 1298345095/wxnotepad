@@ -17,17 +17,21 @@ public:
     explicit EditorFrame(SettingsStore* settings = nullptr);
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
-    SaveResult Save(const GbkLossDecision& decideLoss = {});
+    SaveResult Save(const GbkLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
-                      SaveFileType fileType = SaveType::CurrentScheme);
+                      SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveAs();
     SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
     SaveResult SaveCopy();
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
-                         SaveFileType fileType = SaveType::CurrentScheme);
+                         SaveFileType fileType = SaveType::CurrentScheme,
+                         SaveTimeMode timeMode = SaveTimeMode::Current);
+    bool UpdateFileTime();
     OpenResult Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding = std::nullopt);
     OpenResult Open();
     OpenResult OpenAs(FileEncoding encoding);
+    OpenResult Revert();
+    OpenResult ReloadCurrentFile(bool followEnd = false);
     bool DocumentHasUtf8Bom() const { return document_.HasUtf8Bom(); }
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
@@ -41,6 +45,7 @@ private:
     DocumentSession document_;
     int automaticLanguageId_;
     int saveCopyId_;
+    int revertId_;
     wxString lastSaveCopyDirectory_;
     SearchSession search_;
     FindReplaceDialog* findDialog_ = nullptr;
@@ -62,13 +67,14 @@ private:
     wxMenu* CreateEditMenu();
     wxMenu* CreateLanguageMenu();
     wxMenu* CreateViewMenu();
+    wxMenu* CreateSearchMenu();
+    wxMenu* CreateSettingsMenu();
     void AppendEditingCommands(wxMenu* edit);
     void AppendConversionCommands(wxMenu* edit);
     void AppendEnclosureCommands(wxMenu* edit);
-    void AppendLineCleanupCommands(wxMenu* edit);
-    void AppendLineLayoutCommands(wxMenu* edit);
-    void AppendIndentationCommands(wxMenu* edit);
-    void AppendWhitespaceCommands(wxMenu* edit);
+    void AppendSelectionCommands(wxMenu* edit);
+    void AppendLineCommands(wxMenu* edit);
+    void AppendSpecialCommands(wxMenu* edit);
     void AppendDateTimeCommands(wxMenu* edit);
     void InsertDateTime(bool shortDate);
     void InsertEncodingIdentifier();
@@ -82,6 +88,7 @@ private:
     void AppendIndentationOptions(wxMenu* view);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
+    void AppendMarginCommands(wxMenu* view);
     void ToggleIndentationGuides();
     void ToggleLongLineMarker();
     void AppendCurrentLineCommands(wxMenu* view);
@@ -116,6 +123,9 @@ private:
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
     void OnDropFiles(wxDropFilesEvent& event);
+    OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
+                        std::optional<FileEncoding> encoding = std::nullopt,
+                        std::optional<EncodingChoice> weakEncoding = std::nullopt);
     bool CanDiscardUntitledWhitespace() const;
     GbkLossChoice ConfirmGbkLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);

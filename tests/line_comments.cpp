@@ -24,7 +24,7 @@ void Toggle(EditorFrame* frame) {
     NativeSearch::Command(frame, id);
 }
 void Choose(EditorFrame* frame, const char* language) {
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
 }
 void Range(EditorControl* editor, intptr_t anchor, intptr_t caret) {
     TestEditor::RequireSelection(editor, anchor, caret,
@@ -241,7 +241,7 @@ public:
                 }
                 std::puts("PASS: actual native Ctrl+/, Ctrl+Divide and exact modifiers for C/C++, Python and JSON");
                 if (spaced) SavedBytes(frame);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Save Settings Now"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

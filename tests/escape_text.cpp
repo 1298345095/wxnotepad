@@ -189,7 +189,7 @@ void ShortcutsAndLanguages(EditorFrame* frame) {
                 "extra shortcut modifier preserves original exact matching");
     }
     for (const auto& language : SyntaxCatalog()) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", wxString(language.name)));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", wxString(language.name)));
         for (int mapping = 40204; mapping <= 40207; ++mapping) {
             const auto& shortcut = shortcuts[mapping - 40204];
             ResetBytes(editor, shortcut.before);

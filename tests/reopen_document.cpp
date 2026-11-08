@@ -180,7 +180,7 @@ public:
                         "opening a different file resets selection, scroll and automatic language classification");
                 std::puts("PASS: native path recognition, automatic choice and different-file Open control");
                 Require(frame->Open(path).status == OpenStatus::Opened, "the application Open must succeed");
-                const int python = frame->GetMenuBar()->FindMenuItem("Language", "Python");
+                const int python = frame->GetMenuBar()->FindMenuItem("Scheme", "Python");
                 wxCommandEvent choose(wxEVT_MENU, python);
                 frame->GetEventHandler()->ProcessEvent(choose);
                 Require(frame->GetMenuBar()->IsChecked(python), "the manual language command must be checked");

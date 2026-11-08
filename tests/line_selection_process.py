@@ -27,7 +27,7 @@ def main():
         app = Application(executable, folder, environment)
         try:
             assert app.state["line_selection"] == "2", app.state
-            app.menu("Old Visual Studio", "Edit")
+            app.menu("Old Visual Studio", "Settings")
             assert app.state["line_selection"] == "3", app.state
             app.menu("Save Settings On Exit")
             app.close()
@@ -37,7 +37,7 @@ def main():
         app = Application(executable, folder, environment)
         try:
             assert app.state["line_selection"] == "2", app.state
-            app.menu("None", "Edit")
+            app.menu("None", "Settings")
             assert app.state["line_selection"] == "0", app.state
             app.menu("Save Settings Now")
             app.close()
@@ -47,10 +47,10 @@ def main():
         app = Application(executable, folder, environment)
         try:
             assert app.state["line_selection"] == "0", app.state
-            app.menu("Visual Studio", "Edit")
+            app.menu("Visual Studio", "Settings")
             assert app.state["line_selection"] == "1", app.state
             app.menu("Save Settings Now")
-            app.menu("Normal", "Edit")
+            app.menu("Normal", "Settings")
             assert app.state["line_selection"] == "2", app.state
             app.close()
         finally:

@@ -69,7 +69,7 @@ void Combined(EditorFrame* frame) {
         longLine += "words\t中文😀 ";
     const std::string text = longLine + "\r\nvoid outer() {\n  target();\n}\n";
     TestEditor::ResetStream(editor, text.c_str());
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     NativeFold::Paint(editor);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
     Require(!editor->Send(Message::GetLineVisible, 2), "combined fixture contains a collapsed block");
@@ -111,7 +111,7 @@ void Combined(EditorFrame* frame) {
                 editor->Send(Message::GetWrapVisualFlags) == 1,
             "New preserves both current window preferences");
     for (const auto* language : {"C/C++", "Python", "JSON", "Plain Text", "Automatic"}) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
         Require(editor->Send(Message::GetViewEOL) == 1 && editor->Send(Message::GetWrapVisualFlags) == 1,
                 "language and highlighting transitions preserve both preferences");
     }
@@ -261,7 +261,7 @@ private:
         if (wxString(argv[1]) == "hidden-save") {
             Require(!editor->Send(Message::GetViewEOL) && !editor->Send(Message::GetWrapVisualFlags),
                     "hidden imported zero remains hidden before explicit save");
-            NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Save Settings Now"));
+            NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
             return;
         }
         if (wxString(argv[1]) != "restore") {
@@ -277,7 +277,7 @@ private:
                     editor->Send(Message::GetWrapMode) == 0,
                 "imported placement must match independent original flags, location and line-number side effect");
         if (wxString(argv[1]) == "enable") {
-            NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Save Settings Now"));
+            NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
             NativeSearch::Command(frame, symbols);
             Require(!editor->Send(Message::GetWrapVisualFlags) &&
                         editor->Send(Message::GetWrapVisualFlagsLocation) == location &&

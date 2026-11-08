@@ -237,7 +237,7 @@ wxString FieldText(std::string_view value) {
 void ScannerCaptures(EditorFrame* frame, int id) {
     auto* editor = frame->Editor();
     for (const char* language : {"Plain Text", "C/C++", "Python", "JSON"}) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
         TestEditor::ResetStream(editor, "x", 0, 1);
         Dialog(frame, id, [language](wxDialog* dialog) {
             auto* opening = Field(dialog, "Opening tag");
@@ -421,7 +421,7 @@ void SavedBytes(EditorFrame* frame, int id) {
         TestFiles::WriteBytes(path, capture.before);
         frame->Editor()->Send(Scintilla::Message::SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "open native tag disk fixture");
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
         frame->Editor()->Send(Scintilla::Message::SetSel, 1, 8);
         Dialog(frame, id, [](wxDialog* dialog) {
             Edit(Field(dialog, "Opening tag"), wxString::FromUTF8("<DiV a=\"😀\">"));

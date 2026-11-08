@@ -254,16 +254,16 @@ void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
 }
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
-                                  SaveFileType fileType) {
-    const auto result =
-        document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+                                  SaveFileType fileType, SaveTimeMode timeMode) {
+    const auto result = document_.SaveFirst(
+        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
 }
 
-SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
+SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode timeMode) {
     if (!document_.Path().empty()) {
         if (document_.RefreshReadOnlyFile()) {
             UpdateDocumentState();
@@ -271,26 +271,30 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
                              wxYES_NO | wxICON_WARNING, this) != wxYES)
                 return {SaveStatus::Cancelled, {}};
             const auto chosen = ChooseSaveFile(this, "Save As", document_.Language(), document_.Path());
-            if (!chosen) return SaveAs(std::nullopt, decideLoss);
-            return SaveAs(chosen->path, decideLoss, chosen->type);
+            if (!chosen) return SaveAs(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
+            return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
-        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, timeMode);
         UpdateDocumentState();
         return result;
     }
     const auto chosen = ChooseSaveFile(this, "Save file", document_.Language(), document_.Path());
-    if (!chosen) return SaveFirst(std::nullopt, decideLoss);
-    return SaveFirst(chosen->path, decideLoss, chosen->type);
+    if (!chosen) return SaveFirst(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
+    return SaveFirst(chosen->path, decideLoss, chosen->type, timeMode);
 }
 
 SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
-                               SaveFileType fileType) {
-    const auto result =
-        document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+                               SaveFileType fileType, SaveTimeMode timeMode) {
+    const auto result = document_.SaveAs(
+        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) indentation_.Apply(*editor_, document_.Language());
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
+}
+
+bool EditorFrame::UpdateFileTime() {
+    return document_.UpdateFileTime();
 }
 
 SaveResult EditorFrame::SaveAs() {
@@ -330,14 +334,17 @@ SaveResult EditorFrame::SaveCopy() {
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
-    const auto result = document_.Open(
-        source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding, std::nullopt,
-        [this] {
-            indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
-            const auto& preferences = settings_ ? settings_->values : defaults_;
-            editor_->Send(Scintilla::Message::SetEdgeColumn,
-                          document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
-        });
+    return LoadFile(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
+}
+
+OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
+                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding) {
+    const auto result = document_.Open(source, beforeReplace, encoding, weakEncoding, [this] {
+        indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+        const auto& preferences = settings_ ? settings_->values : defaults_;
+        editor_->Send(Scintilla::Message::SetEdgeColumn,
+                      document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
+    });
     if (result.status == OpenStatus::Opened) {
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
@@ -346,6 +353,24 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     }
     UpdateDocumentState();
     return result;
+}
+
+OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
+    if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
+    const auto result = LoadFile(
+        document_.Path(), [] { return true; }, std::nullopt,
+        EncodingChoice(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding()));
+    if (result.status == OpenStatus::Opened && followEnd) editor_->Send(Scintilla::Message::DocumentEnd);
+    return result;
+}
+
+OpenResult EditorFrame::Revert() {
+    if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
+    if (editor_->Send(Scintilla::Message::GetModify) &&
+        wxMessageBox("Revert file to last saved state? Your changes will be lost!", "Revert",
+                     wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
+        return {OpenStatus::Cancelled, {}};
+    return ReloadCurrentFile();
 }
 
 OpenResult EditorFrame::Open() {

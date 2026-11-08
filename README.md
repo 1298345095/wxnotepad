@@ -154,6 +154,11 @@ and confirms overwrite. Cancellation or failure retains the current document,
 identity and history. A successful save safely replaces the target and updates
 the title and save point.
 
+File → Save with Original Time preserves the destination's writable file times
+through the normal save flow. Update File Time changes the named backing file's
+modification time while retaining its bytes and the live editor state. See
+[file-time behavior](docs/file-times.md) for platform fields and failure behavior.
+
 New/Open/Close skip this confirmation for untitled documents shorter than 2048
 UTF-8 bytes containing only ASCII space or bytes `0x09` through `0x0d` (including
 the empty document). Explicit Save and Save As still save these documents.
