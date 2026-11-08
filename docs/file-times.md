@@ -21,3 +21,6 @@ selection, encoding and document identity. It skips save cleanup and encoding
 conversion. Like the original, it creates an empty backing file when the named
 file has disappeared and its parent directory remains writable; failures are
 silent. Successful updates refresh the active file-watching baseline.
+
+On Linux, a recreated backing file receives owner read/write permissions,
+subject to the process umask. Existing files retain their access permissions.
