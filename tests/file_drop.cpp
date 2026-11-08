@@ -4,6 +4,7 @@
 #include "file_helpers.h"
 #include "file_command_driver.h"
 #include <wx/wx.h>
+#include <wx/stdpaths.h>
 #include <filesystem>
 #include <cstdio>
 #include <stdexcept>
@@ -39,9 +40,22 @@ void ObserveDecision(const char* transition) {
         decisions.emplace_back("save");
     }
 }
+void PeerWrite(const std::filesystem::path& path, const wxString& text) {
+    const wxString arguments[] = {wxStandardPaths::Get().GetExecutablePath(), "--write-file", TestFiles::Filename(path),
+                                  text};
+    const wchar_t* argv[] = {arguments[0].wc_str(), arguments[1].wc_str(), arguments[2].wc_str(), arguments[3].wc_str(),
+                             nullptr};
+    Require(wxExecute(argv, wxEXEC_SYNC) == 0, "independent writer must finish changing the dropped file");
+}
 class FileDropApp final : public wxApp {
 public:
     bool OnInit() override {
+        if (argc == 4 && argv[1] == "--write-file") {
+            TestFiles::WriteBytes(TestFiles::Utf8Path(wxString(argv[2]).ToStdString(wxConvUTF8)),
+                                  wxString(argv[3]).ToStdString(wxConvUTF8));
+            peer_ = true;
+            return true;
+        }
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         auto* frame = new EditorFrame;
         CallAfter([this, frame] {
@@ -127,6 +141,22 @@ public:
 #endif
                 std::puts("PASS: drop Save/Discard, same-file selection, failure retention and host path rules");
                 frame->Editor()->Send(Scintilla::Message::SetSavePoint);
+                frame->SetFileWatchingOptions({FileWatchingMode::AutoReload, 20, 20});
+                Drop(frame, {TestFiles::Filename(first)});
+                const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(6);
+                PeerWrite(first, "external change after drop\n");
+                while (TestEditor::Text(frame) != "external change after drop\n" &&
+                       std::chrono::steady_clock::now() < until) {
+                    wxYield();
+                    wxMilliSleep(10);
+                }
+                Require(frame->DocumentPath() == TestFiles::Filename(first) &&
+                            TestEditor::Text(frame) == "external change after drop\n" &&
+                            TestFiles::Bytes(first) == "external change after drop\n" &&
+                            !frame->Editor()->Send(Scintilla::Message::GetModify),
+                        "dropping another file must transfer watching to the newly opened document");
+                frame->SetFileWatchingOptions({FileWatchingMode::None});
+                std::puts("PASS: dropped document receives independent external changes through file watching");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
@@ -138,11 +168,13 @@ public:
         return true;
     }
     int OnRun() override {
+        if (peer_) return 0;
         wxApp::OnRun();
         return result_;
     }
 
 private:
+    bool peer_ = false;
     int result_ = 1;
 };
 } // namespace
