@@ -19,15 +19,17 @@
 #include <chrono>
 #include <cstdio>
 #include <stdexcept>
+#include <string>
 
 namespace {
 using Scintilla::Message;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
-void Command(EditorFrame* frame, const char* label) {
-    const int id = frame->GetMenuBar()->FindMenuItem("View", label);
-    Require(id != wxNOT_FOUND, "original guide/marker command is reachable in the native View menu");
+void Command(EditorFrame* frame, const char* menu, const char* label) {
+    const int id = frame->GetMenuBar()->FindMenuItem(menu, label);
+    const std::string path = std::string("original command is reachable at ") + menu + " > " + label;
+    Require(id != wxNOT_FOUND, path.c_str());
     NativeSearch::Command(frame, id);
 }
 void Guides(EditorFrame* frame) {
@@ -35,7 +37,7 @@ void Guides(EditorFrame* frame) {
     const auto fontSize =
         editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
     Require(editor->Send(Message::GetIndentationGuides) == 0, "guides default to hidden");
-    Command(frame, "Indentation Guides");
+    Command(frame, "View", "Indentation Guides");
     Require(editor->Send(Message::GetIndentationGuides) == 2, "plain text enables original look-forward guides");
     for (const auto& [language, mode] :
          {std::pair{"C/C++", 3}, std::pair{"Python", 2}, std::pair{"JSON", 3}, std::pair{"Plain Text", 2}}) {
@@ -52,7 +54,7 @@ void Guides(EditorFrame* frame) {
                     fontSize &&
                 editor->GetDPI().x > 0,
             "guide styles preserve native base font and current DPI");
-    Command(frame, "Indentation Guides");
+    Command(frame, "View", "Indentation Guides");
     Require(editor->Send(Message::GetIndentationGuides) == 0, "second native guide command hides them");
     NativeKeys::Shortcut(frame, 'G', true, false, true);
     Require(editor->Send(Message::GetIndentationGuides) == 2, "native Ctrl+Shift+G enables guides exactly once");
@@ -63,10 +65,10 @@ void Marker(EditorFrame* frame) {
     auto* editor = frame->Editor();
     Require(editor->Send(Message::GetEdgeMode) == 0, "long-line marker defaults to hidden");
     Require(editor->Send(Message::GetEdgeColumn) == 80, "default shared long-line boundary is 80");
-    Command(frame, "Long Line Marker");
+    Command(frame, "View", "Long Line Marker");
     Require(editor->Send(Message::GetEdgeMode) == 1 && editor->Send(Message::GetEdgeColour) == 0x00C0FF,
             "long-line command enables original line mode and default yellow color");
-    Command(frame, "Long Line Marker");
+    Command(frame, "View", "Long Line Marker");
     Require(editor->Send(Message::GetEdgeMode) == 0 && editor->Send(Message::GetEdgeColumn) == 80,
             "hiding marker retains its boundary");
     Require(editor->Send(Message::GetEdgeColour) == 0x00C0FF, "hiding a line marker retains its original color");
@@ -136,7 +138,7 @@ void LongLineDialog(EditorFrame* frame, const wxString& expected, const wxString
         } else if (accept)
             Require(!dialog->IsShown(), "valid original numeric input closes the dialog");
     });
-    Command(frame, "Long Line Settings...");
+    Command(frame, "Settings", "Long Line Settings...");
     Require(driver.error.empty(), driver.error.c_str());
     Require(driver.seen, "original long-line settings opens a native dialog");
 }
@@ -204,7 +206,7 @@ void DialogNavigation(EditorFrame* frame) {
             } else
                 DialogKey(dialog, key, key == WXK_RETURN ? "Return" : "Escape");
         });
-        Command(frame, "Long Line Settings...");
+        Command(frame, "Settings", "Long Line Settings...");
         Require(driver.seen && driver.error.empty(),
                 driver.error.empty() ? "keyboard opens native long-line dialog" : driver.error.c_str());
         Require(frame->Editor()->Send(Message::GetEdgeColumn) == 19,
@@ -250,10 +252,10 @@ void DialogAndModeline(EditorFrame* frame) {
     Require(!editor->Send(Message::GetLineVisible, 2), "display settings preserve existing folded block");
     Require(editor->Send(Message::GetEdgeMode) == 2 && editor->Send(Message::GetEdgeColumn) == 35,
             "cancel preserves current boundary and remembered background mode");
-    Command(frame, "Long Line Marker");
+    Command(frame, "View", "Long Line Marker");
     LongLineDialog(frame, "35", "21", 1, false);
     Require(editor->Send(Message::GetEdgeMode) == 0, "cancel does not enable a hidden marker");
-    Command(frame, "Long Line Marker");
+    Command(frame, "View", "Long Line Marker");
     Require(editor->Send(Message::GetEdgeMode) == 2, "showing restores remembered background mode");
     LongLineDialog(frame, "35", "", 1, true, false);
     LongLineDialog(frame, "35", "4097");
@@ -389,9 +391,9 @@ void Preferences(EditorFrame* frame, int guides, int edge, int column, const wxS
     Require(editor->Send(Message::GetEdgeMode) == edge && editor->Send(Message::GetEdgeColumn) == column,
             "imported long-line mode, visibility and limit reach the real editor");
     if (action == "toggle" || action == "explicit") {
-        Command(frame, "Indentation Guides");
-        Command(frame, "Long Line Marker");
-        if (action == "explicit") Command(frame, "Save Settings Now");
+        Command(frame, "View", "Indentation Guides");
+        Command(frame, "View", "Long Line Marker");
+        if (action == "explicit") Command(frame, "Settings", "Save Settings Now");
     } else if (action == "dialog")
         LongLineDialog(frame, wxString::Format("%d", column), "35", 2);
 }
