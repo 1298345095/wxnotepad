@@ -11,7 +11,7 @@ File
   Save; Save As; Save Copy; Save with Original Time
   File Mode > Read Only Mode
   Revert (F5)
-  Reload > With Encoding; As UTF-8
+  Reload > As UTF-8; separator; With Encoding
   Line Endings > Windows (CR+LF); Unix/macOS (LF); Classic Mac OS (CR); Default
   Update File Time
   Recent (History) (Alt+H)
