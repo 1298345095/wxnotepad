@@ -19,6 +19,12 @@ runs:
         ref: ${{ steps.metadata.outputs.baseline }}
         path: .ci/vcpkg
         persist-credentials: false
+    - name: Restore pinned vcpkg executable
+      id: vcpkg-tool-cache
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+      with:
+        path: .ci/vcpkg/vcpkg${{ runner.os == 'Windows' && '.exe' || '' }}
+        key: vcpkg-tool-${{ runner.os }}-${{ runner.arch }}-${{ steps.metadata.outputs.baseline }}
     - name: Restore vcpkg downloads and binary packages
       id: cache
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
@@ -82,18 +88,46 @@ runs:
         path: .ci/apt-archives/*.deb
         key: ${{ steps.apt-cache.outputs.cache-primary-key }}
     - name: Bootstrap vcpkg on Windows
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && steps.vcpkg-tool-cache.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
-        & ./.ci/vcpkg/bootstrap-vcpkg.bat -disableMetrics
+        & ./.ci/vcpkg/scripts/bootstrap.ps1 -disableMetrics
         if ($LASTEXITCODE -ne 0) { throw 'vcpkg bootstrap failed' }
     - name: Bootstrap vcpkg on Linux
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && steps.vcpkg-tool-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         set -euo pipefail
         ./.ci/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+    - name: Validate pinned vcpkg executable on Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $metadata = ConvertFrom-StringData (Get-Content .ci/vcpkg/scripts/vcpkg-tool-metadata.txt -Raw)
+        $version = & ./.ci/vcpkg/vcpkg.exe version --disable-metrics
+        if ($LASTEXITCODE -ne 0) { throw 'vcpkg version check failed' }
+        $version | Write-Output
+        if ($version[0] -notlike "vcpkg package management program version $($metadata.VCPKG_TOOL_RELEASE_TAG)-*") {
+          throw 'vcpkg executable does not match the pinned release'
+        }
+        Set-Content -Path .ci/vcpkg/vcpkg.disable-metrics -Value '' -Encoding UTF8
+    - name: Validate pinned vcpkg executable on Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        . .ci/vcpkg/scripts/vcpkg-tool-metadata.txt
+        printf '%s  %s\n' "$VCPKG_GLIBC_SHA" .ci/vcpkg/vcpkg | sha512sum --check -
+        ./.ci/vcpkg/vcpkg version --disable-metrics
+        touch .ci/vcpkg/vcpkg.disable-metrics
+    - name: Save pinned vcpkg executable before dependency installation
+      if: steps.vcpkg-tool-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+      with:
+        path: .ci/vcpkg/vcpkg${{ runner.os == 'Windows' && '.exe' || '' }}
+        key: ${{ steps.vcpkg-tool-cache.outputs.cache-primary-key }}
     - name: Install pinned wxWidgets core
       shell: bash
       env:
