@@ -94,6 +94,23 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->Append(wxID_SAVEAS, "Save &As...\tF6");
     saveCopyId_ = wxWindow::NewControlId();
     file->Append(saveCopyId_, "Save Cop&y...\tCtrl+F6");
+    const int saveOriginalTime = wxWindow::NewControlId();
+    file->Append(saveOriginalTime, "Save with Original Time");
+    const int updateTime = wxWindow::NewControlId();
+    file->Append(updateTime, "Update File Time");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto result = Save({}, SaveTimeMode::Original);
+            if (result.status == SaveStatus::Failed)
+                wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
+        },
+        saveOriginalTime);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetModify)); },
+        saveOriginalTime);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { UpdateFileTime(); }, updateTime);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, updateTime);
     auto* mode = new wxMenu;
     const int readOnly = wxWindow::NewControlId();
     mode->AppendCheckItem(readOnly, "&Read Only Mode\tF10");
