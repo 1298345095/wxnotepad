@@ -58,6 +58,10 @@ public:
     explicit NormalSizeTransition(EditorFrame& frame) : frame_(frame), ready_(frame.GetSize() == wxSize(640, 480)) {
         frame_.Bind(wxEVT_SIZE, &NormalSizeTransition::OnSize, this);
     }
+    NormalSizeTransition(const NormalSizeTransition&) = delete;
+    NormalSizeTransition& operator=(const NormalSizeTransition&) = delete;
+    NormalSizeTransition(NormalSizeTransition&&) = delete;
+    NormalSizeTransition& operator=(NormalSizeTransition&&) = delete;
     ~NormalSizeTransition() { frame_.Unbind(wxEVT_SIZE, &NormalSizeTransition::OnSize, this); }
     bool Ready() const { return ready_; }
 
@@ -72,7 +76,7 @@ private:
 void Child(EditorFrame* frame) {
     const auto scenario = Scenario();
     const bool maximized = scenario == "maximized";
-    Wait([&] { return frame->IsMaximized() == maximized; }, "child must inherit maximized state");
+    Wait([frame, maximized] { return frame->IsMaximized() == maximized; }, "child must inherit maximized state");
     Require(frame->DocumentPath().empty(), "child must have no document identity");
     Require(frame->GetTitle() == "Untitled - wxnotepad", "child must be Untitled");
     Require(TestEditor::Text(frame).empty() && !frame->Editor()->Send(Message::GetModify), "child must start blank");
@@ -98,11 +102,12 @@ void Child(EditorFrame* frame) {
         Require(normal.left == 110 && normal.top == 110, "child must use the original +10/+10 offset");
     if (maximized) {
         frame->Maximize(false);
-        Wait([&] { return !frame->IsMaximized() && frame->GetSize() == wxSize(640, 480); },
+        Wait([frame] { return !frame->IsMaximized() && frame->GetSize() == wxSize(640, 480); },
              "child must restore normal geometry independently");
     }
 #else
-    if (!maximized) Wait([&] { return frame->GetSize() == wxSize(640, 480); }, "child must inherit normal window size");
+    if (!maximized)
+        Wait([frame] { return frame->GetSize() == wxSize(640, 480); }, "child must inherit normal window size");
 #endif
     TestEditor::Append(frame, "independent child");
     Require(frame->SaveAs(Name(Directory() / (scenario.ToStdString() + "-child.txt"))).status == SaveStatus::Saved,
@@ -110,6 +115,24 @@ void Child(EditorFrame* frame) {
     std::ofstream(Directory() / (scenario.ToStdString() + "-ready")) << wxGetProcessId() << '\n';
     frame->Close();
 }
+#ifdef __WXGTK__
+bool SkipUnsupportedMaximize(EditorFrame* frame, const wxString& scenario) {
+    if (scenario != "maximized") return false;
+    if (!GDK_IS_X11_DISPLAY(gdk_display_get_default())) return false;
+    auto* screen = gtk_widget_get_screen(GTK_WIDGET(frame->GetHandle()));
+    bool supported =
+        gdk_x11_screen_supports_net_wm_hint(screen, gdk_atom_intern_static_string("_NET_WM_STATE_MAXIMIZED_VERT"));
+    if (supported)
+        supported =
+            gdk_x11_screen_supports_net_wm_hint(screen, gdk_atom_intern_static_string("_NET_WM_STATE_MAXIMIZED_HORZ"));
+    if (supported) return false;
+    std::ofstream(Directory() / "skip.txt")
+        << "X11 window manager does not advertise maximized vertical/horizontal states; "
+           "the normal menu and Alt+N scenarios are covered by original_new_window.\n";
+    frame->Destroy();
+    return true;
+}
+#endif
 int Parent(EditorFrame* frame) {
     wxString mode;
     wxGetEnv("WXNOTEPAD_NEW_WINDOW_TEST_MODE", &mode);
@@ -137,24 +160,12 @@ int Parent(EditorFrame* frame) {
         if (scenario == "edge") continue; // Linux leaves top-level placement to the compositor.
 #endif
 #ifdef __WXGTK__
-        if (scenario == "maximized" && GDK_IS_X11_DISPLAY(gdk_display_get_default())) {
-            auto* screen = gtk_widget_get_screen(GTK_WIDGET(frame->GetHandle()));
-            if (!gdk_x11_screen_supports_net_wm_hint(screen,
-                                                     gdk_atom_intern_static_string("_NET_WM_STATE_MAXIMIZED_VERT")) ||
-                !gdk_x11_screen_supports_net_wm_hint(screen,
-                                                     gdk_atom_intern_static_string("_NET_WM_STATE_MAXIMIZED_HORZ"))) {
-                std::ofstream(Directory() / "skip.txt")
-                    << "X11 window manager does not advertise maximized vertical/horizontal states; "
-                       "the normal menu and Alt+N scenarios are covered by original_new_window.\n";
-                frame->Destroy();
-                return 77;
-            }
-        }
+        if (SkipUnsupportedMaximize(frame, scenario)) return 77;
 #endif
         wxSetEnv("WXNOTEPAD_NEW_WINDOW_CASE", scenario);
         NormalSizeTransition normalSize(*frame);
         frame->SetSize(100, 100, 640, 480);
-        Wait([&] { return normalSize.Ready(); }, "parent must receive normal size before relaunch");
+        Wait([&normalSize] { return normalSize.Ready(); }, "parent must receive normal size before relaunch");
 #ifdef __WXMSW__
         if (scenario == "edge") {
             MONITORINFO monitor{};
@@ -167,7 +178,7 @@ int Parent(EditorFrame* frame) {
 #endif
         if (scenario == "maximized") {
             frame->Maximize();
-            Wait([&] { return frame->IsMaximized(); }, "parent must maximize before relaunch");
+            Wait([frame] { return frame->IsMaximized(); }, "parent must maximize before relaunch");
         }
         wxYield();
         if (scenario == "accelerator" || scenario == "maximized")
@@ -175,11 +186,12 @@ int Parent(EditorFrame* frame) {
         else
             NativeSearch::Command(frame, item);
         const auto marker = Directory() / (scenario.ToStdString() + "-ready");
-        Wait([&] { return std::filesystem::exists(marker); }, "a real blank child must finish its independent save");
+        Wait([&marker] { return std::filesystem::exists(marker); },
+             "a real blank child must finish its independent save");
         long childPid = 0;
         std::ifstream(marker) >> childPid;
         Require(childPid != wxGetProcessId(), "child must be a separate process");
-        Wait([&] { return !wxProcess::Exists(static_cast<int>(childPid)); },
+        Wait([&childPid] { return !wxProcess::Exists(static_cast<int>(childPid)); },
              "child must close while parent remains running");
     }
     Require(TestEditor::Text(frame) == before && frame->DocumentPath() == path &&

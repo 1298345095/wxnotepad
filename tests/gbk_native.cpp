@@ -115,7 +115,9 @@ private:
             ++losses;
             const auto label = [widget](int response) {
                 auto* button = gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), response);
-                Require(button && GTK_IS_BUTTON(button), "native loss button must exist");
+                bool valid = false;
+                if (button) valid = GTK_IS_BUTTON(button);
+                Require(valid, "native loss button must exist");
                 return wxString::FromUTF8(gtk_button_get_label(GTK_BUTTON(button)));
             };
             Require(label(GTK_RESPONSE_OK).Contains("OK") && label(GTK_RESPONSE_CANCEL).Contains("Cancel"),

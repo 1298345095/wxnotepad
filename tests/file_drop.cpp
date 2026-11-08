@@ -21,25 +21,27 @@ void Drop(EditorFrame* frame, const wxArrayString& files) {
     event.SetEventObject(frame->Editor());
     frame->Editor()->GetEventHandler()->ProcessEvent(event);
 }
-std::vector<std::string> decisions;
-wxString chooserDirectory;
-void ObserveDecision(const char* transition) {
-    if (std::string_view(transition) == "chooser selection begin") {
-        decisions.emplace_back("chooser");
+struct DropObservation {
+    std::vector<std::string> decisions;
+    wxString chooserDirectory;
+    void Observe(const char* transition) {
+        if (std::string_view(transition) == "chooser selection begin") {
+            decisions.emplace_back("chooser");
 #ifdef __WXGTK__
-        auto* windows = gtk_window_list_toplevels();
-        for (auto* item = windows; item; item = item->next) {
-            if (!GTK_IS_FILE_CHOOSER(item->data) || !gtk_widget_get_visible(GTK_WIDGET(item->data))) continue;
-            auto* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(item->data));
-            if (directory) chooserDirectory = wxString::FromUTF8(directory);
-            g_free(directory);
-        }
-        g_list_free(windows);
+            auto* windows = gtk_window_list_toplevels();
+            for (auto* item = windows; item; item = item->next) {
+                if (!GTK_IS_FILE_CHOOSER(item->data) || !gtk_widget_get_visible(GTK_WIDGET(item->data))) continue;
+                auto* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(item->data));
+                if (directory) chooserDirectory = wxString::FromUTF8(directory);
+                g_free(directory);
+            }
+            g_list_free(windows);
 #endif
-    } else if (std::string_view(transition) == "confirmation response begin") {
-        decisions.emplace_back("save");
+        } else if (std::string_view(transition) == "confirmation response begin") {
+            decisions.emplace_back("save");
+        }
     }
-}
+};
 void PeerWrite(const std::filesystem::path& path, const wxString& text) {
     const wxString arguments[] = {wxStandardPaths::Get().GetExecutablePath(), "--write-file", TestFiles::Filename(path),
                                   text};
@@ -81,23 +83,24 @@ public:
                             TestFiles::Bytes(first) == "first file\n",
                         "directory chooser Cancel must precede saving and retain the dirty document");
                 std::puts("PASS: cancelled directory chooser retains the modified document before save decision");
-                decisions.clear();
+                DropObservation observation;
                 auto chosen = TestFiles::Filename(second);
 #ifdef __WXMSW__
                 // Relative selection independently checks the native chooser's initial directory.
                 chosen = "second.txt";
 #endif
-                NativeDialogs::FileCommandDriver selectDirectory(NativeDialogs::FileDialogProfile::Open, wxID_CANCEL,
-                                                                 chosen, ObserveDecision);
+                NativeDialogs::FileCommandDriver selectDirectory(
+                    NativeDialogs::FileDialogProfile::Open, wxID_CANCEL, chosen,
+                    [&observation](const char* transition) { observation.Observe(transition); });
                 Drop(frame, {TestFiles::Filename(directory)});
                 selectDirectory.Stop();
                 Require(selectDirectory.choosers == 1 && selectDirectory.prompts == 1 &&
-                            decisions == std::vector<std::string>{"chooser", "save"} &&
+                            observation.decisions == std::vector<std::string>{"chooser", "save"} &&
                             TestEditor::Text(frame) == "first file\npending" &&
                             frame->DocumentPath() == TestFiles::Filename(first),
                         "directory selection must lead to the ordinary save decision after the chooser");
 #ifdef __WXGTK__
-                Require(chooserDirectory == TestFiles::Filename(directory),
+                Require(observation.chooserDirectory == TestFiles::Filename(directory),
                         "directory drop must root the native chooser at that directory");
 #endif
                 std::puts("PASS: rooted directory chooser selection precedes the cancelled save decision");

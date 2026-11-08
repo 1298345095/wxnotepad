@@ -62,8 +62,9 @@ void Controls(EditorFrame* frame) {
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", control.label);
         Require(id != wxNOT_FOUND, "every original control character retains its descriptive native menu name");
         auto* item = frame->GetMenuBar()->FindItem(id);
-        Require(item->GetItemLabel() == control.label && item->GetMenu()->FindItemByPosition(index++) == item,
-                "original control order and exact mnemonics survive native menu adaptation");
+        bool ordered = false;
+        if (item->GetItemLabel() == control.label) ordered = item->GetMenu()->FindItemByPosition(index++) == item;
+        Require(ordered, "original control order and exact mnemonics survive native menu adaptation");
         TestEditor::ResetStream(editor, "AoldZ", 1, 4);
         NativeSearch::Command(frame, id);
         Require(TestEditor::Text(editor) == "A" + control.bytes + "Z",

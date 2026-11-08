@@ -89,8 +89,10 @@ private:
     void AppendEditingCommands(wxMenu* edit);
     void AppendConversionCommands(wxMenu* edit);
     void AppendEnclosureCommands(wxMenu* edit);
+    void AppendCommentCommands(wxMenu* edit);
     void AppendSelectionCommands(wxMenu* edit);
     void AppendLineCommands(wxMenu* edit);
+    void AppendLineWrappingCommands(wxMenu* edit);
     void AppendSpecialCommands(wxMenu* edit);
     void AppendDateTimeCommands(wxMenu* edit);
     void InsertDateTime(bool shortDate);

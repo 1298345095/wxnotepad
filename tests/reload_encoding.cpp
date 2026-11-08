@@ -67,13 +67,14 @@ public:
         GList* windows = gtk_window_list_toplevels();
         for (auto* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
-            if (gtk_widget_get_visible(widget) && GTK_IS_MESSAGE_DIALOG(widget) &&
-                wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Reload Encoding") {
+            if (!gtk_widget_get_visible(widget)) continue;
+            if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
+            const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
+            if (title == "Reload Encoding") {
                 ++warnings;
                 order.push_back("warning");
                 NativeDialogs::Respond(widget, warningChoice == wxID_OK ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
-            } else if (gtk_widget_get_visible(widget) && GTK_IS_MESSAGE_DIALOG(widget) &&
-                       wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "Could not reload file") {
+            } else if (title == "Could not reload file") {
                 ++errors;
                 NativeDialogs::Respond(widget, GTK_RESPONSE_OK);
             }

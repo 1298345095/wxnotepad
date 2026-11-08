@@ -30,8 +30,9 @@ wxString ConfigurationPath() {
     wxString directory = executable.GetPath();
 #ifdef __WXMSW__
     // Preserve FindIniFile's installation detection and LocalAppData fallback.
-    const wxString module = executable.GetFullPath();
-    if (module.StartsWith("C:\\Program Files") || module.Contains("WinGet") || module.Contains("hocolatey")) {
+    const wxString programPath = executable.GetFullPath();
+    if (programPath.StartsWith("C:\\Program Files") || programPath.Contains("WinGet") ||
+        programPath.Contains("hocolatey")) {
         PWSTR local = nullptr;
         if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &local))) {
             directory = wxFileName(local, "Notepad4").GetFullPath();
@@ -40,9 +41,9 @@ wxString ConfigurationPath() {
     }
 #else
     // Native Linux installation directories map to the XDG user config directory.
-    const wxString module = executable.GetFullPath();
-    if (module.StartsWith("/usr/") || module.StartsWith("/opt/") || module.StartsWith("/app/") ||
-        module.StartsWith("/snap/") || module.StartsWith("/bin/")) {
+    const wxString programPath = executable.GetFullPath();
+    if (programPath.StartsWith("/usr/") || programPath.StartsWith("/opt/") || programPath.StartsWith("/app/") ||
+        programPath.StartsWith("/snap/") || programPath.StartsWith("/bin/")) {
         wxString config;
         if (!wxGetEnv("XDG_CONFIG_HOME", &config) || !wxFileName(config).IsAbsolute())
             config = wxFileName(wxGetHomeDir(), ".config").GetFullPath();
@@ -327,7 +328,7 @@ void SettingsStore::RemoveRecentFile(size_t index) {
     const wxString removed = values.recentFiles[index];
     if (LoadLines()) {
         auto stored = ReadRecentFiles();
-        std::erase_if(stored, [&](const auto& path) { return RecentFiles::Equal(path, removed); });
+        std::erase_if(stored, [&removed](const auto& path) { return RecentFiles::Equal(path, removed); });
         WriteRecentFiles(stored);
         SaveLines();
     }

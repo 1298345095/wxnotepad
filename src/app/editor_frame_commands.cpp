@@ -449,14 +449,7 @@ void EditorFrame::AppendEnclosureCommands(wxMenu* edit) {
     edit->AppendSubMenu(enclosure, "&Enclose Selection");
 }
 
-void EditorFrame::AppendSelectionCommands(wxMenu* edit) {
-    const int duplicateSelection = wxWindow::NewControlId();
-    edit->Append(duplicateSelection, "&Duplicate\tAlt+D");
-    Bind(
-        wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::SelectionDuplicate); },
-        duplicateSelection);
-    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, duplicateSelection);
-    edit->AppendSeparator();
+void EditorFrame::AppendCommentCommands(wxMenu* edit) {
     const int lineComment = wxWindow::NewControlId();
     auto* lineCommentItem = new wxMenuItem(edit, lineComment, "T&oggle Line Comment\tCtrl+/");
     lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_DIVIDE, lineComment));
@@ -496,6 +489,17 @@ void EditorFrame::AppendSelectionCommands(wxMenu* edit) {
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Enable(SyntaxFor(document_.Language()).blockCommentOpen != nullptr); },
         blockComment);
+}
+
+void EditorFrame::AppendSelectionCommands(wxMenu* edit) {
+    const int duplicateSelection = wxWindow::NewControlId();
+    edit->Append(duplicateSelection, "&Duplicate\tAlt+D");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::SelectionDuplicate); },
+        duplicateSelection);
+    Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, duplicateSelection);
+    edit->AppendSeparator();
+    AppendCommentCommands(edit);
     const int indent = wxWindow::NewControlId();
     edit->Append(indent, "&Indent");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->IndentLines(true); }, indent);
@@ -670,6 +674,22 @@ void EditorFrame::AppendLineCommands(wxMenu* edit) {
     for (const int id : {cutLine, copyLine, deleteLine})
         Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     edit->AppendSeparator();
+    AppendLineWrappingCommands(edit);
+    Bind(wxEVT_CHAR_HOOK, [this, modifyLines, transposeLines](wxKeyEvent& event) {
+        const int key = event.GetKeyCode();
+        if (!event.AltDown() || (key != 'M' && key != 'S')) {
+            event.Skip();
+            return;
+        }
+        // Original command accelerators take priority over Scheme/Search mnemonics.
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) {
+            wxCommandEvent command(wxEVT_MENU, key == 'M' ? modifyLines : transposeLines);
+            GetEventHandler()->ProcessEvent(command);
+        }
+    });
+}
+
+void EditorFrame::AppendLineWrappingCommands(wxMenu* edit) {
     const int joinLines = wxWindow::NewControlId();
     const int splitLines = wxWindow::NewControlId();
     const int columnWrap = wxWindow::NewControlId();
@@ -703,18 +723,6 @@ void EditorFrame::AppendLineCommands(wxMenu* edit) {
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
             id);
-    Bind(wxEVT_CHAR_HOOK, [this, modifyLines, transposeLines](wxKeyEvent& event) {
-        const int key = event.GetKeyCode();
-        if (!event.AltDown() || (key != 'M' && key != 'S')) {
-            event.Skip();
-            return;
-        }
-        // Original command accelerators take priority over Scheme/Search mnemonics.
-        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) {
-            wxCommandEvent command(wxEVT_MENU, key == 'M' ? modifyLines : transposeLines);
-            GetEventHandler()->ProcessEvent(command);
-        }
-    });
 }
 
 void EditorFrame::AppendSearchCommands(wxMenu* edit) {

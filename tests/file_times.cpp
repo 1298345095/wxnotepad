@@ -216,7 +216,7 @@ void LegacyLoss(EditorFrame* frame) {
     const auto before = ReadTimes(path);
     bool cleaned = false;
     const auto cancelled = frame->Save(
-        [&] {
+        [frame, &cleaned] {
             cleaned = TestEditor::Text(frame) == "legacy😀\n";
             return GbkLossChoice::Cancel;
         },
@@ -241,6 +241,11 @@ void UpdateFailures(EditorFrame* frame, int update) {
     const auto text = TestEditor::Text(frame);
 #ifndef __WXMSW__
     struct RestoreUmask {
+        RestoreUmask() = default;
+        RestoreUmask(const RestoreUmask&) = delete;
+        RestoreUmask& operator=(const RestoreUmask&) = delete;
+        RestoreUmask(RestoreUmask&&) = delete;
+        RestoreUmask& operator=(RestoreUmask&&) = delete;
         mode_t previous = ::umask(0);
         ~RestoreUmask() { ::umask(previous); }
     } restoreUmask;

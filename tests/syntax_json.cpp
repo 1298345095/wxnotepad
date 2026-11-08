@@ -76,7 +76,8 @@ public:
         GList* windows = gtk_window_list_toplevels();
         for (GList* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+            if (!gtk_widget_get_visible(widget)) continue;
+            if (!GTK_IS_FILE_CHOOSER(widget)) continue;
             if (stage_ == 0) {
                 stage_ = 1;
                 ++choosers;
