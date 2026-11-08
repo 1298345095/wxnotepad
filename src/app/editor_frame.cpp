@@ -312,6 +312,7 @@ SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const
     if (result.status == SaveStatus::Saved) {
         RecordRecentFile();
         indentation_.Apply(*editor_, document_.Language());
+        if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
         RefreshFileWatching();
     }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -367,7 +368,7 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
 
 OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                                  std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
-                                 OpenDecisionTiming decisionTiming) {
+                                 OpenDecisionTiming decisionTiming, bool reload) {
     const auto result = document_.Open(
         source, beforeReplace, encoding, weakEncoding,
         [this] {
@@ -378,8 +379,9 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
         },
         decisionTiming);
     if (result.status == OpenStatus::Opened) {
-        RecordRecentFile();
+        if (!reload && fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
         RefreshFileWatching();
+        RecordRecentFile();
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
             ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
@@ -428,7 +430,8 @@ OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
     const auto result = LoadFile(
         document_.Path(), [] { return true; }, std::nullopt,
-        EncodingChoice(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding()));
+        EncodingChoice(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding()),
+        OpenDecisionTiming::AfterRead, true);
     if (result.status == OpenStatus::Opened && followEnd) editor_->Send(Scintilla::Message::DocumentEnd);
     return result;
 }
@@ -473,7 +476,9 @@ OpenResult EditorFrame::ReloadWithEncoding() {
     dialog.CentreOnParent();
     source->SetFocus();
     if (dialog.ShowModal() != wxID_OK) return {OpenStatus::Cancelled, {}};
-    return LoadFile(document_.Path(), [] { return true; }, static_cast<FileEncoding>(source->GetSelection()));
+    return LoadFile(
+        document_.Path(), [] { return true; }, static_cast<FileEncoding>(source->GetSelection()), std::nullopt,
+        OpenDecisionTiming::AfterRead, true);
 }
 
 OpenResult EditorFrame::ReloadAsUtf8() {
@@ -482,7 +487,7 @@ OpenResult EditorFrame::ReloadAsUtf8() {
     // before file I/O, with the view captured before Save cleanup can move it.
     return LoadFile(
         document_.Path(), [this] { return ConfirmDiscardChanges("reloading"); }, FileEncoding::Utf8, std::nullopt,
-        OpenDecisionTiming::BeforeRead);
+        OpenDecisionTiming::BeforeRead, true);
 }
 
 OpenResult EditorFrame::Open() {
@@ -518,6 +523,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::NewDocument() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
     RefreshFileWatching();
     editor_->Send(Scintilla::Message::SetEdgeColumn,
                   settings_ ? settings_->values.longLinesLimit : defaults_.longLinesLimit);
