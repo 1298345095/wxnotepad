@@ -55,7 +55,8 @@ public:
         GList* windows = gtk_window_list_toplevels();
         for (auto* item = windows; item && !chooser_; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+            if (!gtk_widget_get_visible(widget)) continue;
+            if (!GTK_IS_FILE_CHOOSER(widget)) continue;
             chooser_ = GTK_FILE_CHOOSER(g_object_ref(widget));
             selection_ = g_signal_connect(chooser_, "selection-changed", G_CALLBACK(SelectionChanged), this);
             Stop();
