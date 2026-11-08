@@ -38,6 +38,23 @@ public:
         }
     }
 };
+class ChangeRememberHistory final : public wxTimer {
+public:
+    ChangeRememberHistory() { Start(20); }
+    bool initiallyRemembered = false;
+    void Notify() override {
+        for (auto* window : wxTopLevelWindows) {
+            auto* dialog = wxDynamicCast(window, wxDialog);
+            if (!dialog || dialog->GetTitle() != "Recent Files" || !dialog->IsShown()) continue;
+            auto* remember = wxDynamicCast(dialog->FindWindowByName("Remember recent files", dialog), wxCheckBox);
+            initiallyRemembered = remember && remember->GetValue();
+            if (remember) remember->SetValue(false);
+            dialog->EndModal(wxID_CANCEL);
+            Stop();
+            return;
+        }
+    }
+};
 class ClearHistory final : public wxTimer {
 public:
     ClearHistory() { Start(20); }
@@ -184,6 +201,7 @@ public:
             SettingsStore settings;
             settings.values.recentFiles.clear();
             settings.values.warnLineEndings = false;
+            settings.values.saveRecentFiles = false;
             auto* frame = new EditorFrame(&settings);
             try {
                 std::filesystem::create_directory(directory);
@@ -214,6 +232,29 @@ public:
                 Require(settings.values.recentFiles ==
                             std::vector<wxString>{TestFiles::Filename(first), TestFiles::Filename(second)},
                         "reopening deduplicates and reorders history");
+                const int remember = frame->GetMenuBar()->FindMenuItem("Settings", "Remember Recent Files");
+                Require(remember != wxNOT_FOUND, "Other Settings must expose Remember Recent Files");
+                auto* settingsMenu = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Settings"));
+                const int otherId = settingsMenu->FindItem("Other Settings");
+                Require(otherId != wxNOT_FOUND && settingsMenu->FindItem(otherId)->GetSubMenu()->FindItem(
+                                                      "Remember Recent Files") == remember,
+                        "Remember Recent Files must be placed in Settings > Other Settings");
+                frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+                Require(!frame->GetMenuBar()->IsChecked(remember), "remember menu reflects shared Off preference");
+                const int capacity = settings.values.maxRecentFiles;
+                wxCommandEvent toggleRemember(wxEVT_MENU, remember);
+                frame->GetEventHandler()->ProcessEvent(toggleRemember);
+                frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+                Require(frame->GetMenuBar()->IsChecked(remember) && settings.values.saveRecentFiles &&
+                            settings.values.maxRecentFiles == capacity,
+                        "remember menu toggles shared preference without changing capacity");
+                ChangeRememberHistory changeRemember;
+                frame->ShowRecentFiles();
+                changeRemember.Stop();
+                Require(changeRemember.initiallyRemembered && !frame->GetMenuBar()->IsChecked(remember) &&
+                            !settings.values.saveRecentFiles && settings.values.maxRecentFiles == capacity,
+                        "dialog reads menu preference and Cancel updates the same menu check state without changing "
+                        "capacity");
                 CancelHistory cancel;
                 frame->ShowRecentFiles();
                 cancel.Stop();
