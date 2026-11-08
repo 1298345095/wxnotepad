@@ -115,6 +115,7 @@ private:
     void UpdatePositionStatus();
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
+    void OnDropFiles(wxDropFilesEvent& event);
     bool CanDiscardUntitledWhitespace() const;
     GbkLossChoice ConfirmGbkLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);

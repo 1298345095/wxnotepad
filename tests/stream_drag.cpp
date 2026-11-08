@@ -1,4 +1,7 @@
 #include "editor/editor_control.h"
+#include "app/editor_frame.h"
+#include "file_helpers.h"
+#include "file_command_driver.h"
 #include "native_paint_helpers.h"
 #include "native_focus_helpers.h"
 #include <wx/wx.h>
@@ -277,6 +280,51 @@ public:
                              peer.sourceStage_ = "end";
                          }),
                          this);
+        g_signal_connect(GetConnectWidget(), "button-press-event",
+                         G_CALLBACK(+[](GtkWidget*, GdkEventButton* event, gpointer value) -> gboolean {
+                             auto& peer = *static_cast<NativePeer*>(value);
+                             if (peer.files_.empty()) return FALSE;
+                             peer.start_ = wxPoint(static_cast<int>(event->x), static_cast<int>(event->y));
+                             peer.armed_ = event->button == 1;
+                             return TRUE;
+                         }),
+                         this);
+        g_signal_connect(GetConnectWidget(), "motion-notify-event",
+                         G_CALLBACK(+[](GtkWidget* widget, GdkEventMotion* event, gpointer value) -> gboolean {
+                             auto& peer = *static_cast<NativePeer*>(value);
+                             if (peer.files_.empty()) return FALSE;
+                             if (peer.armed_ && (event->state & GDK_BUTTON1_MASK) &&
+                                 gtk_drag_check_threshold(widget, peer.start_.x, peer.start_.y,
+                                                          static_cast<int>(event->x), static_cast<int>(event->y))) {
+                                 peer.armed_ = false;
+                                 auto* targets = gtk_target_list_new(nullptr, 0);
+                                 gtk_target_list_add_uri_targets(targets, 1);
+                                 gtk_target_list_add_text_targets(targets, 0);
+                                 gtk_drag_begin_with_coordinates(widget, targets, GDK_ACTION_COPY, 1,
+                                                                 reinterpret_cast<GdkEvent*>(event), -1, -1);
+                                 gtk_target_list_unref(targets);
+                             }
+                             return TRUE;
+                         }),
+                         this);
+        g_signal_connect(
+            GetConnectWidget(), "drag-data-get",
+            G_CALLBACK(+[](GtkWidget* widget, GdkDragContext*, GtkSelectionData* data, guint, guint, gpointer value) {
+                auto& peer = *static_cast<NativePeer*>(value);
+                if (peer.files_.empty()) return;
+                if (gtk_selection_data_get_target(data) == gdk_atom_intern_static_string("text/uri-list")) {
+                    auto** uris = g_new0(gchar*, peer.files_.size() + 1);
+                    for (size_t i = 0; i < peer.files_.size(); ++i)
+                        uris[i] = g_filename_to_uri(peer.files_[i].fn_str(), nullptr, nullptr);
+                    gtk_selection_data_set_uris(data, uris);
+                    g_strfreev(uris);
+                    std::fprintf(stderr, "native-file-offer: text/uri-list items=%zu\n", peer.files_.size());
+                } else {
+                    gtk_selection_data_set_text(data, "file offer text fallback", -1);
+                }
+                g_signal_stop_emission_by_name(widget, "drag-data-get");
+            }),
+            this);
 #else
     explicit NativePeer(wxWindow* parent) : PeerWindow(parent, wxID_ANY) {
         SetBackgroundColour(*wxLIGHT_GREY);
@@ -293,10 +341,18 @@ public:
             dragging_ = true;
             ++sourceAttempts_;
             sourceStage_ = "begin";
-            wxTextDataObject data(value);
+            wxDataObjectComposite data;
+            if (!files_.empty()) {
+                auto* files = new wxFileDataObject;
+                for (const auto& file : files_)
+                    files->AddFile(file);
+                data.Add(files, true);
+                std::fprintf(stderr, "native-file-offer: CF_HDROP items=%zu\n", files_.size());
+            }
+            data.Add(new wxTextDataObject(value));
             wxDropSource source(this);
             source.SetData(data);
-            result = source.DoDragDrop(wxDrag_DefaultMove);
+            result = source.DoDragDrop(files_.empty() ? wxDrag_DefaultMove : wxDrag_CopyOnly);
             if (result == wxDragMove) value.clear();
             if (changed) changed();
             dragging_ = false;
@@ -336,14 +392,20 @@ public:
 #endif
     }
     void Assign(const wxString& text) {
+        files_.clear();
         value = text;
 #ifdef __WXGTK__
         ChangeValue(text);
         SetSelection(-1, -1);
 #endif
     }
+    void OfferFiles(const wxArrayString& files) {
+        Assign("file offer text fallback");
+        files_ = files;
+    }
 
 private:
+    wxArrayString files_;
     bool dragging_ = false;
     unsigned int sourceAttempts_ = 0;
     const char* sourceStage_ = "idle";
@@ -535,6 +597,14 @@ public:
         while (wxFileExists(directory + "/seed") && wait.Time() < 3000)
             Wait(20);
         Require(!wxFileExists(directory + "/seed"), "peer must accept next Unicode source value");
+    }
+    void OfferFiles(const wxArrayString& paths) {
+        wxFFile file(directory + "/files", "wb");
+        Require(file.Write(wxJoin(paths, '\n'), wxConvUTF8) && file.Close(), "publish peer's native file offer");
+        TestClock::StopWatch wait;
+        while (wxFileExists(directory + "/files") && wait.Time() < 3000)
+            Wait(20);
+        Require(!wxFileExists(directory + "/files"), "peer must accept native file offer");
     }
     wxString directory;
     long process;
@@ -812,6 +882,75 @@ void IndependentProcessDrags(wxFrame* frame, EditorControl* editor) {
     IndependentOutgoingDrags(frame, editor, independent, editorOrigin, peerOrigin, wayland);
     IndependentIncomingDrag(frame, editor, independent, editorOrigin, peerOrigin, wayland);
 }
+void NativeFileDrop(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    const auto directory = TestFiles::TemporaryDirectory("wxnotepad-native-file-drop");
+    std::filesystem::create_directory(directory);
+#ifdef __WXMSW__
+    const auto first = directory / std::filesystem::path(u8"native 中 %20.txt");
+#else
+    const auto first = directory / std::filesystem::path(u8"native 中 %20|keep.txt");
+#endif
+    const auto second = directory / "ignored.txt";
+    TestFiles::WriteBytes(first, "native first file\n");
+    TestFiles::WriteBytes(second, "ignored file\n");
+    PeerProcess peer;
+    wxString backend;
+    const bool wayland = wxGetEnv("GDK_BACKEND", &backend) && backend == "wayland";
+    wxPoint editorOrigin;
+    wxPoint peerOrigin;
+    if (wayland) {
+        auto origins = WaylandOrigins(editor, peer.directory);
+        wxString control;
+        wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control);
+        {
+            wxFFile request(control, "wb");
+            request.Write(
+                wxString::Format("move-peer:%d,%d,%d,%d", origins.second.x + 100, origins.second.y + 100, 950, 192));
+        }
+        WaitForDriver(control);
+        origins = WaylandOrigins(editor, peer.directory);
+        editorOrigin = origins.first - editor->GetPosition();
+        peerOrigin = origins.second;
+    }
+    const auto drop = [&](const wxArrayString& files) {
+        peer.OfferFiles(files);
+        if (!wayland) Front(frame, "peer");
+        Drag(frame, peerOrigin + wxPoint(10, 10), At(editor, 0) + editorOrigin, "ctrl", false, 300,
+             wayland ? "" : "main");
+        peer.Value();
+    };
+    editor->Send(Scintilla::Message::SetReadOnly, 1);
+    drop({TestFiles::Filename(first), TestFiles::Filename(second)});
+    Require(frame->DocumentPath() == TestFiles::Filename(first) && Text(editor) == "native first file\n" &&
+                !editor->Send(Scintilla::Message::CanUndo) && TestFiles::Bytes(first) == "native first file\n" &&
+                TestFiles::Bytes(second) == "ignored file\n",
+            "native file-list offer must open exactly the first document instead of inserting fallback text");
+    std::puts("PASS: independent native file-list plus text offer opens only the first Unicode/percent path");
+    editor->Send(Scintilla::Message::SetReadOnly, 0);
+    editor->Send(Scintilla::Message::AppendText, 7, reinterpret_cast<intptr_t>("pending"));
+    NativeDialogs::FileCommandDriver cancelDirectory(NativeDialogs::FileDialogProfile::Open, wxID_CANCEL);
+    drop({TestFiles::Filename(directory)});
+    cancelDirectory.Stop();
+    Require(cancelDirectory.choosers == 1 && cancelDirectory.prompts == 0 &&
+                Text(editor) == "native first file\npending" && frame->DocumentPath() == TestFiles::Filename(first),
+            "actual native directory offer must show its chooser before a dirty-document decision");
+    NativeDialogs::FileCommandDriver cancelFile(NativeDialogs::FileDialogProfile::Open, wxID_CANCEL);
+    drop({TestFiles::Filename(second)});
+    cancelFile.Stop();
+    Require(cancelFile.prompts == 1 && Text(editor) == "native first file\npending" &&
+                TestFiles::Bytes(first) == "native first file\n",
+            "actual native file offer Cancel must retain the live document and independent disk bytes");
+    NativeDialogs::FileCommandDriver saveFile(NativeDialogs::FileDialogProfile::Open, wxID_YES);
+    drop({TestFiles::Filename(second)});
+    saveFile.Stop();
+    Require(saveFile.prompts == 1 && Text(editor) == "ignored file\n" &&
+                TestFiles::Bytes(first) == "native first file\npending" &&
+                frame->DocumentPath() == TestFiles::Filename(second),
+            "actual native file offer Save must write the original document before opening the next");
+    std::puts("PASS: native directory chooser ordering and file Cancel/Save retain document and disk semantics");
+    std::filesystem::remove_all(directory);
+}
 class DragApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -823,6 +962,31 @@ public:
         if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &privateControl_)) ObserveNativeDrags(&privateControl_);
 #endif
         if (argc == 2 && argv[1] == "--input-state-probe") return InitInputStateProbe();
+        if (argc == 2 && argv[1] == "--file-drop") {
+            auto* frame = new EditorFrame;
+            frame->SetTitle("wxnotepad stream drag main");
+            frame->Bind(wxEVT_IDLE, [frame](wxIdleEvent& event) {
+                frame->SetTitle("wxnotepad stream drag main");
+                event.Skip();
+            });
+            wxString backend;
+            if (wxGetEnv("GDK_BACKEND", &backend) && backend == "wayland") {
+                frame->SetClientSize(760, 700);
+                frame->Show();
+            } else
+                frame->ShowFullScreen(true);
+            CallAfter([this, frame] {
+                try {
+                    NativeFileDrop(frame);
+                } catch (const std::exception& error) {
+                    std::fprintf(stderr, "FAIL: %s\n", error.what());
+                    result_ = 1;
+                }
+                frame->Destroy();
+                ExitMainLoop();
+            });
+            return true;
+        }
         if (argc == 2 && argv[1] == "--geometry-probe") {
             wxString backend;
             if (!wxGetEnv("GDK_BACKEND", &backend) || backend != "wayland") {
@@ -943,6 +1107,13 @@ private:
             wxFFile done(directory + "/done", "wb");
             frame->Destroy();
             ExitMainLoop();
+        } else if (wxFileExists(directory + "/files") && !peer->IsDragging()) {
+            wxFFile source(directory + "/files", "rb");
+            wxString paths;
+            Require(source.ReadAll(&paths, wxConvUTF8), "read peer's native file offer");
+            source.Close();
+            peer->OfferFiles(wxSplit(paths, '\n'));
+            wxRemoveFile(directory + "/files");
         } else if (wxFileExists(directory + "/seed") && !peer->IsDragging()) {
             wxFFile source(directory + "/seed", "rb");
             wxString text;
