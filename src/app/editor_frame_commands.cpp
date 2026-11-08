@@ -127,11 +127,11 @@ wxMenu* EditorFrame::CreateFileMenu() {
     const int readOnly = wxWindow::NewControlId();
     mode->AppendCheckItem(readOnly, "&Read Only Mode\tF10");
     file->AppendSubMenu(mode, "File &Mode");
+    revertId_ = wxWindow::NewControlId();
+    file->Append(revertId_, "&Revert\tF5");
     auto* reload = new wxMenu;
     AppendReloadEncodingCommands(reload);
     file->AppendSubMenu(reload, "&Reload");
-    revertId_ = wxWindow::NewControlId();
-    file->Append(revertId_, "&Revert\tF5");
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {

@@ -257,7 +257,7 @@ void SameFileState(EditorFrame* frame) {
     TestFiles::WriteBytes(path, text);
     Require(frame->Open(TestFiles::Filename(path), FileEncoding::Gbk).status == OpenStatus::Opened,
             "same-file source must open");
-    wxCommandEvent cpp(wxEVT_MENU, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    wxCommandEvent cpp(wxEVT_MENU, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     frame->GetEventHandler()->ProcessEvent(cpp);
     auto* editor = frame->Editor();
     editor->Send(Message::SetSel, 4232, 4374);
