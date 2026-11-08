@@ -1,5 +1,7 @@
 #include "editor/editor_control.h"
 #include "app/editor_frame.h"
+#include "native_key_helpers.h"
+#include "native_scroll_helpers.h"
 #include <wx/wx.h>
 #include <cstdio>
 #include <stdexcept>
@@ -56,8 +58,9 @@ public:
         auto* frame = new EditorFrame;
         auto* editor = frame->Editor();
         frame->Show();
-        CallAfter([this, frame, editor] {
+        NativeKeys::AfterPresentation(frame, [this, frame, editor](bool presented) {
             try {
+                Require(presented, "the native editor is presented before synchronous input checks");
                 using Scintilla::Message;
                 Require(Text(editor).empty(), "a new document must start empty");
                 Require(editor->Send(Message::GetModify) == 0, "a new document must be at its save point");
@@ -175,6 +178,8 @@ public:
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(large.c_str()));
                 frame->SetClientSize(420, 220);
                 wxYield();
+                Require(NativeScroll::WaitForHorizontalRange(editor, true, 600),
+                        "the native long-line scrollbar is ready before scrolling to its 600-pixel offset");
                 Scroll(editor, wxVERTICAL, 30);
                 Scroll(editor, wxHORIZONTAL, 600);
                 Require(editor->Send(Message::GetFirstVisibleLine) == 30 && editor->Send(Message::GetXOffset) == 600,

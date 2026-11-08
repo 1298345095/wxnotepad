@@ -65,6 +65,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     LoadLines();
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
+    values.autoShrinkScrollWidth = ReadBool("AutoShrinkScrollWidth", defaults.autoShrinkScrollWidth, "wxnotepad");
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
     values.showBookmarkMargin = ReadBool("ShowBookmarkMargin", defaults.showBookmarkMargin);
     values.changeHistoryMarker = ReadInt("ChangeHistoryMarker", defaults.changeHistoryMarker);
@@ -313,6 +314,7 @@ bool SettingsStore::Save(bool explicitSave) {
     WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
     if (values.saveSettings || explicitSave) {
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
+        WriteBool("AutoShrinkScrollWidth", values.autoShrinkScrollWidth, defaults.autoShrinkScrollWidth, "wxnotepad");
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
         WriteBool("ShowBookmarkMargin", values.showBookmarkMargin, defaults.showBookmarkMargin);
         WriteInt("ChangeHistoryMarker", values.changeHistoryMarker, defaults.changeHistoryMarker);

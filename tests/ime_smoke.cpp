@@ -35,6 +35,13 @@ void CheckGeometry(EditorControl* editor) {
                 candidate.rcArea.right == x + 1 && candidate.rcArea.bottom == y + height,
             "candidate must exclude the caret line");
     Require(font.lfHeight < 0 && font.lfFaceName[0] != 0, "composition must use an explicit editor font");
+    const auto style = editor->Send(Message::GetStyleIndexAt, position);
+    const auto size = editor->Send(Message::StyleGetSizeFractional, style);
+    const auto zoom = editor->Send(Message::GetZoom);
+    const int expectedHeight = -MulDiv(static_cast<int>(size * zoom / 100), editor->GetDPI().y, 72 * 100);
+    std::printf("IME font height=%ld expected=%d line=%lld dpi=%d\n", font.lfHeight, expectedHeight,
+                static_cast<long long>(height), editor->GetDPI().y);
+    Require(font.lfHeight == expectedHeight, "composition font must match editor point size rather than line height");
 }
 
 class ImeApp final : public wxApp {

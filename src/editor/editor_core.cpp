@@ -9,10 +9,6 @@
 #include <wx/settings.h>
 #include <chrono>
 #include <cmath>
-#ifdef __WXMSW__
-#include <imm.h>
-#include <cwchar>
-#endif
 
 using Scintilla::Message;
 namespace core = Scintilla::Internal;
@@ -102,7 +98,10 @@ intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_
     // Read-only enclosure can intentionally attempt a target beyond EOF after
     // the preceding insertion was rejected, then continue selection repair.
     try {
-        return ScintillaBase::WndProc(message, wParam, lParam);
+        const auto result = ScintillaBase::WndProc(message, wParam, lParam);
+        if ((message == Message::SetText || message == Message::ClearAll) && !pdoc->IsReadOnly())
+            ScintillaBase::WndProc(Message::SetScrollWidth, 1, 0);
+        return result;
     } catch (const std::bad_alloc&) {
         errorStatus = Scintilla::Status::BadAlloc;
     } catch (const core::Failure& failure) {
@@ -158,7 +157,11 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
     WndProc(Message::MarkerSetLayer, 0, static_cast<intptr_t>(Scintilla::Layer::OverText));
     WndProc(Message::SetCaretStyle, 1, 0);
     WndProc(Message::SetMarginWidthN, 1, 0);
+    WndProc(Message::SetScrollWidth, 1, 0);
     WndProc(Message::SetScrollWidthTracking, 1, 0);
+#ifdef __WXMSW__
+    WndProc(Message::SetIMEInteraction, static_cast<uintptr_t>(Scintilla::IMEInteraction::Inline), 0);
+#endif
     // Notepad4 CreateEditor: SelectOption_EnableMultipleSelection is bit 1.
     WndProc(Message::SetMultipleSelection, selectionOptions & 1, 0);
     WndProc(Message::SetAdditionalSelectionTyping, 1, 0);
@@ -233,8 +236,21 @@ void EditorControl::Core::Draw(wxDC& dc) {
     rcPaint = core::PRectangle(0, 0, size.x, size.y);
     paintState = PaintState::painting;
     paintingAllText = true;
+    const bool shrink = window_.AutoShrinkScrollWidth() && scrollWidthDirty_ && !Wrapping();
+    if (shrink) {
+        scrollWidthDirty_ = false;
+        view.lineWidthMaxSeen = 0;
+    }
     Paint(surface.get(), rcPaint);
     paintState = PaintState::notPainting;
+    if (shrink && view.lineWidthMaxSeen < scrollWidth) {
+        // Reuse the core's normal visible-line measurements, avoiding a full
+        // document scan on each edit. Offscreen lines grow the range when shown.
+        scrollWidth = std::max(1, view.lineWidthMaxSeen);
+        const int page = static_cast<int>(GetTextRectangle().Width());
+        HorizontalScrollTo(std::min(xOffset, std::max(0, scrollWidth - page + 1)));
+        SetScrollBars();
+    }
     // Style-only notifications do not queue UpdateUI in the pinned core.
     // Refresh after its real styling/paint pass, then redraw changed overlays.
     if (braceStyleChanged_) {
@@ -336,7 +352,7 @@ void EditorControl::Core::Scroll(wxScrollWinEvent& event) {
     int position = event.GetPosition();
     const int current = vertical ? static_cast<int>(topLine) : xOffset;
     const int line = vertical ? 1 : std::max(1, static_cast<int>(vs.spaceWidth));
-    const int page = vertical ? static_cast<int>(LinesOnScreen()) : window_.GetClientSize().x;
+    const int page = vertical ? static_cast<int>(LinesOnScreen()) : static_cast<int>(GetTextRectangle().Width());
     const auto type = event.GetEventType();
     if (type == wxEVT_SCROLLWIN_LINEUP)
         position = current - line;
@@ -352,8 +368,10 @@ void EditorControl::Core::Scroll(wxScrollWinEvent& event) {
         position = vertical ? static_cast<int>(MaxScrollPos()) : scrollWidth;
     if (vertical)
         ScrollTo(position);
-    else
-        HorizontalScrollTo(std::clamp(position, 0, std::max(0, scrollWidth - window_.GetClientSize().x)));
+    else {
+        const int maximum = horizontalScrollBarVisible && !Wrapping() ? std::max(0, scrollWidth - page + 1) : 0;
+        HorizontalScrollTo(std::clamp(position, 0, maximum));
+    }
 }
 
 void EditorControl::Core::Wheel(wxMouseEvent& event) {
@@ -407,16 +425,6 @@ void EditorControl::Core::CaptureLost() {
 }
 
 void EditorControl::Core::SyncSystemCaret() {
-    UpdateSystemCaret();
-}
-
-void EditorControl::Core::CompositionStarted() {
-    // Match original ScintillaWin's windowed IME: the IME draws its own caret.
-    DropCaret();
-}
-
-void EditorControl::Core::CompositionEnded() {
-    ShowCaretAtCurrentPosition();
     UpdateSystemCaret();
 }
 
@@ -550,61 +558,8 @@ void EditorControl::Core::NotifyCaretMove() const noexcept {
     // notifications are forwarded through NotifyParent.
 }
 
+#ifndef __WXMSW__
 void EditorControl::Core::UpdateSystemCaret() {
-#ifdef __WXMSW__
-    if (!hasFocus) {
-        DestroySystemCaret();
-        return;
-    }
-    const auto point = PointMainCaret();
-    const int height = std::max(1, vs.lineHeight);
-    const auto window = static_cast<HWND>(window_.GetHandle());
-    const int width = std::max(1, vs.caret.width);
-    if (!systemCaretBitmap_ || width != systemCaretWidth_ || height != systemCaretHeight_) {
-        DestroySystemCaret();
-        // Original ScintillaWin::CreateSystemCaret uses a zero bitmap: native
-        // IME/accessibility geometry stays available while the core draws it.
-        const std::vector<BYTE> bits(((width + 15) / 16) * 2 * height);
-        systemCaretBitmap_ = CreateBitmap(width, height, 1, 1, bits.data());
-        if (systemCaretBitmap_ && ::CreateCaret(window, static_cast<HBITMAP>(systemCaretBitmap_), width, height)) {
-            systemCaretWidth_ = width;
-            systemCaretHeight_ = height;
-            ::ShowCaret(window);
-        }
-    }
-    ::SetCaretPos(static_cast<int>(point.x), static_cast<int>(point.y));
-    if (const auto context = ImmGetContext(window)) {
-        // Microsoft Pinyin needs explicit IMM forms in addition to the
-        // system caret. All positions are in the editor's client coordinates.
-        COMPOSITIONFORM composition{};
-        composition.dwStyle = CFS_POINT;
-        composition.ptCurrentPos = {static_cast<LONG>(point.x), static_cast<LONG>(point.y)};
-        ::GetClientRect(window, &composition.rcArea);
-        ImmSetCompositionWindow(context, &composition);
-        CANDIDATEFORM candidate{};
-        candidate.dwStyle = CFS_EXCLUDE;
-        candidate.ptCurrentPos = {static_cast<LONG>(point.x), static_cast<LONG>(point.y) + height};
-        candidate.rcArea = {static_cast<LONG>(point.x), static_cast<LONG>(point.y), static_cast<LONG>(point.x) + 1,
-                            static_cast<LONG>(point.y) + height};
-        ImmSetCandidateWindow(context, &candidate);
-        LOGFONTW font{};
-        font.lfHeight = -height;
-        font.lfWeight = FW_NORMAL;
-        font.lfCharSet = DEFAULT_CHARSET;
-        const auto name = wxString::FromUTF8(core::Platform::DefaultFont()).ToStdWstring();
-        std::wcsncpy(font.lfFaceName, name.c_str(), LF_FACESIZE - 1);
-        ImmSetCompositionFontW(context, &font);
-        ImmReleaseContext(window, context);
-    }
-#endif
-}
-
-#ifdef __WXMSW__
-void EditorControl::Core::DestroySystemCaret() {
-    if (!systemCaretBitmap_) return;
-    ::DestroyCaret();
-    DeleteObject(static_cast<HBITMAP>(systemCaretBitmap_));
-    systemCaretBitmap_ = nullptr;
 }
 #endif
 
@@ -616,7 +571,13 @@ void EditorControl::Core::SetHorizontalScrollPos() {
 bool EditorControl::Core::ModifyScrollBars(Sci::Line maximum, Sci::Line page) {
     const auto before = window_.GetClientSize();
     window_.SetScrollbar(wxVERTICAL, static_cast<int>(topLine), static_cast<int>(page), static_cast<int>(maximum + 1));
-    window_.SetScrollbar(wxHORIZONTAL, xOffset, window_.GetClientSize().x, scrollWidth);
+    // ScintillaWin::GetHorizontalScrollRange uses the text viewport and an
+    // inclusive document endpoint; wx's range is an item count.
+    const int pageWidth = static_cast<int>(GetTextRectangle().Width());
+    const int documentEnd = std::max({scrollWidth, pageWidth - 1, 0});
+    const int horizontalPage = horizontalScrollBarVisible && !Wrapping() ? pageWidth : documentEnd + 1;
+    window_.SetScrollbar(wxHORIZONTAL, xOffset, horizontalPage, documentEnd + 1);
+    if (scrollWidth < horizontalPage) HorizontalScrollTo(0);
     return before != window_.GetClientSize();
 }
 
@@ -685,6 +646,10 @@ void EditorControl::Core::NotifyChange() const noexcept {
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
+    if (notification.nmhdr.code == Scintilla::Notification::Modified &&
+        (static_cast<unsigned>(notification.modificationType) &
+         static_cast<unsigned>(Scintilla::ModificationFlags::DeleteText)))
+        scrollWidthDirty_ = true;
     if (notification.nmhdr.code == Scintilla::Notification::UpdateUI && window_.occurrences_)
         window_.occurrences_->Update(notification.updated);
     // Original bookmark-margin clicks use the clicked line and keep the caret.

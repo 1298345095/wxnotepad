@@ -850,6 +850,14 @@ void EditorFrame::AppendDisplayCommands(wxMenu* view) {
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetWrapMode) != 0); }, wordWrap);
     const int lineNumbers = wxWindow::NewControlId();
+    const int shrinkScrollWidth = wxWindow::NewControlId();
+    view->AppendCheckItem(shrinkScrollWidth, "Auto-Shrink Horizontal Scrollbar");
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetAutoShrinkScrollWidth(!editor_->AutoShrinkScrollWidth()); },
+        shrinkScrollWidth);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoShrinkScrollWidth()); },
+        shrinkScrollWidth);
     view->AppendCheckItem(lineNumbers, "Line &Numbers\tCtrl+Shift+N");
     Bind(
         wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible()); },

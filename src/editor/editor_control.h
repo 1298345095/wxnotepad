@@ -36,6 +36,8 @@ public:
     uint64_t SelectionRevision() const;
     intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
+    bool AutoShrinkScrollWidth() const { return autoShrinkScrollWidth_; }
+    void SetAutoShrinkScrollWidth(bool enabled);
     void IndentLines(bool forwards);
     // False reports the original unsupported rectangular-selection operation.
     bool SpacesToTabs(bool onlyIndent = false);
@@ -132,6 +134,7 @@ private:
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
     bool autoIndent_ = true;
+    bool autoShrinkScrollWidth_ = false;
     bool matchBraces_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;

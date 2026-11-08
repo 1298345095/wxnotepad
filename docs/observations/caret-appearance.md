@@ -35,6 +35,8 @@ original ScintillaWin zero bitmap, preserving the native insertion position and
 existing explicit IMM composition/candidate/font geometry. Native focus owns
 that bitmap's lifetime. Windowed IME start drops the core's visual caret;
 composition end/cancel restores it with the selected style and period.
+The subsequent [inline IME correction](windows-ime-layout.md) makes inline
+composition the Windows default while retaining that windowed API mode.
 
 Preferences are applied through one editor capability. Startup settings,
 menus, zoom and DPI use that capability. Language changes, open/reopen, New,

@@ -2,6 +2,7 @@
 
 #include "editor/editor_control.h"
 #include "editor/platform/core_headers.h"
+#include <span>
 #ifdef __WXGTK__
 class GtkTextDragDrop;
 #endif
@@ -19,6 +20,7 @@ public:
     intptr_t SelectionCharacterCount();
 
     void Draw(wxDC& dc);
+    void RequestScrollWidthUpdate() noexcept { scrollWidthDirty_ = true; }
     void Resize();
     void UpdateWrapLayout();
     void DpiChanged();
@@ -34,8 +36,9 @@ public:
     void Mouse(wxMouseEvent& event);
     void CaptureLost();
     void SyncSystemCaret();
-    void CompositionStarted();
-    void CompositionEnded();
+#ifdef __WXMSW__
+    std::optional<intptr_t> ImeMessage(unsigned message, uintptr_t wParam, intptr_t& lParam);
+#endif
     void RepairFoldSelection();
     void UpdateVisualBraceMatching();
 
@@ -45,6 +48,11 @@ private:
     void ClearDropFeedback();
 #ifdef __WXMSW__
     void DestroySystemCaret();
+    bool UsesInlineIme() const noexcept;
+    intptr_t InlineComposition(uintptr_t flags);
+    void InsertImeText(std::wstring_view text, Scintilla::CharacterSource source,
+                       std::span<const unsigned char> indicators = {});
+    bool imeComposing_ = false;
     void* systemCaretBitmap_ = nullptr;
     int systemCaretWidth_ = 0;
     int systemCaretHeight_ = 0;
@@ -94,4 +102,5 @@ private:
     intptr_t selectedCharacters_ = 0;
     mutable bool selectionCountDirty_ = true;
     mutable bool braceStyleChanged_ = false;
+    mutable bool scrollWidthDirty_ = true;
 };

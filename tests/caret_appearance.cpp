@@ -275,6 +275,8 @@ void BlinkAndLifecycle(EditorFrame* frame, PaintRows& paint) {
             "language changes retain chosen caret flags and period");
 #ifdef __WXMSW__
     const auto handle = static_cast<HWND>(editor->GetHandle());
+    const auto interaction = editor->Send(Message::GetIMEInteraction);
+    editor->Send(Message::SetIMEInteraction, static_cast<uintptr_t>(Scintilla::IMEInteraction::Windowed));
     POINT native{};
     Require(GetCaretPos(&native) && native.x == editor->Send(Message::PointXFromPosition, 0, 0) &&
                 native.y == editor->Send(Message::PointYFromPosition, 0, 0),
@@ -286,6 +288,7 @@ void BlinkAndLifecycle(EditorFrame* frame, PaintRows& paint) {
     Require(Span(editor, paint, 2).first >= 0 && editor->Send(Message::GetCaretPeriod) == 0 &&
                 editor->Send(Message::GetCaretStyle) == 273,
             "IME end/cancel restores chosen appearance and No Blink");
+    editor->Send(Message::SetIMEInteraction, interaction);
 #endif
     Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
             "blink, focus, language and empty IME lifecycle preserve original text and undo state");

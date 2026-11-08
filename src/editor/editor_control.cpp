@@ -253,6 +253,12 @@ void EditorControl::JumpToPosition(intptr_t position) {
     Send(Message::ChooseCaretX);
 }
 
+void EditorControl::SetAutoShrinkScrollWidth(bool enabled) {
+    autoShrinkScrollWidth_ = enabled;
+    core_->RequestScrollWidthUpdate();
+    Refresh(false);
+}
+
 void EditorControl::ToggleWordWrap() {
     const auto mode = Send(Message::GetWrapMode) == static_cast<intptr_t>(Scintilla::Wrap::None)
                           ? Scintilla::Wrap::Word
@@ -455,12 +461,9 @@ WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM
         WXNOTE_TRACE("clipboard.transfer", "\ttarget=%p\tformat=%llu", static_cast<void*>(this),
                      static_cast<unsigned long long>(wParam));
 #endif
-    if (core_ && (message == WM_IME_STARTCOMPOSITION || message == WM_IME_COMPOSITION || message == WM_IME_SETCONTEXT ||
-                  message == WM_INPUTLANGCHANGE)) {
-        core_->SyncSystemCaret();
+    if (core_) {
+        if (const auto result = core_->ImeMessage(message, wParam, lParam)) return *result;
     }
-    if (core_ && message == WM_IME_STARTCOMPOSITION) core_->CompositionStarted();
-    if (core_ && message == WM_IME_ENDCOMPOSITION) core_->CompositionEnded();
     return wxControl::MSWWindowProc(message, wParam, lParam);
 }
 #endif
