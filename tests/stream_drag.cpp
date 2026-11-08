@@ -18,6 +18,7 @@
 #include <functional>
 #include <memory>
 #include <string_view>
+#include <vector>
 #ifdef __WXMSW__
 #include <windows.h>
 #elif defined(__WXGTK__)
@@ -209,6 +210,7 @@ wxPoint At(EditorControl* editor, intptr_t position) {
 // Windows uses wx's OLE text data object, without the editor implementation.
 #ifdef __WXGTK__
 using PeerWindow = wxTextCtrl;
+using NativeUri = std::unique_ptr<gchar, decltype(&g_free)>;
 #else
 using PeerWindow = wxPanel;
 #endif
@@ -313,11 +315,17 @@ public:
                 auto& peer = *static_cast<NativePeer*>(value);
                 if (peer.files_.empty()) return;
                 if (gtk_selection_data_get_target(data) == gdk_atom_intern_static_string("text/uri-list")) {
-                    auto** uris = g_new0(gchar*, peer.files_.size() + 1);
-                    for (size_t i = 0; i < peer.files_.size(); ++i)
-                        uris[i] = g_filename_to_uri(peer.files_[i].fn_str(), nullptr, nullptr);
-                    gtk_selection_data_set_uris(data, uris);
-                    g_strfreev(uris);
+                    std::vector<NativeUri> ownedUris;
+                    std::vector<gchar*> uris;
+                    ownedUris.reserve(peer.files_.size());
+                    uris.reserve(peer.files_.size() + 1);
+                    for (const auto& file : peer.files_) {
+                        NativeUri uri(g_filename_to_uri(file.fn_str(), nullptr, nullptr), g_free);
+                        uris.push_back(uri.get());
+                        ownedUris.push_back(std::move(uri));
+                    }
+                    uris.push_back(nullptr);
+                    gtk_selection_data_set_uris(data, uris.data());
                     std::fprintf(stderr, "native-file-offer: text/uri-list items=%zu\n", peer.files_.size());
                 } else {
                     gtk_selection_data_set_text(data, "file offer text fallback", -1);
