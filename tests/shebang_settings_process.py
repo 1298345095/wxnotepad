@@ -38,10 +38,7 @@ def main():
             try:
                 assert app.state["document_status"] == f"UTF-8 | {expected} | EOL: CRLF", app.state
                 for item, result in (("Python", "Python (override)"), ("Automatic", expected)):
-                    app.sequence += 1
-                    command(folder, f"{app.sequence}\nmenu\nLanguage\t{item}\n")
-                    app.state = wait_state(folder, app.process, lambda s: s["sequence"] == str(app.sequence))
-                    assert app.state["result"] == "ok", app.state
+                    app.named_menu("Scheme", item)
                     assert app.state["document_status"] == f"UTF-8 | {result} | EOL: CRLF", app.state
                 for suffix, language in ((".py", "Plain Text" if "[Styles]\nAutoSelect=0" in settings else "Python"),
                                          (".cgi", expected)):
