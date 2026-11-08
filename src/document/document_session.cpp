@@ -397,6 +397,11 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
     // Original EditSaveFile/FileSave leave the live identity, scheme and save
     // point alone for Save Copy; optional cleanup above remains in its history.
     if (copy) return {SaveStatus::Saved, {}};
+    CommitSaveState(destination, fileType);
+    return {SaveStatus::Saved, {}};
+}
+
+void DocumentSession::CommitSaveState(const wxString& destination, std::optional<SaveFileType> fileType) {
     const auto previousLanguage = Language();
     if (fileType) {
         const auto* selected = std::get_if<SyntaxLanguage>(&*fileType);
@@ -418,7 +423,6 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
     // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
     if (previousLanguage != Language()) ApplySyntaxLanguage(editor_, Language());
-    return {SaveStatus::Saved, {}};
 }
 
 bool DocumentSession::UpdateFileTime() {
