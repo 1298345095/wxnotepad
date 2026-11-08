@@ -386,7 +386,7 @@ void SavedBytes(EditorFrame* frame) {
         TestFiles::WriteBytes(path, before);
         editor->Send(Message::SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "open language disk fixture");
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", fixture.language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", fixture.language));
         editor->Send(Message::SetSel, 0, 6);
         Menu(frame, fixture.command);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,

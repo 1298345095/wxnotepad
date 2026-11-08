@@ -331,14 +331,17 @@ SaveResult EditorFrame::SaveCopy() {
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
-    const auto result = document_.Open(
-        source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding, std::nullopt,
-        [this] {
-            indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
-            const auto& preferences = settings_ ? settings_->values : defaults_;
-            editor_->Send(Scintilla::Message::SetEdgeColumn,
-                          document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
-        });
+    return LoadFile(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
+}
+
+OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
+                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding) {
+    const auto result = document_.Open(source, beforeReplace, encoding, weakEncoding, [this] {
+        indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+        const auto& preferences = settings_ ? settings_->values : defaults_;
+        editor_->Send(Scintilla::Message::SetEdgeColumn,
+                      document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
+    });
     if (result.status == OpenStatus::Opened) {
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
@@ -347,6 +350,24 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
     }
     UpdateDocumentState();
     return result;
+}
+
+OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
+    if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
+    const auto result = LoadFile(
+        document_.Path(), [] { return true; }, std::nullopt,
+        EncodingChoice(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding()));
+    if (result.status == OpenStatus::Opened && followEnd) editor_->Send(Scintilla::Message::DocumentEnd);
+    return result;
+}
+
+OpenResult EditorFrame::Revert() {
+    if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
+    if (editor_->Send(Scintilla::Message::GetModify) &&
+        wxMessageBox("Revert file to last saved state? Your changes will be lost!", "Revert",
+                     wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
+        return {OpenStatus::Cancelled, {}};
+    return ReloadCurrentFile();
 }
 
 OpenResult EditorFrame::Open() {

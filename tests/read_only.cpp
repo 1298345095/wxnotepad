@@ -144,7 +144,7 @@ void FileProtection(EditorFrame* frame) {
 }
 void CommandOutcomes(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     // Independent original Windows results: 139/original-nonclipboard-expanded.json.
     std::ifstream fixtures{std::filesystem::path(READ_ONLY_REFERENCE_FIXTURES)};
     Require(fixtures.is_open(), "open readable independent original command fixtures");
@@ -161,7 +161,14 @@ void CommandOutcomes(EditorFrame* frame) {
         editor->Send(Message::SetEOLMode, 0);
         editor->Send(Message::SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-        const int id = frame->GetMenuBar()->FindMenuItem("Edit", wxString::FromUTF8(label));
+        const bool eolCommand = label.starts_with("Convert to ");
+        const wxString menuLabel = label == "Convert to CRLF"       ? "Windows (CR+LF)"
+                                   : label == "Convert to LF"       ? "Unix/macOS (LF)"
+                                   : label == "Convert to CR"       ? "Classic Mac OS (CR)"
+                                   : label == "Duplicate Selection" ? "Duplicate"
+                                   : label == "Transpose Lines"     ? "Transpose"
+                                                                    : wxString::FromUTF8(label);
+        const int id = frame->GetMenuBar()->FindMenuItem(eolCommand ? "File" : "Edit", menuLabel);
         Require(id != wxNOT_FOUND && frame->GetMenuBar()->IsEnabled(id) == enabled,
                 "original nonempty/capability-based editing menu remains enabled during protection");
         Require(frame->GetMenuBar()->IsEnabled(wxID_CUT) && !frame->GetMenuBar()->IsEnabled(wxID_UNDO) &&

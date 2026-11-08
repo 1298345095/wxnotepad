@@ -19,7 +19,7 @@ void Check(EditorControl* editor, int tab, int indent, bool spaces) {
             "effective independent widths and spaces policy must follow original precedence");
 }
 void Language(EditorFrame* frame, const char* name) {
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", name));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", name));
 }
 void Reset(EditorControl* editor, const char* text, intptr_t anchor, intptr_t caret) {
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
@@ -69,7 +69,7 @@ public:
                 }
                 Language(frame, "JSON");
                 Check(editor, 2, 2, true);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Tabs as Spaces"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Insert Tabs as Spaces"));
                 Language(frame, "Python");
                 Check(editor, 7, 3, false);
                 Require(frame->NewDocument(), "empty New must succeed");

@@ -39,7 +39,7 @@ void Guides(EditorFrame* frame) {
     Require(editor->Send(Message::GetIndentationGuides) == 2, "plain text enables original look-forward guides");
     for (const auto& [language, mode] :
          {std::pair{"C/C++", 3}, std::pair{"Python", 2}, std::pair{"JSON", 3}, std::pair{"Plain Text", 2}}) {
-        const int id = frame->GetMenuBar()->FindMenuItem("Language", language);
+        const int id = frame->GetMenuBar()->FindMenuItem("Scheme", language);
         Require(id != wxNOT_FOUND, "delivered language remains reachable");
         NativeSearch::Command(frame, id);
         Require(editor->Send(Message::GetIndentationGuides) == mode,
@@ -381,10 +381,10 @@ void Preferences(EditorFrame* frame, int guides, int edge, int column, const wxS
     Require(editor->Send(Message::GetIndentationGuides) == guides,
             "imported ShowIndentGuides/SimpleIndentGuides selects original mode");
     if (guides != 0) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
         Require(editor->Send(Message::GetIndentationGuides) == (guides == 1 ? 1 : 3),
                 "imported simple mode survives language changes");
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
     }
     Require(editor->Send(Message::GetEdgeMode) == edge && editor->Send(Message::GetEdgeColumn) == column,
             "imported long-line mode, visibility and limit reach the real editor");
