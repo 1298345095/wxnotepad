@@ -13,7 +13,7 @@ from settings_process import Application
 def main():
     source = Path(sys.argv[1]).resolve()
     probe_source = Path(sys.argv[2]).resolve()
-    with tempfile.TemporaryDirectory(prefix="wxnotepad-recent-process-") as name:
+    with tempfile.TemporaryDirectory(prefix="wxnotepad-recent-process-", dir=source.parent) as name:
         folder = Path(name)
         executable = folder / source.name
         shutil.copy2(source, executable)
@@ -31,6 +31,8 @@ def main():
             saved = (folder / "Notepad4.ini").read_text(encoding="utf-16")
             assert "[Recent Files]" in saved and "first.txt" in saved, saved
             assert "SaveRecentFiles=65" in saved and "UnrelatedSetting=keep" in saved and "UnrelatedStyle=keep" in saved, saved
+            if os.name != "nt" or source.drive.lower() != Path(os.environ["WINDIR"]).drive.lower():
+                assert any(line in saved for line in ("01=first.txt", "01=.\\first.txt", "01=./first.txt")), saved
         finally:
             app.stop()
         def history():
@@ -39,7 +41,9 @@ def main():
             return [Path(value.replace("\\", os.sep)).name for value in document["Recent Files"].values()]
 
         def restart(paths):
-            subprocess.run([str(probe), "--history", *(str(path) for path in paths)], env=environment, check=True)
+            result = subprocess.run([str(probe), "--history", *(str(path) for path in paths)], env=environment,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            assert result.returncode == 0, result.stdout
 
         restart([first])
         second, third = folder / "second.txt", folder / "third.txt"
@@ -101,6 +105,38 @@ def main():
         finally:
             app.stop()
         print("PASS: Windows ordinal case dedup retains stored spelling; case-sensitive hosts retain distinct paths")
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+            import uuid
+            shell = ctypes.WinDLL("shell32")
+            ole = ctypes.WinDLL("ole32")
+            token = (ctypes.c_ubyte * 16).from_buffer_copy(uuid.UUID("fdd39ad0-238f-46af-adb4-6c85480369c7").bytes_le)
+            documents = ctypes.c_void_p()
+            shell.SHGetKnownFolderPath.argtypes = [ctypes.c_void_p, wintypes.DWORD, wintypes.HANDLE,
+                                                   ctypes.POINTER(ctypes.c_void_p)]
+            ole.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+            assert shell.SHGetKnownFolderPath(ctypes.byref(token), 0, None, ctypes.byref(documents)) == 0
+            try:
+                documents_path = Path(ctypes.wstring_at(documents))
+            finally:
+                ole.CoTaskMemFree(documents)
+            with tempfile.TemporaryDirectory(prefix="wxnotepad-recent-", dir=documents_path) as documents_name:
+                document = Path(documents_name) / "portable.txt"
+                document.write_bytes(b"portable Documents")
+                ini.write_text("[Settings]\nSaveRecentFiles=65\n", encoding="utf-16")
+                app = Application(executable, folder, environment, document)
+                try:
+                    app.close()
+                    assert "%CSIDL:MYDOCUMENTS%" in ini.read_text(encoding="utf-16")
+                    restart([document])
+                finally:
+                    app.stop()
+            environment["WXNOTEPAD_RECENT_FIXTURE"] = str(folder)
+            ini.write_text("[Settings]\nSaveRecentFiles=65\n[Recent Files]\n"
+                           "01=%WXNOTEPAD_RECENT_FIXTURE%\\first.txt\n", encoding="utf-16")
+            restart([first])
+            print("PASS: portable Documents token and environment expansion resolve through native restart chooser")
     print("PASS: remembered recent history saves independently of SaveSettings")
 
 

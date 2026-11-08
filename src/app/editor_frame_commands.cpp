@@ -171,7 +171,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
 
 void EditorFrame::AppendRecentFilesCommand(wxMenu* file) {
     recentFilesId_ = wxWindow::NewControlId();
-    file->Append(recentFilesId_, "Recent (History)...\tAlt+H");
+    file->Append(recentFilesId_, "Recent (&History)...\tAlt+H");
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowRecentFiles(); }, recentFilesId_);
     Bind(
         wxEVT_UPDATE_UI,
@@ -1475,6 +1475,11 @@ bool EditorFrame::HandleDisplayKey(const wxKeyEvent& event, int whitespace, int 
 }
 
 bool EditorFrame::HandleDocumentKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == 'H' && event.AltDown() && !event.ControlDown() && !event.ShiftDown() &&
+        !event.MetaDown()) {
+        ShowRecentFiles();
+        return true;
+    }
     if (event.GetKeyCode() == WXK_F5 && !event.HasAnyModifiers()) {
         wxCommandEvent command(wxEVT_MENU, revertId_);
         GetEventHandler()->ProcessEvent(command);

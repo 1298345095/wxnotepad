@@ -1,4 +1,5 @@
 #include "app/dialogs/recent_files_dialog.h"
+#include "settings/recent_files.h"
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/listctrl.h>
@@ -82,7 +83,7 @@ std::optional<wxString> RecentFilesDialog::Choose() {
     preferences_.saveRecentFiles = remember_->GetValue();
     long capacity = 0;
     if (!capacity_->GetValue().ToLong(&capacity) || capacity > std::numeric_limits<int>::max()) capacity = 0;
-    preferences_.maxRecentFiles = std::max(static_cast<int>(capacity), 32);
+    preferences_.maxRecentFiles = std::max(static_cast<int>(capacity), RecentFiles::MinimumCapacity);
     if (choice != wxID_OK) return std::nullopt;
     const long selected = files_->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
     return selected < 0 ? std::nullopt : std::optional<wxString>(files_->GetItemText(selected));

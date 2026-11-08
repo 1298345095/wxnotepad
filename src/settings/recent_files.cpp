@@ -51,7 +51,7 @@ wxString RecentFiles::ExpandPath(wxString path) {
     if (path.StartsWith(documentsToken)) {
         path = path.Mid(wxString(documentsToken).length());
         if (path.StartsWith("\\") || path.StartsWith("/")) path = path.Mid(1);
-        path = wxFileName(DocumentsDirectory(), path).GetFullPath();
+        path = wxFileName::DirName(DocumentsDirectory()).GetPathWithSep() + path;
     }
 #ifdef __WXMSW__
     const DWORD size = ExpandEnvironmentStringsW(path.wc_str(), nullptr, 0);
@@ -94,7 +94,8 @@ wxString RecentFiles::PortablePath(const wxString& path, bool relative, bool por
 #else
     wxFileName filename(path);
     const wxString prefix = documents + wxFileName::GetPathSeparator();
-    if (portableDocuments && !documents.empty() && !application.StartsWith(prefix) && path.StartsWith(prefix))
+    if (portableDocuments && !documents.empty() && application != documents && !application.StartsWith(prefix) &&
+        path.StartsWith(prefix))
         return "%CSIDL:MYDOCUMENTS%/" + path.Mid(prefix.length());
     if (filename.MakeRelativeTo(application)) return filename.GetFullPath();
     return path;

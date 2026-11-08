@@ -162,6 +162,12 @@ public:
                     HistorySnapshot snapshot;
                     frame->ShowRecentFiles();
                     snapshot.Stop();
+                    if (snapshot.paths != expected) {
+                        for (const auto& path : snapshot.paths)
+                            std::fprintf(stderr, "observed history: %s\n", path.utf8_str().data());
+                        for (const auto& path : expected)
+                            std::fprintf(stderr, "expected history: %s\n", path.utf8_str().data());
+                    }
                     Require(snapshot.paths == expected && snapshot.visited == !expected.empty(),
                             "restart chooser history order");
                     result_ = 0;
@@ -257,6 +263,24 @@ public:
                 Require(discardBeforeOpen.prompts == 1 && frame->DocumentPath() == TestFiles::Filename(first) &&
                             TestEditor::Text(frame->Editor()) == "first",
                         "double-click opens chosen entry after one discard decision");
+                HistorySnapshot shortcut;
+                wxKeyEvent historyKey(wxEVT_CHAR_HOOK);
+                historyKey.m_keyCode = 'H';
+                historyKey.SetAltDown(true);
+                frame->GetEventHandler()->ProcessEvent(historyKey);
+                shortcut.Stop();
+                Require(shortcut.visited && shortcut.paths == settings.values.recentFiles,
+                        "Alt+H presents the same ordered native history chooser");
+                TestEditor::Append(frame, " pending");
+                NativeDialogs::FileCommandDriver cancelDecision(NativeDialogs::FileDialogProfile::Open, wxID_CANCEL);
+                HistorySnapshot notOpened;
+                frame->ShowRecentFiles();
+                cancelDecision.Stop();
+                notOpened.Stop();
+                Require(cancelDecision.prompts == 1 && !notOpened.visited &&
+                            TestEditor::Text(frame->Editor()) == "first pending" &&
+                            frame->DocumentPath() == TestFiles::Filename(first),
+                        "cancelled save decision retains document and prevents history chooser");
                 std::puts("PASS: Recent command tracks available file history");
                 result_ = 0;
             } catch (const std::exception& error) {

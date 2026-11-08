@@ -142,8 +142,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.findReplaceOption = ReadInt("FindReplaceOption", defaults.findReplaceOption);
     if (values.saveFindReplace) {
         values.findReplaceFlag = ReadInt("FindReplaceFlag", defaults.findReplaceFlag);
-        values.recentFind = ReadHistory("Recent Find");
-        values.recentReplace = ReadHistory("Recent Replace");
+        values.recentFind = ReadHistory("Recent Find", SearchLimits::HistoryEntries);
+        values.recentReplace = ReadHistory("Recent Replace", SearchLimits::HistoryEntries);
     }
     values.lineSelection = ReadInt("LineSelection", defaults.lineSelection);
     values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", defaults.defaultEOLMode), 0, 2);
@@ -323,7 +323,7 @@ void SettingsStore::RemoveRecentFile(size_t index) {
 
 void SettingsStore::WriteHistory(const wxString& sectionName, const std::vector<wxString>& history) {
     if (history.empty()) return;
-    auto merged = ReadHistory(sectionName);
+    auto merged = ReadHistory(sectionName, SearchLimits::HistoryEntries);
     for (auto item = history.rbegin(); item != history.rend(); ++item) {
         std::erase(merged, *item);
         merged.insert(merged.begin(), *item);

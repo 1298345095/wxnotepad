@@ -44,7 +44,7 @@ struct OriginalSettings {
     int markOccurrences = 1;
     bool saveFindReplace = false;
     bool saveRecentFiles = false;
-    int maxRecentFiles = 32;
+    int maxRecentFiles = OriginalSettingLimits::MinRecentFiles;
     bool relativeFileMRU = true;
     bool portableMyDocs = true;
     std::vector<wxString> recentFiles;

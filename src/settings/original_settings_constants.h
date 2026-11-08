@@ -16,6 +16,7 @@ enum AutoInsertMask {
 };
 
 namespace OriginalSettingLimits {
+inline constexpr int MinRecentFiles = 32;
 inline constexpr int MaxTabWidth = 256;
 inline constexpr int MaxLongLineColumn = 4096;
 } // namespace OriginalSettingLimits

@@ -19,12 +19,12 @@ public:
 private:
     wxString path_;
     std::vector<wxString> lines_;
-    int recentFileCapacity_ = 32;
+    int recentFileCapacity_ = OriginalSettingLimits::MinRecentFiles;
     bool LoadLines();
     bool ReadBool(const wxString& key, bool fallback, const wxString& sectionName = "Settings") const;
     int ReadInt(const wxString& key, int fallback, const wxString& sectionName = "Settings") const;
     wxString ReadDateTimeFormat(const wxString& key) const;
-    std::vector<wxString> ReadHistory(const wxString& sectionName, size_t capacity = 32) const;
+    std::vector<wxString> ReadHistory(const wxString& sectionName, size_t capacity) const;
     std::vector<wxString> ReadRecentFiles() const;
     void WriteRecentFiles(const std::vector<wxString>& history);
     void WriteHistory(const wxString& sectionName, const std::vector<wxString>& history);
