@@ -23,6 +23,7 @@ struct SaveCleanupOptions {
 };
 
 enum class SaveStatus { Saved, Cancelled, Failed };
+enum class SaveTimeMode { Current, Original };
 enum class FileNamePart { BaseName, FileName, FullPath };
 struct SaveResult {
     SaveStatus status;
@@ -53,11 +54,13 @@ public:
     bool RefreshReadOnlyFile();
     // A chosen path represents the caller's approved destination; no path is Cancel.
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
-                         SaveFileType fileType = SaveType::CurrentScheme);
-    SaveResult Save(const GbkLossDecision& decideLoss = {});
+                         SaveFileType fileType = SaveType::CurrentScheme,
+                         SaveTimeMode timeMode = SaveTimeMode::Current);
+    SaveResult Save(const GbkLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
-                      SaveFileType fileType = SaveType::CurrentScheme);
+                      SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    bool UpdateFileTime();
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt,
                     std::optional<EncodingChoice> weakEncoding = std::nullopt,
@@ -92,7 +95,8 @@ private:
     bool DetectAutomaticLanguage();
     void ApplySaveCleanup();
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
-                      std::optional<SaveFileType> fileType = std::nullopt, bool copy = false);
+                      std::optional<SaveFileType> fileType = std::nullopt, bool copy = false,
+                      SaveTimeMode timeMode = SaveTimeMode::Current);
     OpenResult Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
                        bool keepLanguage = false);
 };

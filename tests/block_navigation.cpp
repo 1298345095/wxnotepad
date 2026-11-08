@@ -269,8 +269,7 @@ public:
                 int commands[std::size(names)];
                 for (size_t index = 0; index < std::size(names); ++index) {
                     commands[index] = frame->GetMenuBar()->FindMenuItem("Search", names[index]);
-                    Require(commands[index] != wxNOT_FOUND,
-                            "Search exposes the original navigation commands");
+                    Require(commands[index] != wxNOT_FOUND, "Search exposes the original navigation commands");
                 }
                 ReferenceCases(frame, commands);
                 KeyboardCases(frame, commands);

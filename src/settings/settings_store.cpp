@@ -113,6 +113,11 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.noCgiGuess = ReadBool("NoCGIGuess", defaults.noCgiGuess, "Settings2");
     values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
     values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", defaults.fixTrailingBlanks);
+    values.fileWatching.mode = static_cast<FileWatchingMode>(
+        std::clamp(ReadInt("FileWatchingMode", static_cast<int>(defaults.fileWatching.mode)), 0, 2));
+    values.fileWatching.checkInterval = ReadInt("FileCheckInterval", defaults.fileWatching.checkInterval, "Settings2");
+    values.fileWatching.autoReloadDelay =
+        ReadInt("AutoReloadTimeout", defaults.fileWatching.autoReloadDelay, "Settings2");
     values.encoding.defaultEncoding =
         NormalizeEncodingSetting(ReadInt("DefaultEncoding", defaults.encoding.defaultEncoding));
     values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", defaults.encoding.skipUnicodeDetection);
@@ -416,6 +421,12 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteInt("LongLineMode", values.longLineMode, defaults.longLineMode);
         WriteBool("FixLineEndings", values.fixLineEndings, defaults.fixLineEndings);
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
+        WriteInt("FileWatchingMode", static_cast<int>(values.fileWatching.mode),
+                 static_cast<int>(defaults.fileWatching.mode));
+        WriteInt("FileCheckInterval", values.fileWatching.checkInterval, defaults.fileWatching.checkInterval,
+                 "Settings2");
+        WriteInt("AutoReloadTimeout", values.fileWatching.autoReloadDelay, defaults.fileWatching.autoReloadDelay,
+                 "Settings2");
         WriteInt("SelectOption", values.selectOption, defaults.selectOption);
         WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
         WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);

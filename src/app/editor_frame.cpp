@@ -21,7 +21,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
                 settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
                          : SyntaxDetectionOptions{}),
-      search_(*editor_) {
+      fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
+      fileChangeMonitor_(*this, [this] { HandleFileChange(); }), search_(*editor_) {
     const auto& preferences = settings ? settings->values : defaults_;
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
     editor_->Occurrences().SetOptions(preferences.markOccurrences);
@@ -82,6 +83,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
             return;
         }
         SaveSettings(false);
+        fileChangeMonitor_.Stop();
         WXNOTE_TRACE("close.destroy-deferred", "\ttarget=%p", static_cast<void*>(this));
         Destroy();
     });
@@ -115,6 +117,7 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.defaultEOLMode = defaultEolMode_;
     settings_->values.fixLineEndings = document_.SaveCleanup().fixLineEndings;
     settings_->values.fixTrailingBlanks = document_.SaveCleanup().fixTrailingBlanks;
+    settings_->values.fileWatching = fileWatchingOptions_;
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
     settings_->values.caret = editor_->GetCaretAppearance();
     settings_->values.highlightCurrentLine =
@@ -253,19 +256,20 @@ void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
 }
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
-                                  SaveFileType fileType) {
-    const auto result =
-        document_.SaveFirst(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+                                  SaveFileType fileType, SaveTimeMode timeMode) {
+    const auto result = document_.SaveFirst(
+        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) {
         RecordRecentFile();
         indentation_.Apply(*editor_, document_.Language());
+        RefreshFileWatching();
     }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
 }
 
-SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
+SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode timeMode) {
     if (!document_.Path().empty()) {
         if (document_.RefreshReadOnlyFile()) {
             UpdateDocumentState();
@@ -273,30 +277,40 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss) {
                              wxYES_NO | wxICON_WARNING, this) != wxYES)
                 return {SaveStatus::Cancelled, {}};
             const auto chosen = ChooseSaveFile(this, "Save As", document_.Language(), document_.Path());
-            if (!chosen) return SaveAs(std::nullopt, decideLoss);
-            return SaveAs(chosen->path, decideLoss, chosen->type);
+            if (!chosen) return SaveAs(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
+            return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
-        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
-        if (result.status == SaveStatus::Saved) RecordRecentFile();
+        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, timeMode);
+        if (result.status == SaveStatus::Saved) {
+            RecordRecentFile();
+            RefreshFileWatching();
+        }
         UpdateDocumentState();
         return result;
     }
     const auto chosen = ChooseSaveFile(this, "Save file", document_.Language(), document_.Path());
-    if (!chosen) return SaveFirst(std::nullopt, decideLoss);
-    return SaveFirst(chosen->path, decideLoss, chosen->type);
+    if (!chosen) return SaveFirst(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
+    return SaveFirst(chosen->path, decideLoss, chosen->type, timeMode);
 }
 
 SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
-                               SaveFileType fileType) {
-    const auto result =
-        document_.SaveAs(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType);
+                               SaveFileType fileType, SaveTimeMode timeMode) {
+    const auto result = document_.SaveAs(
+        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) {
         RecordRecentFile();
         indentation_.Apply(*editor_, document_.Language());
+        RefreshFileWatching();
     }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
     return result;
+}
+
+bool EditorFrame::UpdateFileTime() {
+    const bool updated = document_.UpdateFileTime();
+    if (updated) RefreshFileWatching();
+    return updated;
 }
 
 SaveResult EditorFrame::SaveAs() {
@@ -349,6 +363,7 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
     });
     if (result.status == OpenStatus::Opened) {
         RecordRecentFile();
+        RefreshFileWatching();
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
             ConfirmLineEndingConversion(result.lineEndings, result.unknownLanguage && document_.IsDefaultEncoding());
@@ -424,6 +439,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 bool EditorFrame::NewDocument() {
     if (!ConfirmDiscardChanges("creating a new document")) return false;
     document_.New();
+    RefreshFileWatching();
     editor_->Send(Scintilla::Message::SetEdgeColumn,
                   settings_ ? settings_->values.longLinesLimit : defaults_.longLinesLimit);
     wrapColumn_ = 0;

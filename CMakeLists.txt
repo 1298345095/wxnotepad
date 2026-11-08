@@ -119,6 +119,8 @@ add_library(app_shell STATIC
     src/app/dialogs/search_feedback_dialog.cpp
     src/app/dialogs/tab_settings_dialog.cpp
     src/app/editor_frame.cpp
+    src/app/file_change_monitor.cpp
+    src/app/editor_frame_file_watching.cpp
     src/app/editor_frame_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
@@ -183,6 +185,9 @@ if(BUILD_TESTING)
     add_test(NAME original_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_settings_lifecycle PROPERTIES TIMEOUT 60)
+    add_test(NAME original_file_watching_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/file_watching_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_file_watching_settings PROPERTIES TIMEOUT 60)
     add_gui_program(settings_read_failure tests/settings_read_failure.cpp app_shell)
     add_gui_program(recent_files tests/recent_files.cpp app_shell)
     add_test(NAME original_recent_files COMMAND recent_files)
@@ -265,6 +270,7 @@ if(BUILD_TESTING)
     set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(save_copy original_save_copy 90)
+    add_editor_test(file_times original_file_times 60)
     add_editor_test(pad_spaces original_pad_spaces 60)
     add_editor_test(align_lines original_align_lines 60)
     add_editor_test(modify_lines original_modify_lines 60)
@@ -460,6 +466,7 @@ if(BUILD_TESTING)
             TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
     endif()
     add_editor_test(save_smoke save_existing 30)
+    add_editor_test(file_change original_file_change_notification 90)
     add_editor_test(save_native save_as_native 60)
     add_editor_test(search_smoke find_literal_next 30)
     add_editor_test(search_wildcards original_wildcard_search 30)

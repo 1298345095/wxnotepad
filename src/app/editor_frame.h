@@ -6,6 +6,7 @@
 #include "search/search_session.h"
 #include "editor/indentation_settings.h"
 #include "editor/align_lines.h"
+#include "app/file_change_monitor.h"
 
 class EditorControl;
 class FindReplaceDialog;
@@ -17,14 +18,16 @@ public:
     explicit EditorFrame(SettingsStore* settings = nullptr);
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
-    SaveResult Save(const GbkLossDecision& decideLoss = {});
+    SaveResult Save(const GbkLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
-                      SaveFileType fileType = SaveType::CurrentScheme);
+                      SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveAs();
     SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
     SaveResult SaveCopy();
     SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
-                         SaveFileType fileType = SaveType::CurrentScheme);
+                         SaveFileType fileType = SaveType::CurrentScheme,
+                         SaveTimeMode timeMode = SaveTimeMode::Current);
+    bool UpdateFileTime();
     OpenResult Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding = std::nullopt);
     OpenResult Open();
     OpenResult OpenAs(FileEncoding encoding);
@@ -35,6 +38,8 @@ public:
     bool DocumentHasBom() const { return document_.HasBom(); }
     bool NewDocument();
     void ShowRecentFiles();
+    void SetFileWatchingOptions(const FileWatchingOptions& options);
+    const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
 
 private:
     EditorControl* editor_;
@@ -42,6 +47,8 @@ private:
     OriginalSettings defaults_;
     IndentationSettings indentation_;
     DocumentSession document_;
+    FileWatchingOptions fileWatchingOptions_;
+    FileChangeMonitor fileChangeMonitor_;
     int automaticLanguageId_;
     int saveCopyId_;
     int recentFilesId_;
@@ -111,6 +118,9 @@ private:
     bool HandleDocumentKey(const wxKeyEvent& event);
     void ToggleReadOnlyMode();
     void ShowLineEndingOptions();
+    void ShowFileChangeNotificationOptions();
+    void RefreshFileWatching();
+    void HandleFileChange();
     void ReportFind(const FindResult& result);
     bool SearchMessage(SearchDirection direction);
     bool ShowSearchMessage(const wxString& key, const wxString& message, bool confirm);

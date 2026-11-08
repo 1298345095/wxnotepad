@@ -88,6 +88,22 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->Append(wxID_SAVEAS, "Save &As...\tF6");
     saveCopyId_ = wxWindow::NewControlId();
     file->Append(saveCopyId_, "Save Cop&y...\tCtrl+F6");
+    const int saveOriginalTime = wxWindow::NewControlId();
+    file->Append(saveOriginalTime, "Save with Original Time");
+    const int updateTime = wxWindow::NewControlId();
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto result = Save({}, SaveTimeMode::Original);
+            if (result.status == SaveStatus::Failed)
+                wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
+        },
+        saveOriginalTime);
+    Bind(
+        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetModify)); },
+        saveOriginalTime);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { UpdateFileTime(); }, updateTime);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, updateTime);
     file->AppendSeparator();
     auto* mode = new wxMenu;
     const int readOnly = wxWindow::NewControlId();
@@ -165,6 +181,8 @@ wxMenu* EditorFrame::CreateFileMenu() {
     auto* endings = new wxMenu;
     AppendLineEndingCommands(endings);
     file->AppendSubMenu(endings, "Line Endin&gs");
+    file->AppendSeparator();
+    file->Append(updateTime, "Update File Time");
     AppendRecentFilesCommand(file);
     return file;
 }
@@ -653,6 +671,18 @@ void EditorFrame::AppendLineCommands(wxMenu* edit) {
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
             id);
+    Bind(wxEVT_CHAR_HOOK, [this, modifyLines, transposeLines](wxKeyEvent& event) {
+        const int key = event.GetKeyCode();
+        if (!event.AltDown() || (key != 'M' && key != 'S')) {
+            event.Skip();
+            return;
+        }
+        // Original command accelerators take priority over Scheme/Search mnemonics.
+        if (!event.ControlDown() && !event.ShiftDown() && !event.MetaDown()) {
+            wxCommandEvent command(wxEVT_MENU, key == 'M' ? modifyLines : transposeLines);
+            GetEventHandler()->ProcessEvent(command);
+        }
+    });
 }
 
 void EditorFrame::AppendSearchCommands(wxMenu* edit) {
@@ -1590,6 +1620,13 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoShrinkScrollWidth()); },
         shrinkScrollWidth);
     view->AppendSubMenu(appearance, "Appea&rance");
+    const int fileChanges = wxWindow::NewControlId();
+    view->AppendCheckItem(fileChanges, "File &Change Notification...\tAlt+F5");
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFileChangeNotificationOptions(); }, fileChanges);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Check(fileWatchingOptions_.mode != FileWatchingMode::None); },
+        fileChanges);
     if (settings_) {
         auto* other = new wxMenu;
         const int saveFind = wxWindow::NewControlId();
