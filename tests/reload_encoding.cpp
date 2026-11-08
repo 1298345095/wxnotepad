@@ -316,6 +316,28 @@ void NativeDefault() {
     std::puts("PASS: native ANSI identity normalizes to the original unselected source choice");
 #endif
 }
+void SaveCleanupView() {
+    SettingsStore settings;
+    settings.values.fixTrailingBlanks = true;
+    auto* frame = new EditorFrame(&settings);
+    const auto path = TestFiles::TemporaryDirectory("cleanup-view.txt");
+    TestFiles::WriteBytes(path, "a  \nb  \nc  \n");
+    Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+            "quick cleanup source must open");
+    TestEditor::Append(frame, " ");
+    frame->Editor()->Send(Scintilla::Message::SetSel, 9, 4);
+    NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Open, wxID_YES);
+    const auto result = frame->ReloadAsUtf8();
+    driver.Stop();
+    const bool passed = result.status == OpenStatus::Opened && driver.prompts == 1 &&
+                        TestEditor::Text(frame) == "a\nb\nc\n" && TestFiles::Bytes(path) == "a\nb\nc\n" &&
+                        frame->Editor()->Send(Scintilla::Message::GetAnchor) == 6 &&
+                        frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == 4;
+    frame->Destroy();
+    Require(passed,
+            "quick reload must capture original selection before Save cleanup, then restore against saved bytes");
+    std::puts("PASS: UTF-8 quick reload restores the original pre-Save selection after cleanup");
+}
 class ReloadEncodingApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -337,6 +359,7 @@ public:
                     FailedReload(frame);
                     SameFileState(frame);
                     NativeDefault();
+                    SaveCleanupView();
                 }
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

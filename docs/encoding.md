@@ -55,7 +55,8 @@ A modified document first receives the original discard warning;
 then the encoding picker can be accepted or cancelled. Reloading reads disk
 without saving live text. As UTF-8 (Shift+F8) instead uses the ordinary
 Save/Discard/Cancel decision before reading the source. Save writes first and
-the reload decodes those newly saved bytes. Both commands retain the existing
+the reload decodes those newly saved bytes, restoring the view captured before
+Save cleanup. Both commands retain the existing
 same-file scheme, selection, viewport and read-only rules, refresh actual
 encoding/BOM metadata, and are disabled for Untitled documents.
 

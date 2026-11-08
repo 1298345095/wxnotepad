@@ -339,13 +339,17 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
 }
 
 OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding) {
-    const auto result = document_.Open(source, beforeReplace, encoding, weakEncoding, [this] {
-        indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
-        const auto& preferences = settings_ ? settings_->values : defaults_;
-        editor_->Send(Scintilla::Message::SetEdgeColumn,
-                      document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
-    });
+                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
+                                 OpenDecisionTiming decisionTiming) {
+    const auto result = document_.Open(
+        source, beforeReplace, encoding, weakEncoding,
+        [this] {
+            indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            editor_->Send(Scintilla::Message::SetEdgeColumn,
+                          document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
+        },
+        decisionTiming);
     if (result.status == OpenStatus::Opened) {
         wrapColumn_ = 0;
         if (result.lineEndings.Mixed() && warnLineEndings_)
@@ -410,11 +414,11 @@ OpenResult EditorFrame::ReloadWithEncoding() {
 
 OpenResult EditorFrame::ReloadAsUtf8() {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
-    const wxString source = document_.Path();
     // Original CMD_RELOADUTF8 uses FileLoad(Reload), including FileSave(Ask)
-    // before file I/O. A successful Save must be decoded from disk again.
-    if (!ConfirmDiscardChanges("reloading")) return {OpenStatus::Cancelled, {}};
-    return LoadFile(source, [] { return true; }, FileEncoding::Utf8);
+    // before file I/O, with the view captured before Save cleanup can move it.
+    return LoadFile(
+        document_.Path(), [this] { return ConfirmDiscardChanges("reloading"); }, FileEncoding::Utf8, std::nullopt,
+        OpenDecisionTiming::BeforeRead);
 }
 
 OpenResult EditorFrame::Open() {
