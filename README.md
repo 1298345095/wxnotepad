@@ -161,6 +161,11 @@ offsets it by 10 pixels, wrapping to the monitor origin at the work-area edge.
 Linux leaves top-level placement to the compositor. Internal relaunches pass
 `--window-position x,y,width,height,maximized` without a startup file or observer.
 
+File → Save with Original Time preserves the destination's writable file times
+through the normal save flow. Update File Time changes the named backing file's
+modification time while retaining its bytes and the live editor state. See
+[file-time behavior](docs/file-times.md) for platform fields and failure behavior.
+
 New/Open/Close skip this confirmation for untitled documents shorter than 2048
 UTF-8 bytes containing only ASCII space or bytes `0x09` through `0x0d` (including
 the empty document). Explicit Save and Save As still save these documents.

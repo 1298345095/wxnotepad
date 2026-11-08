@@ -12,9 +12,50 @@
 #include <algorithm>
 #ifdef __WXMSW__
 #include <windows.h>
+#else
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 namespace {
+// The original ignores query/restore failures: a successful content save stays
+// successful. Preserve every settable time around the existing safe-write path.
+#ifdef __WXMSW__
+using FileTimes = FILE_BASIC_INFO;
+std::optional<FileTimes> ReadFileTimes(const wxString& path) {
+    const auto file = CreateFileW(path.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return std::nullopt;
+    FileTimes times{};
+    const bool read = GetFileInformationByHandleEx(file, FileBasicInfo, &times, sizeof(times)) != 0;
+    CloseHandle(file);
+    return read ? std::optional<FileTimes>(times) : std::nullopt;
+}
+bool SetFileTimes(const wxString& path, FileTimes times) {
+    const auto file = CreateFileW(path.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return false;
+    const bool set = SetFileInformationByHandle(file, FileBasicInfo, &times, sizeof(times)) != 0;
+    CloseHandle(file);
+    return set;
+}
+#else
+struct FileTimes {
+    timespec access;
+    timespec modified;
+};
+std::optional<FileTimes> ReadFileTimes(const wxString& path) {
+    struct stat info{};
+    if (::stat(path.utf8_str(), &info) != 0) return std::nullopt;
+    return FileTimes{info.st_atim, info.st_mtim};
+}
+bool SetFileTimes(const wxString& path, const FileTimes& times) {
+    const timespec fields[]{times.access, times.modified};
+    return ::utimensat(AT_FDCWD, path.utf8_str(), fields, 0) == 0;
+}
+#endif
+
 LineEndingCounts CountLineEndings(std::string_view bytes) {
     LineEndingCounts counts;
     for (size_t i = 0; i < bytes.size(); ++i) {
@@ -294,23 +335,23 @@ bool DocumentSession::RefreshReadOnlyFile() {
 }
 
 SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
-                                      SaveFileType fileType) {
+                                      SaveFileType fileType, SaveTimeMode timeMode) {
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (!path_.empty()) return {SaveStatus::Failed, "This document already has a file name."};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
-    return SaveTo(*destination, decideLoss, fileType);
+    return SaveTo(*destination, decideLoss, fileType, false, timeMode);
 }
 
-SaveResult DocumentSession::Save(const GbkLossDecision& decideLoss) {
+SaveResult DocumentSession::Save(const GbkLossDecision& decideLoss, SaveTimeMode timeMode) {
     if (path_.empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
-    return SaveTo(path_, decideLoss);
+    return SaveTo(path_, decideLoss, std::nullopt, false, timeMode);
 }
 
 SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
-                                   SaveFileType fileType) {
+                                   SaveFileType fileType, SaveTimeMode timeMode) {
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
-    return SaveTo(*destination, decideLoss, fileType);
+    return SaveTo(*destination, decideLoss, fileType, false, timeMode);
 }
 
 SaveResult DocumentSession::SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
@@ -320,18 +361,28 @@ SaveResult DocumentSession::SaveCopy(const std::optional<wxString>& destination,
 }
 
 SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
-                                   std::optional<SaveFileType> fileType, bool copy) {
+                                   std::optional<SaveFileType> fileType, bool copy, SaveTimeMode timeMode) {
     if (copy) {
         const auto error = PrepareSaveCopy(destination);
         if (!error.empty()) return {SaveStatus::Failed, error};
     }
     PendingSave temporary;
+    std::optional<FileTimes> originalTimes;
+    if (timeMode == SaveTimeMode::Original) {
+        const auto error = PrepareSave(destination, temporary);
+        if (!error.empty()) return {SaveStatus::Failed, error};
+        // OPEN_ALWAYS in the original captures a new file's initial timestamps.
+        // Our new file is the safe-write sibling until replacement commits it.
+        originalTimes = ReadFileTimes(wxFileExists(destination) ? destination : temporary.path);
+    }
     // Original EditSaveFile opens the destination before changing text. Prepare
     // the safe-write sibling at that point, without truncating the destination.
     if ((saveCleanup_.fixLineEndings || saveCleanup_.fixTrailingBlanks) &&
         !editor_.Send(Scintilla::Message::GetReadOnly)) {
-        const auto error = PrepareSave(destination, temporary);
-        if (!error.empty()) return {SaveStatus::Failed, error};
+        if (temporary.path.empty()) {
+            const auto error = PrepareSave(destination, temporary);
+            if (!error.empty()) return {SaveStatus::Failed, error};
+        }
         ApplySaveCleanup();
     }
     const auto length = static_cast<size_t>(editor_.Send(Scintilla::Message::GetLength));
@@ -342,6 +393,7 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
     if (const auto* result = std::get_if<SaveResult>(&encoded)) return *result;
     const auto error = WriteSafely(destination, std::get<std::string>(encoded), temporary);
     if (!error.empty()) return {SaveStatus::Failed, error};
+    if (originalTimes) SetFileTimes(destination, *originalTimes);
     // Original EditSaveFile/FileSave leave the live identity, scheme and save
     // point alone for Save Copy; optional cleanup above remains in its history.
     if (copy) return {SaveStatus::Saved, {}};
@@ -367,6 +419,30 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDec
     editor_.Send(Scintilla::Message::SetSavePoint);
     if (previousLanguage != Language()) ApplySyntaxLanguage(editor_, Language());
     return {SaveStatus::Saved, {}};
+}
+
+bool DocumentSession::UpdateFileTime() {
+    if (path_.empty()) return false;
+#ifdef __WXMSW__
+    const auto file = CreateFileW(path_.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return false;
+    FILE_BASIC_INFO times{};
+    bool updated = GetFileInformationByHandleEx(file, FileBasicInfo, &times, sizeof(times)) != 0;
+    if (updated) {
+        GetSystemTimePreciseAsFileTime(reinterpret_cast<FILETIME*>(&times.LastWriteTime));
+        updated = SetFileInformationByHandle(file, FileBasicInfo, &times, sizeof(times)) != 0;
+    }
+    CloseHandle(file);
+#else
+    const int file = ::open(path_.utf8_str(), O_RDWR | O_CREAT, 0666);
+    if (file < 0) return false;
+    // Preserve access time; ctime follows the filesystem's metadata-update rules.
+    const timespec times[]{{0, UTIME_OMIT}, {0, UTIME_NOW}};
+    const bool updated = ::futimens(file, times) == 0;
+    ::close(file);
+#endif
+    return updated;
 }
 
 void DocumentSession::ApplySaveCleanup() {
