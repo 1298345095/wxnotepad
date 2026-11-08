@@ -23,7 +23,7 @@ using TestSyntax::Command;
 using TestSyntax::Paint;
 using TestSyntax::Style;
 void Choose(EditorFrame* frame, const wxString& label) {
-    const int id = frame->GetMenuBar()->FindMenuItem("Language", label);
+    const int id = frame->GetMenuBar()->FindMenuItem("Scheme", label);
     Require(id != wxNOT_FOUND, "Language menu must offer Python");
     Command(frame, id);
     auto* item = frame->GetMenuBar()->FindItem(id);
@@ -160,7 +160,7 @@ public:
                 Paint(frame);
                 Style(editor, 0, 0);
                 Require(frame->GetStatusBar()->GetStatusText() == "UTF-8 | Plain Text | EOL: LF" &&
-                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
+                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic")),
                         "Save As must clear manual Python and identify the .txt filename");
                 Choose(frame, "Automatic");
                 Style(editor, 0, 0);

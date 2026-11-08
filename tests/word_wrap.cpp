@@ -30,7 +30,7 @@ void HorizontalRange(EditorControl* editor, bool overflow, const char* message) 
 }
 void AutomaticScrollWidth(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const int command = frame->GetMenuBar()->FindMenuItem("View", "Auto-Shrink Horizontal Scrollbar");
+    const int command = frame->GetMenuBar()->FindMenuItem("Settings", "Auto-Shrink Horizontal Scrollbar");
     Require(command != wxNOT_FOUND && !frame->GetMenuBar()->IsChecked(command),
             "automatic horizontal shrinking is an opt-in native View command");
     const std::string wide(2000, 'x');
@@ -308,7 +308,7 @@ public:
                 const auto eol = editor->Send(Message::GetEOLMode);
                 Require(editor->Send(Message::GetWrapMode) != 0 && frame->DocumentHasUtf8Bom(),
                         "Open retains wrapping and the document BOM");
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Require(editor->Send(Message::GetWrapMode) != 0, "language changes retain wrapping");
                 Require(frame->SaveAs(files.saved).status == SaveStatus::Saved, "Save As succeeds while wrapping");
                 Require(Bytes(files.saved) == disk && editor->Send(Message::GetEOLMode) == eol &&
@@ -354,10 +354,10 @@ private:
         const int numbers = frame->GetMenuBar()->FindMenuItem("View", "Line Numbers");
         const int whitespace = frame->GetMenuBar()->FindMenuItem("View", "Show Whitespace");
         const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
-        const int goTo = frame->GetMenuBar()->FindMenuItem("Edit", "Go To Line...");
+        const int goTo = frame->GetMenuBar()->FindMenuItem("Search", "Goto Line...");
         Require(numbers != wxNOT_FOUND && whitespace != wxNOT_FOUND && goTo != wxNOT_FOUND,
                 "the combined scenario requires every sibling native control");
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
         NativeFold::Paint(editor);
         Layout(frame);
         editor->Send(Message::GotoPos, 0);

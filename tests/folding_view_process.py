@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-folding-view-") as name:
     app = Application(executable, folder, environment)
     try:
         preferences(app, False)
-        app.named_menu("Language", "JSON")
+        app.named_menu("Scheme", "JSON")
         preferences(app, False)
         for item in ("Show Code Folding", "Highlight Current Block"):
             app.menu(item)
@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-folding-view-") as name:
         app.menu("Save Settings On Exit")
         for item in ("Show Code Folding", "Highlight Current Block"):
             app.menu(item)
-        app.named_menu("Language", "C/C++")
+        app.named_menu("Scheme", "C/C++")
         app.named_menu("File", "New")
         preferences(app, False)
         app.close()

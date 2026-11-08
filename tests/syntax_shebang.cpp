@@ -26,7 +26,7 @@ std::string Text(EditorControl* editor) {
     return text;
 }
 void Choose(EditorFrame* frame, const wxString& name) {
-    const int id = frame->GetMenuBar()->FindMenuItem("Language", name);
+    const int id = frame->GetMenuBar()->FindMenuItem("Scheme", name);
     Require(id != wxNOT_FOUND, "language menu item must exist");
     wxCommandEvent event(wxEVT_MENU, id);
     Require(frame->GetEventHandler()->ProcessEvent(event), "language command must be handled");
@@ -39,7 +39,7 @@ void Language(EditorFrame* frame, SyntaxLanguage expected) {
             "real lexer must match the original filename/interpreter precedence");
     Require(frame->GetStatusBar()->GetStatusText().Contains(" | " + LanguageName(expected) + " | "),
             "status must match automatic language without an explicit override");
-    const int id = frame->GetMenuBar()->FindMenuItem("Language", "Automatic");
+    const int id = frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic");
     Require(id != wxNOT_FOUND && frame->GetMenuBar()->FindItem(id)->IsChecked(),
             "Open must check Automatic rather than a manual Python choice");
 }

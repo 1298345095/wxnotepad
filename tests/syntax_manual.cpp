@@ -23,11 +23,11 @@ using TestFiles::Filename;
 using TestSyntax::Command;
 using TestSyntax::Paint;
 void Choose(EditorFrame* frame, const wxString& label) {
-    const int id = frame->GetMenuBar()->FindMenuItem("Language", label);
+    const int id = frame->GetMenuBar()->FindMenuItem("Scheme", label);
     Require(id != wxNOT_FOUND, "Language menu must offer Automatic, Plain Text and C/C++");
     Command(frame, id);
     for (const auto* choice : {"Automatic", "Plain Text", "C/C++"}) {
-        auto* item = frame->GetMenuBar()->FindItem(frame->GetMenuBar()->FindMenuItem("Language", choice));
+        auto* item = frame->GetMenuBar()->FindItem(frame->GetMenuBar()->FindMenuItem("Scheme", choice));
         Require(item && item->IsRadio() && item->IsChecked() == (label == choice),
                 "native language choices must be mutually exclusive and show the active choice");
     }
@@ -169,7 +169,7 @@ public:
                 Language(frame, true, true);
                 FileCommand(frame, wxID_SAVE, Filename(plain));
                 Language(frame, true, true);
-                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "C/C++")),
+                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++")),
                         "successful first Save must retain selected current C++ type despite .txt");
                 Require(Bytes(plain) == source && !editor->Send(Message::GetModify),
                         "first Save with override must retain exact text and its save point");
@@ -179,7 +179,7 @@ public:
                 Choose(frame, "Plain Text");
                 FileCommand(frame, wxID_SAVEAS, Filename(cpp));
                 Language(frame, false, true);
-                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Plain Text")),
+                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text")),
                         "named Plain Text default type must force Plain Text despite .cpp");
                 Require(Bytes(cpp) == source && editor->Send(Message::CanUndo),
                         "Save As with explicit Plain Text must retain exact bytes and Undo");
@@ -241,12 +241,12 @@ public:
                             !editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
                         "successful New must retain established fresh-document semantics");
                 Language(frame, false, false);
-                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
+                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic")),
                         "successful New must check Automatic in the native menu");
                 Choose(frame, "C/C++");
                 FileCommand(frame, wxID_OPEN, Filename(plain));
                 Language(frame, false, false);
-                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")),
+                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic")),
                         "successful Open must check Automatic in the native menu");
                 Choose(frame, "C/C++");
                 Language(frame, true, true);

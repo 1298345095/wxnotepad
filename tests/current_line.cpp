@@ -196,7 +196,7 @@ void WrapAndLifecycle(EditorFrame* frame, PixelReader& pixels) {
     const auto anchor = editor->Send(Message::GetAnchor);
     const auto caret = editor->Send(Message::GetCurrentPos);
     for (const char* language : {"C/C++", "Plain Text", "Python", "JSON"}) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
         Require(editor->Send(Message::GetElementColour, static_cast<uintptr_t>(Scintilla::Element::CaretLineBack)) ==
                         0x5AC3C0C2 &&
                     editor->Send(Message::GetCaretLineHighlightSubLine),
@@ -216,7 +216,7 @@ void WrapAndLifecycle(EditorFrame* frame, PixelReader& pixels) {
             "original frame scales once with actual window DPI and zoom");
     Require(editor->Send(Message::StyleGetSize, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == 12,
             "highlight keeps delivered native 12-point base font");
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     TestEditor::ResetStream(editor, "int main() {\n    return 0;\n}\nlast\n");
     editor->Send(Message::Colourise, 0, -1);
     editor->Send(Message::SetFoldLevel, 0, 0x2400);

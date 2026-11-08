@@ -149,7 +149,7 @@ void SelectReferenceLanguage(EditorFrame* frame, const std::string& language) {
                         : language == "Cpp"  ? "C/C++"
                         : language == "Json" ? "JSON"
                                              : "Plain Text";
-    const int id = frame->GetMenuBar()->FindMenuItem("Language", label);
+    const int id = frame->GetMenuBar()->FindMenuItem("Scheme", label);
     Require(id != wxNOT_FOUND, "captured language is available in the native menu");
     NativeSearch::Command(frame, id);
 }

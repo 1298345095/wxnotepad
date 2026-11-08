@@ -88,16 +88,16 @@ void ReferenceCase(EditorFrame* frame, const int* commands, const int* modeIds, 
 }
 void ReferenceCases(EditorFrame* frame, const int* commands) {
     auto* editor = frame->Editor();
-    const int modeIds[] = {frame->GetMenuBar()->FindMenuItem("Edit", "None"),
-                           frame->GetMenuBar()->FindMenuItem("Edit", "Visual Studio"),
-                           frame->GetMenuBar()->FindMenuItem("Edit", "Normal"),
-                           frame->GetMenuBar()->FindMenuItem("Edit", "Old Visual Studio")};
+    const int modeIds[] = {frame->GetMenuBar()->FindMenuItem("Settings", "None"),
+                           frame->GetMenuBar()->FindMenuItem("Settings", "Visual Studio"),
+                           frame->GetMenuBar()->FindMenuItem("Settings", "Normal"),
+                           frame->GetMenuBar()->FindMenuItem("Settings", "Old Visual Studio")};
     const auto encoding = frame->DocumentEncoding();
     const bool bom = frame->DocumentHasBom();
     for (size_t document = 0; document < std::size(BlockReference::documents); ++document) {
         const auto& source = BlockReference::documents[document];
         editor->Send(Message::SetReadOnly, 0);
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", source.language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", source.language));
         editor->Send(Message::SetSelectionMode, 0);
         editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.text));
         editor->Send(Message::SetTabWidth, 4);
@@ -135,7 +135,7 @@ void ReferenceCases(EditorFrame* frame, const int* commands) {
 void LoadKeyboardFixture(EditorFrame* frame) {
     auto* editor = frame->Editor();
     editor->Send(Message::SetReadOnly, 0);
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     editor->Send(Message::SetSelectionMode, 0);
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(BlockReference::documents[0].text));
     editor->Send(Message::SetTabWidth, 4);
@@ -208,7 +208,7 @@ void FilePolicyCases(EditorFrame* frame, const int* commands) {
     }
     TestFiles::WriteBytes(path, bytes);
     editor->Send(Message::SetSavePoint);
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Automatic"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic"));
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
                 frame->DocumentEncoding() == FileEncoding::Utf16Le && frame->DocumentHasBom(),
             "block policy fixture opens an independently encoded UTF-16LE document");
@@ -224,7 +224,7 @@ void FilePolicyCases(EditorFrame* frame, const int* commands) {
     Require(editor->Send(Message::GetAnchor) == 16 && editor->Send(Message::GetCurrentPos) == 0 &&
                 editor->Send(Message::GetSelectionMode) == 0,
             "automatic C++ syntax uses original Select All fallback when the document has no fold parent");
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Plain Text"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
     editor->Send(Message::Colourise, 0, -1);
     NativeFold::Paint(editor);
     editor->Send(Message::SetSelectionMode, 0);
@@ -238,7 +238,7 @@ void FilePolicyCases(EditorFrame* frame, const int* commands) {
     Require(row != std::end(BlockReference::fixtures),
             "Plain Text policy has an independently captured original block");
     Position(editor, *row);
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Automatic"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic"));
     editor->Send(Message::Colourise, 0, -1);
     NativeFold::Paint(editor);
     editor->Send(Message::SetSelectionMode, 0);
@@ -268,9 +268,8 @@ public:
                 Require(ready, "owned native window must be presented");
                 int commands[std::size(names)];
                 for (size_t index = 0; index < std::size(names); ++index) {
-                    commands[index] = frame->GetMenuBar()->FindMenuItem("Edit", names[index]);
-                    Require(commands[index] != wxNOT_FOUND,
-                            "native Edit menu must expose all six jumps and current-block selection");
+                    commands[index] = frame->GetMenuBar()->FindMenuItem("Search", names[index]);
+                    Require(commands[index] != wxNOT_FOUND, "Search exposes the original navigation commands");
                 }
                 ReferenceCases(frame, commands);
                 KeyboardCases(frame, commands);

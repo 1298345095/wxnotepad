@@ -32,7 +32,7 @@ in `[Styles]`; NoCGIGuess remains an original load-only flag, preserved in place
 `NoAutoDetection` does not disable original shebang guessing.
 
 `FixLineEndings` and `FixTrailingBlanks` both default to `0`. Their original
-options are in Default Line Ending: Ensure consistent line endings when saving,
+options are in File → Line Endings → Default: Ensure consistent line endings when saving,
 then Strip trailing blanks when saving. A normal writable Save/Save As first
 normalizes to the current EOL mode, then removes only trailing spaces and tabs
 throughout the document, ignoring the selection. The operations retain the EOL
@@ -109,8 +109,9 @@ the original clearing and ownership transitions. Single-line nonempty selections
 seed automatic marking without changing the Find/Replace query or history. Work
 continues in the original measured 1 MiB chunks with a 100 ms time slot.
 
-The View menu exposes Save Find/Replace, Copy Selection As Find Text and Copy
-Paste Buffer As Find Text. Submitted searches retain their query/options through
+Settings → Other Settings exposes Remember Search Options. Settings → Select and
+Edit Options exposes Copy Selection As Find Text and Copy Paste Buffer As Find
+Text. Submitted searches retain their query/options through
 New and Open. Closing the dialog discards unsubmitted edits; Ctrl+F/Ctrl+H switches
 retain edited text, restore submitted options, and apply original seeding again.
 Repeating the command for an already-open dialog retains its query control.
@@ -135,7 +136,8 @@ Save Settings Now writes flags/options but leaves MRU saving to that exit path.
 
 `LineSelection` restores the original four modes: `0` None, `1` Visual Studio
 (the built-in default), `2` Normal and `3` Old Visual Studio. It uses the original
-integer-prefix parser without an added range clamp. The Edit menu changes the
+integer-prefix parser without an added range clamp. Settings → Select and Edit
+Options → Line Selection Mode changes the
 same value, and Save Settings Now/enabled exit saving persist it while omitting
 the default. None keeps empty-selection Copy/Cut as no-ops. The enabled modes
 copy or cut the current line; Visual Studio modes tag it for insertion at the

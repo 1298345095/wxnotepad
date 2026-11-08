@@ -62,7 +62,7 @@ void Options(EditorFrame* frame, bool fix, bool strip, bool accept = true, int d
     LineEndingOptionsDriver driver(observed, fix, strip, accept, defaultMode);
     // Native events may run before menu dispatch creates the modal dialog.
     wxYield();
-    const auto id = frame->GetMenuBar()->FindMenuItem("Edit", "Default Line Ending...");
+    const auto id = frame->GetMenuBar()->FindMenuItem("File", "Default...");
     Require(id != wxNOT_FOUND, "original Default Line Ending options must be exposed");
     NativeSearch::Command(frame, id);
     Require(observed, "original line-ending selector and three original checkboxes must be exposed");

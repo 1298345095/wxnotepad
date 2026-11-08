@@ -17,9 +17,9 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 int BookmarkCommand(EditorFrame* frame, const wxString& label) {
-    auto* edit = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Edit"));
+    auto* edit = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Search"));
     auto* bookmarks = edit->FindItem(edit->FindItem("Bookmarks"));
-    Require(bookmarks && bookmarks->GetSubMenu(), "Edit exposes the original Bookmarks submenu");
+    Require(bookmarks && bookmarks->GetSubMenu(), "Search exposes the original Bookmarks submenu");
     const int id = bookmarks->GetSubMenu()->FindItem(label);
     Require(id != wxNOT_FOUND, "original bookmark menu command exists");
     return id;
@@ -169,7 +169,7 @@ void FoldedBookmarks(EditorFrame* frame, int toggle, int next) {
     auto* editor = frame->Editor();
     editor->Send(Message::SetText, 0,
                  reinterpret_cast<intptr_t>("void f() {\n  hit();\n}\nvoid g() {\n  other();\n}\n"));
-    Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+    Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     NativeFold::Paint(editor);
     editor->Send(Message::GotoPos, 14);
     Command(frame, toggle);

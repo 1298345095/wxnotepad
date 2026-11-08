@@ -20,7 +20,7 @@ void Menu(EditorFrame* frame, const char* label) {
 }
 void FirstSlice(EditorFrame* frame) {
     TestEditor::ResetStream(frame->Editor(), "AB\nC", 0, 1, Scintilla::EndOfLine::Lf);
-    Menu(frame, "Duplicate Selection");
+    Menu(frame, "Duplicate");
     Require(TestEditor::Text(frame) == "AAB\nC", "Duplicate Selection inserts selected bytes at selection end");
     TestEditor::RequireSelection(frame->Editor(), 0, 1, "Duplicate Selection retains original selection");
 }
@@ -31,7 +31,7 @@ void LineCommands(EditorFrame* frame) {
     Require(TestEditor::Text(frame) == "AB\nAB\nC", "Duplicate Line copies the complete caret line");
     TestEditor::RequireSelection(editor, 0, 1, "Duplicate Line retains selection before insertion");
     TestEditor::ResetStream(editor, "AB\nC", 1, 4);
-    Menu(frame, "Transpose Lines");
+    Menu(frame, "Transpose");
     Require(TestEditor::Text(frame) == "C\nAB", "Transpose swaps caret line content with preceding logical line");
     TestEditor::RequireSelection(editor, 2, 2, "Transpose collapses selection at current line start");
 }
@@ -57,15 +57,15 @@ void StreamFixtures(EditorFrame* frame) {
     };
     // Literal outcomes from Editor::Duplicate/LineTranspose in pinned 89b8b36.
     const Fixture fixtures[] = {
-        {"Duplicate Selection", "", 0, 0, "\n", 0, 0},
-        {"Duplicate Selection", "AB", 1, 1, "AB\nAB", 1, 1},
-        {"Duplicate Selection", "AB\nC", 1, 0, "AAB\nC", 1, 0},
-        {"Duplicate Selection", "A\nB", 0, 2, "A\nA\nB", 0, 2},
-        {"Duplicate Selection", "A\nB", 2, 0, "A\nA\nB", 2, 0},
-        {"Duplicate Selection", "A\nB", 2, 2, "A\nB\nB", 2, 2},
-        {"Duplicate Selection", "A\n", 2, 2, "A\n\n", 2, 2},
-        {"Duplicate Selection", "中😀\n尾", 0, 7, "中😀中😀\n尾", 0, 7},
-        {"Duplicate Selection", "A\rB", 0, 2, "A\rA\rB", 0, 2},
+        {"Duplicate", "", 0, 0, "\n", 0, 0},
+        {"Duplicate", "AB", 1, 1, "AB\nAB", 1, 1},
+        {"Duplicate", "AB\nC", 1, 0, "AAB\nC", 1, 0},
+        {"Duplicate", "A\nB", 0, 2, "A\nA\nB", 0, 2},
+        {"Duplicate", "A\nB", 2, 0, "A\nA\nB", 2, 0},
+        {"Duplicate", "A\nB", 2, 2, "A\nB\nB", 2, 2},
+        {"Duplicate", "A\n", 2, 2, "A\n\n", 2, 2},
+        {"Duplicate", "中😀\n尾", 0, 7, "中😀中😀\n尾", 0, 7},
+        {"Duplicate", "A\rB", 0, 2, "A\rA\rB", 0, 2},
         {"Duplicate Line", "", 0, 0, "\r\n", 0, 0, Scintilla::EndOfLine::CrLf},
         {"Duplicate Line", "AB\nCD", 1, 4, "AB\nCD\nCD", 1, 4},
         {"Duplicate Line", "AB\nCD", 4, 1, "AB\nAB\nCD", 7, 1},
@@ -73,12 +73,12 @@ void StreamFixtures(EditorFrame* frame) {
         {"Duplicate Line", "A\nB", 2, 2, "A\nB\r\nB", 2, 2, Scintilla::EndOfLine::CrLf},
         {"Duplicate Line", "A\rB", 2, 2, "A\rB\rB", 2, 2, Scintilla::EndOfLine::Cr},
         {"Duplicate Line", "中😀\n尾", 8, 8, "中😀\n尾\n尾", 8, 8},
-        {"Transpose Lines", "AB\nC", 0, 4, "C\nAB", 2, 2},
-        {"Transpose Lines", "A\r\nBB\nC\rD", 6, 6, "A\r\nC\nBB\rD", 5, 5},
-        {"Transpose Lines", "A\rB", 2, 2, "B\rA", 2, 2, Scintilla::EndOfLine::Cr},
-        {"Transpose Lines", "A\r\n", 3, 3, "\r\nA", 2, 2, Scintilla::EndOfLine::CrLf},
-        {"Transpose Lines", "中😀\r\n尾", 9, 12, "尾\r\n中😀", 5, 5, Scintilla::EndOfLine::CrLf},
-        {"Transpose Lines", "same\nsame", 6, 6, "same\nsame", 5, 5},
+        {"Transpose", "AB\nC", 0, 4, "C\nAB", 2, 2},
+        {"Transpose", "A\r\nBB\nC\rD", 6, 6, "A\r\nC\nBB\rD", 5, 5},
+        {"Transpose", "A\rB", 2, 2, "B\rA", 2, 2, Scintilla::EndOfLine::Cr},
+        {"Transpose", "A\r\n", 3, 3, "\r\nA", 2, 2, Scintilla::EndOfLine::CrLf},
+        {"Transpose", "中😀\r\n尾", 9, 12, "尾\r\n中😀", 5, 5, Scintilla::EndOfLine::CrLf},
+        {"Transpose", "same\nsame", 6, 6, "same\nsame", 5, 5},
     };
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {
@@ -99,7 +99,7 @@ void StreamFixtures(EditorFrame* frame) {
 void AvailabilityAndNoChange(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const std::pair<const char*, const char*> commands[] = {
-        {"Duplicate Selection", "Alt+D"}, {"Duplicate Line", "Ctrl+D"}, {"Transpose Lines", "Alt+S"}};
+        {"Duplicate", "Alt+D"}, {"Duplicate Line", "Ctrl+D"}, {"Transpose", "Alt+S"}};
     for (const auto& [label, shortcut] : commands) {
         const int id = CommandId(frame, label);
         Require(frame->GetMenuBar()->FindItem(id)->GetItemLabel().AfterFirst('\t') == shortcut,
@@ -118,7 +118,7 @@ void AvailabilityAndNoChange(EditorFrame* frame) {
         Require(TestEditor::Text(editor) == "AB\nCD" && editor->DocumentRevision() == revision &&
                     !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
                 "read-only core rejects text edits and history");
-        const bool transpose = std::string(label) == "Transpose Lines";
+        const bool transpose = std::string(label) == "Transpose";
         TestEditor::RequireSelection(editor, 1, transpose ? 1 : 4,
                                      "read-only transpose still follows original caret repair");
     }
@@ -128,7 +128,7 @@ void AvailabilityAndNoChange(EditorFrame* frame) {
         editor->Send(Message::Undo);
         const bool emptyLines = std::string(text) == "\n\n";
         editor->Send(Message::SetSel, emptyLines ? 1 : 0, emptyLines ? 1 : 0);
-        Menu(frame, "Transpose Lines");
+        Menu(frame, "Transpose");
         Require(TestEditor::Text(editor) == text && editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo) &&
                     !editor->Send(Message::GetModify),
                 "first-line and empty-line transpose preserve pending Redo and save point");
@@ -139,7 +139,7 @@ void AvailabilityAndNoChange(EditorFrame* frame) {
     Menu(frame, "Duplicate Line");
     Require(!editor->Send(Message::CanRedo), "text-changing duplication replaces pending Redo");
     TestEditor::ResetStream(editor, "AB\nCD", 4, 1);
-    Menu(frame, "Transpose Lines");
+    Menu(frame, "Transpose");
     Require(TestEditor::Text(editor) == "AB\nCD" && !editor->Send(Message::CanUndo),
             "reversed selection with caret on first logical line does not transpose its final line");
     TestEditor::RequireSelection(editor, 4, 1, "first-line transpose preserves reversed selection");
@@ -154,7 +154,7 @@ void RectangleDuplication(EditorFrame* frame) {
     for (const bool reverse : {false, true}) {
         TestEditor::ResetStream(editor, "ABC\nDEF", 0, 0, Scintilla::EndOfLine::Lf);
         Rectangle(editor, reverse ? 7 : 1, reverse ? 1 : 7);
-        Menu(frame, "Duplicate Selection");
+        Menu(frame, "Duplicate");
         Require(TestEditor::Text(editor) == "ABCBC\nDEFEF" && editor->Send(Message::SelectionIsRectangle),
                 "rectangle duplicates selected columns on each physical line");
         Require(editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 9 : 1) &&
@@ -173,7 +173,7 @@ void RectangleDuplication(EditorFrame* frame) {
     }
     TestEditor::ResetStream(editor, "ABC\nDEF", 0, 0);
     Rectangle(editor, 1, 7);
-    Menu(frame, "Transpose Lines");
+    Menu(frame, "Transpose");
     Require(TestEditor::Text(editor) == "DEF\nABC" && !editor->Send(Message::SelectionIsRectangle),
             "transpose uses main rectangle caret line and collapses shape");
     TestEditor::RequireSelection(editor, 4, 4, "transpose rectangle ends at logical line start");
@@ -185,7 +185,7 @@ void MultipleSelectionDuplication(EditorFrame* frame) {
         TestEditor::ResetStream(editor, "AB\nCD", 0, 1, Scintilla::EndOfLine::Lf);
         editor->Send(Message::SetMultipleSelection, 1);
         editor->Send(Message::AddSelection, 4, 3);
-        Menu(frame, line ? "Duplicate Line" : "Duplicate Selection");
+        Menu(frame, line ? "Duplicate Line" : "Duplicate");
         const char* after = line ? "AB\nAB\nCD\nCD" : "AAB\nCCD";
         Require(TestEditor::Text(editor) == after && editor->Send(Message::GetSelections) == 2,
                 "duplication processes all independent selections");
@@ -198,7 +198,7 @@ void MultipleSelectionDuplication(EditorFrame* frame) {
     }
     TestEditor::ResetStream(editor, "AB\nCD", 0, 1);
     editor->Send(Message::AddSelection, 4, 3);
-    Menu(frame, "Transpose Lines");
+    Menu(frame, "Transpose");
     Require(TestEditor::Text(editor) == "CD\nAB" && editor->Send(Message::GetSelections) == 1,
             "transpose uses only the main caret and clears additional ranges");
     TestEditor::RequireSelection(editor, 3, 3, "multiple-selection transpose collapses at original computed start");
@@ -207,7 +207,7 @@ void MultipleSelectionDuplication(EditorFrame* frame) {
 }
 void VirtualSpaceDuplication(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    for (const char* label : {"Duplicate Selection", "Duplicate Line"}) {
+    for (const char* label : {"Duplicate", "Duplicate Line"}) {
         TestEditor::ResetStream(editor, "AB\nCD", 2, 2, Scintilla::EndOfLine::Lf);
         editor->Send(Message::SetVirtualSpaceOptions, static_cast<uintptr_t>(Scintilla::VirtualSpace::UserAccessible));
         editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 3);
@@ -227,7 +227,7 @@ void VirtualSpaceDuplication(EditorFrame* frame) {
     editor->Send(Message::Undo);
     editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 2);
     editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 4);
-    Menu(frame, "Duplicate Selection");
+    Menu(frame, "Duplicate");
     Require(TestEditor::Text(editor) == "AB\nCD" && editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo) &&
                 !editor->Send(Message::GetModify),
             "nonempty virtual-only selection duplicates zero bytes and retains pending Redo");
@@ -238,14 +238,14 @@ void VirtualSpaceDuplication(EditorFrame* frame) {
     TestEditor::ResetStream(editor, "AB\nCD", 5, 5);
     editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 2);
     editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 2);
-    Menu(frame, "Transpose Lines");
+    Menu(frame, "Transpose");
     Require(TestEditor::Text(editor) == "CD\nAB", "transpose ignores virtual columns when choosing logical line");
     TestEditor::RequireSelection(editor, 3, 3, "transpose resets caret to logical line start");
     Require(editor->Send(Message::GetSelectionNCaretVirtualSpace, 0) == 0, "transpose clears virtual caret columns");
     editor->Send(Message::SetVirtualSpaceOptions, 0);
     TestEditor::ResetStream(editor, "AB\nCD", 0, 0, Scintilla::EndOfLine::Lf);
     Rectangle(editor, 1, 4);
-    Menu(frame, "Duplicate Selection");
+    Menu(frame, "Duplicate");
     Require(TestEditor::Text(editor) == "AB\nAB\nCD\nCD" && editor->Send(Message::SelectionIsRectangle),
             "empty rectangle forces complete-line duplication for all ranges");
     Require(editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
@@ -271,7 +271,7 @@ void WrappedLines(EditorFrame* frame) {
         wxMilliSleep(10);
     }
     Require(editor->Send(Message::WrapCount, 0) > 1, "fixture has actual wrapped display lines");
-    Menu(frame, "Transpose Lines");
+    Menu(frame, "Transpose");
     Require(TestEditor::Text(editor) ==
                     "one two three four five six seven eight nine ten eleven twelve thirteen fourteen\nZ" &&
                 !editor->Send(Message::CanUndo),
@@ -286,7 +286,7 @@ void WrappedLines(EditorFrame* frame) {
     TestEditor::ResetStream(editor,
                             "one two three four five six seven eight nine ten eleven twelve thirteen fourteen\nZ", 0, 3,
                             Scintilla::EndOfLine::Lf);
-    Menu(frame, "Duplicate Selection");
+    Menu(frame, "Duplicate");
     Require(TestEditor::Text(editor) ==
                 "oneone two three four five six seven eight nine ten eleven twelve thirteen fourteen\nZ",
             "selection duplication under wrapping retains exact selected-byte scope");
@@ -321,7 +321,7 @@ void SavedBytes(EditorFrame* frame) {
                       "B\0\r\0\n\0\x2d\x4e",
                       10)}},
     };
-    const std::array<const char*, 3> commands = {"Duplicate Selection", "Duplicate Line", "Transpose Lines"};
+    const std::array<const char*, 3> commands = {"Duplicate", "Duplicate Line", "Transpose"};
     const std::array<const char*, 3> text = {"中中\r\nB", "中\r\n中\r\nB", "B\r\n中"};
     const auto directory = TestFiles::TemporaryDirectory("duplicate-transpose");
     std::filesystem::create_directory(directory);
