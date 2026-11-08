@@ -9,6 +9,7 @@
 #include <wx/stdpaths.h>
 #include <wx/radiobox.h>
 #include <wx/checkbox.h>
+#include <wx/listbox.h>
 #include <filesystem>
 #include <fstream>
 #include <chrono>
@@ -428,6 +429,37 @@ public:
                 Require(frame->ReloadCurrentFile().status == OpenStatus::Opened &&
                             frame->FileWatching().mode == FileWatchingMode::AutoReload,
                         "reloading the same document preserves monitoring with Reset enabled");
+                const auto beforeManualReload = decision.prompts;
+                std::ofstream(firstSave, std::ios::binary) << "manual encoding reload\n";
+                Require(frame->ReloadAsUtf8().status == OpenStatus::Opened &&
+                            frame->FileWatching().mode == FileWatchingMode::AutoReload,
+                        "quick encoding reload preserves active monitoring with Reset enabled");
+                TestEditor::Append(frame, "local after manual reload");
+                Pause(200);
+                Require(decision.prompts == beforeManualReload,
+                        "quick encoding reload refreshes the watch baseline before subsequent live edits");
+                frame->ReloadCurrentFile();
+                {
+                    class AcceptEncoding final : public wxModalDialogHook {
+                    public:
+                        AcceptEncoding() { Register(); }
+                        int Enter(wxDialog* dialog) override {
+                            if (dialog->GetTitle() != "Reload With Encoding") return wxID_NONE;
+                            for (auto* child : dialog->GetChildren())
+                                if (auto* choices = wxDynamicCast(child, wxListBox)) choices->SetSelection(0);
+                            return wxID_OK;
+                        }
+                    } accept;
+                    std::ofstream(firstSave, std::ios::binary) << "x";
+                    Require(frame->ReloadWithEncoding().status == OpenStatus::Opened &&
+                                frame->FileWatching().mode == FileWatchingMode::AutoReload,
+                            "explicit encoding reload preserves active monitoring with Reset enabled");
+                }
+                TestEditor::Append(frame, "local after explicit reload");
+                Pause(200);
+                Require(decision.prompts == beforeManualReload,
+                        "explicit encoding reload refreshes the active watch baseline");
+                frame->ReloadCurrentFile();
                 Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
                             frame->Open(TestFiles::Filename(directory / "missing.txt")).status == OpenStatus::Failed &&
                             frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
