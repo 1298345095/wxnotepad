@@ -154,6 +154,13 @@ and confirms overwrite. Cancellation or failure retains the current document,
 identity and history. A successful save safely replaces the target and updates
 the title and save point.
 
+File → New Window / Alt+N starts a separate blank process using the saved startup
+settings. The current document, selection and undo history stay in the parent.
+The child keeps the parent's normal window size and maximized state; Windows
+offsets it by 10 pixels, wrapping to the monitor origin at the work-area edge.
+Linux leaves top-level placement to the compositor. Internal relaunches pass
+`--window-position x,y,width,height,maximized` without a startup file or observer.
+
 New/Open/Close skip this confirmation for untitled documents shorter than 2048
 UTF-8 bytes containing only ASCII space or bytes `0x09` through `0x0d` (including
 the empty document). Explicit Save and Save As still save these documents.

@@ -85,6 +85,16 @@ void EditorFrame::CreateMenus() {
 wxMenu* EditorFrame::CreateFileMenu() {
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
+    const int newWindow = wxWindow::NewControlId();
+    file->Append(newWindow, "New &Window\tAlt+N");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!NewWindow())
+                wxMessageBox("Could not start another wxnotepad process.", "Could not open new window",
+                             wxOK | wxICON_ERROR, this);
+        },
+        newWindow);
     file->Append(wxID_OPEN, "&Open...\tCtrl+O");
     const int openGbk = wxWindow::NewControlId();
     file->Append(openGbk, "Open As &GBK...");

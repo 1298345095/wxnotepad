@@ -32,10 +32,13 @@ public:
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
     bool NewDocument();
+    bool NewWindow();
 
 private:
     EditorControl* editor_;
     SettingsStore* settings_;
+    const wxString launchWorkingDirectory_;
+    wxSize normalWindowSize_;
     OriginalSettings defaults_;
     IndentationSettings indentation_;
     DocumentSession document_;

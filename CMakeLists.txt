@@ -118,6 +118,7 @@ add_library(app_shell STATIC
     src/app/dialogs/tab_settings_dialog.cpp
     src/app/editor_frame.cpp
     src/app/editor_frame_commands.cpp
+    src/app/new_window.cpp
     src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
@@ -221,6 +222,10 @@ if(BUILD_TESTING)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+    add_gui_program(new_window tests/new_window.cpp app_shell)
+    add_test(NAME original_new_window COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/new_window_process.py" "$<TARGET_FILE:new_window>")
+    set_tests_properties(original_new_window PROPERTIES TIMEOUT 45)
     add_editor_test(date_time original_date_time_insertion 60)
     add_editor_test(caret_appearance original_caret_appearance 60)
     if(WIN32)
