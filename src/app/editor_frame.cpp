@@ -77,6 +77,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         event.Skip();
     });
     Bind(wxEVT_EDITOR_STATE_CHANGED, [this](wxCommandEvent&) { UpdateDocumentState(); });
+    editor_->Bind(wxEVT_DROP_FILES, &EditorFrame::OnDropFiles, this);
+    Bind(wxEVT_DROP_FILES, &EditorFrame::OnDropFiles, this);
+    DragAcceptFiles(true);
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
         WXNOTE_TRACE("close.request", "\ttarget=%p\tcan_veto=%d\tdirty=%d", static_cast<void*>(this), event.CanVeto(),
                      editor_->Send(Scintilla::Message::GetModify) != 0);
@@ -387,6 +390,26 @@ OpenResult EditorFrame::Revert() {
 OpenResult EditorFrame::Open() {
     OpenFileDialog dialog(this);
     return Open(dialog.Choose());
+}
+
+void EditorFrame::OnDropFiles(wxDropFilesEvent& event) {
+    if (event.GetNumberOfFiles() == 0) return;
+    auto path = event.GetFiles()[0];
+#ifdef __WXMSW__
+    // Original MsgDropFiles: Visual Studio supplies {UUID}|project|path.
+    const auto separator = path.find_last_of('|');
+    if (separator != wxString::npos) path = path.Mid(separator + 1);
+#endif
+    if (IsIconized()) Iconize(false);
+    std::optional<wxString> source = path;
+    if (wxDirExists(path)) {
+        OpenFileDialog dialog(this);
+        dialog.SetDirectory(path);
+        source = dialog.Choose();
+    }
+    const auto result = Open(source);
+    if (result.status == OpenStatus::Failed)
+        wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
 }
 
 OpenResult EditorFrame::OpenAs(FileEncoding encoding) {

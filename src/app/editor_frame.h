@@ -133,6 +133,7 @@ private:
     void UpdatePositionStatus();
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
+    void OnDropFiles(wxDropFilesEvent& event);
     OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                         std::optional<FileEncoding> encoding = std::nullopt,
                         std::optional<EncodingChoice> weakEncoding = std::nullopt);
