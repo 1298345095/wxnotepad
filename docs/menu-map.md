@@ -10,10 +10,11 @@ File
   New; New Window; Open; Open As GBK; Open As UTF-16LE
   Save; Save As; Save Copy; Save with Original Time
   File Mode > Read Only Mode
-  Revert
+  Revert (F5)
   Reload > With Encoding; As UTF-8
   Line Endings > Windows (CR+LF); Unix/macOS (LF); Classic Mac OS (CR); Default
   Update File Time
+  Recent (History) (Alt+H)
 Edit
   Undo; Redo
   Cut; Copy; Paste; Swap
@@ -72,7 +73,7 @@ Settings
     Line Selection Mode > None; Visual Studio; Old Visual Studio; Normal
   Appearance > Auto-Shrink Horizontal Scrollbar
   File Change Notification (Alt+F5)
-  Other Settings > Remember Search Options
+  Other Settings > Remember Search Options; Remember Recent Files
   Save Settings On Exit; Save Settings Now
 ```
 
