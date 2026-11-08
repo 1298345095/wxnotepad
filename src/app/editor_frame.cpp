@@ -11,6 +11,10 @@
 #include "diagnostics/trace.h"
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
+#include <wx/dialog.h>
+#include <wx/listbox.h>
+#include <wx/sizer.h>
+#include <wx/stattext.h>
 #include <wx/statusbr.h>
 #include <wx/filename.h>
 
@@ -368,13 +372,17 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
 }
 
 OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding) {
-    const auto result = document_.Open(source, beforeReplace, encoding, weakEncoding, [this] {
-        indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
-        const auto& preferences = settings_ ? settings_->values : defaults_;
-        editor_->Send(Scintilla::Message::SetEdgeColumn,
-                      document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
-    });
+                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
+                                 OpenDecisionTiming decisionTiming) {
+    const auto result = document_.Open(
+        source, beforeReplace, encoding, weakEncoding,
+        [this] {
+            indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            editor_->Send(Scintilla::Message::SetEdgeColumn,
+                          document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
+        },
+        decisionTiming);
     if (result.status == OpenStatus::Opened) {
         RecordRecentFile();
         wrapColumn_ = 0;
@@ -438,6 +446,49 @@ OpenResult EditorFrame::Revert() {
                      wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
         return {OpenStatus::Cancelled, {}};
     return ReloadCurrentFile();
+}
+
+OpenResult EditorFrame::ReloadWithEncoding() {
+    if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
+    // F8's original DontSave path confirms loss before showing the picker.
+    if (editor_->Send(Scintilla::Message::GetModify) &&
+        wxMessageBox("Recoding requires reloading file from disk, unsaved changes will be lost!", "Reload Encoding",
+                     wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
+        return {OpenStatus::Cancelled, {}};
+    const wxString choices[] = {"UTF-8", "UTF-16LE", "GBK (CP936)"};
+    wxDialog dialog(this, wxID_ANY, "Reload With Encoding");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Select source &encoding to reload file:"), 0, wxALL,
+                  dialog.FromDIP(10));
+    auto* source = new wxListBox(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+                                 static_cast<int>(std::size(choices)), choices);
+    source->SetName("Source encoding");
+    // Original IDM_RECODE_SELECT maps the BOM variants to their source codec.
+    // Native ANSI maps to CPI_NONE: the user must select an explicit source.
+    if (!document_.IsDefaultEncoding()) source->SetSelection(static_cast<int>(document_.Encoding()));
+    contents->Add(source, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
+    auto* accept = dialog.FindWindow(wxID_OK);
+    accept->Enable(source->GetSelection() != wxNOT_FOUND);
+    dialog.Bind(wxEVT_LISTBOX,
+                [source, accept](wxCommandEvent&) { accept->Enable(source->GetSelection() != wxNOT_FOUND); });
+    dialog.Bind(wxEVT_LISTBOX_DCLICK, [&dialog, source](wxCommandEvent&) {
+        if (source->GetSelection() != wxNOT_FOUND) dialog.EndModal(wxID_OK);
+    });
+    dialog.SetSizerAndFit(contents);
+    dialog.CentreOnParent();
+    source->SetFocus();
+    if (dialog.ShowModal() != wxID_OK) return {OpenStatus::Cancelled, {}};
+    return LoadFile(document_.Path(), [] { return true; }, static_cast<FileEncoding>(source->GetSelection()));
+}
+
+OpenResult EditorFrame::ReloadAsUtf8() {
+    if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
+    // Original CMD_RELOADUTF8 uses FileLoad(Reload), including FileSave(Ask)
+    // before file I/O, with the view captured before Save cleanup can move it.
+    return LoadFile(
+        document_.Path(), [this] { return ConfirmDiscardChanges("reloading"); }, FileEncoding::Utf8, std::nullopt,
+        OpenDecisionTiming::BeforeRead);
 }
 
 OpenResult EditorFrame::Open() {

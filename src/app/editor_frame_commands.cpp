@@ -76,6 +76,24 @@ void EditorFrame::CreateMenus() {
     SetMenuBar(menus);
 }
 
+void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
+    reloadEncodingId_ = wxWindow::NewControlId();
+    reloadUtf8Id_ = wxWindow::NewControlId();
+    reload->Append(reloadEncodingId_, "With &Encoding...\tF8");
+    reload->Append(reloadUtf8Id_, "As &UTF-8\tShift+F8");
+    for (const int id : {reloadEncodingId_, reloadUtf8Id_})
+        Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, id);
+    for (const int id : {reloadEncodingId_, reloadUtf8Id_})
+        Bind(
+            wxEVT_MENU,
+            [this, id](wxCommandEvent&) {
+                const auto result = id == reloadEncodingId_ ? ReloadWithEncoding() : ReloadAsUtf8();
+                if (result.status == OpenStatus::Failed)
+                    wxMessageBox(result.error, "Could not reload file", wxOK | wxICON_ERROR, this);
+            },
+            id);
+}
+
 wxMenu* EditorFrame::CreateFileMenu() {
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
@@ -121,6 +139,9 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->AppendSubMenu(mode, "File &Mode");
     revertId_ = wxWindow::NewControlId();
     file->Append(revertId_, "&Revert\tF5");
+    auto* reload = new wxMenu;
+    AppendReloadEncodingCommands(reload);
+    file->AppendSubMenu(reload, "&Reload");
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {

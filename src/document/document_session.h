@@ -30,6 +30,7 @@ struct SaveResult {
     wxString error;
 };
 enum class OpenStatus { Opened, Cancelled, Failed };
+enum class OpenDecisionTiming { AfterRead, BeforeRead };
 struct LineEndingCounts {
     size_t crlf = 0;
     size_t cr = 0;
@@ -64,7 +65,8 @@ public:
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt,
                     std::optional<EncodingChoice> weakEncoding = std::nullopt,
-                    const std::function<void()>& configureLoadedDocument = {});
+                    const std::function<void()>& configureLoadedDocument = {},
+                    OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead);
     void New();
     SaveCleanupOptions SaveCleanup() const { return saveCleanup_; }
     void SetSaveCleanup(SaveCleanupOptions options) { saveCleanup_ = options; }
