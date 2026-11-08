@@ -239,6 +239,17 @@ void UpdateFailures(EditorFrame* frame, int update) {
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "failure fixture must open");
     TestEditor::Append(frame, " unsaved  \n");
     const auto text = TestEditor::Text(frame);
+#ifndef __WXMSW__
+    struct RestoreUmask {
+        mode_t previous = ::umask(0);
+        ~RestoreUmask() { ::umask(previous); }
+    } restoreUmask;
+    Require(::chmod(path.c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == 0, "fixture must have a known existing mode");
+    Command(frame, update);
+    struct stat existing{};
+    Require(::stat(path.c_str(), &existing) == 0 && (existing.st_mode & 0777) == 0640,
+            "timestamp-only update must retain an existing file's permissions under a permissive umask");
+#endif
 #ifdef __WXMSW__
     Require(SetFileAttributesW(path.c_str(), FILE_ATTRIBUTE_READONLY) != 0, "fixture must become read only");
     const bool updatedReadOnly = frame->UpdateFileTime();
@@ -253,6 +264,14 @@ void UpdateFailures(EditorFrame* frame, int update) {
     Require(frame->UpdateFileTime() && TestFiles::Bytes(path).empty() && TestEditor::Text(frame) == text &&
                 frame->Editor()->Send(Message::GetModify),
             "timestamp-only command must match original OPEN_ALWAYS for missing backing file");
+#ifndef __WXMSW__
+    struct stat created{};
+    Require(::stat(path.c_str(), &created) == 0, "recreated file metadata must be independently readable");
+    std::printf("Timestamp-only recreated file permissions=%03o under umask 000\n",
+                static_cast<unsigned>(created.st_mode & 0777));
+    Require((created.st_mode & 0777) == 0600,
+            "timestamp-only recreation must grant only owner read/write under a permissive umask");
+#endif
     std::filesystem::remove(path);
     std::filesystem::remove(directory);
     Require(!frame->UpdateFileTime(), "timestamp-only missing-parent update must fail");
