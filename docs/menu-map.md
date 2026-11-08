@@ -7,7 +7,7 @@ bindings; relocating an item retains its handler and update-UI state.
 
 ```text
 File
-  New; Open; Open As GBK; Open As UTF-16LE
+  New; New Window; Open; Open As GBK; Open As UTF-16LE
   Save; Save As; Save Copy; Save with Original Time
   File Mode > Read Only Mode
   Line Endings > Windows (CR+LF); Unix/macOS (LF); Classic Mac OS (CR); Default
