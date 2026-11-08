@@ -442,6 +442,11 @@ if(BUILD_TESTING)
     add_editor_test(eol_smoke loaded_eol_input 30)
     add_editor_test(eol_conversion convert_line_endings 60)
     add_editor_test(open_native open_new_native 60)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+        # Preserve timeout stacks through the existing Linux core/GDB collector.
+        set_tests_properties(open_new_native PROPERTIES
+            TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+    endif()
     add_editor_test(save_smoke save_existing 30)
     add_editor_test(save_native save_as_native 60)
     add_editor_test(search_smoke find_literal_next 30)

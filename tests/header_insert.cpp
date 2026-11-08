@@ -187,7 +187,7 @@ void ReferenceInsertion(EditorFrame* frame, const std::vector<std::string>& fiel
 }
 void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) {
     std::filesystem::create_directories(directory);
-    std::ifstream stream(std::filesystem::u8path(HEADER_REFERENCE));
+    std::ifstream stream(std::filesystem::path(HEADER_REFERENCE));
     Require(stream.good(), "original header fixtures are available");
     std::string row, previousEncoding, previousLanguage;
     std::getline(stream, row);

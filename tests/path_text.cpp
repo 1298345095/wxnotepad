@@ -54,7 +54,7 @@ void NameCases(EditorFrame* frame, const std::filesystem::path& directory) {
                                                          {"no.ext space.txt", "no.ext space"},
                                                          {"é中文😀.txt", "é中文😀"}};
     for (const auto& [name, base] : names) {
-        const auto path = directory / std::filesystem::u8path(name);
+        const auto path = directory / TestFiles::Utf8Path(name);
         TestFiles::WriteBytes(path, "AoldZ");
         frame->Editor()->Send(Message::SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
@@ -179,7 +179,7 @@ void EncodedCases(EditorFrame* frame, const std::filesystem::path& directory) {
     for (const auto& fixture : fixtures) {
         const auto folder = directory / fixture.name;
         std::filesystem::create_directory(folder);
-        const auto path = folder / std::filesystem::u8path("时刻.txt");
+        const auto path = folder / std::filesystem::path(u8"时刻.txt");
         TestFiles::WriteBytes(path, fixture.before);
         frame->Editor()->Send(Message::SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
@@ -190,7 +190,7 @@ void EncodedCases(EditorFrame* frame, const std::filesystem::path& directory) {
                                         {"Save writes captured encoded filename bytes",
                                          "Undo Save restores source bytes", "Redo Save restores filename bytes"});
     }
-    const auto path = directory / std::filesystem::u8path("😀.txt");
+    const auto path = directory / std::filesystem::path(u8"😀.txt");
     TestFiles::WriteBytes(path, "AoldZ");
     frame->Editor()->Send(Message::SetSavePoint);
     Require(frame->Open(TestFiles::Filename(path), FileEncoding::Gbk).status == OpenStatus::Opened,
@@ -219,7 +219,7 @@ void DefaultEncodingCase(const std::filesystem::path& directory) {
     settings.values.encoding.loadASCIIasUTF8 = false;
     settings.values.encoding.loadANSIasUTF8 = false;
     auto* frame = new EditorFrame(&settings);
-    const auto path = directory / std::filesystem::u8path("é中文😀.txt");
+    const auto path = directory / std::filesystem::path(u8"é中文😀.txt");
     TestFiles::WriteBytes(path, "AoldZ");
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
             "native default encoding opens through configured document detection");
@@ -252,7 +252,7 @@ public:
                 TestEditor::ResetStream(frame->Editor(), "AoldZ", 1, 4);
                 Insert(frame, "File Name and Extension");
                 Require(TestEditor::Text(frame) == "AUntitledZ", "untitled insertion uses original fallback");
-                const auto directory = TestFiles::TemporaryDirectory("path-text") / std::filesystem::u8path("目录😀");
+                const auto directory = TestFiles::TemporaryDirectory("path-text") / std::filesystem::path(u8"目录😀");
                 std::filesystem::create_directories(directory);
                 NameCases(frame, directory);
                 SelectionCases(frame, directory);

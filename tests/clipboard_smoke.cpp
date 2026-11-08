@@ -1359,7 +1359,7 @@ void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     TestEditor::ResetStream(editor, "AoldZ", 4, 1);
     for (const char* label : {"File Name", "File Name and Ext.", "Full Path Name"})
         check(label, "Untitled");
-    const auto directory = TestFiles::TemporaryDirectory("path-text-copy") / std::filesystem::u8path("目录😀");
+    const auto directory = TestFiles::TemporaryDirectory("path-text-copy") / std::filesystem::path(u8"目录😀");
     std::filesystem::create_directories(directory);
     const std::pair<const char*, const char*> names[] = {{"report.txt", "report"},
                                                          {"archive.part.txt", "archive.part"},
@@ -1370,7 +1370,7 @@ void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
                                                          {"no.ext space.txt", "no.ext space"},
                                                          {"é中文😀.txt", "é中文😀"}};
     for (const auto& [name, base] : names) {
-        const auto path = directory / std::filesystem::u8path(name);
+        const auto path = directory / TestFiles::Utf8Path(name);
         TestFiles::WriteBytes(path, "AoldZ");
         editor->Send(Message::SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
@@ -1380,7 +1380,7 @@ void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         check("File Name and Ext.", name);
         check("Full Path Name", TestFiles::Filename(path).utf8_string());
     }
-    const auto legacyPath = directory / std::filesystem::u8path("é中文😀.txt");
+    const auto legacyPath = directory / std::filesystem::path(u8"é中文😀.txt");
     Require(frame->Open(TestFiles::Filename(legacyPath), FileEncoding::Gbk).status == OpenStatus::Opened,
             "open explicit GBK identity before Unicode clipboard publication");
     check("File Name and Ext.", "é中文😀.txt");
