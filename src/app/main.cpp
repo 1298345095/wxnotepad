@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "app/process_observer.h"
+#include "app/new_window.h"
 #include "settings/settings_store.h"
 #include "diagnostics/trace.h"
 #include <wx/wx.h>
@@ -15,17 +16,21 @@ public:
         WXNOTE_TRACE("process.start");
         wxString startup;
         wxString observation;
+        std::optional<wxString> windowPosition;
         for (int i = 1; i < argc; ++i) {
             const wxString argument(argv[i]);
             if (argument == "--observe" && i + 1 < argc)
                 observation = argv[++i];
             else if (argument == "--startup-file" && i + 1 < argc)
                 startup = argv[++i];
+            else if (argument == "--window-position" && i + 1 < argc)
+                windowPosition = argv[++i];
             else
                 return false;
         }
         settings_ = std::make_unique<SettingsStore>();
         auto* frame = new EditorFrame(settings_.get());
+        if (windowPosition && !ApplyInitialWindowPosition(*frame, *windowPosition)) return false;
         if (!startup.empty() && frame->Open(startup).status != OpenStatus::Opened) return false;
         frame->Show();
         frame->Editor()->SetFocus();

@@ -39,10 +39,13 @@ public:
     bool NewDocument();
     void SetFileWatchingOptions(const FileWatchingOptions& options);
     const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
+    bool NewWindow();
 
 private:
     EditorControl* editor_;
     SettingsStore* settings_;
+    const wxString launchWorkingDirectory_;
+    wxSize normalWindowSize_;
     OriginalSettings defaults_;
     IndentationSettings indentation_;
     DocumentSession document_;
