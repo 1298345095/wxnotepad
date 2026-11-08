@@ -393,6 +393,24 @@ void EditorFrame::ShowRecentFiles() {
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
 
+OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
+    if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
+    const auto result = LoadFile(
+        document_.Path(), [] { return true; }, std::nullopt,
+        EncodingChoice(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding()));
+    if (result.status == OpenStatus::Opened && followEnd) editor_->Send(Scintilla::Message::DocumentEnd);
+    return result;
+}
+
+OpenResult EditorFrame::Revert() {
+    if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
+    if (editor_->Send(Scintilla::Message::GetModify) &&
+        wxMessageBox("Revert file to last saved state? Your changes will be lost!", "Revert",
+                     wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
+        return {OpenStatus::Cancelled, {}};
+    return ReloadCurrentFile();
+}
+
 OpenResult EditorFrame::Open() {
     OpenFileDialog dialog(this);
     return Open(dialog.Choose());

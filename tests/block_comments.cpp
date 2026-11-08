@@ -22,7 +22,7 @@ void Text(EditorControl* editor, const char* expected, const char* message) {
     Require(actual == expected, message);
 }
 void Choose(EditorFrame* frame, const char* language) {
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
 }
 void Toggle(EditorFrame* frame) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
@@ -278,7 +278,7 @@ void NativeKey(EditorControl* editor, bool shift = false, bool alt = false) {
 void Keys(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const char* language : {"C/C++", "JSON"}) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
         TestEditor::ResetStream(editor, "alpha", 0, 5);
         NativeKey(editor);
         Require(TestEditor::Text(editor) == "/*alpha*/", "native Ctrl+Q uses language block delimiters");
@@ -301,7 +301,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 auto* editor = frame->Editor();
                 TestEditor::ResetStream(editor, "alpha", 0, 5);
                 const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment");

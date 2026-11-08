@@ -61,7 +61,7 @@ void SubmittedSettings(EditorFrame* frame, const wxString& mode) {
         if (mode == "change") NativeSearch::Toggle(bookmark, true);
         NativeSearch::Click(dialog, wxID_CANCEL);
         if (mode == "change") {
-            const int save = frame->GetMenuBar()->FindMenuItem("View", "Save Settings Now");
+            const int save = frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now");
             NativeSearch::Command(frame, save);
         }
     }

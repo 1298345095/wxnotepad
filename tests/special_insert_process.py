@@ -55,7 +55,7 @@ def main():
         document.write_bytes(original)
         app = Application(executable, folder, environment, document)
         try:
-            insert_menu(app, ["alt+e", "i", "i", "Right", "g"], "New GUID")
+            insert_menu(app, ["alt+e", "n", "Right", "g"], "New GUID")
             request(app, "save")
             generated = document.read_bytes()
             assert re.fullmatch(rb"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", generated), generated
@@ -71,7 +71,7 @@ def main():
                 request(app, "open", document)
                 eol = app.state["eol_mode"]
                 if index == 0:
-                    insert_menu(app, ["alt+e", "i", "i", "Right", "c", "w"], label)
+                    insert_menu(app, ["alt+e", "n", "Right", "c", "w"], label)
                 else:
                     app.named_menu("Edit", label)
                 assert app.state["eol_mode"] == eol, "insertion retains EOL metadata"

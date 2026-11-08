@@ -261,7 +261,7 @@ public:
                         "wrapped rows move as one logical line");
                 editor->ToggleWordWrap();
                 Reset(editor, "before\nvoid f() {\n  call();\n}\nafter();\n", 7, 29);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 editor->Refresh();
                 editor->Update();
                 wxYield();
@@ -272,7 +272,7 @@ public:
                 Require(NativeSearch::Text(editor) == "void f() {\n  call();\n}\nbefore\nafter();\n" &&
                             editor->Send(Message::GetAnchor) == 0 && editor->Send(Message::GetCurrentPos) == 23,
                         "folded selection moves its hidden logical lines with original bounds");
-                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "C/C++")),
+                Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++")),
                         "move preserves selected language");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
                 std::puts("PASS: wrapped and folded logical lines, language preservation");
