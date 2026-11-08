@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <vector>
+#include <memory>
 
 namespace {
 void Require(bool condition, const char* message) {
@@ -300,6 +301,8 @@ void NativeDefault() {
 #ifdef __WXMSW__
     if (GetACP() != 936) return;
     SettingsStore settings;
+    settings.values = OriginalSettings{};
+    settings.values.fileWatching.mode = FileWatchingMode::None;
     settings.values.encoding = {.defaultEncoding = 0, .loadANSIasUTF8 = false, .loadASCIIasUTF8 = false};
     auto* frame = new EditorFrame(&settings);
     const auto path = TestFiles::TemporaryDirectory("native-default.txt");
@@ -318,6 +321,8 @@ void NativeDefault() {
 }
 void SaveCleanupView() {
     SettingsStore settings;
+    settings.values = OriginalSettings{};
+    settings.values.fileWatching.mode = FileWatchingMode::None;
     settings.values.fixTrailingBlanks = true;
     auto* frame = new EditorFrame(&settings);
     const auto path = TestFiles::TemporaryDirectory("cleanup-view.txt");
@@ -341,7 +346,10 @@ void SaveCleanupView() {
 class ReloadEncodingApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_ = std::make_unique<SettingsStore>();
+        settings_->values = OriginalSettings{};
+        settings_->values.fileWatching.mode = FileWatchingMode::None;
+        auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         wxString nativeMode;
         const bool native = wxGetEnv("WXNOTEPAD_RELOAD_NATIVE_KEYS", &nativeMode) && nativeMode == "1";
@@ -380,6 +388,7 @@ public:
     }
 
 private:
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 0;
 };
 } // namespace
