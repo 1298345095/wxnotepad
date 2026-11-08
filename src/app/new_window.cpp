@@ -5,8 +5,11 @@
 #include <wx/toplevel.h>
 #include <wx/utils.h>
 #include <limits>
+#include <string>
 #ifdef __WXMSW__
 #include <windows.h>
+#elif defined(__WXGTK__)
+#include <glib.h>
 #endif
 
 bool ApplyInitialWindowPosition(wxTopLevelWindow& window, const wxString& argument) {
@@ -50,10 +53,21 @@ bool EditorFrame::NewWindow() {
     const wxString executable = wxStandardPaths::Get().GetExecutablePath();
     const wxString position = wxString::Format("%d,%d,%d,%d,%d", normal.GetX(), normal.GetY(), normal.GetWidth(),
                                                normal.GetHeight(), IsMaximized());
+#ifdef __WXGTK__
+    // wxExecute's Unix async return only confirms fork(), not a successful exec().
+    // GLib confirms exec failure before returning and reaps independent children.
+    std::string module = executable.ToStdString(wxConvUTF8);
+    std::string geometry = position.ToStdString(wxConvUTF8);
+    char option[] = "--window-position";
+    char* arguments[] = {module.data(), option, geometry.data(), nullptr};
+    return g_spawn_async(launchWorkingDirectory_.utf8_str(), arguments, nullptr, G_SPAWN_DEFAULT, nullptr, nullptr,
+                         nullptr, nullptr) != FALSE;
+#else
     const wchar_t* arguments[] = {executable.wc_str(), L"--window-position", position.wc_str(), nullptr};
     wxExecuteEnv environment;
     environment.cwd = launchWorkingDirectory_;
     // The menu reports launch failures on this frame, without deferred wxLogGui dialogs.
     const wxLogNull noGuiLog;
     return wxExecute(arguments, wxEXEC_ASYNC, nullptr, &environment) > 0;
+#endif
 }
