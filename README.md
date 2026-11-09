@@ -32,17 +32,17 @@ Home retains the original indentation/start toggle. Shift extends the selection
 with the same rules. Ctrl+PageUp/PageDown move between paragraphs separated by
 blank or whitespace-only lines; adding Shift extends the selection.
 
-Edit → Go To Line / Ctrl+G navigates to an absolute, 1-based document line and
+Search → Goto → Goto Line / Ctrl+G navigates to an absolute, 1-based document line and
 reveals its folded ancestors. The dialog validates the current line range;
 Cancel retains the previous selection, viewport and folds.
 
-Edit → Bookmarks offers Toggle (Ctrl+F2), Goto Next (F2), Goto Previous
+Search → Bookmarks offers Toggle (Ctrl+F2), Goto Next (F2), Goto Previous
 (Shift+F2), Select All (Alt+F6) and Clear All (Alt+F2). Navigation wraps and
 reveals folded destinations. Select All selects each marked whole line with
 the nearest bookmark as the main selection, preferring the earlier line on a
 tie. These commands share the bookmark marker used by Find All.
 
-Edit → Toggle Line Comment / Ctrl+/ (also Ctrl+keypad Divide) uses `//` for
+Edit → Selection → Toggle Line Comment / Ctrl+/ (also Ctrl+keypad Divide) uses `//` for
 C/C++ and JSON, and `#` for Python. It follows the original common indentation,
 mixed-line and selection rules, with one Undo step per edit. The command is
 available for these writable schemes; rectangular selections report the
@@ -64,7 +64,7 @@ than UTF-8 bytes or UTF-16 units. Combining code points count separately, and CR
 and LF each count once. Search feedback has a separate field, retaining the
 encoding/BOM, language and EOL information.
 
-Edit offers Convert to CRLF, Convert to LF and Convert to CR. Each command
+File → Line Endings offers Windows (CR+LF), Unix/macOS (LF) and Classic Mac OS (CR). Each command
 normalizes existing line endings without adding a final newline and sets the
 mode used by Enter. A text-changing conversion is one undo action; Undo restores
 the text while retaining the explicitly chosen insertion mode. The `EOL:` status
@@ -72,17 +72,16 @@ label describes that insertion mode, including when Undo restores mixed endings.
 No-op conversions retain the save point and pending Redo history. New/Open keep
 the existing new-document default and loaded-file EOL detection.
 
-Edit → Indentation selects Tabs or Spaces and a shared tab/indentation width of
-2, 4 or 8 columns. Startup retains the original core's tabs and 8-column default.
-Changing options leaves existing whitespace and history intact; the choice lasts
-for this window across New/Open, Save As and language changes, without persistence.
-Edit → Indent / Unindent operates on the current or selected logical lines.
+Settings → Insert Tabs as Spaces and Tab Settings configure tabs/spaces and
+indentation widths. Changing options leaves existing whitespace and history intact.
+Edit → Selection → Indent / Unindent operates on the current or selected logical lines.
 Tab retains ordinary insertion and indents multiline selections; Shift+Tab
 unindents the current or selected lines. A selection ending exactly at the next
 line's start excludes that line. Text-changing block commands undo in one step.
 See the [everyday editing validation record](docs/observations/everyday-editing-README.md).
 
-Edit also provides the original text transformations:
+Edit also provides the original text transformations. The [delivered menu map](docs/menu-map.md)
+lists their Selection, Lines, Convert, Insert and Special groups:
 
 | Command | Shortcut |
 | --- | --- |
@@ -103,13 +102,13 @@ The same operations serve Plain Text, C/C++, Python and JSON. Each retains its
 original selection scope, rectangular-selection handling and history behavior.
 Save As remains F6; Ctrl+Shift+S converts selected tabs to spaces.
 
-Edit → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
+Search → Find / Ctrl+F opens a modeless search dialog. F3 finds the next match;
 Shift+F3 finds the previous match. Wrap around is enabled by default, while
 Match case, Whole word and Regular expression are initially off. Find and
 Replace share the query and options for the current application session.
 Opening imports selected text up to 1 MiB, or the clipboard under the original
 selection options; Replace then focuses replacement text for an imported
-selection. Closing discards unsubmitted edits. View's Save Find/Replace option
+selection. Closing discards unsubmitted edits. Settings → Other Settings → Remember Search Options
 enables original search-history/flag persistence through the shared
 [settings lifecycle](docs/settings.md).
 
@@ -120,7 +119,7 @@ original single-anchor `^` and `$` line-count rules are retained. Query/options
 changes and edits clear the count and indicators. Find All bookmarks remain until
 the next Find All operation; New/Open clear them with the replaced document.
 
-Edit → Replace / Ctrl+H opens the replacement view. Replace revalidates the
+Search → Replace / Ctrl+H opens the replacement view. Replace revalidates the
 selected match before editing; Replace All searches the complete current
 document and reports its count in the dialog. Each text-changing single
 replacement or Replace All operation can be undone once. Byte-identical
@@ -154,6 +153,18 @@ and confirms overwrite. Cancellation or failure retains the current document,
 identity and history. A successful save safely replaces the target and updates
 the title and save point.
 
+File → New Window / Alt+N starts a separate blank process using the saved startup
+settings. The current document, selection and undo history stay in the parent.
+The child requests the parent's normal window size and maximized state. Windows
+uses its exact normal rectangle with a 10-pixel offset, wrapping to the monitor
+origin at the work-area edge. Linux leaves placement and native decorations to
+the compositor. See the [platform validation record](docs/observations/new-window.md).
+
+File → Save with Original Time preserves the destination's writable file times
+through the normal save flow. Update File Time changes the named backing file's
+modification time while retaining its bytes and the live editor state. See
+[file-time behavior](docs/file-times.md) for platform fields and failure behavior.
+
 New/Open/Close skip this confirmation for untitled documents shorter than 2048
 UTF-8 bytes containing only ASCII space or bytes `0x09` through `0x0d` (including
 the empty document). Explicit Save and Save As still save these documents.
@@ -181,7 +192,7 @@ names. Known filename associations take precedence; languages whose lexer has no
 been delivered retain the Plain Text fallback. The original `[Styles] AutoSelect`
 and `[Settings2] NoCGIGuess` settings control this selection. It runs on Open and
 explicit Automatic selection, without changing text or history; ordinary edits
-retain the selected language. Other unmatched content uses Plain Text. The Language menu offers
+retain the selected language. Other unmatched content uses Plain Text. The Scheme menu offers
 Automatic, Plain Text and each supported language. A manual choice applies to the
 current document. New and opening a different supplied path restore Automatic.
 Reopening the current path retains its effective scheme, caret/anchor and view,
@@ -208,7 +219,7 @@ pinned original checkout; generated headers record revision, source hash and
 license, and omit completion-only lists.
 
 C/C++, Python and JSON support code folding. Click a header's margin marker to
-collapse or expand its block; View → Collapse All and Expand All include nested
+collapse or expand its block; View → Toggle Folds → Collapse All and Expand All include nested
 blocks. These commands change visibility without editing text or history. Find
 reveals the complete matched range, including hidden intermediate lines, while
 leaving unrelated folds collapsed. Replacement still searches the full document.

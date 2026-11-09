@@ -2279,6 +2279,11 @@ public:
             InitFocusProbe(frame);
             return true;
         }
+        // Clipboard command fixtures remove named files to check identity and
+        // saved bytes. File-change decisions have their own native fixture.
+        auto monitoring = frame->FileWatching();
+        monitoring.mode = FileWatchingMode::None;
+        frame->SetFileWatchingOptions(monitoring);
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {

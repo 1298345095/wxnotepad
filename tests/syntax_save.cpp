@@ -55,7 +55,8 @@ public:
         GList* windows = gtk_window_list_toplevels();
         for (GList* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+            if (!gtk_widget_get_visible(widget)) continue;
+            if (!GTK_IS_FILE_CHOOSER(widget)) continue;
             if (stage_ == 0) {
                 stage_ = 1;
                 ++choosers;
@@ -117,7 +118,7 @@ void Language(EditorFrame* frame, bool cpp) {
             "status must follow the effective language");
 }
 void Choose(EditorFrame* frame, const char* label) {
-    const auto id = frame->GetMenuBar()->FindMenuItem("Language", label);
+    const auto id = frame->GetMenuBar()->FindMenuItem("Scheme", label);
     Require(id != wxNOT_FOUND, "supported language choice must exist");
     Command(frame, id);
     Require(frame->GetMenuBar()->IsChecked(id) && frame->GetStatusBar()->GetStatusText().Contains("override"),
@@ -126,7 +127,7 @@ void Choose(EditorFrame* frame, const char* label) {
 void Automatic(EditorFrame* frame, const char* language, int lexer) {
     Paint(frame);
     const auto status = frame->GetStatusBar()->GetStatusText();
-    Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "Automatic")) &&
+    Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "Automatic")) &&
                 status.Contains(language) && !status.Contains("override") &&
                 frame->Editor()->Send(Message::GetLexer) == lexer &&
                 frame->Editor()->Send(Message::GetMarginWidthN, 2) > 0,
@@ -134,7 +135,7 @@ void Automatic(EditorFrame* frame, const char* language, int lexer) {
 }
 void Selected(EditorFrame* frame, const char* language, int lexer) {
     Paint(frame);
-    Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", language)) &&
+    Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", language)) &&
                 frame->GetStatusBar()->GetStatusText().Contains(wxString(language) + " (override)") &&
                 frame->Editor()->Send(Message::GetLexer) == lexer,
             "specific save type must install its language and reflect the explicit choice in menu and status");

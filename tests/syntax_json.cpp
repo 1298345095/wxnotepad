@@ -37,10 +37,10 @@ void Command(EditorFrame* frame, int id) {
     Paint(frame);
 }
 void Choose(EditorFrame* frame, const wxString& label) {
-    const int id = frame->GetMenuBar()->FindMenuItem("Language", label);
+    const int id = frame->GetMenuBar()->FindMenuItem("Scheme", label);
     Require(id != wxNOT_FOUND, "Language menu must offer JSON for any document");
     Command(frame, id);
-    auto* menu = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Language"));
+    auto* menu = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("Scheme"));
     for (const auto* item : menu->GetMenuItems()) {
         if (item->IsRadio()) Require(item->IsChecked() == (item->GetId() == id), "language choices must be exclusive");
     }
@@ -76,7 +76,8 @@ public:
         GList* windows = gtk_window_list_toplevels();
         for (GList* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+            if (!gtk_widget_get_visible(widget)) continue;
+            if (!GTK_IS_FILE_CHOOSER(widget)) continue;
             if (stage_ == 0) {
                 stage_ = 1;
                 ++choosers;
@@ -173,7 +174,7 @@ public:
                 const auto plain = directory / "manual.txt";
                 FileCommand(frame, wxID_SAVEAS, plain);
                 Require(Bytes(plain) == source && frame->GetStatusBar()->GetStatusText().Contains("JSON (override)") &&
-                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Language", "JSON")),
+                            frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "JSON")),
                         "native Save As current JSON type must retain JSON despite .txt and preserve exact bytes");
                 Choose(frame, "Automatic");
                 Require(editor->Send(Message::GetLexer) == SCLEX_NULL,

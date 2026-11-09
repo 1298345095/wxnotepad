@@ -106,8 +106,10 @@ add_library(app_shell STATIC
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
+    src/app/dialogs/recent_files_dialog.cpp
     src/app/dialogs/sort_lines_dialog.cpp
     src/settings/settings_store.cpp
+    src/settings/recent_files.cpp
     src/settings/search_settings.cpp
     src/app/dialogs/document_dialogs.cpp
     src/app/dialogs/enclose_selection_dialog.cpp
@@ -117,7 +119,10 @@ add_library(app_shell STATIC
     src/app/dialogs/search_feedback_dialog.cpp
     src/app/dialogs/tab_settings_dialog.cpp
     src/app/editor_frame.cpp
+    src/app/file_change_monitor.cpp
+    src/app/editor_frame_file_watching.cpp
     src/app/editor_frame_commands.cpp
+    src/app/new_window.cpp
     src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
@@ -181,7 +186,16 @@ if(BUILD_TESTING)
     add_test(NAME original_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_settings_lifecycle PROPERTIES TIMEOUT 60)
+    add_test(NAME original_file_watching_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/file_watching_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_file_watching_settings PROPERTIES TIMEOUT 60)
     add_gui_program(settings_read_failure tests/settings_read_failure.cpp app_shell)
+    add_gui_program(recent_files tests/recent_files.cpp app_shell)
+    add_test(NAME original_recent_files COMMAND recent_files)
+    set_tests_properties(original_recent_files PROPERTIES TIMEOUT 60)
+    add_test(NAME original_recent_files_process COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/recent_files_process.py" "$<TARGET_FILE:wxnotepad>" "$<TARGET_FILE:recent_files>")
+    set_tests_properties(original_recent_files_process PROPERTIES TIMEOUT 60)
     add_test(NAME settings_read_failure_preserves_file COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/settings_read_failure_process.py" "$<TARGET_FILE:settings_read_failure>")
     set_tests_properties(settings_read_failure_preserves_file PROPERTIES TIMEOUT 30)
@@ -221,6 +235,14 @@ if(BUILD_TESTING)
         add_test(NAME ${test_name} COMMAND ${target})
         set_tests_properties(${test_name} PROPERTIES TIMEOUT ${timeout})
     endfunction()
+    add_gui_program(new_window tests/new_window.cpp app_shell)
+    add_test(NAME original_new_window COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/new_window_process.py" "$<TARGET_FILE:new_window>" --scenario normal)
+    set_tests_properties(original_new_window PROPERTIES TIMEOUT 45)
+    add_test(NAME original_new_window_maximized COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/new_window_process.py" "$<TARGET_FILE:new_window>" --scenario maximized)
+    set_tests_properties(original_new_window_maximized PROPERTIES TIMEOUT 45 SKIP_RETURN_CODE 77)
+    add_editor_test(menu_hierarchy original_menu_hierarchy 60)
     add_editor_test(date_time original_date_time_insertion 60)
     add_editor_test(caret_appearance original_caret_appearance 60)
     if(WIN32)
@@ -256,6 +278,7 @@ if(BUILD_TESTING)
     set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(save_copy original_save_copy 90)
+    add_editor_test(file_times original_file_times 60)
     add_editor_test(pad_spaces original_pad_spaces 60)
     add_editor_test(align_lines original_align_lines 60)
     add_editor_test(modify_lines original_modify_lines 60)
@@ -275,6 +298,9 @@ if(BUILD_TESTING)
     add_gui_program(reopen_document tests/reopen_document.cpp app_shell)
     add_test(NAME reopen_current_document COMMAND reopen_document)
     set_tests_properties(reopen_current_document PROPERTIES TIMEOUT 30)
+    add_gui_program(revert_document tests/revert_document.cpp app_shell)
+    add_test(NAME revert_current_document COMMAND revert_document)
+    set_tests_properties(revert_current_document PROPERTIES TIMEOUT 60)
 
     add_gui_program(clipboard_peer tests/clipboard_peer.cpp wx::core wx::base)
     if(UNIX AND NOT APPLE)
@@ -306,7 +332,9 @@ if(BUILD_TESTING)
     add_editor_test(encoding_auto automatic_encoding_decisions 30)
     add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
     add_editor_test(editor_smoke editor_input_undo 30)
-    add_gui_program(stream_drag tests/stream_drag.cpp editor_runtime)
+    add_gui_program(stream_drag tests/stream_drag.cpp app_shell)
+    add_test(NAME native_file_drop COMMAND stream_drag --file-drop)
+    set_tests_properties(native_file_drop PROPERTIES TIMEOUT 90)
     add_test(NAME native_stream_drag COMMAND stream_drag)
     set_tests_properties(native_stream_drag PROPERTIES TIMEOUT 90)
     if(UNIX AND NOT APPLE)
@@ -442,12 +470,18 @@ if(BUILD_TESTING)
     add_editor_test(eol_smoke loaded_eol_input 30)
     add_editor_test(eol_conversion convert_line_endings 60)
     add_editor_test(open_native open_new_native 60)
+    add_editor_test(reload_encoding reload_encoding_commands 60)
+    add_test(NAME reload_encoding_native_keys COMMAND reload_encoding)
+    set_tests_properties(reload_encoding_native_keys PROPERTIES TIMEOUT 60
+        ENVIRONMENT "WXNOTEPAD_RELOAD_NATIVE_KEYS=1")
+    add_editor_test(file_drop file_drop_open 60)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
         # Preserve timeout stacks through the existing Linux core/GDB collector.
         set_tests_properties(open_new_native PROPERTIES
             TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
     endif()
     add_editor_test(save_smoke save_existing 30)
+    add_editor_test(file_change original_file_change_notification 90)
     add_editor_test(save_native save_as_native 60)
     add_editor_test(search_smoke find_literal_next 30)
     add_editor_test(search_wildcards original_wildcard_search 30)

@@ -48,6 +48,18 @@ use. Cancellation after detection also preserves that state. Saving retains
 the selected codec and BOM; the #59 legacy-loss and #60 reopen rules remain in
 the same session flow.
 
+File > Reload > With Encoding (F8) offers UTF-8, UTF-16LE and GBK as explicit
+source codecs. Its initial selection normalizes loaded BOM variants to their
+source codec; a native ANSI identity starts without an explicit source choice.
+A modified document first receives the original discard warning;
+then the encoding picker can be accepted or cancelled. Reloading reads disk
+without saving live text. As UTF-8 (Shift+F8) instead uses the ordinary
+Save/Discard/Cancel decision before reading the source. Save writes first and
+the reload decodes those newly saved bytes, restoring the view captured before
+Save cleanup. Both commands retain the existing
+same-file scheme, selection, viewport and read-only rules, refresh actual
+encoding/BOM metadata, and are disabled for Untitled documents.
+
 The decision/parser/catalog ports retain upstream provenance and
 [Notepad4's license](../licenses/Notepad4.txt). Native Unicode predicates were
 checked against the Windows API's returned flags, including cases where its

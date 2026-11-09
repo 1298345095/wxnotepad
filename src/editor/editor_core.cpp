@@ -135,10 +135,18 @@ Message ApplicationKeyCommand(const wxKeyEvent& event) {
 
 class EditorControl::Core::TextDropTarget final : public wxDropTarget {
 public:
-    explicit TextDropTarget(Core& editor) : wxDropTarget(new wxTextDataObject), editor_(editor) {
+    explicit TextDropTarget(Core& editor) : editor_(editor) {
+        auto* data = new wxDataObjectComposite;
+        data->Add(new wxFileDataObject, true);
+        data->Add(new wxTextDataObject);
+        SetDataObject(data);
         SetDefaultAction(wxDragMove);
     }
     wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult result) override {
+        if (FilesOffered()) {
+            editor_.ClearDropFeedback();
+            return wxDragCopy;
+        }
         if (editor_.pdoc->IsReadOnly() || (result != wxDragCopy && result != wxDragMove)) {
             editor_.ClearDropFeedback();
             return wxDragNone;
@@ -152,12 +160,21 @@ public:
         return result;
     }
     void OnLeave() override { editor_.ClearDropFeedback(); }
-    bool OnDrop(wxCoord, wxCoord) override { return !editor_.pdoc->IsReadOnly(); }
+    bool OnDrop(wxCoord, wxCoord) override { return FilesOffered() || !editor_.pdoc->IsReadOnly(); }
     wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult result) override {
         const auto action = OnDragOver(x, y, result);
         editor_.ClearDropFeedback();
         if (action == wxDragNone || !GetData()) return wxDragNone;
-        const auto& value = static_cast<wxTextDataObject*>(GetDataObject())->GetText();
+        auto* data = static_cast<wxDataObjectComposite*>(GetDataObject());
+        if (data->GetReceivedFormat().GetType() == wxDF_FILENAME) {
+            const auto& files = static_cast<wxFileDataObject*>(data->GetObject(wxDF_FILENAME))->GetFilenames();
+            if (files.empty()) return wxDragNone;
+            auto* event = new wxDropFilesEvent(wxEVT_DROP_FILES, 1, new wxString[1]{files[0]});
+            event->SetEventObject(&editor_.window_);
+            wxQueueEvent(editor_.window_.GetEventHandler(), event);
+            return wxDragCopy;
+        }
+        const auto& value = static_cast<wxTextDataObject*>(data->GetObject(data->GetReceivedFormat()))->GetText();
         const auto utf8 = value.ToUTF8();
         if (utf8.length() == 0) return wxDragNone;
         const auto position =
@@ -167,6 +184,13 @@ public:
     }
 
 private:
+    bool FilesOffered() {
+#ifdef __WXMSW__
+        return GetMatchingPair().GetType() == wxDF_FILENAME;
+#else
+        return false;
+#endif
+    }
     Core& editor_;
 };
 
@@ -262,6 +286,11 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
                                        const auto position =
                                            SPositionFromLocation(core::Point(x, y), false, false, UserVirtualSpace());
                                        DropAt(position, text, move, false);
+                                   },
+                                   [this](const wxString& path) {
+                                       auto* event = new wxDropFilesEvent(wxEVT_DROP_FILES, 1, new wxString[1]{path});
+                                       event->SetEventObject(&window_);
+                                       wxQueueEvent(window_.GetEventHandler(), event);
                                    }});
 #else
     window_.SetDropTarget(new TextDropTarget(*this));

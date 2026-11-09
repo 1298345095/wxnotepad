@@ -36,7 +36,7 @@ template <typename Edit> inline void Show(EditorFrame* frame, const Edit& edit, 
         }
     });
     timer.Start(10);
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Tab Settings..."));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Tab Settings..."));
     if (failure) std::rethrow_exception(failure);
 }
 inline void File(EditorFrame* frame, int tab, int indent, bool spaces) {

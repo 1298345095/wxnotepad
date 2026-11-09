@@ -154,7 +154,7 @@ public:
                 std::puts("PASS: multiline regex bookmark scope and Unicode byte boundaries");
 
                 load("void f() {\n  needle();\n}\n");
-                const auto cpp = frame->GetMenuBar()->FindMenuItem("Language", "C/C++");
+                const auto cpp = frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++");
                 Command(frame, cpp);
                 editor->Send(Message::Colourise, 0, -1);
                 editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Contract));

@@ -4,6 +4,7 @@
 #include "editor/display_units.h"
 #include "document/encoding/encoding_detection.h"
 #include "editor/caret_appearance.h"
+#include "settings/file_watching_options.h"
 #include <wx/string.h>
 #include <array>
 #include <vector>
@@ -32,6 +33,7 @@ struct OriginalSettings {
     bool noCgiGuess = false;
     bool fixLineEndings = false;
     bool fixTrailingBlanks = false;
+    FileWatchingOptions fileWatching;
     EncodingOptions encoding;
     int zoomLevel = DisplayUnits::ZoomPercentScale;
     CaretAppearance caret;
@@ -43,6 +45,11 @@ struct OriginalSettings {
     int autoInsertMask = AutoInsertMask_Default;
     int markOccurrences = 1;
     bool saveFindReplace = false;
+    bool saveRecentFiles = false;
+    int maxRecentFiles = OriginalSettingLimits::MinRecentFiles;
+    bool relativeFileMRU = true;
+    bool portableMyDocs = true;
+    std::vector<wxString> recentFiles;
     int findReplaceOption = 2;
     int findReplaceFlag = 0;
     std::vector<wxString> recentFind;

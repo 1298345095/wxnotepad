@@ -75,7 +75,7 @@ void ReadOnlyLanguageFolds(EditorFrame* frame, int show) {
     };
     for (const auto& fixture : fixtures) {
         editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(fixture.text));
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", fixture.language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", fixture.language));
         NativeFold::Paint(editor);
         editor->Send(Message::EmptyUndoBuffer);
         editor->Send(Message::SetSavePoint);
@@ -152,7 +152,7 @@ public:
                         "both original folding preferences must default enabled");
                 const char* source = "void outer() {\n  if (true) {\n    call();\n  }\n}\nafter();\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source));
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 NativeFold::Paint(editor);
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);

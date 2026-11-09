@@ -26,9 +26,10 @@ std::string Text(EditorControl* editor) {
     text.pop_back();
     return text;
 }
-void Menu(EditorFrame* frame, const wxString& label) {
-    const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
-    Require(id != wxNOT_FOUND, "native Edit menu exposes indentation command");
+void Menu(EditorFrame* frame, const char* menu, const wxString& label) {
+    const int id = frame->GetMenuBar()->FindMenuItem(menu, label);
+    const std::string path = std::string("native menu command is reachable at ") + menu + " > " + label.ToStdString();
+    Require(id != wxNOT_FOUND, path.c_str());
     NativeSearch::Command(frame, id);
 }
 void NativeTab(EditorControl* editor, bool shift = false) {
@@ -174,7 +175,7 @@ private:
 };
 void DialogTraversal(EditorFrame* frame) {
     const auto before = Text(frame->Editor());
-    Menu(frame, "Find...");
+    Menu(frame, "Search", "Find...");
     bool found = false;
     for (auto* window : wxTopLevelWindows) {
         if (window->GetLabel() != "Find" || !window->IsShown()) continue;
@@ -185,7 +186,7 @@ void DialogTraversal(EditorFrame* frame) {
     }
     Require(found, "application Find dialog was shown");
     DialogTabs goTo("Go To Line");
-    Menu(frame, "Go To Line...");
+    Menu(frame, "Search", "Goto Line...");
     goTo.Stop();
     if (!goTo.error.empty()) std::fprintf(stderr, "Go To Line: %s\n", goTo.error.c_str());
     Require(goTo.checked && goTo.error.empty(), "Go To Line retains native Tab/Shift+Tab focus traversal");
@@ -228,7 +229,7 @@ void SavedBytes(EditorFrame* frame) {
         Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
                 "byte fixture opens through application file operation");
         editor->Send(Message::SelectAll);
-        Menu(frame, "Indent");
+        Menu(frame, "Edit", "Indent");
         Require(frame->Save().status == SaveStatus::Saved && Bytes(path) == fixture.after,
                 "Save preserves encoding, BOM, mixed EOL bytes and final-newline presence");
         wxString evidence;
@@ -251,6 +252,8 @@ public:
     bool OnInit() override {
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
+        // Editor fixtures remove backing files before the remaining dialog checks.
+        settings_->values.fileWatching.mode = FileWatchingMode::None;
         settings_->values.wordWrap = false;
         // Mixed-EOL warning choices are covered by mixed_line_ending_open.
         settings_->values.warnLineEndings = false;
@@ -266,14 +269,14 @@ public:
                 wxYield();
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("A\r\nB\r\nlast"));
                 editor->Send(Message::SetSel, 0, 6);
-                Menu(frame, "Indent");
+                Menu(frame, "Edit", "Indent");
                 Require(Text(editor) == "\tA\r\n\tB\r\nlast", "Indent excludes a forward endpoint at column zero");
                 std::puts("PASS: Indent native menu and forward logical-line selection");
                 editor->Send(Message::SetSel, 0, 0);
-                Menu(frame, "Indent");
+                Menu(frame, "Edit", "Indent");
                 Require(Text(editor) == "\t\tA\r\n\tB\r\nlast",
                         "Indent at column zero changes the current logical line");
-                Menu(frame, "Unindent");
+                Menu(frame, "Edit", "Unindent");
                 Require(Text(editor) == "\tA\r\n\tB\r\nlast", "Unindent acts on the current logical line");
                 std::puts("PASS: current-line commands at column zero");
                 editor->Send(Message::SetSel, 2, 2);
@@ -311,9 +314,9 @@ public:
                 editor->Send(Message::SetSel, 0, 0);
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
-                Menu(frame, "Indent");
+                Menu(frame, "Edit", "Indent");
                 editor->Send(Message::Undo);
-                Menu(frame, "Unindent");
+                Menu(frame, "Edit", "Unindent");
                 Require(Text(editor) == "A\nB" && !editor->Send(Message::GetModify) &&
                             !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
                         "no-op Unindent leaves save point, undo buffer and pending redo intact");
@@ -335,15 +338,15 @@ public:
                 editor->Send(Message::SetUseTabs, 0);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("\t A\r\n  中文\n\n  Z"));
                 editor->Send(Message::SelectAll);
-                Menu(frame, "Indent");
+                Menu(frame, "Edit", "Indent");
                 Require(Text(editor) == "       A\r\n    中文\n\n    Z",
                         "effective spaces and indent width preserve core mixed-indent and blank-line behavior");
                 editor->Send(Message::SelectAll);
-                Menu(frame, "Unindent");
+                Menu(frame, "Edit", "Unindent");
                 Require(Text(editor) == "     A\r\n  中文\n\n  Z", "Unindent removes one effective indentation step");
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(" A\n"));
                 editor->Send(Message::GotoPos, 1);
-                Menu(frame, "Unindent");
+                Menu(frame, "Edit", "Unindent");
                 Require(Text(editor) == "A\n", "partial indentation unindents to zero using the core");
                 std::puts("PASS: effective settings, mixed whitespace, blank lines, CJK and partial indent");
                 editor->Send(Message::SetTabWidth, 8);
@@ -361,12 +364,12 @@ public:
                 editor->ToggleWordWrap();
                 const std::string folded = "void f() {\n  call();\n}\nafter();\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(folded.c_str()));
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "C/C++"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Paint(editor);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
                 Require(!editor->Send(Message::GetLineVisible, 1), "fixture includes folded logical text");
                 editor->Send(Message::SetSel, 0, editor->Send(Message::PositionFromLine, 3));
-                Menu(frame, "Indent");
+                Menu(frame, "Edit", "Indent");
                 Require(Text(editor) == "\tvoid f() {\n\t  call();\n\t}\nafter();\n",
                         "selected folded content indents with its visible header");
                 const auto caret = editor->Send(Message::GetCurrentPos);
@@ -384,7 +387,7 @@ public:
                 editor->Send(Message::GotoPos, 0);
                 Require(search.Find(SearchDirection::Forward).status == FindStatus::Found,
                         "search fixture finds a match");
-                Menu(frame, "Indent");
+                Menu(frame, "Edit", "Indent");
                 const auto beforeReplace = Text(editor);
                 Require(!search.ReplaceOne().changed && Text(editor) == beforeReplace,
                         "indentation invalidates the previous regex match before replacement");
@@ -393,7 +396,7 @@ public:
                 TabDialog::File(frame, 2, 2, true);
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文\nB"));
                 editor->Send(Message::SelectAll);
-                Menu(frame, "Indent");
+                Menu(frame, "Edit", "Indent");
                 Require(Text(editor) == "  中文\n  B", "block menu uses the user-selected spaces and width");
                 NativeTab(editor, true);
                 Require(Text(editor) == "中文\nB", "Shift+Tab uses the user-selected indentation width");

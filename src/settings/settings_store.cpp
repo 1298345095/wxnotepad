@@ -1,5 +1,6 @@
 #include "settings/settings_store.h"
 #include "search/search_limits.h"
+#include "settings/recent_files.h"
 #include <ScintillaTypes.h>
 #include <wx/ffile.h>
 #include <wx/file.h>
@@ -29,8 +30,9 @@ wxString ConfigurationPath() {
     wxString directory = executable.GetPath();
 #ifdef __WXMSW__
     // Preserve FindIniFile's installation detection and LocalAppData fallback.
-    const wxString module = executable.GetFullPath();
-    if (module.StartsWith("C:\\Program Files") || module.Contains("WinGet") || module.Contains("hocolatey")) {
+    const wxString programPath = executable.GetFullPath();
+    if (programPath.StartsWith("C:\\Program Files") || programPath.Contains("WinGet") ||
+        programPath.Contains("hocolatey")) {
         PWSTR local = nullptr;
         if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &local))) {
             directory = wxFileName(local, "Notepad4").GetFullPath();
@@ -39,9 +41,9 @@ wxString ConfigurationPath() {
     }
 #else
     // Native Linux installation directories map to the XDG user config directory.
-    const wxString module = executable.GetFullPath();
-    if (module.StartsWith("/usr/") || module.StartsWith("/opt/") || module.StartsWith("/app/") ||
-        module.StartsWith("/snap/") || module.StartsWith("/bin/")) {
+    const wxString programPath = executable.GetFullPath();
+    if (programPath.StartsWith("/usr/") || programPath.StartsWith("/opt/") || programPath.StartsWith("/app/") ||
+        programPath.StartsWith("/snap/") || programPath.StartsWith("/bin/")) {
         wxString config;
         if (!wxGetEnv("XDG_CONFIG_HOME", &config) || !wxFileName(config).IsAbsolute())
             config = wxFileName(wxGetHomeDir(), ".config").GetFullPath();
@@ -86,6 +88,13 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     const OriginalSettings defaults;
     LoadLines();
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
+    const int recent = ReadInt("SaveRecentFiles", RecentFiles::MinimumCapacity << 1);
+    values.saveRecentFiles = (recent & 1) != 0;
+    values.maxRecentFiles = std::max(recent >> 1, RecentFiles::MinimumCapacity);
+    recentFileCapacity_ = values.maxRecentFiles;
+    values.relativeFileMRU = ReadBool("RelativeFileMRU", true, "Settings2");
+    values.portableMyDocs = ReadBool("PortableMyDocs", values.relativeFileMRU, "Settings2");
+    if (values.saveRecentFiles) values.recentFiles = ReadRecentFiles();
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
     values.autoShrinkScrollWidth = ReadBool("AutoShrinkScrollWidth", defaults.autoShrinkScrollWidth, "wxnotepad");
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
@@ -105,6 +114,14 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.noCgiGuess = ReadBool("NoCGIGuess", defaults.noCgiGuess, "Settings2");
     values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
     values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", defaults.fixTrailingBlanks);
+    values.fileWatching.mode = static_cast<FileWatchingMode>(
+        std::clamp(ReadInt("FileWatchingMode", static_cast<int>(defaults.fileWatching.mode)),
+                   static_cast<int>(FileWatchingMode::None), static_cast<int>(FileWatchingMode::AutoReload)));
+    values.fileWatching.checkInterval = ReadInt("FileCheckInterval", defaults.fileWatching.checkInterval, "Settings2");
+    values.fileWatching.autoReloadDelay =
+        ReadInt("AutoReloadTimeout", defaults.fileWatching.autoReloadDelay, "Settings2");
+    values.fileWatching.flags = ReadInt("FileWatchingOption", defaults.fileWatching.flags);
+    values.fileWatching.resetOnNewFile = ReadBool("ResetFileWatching", defaults.fileWatching.resetOnNewFile);
     values.encoding.defaultEncoding =
         NormalizeEncodingSetting(ReadInt("DefaultEncoding", defaults.encoding.defaultEncoding));
     values.encoding.skipUnicodeDetection = ReadBool("SkipUnicodeDetection", defaults.encoding.skipUnicodeDetection);
@@ -134,8 +151,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.findReplaceOption = ReadInt("FindReplaceOption", defaults.findReplaceOption);
     if (values.saveFindReplace) {
         values.findReplaceFlag = ReadInt("FindReplaceFlag", defaults.findReplaceFlag);
-        values.recentFind = ReadHistory("Recent Find");
-        values.recentReplace = ReadHistory("Recent Replace");
+        values.recentFind = ReadHistory("Recent Find", SearchLimits::HistoryEntries);
+        values.recentReplace = ReadHistory("Recent Replace", SearchLimits::HistoryEntries);
     }
     values.lineSelection = ReadInt("LineSelection", defaults.lineSelection);
     values.defaultEOLMode = std::clamp(ReadInt("DefaultEOLMode", defaults.defaultEOLMode), 0, 2);
@@ -244,7 +261,8 @@ void SettingsStore::WriteBool(const wxString& key, bool value, bool fallback, co
     WriteInt(key, value, fallback, sectionName);
 }
 
-std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName) const {
+std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName, size_t capacity,
+                                                 bool preserveWhitespace) const {
     std::vector<wxString> history;
     bool section = false;
     for (const auto& raw : lines_) {
@@ -253,19 +271,74 @@ std::vector<wxString> SettingsStore::ReadHistory(const wxString& sectionName) co
         if (line.StartsWith("[")) {
             section = line.CmpNoCase("[" + sectionName + "]") == 0;
         } else if (section && !line.StartsWith(";") && !line.StartsWith("#") && line.Contains('=')) {
-            wxString value = line.AfterFirst('=').Trim().Trim(false);
-            if (value.StartsWith("\"") && value.EndsWith("\"") && value.length() >= 2)
-                value = value.Mid(1, value.length() - 2);
+            wxString value = raw.AfterFirst('=');
+            wxString trimmed = value;
+            trimmed.Trim().Trim(false);
+            if (trimmed.StartsWith("\"") && trimmed.EndsWith("\"") && trimmed.length() >= 2)
+                value = trimmed.Mid(1, trimmed.length() - 2);
+            else if (!preserveWhitespace)
+                value = trimmed;
             if (!value.empty()) history.push_back(value);
-            if (history.size() == SearchLimits::HistoryEntries) break;
+            if (history.size() == capacity) break;
         }
     }
     return history;
 }
 
+std::vector<wxString> SettingsStore::ReadRecentFiles() const {
+    auto history = ReadHistory("Recent Files", recentFileCapacity_, true);
+    for (auto& path : history)
+        path = RecentFiles::ExpandPath(path);
+    return history;
+}
+
+void SettingsStore::WriteRecentFiles(const std::vector<wxString>& history) {
+    bool section = false;
+    for (size_t index = 0; index < lines_.size();) {
+        wxString line = lines_[index];
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) section = line.CmpNoCase("[Recent Files]") == 0;
+        if (section)
+            lines_.erase(lines_.begin() + static_cast<std::ptrdiff_t>(index));
+        else
+            ++index;
+    }
+    if (history.empty()) return;
+    lines_.push_back("[Recent Files]");
+    for (size_t index = 0; index < history.size(); ++index)
+        lines_.push_back(wxString::Format("%02zu=\"", index + 1) +
+                         RecentFiles::PortablePath(history[index], values.relativeFileMRU, values.portableMyDocs) +
+                         "\"");
+}
+
+void SettingsStore::AddRecentFile(const wxString& path) {
+    RecentFiles::Add(values.recentFiles, path, recentFileCapacity_);
+}
+
+void SettingsStore::ClearRecentFiles(const wxString& currentPath) {
+    values.recentFiles.clear();
+    if (values.saveRecentFiles && LoadLines()) {
+        WriteRecentFiles({});
+        SaveLines();
+    }
+    AddRecentFile(currentPath);
+}
+
+void SettingsStore::RemoveRecentFile(size_t index) {
+    if (index >= values.recentFiles.size()) return;
+    const wxString removed = values.recentFiles[index];
+    if (LoadLines()) {
+        auto stored = ReadRecentFiles();
+        std::erase_if(stored, [&removed](const auto& path) { return RecentFiles::Equal(path, removed); });
+        WriteRecentFiles(stored);
+        SaveLines();
+    }
+    values.recentFiles.erase(values.recentFiles.begin() + static_cast<std::ptrdiff_t>(index));
+}
+
 void SettingsStore::WriteHistory(const wxString& sectionName, const std::vector<wxString>& history) {
     if (history.empty()) return;
-    auto merged = ReadHistory(sectionName);
+    auto merged = ReadHistory(sectionName, SearchLimits::HistoryEntries);
     for (auto item = history.rbegin(); item != history.rend(); ++item) {
         std::erase(merged, *item);
         merged.insert(merged.begin(), *item);
@@ -323,6 +396,10 @@ bool SettingsStore::Save(bool explicitSave) {
     if (!LoadLines()) return false;
     WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
     if (values.saveSettings || explicitSave) {
+        WriteInt("SaveRecentFiles",
+                 static_cast<int>((static_cast<unsigned>(values.maxRecentFiles) << 1) |
+                                  static_cast<unsigned>(values.saveRecentFiles)),
+                 RecentFiles::MinimumCapacity << 1);
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
         WriteBool("AutoShrinkScrollWidth", values.autoShrinkScrollWidth, defaults.autoShrinkScrollWidth, "wxnotepad");
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
@@ -354,6 +431,14 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteInt("LongLineMode", values.longLineMode, defaults.longLineMode);
         WriteBool("FixLineEndings", values.fixLineEndings, defaults.fixLineEndings);
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
+        WriteInt("FileWatchingMode", static_cast<int>(values.fileWatching.mode),
+                 static_cast<int>(defaults.fileWatching.mode));
+        WriteInt("FileCheckInterval", values.fileWatching.checkInterval, defaults.fileWatching.checkInterval,
+                 "Settings2");
+        WriteInt("AutoReloadTimeout", values.fileWatching.autoReloadDelay, defaults.fileWatching.autoReloadDelay,
+                 "Settings2");
+        WriteInt("FileWatchingOption", values.fileWatching.flags, defaults.fileWatching.flags);
+        WriteBool("ResetFileWatching", values.fileWatching.resetOnNewFile, defaults.fileWatching.resetOnNewFile);
         WriteInt("SelectOption", values.selectOption, defaults.selectOption);
         WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
         WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);
@@ -380,6 +465,15 @@ bool SettingsStore::Save(bool explicitSave) {
     if (!explicitSave && values.saveFindReplace) {
         WriteHistory("Recent Find", values.recentFind);
         WriteHistory("Recent Replace", values.recentReplace);
+    }
+    // MRUList::MergeSave re-reads disk and adds this process oldest to newest.
+    // It saves independently of SaveSettings and leaves stored history alone when disabled.
+    if (!explicitSave && values.saveRecentFiles && !values.recentFiles.empty()) {
+        auto merged = ReadRecentFiles();
+        for (auto item = values.recentFiles.rbegin(); item != values.recentFiles.rend(); ++item)
+            RecentFiles::Add(merged, *item, recentFileCapacity_);
+        values.recentFiles = std::move(merged);
+        WriteRecentFiles(values.recentFiles);
     }
     return SaveLines();
 }

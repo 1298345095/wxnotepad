@@ -41,9 +41,9 @@ public:
         GList* windows = gtk_window_list_toplevels();
         for (GList* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget) || !GTK_IS_MESSAGE_DIALOG(widget) ||
-                wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) != "wxnotepad")
-                continue;
+            if (!gtk_widget_get_visible(widget)) continue;
+            if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
+            if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) != "wxnotepad") continue;
             observed = true;
             gchar* text = nullptr;
             g_object_get(widget, "text", &text, nullptr);

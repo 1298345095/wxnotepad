@@ -4,6 +4,7 @@
 #include <wx/timer.h>
 #include <utility>
 #include <cstdint>
+#include <functional>
 
 namespace NativeDialogs {
 enum class FileDialogProfile : std::uint8_t { Open, Save };
@@ -12,9 +13,9 @@ enum class FileDialogProfile : std::uint8_t { Open, Save };
 // command sequence, expected dialog counts and document/disk assertions.
 class FileCommandDriver final : public wxTimer {
 public:
-    using Observer = void (*)(const char*);
-    FileCommandDriver(FileDialogProfile profile, int choice, wxString destination = {}, Observer observer = nullptr)
-        : profile_(profile), choice_(choice), destination_(std::move(destination)), observer_(observer) {
+    using Observer = std::function<void(const char*)>;
+    FileCommandDriver(FileDialogProfile profile, int choice, wxString destination = {}, Observer observer = {})
+        : profile_(profile), choice_(choice), destination_(std::move(destination)), observer_(std::move(observer)) {
         Observe("driver start");
         Start(100);
     }
@@ -29,69 +30,80 @@ public:
             GetCurrentThreadId(),
             [](HWND window, LPARAM data) -> BOOL {
                 auto& driver = *reinterpret_cast<FileCommandDriver*>(data);
-                if (!IsWindowVisible(window)) return TRUE;
-                wchar_t title[256]{};
-                GetWindowTextW(window, title, 256);
-                if (wxString(title) == "Save changes?" || wxString(title) == "Read only file") {
-                    driver.Observe("confirmation response begin");
-                    ++driver.prompts;
-                    const int button = driver.choice_ == wxID_YES ? IDYES : driver.choice_ == wxID_NO ? IDNO : IDCANCEL;
-                    SendMessageW(window, WM_USER + 102, button, 0); // TDM_CLICK_BUTTON
-                    driver.Observe("confirmation response end");
-                } else if (driver.IsChooserTitle(title)) {
-                    if (!driver.chooserStage_++) {
-                        ++driver.choosers;
-                        driver.Observe("chooser selection begin");
-                        ChooseFile(window, driver.destination_);
-                        driver.Observe("chooser selection end");
-                    }
-                } else if (driver.IsErrorTitle(title)) {
-                    ++driver.errors;
-                    SendMessageW(window, WM_USER + 102, IDOK, 0);
-                }
+                driver.RespondToWindow(window);
                 return TRUE;
             },
             reinterpret_cast<LPARAM>(this));
 #elif defined(__WXGTK__)
         GList* windows = gtk_window_list_toplevels();
-        for (GList* item = windows; item; item = item->next) {
-            auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget)) continue;
-            if (GTK_IS_FILE_CHOOSER(widget)) {
-                if (chooserStage_ == 0) {
-                    chooserStage_ = 1;
-                    ++choosers;
-                    Observe("chooser selection begin");
-                    ChooseFile(widget, destination_);
-                    Observe("chooser selection end");
-                } else if (chooserStage_ == 1 && !destination_.empty() && CanAcceptFile(widget, destination_)) {
-                    chooserStage_ = 2;
-                    Observe("chooser accept begin");
-                    Respond(widget, GTK_RESPONSE_ACCEPT);
-                    Observe("chooser accept end");
-                }
-                continue;
-            }
-            if (!GTK_IS_MESSAGE_DIALOG(widget)) continue;
-            const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
-            if (title == "Save changes?" || title == "Read only file") {
-                Observe("confirmation response begin");
-                ++prompts;
-                Respond(widget, choice_ == wxID_YES  ? GTK_RESPONSE_YES
-                                : choice_ == wxID_NO ? GTK_RESPONSE_NO
-                                                     : GTK_RESPONSE_CANCEL);
-                Observe("confirmation response end");
-            } else if (IsErrorTitle(title)) {
-                ++errors;
-                Respond(widget, GTK_RESPONSE_OK);
-            }
-        }
+        for (GList* item = windows; item; item = item->next)
+            RespondToWindow(GTK_WIDGET(item->data));
         g_list_free(windows);
 #endif
         Observe("driver callback exit");
     }
 
 private:
+#ifdef __WXMSW__
+    void RespondToWindow(HWND window) {
+        if (!IsWindowVisible(window)) return;
+        wchar_t title[256]{};
+        GetWindowTextW(window, title, static_cast<int>(std::size(title)));
+        if (wxString(title) == "Save changes?" || wxString(title) == "Read only file" || wxString(title) == "Revert") {
+            Observe("confirmation response begin");
+            ++prompts;
+            const int button = choice_ == wxID_OK    ? IDOK
+                               : choice_ == wxID_YES ? IDYES
+                               : choice_ == wxID_NO  ? IDNO
+                                                     : IDCANCEL;
+            SendMessageW(window, TDM_CLICK_BUTTON, button, 0);
+            Observe("confirmation response end");
+        } else if (IsChooserTitle(title)) {
+            if (!chooserStage_++) {
+                ++choosers;
+                Observe("chooser selection begin");
+                ChooseFile(window, destination_);
+                Observe("chooser selection end");
+            }
+        } else if (IsErrorTitle(title)) {
+            ++errors;
+            SendMessageW(window, TDM_CLICK_BUTTON, IDOK, 0);
+        }
+    }
+#elif defined(__WXGTK__)
+    void RespondToWindow(GtkWidget* widget) {
+        if (!gtk_widget_get_visible(widget)) return;
+        if (GTK_IS_FILE_CHOOSER(widget)) {
+            if (chooserStage_ == 0) {
+                chooserStage_ = 1;
+                ++choosers;
+                Observe("chooser selection begin");
+                ChooseFile(widget, destination_);
+                Observe("chooser selection end");
+            } else if (chooserStage_ == 1 && !destination_.empty() && CanAcceptFile(widget, destination_)) {
+                chooserStage_ = 2;
+                Observe("chooser accept begin");
+                Respond(widget, GTK_RESPONSE_ACCEPT);
+                Observe("chooser accept end");
+            }
+            return;
+        }
+        if (!GTK_IS_MESSAGE_DIALOG(widget)) return;
+        const auto title = wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget)));
+        if (title == "Save changes?" || title == "Read only file" || title == "Revert") {
+            Observe("confirmation response begin");
+            ++prompts;
+            Respond(widget, choice_ == wxID_OK    ? GTK_RESPONSE_OK
+                            : choice_ == wxID_YES ? GTK_RESPONSE_YES
+                            : choice_ == wxID_NO  ? GTK_RESPONSE_NO
+                                                  : GTK_RESPONSE_CANCEL);
+            Observe("confirmation response end");
+        } else if (IsErrorTitle(title)) {
+            ++errors;
+            Respond(widget, GTK_RESPONSE_OK);
+        }
+    }
+#endif
     void Observe(const char* transition) const {
         if (observer_) observer_(transition);
     }

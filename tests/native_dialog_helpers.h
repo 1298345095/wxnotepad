@@ -4,8 +4,10 @@
 #include <wx/string.h>
 #include <cstdio>
 #include <stdexcept>
+#include <iterator>
 #ifdef __WXMSW__
 #include <windows.h>
+#include <commctrl.h>
 #elif defined(__WXGTK__)
 #include <wx/filename.h>
 #include <gtk/gtk.h>
@@ -99,7 +101,9 @@ inline void ChooseFileType(GtkWidget* widget, const wxString& choice) {
 }
 inline void Respond(GtkWidget* dialog, int response) {
     auto* button = gtk_dialog_get_widget_for_response(GTK_DIALOG(dialog), response);
-    if (!button || !GTK_IS_BUTTON(button)) throw std::runtime_error("native dialog must expose the expected button");
+    bool valid = false;
+    if (button) valid = GTK_IS_BUTTON(button);
+    if (!valid) throw std::runtime_error("native dialog must expose the expected button");
     gtk_button_clicked(GTK_BUTTON(button));
 }
 

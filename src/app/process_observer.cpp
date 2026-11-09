@@ -125,7 +125,12 @@ void ProcessObserver::Publish() {
         wxString::Format("bookmark_margin\t%d\nchange_history\t%lld\nauto_shrink_scroll_width\t%d\n",
                          frame_->Editor()->BookmarkMarginVisible(),
                          static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetChangeHistory)),
-                         frame_->Editor()->AutoShrinkScrollWidth());
+                         frame_->Editor()->AutoShrinkScrollWidth()) +
+        wxString::Format("file_watching_mode\t%d\nfile_check_interval\t%d\nauto_reload_timeout\t%d\n",
+                         static_cast<int>(frame_->FileWatching().mode), frame_->FileWatching().checkInterval,
+                         frame_->FileWatching().autoReloadDelay) +
+        wxString::Format("file_watching_option\t%d\nreset_file_watching\t%d\n", frame_->FileWatching().flags,
+                         frame_->FileWatching().resetOnNewFile);
     // A reader can temporarily deny replacement on Windows. IPC errors must
     // stay out of wxLogGui: its deferred modal dialog can outlive the frame.
     const wxLogNull noGuiLog;

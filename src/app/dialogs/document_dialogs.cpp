@@ -3,9 +3,16 @@
 #include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/filename.h>
+#include <wx/listbox.h>
+#include <wx/radiobox.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <vector>
+#include <iterator>
+
+namespace {
+constexpr int DialogPaddingDip = 10;
+} // namespace
 
 OpenFileDialog::OpenFileDialog(wxWindow* parent)
     : wxFileDialog(parent, "Open file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
@@ -47,28 +54,84 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
     return ChosenSaveFile{dialog.GetPath(), types.at(static_cast<size_t>(dialog.GetFilterIndex()))};
 }
 
+std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial) {
+    const wxString choices[] = {"UTF-8", "UTF-16LE", "GBK (CP936)"};
+    wxDialog dialog(parent, wxID_ANY, "Reload With Encoding");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Select source &encoding to reload file:"), 0, wxALL,
+                  dialog.FromDIP(DialogPaddingDip));
+    auto* source = new wxListBox(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+                                 static_cast<int>(std::size(choices)), choices);
+    source->SetName("Source encoding");
+    if (initial) source->SetSelection(static_cast<int>(*initial));
+    contents->Add(source, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(DialogPaddingDip));
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
+                  dialog.FromDIP(DialogPaddingDip));
+    auto* accept = dialog.FindWindow(wxID_OK);
+    accept->Enable(source->GetSelection() != wxNOT_FOUND);
+    dialog.Bind(wxEVT_LISTBOX,
+                [source, accept](wxCommandEvent&) { accept->Enable(source->GetSelection() != wxNOT_FOUND); });
+    dialog.Bind(wxEVT_LISTBOX_DCLICK, [&dialog, source](wxCommandEvent&) {
+        if (source->GetSelection() != wxNOT_FOUND) dialog.EndModal(wxID_OK);
+    });
+    dialog.SetSizerAndFit(contents);
+    dialog.CentreOnParent();
+    source->SetFocus();
+    if (dialog.ShowModal() != wxID_OK) return std::nullopt;
+    return static_cast<FileEncoding>(source->GetSelection());
+}
+
+std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, const FileWatchingOptions& initial) {
+    wxDialog dialog(parent, wxID_ANY, "File Change Notification");
+    auto* layout = new wxBoxSizer(wxVERTICAL);
+    const wxString choices[] = {"&None.", "&Show message.", "&Auto-reload (unmodified)."};
+    auto* mode = new wxRadioBox(&dialog, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
+                                static_cast<int>(std::size(choices)), choices, 1, wxRA_SPECIFY_COLS);
+    mode->SetSelection(static_cast<int>(initial.mode));
+    layout->Add(mode, 1, wxEXPAND | wxALL, dialog.FromDIP(DialogPaddingDip));
+    auto* log = new wxCheckBox(&dialog, wxID_ANY, "&Monitor continuously updated file (e.g. log file).");
+    auto* keepEnd = new wxCheckBox(&dialog, wxID_ANY, "&Keep at document end after reloading.");
+    auto* reset = new wxCheckBox(&dialog, wxID_ANY, "&Reset if a new file is opened.");
+    log->SetValue(initial.flags & FileWatchingOption_LogFile);
+    keepEnd->SetValue(initial.flags & FileWatchingOption_KeepAtEnd);
+    reset->SetValue(initial.resetOnNewFile);
+    for (auto* checkbox : {log, keepEnd, reset})
+        layout->Add(checkbox, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogPaddingDip));
+    layout->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
+                dialog.FromDIP(DialogPaddingDip));
+    dialog.SetSizerAndFit(layout);
+    dialog.CentreOnParent();
+    if (dialog.ShowModal() != wxID_OK) return std::nullopt;
+    auto options = initial;
+    options.mode = static_cast<FileWatchingMode>(mode->GetSelection());
+    options.flags =
+        (log->GetValue() ? FileWatchingOption_LogFile : 0) | (keepEnd->GetValue() ? FileWatchingOption_KeepAtEnd : 0);
+    options.resetOnNewFile = reset->GetValue();
+    return options;
+}
+
 LineEndingOptionsDialog::LineEndingOptionsDialog(wxWindow* parent, const LineEndingOptions& options)
     : wxDialog(parent, wxID_ANY, "Line Endings") {
     // Original Dialogs.cpp::SelectDefLineEndingDlgProc and IDD_DEFEOLMODE.
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(this, wxID_ANY, "&Default line ending mode:"), 0, wxALL, FromDIP(10));
+    contents->Add(new wxStaticText(this, wxID_ANY, "&Default line ending mode:"), 0, wxALL, FromDIP(DialogPaddingDip));
     mode_ = new wxChoice(this, wxID_ANY);
     mode_->SetName("Default line ending mode");
     mode_->Append("Windows (CR+LF)");
     mode_->Append("Unix/macOS (LF)");
     mode_->Append("Classic Mac OS (CR)");
     mode_->SetSelection(options.defaultMode);
-    contents->Add(mode_, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
+    contents->Add(mode_, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(DialogPaddingDip));
     const auto option = [&](const char* label, bool value) {
         auto* check = new wxCheckBox(this, wxID_ANY, label);
         check->SetValue(value);
-        contents->Add(check, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
+        contents->Add(check, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(DialogPaddingDip));
         return check;
     };
     warn_ = option("Show inconsistent line endings warning on loading.", options.warn);
     fix_ = option("&Ensure consistent line endings when saving.", options.cleanup.fixLineEndings);
     strip_ = option("&Strip trailing blanks when saving.", options.cleanup.fixTrailingBlanks);
-    contents->Add(CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(10));
+    contents->Add(CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(DialogPaddingDip));
     SetSizerAndFit(contents);
     CentreOnParent();
 }
@@ -83,29 +146,29 @@ LineEndingConversionDialog::LineEndingConversionDialog(wxWindow* parent, const L
     : wxDialog(parent, wxID_ANY, "Inconsistent Line Endings") {
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(new wxStaticText(this, wxID_ANY, "The line endings in this file are not consistent:"), 0, wxALL,
-                  FromDIP(10));
+                  FromDIP(DialogPaddingDip));
     contents->Add(new wxStaticText(this, wxID_ANY,
                                    wxString::Format("CR+LF: %llu line(s).\nLF: %llu line(s).\nCR: %llu line(s).",
                                                     static_cast<unsigned long long>(counts.crlf),
                                                     static_cast<unsigned long long>(counts.lf),
                                                     static_cast<unsigned long long>(counts.cr))),
-                  0, wxLEFT | wxRIGHT, FromDIP(10));
+                  0, wxLEFT | wxRIGHT, FromDIP(DialogPaddingDip));
     contents->Add(new wxStaticText(this, wxID_ANY, "&Do you want to normalize the line endings?"), 0, wxALL,
-                  FromDIP(10));
+                  FromDIP(DialogPaddingDip));
     const wxString names[] = {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)"};
-    mode_ = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 3, names);
+    mode_ = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(std::size(names)), names);
     mode_->SetName("Line ending conversion");
     mode_->SetSelection(current == Scintilla::EndOfLine::CrLf ? 0 : current == Scintilla::EndOfLine::Lf ? 1 : 2);
-    contents->Add(mode_, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
+    contents->Add(mode_, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(DialogPaddingDip));
     always_ = new wxCheckBox(this, wxID_ANY, "&Always show this dialog.");
     always_->SetValue(warn);
-    contents->Add(always_, 0, wxALL, FromDIP(10));
+    contents->Add(always_, 0, wxALL, FromDIP(DialogPaddingDip));
     auto* buttons = new wxBoxSizer(wxHORIZONTAL);
     auto* yes = new wxButton(this, wxID_OK, "&Yes");
     auto* no = new wxButton(this, wxID_CANCEL, "&No");
     buttons->Add(yes, 0, wxRIGHT, FromDIP(5));
     buttons->Add(no);
-    contents->Add(buttons, 0, wxALIGN_RIGHT | wxALL, FromDIP(10));
+    contents->Add(buttons, 0, wxALIGN_RIGHT | wxALL, FromDIP(DialogPaddingDip));
     (defaultNo ? no : yes)->SetDefault();
     SetSizerAndFit(contents);
     CentreOnParent();

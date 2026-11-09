@@ -2,8 +2,10 @@
 #include <string>
 #include <string_view>
 
-// Original resource IDs passed through Scintilla's CustomCaseMapping message.
+// Original core mapping values and resource IDs passed through CustomCaseMapping.
 namespace CustomCaseCommand {
+inline constexpr int Upper = 1;
+inline constexpr int Lower = 2;
 inline constexpr int CharacterToHex = 40202;
 inline constexpr int HexToCharacter = 40203;
 inline constexpr int EscapeC = 40204;

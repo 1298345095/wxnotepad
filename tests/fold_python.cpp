@@ -40,7 +40,7 @@ void Replace(EditorControl* editor, size_t start, size_t length, const char* tex
 void PythonNativeFolds(EditorFrame* frame, const std::string& source) {
     auto* editor = frame->Editor();
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Python"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Python"));
     Paint(editor);
     editor->Send(Message::EmptyUndoBuffer);
     editor->Send(Message::SetSavePoint);
@@ -143,7 +143,7 @@ void PythonDocumentTransitions(EditorFrame* frame, const std::string& source) {
     MarginClick(editor, 0);
     Require(frame->Save().status == SaveStatus::Saved && !editor->Send(Message::GetFoldExpanded, 0),
             "ordinary Save must retain Python contraction state");
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Python"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Python"));
     Require(!editor->Send(Message::GetFoldExpanded, 0), "repeated Python choice must retain folds");
     Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
                 frame->Open(filename + ".missing").status == OpenStatus::Failed &&
@@ -154,12 +154,12 @@ void PythonDocumentTransitions(EditorFrame* frame, const std::string& source) {
             "fold operations and Save must preserve independently read disk bytes");
     saved.close();
     for (const auto* language : {"Plain Text", "C/C++", "JSON"}) {
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", language));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
         Paint(editor);
         Reachable(editor);
         if (std::string(language) == "Plain Text")
             Require(editor->Send(Message::GetMarginWidthN, 2) > 0, "Plain Text must retain the original fold margin");
-        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Language", "Python"));
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Python"));
         Paint(editor);
         Reachable(editor);
         Require(Header(editor, 4) && editor->Send(Message::GetFoldExpanded, 4) &&
