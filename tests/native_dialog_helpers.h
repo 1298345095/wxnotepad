@@ -4,8 +4,10 @@
 #include <wx/string.h>
 #include <cstdio>
 #include <stdexcept>
+#include <iterator>
 #ifdef __WXMSW__
 #include <windows.h>
+#include <commctrl.h>
 #elif defined(__WXGTK__)
 #include <wx/filename.h>
 #include <gtk/gtk.h>

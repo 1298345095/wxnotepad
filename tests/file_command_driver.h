@@ -48,7 +48,7 @@ private:
     void RespondToWindow(HWND window) {
         if (!IsWindowVisible(window)) return;
         wchar_t title[256]{};
-        GetWindowTextW(window, title, 256);
+        GetWindowTextW(window, title, static_cast<int>(std::size(title)));
         if (wxString(title) == "Save changes?" || wxString(title) == "Read only file" || wxString(title) == "Revert") {
             Observe("confirmation response begin");
             ++prompts;
@@ -56,7 +56,7 @@ private:
                                : choice_ == wxID_YES ? IDYES
                                : choice_ == wxID_NO  ? IDNO
                                                      : IDCANCEL;
-            SendMessageW(window, WM_USER + 102, button, 0); // TDM_CLICK_BUTTON
+            SendMessageW(window, TDM_CLICK_BUTTON, button, 0);
             Observe("confirmation response end");
         } else if (IsChooserTitle(title)) {
             if (!chooserStage_++) {
@@ -67,7 +67,7 @@ private:
             }
         } else if (IsErrorTitle(title)) {
             ++errors;
-            SendMessageW(window, WM_USER + 102, IDOK, 0);
+            SendMessageW(window, TDM_CLICK_BUTTON, IDOK, 0);
         }
     }
 #elif defined(__WXGTK__)

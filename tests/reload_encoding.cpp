@@ -51,14 +51,14 @@ public:
             [](HWND window, LPARAM data) -> BOOL {
                 auto& driver = *reinterpret_cast<ReloadDialogs*>(data);
                 wchar_t title[256]{};
-                GetWindowTextW(window, title, 256);
+                GetWindowTextW(window, title, static_cast<int>(std::size(title)));
                 if (IsWindowVisible(window) && wxString(title) == "Reload Encoding") {
                     ++driver.warnings;
                     driver.order.push_back("warning");
-                    SendMessageW(window, WM_USER + 102, driver.warningChoice == wxID_OK ? IDOK : IDCANCEL, 0);
+                    SendMessageW(window, TDM_CLICK_BUTTON, driver.warningChoice == wxID_OK ? IDOK : IDCANCEL, 0);
                 } else if (IsWindowVisible(window) && wxString(title) == "Could not reload file") {
                     ++driver.errors;
-                    SendMessageW(window, WM_USER + 102, IDOK, 0);
+                    SendMessageW(window, TDM_CLICK_BUTTON, IDOK, 0);
                 }
                 return TRUE;
             },

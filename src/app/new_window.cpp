@@ -6,6 +6,7 @@
 #include <wx/utils.h>
 #include <limits>
 #include <string>
+#include <array>
 #ifdef __WXMSW__
 #include <windows.h>
 #elif defined(__WXGTK__)
@@ -14,8 +15,8 @@
 
 bool ApplyInitialWindowPosition(wxTopLevelWindow& window, const wxString& argument) {
     const auto parts = wxSplit(argument, ',');
-    if (parts.size() != 5) return false;
-    int values[5]{};
+    std::array<int, 5> values{};
+    if (parts.size() != values.size()) return false;
     for (size_t i = 0; i < parts.size(); ++i) {
         long value = 0;
         if (!parts[i].ToLong(&value) || value < std::numeric_limits<int>::min() ||
@@ -23,13 +24,14 @@ bool ApplyInitialWindowPosition(wxTopLevelWindow& window, const wxString& argume
             return false;
         values[i] = static_cast<int>(value);
     }
-    if (values[2] <= 0 || values[3] <= 0 || (values[4] != 0 && values[4] != 1)) return false;
+    const auto [x, y, width, height, maximized] = values;
+    if (width <= 0 || height <= 0 || (maximized != 0 && maximized != 1)) return false;
 #ifdef __WXMSW__
-    window.SetSize(values[0], values[1], values[2], values[3]);
+    window.SetSize(x, y, width, height);
 #else
-    window.SetSize(values[2], values[3]);
+    window.SetSize(width, height);
 #endif
-    window.Maximize(values[4] != 0);
+    window.Maximize(maximized != 0);
     return true;
 }
 
@@ -37,6 +39,7 @@ bool EditorFrame::NewWindow() {
     wxRect normal(wxPoint(0, 0), normalWindowSize_);
 #ifdef __WXMSW__
     // Original Notepad4::GetRelaunchParameters(NewWindow | EmptyWindow).
+    constexpr int CascadeOffsetPixels = 10;
     WINDOWPLACEMENT placement{};
     placement.length = sizeof(placement);
     if (!GetWindowPlacement(static_cast<HWND>(GetHandle()), &placement)) return false;
@@ -44,8 +47,8 @@ bool EditorFrame::NewWindow() {
     monitor.cbSize = sizeof(monitor);
     if (!GetMonitorInfo(MonitorFromRect(&placement.rcNormalPosition, MONITOR_DEFAULTTONEAREST), &monitor)) return false;
     const auto& rectangle = placement.rcNormalPosition;
-    normal = wxRect(rectangle.left + 10, rectangle.top + 10, rectangle.right - rectangle.left,
-                    rectangle.bottom - rectangle.top);
+    normal = wxRect(rectangle.left + CascadeOffsetPixels, rectangle.top + CascadeOffsetPixels,
+                    rectangle.right - rectangle.left, rectangle.bottom - rectangle.top);
     if (normal.GetX() + normal.GetWidth() > monitor.rcWork.right ||
         normal.GetY() + normal.GetHeight() > monitor.rcWork.bottom)
         normal.SetPosition(wxPoint(monitor.rcMonitor.left, monitor.rcMonitor.top));

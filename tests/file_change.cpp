@@ -17,6 +17,9 @@
 #include <stdexcept>
 
 namespace {
+constexpr int EventPollIntervalMs = 10;
+constexpr int DialogResponseIntervalMs = 20;
+constexpr int NoChangeObservationMs = 200;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
@@ -24,7 +27,7 @@ template <typename Predicate> void Wait(Predicate predicate) {
     const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(6);
     while (!predicate() && std::chrono::steady_clock::now() < end) {
         wxYield();
-        wxMilliSleep(10);
+        wxMilliSleep(EventPollIntervalMs);
     }
     Require(predicate(), "external change must reach the live document");
 }
@@ -41,7 +44,7 @@ void Pause(int milliseconds) {
     const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
     while (std::chrono::steady_clock::now() < end) {
         wxYield();
-        wxMilliSleep(10);
+        wxMilliSleep(EventPollIntervalMs);
     }
 }
 class FileWatchingDialogDriver final : public wxModalDialogHook {
@@ -114,7 +117,7 @@ public:
     int prompts = 0;
     int errors = 0;
     std::function<void()> beforeChoice;
-    ChangeDecision() { Start(20); }
+    ChangeDecision() { Start(DialogResponseIntervalMs); }
     void Notify() override {
 #ifdef __WXMSW__
         EnumThreadWindows(
@@ -123,20 +126,20 @@ public:
                 auto& driver = *reinterpret_cast<ChangeDecision*>(data);
                 if (!IsWindowVisible(window)) return TRUE;
                 wchar_t title[256]{};
-                GetWindowTextW(window, title, 256);
+                GetWindowTextW(window, title, static_cast<int>(std::size(title)));
                 if (wxString(title) == "File Change Notification") {
                     driver.Stop();
                     ++driver.prompts;
                     if (auto action = std::exchange(driver.beforeChoice, {})) action();
-                    SendMessageW(window, WM_USER + 102,
+                    SendMessageW(window, TDM_CLICK_BUTTON,
                                  driver.choice == wxID_YES  ? IDYES
                                  : driver.choice == wxID_NO ? IDNO
                                                             : IDCANCEL,
                                  0);
-                    driver.Start(20);
+                    driver.Start(DialogResponseIntervalMs);
                 } else if (wxString(title) == "Could not open file" || wxString(title) == "Could not save file") {
                     ++driver.errors;
-                    SendMessageW(window, WM_USER + 102, IDOK, 0);
+                    SendMessageW(window, TDM_CLICK_BUTTON, IDOK, 0);
                 }
                 return TRUE;
             },
@@ -155,7 +158,7 @@ public:
                 NativeDialogs::Respond(widget, choice == wxID_YES  ? GTK_RESPONSE_YES
                                                : choice == wxID_NO ? GTK_RESPONSE_NO
                                                                    : GTK_RESPONSE_CANCEL);
-                Start(20);
+                Start(DialogResponseIntervalMs);
             } else if (title == "Could not open file" || title == "Could not save file") {
                 ++errors;
                 NativeDialogs::Respond(widget, GTK_RESPONSE_OK);
@@ -172,7 +175,7 @@ std::filesystem::path CheckMessageDecisionsAndFileLifecycle(EditorFrame* frame, 
     frame->SetFileWatchingOptions(options);
     Peer(TestFiles::Filename(path), "declined external text\n");
     Wait([&decision] { return decision.prompts == 1; });
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(TestEditor::Text(frame->Editor()) == "external replacement\n" && decision.prompts == 1,
             "No retains live text and consumes one decision");
     decision.choice = wxID_YES;
@@ -198,30 +201,30 @@ std::filesystem::path CheckMessageDecisionsAndFileLifecycle(EditorFrame* frame, 
     frame->SetFileWatchingOptions(options);
     TestEditor::Append(frame, "saved locally");
     Require(frame->Save().status == SaveStatus::Saved, "application save succeeds");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(decision.prompts == 4 && TestFiles::Bytes(path) == "approved dirty reload\nsaved locally",
             "own save refreshes baseline and produces no prompt");
     const auto modified = std::filesystem::last_write_time(path);
     Require(frame->UpdateFileTime(), "application timestamp-only update succeeds");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(decision.prompts == 4 && std::filesystem::last_write_time(path) > modified &&
                 TestFiles::Bytes(path) == "approved dirty reload\nsaved locally",
             "timestamp-only update refreshes baseline and produces no self-change question");
     options.mode = FileWatchingMode::None;
     frame->SetFileWatchingOptions(options);
     Peer(TestFiles::Filename(path), "off mode external content\n");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(TestEditor::Text(frame->Editor()) == "approved dirty reload\nsaved locally" && decision.prompts == 4,
             "None stops current notifications");
     options.mode = FileWatchingMode::ShowMessage;
     frame->SetFileWatchingOptions(options);
     const auto other = directory / "other.txt";
     Peer(TestFiles::Filename(other), "unrelated directory change\n");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(decision.prompts == 4, "a sibling file does not trigger a current-file question");
     Require(frame->Open(TestFiles::Filename(other)).status == OpenStatus::Opened, "switch file succeeds");
     Peer(TestFiles::Filename(path), "old file changed again\n");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(decision.prompts == 4 && TestEditor::Text(frame->Editor()) == "unrelated directory change\n",
             "switching files removes old watch identity");
     Peer(TestFiles::Filename(other), "replaced current content\n", "replace");
@@ -230,7 +233,7 @@ std::filesystem::path CheckMessageDecisionsAndFileLifecycle(EditorFrame* frame, 
     const auto savedAs = directory / "save-as.txt";
     Require(frame->SaveAs(TestFiles::Filename(savedAs)).status == SaveStatus::Saved, "Save As succeeds");
     Peer(TestFiles::Filename(other), "former identity\n");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(decision.prompts == 5, "Save As stops watching the old path");
     Peer(TestFiles::Filename(savedAs), "new identity changed\n");
     Wait([&frame] { return TestEditor::Text(frame->Editor()) == "new identity changed\n"; });
@@ -254,7 +257,7 @@ std::filesystem::path CheckMessageDecisionsAndFileLifecycle(EditorFrame* frame, 
     Peer(TestFiles::Filename(savedAs), "", "remove");
     Wait([&decision] { return decision.prompts == 10; });
     Peer(TestFiles::Filename(savedAs), "after stop\n");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(decision.prompts == 10 && frame->FileWatching().mode == FileWatchingMode::ShowMessage &&
                 TestEditor::Text(frame->Editor()) == "new identity changed\n",
             "removed-file Cancel stops current monitoring while retaining configured mode and live text");
@@ -265,7 +268,7 @@ std::filesystem::path CheckMessageDecisionsAndFileLifecycle(EditorFrame* frame, 
     Require(decision.prompts == 11, "application save reinstalls notifications after stop");
     Require(frame->NewDocument(), "New succeeds on a clean document");
     Peer(TestFiles::Filename(savedAs), "former document\n");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(decision.prompts == 11 && frame->DocumentPath().empty() && TestEditor::Text(frame->Editor()).empty(),
             "New stops current-file monitoring");
     std::puts("PASS: actual native removed-file Yes/No/Cancel, recreation and stop/restart decisions");
@@ -309,7 +312,7 @@ void CheckNativeOptionsAndReloadFailures(EditorFrame* frame, const std::filesyst
     std::puts("PASS: native mode choices/Cancel, original tail condition, restored selection and quiet focus");
     options.mode = FileWatchingMode::ShowMessage;
     frame->SetFileWatchingOptions(options);
-    decision.Start(20);
+    decision.Start(DialogResponseIntervalMs);
     const auto live = TestEditor::Text(frame->Editor());
     decision.beforeChoice = [&savedAs] { Peer(TestFiles::Filename(savedAs), "", "block"); };
     Peer(TestFiles::Filename(savedAs), "reload fails after confirmation\n");
@@ -395,7 +398,7 @@ void CheckResetTransitions(EditorFrame* frame, const std::filesystem::path& dire
                 frame->FileWatching().mode == FileWatchingMode::AutoReload,
             "quick encoding reload preserves active monitoring with Reset enabled");
     TestEditor::Append(frame, "local after manual reload");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(decision.prompts == beforeManualReload,
             "quick encoding reload refreshes the watch baseline before subsequent live edits");
     frame->ReloadCurrentFile();
@@ -416,7 +419,7 @@ void CheckResetTransitions(EditorFrame* frame, const std::filesystem::path& dire
                 "explicit encoding reload preserves active monitoring with Reset enabled");
     }
     TestEditor::Append(frame, "local after explicit reload");
-    Pause(200);
+    Pause(NoChangeObservationMs);
     Require(decision.prompts == beforeManualReload, "explicit encoding reload refreshes the active watch baseline");
     frame->ReloadCurrentFile();
     Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&

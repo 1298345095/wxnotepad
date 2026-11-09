@@ -121,10 +121,10 @@ public:
             GetCurrentThreadId(),
             [](HWND window, LPARAM data) -> BOOL {
                 wchar_t title[256]{};
-                GetWindowTextW(window, title, 256);
+                GetWindowTextW(window, title, static_cast<int>(std::size(title)));
                 if (IsWindowVisible(window) && wxString(title) == "Remove recent file?") {
                     ++reinterpret_cast<RemoveMissing*>(data)->prompts;
-                    SendMessageW(window, WM_USER + 102, IDYES, 0);
+                    SendMessageW(window, TDM_CLICK_BUTTON, IDYES, 0);
                 }
                 return TRUE;
             },

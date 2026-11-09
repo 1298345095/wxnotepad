@@ -115,7 +115,8 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
     values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", defaults.fixTrailingBlanks);
     values.fileWatching.mode = static_cast<FileWatchingMode>(
-        std::clamp(ReadInt("FileWatchingMode", static_cast<int>(defaults.fileWatching.mode)), 0, 2));
+        std::clamp(ReadInt("FileWatchingMode", static_cast<int>(defaults.fileWatching.mode)),
+                   static_cast<int>(FileWatchingMode::None), static_cast<int>(FileWatchingMode::AutoReload)));
     values.fileWatching.checkInterval = ReadInt("FileCheckInterval", defaults.fileWatching.checkInterval, "Settings2");
     values.fileWatching.autoReloadDelay =
         ReadInt("AutoReloadTimeout", defaults.fileWatching.autoReloadDelay, "Settings2");

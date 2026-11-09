@@ -17,6 +17,7 @@
 
 namespace {
 using Scintilla::Message;
+constexpr long long TimestampToleranceSeconds = 2;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
@@ -30,6 +31,8 @@ void Command(EditorFrame* frame, int id) {
     frame->GetEventHandler()->ProcessEvent(event);
 }
 #ifdef __WXMSW__
+constexpr long long FileTimeTicksPerSecond = 10'000'000;
+constexpr long long WindowsToUnixEpochSeconds = 11'644'473'600;
 struct Times {
     long long creation;
     long long access;
@@ -64,7 +67,7 @@ void SetOldTimes(const std::filesystem::path& path) {
     Require(set, "fixture timestamps must be settable");
 }
 long long ModifiedSeconds(const Times& times) {
-    return times.modified / 10000000LL - 11644473600LL;
+    return times.modified / FileTimeTicksPerSecond - WindowsToUnixEpochSeconds;
 }
 bool WritableTimesEqual(const Times& before, const Times& after) {
     return before == after;
@@ -80,6 +83,7 @@ bool OtherTimesEqual(const Times& before, const Times& after) {
     return before.creation == after.creation && before.access == after.access && before.change == after.change;
 }
 #else
+constexpr long long NanosecondsPerSecond = std::nano::den;
 struct Times {
     long long access;
     long long modified;
@@ -88,16 +92,16 @@ struct Times {
 Times ReadTimes(const std::filesystem::path& path) {
     struct stat info{};
     Require(::stat(path.c_str(), &info) == 0, "metadata must be independently readable");
-    return {info.st_atim.tv_sec * 1000000000LL + info.st_atim.tv_nsec,
-            info.st_mtim.tv_sec * 1000000000LL + info.st_mtim.tv_nsec,
-            info.st_ctim.tv_sec * 1000000000LL + info.st_ctim.tv_nsec};
+    return {info.st_atim.tv_sec * NanosecondsPerSecond + info.st_atim.tv_nsec,
+            info.st_mtim.tv_sec * NanosecondsPerSecond + info.st_mtim.tv_nsec,
+            info.st_ctim.tv_sec * NanosecondsPerSecond + info.st_ctim.tv_nsec};
 }
 void SetOldTimes(const std::filesystem::path& path) {
     const timespec times[]{{1609459200, 123400000}, {1609545600, 567800000}};
     Require(::utimensat(AT_FDCWD, path.c_str(), times, 0) == 0, "fixture timestamps must be settable");
 }
 long long ModifiedSeconds(const Times& times) {
-    return times.modified / 1000000000LL;
+    return times.modified / NanosecondsPerSecond;
 }
 bool WritableTimesEqual(const Times& before, const Times& after) {
     return before.access == after.access && before.modified == after.modified;
@@ -150,8 +154,8 @@ void UpdateDirty(EditorFrame* frame, const std::filesystem::path& path, int upda
     const auto after = ReadTimes(path);
     LogTimes("Timestamp update before", before);
     LogTimes("Timestamp update after", after);
-    Require(ModifiedSeconds(after) >= earliest - 2 && ModifiedSeconds(after) <= NowSeconds() + 2 &&
-                OtherTimesEqual(before, after),
+    Require(ModifiedSeconds(after) >= earliest - TimestampToleranceSeconds &&
+                ModifiedSeconds(after) <= NowSeconds() + TimestampToleranceSeconds && OtherTimesEqual(before, after),
             "timestamp update must set current mtime and retain other writable times");
     Require(TestFiles::Bytes(path) == "backing dirty" && TestEditor::Text(frame) == text &&
                 frame->DocumentPath() == identity && frame->DocumentEncoding() == encoding &&
@@ -179,9 +183,9 @@ void SaveDestinations(EditorFrame* frame) {
         "original-time first save must succeed");
     const auto newTimes = ReadTimes(created);
     LogTimes("New original-time destination", newTimes);
-    Require(InitialTimesEqual(newTimes) && ModifiedSeconds(newTimes) >= earliest - 2 &&
-                ModifiedSeconds(newTimes) <= NowSeconds() + 2 && TestFiles::Bytes(created) == "new\n" &&
-                !frame->Editor()->Send(Message::GetModify),
+    Require(InitialTimesEqual(newTimes) && ModifiedSeconds(newTimes) >= earliest - TimestampToleranceSeconds &&
+                ModifiedSeconds(newTimes) <= NowSeconds() + TimestampToleranceSeconds &&
+                TestFiles::Bytes(created) == "new\n" && !frame->Editor()->Send(Message::GetModify),
             "new destination must keep newly created time and normal cleanup/save point");
     const auto existing = directory / "existing-as.txt";
     TestFiles::WriteBytes(existing, "old destination");

@@ -327,8 +327,8 @@ void EditorFrame::AppendEditingCommands(wxMenu* edit) {
 
 void EditorFrame::AppendConversionCommands(wxMenu* edit) {
     auto* conversion = new wxMenu;
-    // Pinned Notepad4's case commands use CustomCaseMapping values upper=1, lower=2.
-    for (const auto& [label, mapping] : {std::pair{"&Upper Case\tCtrl+Shift+U", 1}, std::pair{"&Lower Case\tCtrl+U", 2},
+    for (const auto& [label, mapping] : {std::pair{"&Upper Case\tCtrl+Shift+U", CustomCaseCommand::Upper},
+                                         std::pair{"&Lower Case\tCtrl+U", CustomCaseCommand::Lower},
                                          std::pair{"In&vert Case\tCtrl+Alt+U", CustomCaseCommand::Invert},
                                          std::pair{"Title &Case\tCtrl+Alt+I", CustomCaseCommand::Title},
                                          std::pair{"&Sentence Case\tCtrl+Alt+O", CustomCaseCommand::Sentence}}) {
@@ -840,11 +840,12 @@ void EditorFrame::AppendLineEndingCommands(wxMenu* edit) {
 
 void EditorFrame::AppendLineSelectionCommands(wxMenu* edit) {
     auto* lineSelection = new wxMenu;
-    const char* lineModes[] = {"&None", "&Visual Studio", "&Normal", "&Old Visual Studio"};
-    for (int value : {0, 1, 3, 2}) {
-        const auto mode = static_cast<LineSelectionMode>(value);
+    for (const auto& [label, mode] :
+         {std::pair{"&None", LineSelectionMode::None}, std::pair{"&Visual Studio", LineSelectionMode::VisualStudio},
+          std::pair{"&Old Visual Studio", LineSelectionMode::OldVisualStudio},
+          std::pair{"&Normal", LineSelectionMode::Normal}}) {
         const int id = wxWindow::NewControlId();
-        lineSelection->AppendRadioItem(id, lineModes[value]);
+        lineSelection->AppendRadioItem(id, label);
         Bind(wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->SetLineSelectionMode(mode); }, id);
         Bind(
             wxEVT_UPDATE_UI,

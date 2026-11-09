@@ -12,6 +12,10 @@
 #include <algorithm>
 #include <limits>
 
+namespace {
+constexpr int DialogPaddingDip = 10;
+} // namespace
+
 RecentFilesDialog::RecentFilesDialog(wxWindow* parent, OriginalSettings& preferences,
                                      std::function<void()> clearHistory, std::function<void(size_t)> removeHistory)
     : wxDialog(parent, wxID_ANY, "Recent Files", wxDefaultPosition, wxDefaultSize,
@@ -22,13 +26,13 @@ RecentFilesDialog::RecentFilesDialog(wxWindow* parent, OriginalSettings& prefere
                             wxLC_REPORT | wxLC_SINGLE_SEL | wxLC_NO_HEADER);
     files_->SetName("Recent files");
     files_->InsertColumn(0, "File");
-    layout->Add(files_, 1, wxEXPAND | wxALL, FromDIP(10));
+    layout->Add(files_, 1, wxEXPAND | wxALL, FromDIP(DialogPaddingDip));
     remember_ = new wxCheckBox(this, wxID_ANY, "&Remember recent files on exit");
     remember_->SetName("Remember recent files");
     remember_->SetValue(preferences_.saveRecentFiles);
-    layout->Add(remember_, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+    layout->Add(remember_, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
     auto* clear = new wxButton(this, wxID_CLEAR, "Clear History");
-    layout->Add(clear, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
+    layout->Add(clear, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
     clear->Bind(wxEVT_BUTTON, [this, clearHistory = std::move(clearHistory)](wxCommandEvent&) {
         clearHistory();
         RefreshFiles();
@@ -40,8 +44,8 @@ RecentFilesDialog::RecentFilesDialog(wxWindow* parent, OriginalSettings& prefere
                                FromDIP(wxSize(90, -1)), 0, wxTextValidator(wxFILTER_DIGITS));
     capacity_->SetName("Recent file capacity");
     count->Add(capacity_);
-    layout->Add(count, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10));
-    layout->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(10));
+    layout->Add(count, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
+    layout->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(DialogPaddingDip));
     SetSizerAndFit(layout);
     SetMinSize(GetSize());
     RefreshFiles();
