@@ -33,6 +33,8 @@ void Detection(EditorFrame* frame) {
                                 {"guess", "<Root/>", Xml},
                                 {"embedded", "<!-- header --><HTML/>", Html},
                                 {"sample.cfg", "<?xml version=\"1.0\"?><Root/>", Xml},
+                                {"sample.cfg.in", "<?xml version=\"1.0\"?><Root/>", Xml},
+                                {"sample.conf.in", "<html/>", PlainText},
                                 {"sample.conf", "<html/>", PlainText},
                                 {"sample.txt", "<html/>", PlainText},
                                 {"sample.cpp", "<html/>", Cpp},

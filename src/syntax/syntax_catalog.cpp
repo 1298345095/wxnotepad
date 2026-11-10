@@ -326,6 +326,7 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
     if (!options.autoSelect) return std::nullopt;
     const auto extension = FileExtension(path).Lower();
     const auto interpreter = options.noCgiGuess ? std::nullopt : SniffInterpreter(prefix);
+    bool templateConfig = false;
     // Original .in handling strips one suffix before matching the underlying
     // filename. An unmatched template keeps the Shell Script association.
     if (extension == "in") {
@@ -333,10 +334,9 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
         const auto language = LanguageForPath(underlying);
         if (language != SyntaxLanguage::PlainText) return language;
         if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return SyntaxLanguage::PlainText;
-        if (OriginalFilenameMatch(underlying) == FilenameMatch::Config)
-            return interpreter ? interpreter : std::optional{SyntaxLanguage::PlainText};
+        templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }
-    const auto language = LanguageForPath(path);
+    const auto language = templateConfig ? SyntaxLanguage::PlainText : LanguageForPath(path);
     if (language != SyntaxLanguage::PlainText) {
         if (extension == "asp" || extension == "aspx" || extension == "xml")
             return MarkupDocType(prefix).value_or(language);
@@ -346,7 +346,7 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
     // CGI sniffing precedes associated extensions; unmatched names are sniffed
     // only after original filename matches. Config files are sniffed too.
     if ((extension == "cgi" || extension == "fcgi") && interpreter) return interpreter;
-    const auto match = OriginalFilenameMatch(path);
+    const auto match = templateConfig ? FilenameMatch::Config : OriginalFilenameMatch(path);
     if (match == FilenameMatch::Associated) return SyntaxLanguage::PlainText;
     // Styles.cpp::Style_SetLexerFromFile: only unknown names and Config may
     // inspect markup, and Config only accepts the exact XML declaration.
