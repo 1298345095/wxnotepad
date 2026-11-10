@@ -84,7 +84,8 @@ private:
                         "All Files (*)",
                 "native save types must initially select current scheme first, with All Files last");
         GSList* remaining = filters->next;
-        for (const auto* name : {"Plain Text", "C/C++", "Python", "JSON", "JavaScript", "JSX", "TypeScript", "TSX"}) {
+        for (const auto& definition : SyntaxCatalog()) {
+            const auto* name = definition.name;
             if (current_ == name) continue;
             Require(remaining && wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(remaining->data)))
                                      .StartsWith(wxString(name) + " ("),

@@ -20,7 +20,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
       indentation_(settings ? settings->values : defaults_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
-                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
+                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
+                                                  settings->values.noHtmlGuess}
                          : SyntaxDetectionOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { HandleFileChange(); }), search_(*editor_) {
@@ -229,6 +230,7 @@ void EditorFrame::UpdateDocumentState() {
                                                                                  : "";
     SetTitle((document_.IsModified() ? "*" : "") + name + protection + " - wxnotepad");
     wxString encoding = document_.Encoding() == FileEncoding::Utf16Le       ? "UTF-16LE"
+                        : document_.Encoding() == FileEncoding::Utf16Be     ? "UTF-16BE"
                         : document_.Encoding() == FileEncoding::Gbk         ? "GBK (CP936)"
                         : document_.Encoding() == FileEncoding::Windows1252 ? "Windows-1252"
                         : document_.Encoding() == FileEncoding::Dos437      ? "DOS-437"

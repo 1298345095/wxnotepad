@@ -56,7 +56,7 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 }
 
 std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial) {
-    const wxString choices[] = {"UTF-8", "UTF-16LE", "GBK (CP936)", "Windows-1252", "DOS-437"};
+    const wxString choices[] = {"UTF-8", "UTF-16LE", "GBK (CP936)", "UTF-16BE", "Windows-1252", "DOS-437"};
     wxDialog dialog(parent, wxID_ANY, "Reload With Encoding");
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(new wxStaticText(&dialog, wxID_ANY, "Select source &encoding to reload file:"), 0, wxALL,
@@ -103,7 +103,9 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, EncodingCh
     if (const auto oem = NativeOemEncodingChoice()) add(root, "OEM", *oem);
     const auto unicode = tree->AppendItem(root, "Unicode");
     add(unicode, "UTF-16LE with BOM", EncodingChoice(FileEncoding::Utf16Le, true));
+    add(unicode, "UTF-16BE with BOM", EncodingChoice(FileEncoding::Utf16Be, true));
     add(unicode, "UTF-16LE", EncodingChoice(FileEncoding::Utf16Le));
+    add(unicode, "UTF-16BE", EncodingChoice(FileEncoding::Utf16Be));
     add(unicode, "UTF-8", EncodingChoice(FileEncoding::Utf8));
     add(unicode, "UTF-8 with BOM", EncodingChoice(FileEncoding::Utf8, true));
     const auto chinese = tree->AppendItem(root, "Chinese");

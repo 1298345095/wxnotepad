@@ -181,6 +181,9 @@ def main():
             tabs(app.state, 9, 0, 1, 0, 3)
             app.named_menu("Scheme", "JSON")
             tabs(app.state, 7, 3, 0, 0, 3)
+            for dialect in ("Bash", "C Shell", "m4"):
+                app.named_menu("Scheme", dialect)
+                tabs(app.state, 7, 3, 0, 0, 3)
             app.named_menu("Scheme", "C/C++")
             tabs(app.state, 256, 0, 1, 0, 3)
             app.close()
@@ -189,6 +192,19 @@ def main():
         saved = config.read_text(encoding="utf-16")
         assert "TabWidth=7" in saved and "IndentWidth=3" in saved and "BackspaceUnindents=3" in saved, saved
         assert "[Python Script]" in saved and "TabWidth=9" in saved and "IndentWidth=0" in saved, saved
+        config.write_text("[Settings]\nSaveSettings=0\nTabWidth=6\n[Shell Script]\nTabWidth=9\n"
+                          "IndentWidth=2\nTabsAsSpaces=1\nUseGlobalTabSettings=0\n", encoding="utf-16")
+        app = Application(executable, folder, environment)
+        try:
+            for dialect in ("Bash", "C Shell", "m4"):
+                app.named_menu("Scheme", dialect)
+                tabs(app.state, 9, 2, 0, 1, 2)
+            app.menu("Save Settings Now")
+            app.close()
+        finally:
+            app.stop()
+        saved = config.read_text(encoding="utf-16")
+        assert "[Shell Script]" in saved and "[C Shell]" not in saved and "[m4]" not in saved, saved
     print("Original defaults, seed, restoration, disabled exit save, explicit save and unrelated settings passed")
 
 

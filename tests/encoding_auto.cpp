@@ -42,6 +42,14 @@ public:
                 Require(Text(*editor) == "┌─┐\r\n" && document.Save().status == SaveStatus::Saved &&
                             TestFiles::Bytes(artPath) == "\xda\xc4\xbf\r\n",
                         "DOS-437 preference retains exact saved bytes");
+                const auto bigEndian = directory / "big-endian.txt";
+                TestFiles::WriteBytes(bigEndian, std::string("\xfe\xff\0A\x4e\x2d\xd8\x3d\xde\0\0\r\0\n", 14));
+                Require(document.Open(TestFiles::Filename(bigEndian), [] { return true; }).status == OpenStatus::Opened,
+                        "automatic Open recognizes the original UTF-16BE BOM signature");
+                Require(Text(*editor) == "A中😀\r\n" && document.HasBom(), "UTF-16BE decodes to live UTF-8");
+                Require(document.Save().status == SaveStatus::Saved &&
+                            TestFiles::Bytes(bigEndian) == std::string("\xfe\xff\0A\x4e\x2d\xd8\x3d\xde\0\0\r\0\n", 14),
+                        "Save retains original UTF-16BE byte order and BOM");
                 const auto path = directory / "declared.txt";
                 const std::string bytes = "# coding: gb2312\n\xd6\xd0\xce\xc4\n";
                 std::ofstream(path, std::ios::binary) << bytes;
@@ -74,6 +82,77 @@ public:
                       false);
                 check("bom-utf16.txt", std::string("\xff\xfe\x2d\x4e\x87\x65\x0a\0", 8), "中文\n",
                       FileEncoding::Utf16Le, true);
+                check("latin-utf16be.txt", std::string("\0H\0e\0l\0l\0o\0\n", 12), "Hello\n", FileEncoding::Utf16Be,
+                      false);
+                check("weak-utf16be-ascii.txt", "plain", "plain", FileEncoding::Utf8, false, {}, {},
+                      EncodingChoice(FileEncoding::Utf16Be, true));
+                check("strong-utf16be.txt", std::string("\xfe\xff\x4e\x2d", 4), "中", FileEncoding::Utf16Be, true, {},
+                      FileEncoding::Utf16Be, EncodingChoice(FileEncoding::Utf16Le));
+                check("strong-utf16le-over-be.txt", std::string("\xfe\xff\0A", 4), "\xef\xbf\xbe\xe4\x84\x80",
+                      FileEncoding::Utf16Le, false, {}, FileEncoding::Utf16Le);
+                EncodingOptions bigEndianDefault;
+                bigEndianDefault.loadASCIIasUTF8 = false;
+                bigEndianDefault.defaultEncoding = 7; // Original BOM-less UTF-16BE persisted identity.
+                check("default-utf16be-empty.txt", "", "", FileEncoding::Utf16Be, false, bigEndianDefault);
+                bigEndianDefault.defaultEncoding = 2; // Original UTF-16BE BOM persisted identity.
+                const auto defaultEmpty = directory / "default-empty.txt";
+                TestFiles::WriteBytes(defaultEmpty, "");
+                DocumentSession defaultDocument(*editor, bigEndianDefault);
+                Require(defaultDocument.Open(TestFiles::Filename(defaultEmpty), [] { return true; }).status ==
+                                OpenStatus::Opened &&
+                            defaultDocument.Encoding() == FileEncoding::Utf16Be && defaultDocument.HasBom() &&
+                            defaultDocument.Save().status == SaveStatus::Saved &&
+                            TestFiles::Bytes(defaultEmpty) == "\xfe\xff",
+                        "existing DefaultEncoding UTF-16BE BOM identity is consumed for an empty Open");
+                TestFiles::WriteBytes(defaultEmpty, "");
+                Require(defaultDocument
+                                    .Open(
+                                        TestFiles::Filename(defaultEmpty), [] { return true; }, {},
+                                        EncodingChoice(FileEncoding::Utf16Be, true))
+                                    .status == OpenStatus::Opened &&
+                            defaultDocument.HasBom() && defaultDocument.Encoding() == FileEncoding::Utf16Be,
+                        "empty weak reload retains UTF-16BE and its BOM identity");
+                // Literal observations from the independent original executable capture
+                // (encoding-languages-2026-11-08/reference/original-observations.json).
+                struct Boundary {
+                    std::string bytes;
+                    std::string text;
+                    bool bom;
+                };
+                const Boundary boundaries[] = {{"", "", false},
+                                               {"\xfe\xff", "", true},
+                                               {std::string("\xfe\xff\0A\0", 5), "A", true},
+                                               {std::string("\0A\0", 3), "A", false},
+                                               {"\xfe\xff\xd8\x3d", "\xef\xbf\xbd", true},
+                                               {std::string("\xfe\xff\xde\0", 4), "\xef\xbf\xbd", true},
+                                               {std::string("\xfe\xff\xd8\x3d\0A", 6),
+                                                "\xef\xbf\xbd"
+                                                "A",
+                                                true},
+                                               {std::string("\xfe\xff\xd8\x3d\xde\0", 6), "😀", true},
+                                               {std::string("\xfe\xff\0A\0\0\0B\0\r\0\n\0C\0\n\0D\0\r", 20),
+                                                std::string("A\0B\r\nC\nD\r", 9), true}};
+                const auto boundaryPath = directory / "boundary.txt";
+                for (const auto& boundary : boundaries) {
+                    TestFiles::WriteBytes(boundaryPath, boundary.bytes);
+                    DocumentSession boundaryDocument(*editor);
+                    Require(
+                        boundaryDocument
+                                    .Open(
+                                        TestFiles::Filename(boundaryPath), [] { return true; }, FileEncoding::Utf16Be)
+                                    .status == OpenStatus::Opened &&
+                            Text(*editor) == boundary.text && boundaryDocument.Encoding() == FileEncoding::Utf16Be &&
+                            boundaryDocument.HasBom() == boundary.bom && !boundaryDocument.IsModified() &&
+                            !editor->Send(Scintilla::Message::CanUndo),
+                        "UTF-16BE boundary bytes and identity match independently captured original results");
+                    editor->Send(Scintilla::Message::AppendText, 1, reinterpret_cast<intptr_t>("x"));
+                    editor->Send(Scintilla::Message::Undo);
+                    Require(Text(*editor) == boundary.text && editor->Send(Scintilla::Message::CanRedo),
+                            "Undo after UTF-16BE load preserves replacement/NUL bytes and supports Redo");
+                    editor->Send(Scintilla::Message::Redo);
+                    Require(Text(*editor) == boundary.text + "x", "Redo after UTF-16BE load restores the edit");
+                }
+                std::puts("PASS: UTF-16BE original boundary captures, defaults, strong/weak precedence and history");
                 check("declared-utf8.txt", "# coding: gbk\n中文\n", "# coding: gbk\n中文\n", FileEncoding::Utf8, false);
                 check("bom-utf8.txt", "\xef\xbb\xbf# coding: gbk\n中文\n", "# coding: gbk\n中文\n", FileEncoding::Utf8,
                       true);
@@ -227,9 +306,9 @@ public:
                         "recognized unsupported encoding is explicit");
                 unchanged();
                 std::ofstream(unsupported, std::ios::binary).write("\xfe\xff\0A", 4);
-                Require(protectedDocument.Open(TestFiles::Filename(unsupported), [] { return true; }).status ==
-                            OpenStatus::Failed,
-                        "UTF-16BE is not silently labeled UTF-8 or UTF-16LE");
+                Require(protectedDocument.Open(TestFiles::Filename(unsupported), [] { return false; }).status ==
+                            OpenStatus::Cancelled,
+                        "cancelled UTF-16BE replacement retains the live document");
                 unchanged();
                 std::ofstream(unsupported, std::ios::binary) << "\xc0\xaf";
                 Require(

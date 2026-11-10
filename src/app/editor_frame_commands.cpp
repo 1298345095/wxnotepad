@@ -111,7 +111,8 @@ void EditorFrame::AppendEncodingCommands(wxMenu* file) {
     }
     for (const auto& command : {Command{"UTF-&8", EncodingChoice(FileEncoding::Utf8)},
                                 Command{"UTF-8 B&OM", EncodingChoice(FileEncoding::Utf8, true)},
-                                Command{"UTF-16&LE BOM", EncodingChoice(FileEncoding::Utf16Le, true)}}) {
+                                Command{"UTF-16&LE BOM", EncodingChoice(FileEncoding::Utf16Le, true)},
+                                Command{"UTF-16&BE BOM", EncodingChoice(FileEncoding::Utf16Be, true)}}) {
         const int id = wxWindow::NewControlId();
         encoding->AppendCheckItem(id, command.label);
         Bind(wxEVT_MENU, [this, command](wxCommandEvent&) { SelectEncoding(command.choice); }, id);
@@ -497,6 +498,11 @@ void EditorFrame::AppendEnclosureCommands(wxMenu* edit) {
 }
 
 void EditorFrame::AppendCommentCommands(wxMenu* edit) {
+    const auto comments = [this] {
+        return SyntaxCommentsFor(document_.Language(),
+                                 static_cast<int>(editor_->Send(Scintilla::Message::GetStyleIndexAt,
+                                                                editor_->Send(Scintilla::Message::GetCurrentPos))));
+    };
     const int lineComment = wxWindow::NewControlId();
     auto* lineCommentItem = new wxMenuItem(edit, lineComment, "T&oggle Line Comment\tCtrl+/");
     lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_DIVIDE, lineComment));
@@ -505,8 +511,8 @@ void EditorFrame::AppendCommentCommands(wxMenu* edit) {
     edit->Append(lineCommentItem);
     Bind(
         wxEVT_MENU,
-        [this](wxCommandEvent&) {
-            const auto* prefix = SyntaxFor(document_.Language()).lineComment;
+        [this, comments](wxCommandEvent&) {
+            const auto* prefix = comments().line;
             if (!prefix) return;
             const auto& preferences = settings_ ? settings_->values : defaults_;
             if (!editor_->ToggleLineComments(prefix,
@@ -516,25 +522,21 @@ void EditorFrame::AppendCommentCommands(wxMenu* edit) {
         },
         lineComment);
     Bind(
-        wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) { event.Enable(SyntaxFor(document_.Language()).lineComment != nullptr); },
-        lineComment);
+        wxEVT_UPDATE_UI, [comments](wxUpdateUIEvent& event) { event.Enable(comments().line != nullptr); }, lineComment);
     const int blockComment = wxWindow::NewControlId();
     edit->Append(blockComment, "Toggle Block &Comment\tCtrl+Q");
     Bind(
         wxEVT_MENU,
-        [this](wxCommandEvent&) {
+        [this, comments](wxCommandEvent&) {
             const auto& syntax = SyntaxFor(document_.Language());
-            if (syntax.blockCommentOpen &&
-                !editor_->ToggleBlockComments(syntax.blockCommentOpen, syntax.blockCommentClose,
-                                              syntax.commentStyleLast))
+            const auto rules = comments();
+            if (rules.open && !editor_->ToggleBlockComments(rules.open, rules.close, syntax.commentStyleLast))
                 wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
                              wxOK | wxICON_WARNING, this);
         },
         blockComment);
     Bind(
-        wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) { event.Enable(SyntaxFor(document_.Language()).blockCommentOpen != nullptr); },
+        wxEVT_UPDATE_UI, [comments](wxUpdateUIEvent& event) { event.Enable(comments().open != nullptr); },
         blockComment);
 }
 

@@ -97,8 +97,9 @@ public:
                 auto* list = wxDynamicCast(child, wxListBox);
                 if (list) {
                     initial = list->GetSelection();
-                    validChoices = list->GetCount() >= 3 && list->GetString(0) == "UTF-8" &&
-                                   list->GetString(1) == "UTF-16LE" && list->GetString(2) == "GBK (CP936)";
+                    validChoices = list->GetCount() >= 4 && list->GetString(0) == "UTF-8" &&
+                                   list->GetString(1) == "UTF-16LE" && list->GetString(2) == "GBK (CP936)" &&
+                                   list->GetString(3) == "UTF-16BE";
                     list->SetSelection(selected);
                     wxCommandEvent changed(wxEVT_LISTBOX, list->GetId());
                     list->GetEventHandler()->ProcessEvent(changed);
@@ -194,7 +195,9 @@ void DeliveredCodecs(EditorFrame* frame) {
         {"\xff\xfe\x2d\x4e", FileEncoding::Utf16Le, 1, "UTF-16LE", true, "中"},
         {"\xd6\xd0", FileEncoding::Gbk, 2, "GBK (CP936)", false, "中"},
         {"# coding: utf-8\n\xd6\xd0", FileEncoding::Gbk, 2, "GBK (CP936)", false, "# coding: utf-8\n中"},
-        {"a\r\nb\nc\r", FileEncoding::Utf8, 0, "UTF-8", false, "a\r\nb\nc\r"}};
+        {"a\r\nb\nc\r", FileEncoding::Utf8, 0, "UTF-8", false, "a\r\nb\nc\r"},
+        {std::string("\xfe\xff\x4e\x2d", 4), FileEncoding::Utf16Be, 3, "UTF-16BE", true, "中"},
+        {std::string("\0a\0\r\0\n\0b\0\n\0c\0\r", 14), FileEncoding::Utf16Be, 3, "UTF-16BE", false, "a\r\nb\nc\r"}};
     const auto path = TestFiles::TemporaryDirectory("codecs.txt");
     for (const auto& fixture : fixtures) {
         TestFiles::WriteBytes(path, "initial");
@@ -222,8 +225,7 @@ void DeliveredCodecs(EditorFrame* frame) {
         Require(cancelled.initial == fixture.picker,
                 "current source codec must normalize both BOM and BOM-less picker selections");
     }
-    std::puts(
-        "PASS: all three delivered codecs retain actual BOM/status metadata, explicit precedence and mixed EOL bytes");
+    std::puts("PASS: delivered codecs retain actual BOM/status metadata, explicit precedence and mixed EOL bytes");
 }
 void FailedReload(EditorFrame* frame) {
     const auto path = TestFiles::TemporaryDirectory("failure.txt");
@@ -292,6 +294,14 @@ void NativeShortcuts(EditorFrame* frame) {
     Require(driver.choosers == 1 && driver.initial == 0 && TestEditor::Text(frame) == "中" &&
                 frame->DocumentEncoding() == FileEncoding::Gbk && TestFiles::Bytes(path) == "\xd6\xd0",
             "native F8 must share the explicit encoding reload menu implementation");
+    TestFiles::WriteBytes(path, std::string("\xfe\xff\x4e\x2d", 4));
+    ReloadDialogs bigEndian;
+    bigEndian.selected = 3;
+    NativeKeys::Shortcut(frame, WXK_F8, false);
+    bigEndian.Stop();
+    Require(bigEndian.choosers == 1 && bigEndian.validChoices && TestEditor::Text(frame) == "中" &&
+                frame->DocumentEncoding() == FileEncoding::Utf16Be && frame->DocumentHasBom(),
+            "native F8 selects the UTF-16BE source and reports its actual BOM");
     TestFiles::WriteBytes(path, "quick");
     NativeKeys::Shortcut(frame, WXK_F8, false, false, true);
     Require(TestEditor::Text(frame) == "quick" && frame->DocumentEncoding() == FileEncoding::Utf8 &&

@@ -59,7 +59,13 @@ bool EditorControl::ToggleLineComments(const char* prefix, bool spaceAfterCommen
     if (Send(Message::SelectionIsRectangle)) return false;
 
     // Adapted from Notepad4 89b8b36 Edit.cpp::EditToggleLineComments.
-    // The delivered schemes supply ASCII prefixes without a mandatory pad.
+    // A trailing space in the original prefix requests a mandatory pad (m4).
+    std::string marker(prefix);
+    if (marker.ends_with(' ')) {
+        marker.pop_back();
+        spaceAfterComment = true;
+    }
+    prefix = marker.c_str();
     const auto selectionStart = Send(Message::GetSelectionStart);
     const auto selectionEnd = Send(Message::GetSelectionEnd);
     const auto current = Send(Message::GetCurrentPos);

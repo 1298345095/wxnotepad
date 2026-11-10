@@ -6,16 +6,45 @@
 #include <string_view>
 #include <optional>
 
-enum class SyntaxLanguage : uint8_t { PlainText, Cpp, Python, Json, JavaScript, Jsx, TypeScript, Tsx, Count };
+enum class SyntaxLanguage : uint8_t {
+    PlainText,
+    Cpp,
+    Python,
+    Json,
+    JavaScript,
+    Jsx,
+    TypeScript,
+    Tsx,
+    Bash,
+    CShell,
+    M4,
+    Html,
+    AspVb,
+    AspJs,
+    AspxCs,
+    AspxVb,
+    Jsp,
+    Jspx,
+    Xml,
+    Svg,
+    Xsd,
+    Xslt,
+    Dtd,
+    Plist,
+    Count
+};
 struct SyntaxDetectionOptions {
     bool autoSelect = true;
     bool noCgiGuess = false;
+    bool noHtmlGuess = false;
 };
 struct SyntaxStyle {
     int id;
     unsigned int foreground;
     unsigned int background;
     bool bold;
+    bool italic = false;
+    bool eolFilled = false;
 };
 struct SyntaxKeywords {
     const char* text;
@@ -24,6 +53,11 @@ struct SyntaxKeywords {
 struct SyntaxProperty {
     const char* name;
     const char* value;
+};
+struct SyntaxComments {
+    const char* line;
+    const char* open;
+    const char* close;
 };
 struct SyntaxDefinition {
     const char* name;
@@ -52,3 +86,5 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
                                              SyntaxDetectionOptions options = {});
 wxString LanguageName(SyntaxLanguage language);
 bool LanguageCanFold(SyntaxLanguage language);
+std::span<const SyntaxStyle> MarkupEmbeddedStyles();
+SyntaxComments SyntaxCommentsFor(SyntaxLanguage language, int style);

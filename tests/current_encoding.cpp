@@ -122,6 +122,80 @@ void Picker(EditorFrame* frame, bool native) {
             "BOM-less UTF-16LE saves exact independently specified bytes");
     std::puts("PASS: More/F9 live destination picker, cancellation and exact UTF-16 bytes");
 }
+void BigEndian(EditorFrame* frame, bool native) {
+    using Scintilla::Message;
+    const auto path = TestFiles::TemporaryDirectory("big-endian-destination.txt");
+    const auto copy = TestFiles::TemporaryDirectory("big-endian-copy.txt");
+    const auto renamed = TestFiles::TemporaryDirectory("big-endian-renamed.txt");
+    const std::string utf8 = "A中😀\r\nB\nC\r";
+    const std::string bytes("\0A\x4e\x2d\xd8\x3d\xde\0\0\r\0\n\0B\0\n\0C\0\r", 20);
+    TestFiles::WriteBytes(path, utf8);
+    Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+            "UTF-16BE destination fixture opens");
+    TestEditor::Append(frame, "x");
+    frame->Editor()->Send(Message::Undo);
+    Command(frame, "UTF-16BE BOM");
+    Require(frame->DocumentEncoding() == FileEncoding::Utf16Be && frame->DocumentHasBom() &&
+                frame->GetStatusBar()->GetStatusText().Contains("UTF-16BE (BOM)") &&
+                frame->GetTitle().StartsWith("*") && frame->Editor()->Send(Message::CanRedo),
+            "direct UTF-16BE BOM choice updates live identity and preserves redo");
+    Require(frame->SaveCopy(TestFiles::Filename(copy)).status == SaveStatus::Saved &&
+                TestFiles::Bytes(copy) == "\xfe\xff" + bytes && TestFiles::Bytes(path) == utf8 &&
+                frame->DocumentIsModified(),
+            "Save Copy writes exact UTF-16BE BOM bytes without committing the original identity");
+    Require(frame->SaveAs(TestFiles::Filename(TestFiles::TemporaryDirectory())).status == SaveStatus::Failed &&
+                frame->DocumentPath() == TestFiles::Filename(path) && frame->DocumentIsModified() &&
+                frame->DocumentEncoding() == FileEncoding::Utf16Be && frame->DocumentHasBom() &&
+                frame->Editor()->Send(Message::CanRedo) && TestEditor::Text(frame) == utf8 &&
+                TestFiles::Bytes(path) == utf8,
+            "failed UTF-16BE write retains path, pending encoding, live history and original bytes");
+    Require(frame->Save({}, SaveTimeMode::Original).status == SaveStatus::Saved &&
+                TestFiles::Bytes(path) == "\xfe\xff" + bytes && !frame->DocumentIsModified(),
+            "Save with Original Time commits exact UTF-16BE BOM bytes");
+    {
+        EncodingPicker driver;
+        driver.selected = "UTF-16BE";
+        if (native)
+            NativeKeys::Shortcut(frame, WXK_F9, false);
+        else
+            Command(frame, "More...");
+        driver.Stop();
+        Require(driver.shown == 1 && driver.initial == "UTF-16BE with BOM" &&
+                    frame->DocumentEncoding() == FileEncoding::Utf16Be && !frame->DocumentHasBom() &&
+                    frame->Editor()->Send(Message::CanRedo) && TestEditor::Text(frame) == utf8,
+                "F9 selects BOM-less UTF-16BE without changing live text or redo");
+    }
+    Require(frame->SaveAs(TestFiles::Filename(renamed)).status == SaveStatus::Saved &&
+                TestFiles::Bytes(renamed) == bytes && !frame->DocumentIsModified(),
+            "Save As writes selected BOM-less UTF-16BE");
+    {
+        EncodingPicker driver;
+        driver.selected = "UTF-16BE with BOM";
+        Command(frame, "More...");
+        driver.Stop();
+        Require(driver.initial == "UTF-16BE" && frame->DocumentHasBom(), "F9 offers both UTF-16BE destinations");
+    }
+    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(renamed) == "\xfe\xff" + bytes,
+            "Save adds exactly the selected UTF-16BE BOM");
+    Require(frame->NewDocument(), "saved UTF-16BE document closes cleanly");
+    frame->SelectEncoding(EncodingChoice(FileEncoding::Utf16Be));
+    TestEditor::Append(frame, utf8);
+    Require(frame->SaveFirst(TestFiles::Filename(path)).status == SaveStatus::Saved && TestFiles::Bytes(path) == bytes,
+            "first Save writes BOM-less UTF-16BE");
+    frame->Editor()->Send(Message::SelectAll);
+    const int identifier = frame->GetMenuBar()->FindMenuItem("Edit", "Encoding Identifier");
+    wxCommandEvent insert(wxEVT_MENU, identifier);
+    frame->GetEventHandler()->ProcessEvent(insert);
+    Require(TestEditor::Text(frame) == "UTF-16BE", "encoding identifier distinguishes BOM-less UTF-16BE");
+    frame->Editor()->Send(Message::Undo);
+    Command(frame, "UTF-16BE BOM");
+    frame->Editor()->Send(Message::SelectAll);
+    frame->GetEventHandler()->ProcessEvent(insert);
+    Require(TestEditor::Text(frame) == "UTF-16BE BOM", "encoding identifier distinguishes UTF-16BE BOM");
+    frame->Editor()->Send(Message::Undo);
+    Require(frame->Save().status == SaveStatus::Saved, "finish UTF-16BE format-only change");
+    std::puts("PASS: UTF-16BE direct/F9 identities, all save variants, EOL bytes, redo and encoding identifiers");
+}
 class ConversionPrompt final : public wxTimer {
 public:
     int shown = 0;
@@ -369,6 +443,7 @@ public:
                 Require(ready, "encoding fixture is presented on the private display");
                 FormatOnly(frame);
                 Picker(frame, native);
+                BigEndian(frame, native);
                 AnsiTransition(frame);
                 SaveVariants(frame);
                 EmptyRules(frame);
