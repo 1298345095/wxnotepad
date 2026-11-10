@@ -163,14 +163,14 @@ void LossAndSaveVariants(EditorFrame* frame) {
         frame->Editor()->Send(Scintilla::Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(sample.c_str()));
         Require(frame->SelectEncoding(EncodingChoice(encoding)), "legacy destination selected");
         int warnings = 0;
-        Require(frame->Save([&] {
+        Require(frame->Save([&warnings] {
                          ++warnings;
                          return EncodingLossChoice::Cancel;
                      }).status == SaveStatus::Cancelled &&
                     warnings == 1 && TestFiles::Bytes(source) == "unchanged" && TestEditor::Text(frame) == sample &&
                     frame->DocumentIsModified() && frame->Editor()->Send(Scintilla::Message::CanUndo),
                 "loss Cancel preserves independent disk bytes, live rich text, Undo and pending identity");
-        const auto accept = [&] {
+        const auto accept = [&warnings] {
             ++warnings;
             return EncodingLossChoice::Replace;
         };
@@ -317,7 +317,8 @@ wxString ExplicitOpenChooserState(const wxString& expected) {
     GList* windows = gtk_window_list_toplevels();
     for (auto* item = windows; item; item = item->next) {
         auto* widget = GTK_WIDGET(item->data);
-        if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+        if (!gtk_widget_get_visible(widget)) continue;
+        if (!GTK_IS_FILE_CHOOSER(widget)) continue;
         char* folder = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
         char* selected = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget));
         auto* accept = gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_ACCEPT);

@@ -93,21 +93,24 @@ public:
             if (!dialog || !dialog->IsModal() || dialog->GetTitle() != "Reload With Encoding") continue;
             ++choosers;
             order.push_back("picker");
-            for (auto* child : dialog->GetChildren()) {
-                auto* list = wxDynamicCast(child, wxListBox);
-                if (list) {
-                    initial = list->GetSelection();
-                    validChoices = list->GetCount() >= 4 && list->GetString(0) == "UTF-8" &&
-                                   list->GetString(1) == "UTF-16LE" && list->GetString(2) == "GBK (CP936)" &&
-                                   list->GetString(3) == "UTF-16BE";
-                    list->SetSelection(selected);
-                    wxCommandEvent changed(wxEVT_LISTBOX, list->GetId());
-                    list->GetEventHandler()->ProcessEvent(changed);
-                }
-            }
+            SelectEncoding(dialog);
             wxCommandEvent response(wxEVT_BUTTON, cancel ? wxID_CANCEL : wxID_OK);
             dialog->GetEventHandler()->ProcessEvent(response);
             return;
+        }
+    }
+    void SelectEncoding(wxDialog* dialog) {
+        for (auto* child : dialog->GetChildren()) {
+            auto* list = wxDynamicCast(child, wxListBox);
+            if (list) {
+                initial = list->GetSelection();
+                validChoices = list->GetCount() >= 4 && list->GetString(0) == "UTF-8" &&
+                               list->GetString(1) == "UTF-16LE" && list->GetString(2) == "GBK (CP936)" &&
+                               list->GetString(3) == "UTF-16BE";
+                list->SetSelection(selected);
+                wxCommandEvent changed(wxEVT_LISTBOX, list->GetId());
+                list->GetEventHandler()->ProcessEvent(changed);
+            }
         }
     }
 };
