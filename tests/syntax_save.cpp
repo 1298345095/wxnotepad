@@ -78,12 +78,14 @@ private:
         const auto* current = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(widget));
         GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
         initialType = wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(filters->data)));
-        Require(g_slist_length(filters) == 5 && current == filters->data && initialType.StartsWith(current_ + " (") &&
+        Require(g_slist_length(filters) == SyntaxCatalog().size() + 1 && current == filters->data &&
+                    initialType.StartsWith(current_ + " (") &&
                     wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(g_slist_last(filters)->data))) ==
                         "All Files (*)",
                 "native save types must initially select current scheme first, with All Files last");
         GSList* remaining = filters->next;
-        for (const auto* name : {"Plain Text", "C/C++", "Python", "JSON"}) {
+        for (const auto& definition : SyntaxCatalog()) {
+            const auto* name = definition.name;
             if (current_ == name) continue;
             Require(remaining && wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(remaining->data)))
                                      .StartsWith(wxString(name) + " ("),

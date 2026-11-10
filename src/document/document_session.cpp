@@ -551,7 +551,9 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
 bool DocumentSession::DetectAutomaticLanguage() {
     // The pinned core's GetText count excludes its terminating NUL.
     // Match original SciCall_GetText(255) with the original 256-byte buffer.
-    char prefix[256]{};
+    // Style_GetDocTypeLanguage inspects a larger header than the 255-byte
+    // filename/shebang/markup guess. DetectLanguage retains both limits.
+    char prefix[4000]{};
     editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
     const auto detected = DetectLanguage(path_, prefix, detection_);
     automaticLanguage_ = detected.value_or(SyntaxLanguage::PlainText);

@@ -20,7 +20,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
       indentation_(settings ? settings->values : defaults_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
-                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
+                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
+                                                  settings->values.noHtmlGuess}
                          : SyntaxDetectionOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { HandleFileChange(); }), search_(*editor_) {

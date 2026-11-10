@@ -5,6 +5,7 @@
 #include "document/encoding/encoding_detection.h"
 #include "editor/caret_appearance.h"
 #include "settings/file_watching_options.h"
+#include "syntax/syntax_catalog.h"
 #include <wx/string.h>
 #include <array>
 #include <vector>
@@ -31,6 +32,7 @@ struct OriginalSettings {
     bool simpleIndentGuides = false;
     bool autoSelect = true;
     bool noCgiGuess = false;
+    bool noHtmlGuess = false;
     bool fixLineEndings = false;
     bool fixTrailingBlanks = false;
     FileWatchingOptions fileWatching;
@@ -58,7 +60,15 @@ struct OriginalSettings {
     int defaultEOLMode = 0;
     bool warnLineEndings = true;
     OriginalTabs globalTabs;
-    std::array<OriginalTabs, 4> schemeTabs{{{}, {}, {}, {2, 2, true, false}}};
+    std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> schemeTabs = [] {
+        std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> tabs{};
+        // GCC 13 omits trailing default member initializers in this returned
+        // aggregate; fill explicitly so XML keeps 4/4 and global inheritance.
+        tabs.fill(OriginalTabs{});
+        tabs[static_cast<size_t>(SyntaxLanguage::Json)] = {2, 2, true, false};
+        tabs[static_cast<size_t>(SyntaxLanguage::Html)] = {2, 2, true, false};
+        return tabs;
+    }();
     bool tabIndents = true;
     bool autoIndent = true;
     bool detectIndentation = true;
