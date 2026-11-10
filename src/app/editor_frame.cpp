@@ -85,7 +85,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     DragAcceptFiles(true);
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
         WXNOTE_TRACE("close.request", "\ttarget=%p\tcan_veto=%d\tdirty=%d", static_cast<void*>(this), event.CanVeto(),
-                     editor_->Send(Scintilla::Message::GetModify) != 0);
+                     document_.IsModified());
         if (event.CanVeto() && !ConfirmDiscardChanges("closing")) {
             event.Veto();
             WXNOTE_TRACE("close.veto", "\ttarget=%p", static_cast<void*>(this));
@@ -228,10 +228,12 @@ void EditorFrame::UpdateDocumentState() {
     const wxString protection = document_.IsReadOnlyFile()                       ? " (Read Only File)"
                                 : editor_->Send(Scintilla::Message::GetReadOnly) ? " (Read Only Mode)"
                                                                                  : "";
-    SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + protection + " - wxnotepad");
-    const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
-                              : document_.Encoding() == FileEncoding::Gbk   ? "GBK (CP936)"
-                                                                            : "UTF-8";
+    SetTitle((document_.IsModified() ? "*" : "") + name + protection + " - wxnotepad");
+    const wxString encoding = document_.IsDefaultEncoding()
+                                  ? (document_.Encoding() == FileEncoding::Gbk ? "ANSI (CP936)" : "ANSI (UTF-8)")
+                              : document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
+                              : document_.Encoding() == FileEncoding::Gbk     ? "GBK (CP936)"
+                                                                              : "UTF-8";
     const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
     const wxString eol = eolMode == Scintilla::EndOfLine::CrLf ? "CRLF"
                          : eolMode == Scintilla::EndOfLine::Cr ? "CR"
@@ -435,9 +437,8 @@ OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
 
 OpenResult EditorFrame::Revert() {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
-    if (editor_->Send(Scintilla::Message::GetModify) &&
-        wxMessageBox("Revert file to last saved state? Your changes will be lost!", "Revert",
-                     wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
+    if (document_.IsModified() && wxMessageBox("Revert file to last saved state? Your changes will be lost!", "Revert",
+                                               wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
         return {OpenStatus::Cancelled, {}};
     return ReloadCurrentFile();
 }
@@ -445,7 +446,7 @@ OpenResult EditorFrame::Revert() {
 OpenResult EditorFrame::ReloadWithEncoding() {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
     // F8's original DontSave path confirms loss before showing the picker.
-    if (editor_->Send(Scintilla::Message::GetModify) &&
+    if (document_.IsModified() &&
         wxMessageBox("Recoding requires reloading file from disk, unsaved changes will be lost!", "Reload Encoding",
                      wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
         return {OpenStatus::Cancelled, {}};
@@ -511,7 +512,7 @@ bool EditorFrame::NewDocument() {
 }
 
 bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
-    if (!editor_->Send(Scintilla::Message::GetModify)) return true;
+    if (!document_.IsModified()) return true;
     if (CanDiscardUntitledWhitespace()) return true;
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
@@ -532,6 +533,25 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     if (result.status == SaveStatus::Failed)
         wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
     return result.status == SaveStatus::Saved;
+}
+
+bool EditorFrame::SelectEncoding(EncodingChoice choice) {
+    const auto current = document_.CurrentEncoding();
+    if (choice == current) return false;
+    if (choice.systemDefault != current.systemDefault &&
+        (editor_->Send(Scintilla::Message::GetLength) || editor_->Send(Scintilla::Message::GetUndoActions))) {
+        const bool empty = editor_->Send(Scintilla::Message::GetLength) == 0;
+        const wxString message =
+            empty ? "You are about to change the encoding of an empty file from ANSI to non-ANSI. Note that this will "
+                    "clear the undo history, as it can't be synchronized with the new encoding. Continue?"
+                  : "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text "
+                    "with default characters, and the undo history will be cleared. Continue?";
+        if (wxMessageBox(message, "Encoding Conversion", wxYES_NO | wxICON_WARNING, this) != wxYES) return false;
+    }
+    const bool changed = document_.SelectEncoding(choice);
+    UpdateDocumentState();
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    return changed;
 }
 
 bool EditorFrame::CanDiscardUntitledWhitespace() const {

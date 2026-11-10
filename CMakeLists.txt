@@ -32,8 +32,10 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexBash.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
-    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx")
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
 target_include_directories(notepad4_core PUBLIC
     "${NOTEPAD4_SOURCE}/scintilla/include"
     PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
@@ -282,6 +284,10 @@ if(BUILD_TESTING)
     set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(save_copy original_save_copy 90)
+    add_editor_test(current_encoding original_current_encoding 90)
+    add_test(NAME original_current_encoding_native_keys COMMAND current_encoding)
+    set_tests_properties(original_current_encoding_native_keys PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_CURRENT_ENCODING_NATIVE_KEYS=1")
     add_editor_test(file_times original_file_times 60)
     add_editor_test(pad_spaces original_pad_spaces 60)
     add_editor_test(align_lines original_align_lines 60)
@@ -430,8 +436,10 @@ if(BUILD_TESTING)
     add_editor_test(open_smoke open_utf8 30)
     add_editor_test(syntax_cpp cpp_highlighting 30)
     add_editor_test(syntax_python python_highlighting 30)
+    add_editor_test(syntax_shell shell_highlighting 60)
     add_editor_test(syntax_shebang original_python_shebang 60)
     add_editor_test(syntax_json json_highlighting 60)
+    add_editor_test(syntax_javascript javascript_typescript_schemes 120)
     add_editor_test(syntax_markup original_markup_schemes 90)
     target_compile_definitions(syntax_markup PRIVATE
         "MARKUP_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markup_reference.tsv\"")

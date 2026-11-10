@@ -62,10 +62,10 @@ struct OriginalSettings {
     OriginalTabs globalTabs;
     std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> schemeTabs = [] {
         std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> tabs{};
-        // GCC 13 omits trailing default member initializers in this returned
-        // aggregate; fill explicitly so XML keeps 4/4 and global inheritance.
         tabs.fill(OriginalTabs{});
         tabs[static_cast<size_t>(SyntaxLanguage::Json)] = {2, 2, true, false};
+        tabs[static_cast<size_t>(SyntaxLanguage::JavaScript)] = {2, 2, true, false};
+        tabs[static_cast<size_t>(SyntaxLanguage::TypeScript)] = {2, 2, true, false};
         tabs[static_cast<size_t>(SyntaxLanguage::Html)] = {2, 2, true, false};
         return tabs;
     }();

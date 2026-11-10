@@ -7,6 +7,9 @@ namespace {
 #include "syntax/generated/cpp_scheme_data.h"
 #include "syntax/generated/python_scheme_data.h"
 #include "syntax/generated/json_scheme_data.h"
+#include "syntax/generated/bash_scheme_data.h"
+#include "syntax/generated/javascript_scheme_data.h"
+#include "syntax/generated/typescript_scheme_data.h"
 #include "syntax/generated/markup_scheme_data.h"
 #include "syntax/generated/detection_extensions.h"
 
@@ -19,11 +22,24 @@ template <size_t N> constexpr auto Keywords(const char* const (&text)[N], uintpt
 constexpr auto cppLists = Keywords(cppKeywords, 0);
 constexpr auto pythonLists = Keywords(pythonKeywords, 2U << 8U);
 constexpr auto jsonLists = Keywords(jsonKeywords, jsonKeywordAttributes);
+constexpr auto bashLists = Keywords(bashKeywords, 2U << 8U);
 constexpr const char* textExtensions[] = {"txt"};
 constexpr const char* cppExtensions[] = {"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"};
 constexpr const char* pythonExtensions[] = {"py", "pyw", "pyi"};
 constexpr const char* jsonExtensions[] = {"json"};
+constexpr const char* bashExtensions[] = {"sh", "zsh", "bash", "in"};
+constexpr const char* cShellExtensions[] = {"csh", "tcsh"};
+constexpr const char* m4Extensions[] = {"m4", "ac"};
 constexpr SyntaxProperty cppProperties[] = {{"lexer.lang", "0"}};
+constexpr SyntaxProperty bashProperties[] = {{"lexer.lang", "0"}};
+constexpr SyntaxProperty cShellProperties[] = {{"lexer.lang", "1"}};
+constexpr SyntaxProperty m4Properties[] = {{"lexer.lang", "2"}};
+constexpr const char* jsxExtensions[] = {"jsx"};
+constexpr const char* tsxExtensions[] = {"tsx"};
+constexpr SyntaxProperty javascriptProperties[] = {{"lexer.lang", "0"}};
+constexpr SyntaxProperty jsxProperties[] = {{"lexer.lang", "1"}};
+constexpr SyntaxProperty typescriptProperties[] = {{"lexer.lang", "2"}};
+constexpr SyntaxProperty tsxProperties[] = {{"lexer.lang", "3"}};
 // Notepad4 Styles.cpp stores the HtmlOption bitfield as little endian bytes.
 constexpr SyntaxProperty htmlProperties[] = {{"lexer.lang", "\x0e\x10"}};
 constexpr SyntaxProperty htmlVbProperties[] = {{"lexer.lang", "\x0e\x20"}};
@@ -83,6 +99,20 @@ constexpr SyntaxDefinition definitions[] = {
      "/*",
      "*/",
      SCE_JSON_BLOCKCOMMENT},
+    {"JavaScript", javascriptExtensions, javascriptLists, javascriptStyles, javascriptProperties, SCLEX_JAVASCRIPT,
+     SyntaxLanguage::JavaScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+    {"JSX", jsxExtensions, javascriptLists, javascriptStyles, jsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Jsx,
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+    {"TypeScript", typescriptExtensions, typescriptLists, typescriptStyles, typescriptProperties, SCLEX_JAVASCRIPT,
+     SyntaxLanguage::TypeScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER},
+    {"TSX", tsxExtensions, typescriptLists, typescriptStyles, tsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Tsx,
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER},
+    {"Bash", bashExtensions, bashLists, bashStyles, bashProperties, SCLEX_BASH, SyntaxLanguage::Bash, true, "#",
+     nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/bash"},
+    {"C Shell", cShellExtensions, bashLists, bashStyles, cShellProperties, SCLEX_BASH, SyntaxLanguage::CShell, true,
+     "#", nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/csh"},
+    {"m4", m4Extensions, bashLists, bashStyles, m4Properties, SCLEX_BASH, SyntaxLanguage::M4, true, "dnl ", nullptr,
+     nullptr, SCE_SH_COMMENTLINE, false, false, "m4"},
     {"Web Source Code", htmlExtensions, htmlLists, htmlStyles, htmlProperties, SCLEX_HTML, SyntaxLanguage::Html, true,
      nullptr, "<!--", "-->", SCE_H_COMMENT},
     {"ASP VBScript", aspExtensions, htmlLists, htmlStyles, htmlVbProperties, SCLEX_HTML, SyntaxLanguage::AspVb, true,
@@ -122,11 +152,11 @@ wxString FileExtension(const wxString& path) {
 }
 
 // Adapted from Notepad4 89b8b36 Styles.cpp::Style_SniffShebang.
-// Only the delivered Python result is retained. The original prefix and token
+// Only delivered interpreter results are retained. The original prefix and token
 // rules intentionally accept py*/ipy* and do not parse env options or quotes.
-bool PythonInterpreter(std::string_view text) {
+std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
     text = text.substr(0, 255);
-    if (!text.starts_with("#!")) return false;
+    if (!text.starts_with("#!")) return std::nullopt;
     size_t position = 2;
     const auto token = [&]() {
         while (position < text.size() && (text[position] == ' ' || text[position] == '\t'))
@@ -146,7 +176,13 @@ bool PythonInterpreter(std::string_view text) {
         if (lower < 'a' || lower > 'z') break;
         letters += lower;
     }
-    return letters.starts_with("py") || letters.starts_with("ipy");
+    if (letters.starts_with("py") || letters.starts_with("ipy")) return SyntaxLanguage::Python;
+    if (letters.starts_with("tcsh") || letters.starts_with("csh")) return SyntaxLanguage::CShell;
+    for (const auto* shell : {"bash", "dash", "ash", "zsh", "ksh", "sh"}) {
+        if (letters.starts_with(shell)) return SyntaxLanguage::Bash;
+    }
+    if (letters.starts_with("node")) return SyntaxLanguage::JavaScript;
+    return std::nullopt;
 }
 
 // Adapted from pinned Styles.cpp::Style_GetDocTypeLanguage. Its 4000-byte
@@ -185,8 +221,6 @@ FilenameMatch OriginalFilenameMatch(const wxString& path) {
     const wxFileName file(path);
     const auto name = file.GetFullName().Lower();
     const auto extension = FileExtension(path).Lower().ToStdString();
-    if (name.StartsWith(".") && (extension.starts_with("bash") || extension == "profile"))
-        return FilenameMatch::Associated;
     // The original treats MySQL ini/cnf files as Config, permitting sniffing.
     if (name.StartsWith("my") && (extension == "ini" || extension == "cnf")) return FilenameMatch::Config;
     size_t start = 0;
@@ -223,7 +257,50 @@ const SyntaxDefinition& SyntaxFor(SyntaxLanguage language) {
     return definitions[0];
 }
 
+SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
+    if (language >= SyntaxLanguage::Html && language <= SyntaxLanguage::Jspx) return SyntaxLanguage::Html;
+    if (language >= SyntaxLanguage::Xml && language <= SyntaxLanguage::Plist) return SyntaxLanguage::Xml;
+    switch (language) {
+    case SyntaxLanguage::CShell:
+    case SyntaxLanguage::M4:
+        return SyntaxLanguage::Bash;
+    case SyntaxLanguage::Jsx:
+        return SyntaxLanguage::JavaScript;
+    case SyntaxLanguage::Tsx:
+        return SyntaxLanguage::TypeScript;
+    default:
+        return language;
+    }
+}
+
+const char* SyntaxSettingsSection(SyntaxLanguage language) {
+    switch (SyntaxSettingsLanguage(language)) {
+    case SyntaxLanguage::Cpp:
+        return "C/C++ Source";
+    case SyntaxLanguage::Python:
+        return "Python Script";
+    case SyntaxLanguage::Json:
+        return "JSON Document";
+    case SyntaxLanguage::Html:
+        return "Web Source Code";
+    case SyntaxLanguage::Xml:
+        return "XML Document";
+    case SyntaxLanguage::Bash:
+        return "Shell Script";
+    case SyntaxLanguage::JavaScript:
+        return "JavaScript";
+    case SyntaxLanguage::TypeScript:
+        return "TypeScript";
+    default:
+        return "Text File";
+    }
+}
+
 SyntaxLanguage LanguageForPath(const wxString& path) {
+    const auto name = wxFileName(path).GetFullName();
+    const auto originalExtension = FileExtension(path);
+    if (name.StartsWith(".") && (originalExtension.StartsWith("bash") || originalExtension == "profile"))
+        return SyntaxLanguage::Bash;
     wxString extension = FileExtension(path);
     for (size_t index = 0; index < extension.length(); ++index) {
         const auto ch = extension[index].GetValue();
@@ -238,14 +315,28 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
             if (extension == candidate) return definition.language;
         }
     }
+    for (const auto* build : {"mozconfig", "apkbuild", "pkgbuild"}) {
+        if (name.CmpNoCase(build) == 0) return SyntaxLanguage::Bash;
+    }
     return SyntaxLanguage::PlainText;
 }
 
 std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_view prefix,
                                              SyntaxDetectionOptions options) {
     if (!options.autoSelect) return std::nullopt;
-    const auto language = LanguageForPath(path);
     const auto extension = FileExtension(path).Lower();
+    const auto interpreter = options.noCgiGuess ? std::nullopt : SniffInterpreter(prefix);
+    // Original .in handling strips one suffix before matching the underlying
+    // filename. An unmatched template keeps the Shell Script association.
+    if (extension == "in") {
+        const auto underlying = path.BeforeLast('.');
+        const auto language = LanguageForPath(underlying);
+        if (language != SyntaxLanguage::PlainText) return language;
+        if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return SyntaxLanguage::PlainText;
+        if (OriginalFilenameMatch(underlying) == FilenameMatch::Config)
+            return interpreter ? interpreter : std::optional{SyntaxLanguage::PlainText};
+    }
+    const auto language = LanguageForPath(path);
     if (language != SyntaxLanguage::PlainText) {
         if (extension == "asp" || extension == "aspx" || extension == "xml")
             return MarkupDocType(prefix).value_or(language);
@@ -254,8 +345,7 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
     if (extension == "txt") return language;
     // CGI sniffing precedes associated extensions; unmatched names are sniffed
     // only after original filename matches. Config files are sniffed too.
-    if (!options.noCgiGuess && (extension == "cgi" || extension == "fcgi") && PythonInterpreter(prefix))
-        return SyntaxLanguage::Python;
+    if ((extension == "cgi" || extension == "fcgi") && interpreter) return interpreter;
     const auto match = OriginalFilenameMatch(path);
     if (match == FilenameMatch::Associated) return SyntaxLanguage::PlainText;
     // Styles.cpp::Style_SetLexerFromFile: only unknown names and Config may
@@ -288,7 +378,7 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
         }
         if (markup) return MarkupDocType(prefix).value_or(*markup);
     }
-    if (!options.noCgiGuess && PythonInterpreter(prefix)) return SyntaxLanguage::Python;
+    if (interpreter) return interpreter;
     return match == FilenameMatch::Config ? std::optional{SyntaxLanguage::PlainText} : std::nullopt;
 }
 
@@ -297,29 +387,6 @@ wxString LanguageName(SyntaxLanguage language) {
 }
 bool LanguageCanFold(SyntaxLanguage language) {
     return SyntaxFor(language).canFold;
-}
-
-SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
-    if (language >= SyntaxLanguage::Html && language <= SyntaxLanguage::Jspx) return SyntaxLanguage::Html;
-    if (language >= SyntaxLanguage::Xml && language <= SyntaxLanguage::Plist) return SyntaxLanguage::Xml;
-    return language;
-}
-
-const char* SyntaxSettingsSection(SyntaxLanguage language) {
-    switch (SyntaxSettingsLanguage(language)) {
-    case SyntaxLanguage::Cpp:
-        return "C/C++ Source";
-    case SyntaxLanguage::Python:
-        return "Python Script";
-    case SyntaxLanguage::Json:
-        return "JSON Document";
-    case SyntaxLanguage::Html:
-        return "Web Source Code";
-    case SyntaxLanguage::Xml:
-        return "XML Document";
-    default:
-        return "Text File";
-    }
 }
 
 std::span<const SyntaxStyle> MarkupEmbeddedStyles() {

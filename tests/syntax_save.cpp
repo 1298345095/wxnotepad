@@ -102,10 +102,17 @@ private:
 };
 wxString SaveCommand(EditorFrame* frame, int id, const wxString& path = {}, const wxString& type = {}) {
     const auto lexer = frame->Editor()->Send(Message::GetLexer);
-    const auto current = lexer == SCLEX_CPP      ? SyntaxLanguage::Cpp
-                         : lexer == SCLEX_PYTHON ? SyntaxLanguage::Python
-                         : lexer == SCLEX_JSON   ? SyntaxLanguage::Json
-                                                 : SyntaxLanguage::PlainText;
+    auto current = lexer == SCLEX_CPP      ? SyntaxLanguage::Cpp
+                   : lexer == SCLEX_PYTHON ? SyntaxLanguage::Python
+                   : lexer == SCLEX_JSON   ? SyntaxLanguage::Json
+                                           : SyntaxLanguage::PlainText;
+    if (lexer == SCLEX_JAVASCRIPT) {
+        const SyntaxLanguage dialects[] = {SyntaxLanguage::JavaScript, SyntaxLanguage::Jsx, SyntaxLanguage::TypeScript,
+                                           SyntaxLanguage::Tsx};
+        const auto dialect = frame->Editor()->Send(Message::GetPropertyInt, reinterpret_cast<uintptr_t>("lexer.lang"));
+        Require(dialect >= 0 && dialect < 4, "native Save chooser must retain JS dialect");
+        current = dialects[dialect];
+    }
     SaveChooser chooser(path, current, type);
     Command(frame, id);
     chooser.Stop();
@@ -346,6 +353,14 @@ public:
                 Require(frame->DocumentPath() == Filename(savedCustom) && Bytes(savedCustom) == source,
                         "default filter must force current Python and preserve native extension handling");
                 std::puts("PASS: native current filter retains an extra extension and forces its current scheme");
+                for (const auto* dialect : {"JavaScript", "JSX", "TypeScript", "TSX"}) {
+                    Choose(frame, dialect);
+                    const auto languagePath = directory / (std::string("native-") + dialect + ".js");
+                    SaveCommand(frame, wxID_SAVEAS, Filename(languagePath), dialect);
+                    Selected(frame, dialect, SCLEX_JAVASCRIPT);
+                    Require(Text(editor) == source, "native JS/TS Save As preserves document bytes");
+                }
+                std::puts("PASS: actual native JavaScript/JSX/TypeScript/TSX filter selection");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

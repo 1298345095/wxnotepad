@@ -75,6 +75,9 @@ public:
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
     bool IsDefaultEncoding() const { return systemDefaultEncoding_; }
+    EncodingChoice CurrentEncoding() const { return EncodingChoice(encoding_, hasBom_, systemDefaultEncoding_); }
+    bool IsModified() const;
+    bool SelectEncoding(EncodingChoice choice);
     const OriginalFileVariables& FileVariables() const { return fileVariables_; }
     SyntaxLanguage Language() const { return languageOverride_.value_or(automaticLanguage_); }
     std::optional<SyntaxLanguage> LanguageOverride() const { return languageOverride_; }
@@ -90,11 +93,13 @@ private:
     Scintilla::EndOfLine defaultEolMode_ = Scintilla::EndOfLine::CrLf;
     EncodingOptions encodingOptions_;
     bool systemDefaultEncoding_ = false;
+    std::optional<EncodingChoice> originalEncoding_ = EncodingChoice(FileEncoding::Utf8);
     OriginalFileVariables fileVariables_;
     std::optional<SyntaxLanguage> languageOverride_;
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
     bool DetectAutomaticLanguage();
+    void ApplyEmptySchemeDefaults();
     void ApplySaveCleanup();
     void CommitSaveState(const wxString& destination, std::optional<SaveFileType> fileType);
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,

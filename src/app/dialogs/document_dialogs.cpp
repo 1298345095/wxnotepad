@@ -7,6 +7,7 @@
 #include <wx/radiobox.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
+#include <wx/treectrl.h>
 #include <vector>
 #include <iterator>
 
@@ -79,6 +80,53 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
     source->SetFocus();
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
     return static_cast<FileEncoding>(source->GetSelection());
+}
+
+std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, EncodingChoice initial) {
+    // Notepad4 89b8b36 EditEncoding.cpp sEncodingGroupList and resource labels.
+    // Retain delivered catalog entries in a native tree instead of HWND item data.
+    wxDialog dialog(parent, wxID_ANY, "Select Encoding");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Select current file &encoding:"), 0, wxALL,
+                  dialog.FromDIP(DialogPaddingDip));
+    auto* tree = new wxTreeCtrl(&dialog, wxID_ANY, wxDefaultPosition, dialog.FromDIP(wxSize(360, 260)),
+                                wxTR_HIDE_ROOT | wxTR_HAS_BUTTONS | wxTR_SINGLE);
+    tree->SetName("Current encoding");
+    const auto root = tree->AddRoot("Encodings");
+    std::vector<std::pair<wxTreeItemId, EncodingChoice>> choices;
+    const auto add = [&](wxTreeItemId group, const char* label, EncodingChoice choice) {
+        const auto item = tree->AppendItem(group, label);
+        choices.emplace_back(item, choice);
+        if (choice == initial) tree->SelectItem(item);
+    };
+    if (const auto native = NativeEncodingChoice()) add(root, "ANSI", *native);
+    const auto unicode = tree->AppendItem(root, "Unicode");
+    add(unicode, "UTF-16LE with BOM", EncodingChoice(FileEncoding::Utf16Le, true));
+    add(unicode, "UTF-16LE", EncodingChoice(FileEncoding::Utf16Le));
+    add(unicode, "UTF-8", EncodingChoice(FileEncoding::Utf8));
+    add(unicode, "UTF-8 with BOM", EncodingChoice(FileEncoding::Utf8, true));
+    const auto chinese = tree->AppendItem(root, "Chinese");
+    add(chinese, "Simplified Chinese (GBK, GB2312)", EncodingChoice(FileEncoding::Gbk));
+    tree->ExpandAll();
+    contents->Add(tree, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(DialogPaddingDip));
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
+                  dialog.FromDIP(DialogPaddingDip));
+    const auto selected = [&]() -> std::optional<EncodingChoice> {
+        for (const auto& [item, choice] : choices)
+            if (item == tree->GetSelection()) return choice;
+        return std::nullopt;
+    };
+    auto* accept = dialog.FindWindow(wxID_OK);
+    accept->Enable(selected().has_value());
+    tree->Bind(wxEVT_TREE_SEL_CHANGED, [&](wxTreeEvent&) { accept->Enable(selected().has_value()); });
+    tree->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&](wxTreeEvent&) {
+        if (selected()) dialog.EndModal(wxID_OK);
+    });
+    dialog.SetSizerAndFit(contents);
+    dialog.CentreOnParent();
+    tree->SetFocus();
+    if (dialog.ShowModal() != wxID_OK) return std::nullopt;
+    return selected();
 }
 
 std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, const FileWatchingOptions& initial) {

@@ -43,7 +43,7 @@ the nearest bookmark as the main selection, preferring the earlier line on a
 tie. These commands share the bookmark marker used by Find All.
 
 Edit → Selection → Toggle Line Comment / Ctrl+/ (also Ctrl+keypad Divide) uses `//` for
-C/C++ and JSON, and `#` for Python. It follows the original common indentation,
+C/C++ and JSON, `#` for Python/Bash/C Shell, and `dnl ` for m4. It follows the original common indentation,
 mixed-line and selection rules, with one Undo step per edit. The command is
 available for these writable schemes; rectangular selections report the
 original unsupported-operation warning. `AutoInsertMask` controls optional
@@ -98,7 +98,7 @@ lists their Selection, Lines, Convert, Insert and Special groups:
 | Triple Single Quotes / Triple Double Quotes / Triple Backticks | Ctrl+3 / Ctrl+6 / Ctrl+9 |
 | Merge Duplicate Lines / Remove Duplicate Lines | Menu |
 
-The same operations serve Plain Text, C/C++, Python and JSON. Each retains its
+The same operations serve Plain Text, C/C++, Python, JSON and Shell Script. Each retains its
 original selection scope, rectangular-selection handling and history behavior.
 Save As remains F6; Ctrl+Shift+S converts selected tabs to spaces.
 
@@ -171,12 +171,20 @@ the empty document). Explicit Save and Save As still save these documents.
 
 New documents save as UTF-8 without a BOM. Open accepts UTF-8 with or without a
 BOM and recognizes BOM-marked UTF-16LE; Open As UTF-16LE also handles files
-without a BOM. Open As GBK explicitly decodes CP936. Save and Save As preserve
-the loaded encoding and BOM, shown in the status bar. GBK character loss offers
+without a BOM. Open As GBK explicitly decodes CP936. File → Encoding and More
+(F9) choose the live document's destination format, including BOM-less UTF-16LE
+and GBK; Reload → With Encoding (F8) reinterprets disk bytes. Encoding-only
+changes participate in Save and unsaved-change decisions while retaining text
+and history. Save and Save As write the chosen encoding and BOM, shown in the
+status bar. [Encoding behavior](docs/encoding.md) covers empty files and native
+ANSI conversion. GBK character loss offers
 OK/Cancel. Accepting writes replacement bytes while retaining the editor text and
 establishing its save point. Newline insertion defaults to CRLF;
 loaded files use their detected newline style for Enter, while existing CRLF,
 LF and CR bytes remain intact when saved.
+Selecting a shell scheme for a fresh empty document with no Undo actions uses
+UTF-8/LF. Existing BOMs remain intact; an empty document with edit history keeps
+its encoding and newline mode.
 
 Automatic language selection uses these extensions, ignoring ASCII case:
 
@@ -185,6 +193,11 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 | C/C++ | `.c`, `.cpp`, `.cxx`, `.cc`, `.h`, `.hpp`, `.hxx`, `.hh` |
 | Python | `.py`, `.pyw`, `.pyi` |
 | JSON | `.json` |
+| Bash | `.sh`, `.zsh`, `.bash`, `.in` |
+| C Shell | `.csh`, `.tcsh` |
+| m4 | `.m4`, `.ac` |
+| JavaScript / JSX | `.js`, `.jse`, `.jsm`, `.cjs`, `.mjs`, `.qs` / `.jsx` |
+| TypeScript / TSX | `.ts`, `.cts`, `.mts`, `.ets`, `.osts` / `.tsx` |
 | Web Source Code | `.html`, `.htm`, `.shtml`, `.xhtml`, `.asp`, `.aspx`, `.asax`, `.ascx`, `.cshtml`, `.vbhtml`, `.razor`, `.jsp`, `.jspf`, `.jspx`, `.rhtml`, `.vue`, `.hbs`, `.svelte`, `.mht`, `.htd`, `.htt`, `.hta`, `.htc`, `.cfm`, `.tpl`, `.jd` |
 | XML Document | `.xml`, `.xsl`, `.xslt`, `.xsd`, `.dtd`, `.rss`, `.svg`, `.xul`, `.axl`, `.rdf`, `.xaml`, `.resx`, `.plist`, `.pom`, `.mm`, `.xrc`, `.fbp`, `.wxml` |
 
@@ -203,9 +216,11 @@ load-only setting stays in its original INI location. Known unrelated extensions
 retain their filename association. Document-type and server-page language
 directives use the original larger 3999-byte header window.
 
-For unmatched filenames, Automatic also recognizes the original Python interpreter
-line forms, including direct paths, `env` and `winpty` wrappers, and `py*`/`ipy*`
-names. Known filename associations take precedence; languages whose lexer has not
+For unmatched filenames, Automatic also recognizes the original Python, shell and Node.js
+interpreter line forms, including direct paths and the original `env` and `winpty`
+token handling. Shell dotfiles (`.bash*`, `.profile`, case sensitive), `mozconfig`,
+`APKBUILD` and `PKGBUILD` select Bash. A trailing `.in` first checks the underlying
+filename association. Known filename associations take precedence; languages whose lexer has not
 been delivered retain the Plain Text fallback. The original `[Styles] AutoSelect`
 and `[Settings2] NoCGIGuess` settings control this selection. It runs on Open and
 explicit Automatic selection, without changing text or history; ordinary edits
@@ -227,6 +242,8 @@ shows the effective language and an explicit override alongside encoding/BOM.
 Highlighting continues to follow the selected language above 32 MiB. Select Plain
 Text to use the existing no-lexer path. See the
 [original scheme behavior validation record](docs/observations/original-scheme-README.md).
+JavaScript/TypeScript fixture comparisons and workflow checks are described in the
+[JavaScript validation record](docs/observations/javascript-README.md).
 
 Highlighting uses the pinned original lexers, consumed keyword lists and default
 light syntax colors while retaining the native font and point size. Typing and
@@ -235,7 +252,10 @@ Undo/Redo update syntax through the core's incremental styling lifecycle. The
 pinned original checkout; generated headers record revision, source hash and
 license, and omit completion-only lists.
 
-C/C++, Python, JSON, HTML and XML support code folding. Click a header's margin marker to
+C/C++, Python, JSON, Shell Script, HTML, XML, JavaScript/JSX and TypeScript/TSX support code folding. JavaScript
+and TypeScript use the original shared JavaScript lexer with separate keyword lists
+and four dialect properties. Their tab settings default to two spaces; JSX shares
+the JavaScript section and TSX shares TypeScript. Click a header's margin marker to
 collapse or expand its block; View → Toggle Folds → Collapse All and Expand All include nested
 blocks. These commands change visibility without editing text or history. Find
 reveals the complete matched range, including hidden intermediate lines, while
