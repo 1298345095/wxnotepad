@@ -18,6 +18,23 @@
 #endif
 
 namespace {
+const char* ObservationEncodingName(FileEncoding encoding) {
+    switch (encoding) {
+    case FileEncoding::Utf8:
+        return "UTF-8";
+    case FileEncoding::Utf16Le:
+        return "UTF-16LE";
+    case FileEncoding::Utf16Be:
+        return "UTF-16BE";
+    case FileEncoding::Windows1252:
+        return "CP1252";
+    case FileEncoding::Dos437:
+        return "CP437";
+    default:
+        return "CP936";
+    }
+}
+
 #ifdef WXNOTEPAD_DIAGNOSTICS
 unsigned long long DiagnosticRequest(const wxString& sequence) {
     unsigned long long value = 0;
@@ -80,12 +97,7 @@ void ProcessObserver::Publish() {
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
 #endif
-    const char* encoding = frame_->DocumentEncoding() == FileEncoding::Utf8          ? "UTF-8"
-                           : frame_->DocumentEncoding() == FileEncoding::Utf16Le     ? "UTF-16LE"
-                           : frame_->DocumentEncoding() == FileEncoding::Utf16Be     ? "UTF-16BE"
-                           : frame_->DocumentEncoding() == FileEncoding::Windows1252 ? "CP1252"
-                           : frame_->DocumentEncoding() == FileEncoding::Dos437      ? "CP437"
-                                                                                     : "CP936";
+    const char* encoding = ObservationEncodingName(frame_->DocumentEncoding());
     const wxString contents =
         wxString::Format(
             "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"

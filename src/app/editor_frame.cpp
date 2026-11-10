@@ -14,6 +14,48 @@
 #include <wx/statusbr.h>
 #include <wx/filename.h>
 
+namespace {
+wxString EncodingName(FileEncoding encoding) {
+    switch (encoding) {
+    case FileEncoding::Utf16Le:
+        return "UTF-16LE";
+    case FileEncoding::Utf16Be:
+        return "UTF-16BE";
+    case FileEncoding::Gbk:
+        return "GBK (CP936)";
+    case FileEncoding::Gb18030:
+        return "GB18030 (CP54936)";
+    case FileEncoding::Big5:
+        return "Big5 (CP950)";
+    case FileEncoding::Windows1252:
+        return "Windows-1252";
+    case FileEncoding::Dos437:
+        return "DOS-437";
+    default:
+        return "UTF-8";
+    }
+}
+
+wxString DocumentEncodingLabel(const DocumentSession& document) {
+    const auto encoding = document.Encoding();
+    const wxString name = EncodingName(encoding);
+    if (document.IsDefaultEncoding()) {
+        switch (encoding) {
+        case FileEncoding::Gbk:
+            return "ANSI (CP936)";
+        case FileEncoding::Gb18030:
+            return "ANSI (CP54936)";
+        case FileEncoding::Big5:
+            return "ANSI (CP950)";
+        default:
+            return "ANSI (" + name + ")";
+        }
+    }
+    if (document.IsOemEncoding()) return "OEM (" + name + ")";
+    return name;
+}
+} // namespace
+
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
       editor_(new EditorControl(this, settings ? settings->values.selectOption : OriginalSettings{}.selectOption)),
@@ -230,21 +272,7 @@ void EditorFrame::UpdateDocumentState() {
                                 : editor_->Send(Scintilla::Message::GetReadOnly) ? " (Read Only Mode)"
                                                                                  : "";
     SetTitle((document_.IsModified() ? "*" : "") + name + protection + " - wxnotepad");
-    wxString encoding = document_.Encoding() == FileEncoding::Utf16Le       ? "UTF-16LE"
-                        : document_.Encoding() == FileEncoding::Utf16Be     ? "UTF-16BE"
-                        : document_.Encoding() == FileEncoding::Gbk         ? "GBK (CP936)"
-                        : document_.Encoding() == FileEncoding::Gb18030     ? "GB18030 (CP54936)"
-                        : document_.Encoding() == FileEncoding::Big5        ? "Big5 (CP950)"
-                        : document_.Encoding() == FileEncoding::Windows1252 ? "Windows-1252"
-                        : document_.Encoding() == FileEncoding::Dos437      ? "DOS-437"
-                                                                            : "UTF-8";
-    if (document_.IsDefaultEncoding())
-        encoding = document_.Encoding() == FileEncoding::Gbk       ? wxString("ANSI (CP936)")
-                   : document_.Encoding() == FileEncoding::Gb18030 ? wxString("ANSI (CP54936)")
-                   : document_.Encoding() == FileEncoding::Big5    ? wxString("ANSI (CP950)")
-                                                                   : "ANSI (" + encoding + ")";
-    else if (document_.IsOemEncoding())
-        encoding = "OEM (" + encoding + ")";
+    const wxString encoding = DocumentEncodingLabel(document_);
     const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
     const wxString eol = eolMode == Scintilla::EndOfLine::CrLf ? "CRLF"
                          : eolMode == Scintilla::EndOfLine::Cr ? "CR"
