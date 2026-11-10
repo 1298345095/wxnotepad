@@ -121,9 +121,12 @@ private:
     }
     void HandleChooser(GtkWidget* widget) {
         if (stage_ == 0) {
+            // GTK loads the initial folder asynchronously after the dialog is
+            // visible. Observe its suggestion before driving or cancelling it.
+            char* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
+            if (!directory) return;
             stage_ = 1;
             ++choosers;
-            char* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
             char* name = gtk_file_chooser_get_current_name(GTK_FILE_CHOOSER(widget));
             folder = wxString::FromUTF8(directory ? directory : "");
             filename = wxString::FromUTF8(name ? name : "");
