@@ -27,6 +27,24 @@ system codec instead of changing the core code page. UTF-8 native locales
 retain the original same-code-page early return. Unsupported native codecs
 remain unavailable until their codec tickets are delivered.
 
+File > Encoding > Default opens the original default-format options. Its
+nested picker uses the same delivered catalog as More/F9, with the configured
+default selected. Accepting that picker changes the default immediately, even
+if the outer dialog is then cancelled. The five checkboxes commit only on outer
+OK: skip statistical UTF-16 detection, open unknown ANSI as UTF-8, open ASCII as
+UTF-8, open NFO/DIZ as DOS-437, and ignore encoding tags. These preferences use
+the existing SettingsStore and its Save Settings Now / Save Settings On Exit
+rules. Opening or accepting the dialog leaves the live document unchanged.
+
+New begins with the configured default and retains its BOM. Fresh empty
+documents with no edit history apply the original scheme defaults: Shell Script
+uses UTF-8/LF; other delivered schemes use the configured EOL. A manual switch
+to a different scheme also applies the separate ASCII-as-UTF-8 gate. New/Open
+retain the initially selected format for those schemes. An existing BOM survives these adjustments. Empty buffers
+with Undo or Redo history retain their format. Automatic format adjustments
+establish the original clean identity without adding edits. Detection preferences
+take effect on the next Open/reload through the decision order below.
+
 ## Automatic source detection
 
 The migrated codecs remain UTF-8, UTF-16LE and Windows CP936 (GBK), with

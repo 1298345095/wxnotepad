@@ -26,7 +26,9 @@ public:
 std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& title, SyntaxLanguage currentLanguage,
                                              const wxString& path, const SaveFileLocation& initial = {});
 std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial);
-std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, EncodingChoice initial);
+std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optional<EncodingChoice> initial,
+                                                    bool defaultSelection = false);
+void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options);
 std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, const FileWatchingOptions& initial);
 
 struct LineEndingOptions {

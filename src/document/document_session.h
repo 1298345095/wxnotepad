@@ -68,6 +68,7 @@ public:
                     const std::function<void()>& configureLoadedDocument = {},
                     OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead);
     void New();
+    void SetEncodingOptions(EncodingOptions options) { encodingOptions_ = options; }
     SaveCleanupOptions SaveCleanup() const { return saveCleanup_; }
     void SetSaveCleanup(SaveCleanupOptions options) { saveCleanup_ = options; }
     void SetDefaultEolMode(Scintilla::EndOfLine mode) { defaultEolMode_ = mode; }
@@ -99,12 +100,12 @@ private:
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
     bool DetectAutomaticLanguage();
-    void ApplyEmptySchemeDefaults();
+    void ApplyEmptySchemeDefaults(bool overrideEncoding);
     void ApplySaveCleanup();
     void CommitSaveState(const wxString& destination, std::optional<SaveFileType> fileType);
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt, bool copy = false,
                       SaveTimeMode timeMode = SaveTimeMode::Current);
-    OpenResult Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+    OpenResult Replace(const std::string& bytes, const wxString& path, EncodingChoice encoding,
                        bool keepLanguage = false);
 };

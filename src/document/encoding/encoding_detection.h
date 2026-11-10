@@ -31,6 +31,8 @@ struct DetectedEncoding {
 };
 bool IsUtf8(std::string_view bytes);
 int NormalizeEncodingSetting(int value);
+std::optional<EncodingChoice> DefaultEncodingChoice(int setting);
+int EncodingSetting(EncodingChoice choice);
 std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding);
 std::optional<EncodingChoice> NativeEncodingChoice();
 DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,

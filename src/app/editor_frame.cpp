@@ -71,6 +71,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                       static_cast<uintptr_t>(settings->values.viewWhiteSpace ? Scintilla::WhiteSpace::VisibleAlways
                                                                              : Scintilla::WhiteSpace::Invisible));
     }
+    document_.New();
     CreateMenus();
     CreateStatusBar(3);
     search_.SetWrapConfirmation([this](SearchDirection direction) { return SearchMessage(direction); });

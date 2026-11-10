@@ -427,7 +427,7 @@ void DocumentSession::CommitSaveState(const wxString& destination, std::optional
     // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
     if (previousLanguage != Language()) {
-        ApplyEmptySchemeDefaults();
+        ApplyEmptySchemeDefaults(false);
         ApplySyntaxLanguage(editor_, Language());
     }
 }
@@ -497,9 +497,8 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     }
     auto& loaded = std::get<LoadedDocument>(candidate);
-    const auto result = Replace(loaded.text, loadPath.GetFullPath(), loaded.encoding, loaded.bom, samePath);
-    systemDefaultEncoding_ = loaded.systemDefault && !(!samePath && loaded.text.empty() && !loaded.bom &&
-                                                       SyntaxSettingsLanguage(Language()) == SyntaxLanguage::Bash);
+    const auto result = Replace(loaded.text, loadPath.GetFullPath(),
+                                EncodingChoice(loaded.encoding, loaded.bom, loaded.systemDefault), samePath);
     originalEncoding_ = CurrentEncoding();
     fileVariables_ = std::move(loaded.variables);
     // FileLoad applies the loaded file's indentation before restoring its view
@@ -510,7 +509,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     return result;
 }
 
-OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, EncodingChoice encoding,
                                     bool keepLanguage) {
     const auto lineEndings = CountLineEndings(bytes);
     editor_.Send(Scintilla::Message::SetReadOnly, 0);
@@ -532,21 +531,23 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     editor_.Send(Scintilla::Message::SetUndoSelectionHistory, selectionHistory);
     path_ = path;
     RefreshReadOnlyFile();
-    encoding_ = encoding;
-    hasBom_ = bom;
+    encoding_ = encoding.encoding;
+    hasBom_ = encoding.bom;
+    systemDefaultEncoding_ = encoding.systemDefault;
     bool unknownLanguage = false;
     if (!keepLanguage) {
         languageOverride_.reset();
         unknownLanguage = !DetectAutomaticLanguage();
-        ApplyEmptySchemeDefaults();
+        ApplyEmptySchemeDefaults(false);
         ApplySyntaxLanguage(editor_, Language());
     }
     return {OpenStatus::Opened, {}, lineEndings, unknownLanguage};
 }
 
 void DocumentSession::New() {
-    Replace({}, {}, FileEncoding::Utf8, false);
-    systemDefaultEncoding_ = false;
+    const auto encoding =
+        DefaultEncodingChoice(encodingOptions_.defaultEncoding).value_or(EncodingChoice(FileEncoding::Utf8));
+    Replace({}, {}, encoding);
     originalEncoding_ = CurrentEncoding();
     fileVariables_ = {};
 }
@@ -607,12 +608,12 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     languageOverride_ = language;
     if (!language) DetectAutomaticLanguage();
     if (previous != Language()) {
-        ApplyEmptySchemeDefaults();
+        ApplyEmptySchemeDefaults(SyntaxSettingsLanguage(previous) != SyntaxSettingsLanguage(Language()));
         ApplySyntaxLanguage(editor_, Language());
     }
 }
 
-void DocumentSession::ApplyEmptySchemeDefaults() {
+void DocumentSession::ApplyEmptySchemeDefaults(bool overrideEncoding) {
     // Pinned Styles.cpp::Style_SetLexer / Notepad4.cpp::EditApplyDefaultEncoding.
     // Undo action count includes pending Redo; clean-but-edited empties retain
     // their current encoding/EOL. Scheme defaults preserve an existing BOM.
@@ -620,9 +621,16 @@ void DocumentSession::ApplyEmptySchemeDefaults() {
     if (editor_.Send(Message::GetLength) || editor_.Send(Message::GetUndoActions)) return;
     const bool shell = SyntaxSettingsLanguage(Language()) == SyntaxLanguage::Bash;
     editor_.Send(Message::SetEOLMode, static_cast<uintptr_t>(shell ? Scintilla::EndOfLine::Lf : defaultEolMode_));
-    if (shell && !hasBom_ && CurrentEncoding() != EncodingChoice(FileEncoding::Utf8)) {
-        encoding_ = FileEncoding::Utf8;
-        systemDefaultEncoding_ = false;
+    // Style_SetLexer's LexerChanged_Override bit is set by a user switch to a
+    // different scheme, but not by FileLoad/New or automatic save detection.
+    if (hasBom_ || (!shell && !overrideEncoding)) return;
+    const auto encoding = shell || encodingOptions_.loadASCIIasUTF8
+                              ? std::optional(EncodingChoice(FileEncoding::Utf8))
+                              : DefaultEncodingChoice(encodingOptions_.defaultEncoding);
+    if (encoding && *encoding != CurrentEncoding()) {
+        encoding_ = encoding->encoding;
+        hasBom_ = encoding->bom;
+        systemDefaultEncoding_ = encoding->systemDefault;
         originalEncoding_ = CurrentEncoding();
     }
 }
