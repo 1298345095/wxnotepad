@@ -150,11 +150,14 @@ std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncod
         if (encoded.loss && (!decideLoss || decideLoss() != GbkLossChoice::Replace))
             return SaveResult{SaveStatus::Cancelled, {}};
         bytes = encoded.bytes;
-    } else if (encoding == FileEncoding::Utf16Le) {
-        auto encoded = EncodeUtf16Le(bytes);
-        if (!encoded) return SaveResult{SaveStatus::Failed, "The document could not be encoded as UTF-16LE."};
+    } else if (encoding == FileEncoding::Utf16Le || encoding == FileEncoding::Utf16Be) {
+        auto encoded = encoding == FileEncoding::Utf16Be ? EncodeUtf16Be(bytes) : EncodeUtf16Le(bytes);
+        if (!encoded)
+            return SaveResult{SaveStatus::Failed, encoding == FileEncoding::Utf16Be
+                                                      ? "The document could not be encoded as UTF-16BE."
+                                                      : "The document could not be encoded as UTF-16LE."};
         bytes = std::move(*encoded);
-        if (bom) bytes.insert(0, "\xff\xfe");
+        if (bom) bytes.insert(0, encoding == FileEncoding::Utf16Be ? "\xfe\xff" : "\xff\xfe");
     } else if (bom)
         bytes.insert(0, "\xef\xbb\xbf");
     return bytes;
@@ -242,16 +245,18 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std:
     loaded.encoding = *detected.encoding;
     loaded.bom = detected.bom;
     loaded.systemDefault = detected.systemDefault;
-    if (loaded.encoding != FileEncoding::Utf16Le)
-        loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
-    if (loaded.bom) bytes.erase(0, loaded.encoding == FileEncoding::Utf16Le ? 2 : 3);
+    const bool utf16 = loaded.encoding == FileEncoding::Utf16Le || loaded.encoding == FileEncoding::Utf16Be;
+    if (!utf16) loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
+    if (loaded.bom) bytes.erase(0, utf16 ? 2 : 3);
     if (loaded.encoding == FileEncoding::Gbk) {
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return wxString("The file is not valid GBK (CP936). The document was not changed.");
         bytes = *decoded;
-    } else if (loaded.encoding == FileEncoding::Utf16Le) {
-        auto decoded = DecodeUtf16Le(bytes);
-        if (!decoded) return wxString("The file is not valid UTF-16LE.");
+    } else if (utf16) {
+        auto decoded = loaded.encoding == FileEncoding::Utf16Be ? DecodeUtf16Be(bytes) : DecodeUtf16Le(bytes);
+        if (!decoded)
+            return wxString(loaded.encoding == FileEncoding::Utf16Be ? "The file is not valid UTF-16BE."
+                                                                     : "The file is not valid UTF-16LE.");
         bytes = std::move(*decoded);
         loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     } else if (!IsUtf8(bytes))
