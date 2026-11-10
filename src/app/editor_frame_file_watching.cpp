@@ -21,7 +21,7 @@ void EditorFrame::HandleFileChange() {
     bool terminate = false;
     if (wxFileName::FileExists(document_.Path())) {
         const bool automatic = fileWatchingOptions_.mode == FileWatchingMode::AutoReload;
-        if ((automatic && !editor_->Send(Scintilla::Message::GetModify)) ||
+        if ((automatic && !document_.IsModified()) ||
             wxMessageBox("The current file has been modified by an external program. Reload?",
                          "File Change Notification", wxYES_NO | wxICON_WARNING, this) == wxYES) {
             const bool followEnd = automatic && ((fileWatchingOptions_.flags & FileWatchingOption_KeepAtEnd) ||

@@ -11,6 +11,7 @@ struct EncodingChoice {
     bool systemDefault;
     explicit EncodingChoice(FileEncoding value, bool hasBom = false, bool nativeDefault = false)
         : encoding(value), bom(hasBom), systemDefault(nativeDefault) {}
+    bool operator==(const EncodingChoice&) const = default;
 };
 // Original Settings fields, not a second configuration source.
 struct EncodingOptions {
@@ -31,6 +32,7 @@ struct DetectedEncoding {
 bool IsUtf8(std::string_view bytes);
 int NormalizeEncodingSetting(int value);
 std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding);
+std::optional<EncodingChoice> NativeEncodingChoice();
 DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
                                 std::optional<FileEncoding> explicitEncoding, const EncodingOptions& options = {},
                                 std::optional<EncodingChoice> weakEncoding = std::nullopt);
