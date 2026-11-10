@@ -123,6 +123,15 @@ void ShellOperations(EditorFrame* frame, SettingsStore& settings, const std::fil
                 "shell comment command must retain original prefix and mandatory m4 padding");
         Command(frame, lineComment);
         Require(Text(editor) == "call()\n", "shell comment command must remove its original prefix");
+        if (m4) {
+            const auto mask = settings.values.autoInsertMask;
+            settings.values.autoInsertMask &= ~AutoInsertMask_SpaceAfterComment;
+            Command(frame, lineComment);
+            Require(Text(editor) == "dnl call()\n",
+                    "m4 must retain its mandatory pad when optional spacing is disabled");
+            Command(frame, lineComment);
+            settings.values.autoInsertMask = mask;
+        }
         Require(editor->Send(Message::BraceMatch, 4, -1) == 5, "shell operator braces must use native matching");
         TestEditor::ResetStream(editor, "", 0, 0);
         editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
@@ -321,6 +330,16 @@ public:
                     Choose(frame, "m4");
                     Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(bomPath) == bom,
                             "dialect changes must preserve BOM-only disk bytes");
+                    if (bom.size() == 3) {
+                        frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
+                        Require(frame->DocumentIsModified(),
+                                "removing a named empty file's BOM must be a format change");
+                        Choose(frame, "C Shell");
+                        Require(frame->DocumentIsModified(),
+                                "unchanged shell defaults must retain a pending BOM removal");
+                        frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8, true));
+                        Require(!frame->DocumentIsModified(), "restoring the original BOM must restore clean identity");
+                    }
                 }
                 std::puts("PASS: original empty-document UTF-8/LF, edit history, BOM and shebang behavior");
                 const auto legacyEmpty = directory / "empty-utf16.txt";
@@ -330,7 +349,7 @@ public:
                             frame->DocumentEncoding() == FileEncoding::Utf16Le,
                         "explicit no-BOM empty encoding fixture must open");
                 Choose(frame, "Bash");
-                Require(frame->DocumentEncoding() == FileEncoding::Utf8 && !editor->Send(Message::GetModify) &&
+                Require(frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentIsModified() &&
                             !editor->Send(Message::GetUndoActions),
                         "shell defaults must replace a no-BOM empty encoding without edit history");
                 OriginalShell(frame, directory);

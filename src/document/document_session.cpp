@@ -3,6 +3,7 @@
 #include "syntax/syntax_scheme.h"
 #include "document/encoding/gbk_codec.h"
 #include "document/encoding/utf16_codec.h"
+#include "editor/platform/native_encoding.h"
 #include "ScintillaTypes.h"
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -19,6 +20,8 @@
 #endif
 
 namespace {
+// Original MAX_NON_UTF8_SIZE bounds EditConvertText's native conversion.
+constexpr intptr_t NativeConversionLimit = (intptr_t{1} << 30) - 16;
 // The original ignores query/restore failures: a successful content save stays
 // successful. Preserve every settable time around the existing safe-write path.
 #ifdef __WXMSW__
@@ -418,6 +421,7 @@ void DocumentSession::CommitSaveState(const wxString& destination, std::optional
             languageOverride_.reset();
     }
     path_ = destination;
+    originalEncoding_ = CurrentEncoding();
     RefreshReadOnlyFile();
     if (fileType && !languageOverride_) DetectAutomaticLanguage();
     // Original EditSaveFile saves the conversion without changing editor text or history.
@@ -479,15 +483,14 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     loadPath.Normalize(wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE | wxPATH_NORM_LONG |
                        wxPATH_NORM_SHORTCUT);
     wxLogNull quiet;
-    const bool wasModified = editor_.Send(Scintilla::Message::GetModify);
+    const bool wasModified = IsModified();
     if (decisionTiming == OpenDecisionTiming::BeforeRead && !beforeReplace()) return {OpenStatus::Cancelled, {}};
     auto candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
     if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     if (decisionTiming == OpenDecisionTiming::AfterRead && !beforeReplace()) return {OpenStatus::Cancelled, {}};
     // Save may have rewritten the selected source (including a newly chosen
     // first-save destination). Read it again after that explicit Save succeeds.
-    if (decisionTiming == OpenDecisionTiming::AfterRead && wasModified &&
-        !editor_.Send(Scintilla::Message::GetModify)) {
+    if (decisionTiming == OpenDecisionTiming::AfterRead && wasModified && !IsModified()) {
         // Release the old decoded text before allocating another whole-file read.
         candidate.emplace<wxString>();
         candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
@@ -495,8 +498,9 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     }
     auto& loaded = std::get<LoadedDocument>(candidate);
     const auto result = Replace(loaded.text, loadPath.GetFullPath(), loaded.encoding, loaded.bom, samePath);
-    systemDefaultEncoding_ = loaded.systemDefault && !(loaded.text.empty() && !loaded.bom &&
+    systemDefaultEncoding_ = loaded.systemDefault && !(!samePath && loaded.text.empty() && !loaded.bom &&
                                                        SyntaxSettingsLanguage(Language()) == SyntaxLanguage::Bash);
+    originalEncoding_ = CurrentEncoding();
     fileVariables_ = std::move(loaded.variables);
     // FileLoad applies the loaded file's indentation before restoring its view
     // or resolving a saved visual column against the new tab width.
@@ -543,7 +547,59 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
 void DocumentSession::New() {
     Replace({}, {}, FileEncoding::Utf8, false);
     systemDefaultEncoding_ = false;
+    originalEncoding_ = CurrentEncoding();
     fileVariables_ = {};
+}
+
+bool DocumentSession::IsModified() const {
+    return editor_.Send(Scintilla::Message::GetModify) || originalEncoding_ != CurrentEncoding();
+}
+
+bool DocumentSession::SelectEncoding(EncodingChoice choice) {
+    // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
+    if (choice == CurrentEncoding()) return false;
+    const bool crossesAnsi = choice.systemDefault != systemDefaultEncoding_;
+    const auto length = editor_.Send(Scintilla::Message::GetLength);
+    // Pinned EditConvertText changes the native buffer, discarding its history.
+    // This adapter keeps the original core in UTF-8 and round-trips native text
+    // at that boundary. UTF-8 native locales need no buffer conversion, as in
+    // the original's cpSource == cpDest early return.
+    const auto native = NativeEncodingChoice();
+    if (crossesAnsi && native && native->encoding != FileEncoding::Utf8 && length < NativeConversionLimit) {
+        using Scintilla::Message;
+        std::string text(static_cast<size_t>(length) + 1, '\0');
+        editor_.Send(Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+        text.resize(static_cast<size_t>(length));
+        if (choice.systemDefault)
+            text = NativeDefaultEncodingText(wxString::FromUTF8(text.data(), text.size())).utf8_string();
+        const auto history = editor_.Send(Message::GetChangeHistory);
+        const auto selectionHistory = editor_.Send(Message::GetUndoSelectionHistory);
+        editor_.Send(Message::SetReadOnly, 0);
+        editor_.Send(Message::Cancel);
+        editor_.Send(Message::SetChangeHistory, 0);
+        editor_.Send(Message::SetUndoSelectionHistory, 0);
+        editor_.Send(Message::SetUndoCollection, 0);
+        editor_.Send(Message::EmptyUndoBuffer);
+        editor_.Send(Message::ClearAll);
+        editor_.Send(Message::MarkerDeleteAll, static_cast<uintptr_t>(-1));
+        editor_.Send(Message::AppendText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+        editor_.Send(Message::EmptyUndoBuffer);
+        editor_.Send(Message::SetUndoCollection, 1);
+        if (!length && path_.empty()) editor_.Send(Message::SetSavePoint);
+        editor_.Send(Message::SetChangeHistory, history);
+        editor_.Send(Message::SetUndoSelectionHistory, selectionHistory);
+    }
+    // Notepad4 89b8b36 Notepad4.cpp IDM_ENCODING_SELECT: an empty
+    // Untitled document adopts the format; a named one compares BOM presence.
+    // The original core continues to own text, selection and Undo/Redo.
+    if (editor_.Send(Scintilla::Message::GetLength) == 0 &&
+        (path_.empty() || choice.bom == (originalEncoding_ && originalEncoding_->bom)))
+        originalEncoding_ = choice;
+    if (length && crossesAnsi) originalEncoding_.reset();
+    encoding_ = choice.encoding;
+    hasBom_ = choice.bom;
+    systemDefaultEncoding_ = choice.systemDefault;
+    return true;
 }
 
 void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
@@ -564,9 +620,10 @@ void DocumentSession::ApplyEmptySchemeDefaults() {
     if (editor_.Send(Message::GetLength) || editor_.Send(Message::GetUndoActions)) return;
     const bool shell = SyntaxSettingsLanguage(Language()) == SyntaxLanguage::Bash;
     editor_.Send(Message::SetEOLMode, static_cast<uintptr_t>(shell ? Scintilla::EndOfLine::Lf : defaultEolMode_));
-    if (shell && !hasBom_) {
+    if (shell && !hasBom_ && CurrentEncoding() != EncodingChoice(FileEncoding::Utf8)) {
         encoding_ = FileEncoding::Utf8;
         systemDefaultEncoding_ = false;
+        originalEncoding_ = CurrentEncoding();
     }
 }
 

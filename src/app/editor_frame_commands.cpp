@@ -6,6 +6,7 @@
 #include "editor/editor_control.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/native_encoding.h"
+#include "app/dialogs/document_dialogs.h"
 #include "editor/platform/custom_case.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
@@ -95,6 +96,42 @@ void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
             id);
 }
 
+void EditorFrame::AppendEncodingCommands(wxMenu* file) {
+    auto* encoding = new wxMenu;
+    struct Command {
+        const char* label;
+        EncodingChoice choice;
+    };
+    // Original Notepad4.rc direct encoding commands, in their original order.
+    if (const auto native = NativeEncodingChoice()) {
+        const int id = wxWindow::NewControlId();
+        encoding->AppendCheckItem(id, "&ANSI");
+        Bind(wxEVT_MENU, [this, choice = *native](wxCommandEvent&) { SelectEncoding(choice); }, id);
+        Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(document_.IsDefaultEncoding()); }, id);
+    }
+    for (const auto& command : {Command{"UTF-&8", EncodingChoice(FileEncoding::Utf8)},
+                                Command{"UTF-8 B&OM", EncodingChoice(FileEncoding::Utf8, true)},
+                                Command{"UTF-16&LE BOM", EncodingChoice(FileEncoding::Utf16Le, true)}}) {
+        const int id = wxWindow::NewControlId();
+        encoding->AppendCheckItem(id, command.label);
+        Bind(wxEVT_MENU, [this, command](wxCommandEvent&) { SelectEncoding(command.choice); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, command](wxUpdateUIEvent& event) { event.Check(document_.CurrentEncoding() == command.choice); },
+            id);
+    }
+    const int more = wxWindow::NewControlId();
+    encoding->Append(more, "&More...\tF9");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (const auto choice = ChooseCurrentEncoding(this, document_.CurrentEncoding())) SelectEncoding(*choice);
+        },
+        more);
+    file->AppendSeparator();
+    file->AppendSubMenu(encoding, "&Encoding");
+}
+
 wxMenu* EditorFrame::CreateFileMenu() {
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
@@ -128,9 +165,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
         },
         saveOriginalTime);
-    Bind(
-        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetModify)); },
-        saveOriginalTime);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(document_.IsModified()); }, saveOriginalTime);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { UpdateFileTime(); }, updateTime);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, updateTime);
     file->AppendSeparator();
@@ -143,6 +178,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
     auto* reload = new wxMenu;
     AppendReloadEncodingCommands(reload);
     file->AppendSubMenu(reload, "&Reload");
+    AppendEncodingCommands(file);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -189,9 +225,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
         },
         wxID_SAVE);
-    Bind(
-        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetModify)); },
-        wxID_SAVE);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(document_.IsModified()); }, wxID_SAVE);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {

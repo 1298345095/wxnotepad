@@ -171,8 +171,13 @@ the empty document). Explicit Save and Save As still save these documents.
 
 New documents save as UTF-8 without a BOM. Open accepts UTF-8 with or without a
 BOM and recognizes BOM-marked UTF-16LE; Open As UTF-16LE also handles files
-without a BOM. Open As GBK explicitly decodes CP936. Save and Save As preserve
-the loaded encoding and BOM, shown in the status bar. GBK character loss offers
+without a BOM. Open As GBK explicitly decodes CP936. File → Encoding and More
+(F9) choose the live document's destination format, including BOM-less UTF-16LE
+and GBK; Reload → With Encoding (F8) reinterprets disk bytes. Encoding-only
+changes participate in Save and unsaved-change decisions while retaining text
+and history. Save and Save As write the chosen encoding and BOM, shown in the
+status bar. [Encoding behavior](docs/encoding.md) covers empty files and native
+ANSI conversion. GBK character loss offers
 OK/Cancel. Accepting writes replacement bytes while retaining the editor text and
 establishing its save point. Newline insertion defaults to CRLF;
 loaded files use their detected newline style for Enter, while existing CRLF,
