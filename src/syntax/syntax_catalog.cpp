@@ -174,6 +174,17 @@ wxString FileExtension(const wxString& path) {
     return name.Contains('.') ? name.AfterLast('.') : wxString{};
 }
 
+std::string_view InterpreterToken(std::string_view text, size_t& position) {
+    while (position < text.size() && (text[position] == ' ' || text[position] == '\t'))
+        ++position;
+    size_t name = position;
+    while (position < text.size() && text[position] && !Space(text[position])) {
+        if (text[position] == '/' || text[position] == '\\') name = position + 1;
+        ++position;
+    }
+    return text.substr(name, position - name);
+}
+
 // Adapted from Notepad4 89b8b36 Styles.cpp::Style_SniffShebang.
 // Only delivered interpreter results are retained. The original prefix and token
 // rules intentionally accept py*/ipy* and do not parse env options or quotes.
@@ -181,18 +192,8 @@ std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
     text = text.substr(0, 255);
     if (!text.starts_with("#!")) return std::nullopt;
     size_t position = 2;
-    const auto token = [&]() {
-        while (position < text.size() && (text[position] == ' ' || text[position] == '\t'))
-            ++position;
-        size_t name = position;
-        while (position < text.size() && text[position] && !Space(text[position])) {
-            if (text[position] == '/' || text[position] == '\\') name = position + 1;
-            ++position;
-        }
-        return text.substr(name, position - name);
-    };
-    auto name = token();
-    if (name.starts_with("env") || name.starts_with("winpty")) name = token();
+    auto name = InterpreterToken(text, position);
+    if (name.starts_with("env") || name.starts_with("winpty")) name = InterpreterToken(text, position);
     std::string letters;
     for (const auto ch : name) {
         const char lower = static_cast<char>(ch | 0x20);
@@ -269,6 +270,33 @@ FilenameMatch OriginalFilenameMatch(const wxString& path) {
         if (name.CmpNoCase(exact) == 0) return FilenameMatch::Associated;
     }
     return FilenameMatch::Unknown;
+}
+
+bool MarkupNameStart(unsigned char ch) {
+    return ch >= 128 || ch == '!' || ch == '?' || ch == '/' || ch == ':' || ch == '_' || ch == '-' || ch == '.' ||
+           (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+}
+
+std::optional<SyntaxLanguage> SniffMarkupFamily(std::string_view prefix, FilenameMatch match, bool noHtmlGuess) {
+    // Styles.cpp::Style_SetLexerFromFile: only unknown names and Config may
+    // inspect markup, and Config only accepts the exact XML declaration.
+    auto head = prefix.substr(0, 255);
+    while (!head.empty() && Space(head.front()))
+        head.remove_prefix(1);
+    if (!head.starts_with("<")) return std::nullopt;
+    if (head.starts_with("<?xml")) return SyntaxLanguage::Xml;
+    if (match != FilenameMatch::Unknown || head.starts_with("<?php")) return std::nullopt;
+
+    std::string lower(head);
+    for (auto& ch : lower) {
+        if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
+    }
+    if (lower.starts_with("<!doctype")) return SyntaxLanguage::Xml;
+    if (lower.starts_with("<html")) return SyntaxLanguage::Html;
+    if (noHtmlGuess || head.size() <= 1) return std::nullopt;
+    if (lower.find("<html") != std::string::npos) return SyntaxLanguage::Html;
+    if (MarkupNameStart(static_cast<unsigned char>(head[1]))) return SyntaxLanguage::Xml;
+    return std::nullopt;
 }
 } // namespace
 
@@ -375,41 +403,12 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
     if ((extension == "cgi" || extension == "fcgi") && interpreter) return DetectedSyntax{*interpreter};
     const auto match = templateConfig ? FilenameMatch::Config : OriginalFilenameMatch(path);
     if (match == FilenameMatch::Associated) return DetectedSyntax{SyntaxLanguage::PlainText};
-    // Styles.cpp::Style_SetLexerFromFile: only unknown names and Config may
-    // inspect markup, and Config only accepts the exact XML declaration.
-    auto head = prefix.substr(0, 255);
-    while (!head.empty() && Space(head.front()))
-        head.remove_prefix(1);
-    if (head.starts_with("<")) {
-        std::string lower(head);
-        for (auto& ch : lower) {
-            if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
-        }
-        std::optional<SyntaxLanguage> markup;
-        if (head.starts_with("<?xml"))
-            markup = SyntaxLanguage::Xml;
-        else if (match == FilenameMatch::Unknown && !head.starts_with("<?php")) {
-            if (lower.starts_with("<!doctype"))
-                markup = SyntaxLanguage::Xml;
-            else if (lower.starts_with("<html"))
-                markup = SyntaxLanguage::Html;
-            else if (!options.noHtmlGuess && head.size() > 1) {
-                const auto start = static_cast<unsigned char>(head[1]);
-                if (lower.find("<html") != std::string::npos)
-                    markup = SyntaxLanguage::Html;
-                else if (start >= 128 || start == '!' || start == '?' || start == '/' || start == ':' || start == '_' ||
-                         start == '-' || start == '.' || (start >= '0' && start <= '9') ||
-                         (start >= 'a' && start <= 'z') || (start >= 'A' && start <= 'Z'))
-                    markup = SyntaxLanguage::Xml;
-            }
-        }
-        if (markup) {
-            const auto dialect = DetectMarkupDocType(prefix);
-            // Pinned Style_SetLexerFromFile promotes a prefix-selected XML
-            // family only for WEB; other sniffed dialects retain that family.
-            if (*markup == SyntaxLanguage::Xml && dialect == SyntaxLanguage::Html) markup = SyntaxLanguage::Html;
-            return DetectedSyntax{*markup, dialect};
-        }
+    if (auto markup = SniffMarkupFamily(prefix, match, options.noHtmlGuess)) {
+        const auto dialect = DetectMarkupDocType(prefix);
+        // Pinned Style_SetLexerFromFile promotes a prefix-selected XML
+        // family only for WEB; other sniffed dialects retain that family.
+        if (*markup == SyntaxLanguage::Xml && dialect == SyntaxLanguage::Html) markup = SyntaxLanguage::Html;
+        return DetectedSyntax{*markup, dialect};
     }
     if (interpreter) return DetectedSyntax{*interpreter};
     return match == FilenameMatch::Config ? std::optional{DetectedSyntax{SyntaxLanguage::PlainText}} : std::nullopt;
