@@ -114,6 +114,7 @@ public:
     const CaretAppearance& GetCaretAppearance() const { return caretAppearance_; }
     void SetCaretAppearance(CaretAppearance appearance);
     OccurrenceMarking& Occurrences() { return *occurrences_; }
+    void FlushPendingUIUpdate();
     // Requires a freshly revalidated regex match; copies the original formatter's buffer.
     std::optional<std::string> ExpandRegexReplacement(const std::string& replacement);
 

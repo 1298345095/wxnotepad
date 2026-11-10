@@ -23,6 +23,7 @@ public:
     void RequestScrollWidthUpdate() noexcept { scrollWidthDirty_ = true; }
     void Resize();
     void UpdateWrapLayout();
+    void FlushPendingUIUpdate() { NotifyUpdateUI(); }
     void DpiChanged();
     void Character(std::string_view text);
     bool EditingKey(const wxKeyEvent& event);

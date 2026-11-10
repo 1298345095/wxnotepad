@@ -1,5 +1,7 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
+#include "editor/editor_ids.h"
+#include "editor/occurrence_marking.h"
 #include "document/document_session.h"
 #include "file_helpers.h"
 #include "file_command_driver.h"
@@ -400,9 +402,12 @@ void NativeTabsAndFoldedFind(EditorFrame* frame) {
     auto* findAll = wxDynamicCast(wxWindow::FindWindowByName("Find All", frame), wxButton);
     Require(findAll, "native Find exposes Find All");
     NativeSearch::Click(wxDynamicCast(query->GetParent(), wxDialog), findAll->GetId());
-    Require(editor->Send(Message::IndicatorValueAt, 8, text.find("body")) &&
-                editor->Send(Message::IndicatorValueAt, 8, text.rfind("body")) && TestEditor::Text(editor) == text &&
-                !editor->Send(Message::GetModify),
+    const auto openingMark =
+        editor->Send(Message::IndicatorValueAt, EditorIndicator::Occurrence, static_cast<intptr_t>(text.find("body")));
+    const auto closingMark =
+        editor->Send(Message::IndicatorValueAt, EditorIndicator::Occurrence, static_cast<intptr_t>(text.rfind("body")));
+    Require(openingMark && closingMark && editor->Occurrences().FindAllCount() == 2 &&
+                TestEditor::Text(editor) == text && !editor->Send(Message::GetModify),
             "shared occurrence marks cover opening and closing markup tags without editing");
     NativeSearch::Click(wxDynamicCast(query->GetParent(), wxDialog), wxID_CANCEL);
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
