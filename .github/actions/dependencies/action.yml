@@ -2,7 +2,7 @@ name: Build dependencies
 description: Prepare native build or GUI test tools and the pinned wxWidgets core dependency.
 inputs:
   profile:
-    description: Linux tools to install (build, gui, or tidy).
+    description: Linux tools to install (build, gui, tidy, or fuzz).
     required: false
     default: build
 runs:
@@ -62,6 +62,7 @@ runs:
           gui) linux_packages+=(gdb xvfb xauth dbus-x11 xdotool fonts-dejavu-core fonts-noto-cjk
                                 meson libinput-dev libdrm-dev libx11-xcb-dev libxcb-xkb-dev wayland-protocols) ;;
           tidy) linux_packages+=(clang-tidy-18) ;;
+          fuzz) linux_packages+=(clang-18 llvm-18 libclang-rt-18-dev) ;;
           *) printf 'Unknown dependency profile: %s\n' "$DEPENDENCY_PROFILE" >&2; exit 2 ;;
         esac
         printf 'Linux dependency profile: %s\n' "$DEPENDENCY_PROFILE"

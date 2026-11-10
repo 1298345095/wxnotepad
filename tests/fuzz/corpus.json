@@ -1,0 +1,45 @@
+{
+  "codecs": [
+    {"name": "empty", "hex": ""},
+    {"name": "utf8-text", "text": "A中文 € 😀\u0000B\r\n"},
+    {"name": "utf8-invalid", "hex": "c080eda080f4908080f09f98ff00"},
+    {"name": "utf16le", "hex": "fffe41002d4e3dd800de00000d000a00"},
+    {"name": "utf16be", "hex": "feff00414e2dd83dde000000000d000a"},
+    {"name": "surrogates-and-odd-tail", "hex": "d8000041dc00d83dde0000"},
+    {"name": "big5-invalid-lead-nul", "hex": "41810042"},
+    {"name": "gb18030-mapping-swaps", "hex": "a6d984318236a8bc8135f437fe5982359037"},
+    {"name": "chinese-truncated", "hex": "813081a1a1ff818130ff00"},
+    {"name": "single-byte-repertoire", "file": "fixtures/encoding_175/cp1252-all256.bin"},
+    {"name": "nul-and-noncharacters", "hex": "00efbfbfefbfbee29ca8f48fbfbf"}
+  ],
+  "detection": [
+    {"name": "empty", "prefix": "0f0000000000", "hex": ""},
+    {"name": "utf8-bom-invalid", "prefix": "0f0000000000", "hex": "efbbbfff00"},
+    {"name": "utf16be-bom", "prefix": "0f0000000000", "hex": "feff0041d83dde00"},
+    {"name": "utf16le-bom", "prefix": "0f0000000000", "hex": "fffe41000000"},
+    {"name": "forced-utf8", "prefix": "0f0001030001", "hex": "fffe41"},
+    {"name": "weak-big5", "prefix": "000000060001", "text": "# coding: windows-1252\r\nplain\n"},
+    {"name": "weak-native-ansi", "prefix": "000000000002", "hex": "41808100"},
+    {"name": "weak-native-oem", "prefix": "080000000104", "hex": "dac4bf0d0a"},
+    {"name": "gbk-declaration", "prefix": "000000000000", "hex": "2320636f64696e673a2067626b0ad6d0ce c40a"},
+    {"name": "utf8-shebang", "prefix": "0f0000000500", "text": "#!/usr/bin/env python\nprint('中文')\n"},
+    {"name": "nfo-preference", "prefix": "080000000100", "hex": "dac4bf0d0a"},
+    {"name": "vhdl-preference", "prefix": "000000000600", "hex": "2d2d2080a00d0a"},
+    {"name": "xml-encoding", "prefix": "000000000800", "text": "<?xml version='1.0' encoding='Big5'?>\n"},
+    {"name": "tag-beyond-first-window", "prefix": "000000000000", "padding": 513, "text": "coding: GB18030\n"},
+    {"name": "unsupported-default", "prefix": "000f00000000", "hex": "8181ff00"}
+  ],
+  "file_variables": [
+    {"name": "empty", "hex": ""},
+    {"name": "emacs", "text": "-*- tab-width: 4; c-basic-offset: 2; indent-tabs-mode: nil; coding: gb18030 -*-\n"},
+    {"name": "zero-indent", "text": "c-basic-offset: 0\n"},
+    {"name": "integer-overflow", "text": "tab-width=99999999999999999999999999999999 fill-column=-999999999999999999999999999"},
+    {"name": "disabled", "text": "enable-local-variables: 0; tab-width: 99; coding: Big5"},
+    {"name": "utf8-bom", "prefix": "efbbbf", "text": "coding: gbk; tab-width: 2"},
+    {"name": "embedded-nul", "text": "tab-width: 8\u0000coding: gbk"},
+    {"name": "quoted-token", "text": "charset = 'iso-8859-1 long token with trailing spaces      '"},
+    {"name": "before-window-boundary", "padding": 511, "text": "tab-width: 3; coding: Big5\n"},
+    {"name": "after-window-boundary", "padding": 513, "text": "tab-width: 5; coding: GB18030\n"},
+    {"name": "mysql", "text": "/*!40101 SET NAMES utf8mb4 */;\n"}
+  ]
+}
