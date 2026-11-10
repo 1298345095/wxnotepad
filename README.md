@@ -313,6 +313,18 @@ python -X utf8 tools/build.py --source E:/NewNotepad4/notepad4 --vcpkg-root G:/v
 ./build/cmake/Release/wxnotepad.exe
 ```
 
+Run Windows regressions serially on the normal, unlocked input desktop. For a
+local run, retain each attempt in a fresh report directory:
+
+```powershell
+python -X utf8 .github/scripts/ci.py test --backend windows --cmake-dir build/cmake --report-dir .ci/reports/local-windows-01
+```
+
+The runner records desktop names and rejects alternate desktops. CTest keeps its
+per-test timeouts and writes JUnit at completion; there is no extra ten-minute
+batch cutoff. These tests replace the shared clipboard and can focus their own
+windows. Choose a different report directory for each subsequent attempt.
+
 Linux, from a native filesystem checkout:
 
 ```sh

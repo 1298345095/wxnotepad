@@ -542,6 +542,14 @@ if(BUILD_TESTING)
     add_editor_test(search_smoke find_literal_next 30)
     add_editor_test(search_wildcards original_wildcard_search 30)
     add_editor_test(search_seeding original_find_query_seeding 60)
+    if(WIN32)
+        add_dependencies(search_seeding clipboard_peer)
+        add_test(NAME native_test_failure_logging COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/native_test_logging_process.py"
+            "$<TARGET_FILE:search_seeding>" "$<TARGET_FILE:clipboard_peer>"
+            --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/native-test-logging")
+        set_tests_properties(native_test_failure_logging PROPERTIES TIMEOUT 30)
+    endif()
     add_gui_program(search_settings tests/search_settings.cpp app_shell)
     add_test(NAME original_search_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_settings_process.py" "$<TARGET_FILE:search_settings>")

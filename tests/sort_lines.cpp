@@ -9,6 +9,7 @@
 #include <string_view>
 #include <wx/radiobut.h>
 #include <wx/ffile.h>
+#include <wx/log.h>
 #include <chrono>
 #include <functional>
 
@@ -437,6 +438,7 @@ class SortApp final : public wxApp {
 public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
+        delete wxLog::SetActiveTarget(new wxLogStderr);
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
         settings_->values.wordWrap = false;
