@@ -18,7 +18,6 @@
 #endif
 
 namespace {
-constexpr const char* SchemeSections[] = {"Text File", "C/C++ Source", "Python Script", "JSON Document"};
 wxString ConfigurationPath() {
     wxFileName executable(wxStandardPaths::Get().GetExecutablePath());
 #ifdef __WXMSW__
@@ -169,13 +168,15 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.dateTimeShort = ReadDateTimeFormat("DateTimeShort");
     values.dateTimeLong = ReadDateTimeFormat("DateTimeLong");
     for (size_t index = 0; index < values.schemeTabs.size(); ++index) {
+        const auto language = static_cast<SyntaxLanguage>(index);
+        if (SyntaxSettingsLanguage(language) != language) continue;
+        const auto* section = SyntaxSettingsSection(language);
         auto& tabs = values.schemeTabs[index];
-        tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, SchemeSections[index]), 1,
-                                   OriginalSettingLimits::MaxTabWidth);
-        tabs.indentWidth = std::clamp(ReadInt("IndentWidth", tabs.indentWidth, SchemeSections[index]), 0,
-                                      OriginalSettingLimits::MaxTabWidth);
-        tabs.tabsAsSpaces = ReadInt("TabsAsSpaces", tabs.tabsAsSpaces, SchemeSections[index]) != 0;
-        tabs.useGlobal = ReadInt("UseGlobalTabSettings", tabs.useGlobal, SchemeSections[index]) != 0;
+        tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, section), 1, OriginalSettingLimits::MaxTabWidth);
+        tabs.indentWidth =
+            std::clamp(ReadInt("IndentWidth", tabs.indentWidth, section), 0, OriginalSettingLimits::MaxTabWidth);
+        tabs.tabsAsSpaces = ReadInt("TabsAsSpaces", tabs.tabsAsSpaces, section) != 0;
+        tabs.useGlobal = ReadInt("UseGlobalTabSettings", tabs.useGlobal, section) != 0;
     }
 }
 
@@ -490,10 +491,12 @@ bool SettingsStore::SuppressMessage(const wxString& key) {
 }
 
 void SettingsStore::WriteSchemeTabs(size_t index) {
+    const auto language = static_cast<SyntaxLanguage>(index);
+    if (SyntaxSettingsLanguage(language) != language) return;
     const auto& tabs = values.schemeTabs[index];
     const auto fallback = OriginalSettings{}.schemeTabs[index];
     const auto write = [this, index](const wxString& key, int value, int defaultValue) {
-        WriteInt(key, value, defaultValue, SchemeSections[index]);
+        WriteInt(key, value, defaultValue, SyntaxSettingsSection(static_cast<SyntaxLanguage>(index)));
     };
     write("TabWidth", tabs.tabWidth, fallback.tabWidth);
     write("IndentWidth", tabs.indentWidth, fallback.indentWidth);
@@ -504,7 +507,7 @@ void SettingsStore::WriteSchemeTabs(size_t index) {
 bool SettingsStore::SaveSchemeTabs(SyntaxLanguage language) {
     if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
     if (!LoadLines()) return false;
-    WriteSchemeTabs(static_cast<size_t>(language));
+    WriteSchemeTabs(static_cast<size_t>(SyntaxSettingsLanguage(language)));
     return SaveLines();
 }
 

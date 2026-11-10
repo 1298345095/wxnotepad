@@ -7,6 +7,8 @@ namespace {
 #include "syntax/generated/cpp_scheme_data.h"
 #include "syntax/generated/python_scheme_data.h"
 #include "syntax/generated/json_scheme_data.h"
+#include "syntax/generated/javascript_scheme_data.h"
+#include "syntax/generated/typescript_scheme_data.h"
 #include "syntax/generated/detection_extensions.h"
 
 template <size_t N> constexpr auto Keywords(const char* const (&text)[N], uintptr_t attributes) {
@@ -23,6 +25,12 @@ constexpr const char* cppExtensions[] = {"c", "cpp", "cxx", "cc", "h", "hpp", "h
 constexpr const char* pythonExtensions[] = {"py", "pyw", "pyi"};
 constexpr const char* jsonExtensions[] = {"json"};
 constexpr SyntaxProperty cppProperties[] = {{"lexer.lang", "0"}};
+constexpr const char* jsxExtensions[] = {"jsx"};
+constexpr const char* tsxExtensions[] = {"tsx"};
+constexpr SyntaxProperty javascriptProperties[] = {{"lexer.lang", "0"}};
+constexpr SyntaxProperty jsxProperties[] = {{"lexer.lang", "1"}};
+constexpr SyntaxProperty typescriptProperties[] = {{"lexer.lang", "2"}};
+constexpr SyntaxProperty tsxProperties[] = {{"lexer.lang", "3"}};
 constexpr SyntaxDefinition definitions[] = {
     {"Plain Text",
      textExtensions,
@@ -66,6 +74,14 @@ constexpr SyntaxDefinition definitions[] = {
      "/*",
      "*/",
      SCE_JSON_BLOCKCOMMENT},
+    {"JavaScript", javascriptExtensions, javascriptLists, javascriptStyles, javascriptProperties, SCLEX_JAVASCRIPT,
+     SyntaxLanguage::JavaScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+    {"JSX", jsxExtensions, javascriptLists, javascriptStyles, jsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Jsx,
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+    {"TypeScript", typescriptExtensions, typescriptLists, typescriptStyles, typescriptProperties, SCLEX_JAVASCRIPT,
+     SyntaxLanguage::TypeScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER},
+    {"TSX", tsxExtensions, typescriptLists, typescriptStyles, tsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Tsx,
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER},
 };
 
 bool Space(char ch) {
@@ -79,10 +95,10 @@ wxString FileExtension(const wxString& path) {
 }
 
 // Adapted from Notepad4 89b8b36 Styles.cpp::Style_SniffShebang.
-// Only the delivered Python result is retained. The original prefix and token
+// Only delivered interpreter results are retained. The original prefix and token
 // rules intentionally accept py*/ipy* and do not parse env options or quotes.
-bool PythonInterpreter(std::string_view text) {
-    if (!text.starts_with("#!")) return false;
+std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
+    if (!text.starts_with("#!")) return std::nullopt;
     size_t position = 2;
     const auto token = [&]() {
         while (position < text.size() && (text[position] == ' ' || text[position] == '\t'))
@@ -102,7 +118,9 @@ bool PythonInterpreter(std::string_view text) {
         if (lower < 'a' || lower > 'z') break;
         letters += lower;
     }
-    return letters.starts_with("py") || letters.starts_with("ipy");
+    if (letters.starts_with("py") || letters.starts_with("ipy")) return SyntaxLanguage::Python;
+    if (letters.starts_with("node")) return SyntaxLanguage::JavaScript;
+    return std::nullopt;
 }
 
 enum class FilenameMatch : uint8_t { Unknown, Associated, Config };
@@ -148,6 +166,34 @@ const SyntaxDefinition& SyntaxFor(SyntaxLanguage language) {
     return definitions[0];
 }
 
+SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
+    switch (language) {
+    case SyntaxLanguage::Jsx:
+        return SyntaxLanguage::JavaScript;
+    case SyntaxLanguage::Tsx:
+        return SyntaxLanguage::TypeScript;
+    default:
+        return language;
+    }
+}
+
+const char* SyntaxSettingsSection(SyntaxLanguage language) {
+    switch (SyntaxSettingsLanguage(language)) {
+    case SyntaxLanguage::Cpp:
+        return "C/C++ Source";
+    case SyntaxLanguage::Python:
+        return "Python Script";
+    case SyntaxLanguage::Json:
+        return "JSON Document";
+    case SyntaxLanguage::JavaScript:
+        return "JavaScript";
+    case SyntaxLanguage::TypeScript:
+        return "TypeScript";
+    default:
+        return "Text File";
+    }
+}
+
 SyntaxLanguage LanguageForPath(const wxString& path) {
     wxString extension = FileExtension(path);
     for (size_t index = 0; index < extension.length(); ++index) {
@@ -170,11 +216,11 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
     const auto extension = FileExtension(path).Lower();
     // CGI sniffing precedes associated extensions; unmatched names are sniffed
     // only after original filename matches. Config files are sniffed too.
-    if (!options.noCgiGuess && (extension == "cgi" || extension == "fcgi") && PythonInterpreter(prefix))
-        return SyntaxLanguage::Python;
+    const auto interpreter = options.noCgiGuess ? std::nullopt : SniffInterpreter(prefix);
+    if ((extension == "cgi" || extension == "fcgi") && interpreter) return interpreter;
     const auto match = OriginalFilenameMatch(path);
     if (match == FilenameMatch::Associated) return SyntaxLanguage::PlainText;
-    if (!options.noCgiGuess && PythonInterpreter(prefix)) return SyntaxLanguage::Python;
+    if (interpreter) return interpreter;
     return match == FilenameMatch::Config ? std::optional{SyntaxLanguage::PlainText} : std::nullopt;
 }
 

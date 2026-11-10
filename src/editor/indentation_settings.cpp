@@ -56,7 +56,7 @@ int DetectIndentation(std::string_view text) {
 } // namespace
 
 OriginalTabs IndentationSettings::Effective(SyntaxLanguage language) const {
-    const auto& scheme = preferences_.schemeTabs[static_cast<size_t>(language)];
+    const auto& scheme = preferences_.schemeTabs[static_cast<size_t>(SyntaxSettingsLanguage(language))];
     OriginalTabs tabs = scheme.useGlobal ? preferences_.globalTabs : scheme;
     if (fileWidths_) {
         tabs.tabWidth = fileWidths_->tabWidth;

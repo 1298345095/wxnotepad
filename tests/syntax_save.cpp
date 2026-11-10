@@ -78,12 +78,13 @@ private:
         const auto* current = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(widget));
         GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
         initialType = wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(filters->data)));
-        Require(g_slist_length(filters) == 5 && current == filters->data && initialType.StartsWith(current_ + " (") &&
+        Require(g_slist_length(filters) == SyntaxCatalog().size() + 1 && current == filters->data &&
+                    initialType.StartsWith(current_ + " (") &&
                     wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(g_slist_last(filters)->data))) ==
                         "All Files (*)",
                 "native save types must initially select current scheme first, with All Files last");
         GSList* remaining = filters->next;
-        for (const auto* name : {"Plain Text", "C/C++", "Python", "JSON"}) {
+        for (const auto* name : {"Plain Text", "C/C++", "Python", "JSON", "JavaScript", "JSX", "TypeScript", "TSX"}) {
             if (current_ == name) continue;
             Require(remaining && wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(remaining->data)))
                                      .StartsWith(wxString(name) + " ("),
@@ -100,10 +101,17 @@ private:
 };
 wxString SaveCommand(EditorFrame* frame, int id, const wxString& path = {}, const wxString& type = {}) {
     const auto lexer = frame->Editor()->Send(Message::GetLexer);
-    const auto current = lexer == SCLEX_CPP      ? SyntaxLanguage::Cpp
-                         : lexer == SCLEX_PYTHON ? SyntaxLanguage::Python
-                         : lexer == SCLEX_JSON   ? SyntaxLanguage::Json
-                                                 : SyntaxLanguage::PlainText;
+    auto current = lexer == SCLEX_CPP      ? SyntaxLanguage::Cpp
+                   : lexer == SCLEX_PYTHON ? SyntaxLanguage::Python
+                   : lexer == SCLEX_JSON   ? SyntaxLanguage::Json
+                                           : SyntaxLanguage::PlainText;
+    if (lexer == SCLEX_JAVASCRIPT) {
+        const SyntaxLanguage dialects[] = {SyntaxLanguage::JavaScript, SyntaxLanguage::Jsx, SyntaxLanguage::TypeScript,
+                                           SyntaxLanguage::Tsx};
+        const auto dialect = frame->Editor()->Send(Message::GetPropertyInt, reinterpret_cast<uintptr_t>("lexer.lang"));
+        Require(dialect >= 0 && dialect < 4, "native Save chooser must retain JS dialect");
+        current = dialects[dialect];
+    }
     SaveChooser chooser(path, current, type);
     Command(frame, id);
     chooser.Stop();
@@ -344,6 +352,14 @@ public:
                 Require(frame->DocumentPath() == Filename(savedCustom) && Bytes(savedCustom) == source,
                         "default filter must force current Python and preserve native extension handling");
                 std::puts("PASS: native current filter retains an extra extension and forces its current scheme");
+                for (const auto* dialect : {"JavaScript", "JSX", "TypeScript", "TSX"}) {
+                    Choose(frame, dialect);
+                    const auto languagePath = directory / (std::string("native-") + dialect + ".js");
+                    SaveCommand(frame, wxID_SAVEAS, Filename(languagePath), dialect);
+                    Selected(frame, dialect, SCLEX_JAVASCRIPT);
+                    Require(Text(editor) == source, "native JS/TS Save As preserves document bytes");
+                }
+                std::puts("PASS: actual native JavaScript/JSX/TypeScript/TSX filter selection");
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
