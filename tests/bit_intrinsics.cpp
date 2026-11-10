@@ -15,14 +15,19 @@ void CheckWord(uint32_t* word) {
     for (long bit = 0; bit < std::numeric_limits<uint32_t>::digits; ++bit) {
         const uint32_t mask = uint32_t{1} << bit;
         *word = 0;
-        Require(!_bittest(address, bit) && !_bittestandreset(address, bit) && *word == 0,
-                "an unset bit reads and resets as false");
-        Require(!_bittestandset(address, bit) && *word == mask, "first set returns the prior bit and changes 32 bits");
-        Require(_bittest(address, bit) && _bittestandset(address, bit) && *word == mask,
-                "repeated set retains the bit and reports its prior state");
-        Require(_bittestandreset(address, bit) && *word == 0, "reset reports and clears the original bit");
+        const auto unset = _bittest(address, bit);
+        const auto resetUnset = _bittestandreset(address, bit);
+        Require(!unset && !resetUnset && *word == 0, "an unset bit reads and resets as false");
+        const auto firstSet = _bittestandset(address, bit);
+        Require(!firstSet && *word == mask, "first set returns the prior bit and changes 32 bits");
+        const auto set = _bittest(address, bit);
+        const auto repeatedSet = _bittestandset(address, bit);
+        Require(set && repeatedSet && *word == mask, "repeated set retains the bit and reports its prior state");
+        const auto resetSet = _bittestandreset(address, bit);
+        Require(resetSet && *word == 0, "reset reports and clears the original bit");
         unsigned long highest = 0;
-        Require(_BitScanReverse(&highest, mask) && highest == static_cast<unsigned long>(bit),
+        const auto scanned = _BitScanReverse(&highest, mask);
+        Require(scanned && highest == static_cast<unsigned long>(bit),
                 "reverse scanning returns every original 32-bit index");
     }
 }
