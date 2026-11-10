@@ -18,13 +18,13 @@ public:
     explicit EditorFrame(SettingsStore* settings = nullptr);
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
-    SaveResult Save(const GbkLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
-    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+    SaveResult Save(const EncodingLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
+    SaveResult SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveAs();
-    SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {});
     SaveResult SaveCopy();
-    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+    SaveResult SaveFirst(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme,
                          SaveTimeMode timeMode = SaveTimeMode::Current);
     bool UpdateFileTime();
@@ -38,6 +38,8 @@ public:
     bool DocumentHasUtf8Bom() const { return document_.HasUtf8Bom(); }
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
+    bool DocumentIsModified() const { return document_.IsModified(); }
+    bool SelectEncoding(EncodingChoice choice);
     bool NewDocument();
     void ShowRecentFiles();
     void SetFileWatchingOptions(const FileWatchingOptions& options);
@@ -81,6 +83,7 @@ private:
     void CreateMenus();
     wxMenu* CreateFileMenu();
     void AppendReloadEncodingCommands(wxMenu* reload);
+    void AppendEncodingCommands(wxMenu* file);
     wxMenu* CreateEditMenu();
     wxMenu* CreateLanguageMenu();
     wxMenu* CreateViewMenu();
@@ -135,6 +138,9 @@ private:
     bool SearchMessage(SearchDirection direction);
     bool ShowSearchMessage(const wxString& key, const wxString& message, bool confirm);
     std::array<int, 3> suppressedSearchMessages_{};
+    std::array<int, 3> suppressedEncodingMessages_{};
+    enum class EncodingWarning { Ansi, EmptyAnsi, DestinationLoss };
+    bool ShowEncodingWarning(EncodingWarning warning, const wxString& message, bool yesNo);
     void ShowFind(bool replace = false);
     void FindNext();
     void FindPrevious();
@@ -150,7 +156,7 @@ private:
                         std::optional<EncodingChoice> weakEncoding = std::nullopt,
                         OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead, bool reload = false);
     bool CanDiscardUntitledWhitespace() const;
-    GbkLossChoice ConfirmGbkLoss();
+    EncodingLossChoice ConfirmEncodingLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);
     bool SaveSettings(bool explicitSave);
 };

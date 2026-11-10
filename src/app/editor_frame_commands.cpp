@@ -6,6 +6,7 @@
 #include "editor/editor_control.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/native_encoding.h"
+#include "app/dialogs/document_dialogs.h"
 #include "editor/platform/custom_case.h"
 #include "app/dialogs/go_to_line_dialog.h"
 #include "app/dialogs/enclose_selection_dialog.h"
@@ -95,6 +96,54 @@ void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
             id);
 }
 
+void EditorFrame::AppendEncodingCommands(wxMenu* file) {
+    auto* encoding = new wxMenu;
+    struct Command {
+        const char* label;
+        EncodingChoice choice;
+    };
+    // Original Notepad4.rc direct encoding commands, in their original order.
+    if (const auto native = NativeEncodingChoice()) {
+        const int id = wxWindow::NewControlId();
+        encoding->AppendCheckItem(id, "&ANSI");
+        Bind(wxEVT_MENU, [this, choice = *native](wxCommandEvent&) { SelectEncoding(choice); }, id);
+        Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(document_.IsDefaultEncoding()); }, id);
+    }
+    for (const auto& command : {Command{"UTF-&8", EncodingChoice(FileEncoding::Utf8)},
+                                Command{"UTF-8 B&OM", EncodingChoice(FileEncoding::Utf8, true)},
+                                Command{"UTF-16&LE BOM", EncodingChoice(FileEncoding::Utf16Le, true)},
+                                Command{"UTF-16&BE BOM", EncodingChoice(FileEncoding::Utf16Be, true)}}) {
+        const int id = wxWindow::NewControlId();
+        encoding->AppendCheckItem(id, command.label);
+        Bind(wxEVT_MENU, [this, command](wxCommandEvent&) { SelectEncoding(command.choice); }, id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, command](wxUpdateUIEvent& event) { event.Check(document_.CurrentEncoding() == command.choice); },
+            id);
+    }
+    const int more = wxWindow::NewControlId();
+    encoding->Append(more, "&More...\tF9");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (const auto choice = ChooseCurrentEncoding(this, document_.CurrentEncoding())) SelectEncoding(*choice);
+        },
+        more);
+    const int defaults = wxWindow::NewControlId();
+    encoding->AppendSeparator();
+    encoding->Append(defaults, "&Default...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& options = settings_ ? settings_->values.encoding : defaults_.encoding;
+            ChooseDefaultEncoding(this, options);
+            document_.SetEncodingOptions(options);
+        },
+        defaults);
+    file->AppendSeparator();
+    file->AppendSubMenu(encoding, "&Encoding");
+}
+
 wxMenu* EditorFrame::CreateFileMenu() {
     auto* file = new wxMenu;
     file->Append(wxID_NEW, "&New\tCtrl+N");
@@ -113,6 +162,19 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->Append(openGbk, "Open As &GBK...");
     const int openUtf16 = wxWindow::NewControlId();
     file->Append(openUtf16, "Open As UTF-16LE...");
+    for (const auto& [label, encoding] : {std::pair{"Open As Windows-1252...", FileEncoding::Windows1252},
+                                          std::pair{"Open As DOS-437...", FileEncoding::Dos437}}) {
+        const int id = wxWindow::NewControlId();
+        file->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, encoding](wxCommandEvent&) {
+                const auto result = OpenAs(encoding);
+                if (result.status == OpenStatus::Failed)
+                    wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+            },
+            id);
+    }
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
     file->Append(wxID_SAVEAS, "Save &As...\tF6");
     saveCopyId_ = wxWindow::NewControlId();
@@ -128,9 +190,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
         },
         saveOriginalTime);
-    Bind(
-        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetModify)); },
-        saveOriginalTime);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(document_.IsModified()); }, saveOriginalTime);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { UpdateFileTime(); }, updateTime);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(!document_.Path().empty()); }, updateTime);
     file->AppendSeparator();
@@ -143,6 +203,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
     auto* reload = new wxMenu;
     AppendReloadEncodingCommands(reload);
     file->AppendSubMenu(reload, "&Reload");
+    AppendEncodingCommands(file);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -189,9 +250,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
                 wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
         },
         wxID_SAVE);
-    Bind(
-        wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetModify)); },
-        wxID_SAVE);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(document_.IsModified()); }, wxID_SAVE);
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -450,6 +509,11 @@ void EditorFrame::AppendEnclosureCommands(wxMenu* edit) {
 }
 
 void EditorFrame::AppendCommentCommands(wxMenu* edit) {
+    const auto comments = [this] {
+        return SyntaxCommentsFor(document_.Language(),
+                                 static_cast<int>(editor_->Send(Scintilla::Message::GetStyleIndexAt,
+                                                                editor_->Send(Scintilla::Message::GetCurrentPos))));
+    };
     const int lineComment = wxWindow::NewControlId();
     auto* lineCommentItem = new wxMenuItem(edit, lineComment, "T&oggle Line Comment\tCtrl+/");
     lineCommentItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_CTRL, WXK_NUMPAD_DIVIDE, lineComment));
@@ -458,8 +522,8 @@ void EditorFrame::AppendCommentCommands(wxMenu* edit) {
     edit->Append(lineCommentItem);
     Bind(
         wxEVT_MENU,
-        [this](wxCommandEvent&) {
-            const auto* prefix = SyntaxFor(document_.Language()).lineComment;
+        [this, comments](wxCommandEvent&) {
+            const auto* prefix = comments().line;
             if (!prefix) return;
             const auto& preferences = settings_ ? settings_->values : defaults_;
             if (!editor_->ToggleLineComments(prefix,
@@ -469,25 +533,21 @@ void EditorFrame::AppendCommentCommands(wxMenu* edit) {
         },
         lineComment);
     Bind(
-        wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) { event.Enable(SyntaxFor(document_.Language()).lineComment != nullptr); },
-        lineComment);
+        wxEVT_UPDATE_UI, [comments](wxUpdateUIEvent& event) { event.Enable(comments().line != nullptr); }, lineComment);
     const int blockComment = wxWindow::NewControlId();
     edit->Append(blockComment, "Toggle Block &Comment\tCtrl+Q");
     Bind(
         wxEVT_MENU,
-        [this](wxCommandEvent&) {
+        [this, comments](wxCommandEvent&) {
             const auto& syntax = SyntaxFor(document_.Language());
-            if (syntax.blockCommentOpen &&
-                !editor_->ToggleBlockComments(syntax.blockCommentOpen, syntax.blockCommentClose,
-                                              syntax.commentStyleLast))
+            const auto rules = comments();
+            if (rules.open && !editor_->ToggleBlockComments(rules.open, rules.close, syntax.commentStyleLast))
                 wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
                              wxOK | wxICON_WARNING, this);
         },
         blockComment);
     Bind(
-        wxEVT_UPDATE_UI,
-        [this](wxUpdateUIEvent& event) { event.Enable(SyntaxFor(document_.Language()).blockCommentOpen != nullptr); },
+        wxEVT_UPDATE_UI, [comments](wxUpdateUIEvent& event) { event.Enable(comments().open != nullptr); },
         blockComment);
 }
 
@@ -1235,8 +1295,9 @@ bool EditorFrame::HandleInsertionKey(const wxKeyEvent& event) {
         if (!event.AltDown() && !event.ShiftDown() && !event.MetaDown()) InsertEncodingIdentifier();
         return true;
     }
-    if (event.GetKeyCode() == WXK_F9 && event.ControlDown() && event.ShiftDown()) {
-        if (!event.AltDown() && !event.MetaDown()) InsertFileName(FileNamePart::FullPath);
+    if (event.GetKeyCode() == WXK_F9 && event.ControlDown()) {
+        if (!event.AltDown() && !event.MetaDown())
+            InsertFileName(event.ShiftDown() ? FileNamePart::FullPath : FileNamePart::FileName);
         return true;
     }
     if (event.GetKeyCode() == WXK_F9 && event.AltDown() && event.ShiftDown() && !event.ControlDown()) {
@@ -1395,8 +1456,8 @@ void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
 }
 
 void EditorFrame::InsertEncodingIdentifier() {
-    const EncodingChoice encoding(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding());
-    editor_->InsertEncodingIdentifier(OriginalEncodingIdentifier(encoding), SyntaxFor(document_.Language()));
+    editor_->InsertEncodingIdentifier(OriginalEncodingIdentifier(document_.CurrentEncoding()),
+                                      SyntaxFor(document_.Language()));
 }
 
 void EditorFrame::ConvertTabs(bool toTabs, bool onlyIndent) {

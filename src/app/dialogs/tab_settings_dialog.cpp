@@ -51,7 +51,7 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
         controls.Set(value, true);
         return controls;
     };
-    auto& scheme = preferences.schemeTabs[static_cast<size_t>(language)];
+    auto& scheme = preferences.schemeTabs[static_cast<size_t>(SyntaxSettingsLanguage(language))];
     wxCheckBox* useGlobal;
     wxCheckBox* useScheme;
     const auto global = addGroup("Global", preferences.globalTabs, nullptr, {});

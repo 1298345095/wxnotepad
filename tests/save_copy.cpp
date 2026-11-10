@@ -62,7 +62,8 @@ bool ClickOverwrite(GtkWidget* widget, const char* label) {
 
 class CopyChooser final : public wxTimer {
 public:
-    explicit CopyChooser(wxString destination = {}, bool replace = true, GbkLossChoice loss = GbkLossChoice::Cancel)
+    explicit CopyChooser(wxString destination = {}, bool replace = true,
+                         EncodingLossChoice loss = EncodingLossChoice::Cancel)
         : destination_(std::move(destination)), replace_(replace), loss_(loss) {
         Start(100);
     }
@@ -77,6 +78,13 @@ public:
         destination_ = expected;
     }
     void Notify() override {
+        for (auto* window : wxTopLevelWindows) {
+            auto* dialog = wxDynamicCast(window, wxDialog);
+            if (!dialog || !dialog->IsModal() || dialog->GetTitle() != "Encoding character loss") continue;
+            ++losses;
+            NativeSearch::Click(dialog, loss_ == EncodingLossChoice::Replace ? wxID_OK : wxID_CANCEL);
+            return;
+        }
 #ifdef __WXMSW__
         EnumThreadWindows(
             GetCurrentThreadId(),
@@ -102,7 +110,8 @@ private:
     void HandleMessage(GtkWidget* widget) {
         if (wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == "GBK character loss") {
             ++losses;
-            NativeDialogs::Respond(widget, loss_ == GbkLossChoice::Replace ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
+            NativeDialogs::Respond(widget,
+                                   loss_ == EncodingLossChoice::Replace ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
         } else {
             ++overwrites;
             cancelChooser_ = !replace_;
@@ -112,9 +121,12 @@ private:
     }
     void HandleChooser(GtkWidget* widget) {
         if (stage_ == 0) {
+            // GTK loads the initial folder asynchronously after the dialog is
+            // visible. Observe its suggestion before driving or cancelling it.
+            char* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
+            if (!directory) return;
             stage_ = 1;
             ++choosers;
-            char* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
             char* name = gtk_file_chooser_get_current_name(GTK_FILE_CHOOSER(widget));
             folder = wxString::FromUTF8(directory ? directory : "");
             filename = wxString::FromUTF8(name ? name : "");
@@ -157,7 +169,7 @@ private:
         if (!IsWindowVisible(window)) return TRUE;
         if (wxString(title) == "GBK character loss") {
             ++losses;
-            SendMessageW(window, WM_USER + 102, loss_ == GbkLossChoice::Replace ? IDOK : IDCANCEL, 0);
+            SendMessageW(window, WM_USER + 102, loss_ == EncodingLossChoice::Replace ? IDOK : IDCANCEL, 0);
             return TRUE;
         }
         if (wxString(title) != "Save Copy") {
@@ -187,7 +199,7 @@ private:
     wxString destination_;
     int stage_ = 0;
     bool replace_;
-    GbkLossChoice loss_;
+    EncodingLossChoice loss_;
     bool cancelChooser_ = false;
     bool acceptDefault_ = false;
 };
@@ -388,24 +400,27 @@ void LegacyLoss(SettingsStore* settings, const std::filesystem::path& directory)
     frame->Editor()->Send(Message::SetSel, 3, 6);
     const auto pending = TestEditor::Text(frame);
     const auto cancelled = directory / "loss-new.txt";
-    Require(frame->SaveCopy(Filename(cancelled), [] { return GbkLossChoice::Cancel; }).status ==
+    Require(frame->SaveCopy(Filename(cancelled), [] { return EncodingLossChoice::Cancel; }).status ==
                     SaveStatus::Cancelled &&
                 std::filesystem::exists(cancelled) && Bytes(cancelled).empty(),
             "original lossy copy Cancel must leave an empty newly created destination");
     const auto existing = directory / "loss-existing.txt";
     TestFiles::WriteBytes(existing, "keep existing");
-    Require(frame->SaveCopy(Filename(existing), [] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
+    Require(frame->SaveCopy(Filename(existing), [] { return EncodingLossChoice::Cancel; }).status ==
+                    SaveStatus::Cancelled &&
                 Bytes(existing) == "keep existing",
             "lossy copy Cancel must preserve an existing destination");
     const auto replaced = directory / "loss-replaced.txt";
-    Require(frame->SaveCopy(Filename(replaced), [] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+    Require(frame->SaveCopy(Filename(replaced), [] { return EncodingLossChoice::Replace; }).status ==
+                    SaveStatus::Saved &&
                 Bytes(replaced) == "\xd6\xd0\xce\xc4??\r\n!" && TestEditor::Text(frame) == pending &&
                 frame->DocumentPath() == Filename(source) && frame->DocumentEncoding() == FileEncoding::Gbk &&
                 frame->Editor()->Send(Message::GetModify),
             "confirmed lossy copy must write original CP936 placeholders while retaining Unicode source state");
     TestEditor::RequireSelection(frame->Editor(), 3, 6, "loss confirmation must retain live selection");
     const auto saveAs = directory / "loss-save-as.txt";
-    Require(frame->SaveAs(Filename(saveAs), [] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
+    Require(frame->SaveAs(Filename(saveAs), [] { return EncodingLossChoice::Cancel; }).status ==
+                    SaveStatus::Cancelled &&
                 !std::filesystem::exists(saveAs),
             "Save Copy's original creation effect must not alter existing safe Save As cancellation");
     const auto native = directory / "loss-native.txt";
@@ -414,7 +429,7 @@ void LegacyLoss(SettingsStore* settings, const std::filesystem::path& directory)
     cancelNative.Stop();
     Require(cancelNative.losses == 1 && Bytes(native).empty(),
             "native copy loss Cancel must leave the original newly created empty file");
-    CopyChooser replaceNative(Filename(native), true, GbkLossChoice::Replace);
+    CopyChooser replaceNative(Filename(native), true, EncodingLossChoice::Replace);
     Require(frame->SaveCopy().status == SaveStatus::Saved, "native GBK copy loss must support OK");
     replaceNative.Stop();
     Require(replaceNative.overwrites == 1 && replaceNative.losses == 1 && Bytes(native) == "\xd6\xd0\xce\xc4??\r\n!" &&
@@ -428,7 +443,7 @@ void LegacyLoss(SettingsStore* settings, const std::filesystem::path& directory)
     const char* full = "中文 \t\r\nx \t\n😀!";
     TestEditor::ResetStream(cleanup->Editor(), full, 19, 1, Scintilla::EndOfLine::Lf);
     const auto cleanupCancelled = directory / "cleanup-loss-copy.txt";
-    Require(cleanup->SaveCopy(Filename(cleanupCancelled), [] { return GbkLossChoice::Cancel; }).status ==
+    Require(cleanup->SaveCopy(Filename(cleanupCancelled), [] { return EncodingLossChoice::Cancel; }).status ==
                     SaveStatus::Cancelled &&
                 Bytes(cleanupCancelled).empty() && TestEditor::Text(cleanup) == "中文\nx\n😀!" &&
                 cleanup->Editor()->Send(Message::GetModify),

@@ -12,8 +12,8 @@
 #include <variant>
 
 class EditorControl;
-enum class GbkLossChoice { Cancel, Replace };
-using GbkLossDecision = std::function<GbkLossChoice()>;
+enum class EncodingLossChoice { Cancel, Replace };
+using EncodingLossDecision = std::function<EncodingLossChoice()>;
 // The dialog adapter translates its native filter index into this semantic choice.
 enum class SaveType : uint8_t { CurrentScheme, AllFiles };
 using SaveFileType = std::variant<SaveType, SyntaxLanguage>;
@@ -54,13 +54,13 @@ public:
     bool IsReadOnlyFile() const { return readOnlyFile_; }
     bool RefreshReadOnlyFile();
     // A chosen path represents the caller's approved destination; no path is Cancel.
-    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+    SaveResult SaveFirst(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme,
                          SaveTimeMode timeMode = SaveTimeMode::Current);
-    SaveResult Save(const GbkLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
-    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+    SaveResult Save(const EncodingLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
+    SaveResult SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
-    SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {});
     bool UpdateFileTime();
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt,
@@ -68,6 +68,7 @@ public:
                     const std::function<void()>& configureLoadedDocument = {},
                     OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead);
     void New();
+    void SetEncodingOptions(EncodingOptions options) { encodingOptions_ = options; }
     SaveCleanupOptions SaveCleanup() const { return saveCleanup_; }
     void SetSaveCleanup(SaveCleanupOptions options) { saveCleanup_ = options; }
     void SetDefaultEolMode(Scintilla::EndOfLine mode) { defaultEolMode_ = mode; }
@@ -75,9 +76,20 @@ public:
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
     bool IsDefaultEncoding() const { return systemDefaultEncoding_; }
+    bool IsOemEncoding() const { return systemOemEncoding_; }
+    EncodingChoice CurrentEncoding() const {
+        return EncodingChoice(encoding_, hasBom_, systemDefaultEncoding_, systemOemEncoding_);
+    }
+    bool IsModified() const;
+    bool SelectEncoding(EncodingChoice choice);
     const OriginalFileVariables& FileVariables() const { return fileVariables_; }
+    // The selected scheme supplies styles, settings and file-filter identity.
     SyntaxLanguage Language() const { return languageOverride_.value_or(automaticLanguage_); }
-    std::optional<SyntaxLanguage> LanguageOverride() const { return languageOverride_; }
+    // Original status/menu dialect may differ after a Web/XML header sniff.
+    SyntaxLanguage EffectiveLanguage() const { return markupDialect_.value_or(Language()); }
+    std::optional<SyntaxLanguage> LanguageOverride() const {
+        return languageOverride_ ? std::optional(EffectiveLanguage()) : std::nullopt;
+    }
     void SelectLanguage(std::optional<SyntaxLanguage> language);
 
 private:
@@ -90,16 +102,22 @@ private:
     Scintilla::EndOfLine defaultEolMode_ = Scintilla::EndOfLine::CrLf;
     EncodingOptions encodingOptions_;
     bool systemDefaultEncoding_ = false;
+    bool systemOemEncoding_ = false;
+    std::optional<EncodingChoice> originalEncoding_ = EncodingChoice(FileEncoding::Utf8);
     OriginalFileVariables fileVariables_;
     std::optional<SyntaxLanguage> languageOverride_;
+    // Original pLexCurrent selects settings/styles/filter; np2LexLangIndex can
+    // independently name a document-type dialect for canonical Web/XML choices.
+    std::optional<SyntaxLanguage> markupDialect_;
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
     bool DetectAutomaticLanguage();
+    void ApplyEmptySchemeDefaults(bool overrideEncoding);
     void ApplySaveCleanup();
     void CommitSaveState(const wxString& destination, std::optional<SaveFileType> fileType);
-    SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
+    SaveResult SaveTo(const wxString& destination, const EncodingLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt, bool copy = false,
                       SaveTimeMode timeMode = SaveTimeMode::Current);
-    OpenResult Replace(const std::string& bytes, const wxString& path, FileEncoding encoding, bool bom,
+    OpenResult Replace(const std::string& bytes, const wxString& path, EncodingChoice encoding,
                        bool keepLanguage = false);
 };

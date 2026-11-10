@@ -20,6 +20,12 @@ def run(executable):
         fixture = folder / "fallback.txt"
         cases = [
             ("DefaultEncoding=936", b"\xd6\xd0\xce\xc4\r\n", "CP936", 0, 8, None),
+            ("DefaultEncoding=1252", b"\x80\xa0\r\n", "CP1252", 0, 7, None),
+            ("DefaultEncoding=437", b"\xda\xc4\xbf\r\n", "CP437", 0, 11, None),
+            ("DefaultEncoding=437\nLoadASCIIasUTF8=0", b"plain", "CP437", 0, 5, None),
+            ("DefaultEncoding=1252\nLoadASCIIasUTF8=0", b"plain", "CP1252", 0, 5, None),
+            ("DefaultEncoding=1252\nLoadASCIIasUTF8=1", b"plain", "UTF-8", 0, 5, None),
+            ("DefaultEncoding=1252\nLoadANSIasUTF8=0\nLoadNFOasOEM=0", b"\x80", "CP1252", 0, 3, None),
             ("DefaultEncoding=936\nLoadASCIIasUTF8=0", b"plain", "CP936", 0, 5, None),
             ("DefaultEncoding=936\nLoadASCIIasUTF8=1", b"plain", "UTF-8", 0, 5, None),
             ("DefaultEncoding=4\nLoadASCIIasUTF8=0", b"plain", "UTF-8", 0, 5, None),
@@ -47,6 +53,9 @@ def run(executable):
                 assert "Keep=1" in config.read_text(encoding="utf-16")
                 if seed == "DefaultEncoding=3" or seed.startswith("DefaultEncoding=-4294967296"):
                     assert "DefaultEncoding=" not in config.read_text(encoding="utf-16")
+                elif seed.startswith("DefaultEncoding=1252") or seed.startswith("DefaultEncoding=437"):
+                    saved = config.read_text(encoding="utf-16")
+                    assert seed.splitlines()[0] in saved, saved
                 print(f"PASS: fresh-process {seed!r} -> {encoding}, BOM={bom}, exact Save")
             finally:
                 app.stop()

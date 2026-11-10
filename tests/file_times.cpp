@@ -222,14 +222,15 @@ void LegacyLoss(EditorFrame* frame) {
     const auto cancelled = frame->Save(
         [frame, &cleaned] {
             cleaned = TestEditor::Text(frame) == "legacy😀\n";
-            return GbkLossChoice::Cancel;
+            return EncodingLossChoice::Cancel;
         },
         SaveTimeMode::Original);
     Require(cancelled.status == SaveStatus::Cancelled && cleaned && WritableTimesEqual(before, ReadTimes(path)) &&
                 TestFiles::Bytes(path) == "legacy" && frame->Editor()->Send(Message::GetModify),
             "original-time legacy cancellation must retain disk/times after normal undoable cleanup");
     SetOldTimes(path);
-    Require(frame->Save([] { return GbkLossChoice::Replace; }, SaveTimeMode::Original).status == SaveStatus::Saved &&
+    Require(frame->Save([] { return EncodingLossChoice::Replace; }, SaveTimeMode::Original).status ==
+                    SaveStatus::Saved &&
                 WritableTimesEqual(before, ReadTimes(path)) && TestFiles::Bytes(path) == "legacy??\n" &&
                 TestEditor::Text(frame) == "legacy😀\n" && !frame->Editor()->Send(Message::GetModify),
             "original-time legacy replacement must preserve times and establish normal save point");

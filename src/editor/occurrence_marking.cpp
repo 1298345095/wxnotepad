@@ -201,6 +201,9 @@ void OccurrenceMarking::Start(bool changed, unsigned flags, std::string text) {
 }
 
 void OccurrenceMarking::FindAll(std::string text, Scintilla::FindOption flags, bool multiline, bool bookmarks) {
+    // Deliver older selection changes before explicit results take ownership of
+    // the shared marks. Paint may otherwise report them after Find All returns.
+    editor_.FlushPendingUIUpdate();
     auto findFlags = static_cast<unsigned>(flags);
     if (!(findFlags & static_cast<unsigned>(Scintilla::FindOption::RegExp | Scintilla::FindOption::MatchCase)) &&
         !CaseSensitiveSelection(text))

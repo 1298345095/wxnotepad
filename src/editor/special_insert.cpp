@@ -46,7 +46,7 @@ void EditorControl::InsertEncodingIdentifier(std::string_view name, const Syntax
 
 void EditorControl::InsertScriptShebangLine(const SyntaxDefinition& syntax) {
     using Scintilla::Message;
-    std::string text = "#!/usr/bin/env ";
+    std::string text = syntax.scriptInterpreter && syntax.scriptInterpreter[0] == '/' ? "#!" : "#!/usr/bin/env ";
     if (syntax.scriptInterpreter) {
         text += syntax.scriptInterpreter;
         if (Send(Message::GetCurrentPos) == 0) {

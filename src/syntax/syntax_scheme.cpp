@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <span>
+#include <SciLexer.h>
 #include <utility>
 #include <wx/settings.h>
 
@@ -18,6 +19,8 @@ void InstallStyles(EditorControl& editor, std::span<const SyntaxStyle> styles) {
         editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
         editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
         editor.Send(Message::StyleSetBold, style.id, style.bold);
+        editor.Send(Message::StyleSetItalic, style.id, style.italic);
+        editor.Send(Message::StyleSetEOLFilled, style.id, style.eolFilled);
     }
 }
 } // namespace
@@ -40,7 +43,7 @@ void ApplyLongLineColour(EditorControl& editor) {
     editor.Send(Scintilla::Message::SetEdgeColour, colour);
 }
 
-void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
+void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::optional<SyntaxLanguage> markupDialect) {
     using Scintilla::Message;
     const auto& definition = SyntaxFor(language);
     const bool fold = definition.canFold;
@@ -74,6 +77,11 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::MarkerSetStrokeWidth, marker, editor.FromDIP(100));
     }
     editor.Send(Message::SetLexer, definition.lexer);
+    // A shared lexer can retain settings when switching dialects. Reset the
+    // delivered property and keyword slots before installing the next scheme.
+    editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>("0"));
+    for (int index = 0; index <= Scintilla::KeywordsetMax; ++index)
+        editor.Send(Message::SetKeyWords, index, reinterpret_cast<intptr_t>(""));
     editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("fold"),
                 reinterpret_cast<intptr_t>(fold ? "1" : "0"));
     // Keep the native font/point size already installed on STYLE_DEFAULT.
@@ -91,7 +99,14 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::IndicSetAlpha, indicator, 50);
         editor.Send(Message::IndicSetOutlineAlpha, indicator, 200);
     }
-    for (const auto& property : definition.properties)
+    // Style_SetLexer keeps the selected family even when a canonical menu
+    // choice sniffs a dialect from the other family. Only HTML dialects alter
+    // HTML options; XML keeps its own options for a conflicting ASP/HTML header.
+    const auto propertyLanguage =
+        markupDialect && SyntaxSettingsLanguage(language) == SyntaxLanguage::Html
+            ? (SyntaxSettingsLanguage(*markupDialect) == SyntaxLanguage::Html ? *markupDialect : SyntaxLanguage::Html)
+            : language;
+    for (const auto& property : SyntaxFor(propertyLanguage).properties)
         editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>(property.name),
                     reinterpret_cast<intptr_t>(property.value));
     for (size_t index = 0; index < definition.keywords.size(); ++index) {
@@ -99,6 +114,7 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
     InstallStyles(editor, definition.styles);
+    if (definition.lexer == SCLEX_HTML) InstallStyles(editor, MarkupEmbeddedStyles());
     editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(Scintilla::StylesCommon::IndentGuide), Colour(0xFF8000));
     ApplyLongLineColour(editor);
     const auto guides = editor.Send(Message::GetIndentationGuides);

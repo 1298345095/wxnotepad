@@ -20,7 +20,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
       indentation_(settings ? settings->values : defaults_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
-                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
+                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
+                                                  settings->values.noHtmlGuess}
                          : SyntaxDetectionOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { HandleFileChange(); }), search_(*editor_) {
@@ -71,6 +72,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                       static_cast<uintptr_t>(settings->values.viewWhiteSpace ? Scintilla::WhiteSpace::VisibleAlways
                                                                              : Scintilla::WhiteSpace::Invisible));
     }
+    document_.New();
     CreateMenus();
     CreateStatusBar(3);
     search_.SetWrapConfirmation([this](SearchDirection direction) { return SearchMessage(direction); });
@@ -84,7 +86,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     DragAcceptFiles(true);
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
         WXNOTE_TRACE("close.request", "\ttarget=%p\tcan_veto=%d\tdirty=%d", static_cast<void*>(this), event.CanVeto(),
-                     editor_->Send(Scintilla::Message::GetModify) != 0);
+                     document_.IsModified());
         if (event.CanVeto() && !ConfirmDiscardChanges("closing")) {
             event.Veto();
             WXNOTE_TRACE("close.veto", "\ttarget=%p", static_cast<void*>(this));
@@ -227,16 +229,29 @@ void EditorFrame::UpdateDocumentState() {
     const wxString protection = document_.IsReadOnlyFile()                       ? " (Read Only File)"
                                 : editor_->Send(Scintilla::Message::GetReadOnly) ? " (Read Only Mode)"
                                                                                  : "";
-    SetTitle((editor_->Send(Scintilla::Message::GetModify) ? "*" : "") + name + protection + " - wxnotepad");
-    const wxString encoding = document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
-                              : document_.Encoding() == FileEncoding::Gbk   ? "GBK (CP936)"
+    SetTitle((document_.IsModified() ? "*" : "") + name + protection + " - wxnotepad");
+    wxString encoding = document_.Encoding() == FileEncoding::Utf16Le       ? "UTF-16LE"
+                        : document_.Encoding() == FileEncoding::Utf16Be     ? "UTF-16BE"
+                        : document_.Encoding() == FileEncoding::Gbk         ? "GBK (CP936)"
+                        : document_.Encoding() == FileEncoding::Gb18030     ? "GB18030 (CP54936)"
+                        : document_.Encoding() == FileEncoding::Big5        ? "Big5 (CP950)"
+                        : document_.Encoding() == FileEncoding::Windows1252 ? "Windows-1252"
+                        : document_.Encoding() == FileEncoding::Dos437      ? "DOS-437"
                                                                             : "UTF-8";
+    if (document_.IsDefaultEncoding())
+        encoding = document_.Encoding() == FileEncoding::Gbk       ? wxString("ANSI (CP936)")
+                   : document_.Encoding() == FileEncoding::Gb18030 ? wxString("ANSI (CP54936)")
+                   : document_.Encoding() == FileEncoding::Big5    ? wxString("ANSI (CP950)")
+                                                                   : "ANSI (" + encoding + ")";
+    else if (document_.IsOemEncoding())
+        encoding = "OEM (" + encoding + ")";
     const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
     const wxString eol = eolMode == Scintilla::EndOfLine::CrLf ? "CRLF"
                          : eolMode == Scintilla::EndOfLine::Cr ? "CR"
                                                                : "LF";
-    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " + LanguageName(document_.Language()) +
-                  (document_.LanguageOverride() ? " (override)" : "") + " | EOL: " + eol);
+    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " +
+                  LanguageName(document_.EffectiveLanguage()) + (document_.LanguageOverride() ? " (override)" : "") +
+                  " | EOL: " + eol);
     UpdatePositionStatus();
 }
 
@@ -263,10 +278,10 @@ void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
     UpdateDocumentState();
 }
 
-SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
+SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss,
                                   SaveFileType fileType, SaveTimeMode timeMode) {
     const auto result = document_.SaveFirst(
-        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
+        destination, decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) {
         RecordRecentFile();
         indentation_.Apply(*editor_, document_.Language());
@@ -277,7 +292,7 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
     return result;
 }
 
-SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode timeMode) {
+SaveResult EditorFrame::Save(const EncodingLossDecision& decideLoss, SaveTimeMode timeMode) {
     if (!document_.Path().empty()) {
         if (document_.RefreshReadOnlyFile()) {
             UpdateDocumentState();
@@ -288,7 +303,8 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode tim
             if (!chosen) return SaveAs(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
             return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
-        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, timeMode);
+        const auto result =
+            document_.Save(decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); }, timeMode);
         if (result.status == SaveStatus::Saved) {
             RecordRecentFile();
             RefreshFileWatching();
@@ -301,10 +317,10 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode tim
     return SaveFirst(chosen->path, decideLoss, chosen->type, timeMode);
 }
 
-SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
+SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss,
                                SaveFileType fileType, SaveTimeMode timeMode) {
     const auto result = document_.SaveAs(
-        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
+        destination, decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) {
         RecordRecentFile();
         indentation_.Apply(*editor_, document_.Language());
@@ -328,8 +344,9 @@ SaveResult EditorFrame::SaveAs() {
     return SaveAs(chosen->path, {}, chosen->type);
 }
 
-SaveResult EditorFrame::SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
-    const auto result = document_.SaveCopy(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+SaveResult EditorFrame::SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss) {
+    const auto result =
+        document_.SaveCopy(destination, decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); });
     if (result.status == SaveStatus::Saved && destination) lastSaveCopyDirectory_ = wxFileName(*destination).GetPath();
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
@@ -425,18 +442,16 @@ void EditorFrame::ShowRecentFiles() {
 OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
     const auto result = LoadFile(
-        document_.Path(), [] { return true; }, std::nullopt,
-        EncodingChoice(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding()),
-        OpenDecisionTiming::AfterRead, true);
+        document_.Path(), [] { return true; }, std::nullopt, document_.CurrentEncoding(), OpenDecisionTiming::AfterRead,
+        true);
     if (result.status == OpenStatus::Opened && followEnd) editor_->Send(Scintilla::Message::DocumentEnd);
     return result;
 }
 
 OpenResult EditorFrame::Revert() {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
-    if (editor_->Send(Scintilla::Message::GetModify) &&
-        wxMessageBox("Revert file to last saved state? Your changes will be lost!", "Revert",
-                     wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
+    if (document_.IsModified() && wxMessageBox("Revert file to last saved state? Your changes will be lost!", "Revert",
+                                               wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
         return {OpenStatus::Cancelled, {}};
     return ReloadCurrentFile();
 }
@@ -444,14 +459,15 @@ OpenResult EditorFrame::Revert() {
 OpenResult EditorFrame::ReloadWithEncoding() {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
     // F8's original DontSave path confirms loss before showing the picker.
-    if (editor_->Send(Scintilla::Message::GetModify) &&
+    if (document_.IsModified() &&
         wxMessageBox("Recoding requires reloading file from disk, unsaved changes will be lost!", "Reload Encoding",
                      wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
         return {OpenStatus::Cancelled, {}};
     // Original IDM_RECODE_SELECT maps the BOM variants to their source codec.
     // Native ANSI maps to CPI_NONE: the user must select an explicit source.
-    const auto encoding = ChooseReloadEncoding(
-        this, document_.IsDefaultEncoding() ? std::nullopt : std::optional<FileEncoding>(document_.Encoding()));
+    const auto encoding = ChooseReloadEncoding(this, document_.IsDefaultEncoding() || document_.IsOemEncoding()
+                                                         ? std::nullopt
+                                                         : std::optional<FileEncoding>(document_.Encoding()));
     if (!encoding) return {OpenStatus::Cancelled, {}};
     return LoadFile(document_.Path(), [] { return true; }, encoding, std::nullopt, OpenDecisionTiming::AfterRead, true);
 }
@@ -510,7 +526,7 @@ bool EditorFrame::NewDocument() {
 }
 
 bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
-    if (!editor_->Send(Scintilla::Message::GetModify)) return true;
+    if (!document_.IsModified()) return true;
     if (CanDiscardUntitledWhitespace()) return true;
     const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
     wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
@@ -533,6 +549,26 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     return result.status == SaveStatus::Saved;
 }
 
+bool EditorFrame::SelectEncoding(EncodingChoice choice) {
+    const auto current = document_.CurrentEncoding();
+    if (choice == current) return false;
+    if (choice.systemDefault != current.systemDefault &&
+        (editor_->Send(Scintilla::Message::GetLength) || editor_->Send(Scintilla::Message::GetUndoActions))) {
+        const bool empty = editor_->Send(Scintilla::Message::GetLength) == 0;
+        const wxString message =
+            empty ? "You are about to change the encoding of an empty file from ANSI to non-ANSI. Note that this will "
+                    "clear the undo history, as it can't be synchronized with the new encoding. Continue?"
+                  : "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text "
+                    "with default characters, and the undo history will be cleared. Continue?";
+        if (!ShowEncodingWarning(empty ? EncodingWarning::EmptyAnsi : EncodingWarning::Ansi, message, true))
+            return false;
+    }
+    const bool changed = document_.SelectEncoding(choice);
+    UpdateDocumentState();
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    return changed;
+}
+
 bool EditorFrame::CanDiscardUntitledWhitespace() const {
     // Pinned Notepad4 FileSave/IsASpace: only short ASCII-whitespace Untitled
     // documents bypass the lifecycle prompt; explicit Save still writes them.
@@ -547,13 +583,32 @@ bool EditorFrame::CanDiscardUntitledWhitespace() const {
     return true;
 }
 
-GbkLossChoice EditorFrame::ConfirmGbkLoss() {
-    wxMessageDialog dialog(
-        this,
-        "Certain characters in the current text are not supported by the selected encoding, and may be replaced "
-        "by default placeholders when saving. It's recommended to choose another file encoding. Continue?",
-        "GBK character loss", wxOK | wxCANCEL | wxICON_WARNING);
-    return dialog.ShowModal() == wxID_OK ? GbkLossChoice::Replace : GbkLossChoice::Cancel;
+EncodingLossChoice EditorFrame::ConfirmEncodingLoss() {
+    return ShowEncodingWarning(
+               EncodingWarning::DestinationLoss,
+               "Certain characters in the current text are not supported by the selected encoding, and may be replaced "
+               "by default placeholders when saving. It's recommended to choose another file encoding. Continue?",
+               false)
+               ? EncodingLossChoice::Replace
+               : EncodingLossChoice::Cancel;
+}
+
+bool EditorFrame::ShowEncodingWarning(EncodingWarning warning, const wxString& message, bool yesNo) {
+    // Original InfoBox keys and modes: suppress=1 returns Yes/OK immediately;
+    // never-suppress=2 leaves the checkbox disabled. Cancel may also persist it.
+    const auto index = static_cast<size_t>(warning);
+    const wxString key = wxString::Format("MsgConv%zu", index + 1);
+    int& mode = suppressedEncodingMessages_[index];
+    if (settings_) mode = settings_->MessageSuppression(key);
+    if (mode == 1) return true;
+    SearchFeedbackDialog dialog(this, key, message, true, mode != 2,
+                                yesNo ? "Encoding Conversion" : "Encoding character loss", yesNo);
+    const auto choice = dialog.Choose();
+    if (choice.suppress) {
+        mode = 1;
+        if (settings_) settings_->SuppressMessage(key);
+    }
+    return choice.accepted;
 }
 
 void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo) {

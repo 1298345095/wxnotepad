@@ -199,10 +199,10 @@ void EncodedCases(EditorFrame* frame, const std::filesystem::path& directory) {
     Insert(frame, "File Name");
     Require(TestEditor::Text(frame) == "A😀Z" && frame->DocumentEncoding() == FileEncoding::Gbk,
             "explicit GBK insertion retains Unicode until the existing save conversion boundary");
-    Require(frame->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
+    Require(frame->Save([] { return EncodingLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
                 TestFiles::Bytes(path) == "AoldZ" && frame->Editor()->Send(Message::GetModify),
             "legacy-save cancellation preserves the Unicode edit and original disk bytes");
-    Require(frame->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+    Require(frame->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                 TestFiles::Bytes(path) == "A??Z" && TestEditor::Text(frame) == "A😀Z",
             "approved legacy conversion writes original placeholders without changing editor bytes");
     std::puts("PASS: encoded native saved bytes, EOL, Undo/Redo saves and existing legacy-save decisions");
@@ -243,6 +243,7 @@ void DefaultEncodingCase(const std::filesystem::path& directory) {
 class PathTextApp final : public wxApp {
 public:
     bool OnInit() override {
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
         wxLog::SetActiveTarget(new wxLogStderr);
         auto* frame = new EditorFrame;
         frame->Show();

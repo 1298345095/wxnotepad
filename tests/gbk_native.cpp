@@ -8,6 +8,7 @@
 #include <wx/timer.h>
 #include <wx/statusbr.h>
 #include "native_dialog_helpers.h"
+#include "native_search_helpers.h"
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
@@ -31,6 +32,15 @@ public:
     int losses = 0, choosers = 0, errors = 0;
     wxString selectedType;
     void Notify() override {
+        for (auto* window : wxTopLevelWindows) {
+            auto* dialog = wxDynamicCast(window, wxDialog);
+            if (!dialog || !dialog->IsModal() || dialog->GetTitle() != "Encoding character loss") continue;
+            ++losses;
+            Require(dialog->FindWindow(wxID_OK) && dialog->FindWindow(wxID_CANCEL),
+                    "original loss prompt exposes OK/Cancel native controls");
+            NativeSearch::Click(dialog, choice_);
+            return;
+        }
 #ifdef __WXMSW__
         EnumThreadWindows(
             GetCurrentThreadId(),

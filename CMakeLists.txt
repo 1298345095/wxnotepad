@@ -32,7 +32,10 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
-    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx")
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexBash.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
 target_include_directories(notepad4_core PUBLIC
     "${NOTEPAD4_SOURCE}/scintilla/include"
     PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
@@ -93,6 +96,8 @@ add_library(editor_features STATIC
     src/document/document_session.cpp
     src/document/file_variables.cpp
     src/document/encoding/gbk_codec.cpp
+    src/document/encoding/single_byte_codec.cpp
+    src/document/encoding/chinese_codec.cpp
     src/document/encoding/utf16_codec.cpp
     src/document/encoding/encoding_detection.cpp
     src/search/search_session.cpp
@@ -175,6 +180,12 @@ if(BUILD_TESTING)
         set_tests_properties(original_date_time_literals PROPERTIES ENVIRONMENT "LC_ALL=C.UTF-8")
     endif()
     find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+    add_gui_program(default_encoding tests/default_encoding.cpp app_shell)
+    add_test(NAME original_default_encoding_dialog COMMAND default_encoding)
+    set_tests_properties(original_default_encoding_dialog PROPERTIES TIMEOUT 60)
+    add_test(NAME original_default_encoding_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/default_encoding_process.py" "$<TARGET_FILE:default_encoding>")
+    set_tests_properties(original_default_encoding_settings PROPERTIES TIMEOUT 120)
     set(diagnostic_mode)
     if(NOT WXNOTEPAD_ENABLE_DIAGNOSTICS)
         set(diagnostic_mode --compiled-out)
@@ -206,6 +217,9 @@ if(BUILD_TESTING)
     add_test(NAME original_shebang_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/shebang_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_shebang_settings PROPERTIES TIMEOUT 60)
+    add_test(NAME original_markup_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/markup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_markup_settings PROPERTIES TIMEOUT 90)
     add_test(NAME original_encoding_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/encoding_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_encoding_settings PROPERTIES TIMEOUT 60)
@@ -278,6 +292,10 @@ if(BUILD_TESTING)
     set_tests_properties(original_date_time_settings PROPERTIES TIMEOUT 90)
     add_editor_test(save_cleanup original_save_cleanup 60)
     add_editor_test(save_copy original_save_copy 90)
+    add_editor_test(current_encoding original_current_encoding 90)
+    add_test(NAME original_current_encoding_native_keys COMMAND current_encoding)
+    set_tests_properties(original_current_encoding_native_keys PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_CURRENT_ENCODING_NATIVE_KEYS=1")
     add_editor_test(file_times original_file_times 60)
     add_editor_test(pad_spaces original_pad_spaces 60)
     add_editor_test(align_lines original_align_lines 60)
@@ -330,6 +348,24 @@ if(BUILD_TESTING)
     add_editor_test(gbk_native gbk_native_choices 60)
     add_editor_test(utf16_smoke utf16_roundtrip 30)
     add_editor_test(encoding_auto automatic_encoding_decisions 30)
+    add_editor_test(western_encoding western_encoding 90)
+    target_compile_definitions(western_encoding PRIVATE
+        "WESTERN_ENCODING_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/encoding_175\"")
+    add_test(NAME western_encoding_native_keys COMMAND western_encoding)
+    set_tests_properties(western_encoding_native_keys PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_WESTERN_NATIVE_KEYS=1")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+        # Preserve Open As timeout stacks through the existing Linux core collector.
+        set_tests_properties(western_encoding western_encoding_native_keys PROPERTIES
+            TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+    endif()
+    add_test(NAME western_encoding_suppression COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/western_encoding_process.py" "$<TARGET_FILE:western_encoding>")
+    set_tests_properties(western_encoding_suppression PROPERTIES TIMEOUT 90)
+    add_editor_test(chinese_encoding original_chinese_encoding 90)
+    add_test(NAME original_chinese_encoding_native_keys COMMAND chinese_encoding)
+    set_tests_properties(original_chinese_encoding_native_keys PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_CHINESE_NATIVE_KEYS=1")
     add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
     add_editor_test(editor_smoke editor_input_undo 30)
     add_gui_program(stream_drag tests/stream_drag.cpp app_shell)
@@ -426,8 +462,13 @@ if(BUILD_TESTING)
     add_editor_test(open_smoke open_utf8 30)
     add_editor_test(syntax_cpp cpp_highlighting 30)
     add_editor_test(syntax_python python_highlighting 30)
+    add_editor_test(syntax_shell shell_highlighting 60)
     add_editor_test(syntax_shebang original_python_shebang 60)
     add_editor_test(syntax_json json_highlighting 60)
+    add_editor_test(syntax_javascript javascript_typescript_schemes 120)
+    add_editor_test(syntax_markup original_markup_schemes 90)
+    target_compile_definitions(syntax_markup PRIVATE
+        "MARKUP_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markup_reference.tsv\"")
     add_editor_test(syntax_save automatic_language_save 60)
     add_editor_test(syntax_manual manual_language_choice 60)
     add_editor_test(syntax_large large_language_selection 60)

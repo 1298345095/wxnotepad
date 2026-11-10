@@ -62,7 +62,9 @@ void Options(EditorFrame* frame, bool fix, bool strip, bool accept = true, int d
     LineEndingOptionsDriver driver(observed, fix, strip, accept, defaultMode);
     // Native events may run before menu dispatch creates the modal dialog.
     wxYield();
-    const auto id = frame->GetMenuBar()->FindMenuItem("File", "Default...");
+    auto* file = frame->GetMenuBar()->GetMenu(frame->GetMenuBar()->FindMenu("File"));
+    auto* lineEndings = file->FindItem(file->FindItem("Line Endings"))->GetSubMenu();
+    const auto id = lineEndings->FindItem("Default...");
     Require(id != wxNOT_FOUND, "original Default Line Ending options must be exposed");
     NativeSearch::Command(frame, id);
     Require(observed, "original line-ending selector and three original checkboxes must be exposed");
@@ -248,7 +250,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
                      Filename(output),
                      [&sawCleaned, editor] {
                          sawCleaned = NativeSearch::Text(editor) == "中\n😀\nlast";
-                         return GbkLossChoice::Cancel;
+                         return EncodingLossChoice::Cancel;
                      }).status == SaveStatus::Cancelled &&
                 sawCleaned && NativeSearch::Text(editor) == "中\n😀\nlast" && editor->Send(Message::GetModify) &&
                 frame->DocumentPath() == identity && Bytes(seed) == "\xd6\xd0" && !std::filesystem::exists(output),
@@ -259,7 +261,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
     editor->Send(Message::Undo);
     Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify),
             "cancelled cleanup Undo must return to the old save point");
-    Require(frame->SaveAs(Filename(output), [] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+    Require(frame->SaveAs(Filename(output), [] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                 Bytes(output) == "\xd6\xd0\n??\nlast" && NativeSearch::Text(editor) == "中\n😀\nlast" &&
                 !editor->Send(Message::GetModify),
             "accepted GBK loss must save cleaned replacement bytes without rewriting Unicode text");
@@ -275,7 +277,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
                          std::filesystem::rename(lateFailure, preserved);
                          std::filesystem::create_directory(lateFailure);
                          std::ofstream(lateFailure / "sentinel") << "keep";
-                         return GbkLossChoice::Replace;
+                         return EncodingLossChoice::Replace;
                      }).status == SaveStatus::Failed &&
                 NativeSearch::Text(editor) == "中\n😀\nlast" && editor->Send(Message::GetModify) &&
                 Bytes(preserved) == "original" && Bytes(lateFailure / "sentinel") == "keep",

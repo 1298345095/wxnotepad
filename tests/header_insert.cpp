@@ -5,6 +5,7 @@
 #include <map>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 namespace {
 using Scintilla::Message;
@@ -22,6 +23,7 @@ void Encoding(EditorFrame* frame) {
     NativeSearch::Command(frame, InsertId(frame, "Encoding Identifier"));
 }
 void BasicEncoding(EditorFrame* frame) {
+    frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "AoldZ", 1, 4);
     Encoding(frame);
@@ -197,7 +199,9 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
 #ifdef __WXMSW__
     constexpr bool nativeUtf8 = false;
     const unsigned nativePage = GetACP();
-    const bool unmigratedNativeAnsi = nativePage != 936 && nativePage != CP_UTF8;
+    constexpr std::array migratedNativePages{437U, 936U, 950U, 1252U, 54936U, unsigned{CP_UTF8}};
+    const bool unmigratedNativeAnsi =
+        std::find(migratedNativePages.begin(), migratedNativePages.end(), nativePage) == migratedNativePages.end();
 #else
     const bool nativeUtf8 = wxLocale::GetSystemEncodingName().CmpNoCase("UTF-8") == 0;
     constexpr unsigned nativePage = 0;
@@ -257,6 +261,7 @@ void KeyCases(EditorFrame* frame) {
     editor->Send(Message::SetReadOnly, 0);
     editor->Send(Message::SetSavePoint);
     Require(frame->NewDocument(), "fresh UTF-8 document is available for the native Ctrl+F8 shortcut");
+    frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
     TestEditor::ResetStream(editor, "AoldZ", 4, 1);
     NativeKeys::Shortcut(frame, WXK_F8, true);
     Require(TestEditor::Text(editor) == "AUTF-8Z", "native Ctrl+F8 invokes encoding insertion on the owned editor");
@@ -293,7 +298,7 @@ void LossDecision(EditorFrame* frame, const std::filesystem::path& directory) {
     bool asked = false;
     Require(frame->Save([&asked] {
                      asked = true;
-                     return GbkLossChoice::Cancel;
+                     return EncodingLossChoice::Cancel;
                  }).status == SaveStatus::Cancelled &&
                 asked && TestFiles::Bytes(path) == "AoldZ" && editor->Send(Message::GetModify),
             "header insertion retains the existing legacy loss decision and cancelled Save bytes");

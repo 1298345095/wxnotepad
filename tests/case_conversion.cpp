@@ -223,12 +223,12 @@ void SavedBytes(EditorFrame* frame) {
     bool asked = false;
     const auto cancelled = frame->Save([&asked] {
         asked = true;
-        return GbkLossChoice::Cancel;
+        return EncodingLossChoice::Cancel;
     });
     Require(asked && cancelled.status == SaveStatus::Cancelled && TestFiles::Bytes(path) == "\xa8\xa6" &&
                 editor->Send(Message::GetModify) && frame->DocumentEncoding() == FileEncoding::Gbk,
             "existing GBK loss cancellation preserves disk bytes and unsaved Unicode result");
-    Require(frame->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+    Require(frame->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                 TestFiles::Bytes(path) == "?" && TestEditor::Text(editor) == "É" && !editor->Send(Message::GetModify),
             "existing explicit GBK replacement saves literal replacement byte and retains Unicode editor text");
     std::puts("PASS: exact UTF-8 BOM, GBK, UTF-16LE BOM bytes, Undo/Redo and unrepresentable-GBK decisions");

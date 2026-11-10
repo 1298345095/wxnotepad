@@ -17,15 +17,19 @@ def provenance(generator, path, data):
             "// Copyright and BSD 3-Clause license: licenses/Notepad4.txt."]
 
 
-def style_initializers(styles, prefix):
+def style_initializers(styles, prefix, *, eol_filled=False, offset=""):
     output = []
     for line in styles.splitlines():
         if 'L"' not in line:
             continue
-        value = re.search(r'L"([^"]+)"', line)[1]
+        value = re.search(r'L"([^"]*)"', line)[1]
         fore = re.search(r"fore:#([0-9A-Fa-f]{6})", value)
         back = re.search(r"back:#([0-9A-Fa-f]{6})", value)
         for style in re.findall(rf"{prefix}\w+", line):
+            if offset:
+                style = f"{offset}({style})"
+            extra = (f", {str('italic' in value).lower()}, {str('eolfilled' in value).lower()}"
+                     if eol_filled else "")
             output.append(f"    {{{style}, 0x{fore[1] if fore else '000000'}, "
-                          f"0x{back[1] if back else 'FFFFFF'}, {'true' if 'bold' in value else 'false'}}},")
+                          f"0x{back[1] if back else 'FFFFFF'}, {'true' if 'bold' in value else 'false'}{extra}}},")
     return output

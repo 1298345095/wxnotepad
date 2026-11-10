@@ -78,14 +78,14 @@ std::optional<std::string> DecodeGbk(std::string_view bytes) {
     }
     return Encode(wxMBConvUTF8(), wide);
 }
-GbkEncoded EncodeGbk(std::string_view utf8) {
+LegacyEncoded EncodeGbk(std::string_view utf8) {
     const auto wide = Decode(wxMBConvUTF8(), utf8);
     const wxCSConv cp936("CP936");
     const auto strict = Encode(cp936, *wide);
     if (strict && DecodeGbk(*strict) == utf8) return {*strict, false};
     // Original EditSaveFile retains WC_NO_BEST_FIT_CHARS output whenever
     // substitution occurs. Supplementary scalars use two UTF-16 placeholders.
-    GbkEncoded result{{}, false};
+    LegacyEncoded result{{}, false};
     for (size_t offset = 0; offset < utf8.size();) {
         const auto* lead = reinterpret_cast<const unsigned char*>(utf8.data() + offset);
         const auto length = Scintilla::Internal::UTF8BytesOfLead(*lead);
