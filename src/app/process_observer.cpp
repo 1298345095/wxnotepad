@@ -80,9 +80,11 @@ void ProcessObserver::Publish() {
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
 #endif
-    const char* encoding = frame_->DocumentEncoding() == FileEncoding::Utf8      ? "UTF-8"
-                           : frame_->DocumentEncoding() == FileEncoding::Utf16Le ? "UTF-16LE"
-                                                                                 : "CP936";
+    const char* encoding = frame_->DocumentEncoding() == FileEncoding::Utf8          ? "UTF-8"
+                           : frame_->DocumentEncoding() == FileEncoding::Utf16Le     ? "UTF-16LE"
+                           : frame_->DocumentEncoding() == FileEncoding::Windows1252 ? "CP1252"
+                           : frame_->DocumentEncoding() == FileEncoding::Dos437      ? "CP437"
+                                                                                     : "CP936";
     const wxString contents =
         wxString::Format(
             "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"

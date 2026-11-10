@@ -75,7 +75,10 @@ public:
     FileEncoding Encoding() const { return encoding_; }
     bool HasBom() const { return hasBom_; }
     bool IsDefaultEncoding() const { return systemDefaultEncoding_; }
-    EncodingChoice CurrentEncoding() const { return EncodingChoice(encoding_, hasBom_, systemDefaultEncoding_); }
+    bool IsOemEncoding() const { return systemOemEncoding_; }
+    EncodingChoice CurrentEncoding() const {
+        return EncodingChoice(encoding_, hasBom_, systemDefaultEncoding_, systemOemEncoding_);
+    }
     bool IsModified() const;
     bool SelectEncoding(EncodingChoice choice);
     const OriginalFileVariables& FileVariables() const { return fileVariables_; }
@@ -93,6 +96,7 @@ private:
     Scintilla::EndOfLine defaultEolMode_ = Scintilla::EndOfLine::CrLf;
     EncodingOptions encodingOptions_;
     bool systemDefaultEncoding_ = false;
+    bool systemOemEncoding_ = false;
     std::optional<EncodingChoice> originalEncoding_ = EncodingChoice(FileEncoding::Utf8);
     OriginalFileVariables fileVariables_;
     std::optional<SyntaxLanguage> languageOverride_;

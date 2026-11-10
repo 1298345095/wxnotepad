@@ -77,6 +77,13 @@ public:
         destination_ = expected;
     }
     void Notify() override {
+        for (auto* window : wxTopLevelWindows) {
+            auto* dialog = wxDynamicCast(window, wxDialog);
+            if (!dialog || !dialog->IsModal() || dialog->GetTitle() != "Encoding character loss") continue;
+            ++losses;
+            NativeSearch::Click(dialog, loss_ == GbkLossChoice::Replace ? wxID_OK : wxID_CANCEL);
+            return;
+        }
 #ifdef __WXMSW__
         EnumThreadWindows(
             GetCurrentThreadId(),

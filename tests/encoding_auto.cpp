@@ -28,6 +28,20 @@ public:
             try {
                 std::filesystem::create_directory(directory);
                 DocumentSession document(*editor);
+                const auto western = directory / "western.vhdl";
+                TestFiles::WriteBytes(western, "-- \x80\xa0\r\n");
+                Require(document.Open(TestFiles::Filename(western), [] { return true; }).status == OpenStatus::Opened,
+                        "VHDL preference opens original Windows-1252 bytes");
+                Require(Text(*editor) == "-- €\u00a0\r\n" && document.Save().status == SaveStatus::Saved &&
+                            TestFiles::Bytes(western) == "-- \x80\xa0\r\n",
+                        "Windows-1252 preference retains Euro, NBSP and exact saved bytes");
+                const auto artPath = directory / "original.nfo";
+                TestFiles::WriteBytes(artPath, "\xda\xc4\xbf\r\n");
+                Require(document.Open(TestFiles::Filename(artPath), [] { return true; }).status == OpenStatus::Opened,
+                        "NFO preference opens original DOS-437 box drawing");
+                Require(Text(*editor) == "┌─┐\r\n" && document.Save().status == SaveStatus::Saved &&
+                            TestFiles::Bytes(artPath) == "\xda\xc4\xbf\r\n",
+                        "DOS-437 preference retains exact saved bytes");
                 const auto path = directory / "declared.txt";
                 const std::string bytes = "# coding: gb2312\n\xd6\xd0\xce\xc4\n";
                 std::ofstream(path, std::ios::binary) << bytes;
@@ -167,6 +181,29 @@ public:
                 EncodingOptions art;
                 art.loadNFOasOEM = false;
                 check("disabled.nfo", "plain", "plain", FileEncoding::Utf8, false, art);
+                for (const char* name : {"preferred.vhd", "preferred.VHDL"})
+                    check(name, "plain", "plain", FileEncoding::Windows1252, false);
+                for (const char* name : {"preferred.nfo", "preferred.DIZ"})
+                    check(name, "plain", "plain", FileEncoding::Dos437, false);
+                for (const char* alias : {"windows-1252", "xansi", "cp367", "ibm367", "us", "cp1252", "iso-8859-1"}) {
+                    const auto declaration = std::string("# coding: ") + alias + "\n";
+                    check("western-alias.txt", declaration + "\x80\xa0", declaration + "€\u00a0",
+                          FileEncoding::Windows1252, false);
+                }
+                for (const char* alias : {"ibm437", "437", "cp437", "cspc8", "codepage437"}) {
+                    const auto declaration = std::string("# coding: ") + alias + "\n";
+                    check("oem-alias.txt", declaration + "\xda\xc4\xbf", declaration + "┌─┐", FileEncoding::Dos437,
+                          false);
+                }
+                check("explicit.nfo", "\x80", "€", FileEncoding::Windows1252, false, {}, FileEncoding::Windows1252);
+                check("explicit.vhdl", "\xec", "∞", FileEncoding::Dos437, false, {}, FileEncoding::Dos437);
+                EncodingOptions westernDefault;
+                westernDefault.defaultEncoding = 1252;
+                westernDefault.loadASCIIasUTF8 = false;
+                check("default-western.txt", "\x80", "€", FileEncoding::Windows1252, false, westernDefault);
+                westernDefault.defaultEncoding = 437;
+                check("default-oem.txt", "\xec", "∞", FileEncoding::Dos437, false, westernDefault);
+                check("default-oem-ascii.txt", "plain", "plain", FileEncoding::Dos437, false, westernDefault);
 
                 const auto retained = directory / "retained.txt";
                 std::ofstream(retained, std::ios::binary) << "\xef\xbb\xbfkeep";
@@ -183,9 +220,9 @@ public:
                             "failed or cancelled automatic Open retains editor, history, path and encoding");
                 };
                 const auto unsupported = directory / "unsupported.txt";
-                std::ofstream(unsupported, std::ios::binary) << "# coding: windows1252\nplain";
+                std::ofstream(unsupported, std::ios::binary) << "# coding: windows1251\nplain";
                 const auto rejected = protectedDocument.Open(TestFiles::Filename(unsupported), [] { return true; });
-                Require(rejected.status == OpenStatus::Failed && rejected.error.Contains("1252") &&
+                Require(rejected.status == OpenStatus::Failed && rejected.error.Contains("1251") &&
                             rejected.error.Contains("not migrated"),
                         "recognized unsupported encoding is explicit");
                 unchanged();

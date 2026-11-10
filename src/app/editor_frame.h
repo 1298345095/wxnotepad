@@ -138,6 +138,9 @@ private:
     bool SearchMessage(SearchDirection direction);
     bool ShowSearchMessage(const wxString& key, const wxString& message, bool confirm);
     std::array<int, 3> suppressedSearchMessages_{};
+    std::array<int, 3> suppressedEncodingMessages_{};
+    enum class EncodingWarning { Ansi, EmptyAnsi, DestinationLoss };
+    bool ShowEncodingWarning(EncodingWarning warning, const wxString& message, bool yesNo);
     void ShowFind(bool replace = false);
     void FindNext();
     void FindPrevious();

@@ -3,6 +3,7 @@
 #include "syntax/syntax_scheme.h"
 #include "document/encoding/gbk_codec.h"
 #include "document/encoding/utf16_codec.h"
+#include "document/encoding/single_byte_codec.h"
 #include "editor/platform/native_encoding.h"
 #include "ScintillaTypes.h"
 #include <wx/file.h>
@@ -144,9 +145,9 @@ wxString PrepareSaveCopy(const wxString& destination) {
 
 std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncoding encoding, bool bom,
                                                     const GbkLossDecision& decideLoss) {
-    if (encoding == FileEncoding::Gbk) {
+    if (encoding == FileEncoding::Gbk || encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437) {
         if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, "The document contains invalid UTF-8."};
-        const auto encoded = EncodeGbk(bytes);
+        const auto encoded = encoding == FileEncoding::Gbk ? EncodeGbk(bytes) : EncodeSingleByte(bytes, encoding);
         if (encoded.loss && (!decideLoss || decideLoss() != GbkLossChoice::Replace))
             return SaveResult{SaveStatus::Cancelled, {}};
         bytes = encoded.bytes;
@@ -219,6 +220,7 @@ struct LoadedDocument {
     FileEncoding encoding;
     bool bom;
     bool systemDefault;
+    bool systemOem;
     OriginalFileVariables variables;
 };
 
@@ -242,6 +244,7 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std:
     loaded.encoding = *detected.encoding;
     loaded.bom = detected.bom;
     loaded.systemDefault = detected.systemDefault;
+    loaded.systemOem = detected.systemOem;
     if (loaded.encoding != FileEncoding::Utf16Le)
         loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     if (loaded.bom) bytes.erase(0, loaded.encoding == FileEncoding::Utf16Le ? 2 : 3);
@@ -249,6 +252,8 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std:
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return wxString("The file is not valid GBK (CP936). The document was not changed.");
         bytes = *decoded;
+    } else if (loaded.encoding == FileEncoding::Windows1252 || loaded.encoding == FileEncoding::Dos437) {
+        bytes = DecodeSingleByte(bytes, loaded.encoding);
     } else if (loaded.encoding == FileEncoding::Utf16Le) {
         auto decoded = DecodeUtf16Le(bytes);
         if (!decoded) return wxString("The file is not valid UTF-16LE.");
@@ -496,6 +501,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     auto& loaded = std::get<LoadedDocument>(candidate);
     const auto result = Replace(loaded.text, loadPath.GetFullPath(), loaded.encoding, loaded.bom, samePath);
     systemDefaultEncoding_ = loaded.systemDefault;
+    systemOemEncoding_ = loaded.systemOem;
     originalEncoding_ = CurrentEncoding();
     fileVariables_ = std::move(loaded.variables);
     // FileLoad applies the loaded file's indentation before restoring its view
@@ -542,6 +548,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
 void DocumentSession::New() {
     Replace({}, {}, FileEncoding::Utf8, false);
     systemDefaultEncoding_ = false;
+    systemOemEncoding_ = false;
     originalEncoding_ = CurrentEncoding();
     fileVariables_ = {};
 }
@@ -594,6 +601,7 @@ bool DocumentSession::SelectEncoding(EncodingChoice choice) {
     encoding_ = choice.encoding;
     hasBom_ = choice.bom;
     systemDefaultEncoding_ = choice.systemDefault;
+    systemOemEncoding_ = choice.systemOem;
     return true;
 }
 

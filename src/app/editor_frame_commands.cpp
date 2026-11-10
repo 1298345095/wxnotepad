@@ -150,6 +150,19 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->Append(openGbk, "Open As &GBK...");
     const int openUtf16 = wxWindow::NewControlId();
     file->Append(openUtf16, "Open As UTF-16LE...");
+    for (const auto& [label, encoding] : {std::pair{"Open As Windows-1252...", FileEncoding::Windows1252},
+                                          std::pair{"Open As DOS-437...", FileEncoding::Dos437}}) {
+        const int id = wxWindow::NewControlId();
+        file->Append(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, encoding](wxCommandEvent&) {
+                const auto result = OpenAs(encoding);
+                if (result.status == OpenStatus::Failed)
+                    wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+            },
+            id);
+    }
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
     file->Append(wxID_SAVEAS, "Save &As...\tF6");
     saveCopyId_ = wxWindow::NewControlId();
@@ -1429,8 +1442,8 @@ void EditorFrame::AppendDateTimeCommands(wxMenu* edit) {
 }
 
 void EditorFrame::InsertEncodingIdentifier() {
-    const EncodingChoice encoding(document_.Encoding(), document_.HasBom(), document_.IsDefaultEncoding());
-    editor_->InsertEncodingIdentifier(OriginalEncodingIdentifier(encoding), SyntaxFor(document_.Language()));
+    editor_->InsertEncodingIdentifier(OriginalEncodingIdentifier(document_.CurrentEncoding()),
+                                      SyntaxFor(document_.Language()));
 }
 
 void EditorFrame::ConvertTabs(bool toTabs, bool onlyIndent) {

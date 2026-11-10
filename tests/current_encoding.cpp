@@ -8,6 +8,7 @@
 #include <wx/timer.h>
 #include "native_key_helpers.h"
 #include "native_dialog_helpers.h"
+#include "native_search_helpers.h"
 #include "file_command_driver.h"
 #include <wx/statusbr.h>
 #include <cstdio>
@@ -128,6 +129,13 @@ public:
     wxString title = "Encoding Conversion";
     ConversionPrompt() { Start(40); }
     void Notify() override {
+        for (auto* window : wxTopLevelWindows) {
+            auto* dialog = wxDynamicCast(window, wxDialog);
+            if (!dialog || !dialog->IsModal() || dialog->GetTitle() != title) continue;
+            ++shown;
+            NativeSearch::Click(dialog, accept ? wxID_YES : wxID_NO);
+            return;
+        }
 #ifdef __WXMSW__
         EnumThreadWindows(
             GetCurrentThreadId(),
@@ -185,7 +193,9 @@ void AnsiTransition(EditorFrame* frame) {
         driver.accept = true;
         Require(frame->SelectEncoding(*native), "accepted ANSI conversion changes identity");
         driver.Stop();
-        const std::string expected = native->encoding == FileEncoding::Gbk ? "a中??\r\n" : "a中😀\r\n";
+        const std::string expected = native->encoding == FileEncoding::Gbk    ? "a中??\r\n"
+                                     : native->encoding == FileEncoding::Utf8 ? "a中😀\r\n"
+                                                                              : "a???\r\n";
         const bool converted = native->encoding != FileEncoding::Utf8;
         Require(driver.shown == 1 && TestEditor::Text(frame) == expected &&
                     bool(editor->Send(Message::GetReadOnly)) == !converted &&
