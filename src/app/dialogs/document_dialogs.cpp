@@ -141,8 +141,8 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optio
     };
     auto* accept = dialog.FindWindow(wxID_OK);
     accept->Enable(selected().has_value());
-    tree->Bind(wxEVT_TREE_SEL_CHANGED, [&](wxTreeEvent&) { accept->Enable(selected().has_value()); });
-    tree->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&](wxTreeEvent&) {
+    tree->Bind(wxEVT_TREE_SEL_CHANGED, [accept, &selected](wxTreeEvent&) { accept->Enable(selected().has_value()); });
+    tree->Bind(wxEVT_TREE_ITEM_ACTIVATED, [&dialog, &selected](wxTreeEvent&) {
         if (selected()) dialog.EndModal(wxID_OK);
     });
     dialog.SetSizerAndFit(contents);
@@ -172,7 +172,7 @@ void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options) {
     auto* choose = new wxButton(&dialog, wxID_ANY, "Click here to &select default encoding.");
     choose->SetName("Choose default encoding");
     contents->Add(choose, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogPaddingDip));
-    choose->Bind(wxEVT_BUTTON, [&](wxCommandEvent&) {
+    choose->Bind(wxEVT_BUTTON, [&dialog, &options, current, &label](wxCommandEvent&) {
         if (const auto choice = ChooseCurrentEncoding(&dialog, DefaultEncodingChoice(options.defaultEncoding), true)) {
             options.defaultEncoding = EncodingSetting(*choice);
             current->SetLabel(label());
