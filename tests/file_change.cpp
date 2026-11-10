@@ -12,9 +12,11 @@
 #include <wx/listbox.h>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <chrono>
 #include <thread>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 constexpr int EventPollIntervalMs = 10;
@@ -267,9 +269,9 @@ std::filesystem::path CheckMessageDecisionsAndFileLifecycle(EditorFrame* frame, 
     Peer(TestFiles::Filename(savedAs), "watch restarted\n", "slow-write");
     Wait([&frame] { return TestEditor::Text(frame->Editor()) == "watch restarted\n"; });
     if (decision.prompts != 11)
-        std::fprintf(stderr, "File watch restart: expected=11 actual=%d errors=%d mode=%d text='%s'\n",
-                     decision.prompts, decision.errors, static_cast<int>(frame->FileWatching().mode),
-                     TestEditor::Text(frame->Editor()).c_str());
+        std::cerr << "File watch restart: expected=11 actual=" << decision.prompts << " errors=" << decision.errors
+                  << " mode=" << std::to_underlying(frame->FileWatching().mode) << " text='"
+                  << TestEditor::Text(frame->Editor()) << "'\n";
     Require(decision.prompts == 11, "application save reinstalls notifications after stop");
     Require(frame->NewDocument(), "New succeeds on a clean document");
     Peer(TestFiles::Filename(savedAs), "former document\n");
