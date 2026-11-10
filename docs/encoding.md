@@ -2,8 +2,8 @@
 
 File > Encoding changes the live document's destination format. The delivered
 direct choices retain the original order: ANSI (when its native codec is
-delivered), UTF-8, UTF-8 BOM and UTF-16LE BOM. More (F9) offers those formats,
-BOM-less UTF-16LE and GBK in the original Unicode/Chinese catalog groups and
+delivered), UTF-8, UTF-8 BOM, UTF-16LE BOM and UTF-16BE BOM. More (F9) offers those formats,
+BOM-less UTF-16LE/UTF-16BE and GBK in the original Unicode/Chinese catalog groups and
 names. It selects the current identity and retains it on cancellation. F9
 neither reloads nor saves the file; F8 below continues to select the source
 codec for a disk reload.
@@ -29,8 +29,8 @@ remain unavailable until their codec tickets are delivered.
 
 ## Automatic source detection
 
-The migrated codecs remain UTF-8, UTF-16LE and Windows CP936 (GBK), with
-UTF-8/UTF-16LE BOM metadata retained by Save. `DocumentSession::Open` applies
+The migrated codecs are UTF-8, UTF-16LE, UTF-16BE and Windows CP936 (GBK), with
+UTF-8/UTF-16 BOM metadata retained by Save. `DocumentSession::Open` applies
 Notepad4 `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`'s
 `EditDetermineEncoding` decision order. Explicit Open As is authoritative.
 An optional weak choice is available to reload callers; ordinary same-path Open
@@ -72,12 +72,18 @@ including the original NUL-window gate and leading sample limit. No additional
 encoding-guessing library is used.
 
 Decoding errors and unsupported selections leave the editor, undo history,
-path and loaded format unchanged. Existing strict migrated decoders remain in
-use. Cancellation after detection also preserves that state. Saving retains
+path and loaded format unchanged. UTF-8, UTF-16LE and GBK retain their strict
+decoders. UTF-16BE follows the original FileLoad conversion: ignore an incomplete
+final byte, replace isolated surrogate code units with U+FFFD, preserve pairs,
+embedded NULs and EOL code units. Its adapter swaps byte order and reuses the LE
+converter. The original `_swab`/`WideCharToMultiByte(CP_UTF8, 0)` sequence cannot
+be reused directly on Linux, whose `wchar_t` and native conversion APIs differ;
+the adapter prepares valid UTF-16LE for the shared strict wx converter.
+Cancellation after detection also preserves that state. Saving retains
 the selected codec and BOM; the #59 legacy-loss and #60 reopen rules remain in
 the same session flow.
 
-File > Reload > With Encoding (F8) offers UTF-8, UTF-16LE and GBK as explicit
+File > Reload > With Encoding (F8) offers UTF-8, UTF-16LE, GBK and UTF-16BE as explicit
 source codecs. Its initial selection normalizes loaded BOM variants to their
 source codec; a native ANSI identity starts without an explicit source choice.
 A modified document first receives the original discard warning;
@@ -102,7 +108,7 @@ choices are reported rather than relabeled. The remaining original codecs are:
 
 | Group | Unmigrated encodings / code pages |
 | --- | --- |
-| Unicode | UTF-16BE with/without BOM; UTF-7 (65000) |
+| Unicode | UTF-7 (65000) |
 | Windows | 1250–1258, 874 |
 | Asian | Shift-JIS 932, UHC 949, Big5 950, GB18030 54936, EUC-JP 20932, Johab 1361, EUC-KR 51949, Chinese CNS 20000 |
 | ISO | 28591–28600, 28603–28606, Arabic logical 38596, Hebrew logical 38598 |
