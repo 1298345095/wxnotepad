@@ -99,13 +99,13 @@ public:
                          {"missingbang", "#/bin/python", plain},
                          {"empty", "#!", plain},
                          {"other", "#!/bin/perl", plain},
-                         {"latepython", "#!/bin/sh python3", plain},
+                         {"latepython", "#!/bin/sh python3", SyntaxLanguage::Bash},
                          {"script.unknown", "#!/bin/python", python},
                          {"script.cgi", "#!/bin/python", python},
                          {"script.fcgi", "#!/bin/python", python},
                          {"script.txt", "#!/bin/python", plain},
                          {"script.js", "#!/bin/python", plain},
-                         {"script.sh", "#!/bin/python", plain},
+                         {"script.sh", "#!/bin/python", SyntaxLanguage::Bash},
                          {"script.ini", "#!/bin/python", plain},
                          {"my.ini", "#!/bin/python", python},
                          {"script.cfg", "#!/bin/python", python},
@@ -115,8 +115,8 @@ public:
                          {".py", "#!/bin/sh", python},
                          {"Readme.custom", "#!/bin/python", plain},
                          {"Makefile", "#!/bin/python", plain},
-                         {".bashcustom", "#!/bin/python", plain},
-                         {".profile", "#!/bin/python", plain},
+                         {".bashcustom", "#!/bin/python", SyntaxLanguage::Bash},
+                         {".profile", "#!/bin/python", SyntaxLanguage::Bash},
                          {".bashrc.cfg", "#!/bin/python", python},
                          {"withinlimit", "#!" + std::string(251, ' ') + "py", python},
                          {"beyondlimit", "#!" + std::string(252, ' ') + "py", plain},
@@ -205,7 +205,7 @@ public:
                         "same-path interpreter fixture must reopen");
                 Language(frame, python);
                 Choose(frame, "Automatic");
-                Language(frame, plain);
+                Language(frame, SyntaxLanguage::Bash);
                 std::puts("PASS: decoded UTF-16 and same-path effective-language retention");
                 std::filesystem::remove_all(folder);
                 frame->Destroy();

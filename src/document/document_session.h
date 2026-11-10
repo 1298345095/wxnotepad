@@ -95,6 +95,7 @@ private:
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
     bool DetectAutomaticLanguage();
+    void ApplyEmptySchemeDefaults();
     void ApplySaveCleanup();
     void CommitSaveState(const wxString& destination, std::optional<SaveFileType> fileType);
     SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
