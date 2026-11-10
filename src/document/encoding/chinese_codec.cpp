@@ -168,7 +168,7 @@ std::optional<std::string> DecodeChinese(std::string_view bytes, FileEncoding en
     return Narrow(wxMBConvUTF8(), text);
 }
 
-GbkEncoded EncodeChinese(std::string_view utf8, FileEncoding encoding) {
+LegacyEncoded EncodeChinese(std::string_view utf8, FileEncoding encoding) {
     const auto text = Wide(wxMBConvUTF8(), utf8);
     if (text->empty()) return {{}, false};
 #ifdef __WXMSW__
@@ -191,7 +191,7 @@ GbkEncoded EncodeChinese(std::string_view utf8, FileEncoding encoding) {
     return {bytes, loss != FALSE};
 #else
     const wxCSConv converter(encoding == FileEncoding::Gb18030 ? "GB18030" : "CP950");
-    GbkEncoded result{{}, false};
+    LegacyEncoded result{{}, false};
     for (size_t offset = 0; offset < utf8.size();) {
         const auto* lead = reinterpret_cast<const unsigned char*>(utf8.data() + offset);
         const auto width = Scintilla::Internal::UTF8BytesOfLead(*lead);

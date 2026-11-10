@@ -248,7 +248,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
                      Filename(output),
                      [&sawCleaned, editor] {
                          sawCleaned = NativeSearch::Text(editor) == "中\n😀\nlast";
-                         return GbkLossChoice::Cancel;
+                         return EncodingLossChoice::Cancel;
                      }).status == SaveStatus::Cancelled &&
                 sawCleaned && NativeSearch::Text(editor) == "中\n😀\nlast" && editor->Send(Message::GetModify) &&
                 frame->DocumentPath() == identity && Bytes(seed) == "\xd6\xd0" && !std::filesystem::exists(output),
@@ -259,7 +259,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
     editor->Send(Message::Undo);
     Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify),
             "cancelled cleanup Undo must return to the old save point");
-    Require(frame->SaveAs(Filename(output), [] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+    Require(frame->SaveAs(Filename(output), [] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                 Bytes(output) == "\xd6\xd0\n??\nlast" && NativeSearch::Text(editor) == "中\n😀\nlast" &&
                 !editor->Send(Message::GetModify),
             "accepted GBK loss must save cleaned replacement bytes without rewriting Unicode text");
@@ -275,7 +275,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
                          std::filesystem::rename(lateFailure, preserved);
                          std::filesystem::create_directory(lateFailure);
                          std::ofstream(lateFailure / "sentinel") << "keep";
-                         return GbkLossChoice::Replace;
+                         return EncodingLossChoice::Replace;
                      }).status == SaveStatus::Failed &&
                 NativeSearch::Text(editor) == "中\n😀\nlast" && editor->Send(Message::GetModify) &&
                 Bytes(preserved) == "original" && Bytes(lateFailure / "sentinel") == "keep",

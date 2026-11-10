@@ -328,12 +328,12 @@ void Saves(EditorFrame* frame) {
                     "native loss Cancel preserves disk, selected format, live text, selection and Undo");
         }
         const auto blocked = TestFiles::TemporaryDirectory();
-        Require(frame->SaveAs(TestFiles::Filename(blocked), [] { return GbkLossChoice::Replace; }).status ==
+        Require(frame->SaveAs(TestFiles::Filename(blocked), [] { return EncodingLossChoice::Replace; }).status ==
                         SaveStatus::Failed &&
                     frame->DocumentPath() == TestFiles::Filename(source) && frame->DocumentIsModified() &&
                     TestEditor::Text(frame) == sample && TestFiles::Bytes(source) == "unchanged",
                 "Chinese write failure preserves original path, rich text, pending format and disk bytes");
-        Require(frame->SaveCopy(TestFiles::Filename(copy), [] { return GbkLossChoice::Replace; }).status ==
+        Require(frame->SaveCopy(TestFiles::Filename(copy), [] { return EncodingLossChoice::Replace; }).status ==
                         SaveStatus::Saved &&
                     TestFiles::Bytes(copy) == expected && TestFiles::Bytes(source) == "unchanged" &&
                     frame->DocumentPath() == TestFiles::Filename(source) && frame->DocumentIsModified(),
@@ -355,7 +355,7 @@ void Saves(EditorFrame* frame) {
         frame->Editor()->Send(Message::Redo);
         Require(TestEditor::Text(frame) == sample && !frame->DocumentIsModified(),
                 "post-save Redo restores rich text at original save point");
-        Require(frame->Save([] { return GbkLossChoice::Replace; }, SaveTimeMode::Original).status ==
+        Require(frame->Save([] { return EncodingLossChoice::Replace; }, SaveTimeMode::Original).status ==
                         SaveStatus::Saved &&
                     TestFiles::Bytes(target) == expected,
                 "Save with Original Time retains selected Chinese bytes");
@@ -432,7 +432,7 @@ void Big5BestFit(EditorFrame* frame) {
         Require(driver.shown == 1 && TestFiles::Bytes(path) == "¢" && frame->DocumentIsModified(),
                 "best-fit warning Cancel preserves the UTF-8 disk and pending Big5 identity");
     }
-    Require(frame->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+    Require(frame->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                 TestFiles::Bytes(path) == "?" && TestEditor::Text(frame) == "¢",
             "original accepted CP950 cent saves question mark while retaining live Unicode");
     TestFiles::WriteBytes(path, "═╞╡╪");

@@ -288,11 +288,11 @@ void SavedBytes(EditorFrame* frame) {
         bool asked = false;
         Require(frame->Save([&asked] {
                          asked = true;
-                         return GbkLossChoice::Cancel;
+                         return EncodingLossChoice::Cancel;
                      }).status == SaveStatus::Cancelled &&
                     asked && TestFiles::Bytes(path) == "\xa8\xa6" && editor->Send(Message::GetModify),
                 "GBK loss cancellation preserves disk bytes and unsaved custom case");
-        Require(frame->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+        Require(frame->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                     TestFiles::Bytes(path) == "?" && TestEditor::Text(editor) == "É" &&
                     !editor->Send(Message::GetModify),
                 "GBK replacement retains existing explicit-loss behavior");

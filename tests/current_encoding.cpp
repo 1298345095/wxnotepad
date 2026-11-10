@@ -327,7 +327,7 @@ void SaveVariants(EditorFrame* frame) {
                 TestFiles::Bytes(first) == "\xef\xbb\xbf😀",
             "first Save writes chosen UTF-8 BOM");
     frame->SelectEncoding(EncodingChoice(FileEncoding::Gbk));
-    Require(frame->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
+    Require(frame->Save([] { return EncodingLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
                 frame->GetTitle().StartsWith("*") && frame->DocumentEncoding() == FileEncoding::Gbk &&
                 TestFiles::Bytes(first) == "\xef\xbb\xbf😀",
             "loss cancellation retains pending GBK and original bytes");

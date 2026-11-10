@@ -277,10 +277,10 @@ void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
     UpdateDocumentState();
 }
 
-SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
+SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss,
                                   SaveFileType fileType, SaveTimeMode timeMode) {
     const auto result = document_.SaveFirst(
-        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
+        destination, decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) {
         RecordRecentFile();
         indentation_.Apply(*editor_, document_.Language());
@@ -291,7 +291,7 @@ SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, co
     return result;
 }
 
-SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode timeMode) {
+SaveResult EditorFrame::Save(const EncodingLossDecision& decideLoss, SaveTimeMode timeMode) {
     if (!document_.Path().empty()) {
         if (document_.RefreshReadOnlyFile()) {
             UpdateDocumentState();
@@ -302,7 +302,8 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode tim
             if (!chosen) return SaveAs(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
             return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
-        const auto result = document_.Save(decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, timeMode);
+        const auto result =
+            document_.Save(decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); }, timeMode);
         if (result.status == SaveStatus::Saved) {
             RecordRecentFile();
             RefreshFileWatching();
@@ -315,10 +316,10 @@ SaveResult EditorFrame::Save(const GbkLossDecision& decideLoss, SaveTimeMode tim
     return SaveFirst(chosen->path, decideLoss, chosen->type, timeMode);
 }
 
-SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
+SaveResult EditorFrame::SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss,
                                SaveFileType fileType, SaveTimeMode timeMode) {
     const auto result = document_.SaveAs(
-        destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); }, fileType, timeMode);
+        destination, decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); }, fileType, timeMode);
     if (result.status == SaveStatus::Saved) {
         RecordRecentFile();
         indentation_.Apply(*editor_, document_.Language());
@@ -342,8 +343,9 @@ SaveResult EditorFrame::SaveAs() {
     return SaveAs(chosen->path, {}, chosen->type);
 }
 
-SaveResult EditorFrame::SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
-    const auto result = document_.SaveCopy(destination, decideLoss ? decideLoss : [this] { return ConfirmGbkLoss(); });
+SaveResult EditorFrame::SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss) {
+    const auto result =
+        document_.SaveCopy(destination, decideLoss ? decideLoss : [this] { return ConfirmEncodingLoss(); });
     if (result.status == SaveStatus::Saved && destination) lastSaveCopyDirectory_ = wxFileName(*destination).GetPath();
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
     UpdateDocumentState();
@@ -580,14 +582,14 @@ bool EditorFrame::CanDiscardUntitledWhitespace() const {
     return true;
 }
 
-GbkLossChoice EditorFrame::ConfirmGbkLoss() {
+EncodingLossChoice EditorFrame::ConfirmEncodingLoss() {
     return ShowEncodingWarning(
                EncodingWarning::DestinationLoss,
                "Certain characters in the current text are not supported by the selected encoding, and may be replaced "
                "by default placeholders when saving. It's recommended to choose another file encoding. Continue?",
                false)
-               ? GbkLossChoice::Replace
-               : GbkLossChoice::Cancel;
+               ? EncodingLossChoice::Replace
+               : EncodingLossChoice::Cancel;
 }
 
 bool EditorFrame::ShowEncodingWarning(EncodingWarning warning, const wxString& message, bool yesNo) {

@@ -12,8 +12,8 @@
 #include <variant>
 
 class EditorControl;
-enum class GbkLossChoice { Cancel, Replace };
-using GbkLossDecision = std::function<GbkLossChoice()>;
+enum class EncodingLossChoice { Cancel, Replace };
+using EncodingLossDecision = std::function<EncodingLossChoice()>;
 // The dialog adapter translates its native filter index into this semantic choice.
 enum class SaveType : uint8_t { CurrentScheme, AllFiles };
 using SaveFileType = std::variant<SaveType, SyntaxLanguage>;
@@ -54,13 +54,13 @@ public:
     bool IsReadOnlyFile() const { return readOnlyFile_; }
     bool RefreshReadOnlyFile();
     // A chosen path represents the caller's approved destination; no path is Cancel.
-    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+    SaveResult SaveFirst(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme,
                          SaveTimeMode timeMode = SaveTimeMode::Current);
-    SaveResult Save(const GbkLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
-    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+    SaveResult Save(const EncodingLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
+    SaveResult SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
-    SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {});
     bool UpdateFileTime();
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt,
@@ -107,7 +107,7 @@ private:
     void ApplyEmptySchemeDefaults(bool overrideEncoding);
     void ApplySaveCleanup();
     void CommitSaveState(const wxString& destination, std::optional<SaveFileType> fileType);
-    SaveResult SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
+    SaveResult SaveTo(const wxString& destination, const EncodingLossDecision& decideLoss,
                       std::optional<SaveFileType> fileType = std::nullopt, bool copy = false,
                       SaveTimeMode timeMode = SaveTimeMode::Current);
     OpenResult Replace(const std::string& bytes, const wxString& path, EncodingChoice encoding,

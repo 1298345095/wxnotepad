@@ -168,7 +168,7 @@ void SavedBytes(EditorFrame* frame) {
     editor->Send(Message::SetSel, 1, 7);
     editor->InsertDateTime(DateTimeInsertion::Short, wxString::FromUTF8("😀"));
     const auto unchanged = TestFiles::Bytes(path);
-    Require(frame->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
+    Require(frame->Save([] { return EncodingLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
                 TestFiles::Bytes(path) == unchanged && editor->Send(Message::GetModify),
             "unrepresentable insertion retains edit and original disk bytes on encoding-warning cancellation");
     editor->Send(Message::SetSavePoint);

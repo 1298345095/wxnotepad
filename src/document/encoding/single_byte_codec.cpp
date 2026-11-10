@@ -36,12 +36,12 @@ std::string DecodeSingleByte(std::string_view bytes, FileEncoding encoding) {
     return result;
 }
 
-GbkEncoded EncodeSingleByte(std::string_view utf8, FileEncoding encoding) {
+LegacyEncoded EncodeSingleByte(std::string_view utf8, FileEncoding encoding) {
     // Adapt original EditSaveFile's WC_NO_BEST_FIT_CHARS and substitution per
     // UTF-16 code unit. wx/iconv best-fit and undefined-byte behavior differ;
     // inverting the measured decode mapping preserves the original repertoire.
     const auto& mappings = ByteMappings(encoding);
-    GbkEncoded result{{}, false};
+    LegacyEncoded result{{}, false};
     for (size_t offset = 0; offset < utf8.size();) {
         const auto* lead = reinterpret_cast<const unsigned char*>(utf8.data() + offset);
         const auto length = Scintilla::Internal::UTF8BytesOfLead(*lead);

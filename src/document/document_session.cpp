@@ -145,7 +145,7 @@ wxString PrepareSaveCopy(const wxString& destination) {
 }
 
 std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncoding encoding, bool bom,
-                                                    const GbkLossDecision& decideLoss) {
+                                                    const EncodingLossDecision& decideLoss) {
     if (encoding == FileEncoding::Gbk || encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437 ||
         encoding == FileEncoding::Gb18030 || encoding == FileEncoding::Big5) {
         if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, "The document contains invalid UTF-8."};
@@ -153,7 +153,7 @@ std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncod
                              : encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437
                                  ? EncodeSingleByte(bytes, encoding)
                                  : EncodeChinese(bytes, encoding);
-        if (encoded.loss && (!decideLoss || decideLoss() != GbkLossChoice::Replace))
+        if (encoded.loss && (!decideLoss || decideLoss() != EncodingLossChoice::Replace))
             return SaveResult{SaveStatus::Cancelled, {}};
         bytes = encoded.bytes;
     } else if (encoding == FileEncoding::Utf16Le || encoding == FileEncoding::Utf16Be) {
@@ -356,33 +356,35 @@ bool DocumentSession::RefreshReadOnlyFile() {
     return readOnlyFile_;
 }
 
-SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
-                                      SaveFileType fileType, SaveTimeMode timeMode) {
+SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination,
+                                      const EncodingLossDecision& decideLoss, SaveFileType fileType,
+                                      SaveTimeMode timeMode) {
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (!path_.empty()) return {SaveStatus::Failed, "This document already has a file name."};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
     return SaveTo(*destination, decideLoss, fileType, false, timeMode);
 }
 
-SaveResult DocumentSession::Save(const GbkLossDecision& decideLoss, SaveTimeMode timeMode) {
+SaveResult DocumentSession::Save(const EncodingLossDecision& decideLoss, SaveTimeMode timeMode) {
     if (path_.empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
     return SaveTo(path_, decideLoss, std::nullopt, false, timeMode);
 }
 
-SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss,
+SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss,
                                    SaveFileType fileType, SaveTimeMode timeMode) {
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
     return SaveTo(*destination, decideLoss, fileType, false, timeMode);
 }
 
-SaveResult DocumentSession::SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss) {
+SaveResult DocumentSession::SaveCopy(const std::optional<wxString>& destination,
+                                     const EncodingLossDecision& decideLoss) {
     if (!destination) return {SaveStatus::Cancelled, {}};
     if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
     return SaveTo(*destination, decideLoss, std::nullopt, true);
 }
 
-SaveResult DocumentSession::SaveTo(const wxString& destination, const GbkLossDecision& decideLoss,
+SaveResult DocumentSession::SaveTo(const wxString& destination, const EncodingLossDecision& decideLoss,
                                    std::optional<SaveFileType> fileType, bool copy, SaveTimeMode timeMode) {
     if (copy) {
         const auto error = PrepareSaveCopy(destination);
@@ -516,9 +518,9 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
         if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     }
     auto& loaded = std::get<LoadedDocument>(candidate);
-    const auto result = Replace(loaded.text, loadPath.GetFullPath(),
-                                EncodingChoice(loaded.encoding, loaded.bom, loaded.systemDefault, loaded.systemOem),
-                                samePath);
+    const auto result =
+        Replace(loaded.text, loadPath.GetFullPath(),
+                EncodingChoice(loaded.encoding, loaded.bom, loaded.systemDefault, loaded.systemOem), samePath);
     originalEncoding_ = CurrentEncoding();
     fileVariables_ = std::move(loaded.variables);
     // FileLoad applies the loaded file's indentation before restoring its view

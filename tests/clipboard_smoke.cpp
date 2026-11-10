@@ -1871,7 +1871,7 @@ void SwapDefaultCaretEncoding(EditorFrame* frame, EditorControl* editor, Peer& p
     int lossPrompts = 0;
     Require(frame->Save([&lossPrompts] {
                      ++lossPrompts;
-                     return GbkLossChoice::Cancel;
+                     return EncodingLossChoice::Cancel;
                  }).status == SaveStatus::Saved &&
                 lossPrompts == 0 && TestFiles::Bytes(path) == saved,
             "default-ANSI caret Swap saves captured native bytes without a second loss decision");
@@ -1912,12 +1912,12 @@ void SwapExplicitGbk(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         else
             Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
                     "explicit GBK selected Swap independently publishes the original selection");
-        Require(frame->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
+        Require(frame->Save([] { return EncodingLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
                     TestFiles::Bytes(path) == original && Text(editor) == expected && editor->Send(Message::GetModify),
                 "explicit GBK save cancellation preserves Unicode, modification and original disk bytes");
         const std::string saved =
             caret ? "\xc7\xb0\xd6\xd0\xce\xc4??\r\nXold\xe1\xe1" : "\xc7\xb0\xd6\xd0\xce\xc4??\r\nX\xe1\xe1";
-        Require(frame->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+        Require(frame->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                     TestFiles::Bytes(path) == saved && Text(editor) == expected,
                 "approved GBK save writes native placeholders while keeping Unicode in the editor");
     }
@@ -2019,7 +2019,7 @@ void SwapDefaultEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) 
         int lossPrompts = 0;
         Require(frame->Save([&lossPrompts] {
                          ++lossPrompts;
-                         return GbkLossChoice::Cancel;
+                         return EncodingLossChoice::Cancel;
                      }).status == SaveStatus::Saved &&
                     lossPrompts == 0 && TestFiles::Bytes(path) == saved && frame->DocumentEncoding() == encoding &&
                     frame->DocumentHasBom() == bom,

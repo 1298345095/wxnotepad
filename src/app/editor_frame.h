@@ -18,13 +18,13 @@ public:
     explicit EditorFrame(SettingsStore* settings = nullptr);
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
-    SaveResult Save(const GbkLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
-    SaveResult SaveAs(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+    SaveResult Save(const EncodingLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
+    SaveResult SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveAs();
-    SaveResult SaveCopy(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {});
+    SaveResult SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {});
     SaveResult SaveCopy();
-    SaveResult SaveFirst(const std::optional<wxString>& destination, const GbkLossDecision& decideLoss = {},
+    SaveResult SaveFirst(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                          SaveFileType fileType = SaveType::CurrentScheme,
                          SaveTimeMode timeMode = SaveTimeMode::Current);
     bool UpdateFileTime();
@@ -156,7 +156,7 @@ private:
                         std::optional<EncodingChoice> weakEncoding = std::nullopt,
                         OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead, bool reload = false);
     bool CanDiscardUntitledWhitespace() const;
-    GbkLossChoice ConfirmGbkLoss();
+    EncodingLossChoice ConfirmEncodingLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);
     bool SaveSettings(bool explicitSave);
 };

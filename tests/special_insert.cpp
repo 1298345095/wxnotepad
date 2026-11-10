@@ -307,7 +307,7 @@ void SavedBytes(EditorFrame* frame) {
     bool asked = false;
     Require(frame->Save([&asked] {
                      asked = true;
-                     return GbkLossChoice::Cancel;
+                     return EncodingLossChoice::Cancel;
                  }).status == SaveStatus::Cancelled &&
                 asked && TestFiles::Bytes(path) == "AoldZ" && editor->Send(Message::GetModify),
             "cancelling the existing legacy loss warning retains the inserted control and original disk bytes");

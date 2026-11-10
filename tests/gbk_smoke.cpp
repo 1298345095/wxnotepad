@@ -34,10 +34,10 @@ void PrivateUseRepertoire(SettingsStore* settings, const std::filesystem::path& 
     Require(repertoire->Save().status == SaveStatus::Saved && Bytes(puaPath) == pua,
             "CP936 PUA must roundtrip without replacement");
     Append(repertoire, "\x{ef}\x{a3}\x{b5}"); // U+F8F5 maps to invalid FF in the original Win32 encoder.
-    Require(repertoire->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
+    Require(repertoire->Save([] { return EncodingLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
                 Bytes(puaPath) == pua,
             "asymmetric F8F5 must require explicit loss choice");
-    Require(repertoire->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved &&
+    Require(repertoire->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                 Bytes(puaPath) == pua + "?",
             "asymmetric F8F5 replacement must be strict-readable question mark");
     repertoire->Destroy();
@@ -82,7 +82,7 @@ void LossChoiceFailures(SettingsStore* settings, const std::filesystem::path& di
     const auto blocked = directory / "blocked.txt";
     std::filesystem::create_directory(blocked);
     Write(blocked / "sentinel", "keep");
-    for (const auto choice : {GbkLossChoice::Cancel, GbkLossChoice::Replace}) {
+    for (const auto choice : {EncodingLossChoice::Cancel, EncodingLossChoice::Replace}) {
         auto* failure = new EditorFrame(settings);
         Require(failure->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
                 "failure source must open");
@@ -91,7 +91,7 @@ void LossChoiceFailures(SettingsStore* settings, const std::filesystem::path& di
         Require(failure->SaveAs(std::nullopt, [choice] { return choice; }).status == SaveStatus::Cancelled,
                 "cancelled picker must not save");
         const auto result = failure->SaveAs(Filename(blocked), [choice] { return choice; }, SyntaxLanguage::Python);
-        Require(result.status == (choice == GbkLossChoice::Cancel ? SaveStatus::Cancelled : SaveStatus::Failed),
+        Require(result.status == (choice == EncodingLossChoice::Cancel ? SaveStatus::Cancelled : SaveStatus::Failed),
                 "loss branch must cancel or report replacement failure");
         Require(Text(failure) == before && failure->DocumentPath() == Filename(source) &&
                     failure->DocumentEncoding() == FileEncoding::Gbk && !failure->DocumentHasBom() &&
@@ -120,7 +120,8 @@ void LossySaveAs(SettingsStore* settings, const std::filesystem::path& directory
     Append(lossyAs, "¥☃😀𝄞");
     const auto richAs = Text(lossyAs);
     const auto lossyTarget = directory / "lossy-as.txt";
-    Require(lossyAs->SaveAs(Filename(lossyTarget), [] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved,
+    Require(lossyAs->SaveAs(Filename(lossyTarget), [] { return EncodingLossChoice::Replace; }).status ==
+                SaveStatus::Saved,
             "confirmed lossy Save As must succeed");
     Require(Bytes(lossyTarget) == original + "\xd6\xd0\xce\xc4??????" &&
                 Bytes(source) == original + "\xd6\xd0\xce\xc4" && Text(lossyAs) == richAs &&
@@ -165,12 +166,12 @@ public:
                 Append(frame, "¥☃😀𝄞");
                 const auto rich = Text(frame);
                 const auto saved = Bytes(copy);
-                Require(frame->Save([] { return GbkLossChoice::Cancel; }).status == SaveStatus::Cancelled,
+                Require(frame->Save([] { return EncodingLossChoice::Cancel; }).status == SaveStatus::Cancelled,
                         "loss cancellation must return Cancelled");
                 Require(Bytes(copy) == saved && Text(frame) == rich &&
                             frame->Editor()->Send(Scintilla::Message::GetModify),
                         "loss cancellation must preserve bytes, text and dirty state");
-                Require(frame->Save([] { return GbkLossChoice::Replace; }).status == SaveStatus::Saved,
+                Require(frame->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved,
                         "explicit replacement must save");
                 Require(Bytes(copy) == saved + "??????" && Text(frame) == rich,
                         "accepted loss writes original placeholders while retaining the rich editor text");

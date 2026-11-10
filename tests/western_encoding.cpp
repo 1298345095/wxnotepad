@@ -174,14 +174,14 @@ void LossAndSaveVariants(EditorFrame* frame) {
         int warnings = 0;
         Require(frame->Save([&] {
                          ++warnings;
-                         return GbkLossChoice::Cancel;
+                         return EncodingLossChoice::Cancel;
                      }).status == SaveStatus::Cancelled &&
                     warnings == 1 && TestFiles::Bytes(source) == "unchanged" && TestEditor::Text(frame) == sample &&
                     frame->DocumentIsModified() && frame->Editor()->Send(Scintilla::Message::CanUndo),
                 "loss Cancel preserves independent disk bytes, live rich text, Undo and pending identity");
         const auto accept = [&] {
             ++warnings;
-            return GbkLossChoice::Replace;
+            return EncodingLossChoice::Replace;
         };
         const auto expected = TestFiles::Bytes(fixtures / (std::string("save-") + name + ".bin"));
         Require(frame->SaveCopy(TestFiles::Filename(copy), accept).status == SaveStatus::Saved &&

@@ -293,7 +293,7 @@ void LossDecision(EditorFrame* frame, const std::filesystem::path& directory) {
     bool asked = false;
     Require(frame->Save([&asked] {
                      asked = true;
-                     return GbkLossChoice::Cancel;
+                     return EncodingLossChoice::Cancel;
                  }).status == SaveStatus::Cancelled &&
                 asked && TestFiles::Bytes(path) == "AoldZ" && editor->Send(Message::GetModify),
             "header insertion retains the existing legacy loss decision and cancelled Save bytes");
