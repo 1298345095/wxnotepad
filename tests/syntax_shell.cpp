@@ -200,6 +200,27 @@ void ShellOperations(EditorFrame* frame, SettingsStore& settings, const std::fil
     std::puts("PASS: native shell comments, brace matching, dialect shebangs, settings persistence and file-variable "
               "precedence");
 }
+void EmptyShellBoms(EditorFrame* frame, EditorControl* editor, const std::filesystem::path& directory) {
+    for (const auto& bom : {std::string("\xef\xbb\xbf"), std::string("\xff\xfe")}) {
+        const auto bomPath = directory / (bom.size() == 3 ? "bom.sh" : "utf16.sh");
+        std::ofstream(bomPath, std::ios::binary) << bom;
+        Require(frame->Open(TestFiles::Filename(bomPath)).status == OpenStatus::Opened, "BOM-only shell must open");
+        Require(frame->DocumentHasBom() &&
+                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf),
+                "fresh shell must retain its encoding BOM while applying LF");
+        Choose(frame, "m4");
+        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(bomPath) == bom,
+                "dialect changes must preserve BOM-only disk bytes");
+        if (bom.size() == 3) {
+            frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
+            Require(frame->DocumentIsModified(), "removing a named empty file's BOM must be a format change");
+            Choose(frame, "C Shell");
+            Require(frame->DocumentIsModified(), "unchanged shell defaults must retain a pending BOM removal");
+            frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8, true));
+            Require(!frame->DocumentIsModified(), "restoring the original BOM must restore clean identity");
+        }
+    }
+}
 class ShellApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -319,28 +340,7 @@ public:
                         "an empty document with edit history must retain EOL and pending redo on scheme changes");
                 editor->Send(Message::Redo);
                 Require(frame->Save().status == SaveStatus::Saved, "history fixture must save before loading BOMs");
-                for (const auto& bom : {std::string("\xef\xbb\xbf"), std::string("\xff\xfe")}) {
-                    const auto bomPath = directory / (bom.size() == 3 ? "bom.sh" : "utf16.sh");
-                    std::ofstream(bomPath, std::ios::binary) << bom;
-                    Require(frame->Open(TestFiles::Filename(bomPath)).status == OpenStatus::Opened,
-                            "BOM-only shell must open");
-                    Require(frame->DocumentHasBom() &&
-                                editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf),
-                            "fresh shell must retain its encoding BOM while applying LF");
-                    Choose(frame, "m4");
-                    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(bomPath) == bom,
-                            "dialect changes must preserve BOM-only disk bytes");
-                    if (bom.size() == 3) {
-                        frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
-                        Require(frame->DocumentIsModified(),
-                                "removing a named empty file's BOM must be a format change");
-                        Choose(frame, "C Shell");
-                        Require(frame->DocumentIsModified(),
-                                "unchanged shell defaults must retain a pending BOM removal");
-                        frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8, true));
-                        Require(!frame->DocumentIsModified(), "restoring the original BOM must restore clean identity");
-                    }
-                }
+                EmptyShellBoms(frame, editor, directory);
                 std::puts("PASS: original empty-document UTF-8/LF, edit history, BOM and shebang behavior");
                 const auto legacyEmpty = directory / "empty-utf16.txt";
                 std::ofstream(legacyEmpty, std::ios::binary);
