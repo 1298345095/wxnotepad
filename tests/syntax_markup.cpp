@@ -2,6 +2,8 @@
 #include "editor/editor_control.h"
 #include "document/document_session.h"
 #include "file_helpers.h"
+#include "file_command_driver.h"
+#include "native_key_helpers.h"
 #include "syntax_test_helpers.h"
 #include "tab_settings_helpers.h"
 #include <SciLexer.h>
@@ -53,6 +55,118 @@ void Detection(EditorFrame* frame) {
                          SyntaxFor(document.Language()).name);
             throw std::runtime_error("original filename and prefix precedence must select the effective dialect");
         }
+    }
+}
+void ManualCanonicalMarkup(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    const auto path = TestFiles::TemporaryDirectory("manual-markup.txt");
+    const std::string text = "<%@ Language=\"VBScript\" %>\r\n<% value = 1 %>";
+    TestFiles::WriteBytes(path, text);
+    Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+            "manual markup fixture opens as plain text");
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Web Source Code"));
+    char property[8]{};
+    editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
+    // Pinned Styles.cpp::Style_SelectLexer sniffs the canonical Web choice;
+    // its independently specified HtmlOption_HtmlVBScript bytes are 0e20.
+    Require(std::string(property) == "\x0e\x20" &&
+                frame->GetStatusBar()->GetStatusText().Contains("ASP VBScript (override)") &&
+                TestEditor::Text(editor) == text && !frame->DocumentIsModified() && !editor->Send(Message::CanUndo) &&
+                TestFiles::Bytes(path) == text,
+            "canonical Web menu choice sniffs VBScript without changing clean text, history or disk");
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "ASP JavaScript"));
+    editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
+    Require(std::string(property) == "\x0e\x10" &&
+                frame->GetStatusBar()->GetStatusText().Contains("ASP JavaScript (override)"),
+            "explicit dialect choice overrides the conflicting document directive");
+    const auto xml = TestFiles::TemporaryDirectory("manual-schema.txt");
+    TestFiles::WriteBytes(xml, "<!DOCTYPE schema><schema/>");
+    Require(frame->Open(TestFiles::Filename(xml), FileEncoding::Utf8).status == OpenStatus::Opened,
+            "manual XML fixture opens as plain text");
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "XML Document"));
+    editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
+    Require(std::string(property) == "\x01\x10" &&
+                frame->GetStatusBar()->GetStatusText().Contains("XML Schema (override)") &&
+                !frame->DocumentIsModified() && !editor->Send(Message::CanUndo),
+            "canonical XML menu choice sniffs schema while retaining original XML options and clean state");
+}
+void ManualMarkupFamilies(EditorFrame* frame) {
+    struct Fixture {
+        const char* name;
+        const char* choice;
+        const char* text;
+        const char* dialect;
+        const char* options;
+        int tabWidth;
+    };
+    // Original Style_SelectLexer keeps pLex (selected scheme) separate from
+    // np2LexLangIndex (sniffed status/dialect), even for conflicting headers.
+    for (const auto& fixture :
+         {Fixture{"xml-html.txt", "XML Document", "<!DOCTYPE html><html/>", "Web Source Code", "\x01\x10", 4},
+          {"xml-asp.txt", "XML Document", "<%@ Language=\"VBScript\" %>", "ASP VBScript", "\x01\x10", 4},
+          {"web-schema.txt", "Web Source Code", "<!DOCTYPE schema><schema/>", "XML Schema", "\x0e\x10", 2}}) {
+        const auto path = TestFiles::TemporaryDirectory(fixture.name);
+        TestFiles::WriteBytes(path, fixture.text);
+        Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+                "cross-family manual fixture opens");
+        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", fixture.choice));
+        auto* editor = frame->Editor();
+        char property[8]{};
+        editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
+                     reinterpret_cast<intptr_t>(property));
+        if (std::string(property) != fixture.options ||
+            !frame->GetStatusBar()->GetStatusText().Contains(wxString(fixture.dialect) + " (override)") ||
+            editor->Send(Message::GetTabWidth) != fixture.tabWidth)
+            std::fprintf(stderr, "Markup family: file=%s choice=%s property=%02x%02x tabs=%zd status='%s'\n",
+                         fixture.name, fixture.choice, static_cast<unsigned char>(property[0]),
+                         static_cast<unsigned char>(property[1]), editor->Send(Message::GetTabWidth),
+                         frame->GetStatusBar()->GetStatusText().utf8_str().data());
+        Require(editor->Send(Message::GetLexer) == SCLEX_HTML && std::string(property) == fixture.options &&
+                    frame->GetStatusBar()->GetStatusText().Contains(wxString(fixture.dialect) + " (override)") &&
+                    editor->Send(Message::GetTabWidth) == fixture.tabWidth,
+                "canonical markup retains chosen lexer family/settings while displaying sniffed dialect");
+        NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL);
+        TestSyntax::Command(frame, wxID_SAVEAS);
+        driver.Stop();
+        Require(driver.choosers == 1 && driver.initialType.StartsWith(wxString(fixture.choice) + " (") &&
+                    TestEditor::Text(editor) == fixture.text && !frame->DocumentIsModified() &&
+                    TestFiles::Bytes(path) == fixture.text && !editor->Send(Message::CanUndo),
+                "native Save As starts with chosen scheme filter and Cancel preserves clean document");
+        const auto saved = TestFiles::TemporaryDirectory(std::string("saved-") + fixture.name);
+        NativeDialogs::FileCommandDriver save(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL,
+                                              TestFiles::Filename(saved));
+        TestSyntax::Command(frame, wxID_SAVEAS);
+        save.Stop();
+        Require(save.choosers == 1 && save.initialType.StartsWith(wxString(fixture.choice) + " (") &&
+                    TestFiles::Bytes(saved) == fixture.text &&
+                    frame->GetStatusBar()->GetStatusText().Contains(wxString(fixture.dialect) + " (override)"),
+                "saving with current family filter preserves sniffed dialect and exact bytes");
+    }
+}
+void AutomaticMarkupFamilies(EditorFrame* frame) {
+    // Style_UpdateLexerLang sniffs .xml, while ordinary .html keeps Web's
+    // default language. In both cases the matched filename selects the family.
+    const auto html = TestFiles::TemporaryDirectory("automatic-directive.html");
+    const auto xml = TestFiles::TemporaryDirectory("automatic-directive.xml");
+    for (const auto& path : {html, xml}) {
+        TestFiles::WriteBytes(path, "<%@ Language=\"VBScript\" %>");
+        Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+                "automatic markup family fixture opens");
+        char property[8]{};
+        frame->Editor()->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
+                              reinterpret_cast<intptr_t>(property));
+        const bool isXml = path == xml;
+        const wxString family = isXml ? "XML Document" : "Web Source Code";
+        Require(std::string(property) == (isXml ? "\x01\x10" : "\x0e\x10") &&
+                    frame->GetStatusBar()->GetStatusText().Contains(isXml ? "ASP VBScript" : "Web Source Code") &&
+                    !frame->GetStatusBar()->GetStatusText().Contains("override") &&
+                    frame->Editor()->Send(Message::GetTabWidth) == (isXml ? 4 : 2),
+                "automatic XML sniff retains filename family and HTML does not acquire a manual-only sniff");
+        NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL);
+        TestSyntax::Command(frame, wxID_SAVEAS);
+        driver.Stop();
+        Require(driver.choosers == 1 && driver.initialType.StartsWith(family + " (") && !frame->DocumentIsModified(),
+                "automatic markup native Save As filter follows original filename family");
     }
 }
 std::string Unhex(const std::string& hex) {
@@ -224,54 +338,6 @@ void NativeTabsAndFoldedFind(EditorFrame* frame) {
     Require(editor->Send(Message::GetLineVisible, 3), "shared Expand All restores markup visibility");
     std::puts("PASS: native HTML/XML tabs, alias/file precedence and folded markup Find");
 }
-class FileDriver final : public wxTimer {
-public:
-    explicit FileDriver(wxString path, wxString type = {}) : path_(std::move(path)), type_(std::move(type)) {
-        Start(100);
-    }
-    int choosers = 0;
-    void Notify() override {
-#ifdef __WXMSW__
-        EnumThreadWindows(
-            GetCurrentThreadId(),
-            [](HWND window, LPARAM data) -> BOOL {
-                auto& driver = *reinterpret_cast<FileDriver*>(data);
-                wchar_t title[256]{};
-                GetWindowTextW(window, title, 256);
-                if (IsWindowVisible(window) &&
-                    (wxString(title) == "Open file" || wxString(title) == "Save file" ||
-                     wxString(title) == "Save As") &&
-                    !driver.stage_++) {
-                    ++driver.choosers;
-                    if (!driver.type_.empty()) NativeDialogs::ChooseFileType(window, driver.type_);
-                    NativeDialogs::ChooseFile(window, driver.path_);
-                }
-                return TRUE;
-            },
-            reinterpret_cast<LPARAM>(this));
-#elif defined(__WXGTK__)
-        GList* windows = gtk_window_list_toplevels();
-        for (GList* item = windows; item; item = item->next) {
-            auto* widget = GTK_WIDGET(item->data);
-            if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
-            if (stage_ == 0) {
-                stage_ = 1;
-                ++choosers;
-                if (!type_.empty()) NativeDialogs::ChooseFileType(widget, type_);
-                NativeDialogs::ChooseFile(widget, path_);
-            } else if (stage_ == 1 && !path_.empty() && NativeDialogs::CanAcceptFile(widget, path_)) {
-                stage_ = 2;
-                NativeDialogs::Respond(widget, GTK_RESPONSE_ACCEPT);
-            }
-        }
-        g_list_free(windows);
-#endif
-    }
-
-private:
-    wxString path_, type_;
-    int stage_ = 0;
-};
 void NativeFiles(EditorFrame* frame) {
     auto* editor = frame->Editor();
     editor->Send(Message::SetSavePoint);
@@ -281,7 +347,9 @@ void NativeFiles(EditorFrame* frame) {
     const auto html = TestFiles::TemporaryDirectory("native.html");
     const auto xml = TestFiles::TemporaryDirectory("native.xml");
     const auto file = [&](int id, const std::filesystem::path& path, const char* type) {
-        FileDriver driver(path.empty() ? wxString{} : TestFiles::Filename(path), type);
+        NativeDialogs::FileCommandDriver driver(
+            id == wxID_OPEN ? NativeDialogs::FileDialogProfile::Open : NativeDialogs::FileDialogProfile::Save,
+            wxID_CANCEL, path.empty() ? wxString{} : TestFiles::Filename(path), {}, type);
         TestSyntax::Command(frame, id);
         driver.Stop();
         Require(driver.choosers == 1, "file command must use one native file dialog");
@@ -315,8 +383,9 @@ public:
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "private compositor presents the markup editor before native style assertions");
                 const auto path = TestFiles::TemporaryDirectory("sample.html");
                 TestFiles::WriteBytes(path, "<html>\n<body id=\"page\">&amp;</body>\n</html>\n");
                 DocumentSession document(*frame->Editor());
@@ -335,6 +404,14 @@ public:
                 Commands(frame);
                 NativeTabsAndFoldedFind(frame);
                 NativeFiles(frame);
+                // Keep the new family fixtures independent of the tab and
+                // Find dialog preferences exercised on the original frame.
+                auto* families = new EditorFrame;
+                families->ShowWithoutActivating();
+                AutomaticMarkupFamilies(families);
+                ManualCanonicalMarkup(families);
+                ManualMarkupFamilies(families);
+                families->Destroy();
                 result_ = 0;
                 std::puts("PASS: original markup document association");
             } catch (const std::exception& error) {

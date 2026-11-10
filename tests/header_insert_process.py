@@ -31,7 +31,8 @@ def run(source, reference):
         if sys.platform == "win32":
             import ctypes
             native_page = ctypes.windll.kernel32.GetACP()
-        unmigrated_native_ansi = sys.platform == "win32" and native_page not in (936, 65001)
+        migrated_native_pages = (437, 936, 950, 1252, 54936, 65001)
+        unmigrated_native_ansi = sys.platform == "win32" and native_page not in migrated_native_pages
         supported = rejected = 0
         for row in rows:
             encoding = row["encoding"]

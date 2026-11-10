@@ -83,8 +83,13 @@ public:
     bool IsModified() const;
     bool SelectEncoding(EncodingChoice choice);
     const OriginalFileVariables& FileVariables() const { return fileVariables_; }
+    // The selected scheme supplies styles, settings and file-filter identity.
     SyntaxLanguage Language() const { return languageOverride_.value_or(automaticLanguage_); }
-    std::optional<SyntaxLanguage> LanguageOverride() const { return languageOverride_; }
+    // Original status/menu dialect may differ after a Web/XML header sniff.
+    SyntaxLanguage EffectiveLanguage() const { return markupDialect_.value_or(Language()); }
+    std::optional<SyntaxLanguage> LanguageOverride() const {
+        return languageOverride_ ? std::optional(EffectiveLanguage()) : std::nullopt;
+    }
     void SelectLanguage(std::optional<SyntaxLanguage> language);
 
 private:
@@ -101,6 +106,9 @@ private:
     std::optional<EncodingChoice> originalEncoding_ = EncodingChoice(FileEncoding::Utf8);
     OriginalFileVariables fileVariables_;
     std::optional<SyntaxLanguage> languageOverride_;
+    // Original pLexCurrent selects settings/styles/filter; np2LexLangIndex can
+    // independently name a document-type dialect for canonical Web/XML choices.
+    std::optional<SyntaxLanguage> markupDialect_;
     SyntaxDetectionOptions detection_;
     SyntaxLanguage automaticLanguage_ = SyntaxLanguage::PlainText;
     bool DetectAutomaticLanguage();
