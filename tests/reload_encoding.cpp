@@ -97,7 +97,7 @@ public:
                 auto* list = wxDynamicCast(child, wxListBox);
                 if (list) {
                     initial = list->GetSelection();
-                    validChoices = list->GetCount() == 4 && list->GetString(0) == "UTF-8" &&
+                    validChoices = list->GetCount() >= 4 && list->GetString(0) == "UTF-8" &&
                                    list->GetString(1) == "UTF-16LE" && list->GetString(2) == "GBK (CP936)" &&
                                    list->GetString(3) == "UTF-16BE";
                     list->SetSelection(selected);
