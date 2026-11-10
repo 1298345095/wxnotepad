@@ -57,18 +57,9 @@ constexpr unsigned Big5LowTrailCount = 0x7e - 0x40 + 1;
 bool Big5Trail(unsigned trail) {
     return (trail >= 0x40 && trail <= 0x7e) || (trail >= 0xa1 && trail <= 0xfe);
 }
-std::optional<wchar_t> CompatibilityDecode(std::string_view bytes, FileEncoding encoding) {
-    unsigned value = 0;
-    for (const unsigned char byte : bytes)
-        value = (value << 8) | byte;
-    if (encoding == FileEncoding::Gb18030) {
-        for (const auto& mapping : gbMappings) {
-            if (value == mapping.pair) return mapping.pua;
-            if (value == mapping.four) return mapping.revised;
-        }
-    } else if (bytes.size() == 1 && (value == 0x80 || value == 0xff))
-        return value == 0x80 ? wchar_t{0x80} : wchar_t{0xf8f8};
-    else if (bytes.size() == 2 && Big5Trail(value & 0xff)) {
+std::optional<wchar_t> CompatibilityDecodeBig5(unsigned value, size_t byteCount) {
+    if (byteCount == 1 && (value == 0x80 || value == 0xff)) return value == 0x80 ? wchar_t{0x80} : wchar_t{0xf8f8};
+    if (byteCount == 2 && Big5Trail(value & 0xff)) {
         const unsigned lead = value >> 8;
         const unsigned trail = value & 0xff;
         for (const auto& range : big5PuaRanges) {
@@ -78,6 +69,34 @@ std::optional<wchar_t> CompatibilityDecode(std::string_view bytes, FileEncoding 
         }
     }
     return std::nullopt;
+}
+std::optional<wchar_t> CompatibilityDecode(std::string_view bytes, FileEncoding encoding) {
+    unsigned value = 0;
+    for (const unsigned char byte : bytes)
+        value = (value << 8) | byte;
+    if (encoding != FileEncoding::Gb18030) return CompatibilityDecodeBig5(value, bytes.size());
+    for (const auto& mapping : gbMappings) {
+        if (value == mapping.pair) return mapping.pua;
+        if (value == mapping.four) return mapping.revised;
+    }
+    return std::nullopt;
+}
+
+size_t ChineseSequenceWidth(std::string_view bytes, FileEncoding encoding) {
+    const auto lead = static_cast<unsigned char>(bytes[0]);
+    if (lead < 0x81 || lead > 0xfe) return 1;
+    if (encoding == FileEncoding::Big5) {
+        // CP950 consumes malformed pairs together except for NUL:
+        // the original Windows conversion retains that code unit.
+        return bytes.size() >= 2 && bytes[1] != '\0' ? 2 : 1;
+    }
+    if (bytes.size() >= 4 && bytes[1] >= '0' && bytes[1] <= '9' && static_cast<unsigned char>(bytes[2]) >= 0x81 &&
+        static_cast<unsigned char>(bytes[2]) <= 0xfe && bytes[3] >= '0' && bytes[3] <= '9')
+        return 4;
+    if (bytes.size() >= 2 && static_cast<unsigned char>(bytes[1]) >= 0x40 &&
+        static_cast<unsigned char>(bytes[1]) <= 0xfe && bytes[1] != '\x7f')
+        return 2;
+    return 1;
 }
 std::string PackedBytes(unsigned value) {
     std::string bytes;
@@ -140,24 +159,10 @@ std::optional<std::string> DecodeChinese(std::string_view bytes, FileEncoding en
     std::wstring text;
     for (size_t offset = 0; offset < bytes.size();) {
         const auto lead = static_cast<unsigned char>(bytes[offset]);
-        size_t width = 1;
-        if (lead >= 0x81 && lead <= 0xfe) {
-            if (encoding == FileEncoding::Big5) {
-                // CP950 consumes malformed pairs together except for NUL:
-                // the original Windows conversion retains that code unit.
-                if (bytes.size() - offset >= 2 && bytes[offset + 1] != '\0') width = 2;
-            } else if (bytes.size() - offset >= 4 && bytes[offset + 1] >= '0' && bytes[offset + 1] <= '9' &&
-                       static_cast<unsigned char>(bytes[offset + 2]) >= 0x81 &&
-                       static_cast<unsigned char>(bytes[offset + 2]) <= 0xfe && bytes[offset + 3] >= '0' &&
-                       bytes[offset + 3] <= '9')
-                width = 4;
-            else if (bytes.size() - offset >= 2 && static_cast<unsigned char>(bytes[offset + 1]) >= 0x40 &&
-                     static_cast<unsigned char>(bytes[offset + 1]) <= 0xfe && bytes[offset + 1] != '\x7f')
-                width = 2;
-        }
+        const auto width = ChineseSequenceWidth(bytes.substr(offset), encoding);
         const auto piece = bytes.substr(offset, width);
         const auto compatible = CompatibilityDecode(piece, encoding);
-        if (compatible && !(strict && lead == 0xff))
+        if (compatible.has_value() && !(strict && lead == 0xff))
             text += *compatible;
         else if (const auto converted = Wide(converter, piece))
             text += *converted;
