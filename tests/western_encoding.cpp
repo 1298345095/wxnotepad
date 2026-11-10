@@ -11,6 +11,7 @@
 #include <wx/statusbr.h>
 #include <cstdio>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 
 namespace {
@@ -338,31 +339,38 @@ wxString ExplicitOpenChooserState(const wxString& expected) {
 #endif
 }
 void ExplicitOpen(EditorFrame* frame) {
-    for (const auto& [label, encoding, input, text] :
-         {std::tuple{"Open As Windows-1252...", FileEncoding::Windows1252, "\x80", "€"},
-          std::tuple{"Open As DOS-437...", FileEncoding::Dos437, "\xec", "∞"}}) {
+    struct Fixture {
+        const char* label;
+        FileEncoding encoding;
+        const char* input;
+        const char* text;
+    };
+    constexpr Fixture fixtures[] = {{"Open As Windows-1252...", FileEncoding::Windows1252, "\x80", "€"},
+                                    {"Open As DOS-437...", FileEncoding::Dos437, "\xec", "∞"}};
+    for (const auto& fixture : fixtures) {
         const auto path = TestFiles::TemporaryDirectory("open-as-western.nfo");
-        TestFiles::WriteBytes(path, input);
+        TestFiles::WriteBytes(path, fixture.input);
         wxString previousState;
-        const auto trace = [label, expected = TestFiles::Filename(path), &previousState](const char* transition) {
+        const auto trace = [label = std::string(fixture.label), expected = TestFiles::Filename(path),
+                            &previousState](const char* transition) {
             const std::string_view phase(transition);
             if (phase.starts_with("driver callback")) {
                 if (phase != "driver callback exit") return;
                 const auto state = ExplicitOpenChooserState(expected);
                 if (state.empty() || state == previousState) return;
                 previousState = state;
-                std::fprintf(stderr, "WESTERN-OPEN [%s] %s\n", label, state.utf8_str().data());
+                std::fprintf(stderr, "WESTERN-OPEN [%s] %s\n", label.c_str(), state.utf8_str().data());
             } else
-                std::fprintf(stderr, "WESTERN-OPEN [%s] %s\n", label, transition);
+                std::fprintf(stderr, "WESTERN-OPEN [%s] %s\n", label.c_str(), transition);
             std::fflush(stderr);
         };
         NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Open, wxID_OK,
                                                 TestFiles::Filename(path), trace);
         trace("command begin");
-        Command(frame, "File", label);
+        Command(frame, "File", fixture.label);
         trace("command returned");
         driver.Stop();
-        Require(frame->DocumentEncoding() == encoding && TestEditor::Text(frame) == text,
+        Require(frame->DocumentEncoding() == fixture.encoding && TestEditor::Text(frame) == fixture.text,
                 "explicit native Open As overrides filename preference and keeps original bytes");
     }
     std::puts("PASS: explicit native Open As Windows-1252 and DOS-437");
