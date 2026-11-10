@@ -166,9 +166,10 @@ using the tab width. Backspace's original bit 1 unindents the line; bit 2 delete
 spaces to the previous indentation stop. Both choices are exposed in Tab Settings.
 
 The original scheme sections are `[Text File]`, `[C/C++ Source]`,
-`[Python Script]`, `[JSON Document]`, `[JavaScript]`, and `[TypeScript]`. All support `TabWidth`, `IndentWidth`,
+`[Python Script]`, `[JSON Document]`, `[Shell Script]`, `[JavaScript]` and `[TypeScript]`. Bash, C Shell and m4
+share the Shell Script section. All support `TabWidth`, `IndentWidth`,
 `TabsAsSpaces`, and `UseGlobalTabSettings`. The first three default to 4/4, tabs,
-and global inheritance. JSON, JavaScript and TypeScript default to 2/2, spaces,
+and global inheritance, as does Shell Script. JSON, JavaScript and TypeScript default to 2/2, spaces,
 and independent settings. JSX uses `[JavaScript]`; TSX uses `[TypeScript]`.
 Tab Settings edits global, current scheme and current file settings. Scheme
 inheritance takes precedence over stored scheme widths; current file overrides

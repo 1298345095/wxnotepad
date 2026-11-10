@@ -18,6 +18,8 @@ void InstallStyles(EditorControl& editor, std::span<const SyntaxStyle> styles) {
         editor.Send(Message::StyleSetFore, style.id, Colour(style.foreground));
         editor.Send(Message::StyleSetBack, style.id, Colour(style.background));
         editor.Send(Message::StyleSetBold, style.id, style.bold);
+        editor.Send(Message::StyleSetItalic, style.id, style.italic);
+        editor.Send(Message::StyleSetEOLFilled, style.id, style.eolFilled);
     }
 }
 } // namespace
