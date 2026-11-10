@@ -15,6 +15,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 
 namespace {
 using Scintilla::Message;
@@ -137,6 +138,10 @@ void ManualMarkupFamilies(EditorFrame* frame) {
                                               TestFiles::Filename(saved));
         TestSyntax::Command(frame, wxID_SAVEAS);
         save.Stop();
+        if (!std::filesystem::is_regular_file(saved))
+            std::fprintf(stderr, "Markup save: requested='%s' actual='%s' initial_type='%s'\n",
+                         TestFiles::Filename(saved).utf8_str().data(), frame->DocumentPath().utf8_str().data(),
+                         save.initialType.utf8_str().data());
         Require(save.choosers == 1 && save.initialType.StartsWith(wxString(fixture.choice) + " (") &&
                     TestFiles::Bytes(saved) == fixture.text &&
                     frame->GetStatusBar()->GetStatusText().Contains(wxString(fixture.dialect) + " (override)"),
@@ -212,18 +217,26 @@ void AutomaticSniffedFamilies(EditorFrame* frame) {
                     !frame->DocumentIsModified() && TestEditor::Text(editor) == fixture.text &&
                     TestFiles::Bytes(path) == fixture.text,
                 "automatic sniffed dialect retains original native family filter and clean text/disk");
-        const auto saved = TestFiles::TemporaryDirectory(std::string("saved-automatic-") + fixture.name + ".out");
+        // Native Windows dialogs can append the current default to an
+        // unregistered extension. Choose a filename within the asserted filter.
+        const auto extension = std::string_view(fixture.family) == "XML Document" ? ".xml" : ".html";
+        const auto saved = TestFiles::TemporaryDirectory(std::string("saved-automatic-") + fixture.name + extension);
         NativeDialogs::FileCommandDriver save(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL,
                                               TestFiles::Filename(saved));
         TestSyntax::Command(frame, wxID_SAVEAS);
         save.Stop();
+        if (!std::filesystem::is_regular_file(saved))
+            std::fprintf(stderr, "Automatic markup save: requested='%s' actual='%s' initial_type='%s'\n",
+                         TestFiles::Filename(saved).utf8_str().data(), frame->DocumentPath().utf8_str().data(),
+                         save.initialType.utf8_str().data());
         editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
                      reinterpret_cast<intptr_t>(property));
         Require(save.choosers == 1 && save.initialType.StartsWith(wxString(fixture.family) + " (") &&
                     std::string(property) == fixture.options &&
                     editor->Send(Message::GetTabWidth) == fixture.tabWidth &&
                     frame->GetStatusBar()->GetStatusText().Contains(fixture.dialect) &&
-                    TestFiles::Bytes(saved) == fixture.text && !frame->DocumentIsModified(),
+                    frame->DocumentPath() == TestFiles::Filename(saved) && TestFiles::Bytes(saved) == fixture.text &&
+                    !frame->DocumentIsModified(),
                 "automatic current-family Save As retains effective dialect/options/settings and exact bytes");
     }
 }

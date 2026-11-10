@@ -354,6 +354,11 @@ if(BUILD_TESTING)
     add_test(NAME western_encoding_native_keys COMMAND western_encoding)
     set_tests_properties(western_encoding_native_keys PROPERTIES TIMEOUT 90
         ENVIRONMENT "WXNOTEPAD_WESTERN_NATIVE_KEYS=1")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+        # Preserve Open As timeout stacks through the existing Linux core collector.
+        set_tests_properties(western_encoding western_encoding_native_keys PROPERTIES
+            TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+    endif()
     add_test(NAME western_encoding_suppression COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/western_encoding_process.py" "$<TARGET_FILE:western_encoding>")
     set_tests_properties(western_encoding_suppression PROPERTIES TIMEOUT 90)
