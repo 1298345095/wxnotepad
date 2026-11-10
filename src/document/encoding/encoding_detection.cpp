@@ -123,6 +123,10 @@ int EncodingIndex(FileEncoding encoding) {
         return CPI_UNICODEBE;
     case FileEncoding::Gbk:
         return CodePageIndex(936);
+    case FileEncoding::Windows1252:
+        return CodePageIndex(1252);
+    case FileEncoding::Dos437:
+        return CodePageIndex(437);
     case FileEncoding::Gb18030:
         return CodePageIndex(54936);
     case FileEncoding::Big5:
@@ -133,6 +137,7 @@ int EncodingIndex(FileEncoding encoding) {
 
 int EncodingIndex(const EncodingChoice& choice) {
     if (choice.systemDefault) return CPI_DEFAULT;
+    if (choice.systemOem) return CPI_OEM;
     if (choice.bom && choice.encoding == FileEncoding::Utf16Le) return CPI_UNICODEBOM;
     if (choice.bom && choice.encoding == FileEncoding::Utf16Be) return CPI_UNICODEBEBOM;
     if (choice.bom && choice.encoding == FileEncoding::Utf8) return CPI_UTF8SIGN;
@@ -140,6 +145,10 @@ int EncodingIndex(const EncodingChoice& choice) {
 }
 
 bool ValidLegacy(unsigned page, std::string_view bytes) {
+    // Windows accepts every byte in these single-byte repertoires. In
+    // particular iconv rejects CP1252's five C1 mappings and may not expose the
+    // numeric ISO-8859-1 converter name used before the original alias rewrite.
+    if (page == 1252 || page == 437 || page == 28591) return true;
     if (page == 936) return DecodeGbk(bytes).has_value();
     if (page == 54936 || page == 950)
         return DecodeChinese(bytes, page == 54936 ? FileEncoding::Gb18030 : FileEncoding::Big5, true).has_value();
@@ -174,10 +183,12 @@ DetectedEncoding Choice(int index, unsigned native, unsigned oem, bool systemDef
                           : index == CPI_OEM   ? oem
                           : index >= 0         ? catalog[index].codePage
                                                : 0;
-    if (page == 936) return {FileEncoding::Gbk, false, {}, systemDefault};
-    if (page == 54936) return {FileEncoding::Gb18030, false, {}, systemDefault};
-    if (page == 950) return {FileEncoding::Big5, false, {}, systemDefault};
-    if (page == 65001) return {FileEncoding::Utf8, false, {}, systemDefault};
+    if (page == 936) return {FileEncoding::Gbk, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 1252) return {FileEncoding::Windows1252, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 437) return {FileEncoding::Dos437, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 54936) return {FileEncoding::Gb18030, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 950) return {FileEncoding::Big5, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 65001) return {FileEncoding::Utf8, false, {}, systemDefault, index == CPI_OEM};
     return {
         std::nullopt, false,
         wxString::Format("The selected encoding (code page %u) is not migrated. The document was not changed.", page)};
@@ -404,6 +415,13 @@ std::optional<EncodingChoice> NativeEncodingChoice() {
     return EncodingChoice(*choice.encoding, false, true);
 }
 
+std::optional<EncodingChoice> NativeOemEncodingChoice() {
+    const auto native = NativeCodePage();
+    const auto choice = Choice(CPI_OEM, native, OemCodePage(native));
+    if (!choice.encoding) return std::nullopt;
+    return EncodingChoice(*choice.encoding, false, false, true);
+}
+
 int NormalizeEncodingSetting(int value) {
     const int index = DefaultEncoding(value);
     if (index == CPI_UTF8) return CPI_NONE; // Original global UTF-8 default is omitted on Save.
@@ -417,7 +435,7 @@ std::optional<EncodingChoice> DefaultEncodingChoice(int setting) {
     const auto native = NativeCodePage();
     const auto choice = Choice(index, native, OemCodePage(native), index == CPI_DEFAULT);
     if (!choice.encoding) return std::nullopt;
-    return EncodingChoice(*choice.encoding, choice.bom, choice.systemDefault);
+    return EncodingChoice(*choice.encoding, choice.bom, choice.systemDefault, choice.systemOem);
 }
 
 int EncodingSetting(EncodingChoice choice) {

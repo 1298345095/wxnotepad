@@ -65,7 +65,9 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
                                       {"GBK (CP936)", FileEncoding::Gbk},
                                       {"UTF-16BE", FileEncoding::Utf16Be},
                                       {"GB18030 (CP54936)", FileEncoding::Gb18030},
-                                      {"Big5 (CP950)", FileEncoding::Big5}};
+                                      {"Big5 (CP950)", FileEncoding::Big5},
+                                      {"Windows-1252", FileEncoding::Windows1252},
+                                      {"DOS-437", FileEncoding::Dos437}};
     wxDialog dialog(parent, wxID_ANY, "Reload With Encoding");
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(new wxStaticText(&dialog, wxID_ANY, "Select source &encoding to reload file:"), 0, wxALL,
@@ -113,6 +115,7 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optio
         if (choice == initial) tree->SelectItem(item);
     };
     if (const auto native = NativeEncodingChoice()) add(root, "ANSI", *native);
+    if (const auto oem = NativeOemEncodingChoice()) add(root, "OEM", *oem);
     const auto unicode = tree->AppendItem(root, "Unicode");
     add(unicode, "UTF-16LE with BOM", EncodingChoice(FileEncoding::Utf16Le, true));
     add(unicode, "UTF-16BE with BOM", EncodingChoice(FileEncoding::Utf16Be, true));
@@ -124,6 +127,9 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optio
     add(chinese, "Simplified Chinese (GBK, GB2312)", EncodingChoice(FileEncoding::Gbk));
     add(chinese, "Simplified Chinese (GB18030)", EncodingChoice(FileEncoding::Gb18030));
     add(chinese, "Traditional Chinese (Big5, Big5-HKSCS)", EncodingChoice(FileEncoding::Big5));
+    const auto western = tree->AppendItem(root, "Western European");
+    add(western, "Latin-1 (Windows-1252)", EncodingChoice(FileEncoding::Windows1252));
+    add(western, "OEM United States (DOS-437)", EncodingChoice(FileEncoding::Dos437));
     tree->ExpandAll();
     contents->Add(tree, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(DialogPaddingDip));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,

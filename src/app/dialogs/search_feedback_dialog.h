@@ -12,7 +12,7 @@ struct SearchFeedbackChoice {
 class SearchFeedbackDialog final : public wxDialog {
 public:
     SearchFeedbackDialog(wxWindow* parent, const wxString& key, const wxString& message, bool confirm,
-                         bool allowSuppression);
+                         bool allowSuppression, const wxString& title = "wxnotepad", bool yesNo = false);
     SearchFeedbackChoice Choose();
 
 private:
