@@ -12,6 +12,7 @@
 #include <wx/log.h>
 #include <chrono>
 #include <functional>
+#include <memory>
 
 namespace {
 void Require(bool value, const char* message) {
@@ -438,7 +439,8 @@ class SortApp final : public wxApp {
 public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
-        delete wxLog::SetActiveTarget(new wxLogStderr);
+        std::unique_ptr<wxLog> previousLog{wxLog::SetActiveTarget(new wxLogStderr)};
+        previousLog.reset();
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
         settings_->values.wordWrap = false;

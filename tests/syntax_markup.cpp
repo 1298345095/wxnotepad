@@ -486,7 +486,9 @@ private:
         GList* windows = gtk_window_list_toplevels();
         for (GList* item = windows; item; item = item->next) {
             auto* widget = GTK_WIDGET(item->data);
-            if (!GTK_IS_FILE_CHOOSER(widget) || !GTK_IS_DIALOG(widget) || !gtk_widget_get_visible(widget)) continue;
+            if (!GTK_IS_FILE_CHOOSER(widget)) continue;
+            if (!GTK_IS_DIALOG(widget)) continue;
+            if (!gtk_widget_get_visible(widget)) continue;
             chooser_ = GTK_WIDGET(g_object_ref(widget));
             // Run the injected veto before GTK's own response handlers, then
             // restore them so subsequent clicks use real native validation.

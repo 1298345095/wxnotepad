@@ -135,7 +135,8 @@ void SelectionLimits(EditorFrame* frame, EditorControl* editor, wxTextCtrl* quer
 class SeedingApp final : public wxApp {
 public:
     bool OnInit() override {
-        delete wxLog::SetActiveTarget(new wxLogStderr);
+        std::unique_ptr<wxLog> previousLog{wxLog::SetActiveTarget(new wxLogStderr)};
+        previousLog.reset();
 #ifdef __WXMSW__
         wxString selectionOnly;
         selectionOnly_ = wxGetEnv("WXNOTEPAD_SEEDING_SELECTION_ONLY", &selectionOnly) && selectionOnly == "1";
