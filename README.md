@@ -185,10 +185,12 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 | C/C++ | `.c`, `.cpp`, `.cxx`, `.cc`, `.h`, `.hpp`, `.hxx`, `.hh` |
 | Python | `.py`, `.pyw`, `.pyi` |
 | JSON | `.json` |
+| JavaScript / JSX | `.js`, `.jse`, `.jsm`, `.cjs`, `.mjs`, `.qs` / `.jsx` |
+| TypeScript / TSX | `.ts`, `.cts`, `.mts`, `.ets`, `.osts` / `.tsx` |
 
 For unmatched filenames, Automatic also recognizes the original Python interpreter
 line forms, including direct paths, `env` and `winpty` wrappers, and `py*`/`ipy*`
-names. Known filename associations take precedence; languages whose lexer has not
+names, and Node.js interpreter names (`node*`). Known filename associations take precedence; languages whose lexer has not
 been delivered retain the Plain Text fallback. The original `[Styles] AutoSelect`
 and `[Settings2] NoCGIGuess` settings control this selection. It runs on Open and
 explicit Automatic selection, without changing text or history; ordinary edits
@@ -210,15 +212,20 @@ shows the effective language and an explicit override alongside encoding/BOM.
 Highlighting continues to follow the selected language above 32 MiB. Select Plain
 Text to use the existing no-lexer path. See the
 [original scheme behavior validation record](docs/observations/original-scheme-README.md).
+JavaScript/TypeScript fixture comparisons and workflow checks are described in the
+[JavaScript validation record](docs/observations/javascript-README.md).
 
 Highlighting uses the pinned original lexers, consumed keyword lists and default
 light syntax colors while retaining the native font and point size. Typing and
 Undo/Redo update syntax through the core's incremental styling lifecycle. The
-three `tools/update_*_scheme.py` scripts reproduce the checked-in data from the
+`tools/update_*_scheme.py` scripts reproduce the checked-in data from the
 pinned original checkout; generated headers record revision, source hash and
 license, and omit completion-only lists.
 
-C/C++, Python and JSON support code folding. Click a header's margin marker to
+C/C++, Python, JSON, JavaScript/JSX and TypeScript/TSX support code folding. JavaScript
+and TypeScript use the original shared JavaScript lexer with separate keyword lists
+and four dialect properties. Their tab settings default to two spaces; JSX shares
+the JavaScript section and TSX shares TypeScript. Click a header's margin marker to
 collapse or expand its block; View → Toggle Folds → Collapse All and Expand All include nested
 blocks. These commands change visibility without editing text or history. Find
 reveals the complete matched range, including hidden intermediate lines, while

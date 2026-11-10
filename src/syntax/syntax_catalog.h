@@ -6,7 +6,7 @@
 #include <string_view>
 #include <optional>
 
-enum class SyntaxLanguage : uint8_t { PlainText, Cpp, Python, Json };
+enum class SyntaxLanguage : uint8_t { PlainText, Cpp, Python, Json, JavaScript, Jsx, TypeScript, Tsx, Count };
 struct SyntaxDetectionOptions {
     bool autoSelect = true;
     bool noCgiGuess = false;
@@ -45,6 +45,8 @@ struct SyntaxDefinition {
 
 std::span<const SyntaxDefinition> SyntaxCatalog();
 const SyntaxDefinition& SyntaxFor(SyntaxLanguage language);
+SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language);
+const char* SyntaxSettingsSection(SyntaxLanguage language);
 SyntaxLanguage LanguageForPath(const wxString& path);
 std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_view prefix,
                                              SyntaxDetectionOptions options = {});

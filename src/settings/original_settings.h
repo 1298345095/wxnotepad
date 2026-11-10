@@ -1,6 +1,7 @@
 #pragma once
 
 #include "settings/original_settings_constants.h"
+#include "syntax/syntax_catalog.h"
 #include "editor/display_units.h"
 #include "document/encoding/encoding_detection.h"
 #include "editor/caret_appearance.h"
@@ -58,7 +59,8 @@ struct OriginalSettings {
     int defaultEOLMode = 0;
     bool warnLineEndings = true;
     OriginalTabs globalTabs;
-    std::array<OriginalTabs, 4> schemeTabs{{{}, {}, {}, {2, 2, true, false}}};
+    std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> schemeTabs{
+        {{}, {}, {}, {2, 2, true, false}, {2, 2, true, false}, {}, {2, 2, true, false}, {}}};
     bool tabIndents = true;
     bool autoIndent = true;
     bool detectIndentation = true;
