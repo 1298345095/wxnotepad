@@ -102,6 +102,8 @@ void Run(SettingsStore& settings) {
                     "live fixture opens");
             TestEditor::Append(frame, "x");
             frame->Editor()->Send(Message::Undo);
+            const auto actions = frame->Editor()->Send(Message::GetUndoActions);
+            const auto undoCurrent = frame->Editor()->Send(Message::GetUndoCurrent);
             frame->Editor()->Send(Message::SetSel, 7, 2);
             frame->Editor()->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
             frame->Editor()->Send(Message::SetReadOnly, 1);
@@ -119,7 +121,9 @@ void Run(SettingsStore& settings) {
                     "five options commit only on outer OK");
             Require(TestEditor::Text(frame) == "live text" && !frame->DocumentHasBom() &&
                         frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentIsModified() &&
-                        frame->Editor()->Send(Message::CanRedo) && frame->Editor()->Send(Message::GetAnchor) == 7 &&
+                        frame->Editor()->Send(Message::GetUndoActions) == actions &&
+                        frame->Editor()->Send(Message::GetUndoCurrent) == undoCurrent &&
+                        frame->Editor()->Send(Message::GetAnchor) == 7 &&
                         frame->Editor()->Send(Message::GetCurrentPos) == 2 &&
                         frame->Editor()->Send(Message::GetReadOnly) &&
                         frame->Editor()->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
