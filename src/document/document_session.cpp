@@ -692,15 +692,7 @@ bool DocumentSession::DetectAutomaticLanguage() {
     char prefix[4000]{};
     editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
     const auto detected = DetectLanguage(path_, prefix, detection_);
-    automaticLanguage_ = detected.value_or(SyntaxLanguage::PlainText);
-    markupDialect_.reset();
-    // Style_UpdateLexerLang sniffs .xml after its filename has selected lexXML.
-    // An ASP/HTML result changes the displayed dialect, keeping XML options,
-    // settings and the current-scheme Save filter from that matched filename.
-    if (detected && LanguageForPath(path_) == SyntaxLanguage::Xml &&
-        SyntaxSettingsLanguage(*detected) == SyntaxLanguage::Html) {
-        automaticLanguage_ = SyntaxLanguage::Xml;
-        markupDialect_ = detected;
-    }
+    automaticLanguage_ = detected ? detected->schemeLanguage : SyntaxLanguage::PlainText;
+    markupDialect_ = detected ? detected->markupDialect : std::nullopt;
     return detected.has_value();
 }

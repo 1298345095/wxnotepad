@@ -50,9 +50,9 @@ void Detection(EditorFrame* frame) {
         DocumentSession document(*frame->Editor());
         Require(document.Open(TestFiles::Filename(path), [] { return true; }).status == OpenStatus::Opened,
                 "prefix fixture Open must succeed");
-        if (document.Language() != fixture.language) {
+        if (document.EffectiveLanguage() != fixture.language) {
             std::fprintf(stderr, "fixture=%s expected=%s actual=%s\n", fixture.name, SyntaxFor(fixture.language).name,
-                         SyntaxFor(document.Language()).name);
+                         SyntaxFor(document.EffectiveLanguage()).name);
             throw std::runtime_error("original filename and prefix precedence must select the effective dialect");
         }
     }
@@ -167,6 +167,64 @@ void AutomaticMarkupFamilies(EditorFrame* frame) {
         driver.Stop();
         Require(driver.choosers == 1 && driver.initialType.StartsWith(family + " (") && !frame->DocumentIsModified(),
                 "automatic markup native Save As filter follows original filename family");
+    }
+}
+void AutomaticSniffedFamilies(EditorFrame* frame) {
+    struct Fixture {
+        const char* name;
+        const char* text;
+        const char* family;
+        const char* dialect;
+        const char* options;
+        int tabWidth;
+    };
+    // Pinned Styles.cpp keeps the prefix/filename-selected pLex while storing
+    // Style_GetDocTypeLanguage in np2LexLangIndex. Only WEB promotes XML to HTML.
+    for (const auto& fixture :
+         {Fixture{"sample.cfg", "<?xml version=\"1.0\"?><root><!-- <%@ Language=\"VBScript\" %> --></root>",
+                  "XML Document", "ASP VBScript", "\x01\x10", 4},
+          {"unknown-markup", "<?xml version=\"1.0\"?><root><!-- <%@ Language=\"VBScript\" %> --></root>",
+           "XML Document", "ASP VBScript", "\x01\x10", 4},
+          {"page.asp", "<!DOCTYPE schema><schema/>", "Web Source Code", "XML Schema", "\x0e\x10", 2},
+          {"page.aspx", "<!DOCTYPE schema><schema/>", "Web Source Code", "XML Schema", "\x0e\x10", 2},
+          {"web-promotion.cfg", "<?xml version=\"1.0\"?><!DOCTYPE html><html/>", "Web Source Code", "Web Source Code",
+           "\x0e\x10", 2}}) {
+        const auto path = TestFiles::TemporaryDirectory(fixture.name);
+        TestFiles::WriteBytes(path, fixture.text);
+        Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+                "automatic document-type fixture opens");
+        auto* editor = frame->Editor();
+        char property[8]{};
+        editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
+                     reinterpret_cast<intptr_t>(property));
+        if (std::string(property) != fixture.options || editor->Send(Message::GetTabWidth) != fixture.tabWidth)
+            std::fprintf(stderr, "Automatic markup: file=%s property=%02x%02x tabs=%zd status='%s'\n", fixture.name,
+                         static_cast<unsigned char>(property[0]), static_cast<unsigned char>(property[1]),
+                         editor->Send(Message::GetTabWidth), frame->GetStatusBar()->GetStatusText().utf8_str().data());
+        Require(std::string(property) == fixture.options && editor->Send(Message::GetTabWidth) == fixture.tabWidth &&
+                    frame->GetStatusBar()->GetStatusText().Contains(fixture.dialect) &&
+                    !frame->GetStatusBar()->GetStatusText().Contains("override"),
+                "automatic header sniff preserves selected family/options/settings and effective dialect");
+        NativeDialogs::FileCommandDriver cancel(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL);
+        TestSyntax::Command(frame, wxID_SAVEAS);
+        cancel.Stop();
+        Require(cancel.choosers == 1 && cancel.initialType.StartsWith(wxString(fixture.family) + " (") &&
+                    !frame->DocumentIsModified() && TestEditor::Text(editor) == fixture.text &&
+                    TestFiles::Bytes(path) == fixture.text,
+                "automatic sniffed dialect retains original native family filter and clean text/disk");
+        const auto saved = TestFiles::TemporaryDirectory(std::string("saved-automatic-") + fixture.name + ".out");
+        NativeDialogs::FileCommandDriver save(NativeDialogs::FileDialogProfile::Save, wxID_CANCEL,
+                                              TestFiles::Filename(saved));
+        TestSyntax::Command(frame, wxID_SAVEAS);
+        save.Stop();
+        editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
+                     reinterpret_cast<intptr_t>(property));
+        Require(save.choosers == 1 && save.initialType.StartsWith(wxString(fixture.family) + " (") &&
+                    std::string(property) == fixture.options &&
+                    editor->Send(Message::GetTabWidth) == fixture.tabWidth &&
+                    frame->GetStatusBar()->GetStatusText().Contains(fixture.dialect) &&
+                    TestFiles::Bytes(saved) == fixture.text && !frame->DocumentIsModified(),
+                "automatic current-family Save As retains effective dialect/options/settings and exact bytes");
     }
 }
 std::string Unhex(const std::string& hex) {
@@ -409,6 +467,7 @@ public:
                 auto* families = new EditorFrame;
                 families->ShowWithoutActivating();
                 AutomaticMarkupFamilies(families);
+                AutomaticSniffedFamilies(families);
                 ManualCanonicalMarkup(families);
                 ManualMarkupFamilies(families);
                 families->Destroy();

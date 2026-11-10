@@ -347,7 +347,7 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
     return SyntaxLanguage::PlainText;
 }
 
-std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_view prefix,
+std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,
                                              SyntaxDetectionOptions options) {
     if (!options.autoSelect) return std::nullopt;
     const auto extension = FileExtension(path).Lower();
@@ -358,22 +358,23 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
     if (extension == "in") {
         const auto underlying = path.BeforeLast('.');
         const auto language = LanguageForPath(underlying);
-        if (language != SyntaxLanguage::PlainText) return language;
-        if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return SyntaxLanguage::PlainText;
+        if (language != SyntaxLanguage::PlainText) return DetectedSyntax{language};
+        if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated)
+            return DetectedSyntax{SyntaxLanguage::PlainText};
         templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }
     const auto language = templateConfig ? SyntaxLanguage::PlainText : LanguageForPath(path);
     if (language != SyntaxLanguage::PlainText) {
         if (extension == "asp" || extension == "aspx" || extension == "xml")
-            return DetectMarkupDocType(prefix).value_or(language);
-        return language;
+            return DetectedSyntax{SyntaxSettingsLanguage(language), DetectMarkupDocType(prefix).value_or(language)};
+        return DetectedSyntax{language};
     }
-    if (extension == "txt") return language;
+    if (extension == "txt") return DetectedSyntax{language};
     // CGI sniffing precedes associated extensions; unmatched names are sniffed
     // only after original filename matches. Config files are sniffed too.
-    if ((extension == "cgi" || extension == "fcgi") && interpreter) return interpreter;
+    if ((extension == "cgi" || extension == "fcgi") && interpreter) return DetectedSyntax{*interpreter};
     const auto match = templateConfig ? FilenameMatch::Config : OriginalFilenameMatch(path);
-    if (match == FilenameMatch::Associated) return SyntaxLanguage::PlainText;
+    if (match == FilenameMatch::Associated) return DetectedSyntax{SyntaxLanguage::PlainText};
     // Styles.cpp::Style_SetLexerFromFile: only unknown names and Config may
     // inspect markup, and Config only accepts the exact XML declaration.
     auto head = prefix.substr(0, 255);
@@ -402,10 +403,16 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
                     markup = SyntaxLanguage::Xml;
             }
         }
-        if (markup) return DetectMarkupDocType(prefix).value_or(*markup);
+        if (markup) {
+            const auto dialect = DetectMarkupDocType(prefix);
+            // Pinned Style_SetLexerFromFile promotes a prefix-selected XML
+            // family only for WEB; other sniffed dialects retain that family.
+            if (*markup == SyntaxLanguage::Xml && dialect == SyntaxLanguage::Html) markup = SyntaxLanguage::Html;
+            return DetectedSyntax{*markup, dialect};
+        }
     }
-    if (interpreter) return interpreter;
-    return match == FilenameMatch::Config ? std::optional{SyntaxLanguage::PlainText} : std::nullopt;
+    if (interpreter) return DetectedSyntax{*interpreter};
+    return match == FilenameMatch::Config ? std::optional{DetectedSyntax{SyntaxLanguage::PlainText}} : std::nullopt;
 }
 
 wxString LanguageName(SyntaxLanguage language) {
