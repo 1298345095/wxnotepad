@@ -232,11 +232,16 @@ void EditorFrame::UpdateDocumentState() {
     wxString encoding = document_.Encoding() == FileEncoding::Utf16Le       ? "UTF-16LE"
                         : document_.Encoding() == FileEncoding::Utf16Be     ? "UTF-16BE"
                         : document_.Encoding() == FileEncoding::Gbk         ? "GBK (CP936)"
+                        : document_.Encoding() == FileEncoding::Gb18030     ? "GB18030 (CP54936)"
+                        : document_.Encoding() == FileEncoding::Big5        ? "Big5 (CP950)"
                         : document_.Encoding() == FileEncoding::Windows1252 ? "Windows-1252"
                         : document_.Encoding() == FileEncoding::Dos437      ? "DOS-437"
                                                                             : "UTF-8";
     if (document_.IsDefaultEncoding())
-        encoding = document_.Encoding() == FileEncoding::Gbk ? wxString("ANSI (CP936)") : "ANSI (" + encoding + ")";
+        encoding = document_.Encoding() == FileEncoding::Gbk       ? wxString("ANSI (CP936)")
+                   : document_.Encoding() == FileEncoding::Gb18030 ? wxString("ANSI (CP54936)")
+                   : document_.Encoding() == FileEncoding::Big5    ? wxString("ANSI (CP950)")
+                                                                   : "ANSI (" + encoding + ")";
     else if (document_.IsOemEncoding())
         encoding = "OEM (" + encoding + ")";
     const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));

@@ -3,6 +3,7 @@
 #include "document/encoding/encoding_detection.h"
 #include "document/file_variables.h"
 #include "document/encoding/gbk_codec.h"
+#include "document/encoding/chinese_codec.h"
 #include "document/encoding/utf16_codec.h"
 #include <wx/filename.h>
 #include <wx/intl.h>
@@ -126,6 +127,10 @@ int EncodingIndex(FileEncoding encoding) {
         return CodePageIndex(1252);
     case FileEncoding::Dos437:
         return CodePageIndex(437);
+    case FileEncoding::Gb18030:
+        return CodePageIndex(54936);
+    case FileEncoding::Big5:
+        return CodePageIndex(950);
     }
     return CPI_NONE;
 }
@@ -145,6 +150,8 @@ bool ValidLegacy(unsigned page, std::string_view bytes) {
     // numeric ISO-8859-1 converter name used before the original alias rewrite.
     if (page == 1252 || page == 437 || page == 28591) return true;
     if (page == 936) return DecodeGbk(bytes).has_value();
+    if (page == 54936 || page == 950)
+        return DecodeChinese(bytes, page == 54936 ? FileEncoding::Gb18030 : FileEncoding::Big5, true).has_value();
     if (page == 65001) return IsUtf8(bytes);
     if (page == 0) return false;
 #ifdef __WXMSW__
@@ -179,6 +186,8 @@ DetectedEncoding Choice(int index, unsigned native, unsigned oem, bool systemDef
     if (page == 936) return {FileEncoding::Gbk, false, {}, systemDefault, index == CPI_OEM};
     if (page == 1252) return {FileEncoding::Windows1252, false, {}, systemDefault, index == CPI_OEM};
     if (page == 437) return {FileEncoding::Dos437, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 54936) return {FileEncoding::Gb18030, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 950) return {FileEncoding::Big5, false, {}, systemDefault, index == CPI_OEM};
     if (page == 65001) return {FileEncoding::Utf8, false, {}, systemDefault, index == CPI_OEM};
     return {
         std::nullopt, false,

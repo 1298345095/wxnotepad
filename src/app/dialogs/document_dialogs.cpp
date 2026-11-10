@@ -56,15 +56,28 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 }
 
 std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial) {
-    const wxString choices[] = {"UTF-8", "UTF-16LE", "GBK (CP936)", "UTF-16BE", "Windows-1252", "DOS-437"};
+    struct SourceEncoding {
+        const char* label;
+        FileEncoding encoding;
+    };
+    const SourceEncoding choices[] = {{"UTF-8", FileEncoding::Utf8},
+                                      {"UTF-16LE", FileEncoding::Utf16Le},
+                                      {"GBK (CP936)", FileEncoding::Gbk},
+                                      {"UTF-16BE", FileEncoding::Utf16Be},
+                                      {"GB18030 (CP54936)", FileEncoding::Gb18030},
+                                      {"Big5 (CP950)", FileEncoding::Big5},
+                                      {"Windows-1252", FileEncoding::Windows1252},
+                                      {"DOS-437", FileEncoding::Dos437}};
     wxDialog dialog(parent, wxID_ANY, "Reload With Encoding");
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(new wxStaticText(&dialog, wxID_ANY, "Select source &encoding to reload file:"), 0, wxALL,
                   dialog.FromDIP(DialogPaddingDip));
-    auto* source = new wxListBox(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-                                 static_cast<int>(std::size(choices)), choices);
+    auto* source = new wxListBox(&dialog, wxID_ANY);
     source->SetName("Source encoding");
-    if (initial) source->SetSelection(static_cast<int>(*initial));
+    for (const auto& choice : choices) {
+        const auto index = source->Append(choice.label);
+        if (initial == choice.encoding) source->SetSelection(static_cast<int>(index));
+    }
     contents->Add(source, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(DialogPaddingDip));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
                   dialog.FromDIP(DialogPaddingDip));
@@ -79,7 +92,7 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
     dialog.CentreOnParent();
     source->SetFocus();
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
-    return static_cast<FileEncoding>(source->GetSelection());
+    return choices[source->GetSelection()].encoding;
 }
 
 std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, EncodingChoice initial) {
@@ -110,6 +123,8 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, EncodingCh
     add(unicode, "UTF-8 with BOM", EncodingChoice(FileEncoding::Utf8, true));
     const auto chinese = tree->AppendItem(root, "Chinese");
     add(chinese, "Simplified Chinese (GBK, GB2312)", EncodingChoice(FileEncoding::Gbk));
+    add(chinese, "Simplified Chinese (GB18030)", EncodingChoice(FileEncoding::Gb18030));
+    add(chinese, "Traditional Chinese (Big5, Big5-HKSCS)", EncodingChoice(FileEncoding::Big5));
     const auto western = tree->AppendItem(root, "Western European");
     add(western, "Latin-1 (Windows-1252)", EncodingChoice(FileEncoding::Windows1252));
     add(western, "OEM United States (DOS-437)", EncodingChoice(FileEncoding::Dos437));

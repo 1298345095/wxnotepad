@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "syntax/syntax_scheme.h"
 #include "document/encoding/gbk_codec.h"
+#include "document/encoding/chinese_codec.h"
 #include "document/encoding/utf16_codec.h"
 #include "document/encoding/single_byte_codec.h"
 #include "editor/platform/native_encoding.h"
@@ -145,9 +146,13 @@ wxString PrepareSaveCopy(const wxString& destination) {
 
 std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncoding encoding, bool bom,
                                                     const GbkLossDecision& decideLoss) {
-    if (encoding == FileEncoding::Gbk || encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437) {
+    if (encoding == FileEncoding::Gbk || encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437 ||
+        encoding == FileEncoding::Gb18030 || encoding == FileEncoding::Big5) {
         if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, "The document contains invalid UTF-8."};
-        const auto encoded = encoding == FileEncoding::Gbk ? EncodeGbk(bytes) : EncodeSingleByte(bytes, encoding);
+        const auto encoded = encoding == FileEncoding::Gbk ? EncodeGbk(bytes)
+                             : encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437
+                                 ? EncodeSingleByte(bytes, encoding)
+                                 : EncodeChinese(bytes, encoding);
         if (encoded.loss && (!decideLoss || decideLoss() != GbkLossChoice::Replace))
             return SaveResult{SaveStatus::Cancelled, {}};
         bytes = encoded.bytes;
@@ -257,6 +262,10 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std:
         bytes = *decoded;
     } else if (loaded.encoding == FileEncoding::Windows1252 || loaded.encoding == FileEncoding::Dos437) {
         bytes = DecodeSingleByte(bytes, loaded.encoding);
+    } else if (loaded.encoding == FileEncoding::Gb18030 || loaded.encoding == FileEncoding::Big5) {
+        const auto decoded = DecodeChinese(bytes, loaded.encoding);
+        if (!decoded) return wxString("The file could not be decoded with the selected Chinese encoding.");
+        bytes = *decoded;
     } else if (utf16) {
         auto decoded = loaded.encoding == FileEncoding::Utf16Be ? DecodeUtf16Be(bytes) : DecodeUtf16Le(bytes);
         if (!decoded)
@@ -508,8 +517,8 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     }
     auto& loaded = std::get<LoadedDocument>(candidate);
     const auto result = Replace(loaded.text, loadPath.GetFullPath(), loaded.encoding, loaded.bom, samePath);
-    const bool freshShell = !samePath && loaded.text.empty() && !loaded.bom &&
-                            SyntaxSettingsLanguage(Language()) == SyntaxLanguage::Bash;
+    const bool freshShell =
+        !samePath && loaded.text.empty() && !loaded.bom && SyntaxSettingsLanguage(Language()) == SyntaxLanguage::Bash;
     systemDefaultEncoding_ = loaded.systemDefault && !freshShell;
     systemOemEncoding_ = loaded.systemOem && !freshShell;
     originalEncoding_ = CurrentEncoding();

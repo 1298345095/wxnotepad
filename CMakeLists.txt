@@ -97,6 +97,7 @@ add_library(editor_features STATIC
     src/document/file_variables.cpp
     src/document/encoding/gbk_codec.cpp
     src/document/encoding/single_byte_codec.cpp
+    src/document/encoding/chinese_codec.cpp
     src/document/encoding/utf16_codec.cpp
     src/document/encoding/encoding_detection.cpp
     src/search/search_session.cpp
@@ -350,6 +351,10 @@ if(BUILD_TESTING)
     add_test(NAME western_encoding_suppression COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/western_encoding_process.py" "$<TARGET_FILE:western_encoding>")
     set_tests_properties(western_encoding_suppression PROPERTIES TIMEOUT 90)
+    add_editor_test(chinese_encoding original_chinese_encoding 90)
+    add_test(NAME original_chinese_encoding_native_keys COMMAND chinese_encoding)
+    set_tests_properties(original_chinese_encoding_native_keys PROPERTIES TIMEOUT 90
+        ENVIRONMENT "WXNOTEPAD_CHINESE_NATIVE_KEYS=1")
     add_gui_program(navigation_probe tests/navigation_probe.cpp editor_runtime)
     add_editor_test(editor_smoke editor_input_undo 30)
     add_gui_program(stream_drag tests/stream_drag.cpp app_shell)
