@@ -236,6 +236,14 @@ public:
                 Require(search.FindAll().count == 2 && (editor->Send(Message::MarkerGet, 1) & 1),
                         "unchanged explicit case-invariant marking retains manual bookmarks across search option "
                         "submission");
+                load("one two one two", 0, 3);
+                request.query = "two";
+                search.Configure(request);
+                Require(search.FindAll().count == 2, "Find All replaces the earlier selection marks");
+                editor->Send(Message::SetSel, 8, 11);
+                NativePaint::Complete(editor);
+                Ranges(editor, {{0, 3}, {8, 11}}, "a later selection replaces explicit Find All ranges");
+                Require(!search.MatchCount().has_value(), "a later selection releases explicit Find All count");
                 std::puts("PASS: original option bits, Unicode/white/multiple/rectangular needles, edits, native "
                           "mouse/paint and large-document lifecycle");
                 result_ = 0;

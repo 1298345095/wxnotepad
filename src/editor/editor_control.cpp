@@ -150,6 +150,10 @@ EditorControl::~EditorControl() {
     SetDropTarget(nullptr);
 }
 
+void EditorControl::FlushPendingUIUpdate() {
+    core_->FlushPendingUIUpdate();
+}
+
 void EditorControl::SetLineSelectionMode(LineSelectionMode mode) {
     lineSelectionMode_ = mode;
     if (mode == LineSelectionMode::None)

@@ -186,10 +186,17 @@ int Parent(EditorFrame* frame) {
         else
             NativeSearch::Command(frame, item);
         const auto marker = Directory() / (scenario.ToStdString() + "-ready");
-        Wait([&marker] { return std::filesystem::exists(marker); },
-             "a real blank child must finish its independent save");
         long childPid = 0;
-        std::ifstream(marker) >> childPid;
+        Wait(
+            [&marker, &childPid] {
+                long candidate = 0;
+                char newline = 0;
+                std::ifstream ready(marker);
+                if (!(ready >> candidate) || !ready.get(newline) || newline != '\n' || candidate <= 0) return false;
+                childPid = candidate;
+                return true;
+            },
+            "a real blank child must finish its independent save");
         Require(childPid != wxGetProcessId(), "child must be a separate process");
         Wait([&childPid] { return !wxProcess::Exists(static_cast<int>(childPid)); },
              "child must close while parent remains running");
