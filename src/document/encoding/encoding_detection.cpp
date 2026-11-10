@@ -119,6 +119,8 @@ int EncodingIndex(FileEncoding encoding) {
         return CPI_UTF8;
     case FileEncoding::Utf16Le:
         return CPI_UNICODE;
+    case FileEncoding::Utf16Be:
+        return CPI_UNICODEBE;
     case FileEncoding::Gbk:
         return CodePageIndex(936);
     case FileEncoding::Gb18030:
@@ -132,6 +134,7 @@ int EncodingIndex(FileEncoding encoding) {
 int EncodingIndex(const EncodingChoice& choice) {
     if (choice.systemDefault) return CPI_DEFAULT;
     if (choice.bom && choice.encoding == FileEncoding::Utf16Le) return CPI_UNICODEBOM;
+    if (choice.bom && choice.encoding == FileEncoding::Utf16Be) return CPI_UNICODEBEBOM;
     if (choice.bom && choice.encoding == FileEncoding::Utf8) return CPI_UTF8SIGN;
     return EncodingIndex(choice.encoding);
 }
@@ -165,7 +168,7 @@ FileVariables ReadFileVariables(std::string_view bytes, const EncodingOptions& o
 DetectedEncoding Choice(int index, unsigned native, unsigned oem, bool systemDefault = false) {
     if (index == CPI_UNICODEBOM || index == CPI_UNICODE) return {FileEncoding::Utf16Le, index == CPI_UNICODEBOM, {}};
     if (index == CPI_UNICODEBEBOM || index == CPI_UNICODEBE)
-        return {std::nullopt, false, "The selected encoding (UTF-16BE) is not migrated. The document was not changed."};
+        return {FileEncoding::Utf16Be, index == CPI_UNICODEBEBOM, {}};
     if (index == CPI_UTF8 || index == CPI_UTF8SIGN) return {FileEncoding::Utf8, index == CPI_UTF8SIGN, {}};
     const unsigned page = index == CPI_DEFAULT ? native
                           : index == CPI_OEM   ? oem
@@ -369,8 +372,9 @@ std::optional<DetectedEncoding> DetectSignatureEncoding(std::string_view bytes,
     constexpr size_t maxConvertedSize = (1U << 30) - 16;
     if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == FileEncoding::Utf8)) {
         return DetectedEncoding{explicitEncoding,
-                                *explicitEncoding == FileEncoding::Utf16Le
-                                    ? bytes.starts_with("\xff\xfe")
+                                *explicitEncoding == FileEncoding::Utf16Le ? bytes.starts_with("\xff\xfe")
+                                : *explicitEncoding == FileEncoding::Utf16Be
+                                    ? bytes.starts_with("\xfe\xff")
                                     : *explicitEncoding == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf"),
                                 {}};
     }
@@ -390,7 +394,7 @@ std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding) {
     if (separator != std::string_view::npos) return names.substr(0, separator);
     // The original falls back to the status item's short display name for the
     // BOM UTF-16 catalog entries, whose parse-name lists are empty.
-    return "UTF-16LE BOM";
+    return encoding.encoding == FileEncoding::Utf16Be ? "UTF-16BE BOM" : "UTF-16LE BOM";
 }
 
 std::optional<EncodingChoice> NativeEncodingChoice() {

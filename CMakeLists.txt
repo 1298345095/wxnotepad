@@ -32,7 +32,9 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexNull.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexBash.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
 target_include_directories(notepad4_core PUBLIC
     "${NOTEPAD4_SOURCE}/scintilla/include"
@@ -208,6 +210,9 @@ if(BUILD_TESTING)
     add_test(NAME original_shebang_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/shebang_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_shebang_settings PROPERTIES TIMEOUT 60)
+    add_test(NAME original_markup_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/markup_settings_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(original_markup_settings PROPERTIES TIMEOUT 90)
     add_test(NAME original_encoding_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/encoding_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_encoding_settings PROPERTIES TIMEOUT 60)
@@ -436,9 +441,13 @@ if(BUILD_TESTING)
     add_editor_test(open_smoke open_utf8 30)
     add_editor_test(syntax_cpp cpp_highlighting 30)
     add_editor_test(syntax_python python_highlighting 30)
+    add_editor_test(syntax_shell shell_highlighting 60)
     add_editor_test(syntax_shebang original_python_shebang 60)
     add_editor_test(syntax_json json_highlighting 60)
     add_editor_test(syntax_javascript javascript_typescript_schemes 120)
+    add_editor_test(syntax_markup original_markup_schemes 90)
+    target_compile_definitions(syntax_markup PRIVATE
+        "MARKUP_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markup_reference.tsv\"")
     add_editor_test(syntax_save automatic_language_save 60)
     add_editor_test(syntax_manual manual_language_choice 60)
     add_editor_test(syntax_large large_language_selection 60)

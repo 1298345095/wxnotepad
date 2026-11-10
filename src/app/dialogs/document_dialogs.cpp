@@ -63,6 +63,7 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
     const SourceEncoding choices[] = {{"UTF-8", FileEncoding::Utf8},
                                       {"UTF-16LE", FileEncoding::Utf16Le},
                                       {"GBK (CP936)", FileEncoding::Gbk},
+                                      {"UTF-16BE", FileEncoding::Utf16Be},
                                       {"GB18030 (CP54936)", FileEncoding::Gb18030},
                                       {"Big5 (CP950)", FileEncoding::Big5}};
     wxDialog dialog(parent, wxID_ANY, "Reload With Encoding");
@@ -112,7 +113,9 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, EncodingCh
     if (const auto native = NativeEncodingChoice()) add(root, "ANSI", *native);
     const auto unicode = tree->AppendItem(root, "Unicode");
     add(unicode, "UTF-16LE with BOM", EncodingChoice(FileEncoding::Utf16Le, true));
+    add(unicode, "UTF-16BE with BOM", EncodingChoice(FileEncoding::Utf16Be, true));
     add(unicode, "UTF-16LE", EncodingChoice(FileEncoding::Utf16Le));
+    add(unicode, "UTF-16BE", EncodingChoice(FileEncoding::Utf16Be));
     add(unicode, "UTF-8", EncodingChoice(FileEncoding::Utf8));
     add(unicode, "UTF-8 with BOM", EncodingChoice(FileEncoding::Utf8, true));
     const auto chinese = tree->AppendItem(root, "Chinese");

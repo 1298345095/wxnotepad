@@ -20,7 +20,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
       indentation_(settings ? settings->values : defaults_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
-                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
+                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
+                                                  settings->values.noHtmlGuess}
                          : SyntaxDetectionOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { HandleFileChange(); }), search_(*editor_) {
@@ -234,6 +235,7 @@ void EditorFrame::UpdateDocumentState() {
                                      : document_.Encoding() == FileEncoding::Big5    ? "ANSI (CP950)"
                                                                                      : "ANSI (UTF-8)")
                               : document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
+                              : document_.Encoding() == FileEncoding::Utf16Be ? "UTF-16BE"
                               : document_.Encoding() == FileEncoding::Gbk     ? "GBK (CP936)"
                               : document_.Encoding() == FileEncoding::Gb18030 ? "GB18030 (CP54936)"
                               : document_.Encoding() == FileEncoding::Big5    ? "Big5 (CP950)"

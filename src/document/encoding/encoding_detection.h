@@ -4,7 +4,7 @@
 #include <string_view>
 #include <wx/string.h>
 
-enum class FileEncoding { Utf8, Utf16Le, Gbk, Gb18030, Big5 };
+enum class FileEncoding { Utf8, Utf16Le, Gbk, Utf16Be, Gb18030, Big5 };
 struct EncodingChoice {
     FileEncoding encoding;
     bool bom;
