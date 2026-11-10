@@ -229,9 +229,14 @@ void EditorFrame::UpdateDocumentState() {
                                                                                  : "";
     SetTitle((document_.IsModified() ? "*" : "") + name + protection + " - wxnotepad");
     const wxString encoding = document_.IsDefaultEncoding()
-                                  ? (document_.Encoding() == FileEncoding::Gbk ? "ANSI (CP936)" : "ANSI (UTF-8)")
+                                  ? (document_.Encoding() == FileEncoding::Gbk       ? "ANSI (CP936)"
+                                     : document_.Encoding() == FileEncoding::Gb18030 ? "ANSI (CP54936)"
+                                     : document_.Encoding() == FileEncoding::Big5    ? "ANSI (CP950)"
+                                                                                     : "ANSI (UTF-8)")
                               : document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
                               : document_.Encoding() == FileEncoding::Gbk     ? "GBK (CP936)"
+                              : document_.Encoding() == FileEncoding::Gb18030 ? "GB18030 (CP54936)"
+                              : document_.Encoding() == FileEncoding::Big5    ? "Big5 (CP950)"
                                                                               : "UTF-8";
     const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
     const wxString eol = eolMode == Scintilla::EndOfLine::CrLf ? "CRLF"

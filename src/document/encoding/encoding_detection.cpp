@@ -3,6 +3,7 @@
 #include "document/encoding/encoding_detection.h"
 #include "document/file_variables.h"
 #include "document/encoding/gbk_codec.h"
+#include "document/encoding/chinese_codec.h"
 #include "document/encoding/utf16_codec.h"
 #include <wx/filename.h>
 #include <wx/intl.h>
@@ -120,6 +121,10 @@ int EncodingIndex(FileEncoding encoding) {
         return CPI_UNICODE;
     case FileEncoding::Gbk:
         return CodePageIndex(936);
+    case FileEncoding::Gb18030:
+        return CodePageIndex(54936);
+    case FileEncoding::Big5:
+        return CodePageIndex(950);
     }
     return CPI_NONE;
 }
@@ -133,6 +138,8 @@ int EncodingIndex(const EncodingChoice& choice) {
 
 bool ValidLegacy(unsigned page, std::string_view bytes) {
     if (page == 936) return DecodeGbk(bytes).has_value();
+    if (page == 54936 || page == 950)
+        return DecodeChinese(bytes, page == 54936 ? FileEncoding::Gb18030 : FileEncoding::Big5, true).has_value();
     if (page == 65001) return IsUtf8(bytes);
     if (page == 0) return false;
 #ifdef __WXMSW__
@@ -165,6 +172,8 @@ DetectedEncoding Choice(int index, unsigned native, unsigned oem, bool systemDef
                           : index >= 0         ? catalog[index].codePage
                                                : 0;
     if (page == 936) return {FileEncoding::Gbk, false, {}, systemDefault};
+    if (page == 54936) return {FileEncoding::Gb18030, false, {}, systemDefault};
+    if (page == 950) return {FileEncoding::Big5, false, {}, systemDefault};
     if (page == 65001) return {FileEncoding::Utf8, false, {}, systemDefault};
     return {
         std::nullopt, false,

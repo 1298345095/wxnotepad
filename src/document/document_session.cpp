@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "syntax/syntax_scheme.h"
 #include "document/encoding/gbk_codec.h"
+#include "document/encoding/chinese_codec.h"
 #include "document/encoding/utf16_codec.h"
 #include "editor/platform/native_encoding.h"
 #include "ScintillaTypes.h"
@@ -144,9 +145,9 @@ wxString PrepareSaveCopy(const wxString& destination) {
 
 std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncoding encoding, bool bom,
                                                     const GbkLossDecision& decideLoss) {
-    if (encoding == FileEncoding::Gbk) {
+    if (encoding == FileEncoding::Gbk || encoding == FileEncoding::Gb18030 || encoding == FileEncoding::Big5) {
         if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, "The document contains invalid UTF-8."};
-        const auto encoded = EncodeGbk(bytes);
+        const auto encoded = encoding == FileEncoding::Gbk ? EncodeGbk(bytes) : EncodeChinese(bytes, encoding);
         if (encoded.loss && (!decideLoss || decideLoss() != GbkLossChoice::Replace))
             return SaveResult{SaveStatus::Cancelled, {}};
         bytes = encoded.bytes;
@@ -248,6 +249,10 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std:
     if (loaded.encoding == FileEncoding::Gbk) {
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return wxString("The file is not valid GBK (CP936). The document was not changed.");
+        bytes = *decoded;
+    } else if (loaded.encoding == FileEncoding::Gb18030 || loaded.encoding == FileEncoding::Big5) {
+        const auto decoded = DecodeChinese(bytes, loaded.encoding);
+        if (!decoded) return wxString("The file could not be decoded with the selected Chinese encoding.");
         bytes = *decoded;
     } else if (loaded.encoding == FileEncoding::Utf16Le) {
         auto decoded = DecodeUtf16Le(bytes);
