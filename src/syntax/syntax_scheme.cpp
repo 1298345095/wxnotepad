@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <span>
+#include <SciLexer.h>
 #include <utility>
 #include <wx/settings.h>
 
@@ -76,6 +77,11 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::MarkerSetStrokeWidth, marker, editor.FromDIP(100));
     }
     editor.Send(Message::SetLexer, definition.lexer);
+    // A shared lexer can retain settings when switching dialects. Reset the
+    // delivered property and keyword slots before installing the next scheme.
+    editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>("0"));
+    for (size_t index = 0; index < 16; ++index)
+        editor.Send(Message::SetKeyWords, index, reinterpret_cast<intptr_t>(""));
     editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("fold"),
                 reinterpret_cast<intptr_t>(fold ? "1" : "0"));
     // Keep the native font/point size already installed on STYLE_DEFAULT.
@@ -101,6 +107,7 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
     InstallStyles(editor, definition.styles);
+    if (definition.lexer == SCLEX_HTML) InstallStyles(editor, MarkupEmbeddedStyles());
     editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(Scintilla::StylesCommon::IndentGuide), Colour(0xFF8000));
     ApplyLongLineColour(editor);
     const auto guides = editor.Send(Message::GetIndentationGuides);

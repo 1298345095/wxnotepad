@@ -1,6 +1,7 @@
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <ScintillaStructures.h>
+#include <SciLexer.h>
 #include <cstring>
 
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
@@ -9,8 +10,15 @@ bool EditorControl::ToggleBlockComments(const char* open, const char* close, int
     // Adapted from Notepad4 89b8b36 EditAutoC.cpp::EditUncommentBlock and
     // EditToggleCommentBlock. Use the current styles, including line/doc styles;
     // the original command does not force pending highlighting to run.
-    const auto commentAt = [this, commentStyleLast](intptr_t position) {
+    const bool markup = Send(Message::GetLexer) == SCLEX_HTML;
+    const auto commentAt = [this, commentStyleLast, markup](intptr_t position) {
         const auto style = Send(Message::GetStyleIndexAt, position);
+        // Original EditAutoC.cpp::CommentStyleMask for the shared HTML lexer.
+        if (markup)
+            return style == SCE_H_COMMENT || style == SCE_H_XCCOMMENT || style == SCE_H_SGML_COMMENT ||
+                   style == SCE_H_SGML_1ST_PARAM_COMMENT || style == SCE_HB_COMMENTLINE ||
+                   (style >= js_style(SCE_JS_COMMENTLINE) && style <= js_style(SCE_JS_TASKMARKER)) ||
+                   style == css_style(SCE_CSS_COMMENTBLOCK) || style == css_style(SCE_CSS_CDO_CDC);
         return style > 0 && style <= commentStyleLast;
     };
     const auto selectionStart = Send(Message::GetSelectionStart);

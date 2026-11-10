@@ -198,6 +198,23 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 | m4 | `.m4`, `.ac` |
 | JavaScript / JSX | `.js`, `.jse`, `.jsm`, `.cjs`, `.mjs`, `.qs` / `.jsx` |
 | TypeScript / TSX | `.ts`, `.cts`, `.mts`, `.ets`, `.osts` / `.tsx` |
+| Web Source Code | `.html`, `.htm`, `.shtml`, `.xhtml`, `.asp`, `.aspx`, `.asax`, `.ascx`, `.cshtml`, `.vbhtml`, `.razor`, `.jsp`, `.jspf`, `.jspx`, `.rhtml`, `.vue`, `.hbs`, `.svelte`, `.mht`, `.htd`, `.htt`, `.hta`, `.htc`, `.cfm`, `.tpl`, `.jd` |
+| XML Document | `.xml`, `.xsl`, `.xslt`, `.xsd`, `.dtd`, `.rss`, `.svg`, `.xul`, `.axl`, `.rdf`, `.xaml`, `.resx`, `.plist`, `.pom`, `.mm`, `.xrc`, `.fbp`, `.wxml` |
+
+HTML and XML share the original HTML lexer. The Scheme menu and status expose ASP
+VBScript/JavaScript, ASP.NET C#/VB, JSP/JSPX, SVG, XML Schema, XSLT, DTD and Property
+List dialects. Embedded JavaScript and CSS use the original offset styles and
+region-specific comment commands. HTML dialects share the `[Web Source Code]`
+tab section (2/2 spaces, independent); XML dialects share `[XML Document]`
+(4/4 tabs, global inheritance).
+
+For unmatched filenames, the original 255-byte prefix guess recognizes XML
+declarations, document types, HTML tags and other markup. Configuration files
+accept XML declarations. `[Settings2] NoHTMLGuess` disables the general markup
+guess while retaining declarations, document types and a leading HTML tag; the
+load-only setting stays in its original INI location. Known unrelated extensions
+retain their filename association. Document-type and server-page language
+directives use the original larger 3999-byte header window.
 
 For unmatched filenames, Automatic also recognizes the original Python, shell and Node.js
 interpreter line forms, including direct paths and the original `env` and `winpty`
@@ -231,11 +248,11 @@ JavaScript/TypeScript fixture comparisons and workflow checks are described in t
 Highlighting uses the pinned original lexers, consumed keyword lists and default
 light syntax colors while retaining the native font and point size. Typing and
 Undo/Redo update syntax through the core's incremental styling lifecycle. The
-`tools/update_*_scheme.py` scripts reproduce the checked-in data from the
+`tools/update_*_scheme.py` and `tools/update_markup_schemes.py` scripts reproduce the checked-in data from the
 pinned original checkout; generated headers record revision, source hash and
 license, and omit completion-only lists.
 
-C/C++, Python, JSON, Shell Script, JavaScript/JSX and TypeScript/TSX support code folding. JavaScript
+C/C++, Python, JSON, Shell Script, HTML, XML, JavaScript/JSX and TypeScript/TSX support code folding. JavaScript
 and TypeScript use the original shared JavaScript lexer with separate keyword lists
 and four dialect properties. Their tab settings default to two spaces; JSX shares
 the JavaScript section and TSX shares TypeScript. Click a header's margin marker to

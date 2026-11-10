@@ -1,5 +1,27 @@
 # Original scheme behavior validation
 
+## HTML/XML extension (#180)
+
+`tests/data/markup_reference.tsv` contains eleven independent original Windows
+executable fixtures, each captured at baseline, after a Delete key, and after
+Undo/Redo: complete UTF-8 text, byte styles and fold levels. The fixtures cover
+HTML tags/void tags/entities/comments, embedded JavaScript/CSS, XML case/CDATAs/
+processing instructions, XML Schema, SVG and ASP/ASPX/JSP/JSPX dialects.
+The original executable was `build/notepad4-baseline/Notepad4.exe` in the owner's
+reference checkout. Its retained build log records the output path but does not
+independently prove the executable's precise source revision. The source
+authority for imported lexer/data and adapted selection/comment rules remains
+Notepad4 `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`.
+
+The capture helper, raw JSON and process log are retained under the owner's
+`wxnotepad-evidence/encoding-languages-2026-11-08/issue-180/`. It ran on an owned
+private Windows desktop using native controls and Scintilla messages, without
+clipboard writes or screenshots. `tools/update_markup_schemes.py` separately
+reproduces imported HTML/XML and embedded JS/CSS tables from that pinned source;
+these generated tables are not the oracle used by the differential tests below.
+
+The following sections describe the earlier scheme-selection delivery.
+
 The owner replaced the proposed automatic large-file highlighting extensions
 with pinned original Notepad4 behavior. Revised
 [overview #41](https://github.com/1298345095/wxnotepad/issues/41) is delivered by
