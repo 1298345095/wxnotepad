@@ -27,7 +27,7 @@ public:
     bool nestedOk;
     bool outerOk;
     int stage = 0;
-    wxString selected = "UTF-16LE with BOM";
+    wxString selected = "UTF-16BE with BOM";
     wxString initial;
     std::array<bool, 5> initialStates{false, true, true, true, false};
     std::array<bool, 5> finalStates{true, false, false, false, true};
@@ -103,13 +103,15 @@ void Run(SettingsStore& settings) {
             TestEditor::Append(frame, "x");
             frame->Editor()->Send(Message::Undo);
             frame->Editor()->Send(Message::SetSel, 7, 2);
+            frame->Editor()->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
+            frame->Editor()->Send(Message::SetReadOnly, 1);
             DefaultsDriver driver(nested, outer);
             ShowDefaults(frame);
             driver.Stop();
             const auto& options = settings.values.encoding;
             Require(driver.stage == 3 && driver.initial == "UTF-8",
                     "nested default picker initially selects configured default");
-            Require(options.defaultEncoding == (nested ? 1 : -1),
+            Require(options.defaultEncoding == (nested ? 2 : -1),
                     "nested acceptance commits encoding even when outer is cancelled");
             Require(options.skipUnicodeDetection == outer && options.loadANSIasUTF8 == !outer &&
                         options.loadASCIIasUTF8 == !outer && options.loadNFOasOEM == !outer &&
@@ -118,10 +120,13 @@ void Run(SettingsStore& settings) {
             Require(TestEditor::Text(frame) == "live text" && !frame->DocumentHasBom() &&
                         frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentIsModified() &&
                         frame->Editor()->Send(Message::CanRedo) && frame->Editor()->Send(Message::GetAnchor) == 7 &&
-                        frame->Editor()->Send(Message::GetCurrentPos) == 2 && TestFiles::Bytes(source) == "live text",
+                        frame->Editor()->Send(Message::GetCurrentPos) == 2 &&
+                        frame->Editor()->Send(Message::GetReadOnly) &&
+                        frame->Editor()->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
+                        TestFiles::Bytes(source) == "live text",
                     "default changes preserve live encoding, text, selection, redo, save point and disk");
             Require(frame->NewDocument(), "New consumes accepted defaults");
-            Require(frame->DocumentEncoding() == (nested ? FileEncoding::Utf16Le : FileEncoding::Utf8) &&
+            Require(frame->DocumentEncoding() == (nested ? FileEncoding::Utf16Be : FileEncoding::Utf8) &&
                         frame->DocumentHasBom() == nested && !frame->DocumentIsModified() &&
                         !frame->Editor()->Send(Message::GetUndoActions),
                     "New preserves the configured BOM and establishes a clean encoding identity without history");
@@ -129,12 +134,12 @@ void Run(SettingsStore& settings) {
             const auto destination = TestFiles::TemporaryDirectory("defaults-new.txt");
             Require(frame->SaveAs(TestFiles::Filename(destination)).status == SaveStatus::Saved &&
                         TestFiles::Bytes(destination) ==
-                            (nested ? std::string("\xff\xfe\x2d\x4e\r\0\n\0", 8) : "中\r\n"),
+                            (nested ? std::string("\xfe\xff\x4e\x2d\0\r\0\n", 8) : "中\r\n"),
                     "New saves exact independently specified default-format bytes");
             const auto empty = TestFiles::TemporaryDirectory("defaults-empty.txt");
             TestFiles::WriteBytes(empty, "");
             Require(frame->Open(TestFiles::Filename(empty)).status == OpenStatus::Opened &&
-                        frame->DocumentEncoding() == (nested && outer ? FileEncoding::Utf16Le : FileEncoding::Utf8) &&
+                        frame->DocumentEncoding() == (nested && outer ? FileEncoding::Utf16Be : FileEncoding::Utf8) &&
                         frame->DocumentHasBom() == (nested && outer) && !frame->DocumentIsModified() &&
                         !frame->Editor()->Send(Message::GetUndoActions),
                     "later empty Open uses the separate ASCII-as-UTF8 gate and accepted default");

@@ -26,7 +26,8 @@ def run(source, installed_directory):
                 config_folder.mkdir(parents=True)
             config = config_folder / "Notepad4.ini"
             choices = [("UTF-8", None), ("UTF-8 with BOM", 4), ("UTF-16LE with BOM", 1),
-                       ("UTF-16LE", 6), ("Simplified Chinese (GBK, GB2312)", 936)]
+                       ("UTF-16LE", 6), ("UTF-16BE with BOM", 2), ("UTF-16BE", 7),
+                       ("Simplified Chinese (GBK, GB2312)", 936)]
             for mode in ("disabled", "exit", "explicit"):
                 for label, number in choices:
                     enabled = mode == "exit"
