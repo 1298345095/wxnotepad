@@ -39,6 +39,9 @@ class CompilerCache(unittest.TestCase):
             port = listener.getsockname()[1]
         environment = dict(os.environ, SCCACHE_DIR=str(directory / 'cache'), SCCACHE_CONF=str(configuration),
                            SCCACHE_SERVER_PORT=str(port), SCCACHE_GHA_ENABLED='off')
+        # sccache 0.19 enables GHA whenever VERSION exists, overriding ENABLED=off.
+        # Keep this cold-cache probe local even after earlier CI runs warmed GHA.
+        environment.pop('SCCACHE_GHA_VERSION', None)
         environment.pop('SCCACHE_DISABLE', None)
 
         def command(arguments, label, *, check=True):
