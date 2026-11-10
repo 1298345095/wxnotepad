@@ -4,6 +4,11 @@
 *.sha256 text eol=lf
 tests/fixtures/encoding_175/*.bin binary
 tests/fixtures/encoding_175/*.utf8 binary
+# Original JavaScript lexer observations use LF byte offsets and lengths.
+tests/fixtures/javascript/sample.js text eol=lf
+tests/fixtures/javascript/sample.jsx text eol=lf
+tests/fixtures/javascript/sample.ts text eol=lf
+tests/fixtures/javascript/sample.tsx text eol=lf
 
 # Preserve upstream notice formatting, including its final blank lines.
 licenses/*.txt text eol=lf -whitespace
