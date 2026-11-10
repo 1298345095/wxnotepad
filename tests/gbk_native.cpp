@@ -158,6 +158,9 @@ public:
         settings_->values.wordWrap = false;
         // Mixed-EOL warning choices are covered by mixed_line_ending_open.
         settings_->values.warnLineEndings = false;
+        // File monitoring is tested separately; these fixtures delete their
+        // directory before deferred frame destruction completes.
+        settings_->values.fileWatching.mode = FileWatchingMode::None;
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {

@@ -12,9 +12,11 @@
 #include <wx/listbox.h>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <chrono>
 #include <thread>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 constexpr int EventPollIntervalMs = 10;
@@ -35,9 +37,10 @@ void Peer(const wxString& path, const wxString& text, const wxString& action = "
     const wxString arguments[] = {wxStandardPaths::Get().GetExecutablePath(), "--peer", path, text, action};
     const wchar_t* argv[] = {arguments[0].wc_str(), arguments[1].wc_str(), arguments[2].wc_str(),
                              arguments[3].wc_str(), arguments[4].wc_str(), nullptr};
-    // Running the independent writer must preserve the observed application's
-    // native window enablement and focus.
-    const auto result = wxExecute(argv, asynchronous ? wxEXEC_ASYNC : wxEXEC_SYNC | wxEXEC_NODISABLE);
+    // Synchronous commands represent completed file operations: dispatch
+    // notifications after the writer closes, not during its truncate/write gap.
+    // Keep native windows enabled; the asynchronous stream still runs live.
+    const auto result = wxExecute(argv, asynchronous ? wxEXEC_ASYNC : wxEXEC_BLOCK | wxEXEC_NODISABLE);
     Require(asynchronous ? result > 0 : result == 0, "independent file writer must start or finish");
 }
 void Pause(int milliseconds) {
@@ -263,8 +266,12 @@ std::filesystem::path CheckMessageDecisionsAndFileLifecycle(EditorFrame* frame, 
             "removed-file Cancel stops current monitoring while retaining configured mode and live text");
     Require(frame->Save().status == SaveStatus::Saved, "save restarts stopped current monitoring");
     decision.choice = wxID_YES;
-    Peer(TestFiles::Filename(savedAs), "watch restarted\n");
+    Peer(TestFiles::Filename(savedAs), "watch restarted\n", "slow-write");
     Wait([&frame] { return TestEditor::Text(frame->Editor()) == "watch restarted\n"; });
+    if (decision.prompts != 11)
+        std::cerr << "File watch restart: expected=11 actual=" << decision.prompts << " errors=" << decision.errors
+                  << " mode=" << std::to_underlying(frame->FileWatching().mode) << " text='"
+                  << TestEditor::Text(frame->Editor()) << "'\n";
     Require(decision.prompts == 11, "application save reinstalls notifications after stop");
     Require(frame->NewDocument(), "New succeeds on a clean document");
     Peer(TestFiles::Filename(savedAs), "former document\n");
@@ -602,6 +609,10 @@ private:
             const auto target = action == "replace" ? std::filesystem::path(path).concat(".peer") : path;
             {
                 std::ofstream output(target, std::ios::binary);
+                if (action == "slow-write") {
+                    constexpr int TruncatedFileHoldMs = 200;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(TruncatedFileHoldMs));
+                }
                 const auto text = wxString(argv[3]).ToStdString(wxConvUTF8);
                 output.write(text.data(), static_cast<std::streamsize>(text.size()));
             }
