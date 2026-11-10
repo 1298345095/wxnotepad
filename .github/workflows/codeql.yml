@@ -18,6 +18,8 @@ jobs:
     name: CodeQL / ${{ matrix.language }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    env:
+      SCCACHE_DISABLE: '1'
     permissions:
       contents: read
       security-events: write

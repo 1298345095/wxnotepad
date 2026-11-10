@@ -30,6 +30,8 @@ jobs:
             artifact: linux-x64
     env:
       PYTHONUTF8: '1'
+      SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_GHA_VERSION: wxnotepad-cxx-v1
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -51,6 +53,14 @@ jobs:
         uses: ./.github/actions/dependencies
         with:
           profile: gui
+      - name: Set up compiler cache
+        id: compiler_cache
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          version: v0.19.0
+      - name: Verify compiler cache hits and header invalidation
+        shell: bash
+        run: python -X utf8 tests/ci_compiler_cache.py -v
       - name: Validate Linux native crash evidence
         if: runner.os == 'Linux'
         shell: bash
@@ -62,11 +72,17 @@ jobs:
         shell: bash
         env:
           CXXFLAGS: ${{ runner.os == 'Linux' && '-g1' || '' }}
-        run: python -X utf8 .github/scripts/ci.py configure
+        run: python -X utf8 .github/scripts/ci.py configure --compiler-cache
       - name: Build application and tests
         id: build
         shell: bash
         run: python -X utf8 .github/scripts/ci.py build
+      - name: Record ordinary compilation cache statistics
+        if: ${{ !cancelled() && steps.compiler_cache.outcome == 'success' && steps.build.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sccache --show-stats | tee .ci/reports/sccache-build.txt
       - name: Enable Linux native core dumps
         if: runner.os == 'Linux'
         shell: bash
@@ -97,7 +113,13 @@ jobs:
         shell: bash
         env:
           CXXFLAGS: ${{ runner.os == 'Linux' && '-g1' || '' }}
-        run: python -X utf8 .github/scripts/ci.py diagnostic-build
+        run: python -X utf8 .github/scripts/ci.py diagnostic-build --compiler-cache
+      - name: Record diagnostic compilation cache statistics
+        if: ${{ !cancelled() && steps.compiler_cache.outcome == 'success' && steps.diagnostic_build.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sccache --show-stats | tee .ci/reports/sccache-diagnostic.txt
       - name: Test Windows diagnostics
         if: ${{ !cancelled() && runner.os == 'Windows' && steps.diagnostic_build.outcome == 'success' }}
         shell: bash
@@ -164,6 +186,7 @@ jobs:
     env:
       PYTHONUTF8: '1'
       WXNOTEPAD_COVERAGE_ROOT: ${{ github.workspace }}
+      SCCACHE_DISABLE: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6

@@ -93,6 +93,32 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   trees or application build directories are not reused between checkouts.
 - The dependency cache is saved after successful installation, before GUI tests.
   A later test failure therefore does not discard an expensive successful build.
+- Ordinary Windows/MSVC and Linux/GCC builds opt into sccache 0.19.0 through the
+  pinned Mozilla action and CMake's C++ compiler launcher. Diagnostic builds use
+  the same cache. The GitHub cache backend stores compilation entries as they
+  finish, independently of later test success; there is no application build-tree
+  restore or manually maintained precompiled Scintilla library. sccache validates
+  compiler, options, source and header inputs. A cold cache or changed inputs still
+  requires compilation, and linking/testing always runs normally.
+  CodeQL and coverage jobs explicitly disable sccache and clear the CMake launcher:
+  CodeQL must observe real compiler invocations, and coverage retains fresh
+  instrumentation and counters. clang-tidy configuration also defaults to no
+  launcher. The GHA cache namespace is `wxnotepad-cxx-v1`; no additional secret is
+  required. The action's own summary and retained `sccache-build.txt` /
+  `sccache-diagnostic.txt` show hits/misses; command logs retain monotonic elapsed
+  times. CI first checks cold/warm builds, header invalidation and explicit cache
+  bypass using a private disk cache, separately from its persistent GHA backend.
+  With sccache 0.19.0, Windows caching requires English MSVC diagnostic resources:
+  [upstream #2864](https://github.com/mozilla/sccache/issues/2864) corrupts non-UTF-8
+  `/showIncludes` output and can silently lose Ninja header dependencies. The
+  developer-shell wrapper rejects cache-enabled configuration when the English
+  message DLL is missing. Hosted Windows CI has that resource; uncached local
+  builds continue to support localized MSVC. The native cache probe documents a
+  skip for this explicit rejection and otherwise requires real cache hits and
+  header invalidation before CI starts the application build.
+  This enables caching only for the hosted CI's ASCII source/dependency paths;
+  English diagnostics do not fix upstream corruption of non-ASCII path bytes.
+  Local builds remain uncached by default, including checkouts under other paths.
 - Core preparation goes through the existing build tool and pinned archive/patch
   checks, with command-local LF settings for archive and patch application so a
   runner's Git autocrlf configuration cannot change prepared bytes. A real-Git regression test runs on
