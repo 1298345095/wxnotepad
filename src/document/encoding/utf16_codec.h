@@ -5,3 +5,5 @@
 
 std::optional<std::string> DecodeUtf16Le(std::string_view bytes);
 std::optional<std::string> EncodeUtf16Le(std::string_view utf8);
+std::optional<std::string> DecodeUtf16Be(std::string_view bytes);
+std::optional<std::string> EncodeUtf16Be(std::string_view utf8);

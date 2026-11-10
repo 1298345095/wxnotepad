@@ -111,7 +111,8 @@ void EditorFrame::AppendEncodingCommands(wxMenu* file) {
     }
     for (const auto& command : {Command{"UTF-&8", EncodingChoice(FileEncoding::Utf8)},
                                 Command{"UTF-8 B&OM", EncodingChoice(FileEncoding::Utf8, true)},
-                                Command{"UTF-16&LE BOM", EncodingChoice(FileEncoding::Utf16Le, true)}}) {
+                                Command{"UTF-16&LE BOM", EncodingChoice(FileEncoding::Utf16Le, true)},
+                                Command{"UTF-16&BE BOM", EncodingChoice(FileEncoding::Utf16Be, true)}}) {
         const int id = wxWindow::NewControlId();
         encoding->AppendCheckItem(id, command.label);
         Bind(wxEVT_MENU, [this, command](wxCommandEvent&) { SelectEncoding(command.choice); }, id);
