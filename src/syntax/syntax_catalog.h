@@ -38,6 +38,11 @@ struct SyntaxDetectionOptions {
     bool noCgiGuess = false;
     bool noHtmlGuess = false;
 };
+struct DetectedSyntax {
+    // Original pLex is chosen before the independent np2LexLangIndex sniff.
+    SyntaxLanguage schemeLanguage;
+    std::optional<SyntaxLanguage> markupDialect = std::nullopt;
+};
 struct SyntaxStyle {
     int id;
     unsigned int foreground;
@@ -83,7 +88,7 @@ SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language);
 const char* SyntaxSettingsSection(SyntaxLanguage language);
 SyntaxLanguage LanguageForPath(const wxString& path);
 std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view prefix);
-std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_view prefix,
+std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,
                                              SyntaxDetectionOptions options = {});
 wxString LanguageName(SyntaxLanguage language);
 bool LanguageCanFold(SyntaxLanguage language);
