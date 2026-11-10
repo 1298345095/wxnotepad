@@ -95,6 +95,16 @@ private:
                 // GTK may veto this response while its folder/selection changes.
                 // Stage 2 prevents reentry during Respond, not a later attempt.
                 chooserStage_ = 1;
+            } else if (chooserStage_ == 1 && !destination_.empty() &&
+                       gtk_file_chooser_get_action(GTK_FILE_CHOOSER(widget)) == GTK_FILE_CHOOSER_ACTION_OPEN &&
+                       !FileChooserBusy(widget) && !SelectedFileMatches(widget, destination_)) {
+                // A folder reload can replace the pending selection. Once it
+                // settles, restore the requested file instead of waiting forever.
+                chooserStage_ = 2;
+                Observe("chooser selection retry begin");
+                ChooseFile(widget, destination_);
+                Observe("chooser selection retry end");
+                chooserStage_ = 1;
             }
             return;
         }

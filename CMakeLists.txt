@@ -597,8 +597,11 @@ if(BUILD_TESTING)
         add_test(NAME native_file_accept_retry COMMAND syntax_markup)
         set_tests_properties(native_file_accept_retry PROPERTIES TIMEOUT 30
             ENVIRONMENT "WXNOTEPAD_TEST_BLOCK_FILE_ACCEPT=1")
+        add_test(NAME native_file_selection_retry COMMAND western_encoding)
+        set_tests_properties(native_file_selection_retry PROPERTIES TIMEOUT 30
+            ENVIRONMENT "WXNOTEPAD_TEST_LOSE_FILE_SELECTION=1;WXNOTEPAD_WESTERN_NATIVE_KEYS=1")
         if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
-            set_tests_properties(native_file_accept_retry PROPERTIES
+            set_tests_properties(native_file_accept_retry native_file_selection_retry PROPERTIES
                 TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
         endif()
     endif()

@@ -340,6 +340,12 @@ wxString ExplicitOpenChooserState(const wxString& expected) {
 #endif
 }
 void ExplicitOpen(EditorFrame* frame) {
+#ifdef __WXGTK__
+    const bool loseSelection = wxGetenv("WXNOTEPAD_TEST_LOSE_FILE_SELECTION") != nullptr;
+    bool selectionLost = false;
+    const auto other = TestFiles::TemporaryDirectory("selection-loss-other.txt");
+    if (loseSelection) TestFiles::WriteBytes(other, "unrelated");
+#endif
     struct Fixture {
         const char* label;
         FileEncoding encoding;
@@ -352,9 +358,23 @@ void ExplicitOpen(EditorFrame* frame) {
         const auto path = TestFiles::TemporaryDirectory("open-as-western.nfo");
         TestFiles::WriteBytes(path, fixture.input);
         wxString previousState;
-        const auto trace = [label = std::string(fixture.label), expected = TestFiles::Filename(path),
-                            &previousState](const char* transition) {
+        const auto trace = [&, label = std::string(fixture.label),
+                            expected = TestFiles::Filename(path)](const char* transition) {
             const std::string_view phase(transition);
+#ifdef __WXGTK__
+            if (loseSelection && !selectionLost && phase == "chooser selection end") {
+                GList* windows = gtk_window_list_toplevels();
+                for (auto* item = windows; item; item = item->next) {
+                    auto* widget = GTK_WIDGET(item->data);
+                    if (!GTK_IS_FILE_CHOOSER(widget) || !gtk_widget_get_visible(widget)) continue;
+                    // Reproduce GTK replacing the pending requested selection.
+                    NativeDialogs::ChooseFile(widget, TestFiles::Filename(other));
+                    selectionLost = true;
+                    break;
+                }
+                g_list_free(windows);
+            }
+#endif
             if (phase.starts_with("driver callback")) {
                 if (phase != "driver callback exit") return;
                 const auto state = ExplicitOpenChooserState(expected);
@@ -374,6 +394,9 @@ void ExplicitOpen(EditorFrame* frame) {
         Require(frame->DocumentEncoding() == fixture.encoding && TestEditor::Text(frame) == fixture.text,
                 "explicit native Open As overrides filename preference and keeps original bytes");
     }
+#ifdef __WXGTK__
+    Require(!loseSelection || selectionLost, "native chooser selection loss must be injected");
+#endif
     std::puts("PASS: explicit native Open As Windows-1252 and DOS-437");
 }
 class WesternApp final : public wxApp {
