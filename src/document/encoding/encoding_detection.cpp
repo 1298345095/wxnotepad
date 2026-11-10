@@ -412,6 +412,21 @@ int NormalizeEncodingSetting(int value) {
     return index < static_cast<int>(std::size(mapping)) ? mapping[index] : static_cast<int>(catalog[index].codePage);
 }
 
+std::optional<EncodingChoice> DefaultEncodingChoice(int setting) {
+    const int index = DefaultEncoding(setting);
+    const auto native = NativeCodePage();
+    const auto choice = Choice(index, native, OemCodePage(native), index == CPI_DEFAULT);
+    if (!choice.encoding) return std::nullopt;
+    return EncodingChoice(*choice.encoding, choice.bom, choice.systemDefault);
+}
+
+int EncodingSetting(EncodingChoice choice) {
+    const int index = EncodingIndex(choice);
+    if (index == CPI_UTF8) return CPI_NONE;
+    constexpr int mapping[] = {0, 5, 1, 2, 6, 7, 3, 4, 8};
+    return index < static_cast<int>(std::size(mapping)) ? mapping[index] : static_cast<int>(catalog[index].codePage);
+}
+
 bool IsUtf8(std::string_view bytes) {
     for (size_t i = 0; i < bytes.size();) {
         const auto lead = static_cast<unsigned char>(bytes[i++]);

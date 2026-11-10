@@ -129,6 +129,17 @@ void EditorFrame::AppendEncodingCommands(wxMenu* file) {
             if (const auto choice = ChooseCurrentEncoding(this, document_.CurrentEncoding())) SelectEncoding(*choice);
         },
         more);
+    const int defaults = wxWindow::NewControlId();
+    encoding->AppendSeparator();
+    encoding->Append(defaults, "&Default...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& options = settings_ ? settings_->values.encoding : defaults_.encoding;
+            ChooseDefaultEncoding(this, options);
+            document_.SetEncodingOptions(options);
+        },
+        defaults);
     file->AppendSeparator();
     file->AppendSubMenu(encoding, "&Encoding");
 }

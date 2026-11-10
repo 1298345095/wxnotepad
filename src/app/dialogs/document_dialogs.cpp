@@ -93,16 +93,18 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
     return choices[source->GetSelection()].encoding;
 }
 
-std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, EncodingChoice initial) {
+std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optional<EncodingChoice> initial,
+                                                    bool defaultSelection) {
     // Notepad4 89b8b36 EditEncoding.cpp sEncodingGroupList and resource labels.
     // Retain delivered catalog entries in a native tree instead of HWND item data.
     wxDialog dialog(parent, wxID_ANY, "Select Encoding");
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Select current file &encoding:"), 0, wxALL,
-                  dialog.FromDIP(DialogPaddingDip));
+    contents->Add(new wxStaticText(&dialog, wxID_ANY,
+                                   defaultSelection ? "Select &default encoding:" : "Select current file &encoding:"),
+                  0, wxALL, dialog.FromDIP(DialogPaddingDip));
     auto* tree = new wxTreeCtrl(&dialog, wxID_ANY, wxDefaultPosition, dialog.FromDIP(wxSize(360, 260)),
                                 wxTR_HIDE_ROOT | wxTR_HAS_BUTTONS | wxTR_SINGLE);
-    tree->SetName("Current encoding");
+    tree->SetName(defaultSelection ? "Default encoding" : "Current encoding");
     const auto root = tree->AddRoot("Encodings");
     std::vector<std::pair<wxTreeItemId, EncodingChoice>> choices;
     const auto add = [&](wxTreeItemId group, const char* label, EncodingChoice choice) {
@@ -142,6 +144,58 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, EncodingCh
     tree->SetFocus();
     if (dialog.ShowModal() != wxID_OK) return std::nullopt;
     return selected();
+}
+
+void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options) {
+    // Adapted from Notepad4 89b8b36 SelectDefEncodingDlgProc and IDD_DEFENCODING.
+    // The accepted nested choice commits immediately; only the five flags wait
+    // for outer OK. See licenses/Notepad4.txt.
+    wxDialog dialog(parent, wxID_ANY, "Default Encoding");
+    auto* contents = new wxBoxSizer(wxVERTICAL);
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Default encoding:"), 0, wxALL,
+                  dialog.FromDIP(DialogPaddingDip));
+    const auto label = [&]() {
+        const auto choice = DefaultEncodingChoice(options.defaultEncoding);
+        if (!choice) return wxString::Format("Code page %d (unavailable)", options.defaultEncoding);
+        const auto name = OriginalEncodingIdentifier(*choice);
+        return wxString::FromUTF8(name.data(), name.size());
+    };
+    auto* current = new wxStaticText(&dialog, wxID_ANY, label());
+    current->SetName("Default encoding label");
+    contents->Add(current, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogPaddingDip));
+    auto* choose = new wxButton(&dialog, wxID_ANY, "Click here to &select default encoding.");
+    choose->SetName("Choose default encoding");
+    contents->Add(choose, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogPaddingDip));
+    choose->Bind(wxEVT_BUTTON, [&](wxCommandEvent&) {
+        if (const auto choice = ChooseCurrentEncoding(&dialog, DefaultEncodingChoice(options.defaultEncoding), true)) {
+            options.defaultEncoding = EncodingSetting(*choice);
+            current->SetLabel(label());
+            dialog.Layout();
+        }
+    });
+    const auto add = [&](const char* name, const char* text, bool checked) {
+        auto* control = new wxCheckBox(&dialog, wxID_ANY, text);
+        control->SetName(name);
+        control->SetValue(checked);
+        contents->Add(control, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogPaddingDip));
+        return control;
+    };
+    auto* skip =
+        add("SkipUnicodeDetection", "Skip statistical &Unicode (UTF-16) detection.", options.skipUnicodeDetection);
+    auto* ascii = add("LoadASCIIasUTF8", "Open 7-bit &ASCII files in UTF-8 mode.", options.loadASCIIasUTF8);
+    auto* ansi = add("LoadANSIasUTF8", "Open ANSI (unknown encoding) files in UTF-&8 mode.", options.loadANSIasUTF8);
+    auto* nfo = add("LoadNFOasOEM", "Open ANSI Art (*.&nfo, *.diz) files in DOS-437 mode.", options.loadNFOasOEM);
+    auto* tags = add("NoEncodingTags", "Don't parse encoding &tags.", options.noEncodingTags);
+    contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
+                  dialog.FromDIP(DialogPaddingDip));
+    dialog.SetSizerAndFit(contents);
+    dialog.CentreOnParent();
+    if (dialog.ShowModal() != wxID_OK) return;
+    options.skipUnicodeDetection = skip->GetValue();
+    options.loadASCIIasUTF8 = ascii->GetValue();
+    options.loadANSIasUTF8 = ansi->GetValue();
+    options.loadNFOasOEM = nfo->GetValue();
+    options.noEncodingTags = tags->GetValue();
 }
 
 std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, const FileWatchingOptions& initial) {
