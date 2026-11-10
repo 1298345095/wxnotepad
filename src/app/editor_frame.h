@@ -38,6 +38,8 @@ public:
     bool DocumentHasUtf8Bom() const { return document_.HasUtf8Bom(); }
     FileEncoding DocumentEncoding() const { return document_.Encoding(); }
     bool DocumentHasBom() const { return document_.HasBom(); }
+    bool DocumentIsModified() const { return document_.IsModified(); }
+    bool SelectEncoding(EncodingChoice choice);
     bool NewDocument();
     void ShowRecentFiles();
     void SetFileWatchingOptions(const FileWatchingOptions& options);
@@ -81,6 +83,7 @@ private:
     void CreateMenus();
     wxMenu* CreateFileMenu();
     void AppendReloadEncodingCommands(wxMenu* reload);
+    void AppendEncodingCommands(wxMenu* file);
     wxMenu* CreateEditMenu();
     wxMenu* CreateLanguageMenu();
     wxMenu* CreateViewMenu();

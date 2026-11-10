@@ -384,6 +384,13 @@ std::string_view OriginalEncodingIdentifier(const EncodingChoice& encoding) {
     return "UTF-16LE BOM";
 }
 
+std::optional<EncodingChoice> NativeEncodingChoice() {
+    const auto native = NativeCodePage();
+    const auto choice = Choice(CPI_DEFAULT, native, OemCodePage(native), true);
+    if (!choice.encoding) return std::nullopt;
+    return EncodingChoice(*choice.encoding, false, true);
+}
+
 int NormalizeEncodingSetting(int value) {
     const int index = DefaultEncoding(value);
     if (index == CPI_UTF8) return CPI_NONE; // Original global UTF-8 default is omitted on Save.

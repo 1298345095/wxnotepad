@@ -1,4 +1,33 @@
-# Original automatic encoding selection
+# Original encoding selection
+
+File > Encoding changes the live document's destination format. The delivered
+direct choices retain the original order: ANSI (when its native codec is
+delivered), UTF-8, UTF-8 BOM and UTF-16LE BOM. More (F9) offers those formats,
+BOM-less UTF-16LE and GBK in the original Unicode/Chinese catalog groups and
+names. It selects the current identity and retains it on cancellation. F9
+neither reloads nor saves the file; F8 below continues to select the source
+codec for a disk reload.
+
+An encoding-only change participates in the title, Save, lifecycle prompts and
+file-watching decisions independently of the original core's text save point.
+Non-ANSI changes retain text, selection, language, EOL bytes and Undo/Redo;
+returning to the original format clears encoding-only modification. Empty
+Untitled documents adopt a choice without becoming modified. Named empty files
+compare BOM presence; empty-by-editing documents still retain text modification.
+Save, first Save, Save As and Save with Original Time write the selected codec
+and BOM and commit the original identity only on success. Save Copy writes the
+selected format while retaining the current identity and pending modification.
+
+Crossing native ANSI follows pinned `EditSetNewEncoding`/`EditConvertText`:
+confirm for nonempty text or an empty buffer with history; cancellation retains
+all state. A native conversion clears read-only mode, markers and Undo/Redo,
+and invalidates the original encoding for nonempty text. The original core in
+this port always owns UTF-8 text, so the native adapter round-trips through the
+system codec instead of changing the core code page. UTF-8 native locales
+retain the original same-code-page early return. Unsupported native codecs
+remain unavailable until their codec tickets are delivered.
+
+## Automatic source detection
 
 The migrated codecs remain UTF-8, UTF-16LE and Windows CP936 (GBK), with
 UTF-8/UTF-16LE BOM metadata retained by Save. `DocumentSession::Open` applies
