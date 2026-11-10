@@ -104,7 +104,7 @@ public:
                          {"script.cgi", "#!/bin/python", python},
                          {"script.fcgi", "#!/bin/python", python},
                          {"script.txt", "#!/bin/python", plain},
-                         {"script.js", "#!/bin/python", plain},
+                         {"script.js", "#!/bin/python", SyntaxLanguage::JavaScript},
                          {"script.sh", "#!/bin/python", SyntaxLanguage::Bash},
                          {"script.ini", "#!/bin/python", plain},
                          {"my.ini", "#!/bin/python", python},

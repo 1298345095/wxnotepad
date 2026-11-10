@@ -33,7 +33,8 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexBash.cxx"
-    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx")
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
 target_include_directories(notepad4_core PUBLIC
     "${NOTEPAD4_SOURCE}/scintilla/include"
     PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
@@ -430,6 +431,7 @@ if(BUILD_TESTING)
     add_editor_test(syntax_shell shell_highlighting 60)
     add_editor_test(syntax_shebang original_python_shebang 60)
     add_editor_test(syntax_json json_highlighting 60)
+    add_editor_test(syntax_javascript javascript_typescript_schemes 120)
     add_editor_test(syntax_save automatic_language_save 60)
     add_editor_test(syntax_manual manual_language_choice 60)
     add_editor_test(syntax_large large_language_selection 60)

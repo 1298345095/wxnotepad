@@ -62,6 +62,8 @@ struct OriginalSettings {
     std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> schemeTabs = [] {
         std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> tabs{};
         tabs[static_cast<size_t>(SyntaxLanguage::Json)] = {2, 2, true, false};
+        tabs[static_cast<size_t>(SyntaxLanguage::JavaScript)] = {2, 2, true, false};
+        tabs[static_cast<size_t>(SyntaxLanguage::TypeScript)] = {2, 2, true, false};
         return tabs;
     }();
     bool tabIndents = true;

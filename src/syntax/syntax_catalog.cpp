@@ -8,6 +8,8 @@ namespace {
 #include "syntax/generated/python_scheme_data.h"
 #include "syntax/generated/json_scheme_data.h"
 #include "syntax/generated/bash_scheme_data.h"
+#include "syntax/generated/javascript_scheme_data.h"
+#include "syntax/generated/typescript_scheme_data.h"
 #include "syntax/generated/detection_extensions.h"
 
 template <size_t N> constexpr auto Keywords(const char* const (&text)[N], uintptr_t attributes) {
@@ -31,6 +33,12 @@ constexpr SyntaxProperty cppProperties[] = {{"lexer.lang", "0"}};
 constexpr SyntaxProperty bashProperties[] = {{"lexer.lang", "0"}};
 constexpr SyntaxProperty cShellProperties[] = {{"lexer.lang", "1"}};
 constexpr SyntaxProperty m4Properties[] = {{"lexer.lang", "2"}};
+constexpr const char* jsxExtensions[] = {"jsx"};
+constexpr const char* tsxExtensions[] = {"tsx"};
+constexpr SyntaxProperty javascriptProperties[] = {{"lexer.lang", "0"}};
+constexpr SyntaxProperty jsxProperties[] = {{"lexer.lang", "1"}};
+constexpr SyntaxProperty typescriptProperties[] = {{"lexer.lang", "2"}};
+constexpr SyntaxProperty tsxProperties[] = {{"lexer.lang", "3"}};
 constexpr SyntaxDefinition definitions[] = {
     {"Plain Text",
      textExtensions,
@@ -74,6 +82,14 @@ constexpr SyntaxDefinition definitions[] = {
      "/*",
      "*/",
      SCE_JSON_BLOCKCOMMENT},
+    {"JavaScript", javascriptExtensions, javascriptLists, javascriptStyles, javascriptProperties, SCLEX_JAVASCRIPT,
+     SyntaxLanguage::JavaScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+    {"JSX", jsxExtensions, javascriptLists, javascriptStyles, jsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Jsx,
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+    {"TypeScript", typescriptExtensions, typescriptLists, typescriptStyles, typescriptProperties, SCLEX_JAVASCRIPT,
+     SyntaxLanguage::TypeScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER},
+    {"TSX", tsxExtensions, typescriptLists, typescriptStyles, tsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Tsx,
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER},
     {"Bash", bashExtensions, bashLists, bashStyles, bashProperties, SCLEX_BASH, SyntaxLanguage::Bash, true, "#",
      nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/bash"},
     {"C Shell", cShellExtensions, bashLists, bashStyles, cShellProperties, SCLEX_BASH, SyntaxLanguage::CShell, true,
@@ -121,6 +137,7 @@ std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
     for (const auto* shell : {"bash", "dash", "ash", "zsh", "ksh", "sh"}) {
         if (letters.starts_with(shell)) return SyntaxLanguage::Bash;
     }
+    if (letters.starts_with("node")) return SyntaxLanguage::JavaScript;
     return std::nullopt;
 }
 
@@ -163,6 +180,39 @@ const SyntaxDefinition& SyntaxFor(SyntaxLanguage language) {
         if (definition.language == language) return definition;
     }
     return definitions[0];
+}
+
+SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
+    switch (language) {
+    case SyntaxLanguage::CShell:
+    case SyntaxLanguage::M4:
+        return SyntaxLanguage::Bash;
+    case SyntaxLanguage::Jsx:
+        return SyntaxLanguage::JavaScript;
+    case SyntaxLanguage::Tsx:
+        return SyntaxLanguage::TypeScript;
+    default:
+        return language;
+    }
+}
+
+const char* SyntaxSettingsSection(SyntaxLanguage language) {
+    switch (SyntaxSettingsLanguage(language)) {
+    case SyntaxLanguage::Cpp:
+        return "C/C++ Source";
+    case SyntaxLanguage::Python:
+        return "Python Script";
+    case SyntaxLanguage::Json:
+        return "JSON Document";
+    case SyntaxLanguage::Bash:
+        return "Shell Script";
+    case SyntaxLanguage::JavaScript:
+        return "JavaScript";
+    case SyntaxLanguage::TypeScript:
+        return "TypeScript";
+    default:
+        return "Text File";
+    }
 }
 
 SyntaxLanguage LanguageForPath(const wxString& path) {
@@ -217,23 +267,4 @@ wxString LanguageName(SyntaxLanguage language) {
 }
 bool LanguageCanFold(SyntaxLanguage language) {
     return SyntaxFor(language).canFold;
-}
-
-SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
-    return language == SyntaxLanguage::CShell || language == SyntaxLanguage::M4 ? SyntaxLanguage::Bash : language;
-}
-
-const char* SyntaxSettingsSection(SyntaxLanguage language) {
-    switch (SyntaxSettingsLanguage(language)) {
-    case SyntaxLanguage::Cpp:
-        return "C/C++ Source";
-    case SyntaxLanguage::Python:
-        return "Python Script";
-    case SyntaxLanguage::Json:
-        return "JSON Document";
-    case SyntaxLanguage::Bash:
-        return "Shell Script";
-    default:
-        return "Text File";
-    }
 }

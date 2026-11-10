@@ -191,8 +191,10 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 | Bash | `.sh`, `.zsh`, `.bash`, `.in` |
 | C Shell | `.csh`, `.tcsh` |
 | m4 | `.m4`, `.ac` |
+| JavaScript / JSX | `.js`, `.jse`, `.jsm`, `.cjs`, `.mjs`, `.qs` / `.jsx` |
+| TypeScript / TSX | `.ts`, `.cts`, `.mts`, `.ets`, `.osts` / `.tsx` |
 
-For unmatched filenames, Automatic also recognizes the original Python and shell
+For unmatched filenames, Automatic also recognizes the original Python, shell and Node.js
 interpreter line forms, including direct paths and the original `env` and `winpty`
 token handling. Shell dotfiles (`.bash*`, `.profile`, case sensitive), `mozconfig`,
 `APKBUILD` and `PKGBUILD` select Bash. A trailing `.in` first checks the underlying
@@ -218,15 +220,20 @@ shows the effective language and an explicit override alongside encoding/BOM.
 Highlighting continues to follow the selected language above 32 MiB. Select Plain
 Text to use the existing no-lexer path. See the
 [original scheme behavior validation record](docs/observations/original-scheme-README.md).
+JavaScript/TypeScript fixture comparisons and workflow checks are described in the
+[JavaScript validation record](docs/observations/javascript-README.md).
 
 Highlighting uses the pinned original lexers, consumed keyword lists and default
 light syntax colors while retaining the native font and point size. Typing and
 Undo/Redo update syntax through the core's incremental styling lifecycle. The
-three `tools/update_*_scheme.py` scripts reproduce the checked-in data from the
+`tools/update_*_scheme.py` scripts reproduce the checked-in data from the
 pinned original checkout; generated headers record revision, source hash and
 license, and omit completion-only lists.
 
-C/C++, Python, JSON and Shell Script support code folding. Click a header's margin marker to
+C/C++, Python, JSON, Shell Script, JavaScript/JSX and TypeScript/TSX support code folding. JavaScript
+and TypeScript use the original shared JavaScript lexer with separate keyword lists
+and four dialect properties. Their tab settings default to two spaces; JSX shares
+the JavaScript section and TSX shares TypeScript. Click a header's margin marker to
 collapse or expand its block; View → Toggle Folds → Collapse All and Expand All include nested
 blocks. These commands change visibility without editing text or history. Find
 reveals the complete matched range, including hidden intermediate lines, while
