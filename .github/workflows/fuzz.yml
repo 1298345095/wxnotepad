@@ -52,7 +52,7 @@ jobs:
           -DVCPKG_INSTALLED_DIR="${{ github.workspace }}/.ci/vcpkg/installed"
           -DVCPKG_TARGET_TRIPLET=x64-linux-ci -DVCPKG_MANIFEST_MODE=OFF
       - name: Build fuzzers and replay executables
-        run: cmake --build .ci/build/fuzz --parallel 4
+        run: cmake --build .ci/build/fuzz --parallel "$(nproc)"
       - name: Replay fixed regression corpus under sanitizers
         run: ctest --test-dir .ci/build/fuzz --output-on-failure --parallel 3
       - name: Restore accumulated corpus
