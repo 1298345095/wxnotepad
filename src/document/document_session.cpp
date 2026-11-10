@@ -144,15 +144,19 @@ wxString PrepareSaveCopy(const wxString& destination) {
     return {};
 }
 
+LegacyEncoded EncodeLegacy(std::string_view bytes, FileEncoding encoding) {
+    if (encoding == FileEncoding::Gbk) return EncodeGbk(bytes);
+    if (encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437)
+        return EncodeSingleByte(bytes, encoding);
+    return EncodeChinese(bytes, encoding);
+}
+
 std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncoding encoding, bool bom,
                                                     const EncodingLossDecision& decideLoss) {
     if (encoding == FileEncoding::Gbk || encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437 ||
         encoding == FileEncoding::Gb18030 || encoding == FileEncoding::Big5) {
         if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, "The document contains invalid UTF-8."};
-        const auto encoded = encoding == FileEncoding::Gbk ? EncodeGbk(bytes)
-                             : encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437
-                                 ? EncodeSingleByte(bytes, encoding)
-                                 : EncodeChinese(bytes, encoding);
+        const auto encoded = EncodeLegacy(bytes, encoding);
         if (encoded.loss && (!decideLoss || decideLoss() != EncodingLossChoice::Replace))
             return SaveResult{SaveStatus::Cancelled, {}};
         bytes = encoded.bytes;
@@ -232,27 +236,8 @@ struct LoadedDocument {
     OriginalFileVariables variables;
 };
 
-// Preparing a candidate never changes the live document. The caller can repeat
-// this read if the discard/save decision rewrites the selected source.
-std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std::optional<FileEncoding> encoding,
-                                                    const EncodingOptions& options,
-                                                    std::optional<EncodingChoice> weakEncoding) {
-    if (!path.FileExists()) return wxString("Choose an existing file to open.");
-    wxFile file(path.GetFullPath(), wxFile::read);
-    if (!file.IsOpened()) return wxString("Could not open the file for reading.");
-    const auto length = file.Length();
-    if (length < 0) return wxString("Could not determine the file size.");
-    LoadedDocument loaded;
+wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& options) {
     auto& bytes = loaded.text;
-    bytes.assign(static_cast<size_t>(length), '\0');
-    if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
-        return wxString("Could not read the complete file.");
-    const auto detected = DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
-    if (!detected.encoding) return detected.error;
-    loaded.encoding = *detected.encoding;
-    loaded.bom = detected.bom;
-    loaded.systemDefault = detected.systemDefault;
-    loaded.systemOem = detected.systemOem;
     const bool utf16 = loaded.encoding == FileEncoding::Utf16Le || loaded.encoding == FileEncoding::Utf16Be;
     if (!utf16) loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     if (loaded.bom) bytes.erase(0, utf16 ? 2 : 3);
@@ -275,6 +260,32 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std:
         loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     } else if (!IsUtf8(bytes))
         return wxString("The file is not valid UTF-8. No other encoding was assumed.");
+    return {};
+}
+
+// Preparing a candidate never changes the live document. The caller can repeat
+// this read if the discard/save decision rewrites the selected source.
+std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std::optional<FileEncoding> encoding,
+                                                    const EncodingOptions& options,
+                                                    std::optional<EncodingChoice> weakEncoding) {
+    if (!path.FileExists()) return wxString("Choose an existing file to open.");
+    wxFile file(path.GetFullPath(), wxFile::read);
+    if (!file.IsOpened()) return wxString("Could not open the file for reading.");
+    const auto length = file.Length();
+    if (length < 0) return wxString("Could not determine the file size.");
+    LoadedDocument loaded;
+    auto& bytes = loaded.text;
+    bytes.assign(static_cast<size_t>(length), '\0');
+    if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
+        return wxString("Could not read the complete file.");
+    const auto detected = DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
+    if (!detected.encoding) return detected.error;
+    loaded.encoding = *detected.encoding;
+    loaded.bom = detected.bom;
+    loaded.systemDefault = detected.systemDefault;
+    loaded.systemOem = detected.systemOem;
+    const auto error = DecodeLoadedDocument(loaded, options);
+    if (!error.empty()) return error;
     return loaded;
 }
 
