@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[2]
 WORK = ROOT / '.ci'
@@ -22,6 +23,7 @@ TRIPLET = 'x64-windows-ci' if WINDOWS else 'x64-linux-ci'
 def run(command, log, env=None, check=True):
     REPORTS.mkdir(parents=True, exist_ok=True)
     print('+ ' + ' '.join(str(item) for item in command), flush=True)
+    started = time.monotonic()
     with (REPORTS / log).open('w', encoding='utf-8') as output:
         process = subprocess.Popen([str(item) for item in command], cwd=ROOT, env=env,
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -30,6 +32,9 @@ def run(command, log, env=None, check=True):
             output.write(line)
             print(line, end='', flush=True)
         result = process.wait()
+        summary = f'\nCommand finished: exit {result}, elapsed {time.monotonic() - started:.3f}s\n'
+        output.write(summary)
+        print(summary, end='', flush=True)
     if result and check:
         raise SystemExit(result)
     return result
@@ -59,7 +64,15 @@ def dependencies():
         'dependencies.log', environment)
 
 
-def configure(app_only, *, coverage=False):
+def compiler_launcher_arguments(enabled):
+    arguments = ['-DCMAKE_CXX_COMPILER_LAUNCHER=' + ('sccache' if enabled else '')]
+    if enabled and WINDOWS:
+        # CMake >=3.25/CMP0141: embedded debug information avoids a shared compiler PDB.
+        arguments.append('-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>')
+    return arguments
+
+
+def configure(app_only, *, coverage=False, compiler_cache=False):
     directory = BUILD / ('coverage-cmake' if coverage else 'cmake')
     prefix = 'coverage-' if coverage else ''
     if coverage and sys.platform != 'linux':
@@ -85,7 +98,8 @@ def configure(app_only, *, coverage=False):
                '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON', '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
                '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=OFF',
                '-DWXNOTEPAD_ENABLE_COVERAGE=' + ('ON' if coverage else 'OFF'),
-               '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON')])
+               '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON'),
+               *compiler_launcher_arguments(compiler_cache and not coverage)])
     if coverage:
         command.append(f'-DPython3_EXECUTABLE={sys.executable}')
     run(command, prefix + 'configure.log')
@@ -183,7 +197,7 @@ def test(backend, cmake_dir, expression, jobs, report_prefix=''):
         raise SystemExit(f'Private {backend} test shards failed; inspect the retained per-shard logs')
 
 
-def diagnostic_build(jobs):
+def diagnostic_build(jobs, *, compiler_cache=False):
     directory = BUILD / 'diagnostic-cmake'
     run(cmake_command(['-S', ROOT, '-B', directory, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
                        f'-DNOTEPAD4_SOURCE={BUILD / "original-core"}',
@@ -191,7 +205,8 @@ def diagnostic_build(jobs):
                        f'-DVCPKG_INSTALLED_DIR={VCPKG / "installed"}',
                        f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', '-DVCPKG_MANIFEST_MODE=OFF',
                        f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
-                       '-DBUILD_TESTING=ON', '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=ON']), 'diagnostic-configure.log')
+                       '-DBUILD_TESTING=ON', '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=ON',
+                       *compiler_launcher_arguments(compiler_cache)]), 'diagnostic-configure.log')
     run(cmake_command(['--build', directory, '--config', 'Release', '--parallel', str(jobs),
                        '--target', 'wxnotepad', 'editing_keys', 'close_smoke']), 'diagnostic-build.log')
 
@@ -245,6 +260,8 @@ def argument_parser():
         command.add_argument('--app-only', action='store_true')
         if name == 'build':
             command.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
+        else:
+            command.add_argument('--compiler-cache', action='store_true', help='Use sccache for ordinary compilation')
     tests = commands.add_parser('test')
     tests.add_argument('--backend', choices=('windows', 'x11', 'wayland'), required=True)
     tests.add_argument('--cmake-dir', type=Path, default=BUILD / 'cmake')
@@ -253,6 +270,7 @@ def argument_parser():
                        help='Concurrent private Linux display sessions; Windows uses one desktop')
     diagnostic = commands.add_parser('diagnostic-build')
     diagnostic.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
+    diagnostic.add_argument('--compiler-cache', action='store_true')
     coverage = commands.add_parser('coverage-build')
     coverage.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
     diagnostic = commands.add_parser('diagnostic-test')
@@ -266,13 +284,13 @@ def main():
     if getattr(arguments, 'jobs', 1) < 1:
         parser.error('--jobs must be positive')
     if arguments.command == 'configure':
-        configure(arguments.app_only)
+        configure(arguments.app_only, compiler_cache=arguments.compiler_cache)
     elif arguments.command == 'build':
         build(arguments.app_only, arguments.jobs)
     elif arguments.command == 'test':
         test(arguments.backend, arguments.cmake_dir.resolve(), arguments.tests, arguments.jobs)
     elif arguments.command == 'diagnostic-build':
-        diagnostic_build(arguments.jobs)
+        diagnostic_build(arguments.jobs, compiler_cache=arguments.compiler_cache)
     elif arguments.command == 'coverage-build':
         configure(False, coverage=True)
         build(False, arguments.jobs, coverage=True)
