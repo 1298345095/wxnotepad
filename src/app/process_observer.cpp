@@ -82,6 +82,7 @@ void ProcessObserver::Publish() {
 #endif
     const char* encoding = frame_->DocumentEncoding() == FileEncoding::Utf8      ? "UTF-8"
                            : frame_->DocumentEncoding() == FileEncoding::Utf16Le ? "UTF-16LE"
+                           : frame_->DocumentEncoding() == FileEncoding::Utf16Be ? "UTF-16BE"
                                                                                  : "CP936";
     const wxString contents =
         wxString::Format(

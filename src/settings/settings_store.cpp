@@ -111,6 +111,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.wordWrapSymbols = std::min(wrapSymbols % 10, 2) + (wrapSymbols / 10) * 10;
     values.autoSelect = ReadBool("AutoSelect", defaults.autoSelect, "Styles");
     values.noCgiGuess = ReadBool("NoCGIGuess", defaults.noCgiGuess, "Settings2");
+    values.noHtmlGuess = ReadBool("NoHTMLGuess", defaults.noHtmlGuess, "Settings2");
     values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
     values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", defaults.fixTrailingBlanks);
     values.fileWatching.mode = static_cast<FileWatchingMode>(

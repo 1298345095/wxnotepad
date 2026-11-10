@@ -32,6 +32,7 @@ struct OriginalSettings {
     bool simpleIndentGuides = false;
     bool autoSelect = true;
     bool noCgiGuess = false;
+    bool noHtmlGuess = false;
     bool fixLineEndings = false;
     bool fixTrailingBlanks = false;
     FileWatchingOptions fileWatching;
@@ -65,6 +66,7 @@ struct OriginalSettings {
         tabs[static_cast<size_t>(SyntaxLanguage::Json)] = {2, 2, true, false};
         tabs[static_cast<size_t>(SyntaxLanguage::JavaScript)] = {2, 2, true, false};
         tabs[static_cast<size_t>(SyntaxLanguage::TypeScript)] = {2, 2, true, false};
+        tabs[static_cast<size_t>(SyntaxLanguage::Html)] = {2, 2, true, false};
         return tabs;
     }();
     bool tabIndents = true;

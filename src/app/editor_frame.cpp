@@ -20,7 +20,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
       indentation_(settings ? settings->values : defaults_),
       document_(*editor_, settings ? settings->values.encoding : EncodingOptions{},
-                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess}
+                settings ? SyntaxDetectionOptions{settings->values.autoSelect, settings->values.noCgiGuess,
+                                                  settings->values.noHtmlGuess}
                          : SyntaxDetectionOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { HandleFileChange(); }), search_(*editor_) {
@@ -232,6 +233,7 @@ void EditorFrame::UpdateDocumentState() {
     const wxString encoding = document_.IsDefaultEncoding()
                                   ? (document_.Encoding() == FileEncoding::Gbk ? "ANSI (CP936)" : "ANSI (UTF-8)")
                               : document_.Encoding() == FileEncoding::Utf16Le ? "UTF-16LE"
+                              : document_.Encoding() == FileEncoding::Utf16Be ? "UTF-16BE"
                               : document_.Encoding() == FileEncoding::Gbk     ? "GBK (CP936)"
                                                                               : "UTF-8";
     const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
