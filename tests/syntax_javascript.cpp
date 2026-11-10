@@ -138,6 +138,12 @@ void SchemeSettings(SettingsStore& settings) {
     struct Restore {
         wxString path;
         std::string bytes;
+        Restore(const wxString& restorePath, const std::string& restoreBytes)
+            : path(restorePath), bytes(restoreBytes) {}
+        Restore(const Restore&) = delete;
+        Restore& operator=(const Restore&) = delete;
+        Restore(Restore&&) = delete;
+        Restore& operator=(Restore&&) = delete;
         ~Restore() {
             wxFFile file(path, "wb");
             if (file.IsOpened()) file.Write(bytes.data(), bytes.size());

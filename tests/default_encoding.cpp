@@ -32,25 +32,27 @@ public:
     std::array<bool, 5> initialStates{false, true, true, true, false};
     std::array<bool, 5> finalStates{true, false, false, false, true};
     DefaultsDriver(bool nested, bool outer) : nestedOk(nested), outerOk(outer) { Start(40); }
+    void SetOptions(wxDialog* dialog) {
+        const std::array names{"SkipUnicodeDetection", "LoadANSIasUTF8", "LoadASCIIasUTF8", "LoadNFOasOEM",
+                               "NoEncodingTags"};
+        for (size_t i = 0; i < names.size(); ++i) {
+            auto* check = wxDynamicCast(dialog->FindWindowByName(names[i], dialog), wxCheckBox);
+            Require(check && check->GetValue() == initialStates[i], "original checkbox states and polarity");
+            if (initialStates[i] != finalStates[i]) Click(check);
+        }
+        stage = 1;
+        auto* choose = dialog->FindWindowByName("Choose default encoding", dialog);
+        // GTK timeout sources do not re-enter while their callback
+        // is displaying a nested modal dialog.
+        wxTheApp->CallAfter([choose] { Click(choose); });
+    }
     void Notify() override {
         for (auto* window : wxTopLevelWindows) {
             auto* dialog = wxDynamicCast(window, wxDialog);
             if (!dialog || !dialog->IsModal()) continue;
             if (dialog->GetTitle() == "Default Encoding") {
                 if (stage == 0) {
-                    const std::array names{"SkipUnicodeDetection", "LoadANSIasUTF8", "LoadASCIIasUTF8", "LoadNFOasOEM",
-                                           "NoEncodingTags"};
-                    for (size_t i = 0; i < names.size(); ++i) {
-                        auto* check = wxDynamicCast(dialog->FindWindowByName(names[i], dialog), wxCheckBox);
-                        Require(check && check->GetValue() == initialStates[i],
-                                "original checkbox states and polarity");
-                        if (initialStates[i] != finalStates[i]) Click(check);
-                    }
-                    stage = 1;
-                    auto* choose = dialog->FindWindowByName("Choose default encoding", dialog);
-                    // GTK timeout sources do not re-enter while their callback
-                    // is displaying a nested modal dialog.
-                    wxTheApp->CallAfter([choose] { Click(choose); });
+                    SetOptions(dialog);
                     return;
                 }
                 if (stage == 2) {
@@ -78,79 +80,76 @@ void ShowDefaults(EditorFrame* frame) {
     wxCommandEvent event(wxEVT_MENU, command);
     frame->GetEventHandler()->ProcessEvent(event);
 }
-void Run(SettingsStore& settings) {
+void RunCommitCase(SettingsStore& settings, bool nested, bool outer) {
     using Scintilla::Message;
-    for (const bool nested : {false, true}) {
-        for (const bool outer : {false, true}) {
-            settings.values.encoding = {};
-            settings.values.encoding.skipUnicodeDetection = false;
-            settings.values.warnLineEndings = false;
-            settings.values.fileWatching.mode = FileWatchingMode::None;
-            auto* frame = new EditorFrame(&settings);
-            frame->Show();
-            const auto source = TestFiles::TemporaryDirectory("defaults-live.txt");
-            TestFiles::WriteBytes(source, "live text");
-            Require(frame->Open(TestFiles::Filename(source), FileEncoding::Utf8).status == OpenStatus::Opened,
-                    "live fixture opens");
-            TestEditor::Append(frame, "x");
-            frame->Editor()->Send(Message::Undo);
-            const auto actions = frame->Editor()->Send(Message::GetUndoActions);
-            const auto undoCurrent = frame->Editor()->Send(Message::GetUndoCurrent);
-            frame->Editor()->Send(Message::SetSel, 7, 2);
-            frame->Editor()->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
-            frame->Editor()->Send(Message::SetReadOnly, 1);
-            DefaultsDriver driver(nested, outer);
-            ShowDefaults(frame);
-            driver.Stop();
-            const auto& options = settings.values.encoding;
-            Require(driver.stage == 3 && driver.initial == "UTF-8",
-                    "nested default picker initially selects configured default");
-            Require(options.defaultEncoding == (nested ? 2 : -1),
-                    "nested acceptance commits encoding even when outer is cancelled");
-            Require(options.skipUnicodeDetection == outer && options.loadANSIasUTF8 == !outer &&
-                        options.loadASCIIasUTF8 == !outer && options.loadNFOasOEM == !outer &&
-                        options.noEncodingTags == outer,
-                    "five options commit only on outer OK");
-            Require(TestEditor::Text(frame) == "live text" && !frame->DocumentHasBom() &&
-                        frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentIsModified() &&
-                        frame->Editor()->Send(Message::GetUndoActions) == actions &&
-                        frame->Editor()->Send(Message::GetUndoCurrent) == undoCurrent &&
-                        frame->Editor()->Send(Message::GetAnchor) == 7 &&
-                        frame->Editor()->Send(Message::GetCurrentPos) == 2 &&
-                        frame->Editor()->Send(Message::GetReadOnly) &&
-                        frame->Editor()->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
-                        TestFiles::Bytes(source) == "live text",
-                    "default changes preserve live encoding, text, selection, redo, save point and disk");
-            Require(frame->NewDocument(), "New consumes accepted defaults");
-            Require(frame->DocumentEncoding() == (nested ? FileEncoding::Utf16Be : FileEncoding::Utf8) &&
-                        frame->DocumentHasBom() == nested && !frame->DocumentIsModified() &&
-                        !frame->Editor()->Send(Message::GetUndoActions),
-                    "New preserves the configured BOM and establishes a clean encoding identity without history");
-            TestEditor::Append(frame, "中\r\n");
-            const auto destination = TestFiles::TemporaryDirectory("defaults-new.txt");
-            Require(frame->SaveAs(TestFiles::Filename(destination)).status == SaveStatus::Saved &&
-                        TestFiles::Bytes(destination) ==
-                            (nested ? std::string("\xfe\xff\x4e\x2d\0\r\0\n", 8) : "中\r\n"),
-                    "New saves exact independently specified default-format bytes");
-            const auto empty = TestFiles::TemporaryDirectory("defaults-empty.txt");
-            TestFiles::WriteBytes(empty, "");
-            Require(frame->Open(TestFiles::Filename(empty)).status == OpenStatus::Opened &&
-                        frame->DocumentEncoding() == (nested && outer ? FileEncoding::Utf16Be : FileEncoding::Utf8) &&
-                        frame->DocumentHasBom() == (nested && outer) && !frame->DocumentIsModified() &&
-                        !frame->Editor()->Send(Message::GetUndoActions),
-                    "later empty Open uses the separate ASCII-as-UTF8 gate and accepted default");
-            const auto ascii = TestFiles::TemporaryDirectory("defaults-ascii.txt");
-            TestFiles::WriteBytes(ascii, "plain");
-            const auto native = NativeEncodingChoice();
-            Require(frame->Open(TestFiles::Filename(ascii)).status == OpenStatus::Opened &&
-                        frame->DocumentEncoding() ==
-                            (nested && outer && native ? native->encoding : FileEncoding::Utf8) &&
-                        !frame->DocumentHasBom() && TestEditor::Text(frame) == "plain",
-                    "ASCII Open retains original non-Unicode fallback decision order");
-            frame->Destroy();
-            std::printf("PASS: native nested=%d outer=%d commit matrix and live state\n", nested, outer);
-        }
-    }
+    settings.values.encoding = {};
+    settings.values.encoding.skipUnicodeDetection = false;
+    settings.values.warnLineEndings = false;
+    settings.values.fileWatching.mode = FileWatchingMode::None;
+    auto* frame = new EditorFrame(&settings);
+    frame->Show();
+    const auto source = TestFiles::TemporaryDirectory("defaults-live.txt");
+    TestFiles::WriteBytes(source, "live text");
+    Require(frame->Open(TestFiles::Filename(source), FileEncoding::Utf8).status == OpenStatus::Opened,
+            "live fixture opens");
+    TestEditor::Append(frame, "x");
+    frame->Editor()->Send(Message::Undo);
+    const auto actions = frame->Editor()->Send(Message::GetUndoActions);
+    const auto undoCurrent = frame->Editor()->Send(Message::GetUndoCurrent);
+    frame->Editor()->Send(Message::SetSel, 7, 2);
+    frame->Editor()->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
+    frame->Editor()->Send(Message::SetReadOnly, 1);
+    DefaultsDriver driver(nested, outer);
+    ShowDefaults(frame);
+    driver.Stop();
+    const auto& options = settings.values.encoding;
+    Require(driver.stage == 3 && driver.initial == "UTF-8",
+            "nested default picker initially selects configured default");
+    Require(options.defaultEncoding == (nested ? 2 : -1),
+            "nested acceptance commits encoding even when outer is cancelled");
+    Require(options.skipUnicodeDetection == outer && options.loadANSIasUTF8 == !outer &&
+                options.loadASCIIasUTF8 == !outer && options.loadNFOasOEM == !outer && options.noEncodingTags == outer,
+            "five options commit only on outer OK");
+    Require(TestEditor::Text(frame) == "live text" && !frame->DocumentHasBom() &&
+                frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentIsModified() &&
+                frame->Editor()->Send(Message::GetUndoActions) == actions &&
+                frame->Editor()->Send(Message::GetUndoCurrent) == undoCurrent &&
+                frame->Editor()->Send(Message::GetAnchor) == 7 && frame->Editor()->Send(Message::GetCurrentPos) == 2 &&
+                frame->Editor()->Send(Message::GetReadOnly) &&
+                frame->Editor()->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
+                TestFiles::Bytes(source) == "live text",
+            "default changes preserve live encoding, text, selection, redo, save point and disk");
+    Require(frame->NewDocument(), "New consumes accepted defaults");
+    Require(frame->DocumentEncoding() == (nested ? FileEncoding::Utf16Be : FileEncoding::Utf8) &&
+                frame->DocumentHasBom() == nested && !frame->DocumentIsModified() &&
+                !frame->Editor()->Send(Message::GetUndoActions),
+            "New preserves the configured BOM and establishes a clean encoding identity without history");
+    TestEditor::Append(frame, "中\r\n");
+    const auto destination = TestFiles::TemporaryDirectory("defaults-new.txt");
+    Require(frame->SaveAs(TestFiles::Filename(destination)).status == SaveStatus::Saved &&
+                TestFiles::Bytes(destination) == (nested ? std::string("\xfe\xff\x4e\x2d\0\r\0\n", 8) : "中\r\n"),
+            "New saves exact independently specified default-format bytes");
+    const auto empty = TestFiles::TemporaryDirectory("defaults-empty.txt");
+    TestFiles::WriteBytes(empty, "");
+    Require(frame->Open(TestFiles::Filename(empty)).status == OpenStatus::Opened &&
+                frame->DocumentEncoding() == (nested && outer ? FileEncoding::Utf16Be : FileEncoding::Utf8) &&
+                frame->DocumentHasBom() == (nested && outer) && !frame->DocumentIsModified() &&
+                !frame->Editor()->Send(Message::GetUndoActions),
+            "later empty Open uses the separate ASCII-as-UTF8 gate and accepted default");
+    const auto ascii = TestFiles::TemporaryDirectory("defaults-ascii.txt");
+    TestFiles::WriteBytes(ascii, "plain");
+    const auto native = NativeEncodingChoice();
+    Require(frame->Open(TestFiles::Filename(ascii)).status == OpenStatus::Opened &&
+                frame->DocumentEncoding() == (nested && outer && native ? native->encoding : FileEncoding::Utf8) &&
+                !frame->DocumentHasBom() && TestEditor::Text(frame) == "plain",
+            "ASCII Open retains original non-Unicode fallback decision order");
+    frame->Destroy();
+    std::printf("PASS: native nested=%d outer=%d commit matrix and live state\n", nested, outer);
+}
+void Run(SettingsStore& settings) {
+    for (const bool nested : {false, true})
+        for (const bool outer : {false, true})
+            RunCommitCase(settings, nested, outer);
 }
 void Persist(SettingsStore& settings, const wxString& mode) {
     auto* frame = new EditorFrame(&settings);

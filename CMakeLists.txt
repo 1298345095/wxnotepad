@@ -533,7 +533,7 @@ if(BUILD_TESTING)
     add_editor_test(file_drop file_drop_open 60)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
         # Preserve timeout stacks through the existing Linux core/GDB collector.
-        set_tests_properties(open_new_native PROPERTIES
+        set_tests_properties(open_new_native original_markup_schemes PROPERTIES
             TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
     endif()
     add_editor_test(save_smoke save_existing 30)
@@ -542,6 +542,14 @@ if(BUILD_TESTING)
     add_editor_test(search_smoke find_literal_next 30)
     add_editor_test(search_wildcards original_wildcard_search 30)
     add_editor_test(search_seeding original_find_query_seeding 60)
+    if(WIN32)
+        add_dependencies(search_seeding clipboard_peer)
+        add_test(NAME native_test_failure_logging COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/native_test_logging_process.py"
+            "$<TARGET_FILE:search_seeding>" "$<TARGET_FILE:clipboard_peer>"
+            --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/native-test-logging")
+        set_tests_properties(native_test_failure_logging PROPERTIES TIMEOUT 30)
+    endif()
     add_gui_program(search_settings tests/search_settings.cpp app_shell)
     add_test(NAME original_search_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/search_settings_process.py" "$<TARGET_FILE:search_settings>")
@@ -577,10 +585,25 @@ if(BUILD_TESTING)
             ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=readiness;WXNOTEPAD_CLIPBOARD_DEFER_PEER_RENDER=1;WXNOTEPAD_CLIPBOARD_DEFER_PEER_FOCUS_CLAIM=1")
     endif()
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        add_executable(bit_intrinsics tests/bit_intrinsics.cpp)
+        target_include_directories(bit_intrinsics PRIVATE src)
+        add_test(NAME original_32bit_bit_intrinsics COMMAND bit_intrinsics)
         add_executable(steady_stopwatch tests/steady_stopwatch.cpp)
         target_link_options(steady_stopwatch PRIVATE -Wl,--wrap=clock_gettime -Wl,--wrap=gettimeofday)
         add_test(NAME native_monotonic_wait_clock COMMAND steady_stopwatch)
         set_tests_properties(native_monotonic_wait_clock PROPERTIES TIMEOUT 30)
+    endif()
+    if(UNIX AND NOT APPLE)
+        add_test(NAME native_file_accept_retry COMMAND syntax_markup)
+        set_tests_properties(native_file_accept_retry PROPERTIES TIMEOUT 30
+            ENVIRONMENT "WXNOTEPAD_TEST_BLOCK_FILE_ACCEPT=1")
+        add_test(NAME native_file_selection_retry COMMAND western_encoding)
+        set_tests_properties(native_file_selection_retry PROPERTIES TIMEOUT 30
+            ENVIRONMENT "WXNOTEPAD_TEST_LOSE_FILE_SELECTION=1;WXNOTEPAD_WESTERN_NATIVE_KEYS=1")
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+            set_tests_properties(native_file_accept_retry native_file_selection_retry PROPERTIES
+                TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+        endif()
     endif()
 endif()
 

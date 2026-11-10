@@ -18,6 +18,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
+#include <vector>
 
 namespace {
 using Scintilla::Message;
@@ -453,6 +454,100 @@ void NativeFiles(EditorFrame* frame) {
             "explicit Automatic restores HTML without changing text");
     std::puts("PASS: native first Save, XML filter, cancel, Open, same-path override and Automatic");
 }
+#ifdef __WXGTK__
+class BlockFirstFileAccept final : private wxTimer {
+public:
+    BlockFirstFileAccept() {
+        constexpr int FindChooserIntervalMs = 10;
+        Start(FindChooserIntervalMs);
+    }
+    BlockFirstFileAccept(const BlockFirstFileAccept&) = delete;
+    BlockFirstFileAccept& operator=(const BlockFirstFileAccept&) = delete;
+    BlockFirstFileAccept(BlockFirstFileAccept&&) = delete;
+    BlockFirstFileAccept& operator=(BlockFirstFileAccept&&) = delete;
+    ~BlockFirstFileAccept() override {
+        Stop();
+        if (!chooser_) return;
+        ClearBusyCursor();
+        g_signal_remove_emission_hook(g_signal_lookup("clicked", GTK_TYPE_BUTTON), clickHook_);
+        g_signal_handlers_disconnect_by_data(chooser_, this);
+        Unblock();
+        g_object_unref(chooser_);
+    }
+    int responses = 0;
+    int clicksWhileBusy = 0;
+
+private:
+    void Notify() override {
+        if (chooser_) {
+            ClearBusyCursor();
+            return;
+        }
+        GList* windows = gtk_window_list_toplevels();
+        for (GList* item = windows; item; item = item->next) {
+            auto* widget = GTK_WIDGET(item->data);
+            if (!GTK_IS_FILE_CHOOSER(widget)) continue;
+            if (!GTK_IS_DIALOG(widget)) continue;
+            if (!gtk_widget_get_visible(widget)) continue;
+            chooser_ = GTK_WIDGET(g_object_ref(widget));
+            // Run the injected veto before GTK's own response handlers, then
+            // restore them so subsequent clicks use real native validation.
+            const auto signal = g_signal_lookup("response", GTK_TYPE_DIALOG);
+            // GSignalMatchType is a bitmask; combined enumerators are valid.
+            // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+            const auto match = static_cast<GSignalMatchType>(G_SIGNAL_MATCH_ID | G_SIGNAL_MATCH_UNBLOCKED);
+            while (const auto handler = g_signal_handler_find(widget, match, signal, 0, nullptr, nullptr, nullptr)) {
+                g_signal_handler_block(widget, handler);
+                handlers_.push_back(handler);
+            }
+            g_signal_connect(widget, "response", G_CALLBACK(OnResponse), this);
+            clickHook_ = g_signal_add_emission_hook(g_signal_lookup("clicked", GTK_TYPE_BUTTON), 0, CountBusyClicks,
+                                                    this, nullptr);
+            Stop();
+            break;
+        }
+        g_list_free(windows);
+    }
+    static void OnResponse(GtkDialog* dialog, gint response, gpointer data) {
+        auto& self = *static_cast<BlockFirstFileAccept*>(data);
+        if (response != GTK_RESPONSE_ACCEPT) return;
+        ++self.responses;
+        if (self.responses == 1) {
+            g_signal_stop_emission_by_name(dialog, "response");
+            self.Unblock();
+            // Keep GTK's progress cursor across several 100ms driver polls.
+            // A retry must wait, rather than restart asynchronous validation.
+            auto* cursor = gdk_cursor_new_for_display(gtk_widget_get_display(self.chooser_), GDK_WATCH);
+            gdk_window_set_cursor(gtk_widget_get_window(self.chooser_), cursor);
+            g_object_unref(cursor);
+            self.busy_ = true;
+            constexpr int BusyValidationMs = 400;
+            self.StartOnce(BusyValidationMs);
+        }
+    }
+    static gboolean CountBusyClicks(GSignalInvocationHint*, guint, const GValue* values, gpointer data) {
+        auto& self = *static_cast<BlockFirstFileAccept*>(data);
+        auto* accept = gtk_dialog_get_widget_for_response(GTK_DIALOG(self.chooser_), GTK_RESPONSE_ACCEPT);
+        // Observe the click before GTK can intercept its resulting response.
+        if (self.busy_ && g_value_get_object(values) == accept) ++self.clicksWhileBusy;
+        return TRUE;
+    }
+    void ClearBusyCursor() {
+        if (!busy_) return;
+        if (auto* window = gtk_widget_get_window(chooser_)) gdk_window_set_cursor(window, nullptr);
+        busy_ = false;
+    }
+    void Unblock() {
+        for (const auto handler : handlers_)
+            if (g_signal_handler_is_connected(chooser_, handler)) g_signal_handler_unblock(chooser_, handler);
+        handlers_.clear();
+    }
+    GtkWidget* chooser_ = nullptr;
+    std::vector<gulong> handlers_;
+    bool busy_ = false;
+    gulong clickHook_ = 0;
+};
+#endif
 class MarkupApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -462,6 +557,19 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
                 Require(presented, "private compositor presents the markup editor before native style assertions");
+#ifdef __WXGTK__
+                if (wxGetenv("WXNOTEPAD_TEST_BLOCK_FILE_ACCEPT")) {
+                    BlockFirstFileAccept blocker;
+                    NativeFiles(frame);
+                    Require(blocker.responses >= 2, "a blocked first response must be followed by native acceptance");
+                    Require(blocker.clicksWhileBusy == 0, "accept must not restart GTK's pending validation");
+                    std::puts("PASS: vetoed native file response is retried after GTK finishes validation");
+                    result_ = 0;
+                    frame->Destroy();
+                    ExitMainLoop();
+                    return;
+                }
+#endif
                 const auto path = TestFiles::TemporaryDirectory("sample.html");
                 TestFiles::WriteBytes(path, "<html>\n<body id=\"page\">&amp;</body>\n</html>\n");
                 DocumentSession document(*frame->Editor());

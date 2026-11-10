@@ -9,8 +9,10 @@
 #include <string_view>
 #include <wx/radiobut.h>
 #include <wx/ffile.h>
+#include <wx/log.h>
 #include <chrono>
 #include <functional>
+#include <memory>
 
 namespace {
 void Require(bool value, const char* message) {
@@ -429,6 +431,7 @@ void SavedBytes(EditorFrame* frame) {
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "Redo and Save restore independent sorted encoded bytes");
     }
+    Require(frame->NewDocument(), "release the saved fixture and its directory watch before cleanup");
     std::filesystem::remove_all(directory);
     std::puts("PASS: independently reopened UTF-8/GBK/UTF-16 bytes, BOM/EOL and Undo/Redo");
 }
@@ -436,6 +439,8 @@ class SortApp final : public wxApp {
 public:
     bool OnInit() override {
         std::setvbuf(stdout, nullptr, _IONBF, 0);
+        std::unique_ptr<wxLog> previousLog{wxLog::SetActiveTarget(new wxLogStderr)};
+        previousLog.reset();
         settings_ = std::make_unique<SettingsStore>();
         settings_->values = OriginalSettings{};
         settings_->values.wordWrap = false;

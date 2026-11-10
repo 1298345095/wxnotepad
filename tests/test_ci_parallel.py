@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('ci_parallel', ROOT / '.github/scripts/ci.py')
@@ -88,6 +89,43 @@ class ParallelCTest(unittest.TestCase):
     def test_empty_selection_is_a_failure(self):
         with self.assertRaisesRegex(SystemExit, 'No CTest tests match'):
             CI.test_shards(self.build, '^missing-test$', 4, self.directory / 'reports')
+
+    def test_windows_run_retains_reports_and_refuses_to_overwrite_a_previous_attempt(self):
+        reports = self.directory / 'windows evidence'
+        with mock.patch.object(CI, 'WINDOWS', True), mock.patch.object(
+                CI, 'windows_desktop_names', return_value={'thread': 'Default', 'input': 'Default'}):
+            CI.test('windows', self.build, '^owned-custom$', 1, report_directory=reports)
+            junit = (reports / 'windows-tests.xml').read_bytes()
+            log = (reports / 'windows-ctest.log').read_bytes()
+            with self.assertRaisesRegex(SystemExit, 'Report directory already exists'):
+                CI.test('windows', self.build, '^owned-custom$', 1, report_directory=reports)
+        self.assertIn(b'100% tests passed', log)
+        self.assertEqual((reports / 'windows-tests.xml').read_bytes(), junit)
+        self.assertEqual((reports / 'windows-ctest.log').read_bytes(), log)
+        self.assertTrue((reports / 'windows-desktop.json').is_file())
+        self.assertTrue((reports / 'windows-ctest/LastTest.log').is_file())
+
+    def test_windows_private_desktop_fails_before_starting_any_test(self):
+        reports = self.directory / 'rejected desktop'
+        with mock.patch.object(CI, 'WINDOWS', True), mock.patch.object(
+                CI, 'windows_desktop_names', return_value={'thread': 'owned-private', 'input': 'Default'}):
+            with self.assertRaisesRegex(SystemExit, 'Default input desktop'):
+                CI.test('windows', self.build, '^owned-custom$', 1, report_directory=reports)
+        self.assertEqual(list(self.results.glob('*.started')), [])
+        self.assertTrue((reports / 'windows-desktop.json').is_file())
+        self.assertFalse((reports / 'windows-tests.xml').exists())
+
+    def test_windows_child_failure_keeps_its_nonzero_status_and_junit(self):
+        reports = self.directory / 'failed windows evidence'
+        (self.results / '2.done').write_text('earlier attempt', encoding='utf-8')
+        with mock.patch.object(CI, 'WINDOWS', True), mock.patch.object(
+                CI, 'windows_desktop_names', return_value={'thread': 'Default', 'input': 'Default'}):
+            with self.assertRaises(SystemExit) as failure:
+                CI.test('windows', self.build, '^owned-custom$', 1, report_directory=reports)
+        self.assertNotEqual(failure.exception.code, 0)
+        self.assertTrue((reports / 'windows-tests.xml').is_file())
+        self.assertIn('FileExistsError', (reports / 'windows-ctest.log').read_text(encoding='utf-8'))
+        self.assertIn(b'FileExistsError', (reports / 'windows-ctest/LastTest.log').read_bytes())
 
     def test_child_failures_return_to_workers_and_default_commands_still_fail(self):
         previous_reports = CI.REPORTS

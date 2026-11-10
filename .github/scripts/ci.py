@@ -143,27 +143,78 @@ def test_shards(cmake_dir, expression, jobs, directory):
     return shards
 
 
-def test(backend, cmake_dir, expression, jobs, report_prefix=''):
+def windows_desktop_names():
+    import ctypes
+    from ctypes import wintypes
+
+    desktop_read_objects = 0x0001
+    user_object_name = 2
+    desktop_name_characters = 256
+    user = ctypes.WinDLL('user32', use_last_error=True)
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.GetCurrentThreadId.restype = wintypes.DWORD
+    user.GetThreadDesktop.argtypes = [wintypes.DWORD]
+    user.GetThreadDesktop.restype = wintypes.HANDLE
+    user.OpenInputDesktop.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    user.OpenInputDesktop.restype = wintypes.HANDLE
+    user.GetUserObjectInformationW.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p,
+                                             wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
+    user.CloseDesktop.argtypes = [wintypes.HANDLE]
+
+    def name(handle):
+        value = ctypes.create_unicode_buffer(desktop_name_characters)
+        needed = wintypes.DWORD()
+        if not user.GetUserObjectInformationW(handle, user_object_name, value,
+                                              ctypes.sizeof(value), ctypes.byref(needed)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        return value.value
+
+    input_desktop = user.OpenInputDesktop(0, False, desktop_read_objects)
+    if not input_desktop:
+        raise SystemExit('Windows input desktop is unavailable: ' + str(ctypes.WinError(ctypes.get_last_error())))
+    try:
+        return {'thread': name(user.GetThreadDesktop(kernel.GetCurrentThreadId())), 'input': name(input_desktop)}
+    finally:
+        user.CloseDesktop(input_desktop)
+
+
+def test(backend, cmake_dir, expression, jobs, report_prefix='', report_directory=None):
     if (backend == 'windows') != WINDOWS:
         raise SystemExit('The requested test backend does not match this host')
-    REPORTS.mkdir(parents=True, exist_ok=True)
-    report = report_prefix + backend
-    command = ['ctest', '--test-dir', cmake_dir, '-C', 'Release', '--parallel', '1',
-               '--output-on-failure', '--no-tests=error',
-               '--output-junit', REPORTS / f'{report}-tests.xml']
-    if expression:
-        command += ['-R', expression]
+    reports = report_directory.resolve() if report_directory is not None else REPORTS
+    try:
+        reports.mkdir(parents=True, exist_ok=report_directory is None)
+    except FileExistsError:
+        raise SystemExit('Report directory already exists; choose a fresh directory to retain earlier evidence')
     if WINDOWS:
         if jobs != 1:
             raise SystemExit('Windows native tests share one desktop and clipboard; use --jobs 1')
-        run(command, f'{report}-ctest.log')
+        desktop = windows_desktop_names()
+        (reports / 'windows-desktop.json').write_text(json.dumps(desktop, indent=2) + '\n', encoding='utf-8')
+        if any(value.casefold() != 'default' for value in desktop.values()):
+            raise SystemExit('Windows native tests require the Default input desktop; '
+                             f'thread={desktop["thread"]}, input={desktop["input"]}. '
+                             'Run ci.py test directly from a terminal on the normal desktop.')
+    report = report_prefix + backend
+    command = ['ctest', '--test-dir', cmake_dir, '-C', 'Release', '--parallel', '1',
+               '--output-on-failure', '--no-tests=error',
+               '--output-junit', reports / f'{report}-tests.xml']
+    if expression:
+        command += ['-R', expression]
+    if WINDOWS:
+        try:
+            run(command, reports / f'{report}-ctest.log')
+        finally:
+            temporary = cmake_dir / 'Testing/Temporary'
+            if report_directory is not None and temporary.exists():
+                shutil.copytree(temporary, reports / f'{report}-ctest', dirs_exist_ok=True)
         return
 
-    shards = test_shards(cmake_dir.resolve(), expression, jobs, REPORTS / report)
+    shards = test_shards(cmake_dir.resolve(), expression, jobs, reports / report)
     print(f'Private {backend}: {sum(len(names) for _, names in shards)} tests across '
           f'{len(shards)} concurrent sessions', flush=True)
     plan = [{'shard': index, 'tests': names} for index, (_, names) in enumerate(shards, 1)]
-    (REPORTS / f'{report}-test-plan.json').write_text(json.dumps(plan, indent=2) + '\n', encoding='utf-8')
+    (reports / f'{report}-test-plan.json').write_text(json.dumps(plan, indent=2) + '\n', encoding='utf-8')
 
     def run_shard(item):
         index, (workspace, names) = item
@@ -175,7 +226,7 @@ def test(backend, cmake_dir, expression, jobs, report_prefix=''):
         isolated = ['xvfb-run', '-a', '-s', '-screen 0 1600x1000x24 -nolisten tcp',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
                     backend, *selected]
-        return run(isolated, f'{report}-shard-{index}-ctest.log', environment, check=False)
+        return run(isolated, reports / f'{report}-shard-{index}-ctest.log', environment, check=False)
 
     with ThreadPoolExecutor(max_workers=len(shards)) as workers:
         results = list(workers.map(run_shard, enumerate(shards, 1)))
@@ -249,6 +300,7 @@ def argument_parser():
     tests.add_argument('--backend', choices=('windows', 'x11', 'wayland'), required=True)
     tests.add_argument('--cmake-dir', type=Path, default=BUILD / 'cmake')
     tests.add_argument('--tests', help='Optional CTest regex for local verification; CI runs the complete suite')
+    tests.add_argument('--report-dir', type=Path, help='Fresh report directory for a local run; never overwrites it')
     tests.add_argument('--jobs', type=int, default=1 if WINDOWS else os.cpu_count() or 1,
                        help='Concurrent private Linux display sessions; Windows uses one desktop')
     diagnostic = commands.add_parser('diagnostic-build')
@@ -270,7 +322,8 @@ def main():
     elif arguments.command == 'build':
         build(arguments.app_only, arguments.jobs)
     elif arguments.command == 'test':
-        test(arguments.backend, arguments.cmake_dir.resolve(), arguments.tests, arguments.jobs)
+        test(arguments.backend, arguments.cmake_dir.resolve(), arguments.tests, arguments.jobs,
+             report_directory=arguments.report_dir)
     elif arguments.command == 'diagnostic-build':
         diagnostic_build(arguments.jobs)
     elif arguments.command == 'coverage-build':

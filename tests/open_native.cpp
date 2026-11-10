@@ -45,6 +45,9 @@ public:
         if (holdSource_) g_source_remove(holdSource_);
         if (restoreSource_) g_source_remove(restoreSource_);
         if (chooser_) {
+            if (held_ && !restored_) {
+                if (auto* window = gtk_widget_get_window(GTK_WIDGET(chooser_))) gdk_window_set_cursor(window, nullptr);
+            }
             if (g_signal_handler_is_connected(chooser_, selection_)) g_signal_handler_disconnect(chooser_, selection_);
             g_object_unref(chooser_);
         }
@@ -77,12 +80,18 @@ private:
                 auto& self = *static_cast<DelayedFileSelection*>(data);
                 self.holdSource_ = 0;
                 gtk_file_chooser_set_filename(self.chooser_, self.previous_.utf8_str());
+                // Model GTK's pending metadata work, not an idle lost selection.
+                auto* widget = GTK_WIDGET(self.chooser_);
+                auto* cursor = gdk_cursor_new_for_display(gtk_widget_get_display(widget), GDK_WATCH);
+                gdk_window_set_cursor(gtk_widget_get_window(widget), cursor);
+                g_object_unref(cursor);
                 self.restoreSource_ = g_timeout_add(
                     350,
                     [](gpointer data) -> gboolean {
                         auto& self = *static_cast<DelayedFileSelection*>(data);
                         self.restoreSource_ = 0;
                         self.restored_ = true;
+                        gdk_window_set_cursor(gtk_widget_get_window(GTK_WIDGET(self.chooser_)), nullptr);
                         gtk_file_chooser_set_filename(self.chooser_, self.expected_.utf8_str());
                         return G_SOURCE_REMOVE;
                     },
@@ -107,7 +116,8 @@ void DelayedOpenAs(EditorFrame* frame, const std::filesystem::path& directory) {
     FileCommandDriver driver(FileDialogProfile::Open, wxID_NO, Filename(expected), TraceFileCommand);
     const auto result = frame->OpenAs(FileEncoding::Utf16Le);
     driver.Stop();
-    if (result.status != OpenStatus::Opened || frame->DocumentPath() != Filename(expected))
+    if (!selection.Held() || !selection.Restored() || result.status != OpenStatus::Opened ||
+        frame->DocumentPath() != Filename(expected))
         std::fprintf(stderr, "Delayed native Open As status=%d held=%d restored=%d path='%s' error='%s'\n",
                      static_cast<int>(result.status), selection.Held(), selection.Restored(),
                      frame->DocumentPath().utf8_str().data(), result.error.utf8_str().data());
