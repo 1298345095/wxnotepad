@@ -6,7 +6,20 @@
 #include <string_view>
 #include <optional>
 
-enum class SyntaxLanguage : uint8_t { PlainText, Cpp, Python, Json, JavaScript, Jsx, TypeScript, Tsx, Count };
+enum class SyntaxLanguage : uint8_t {
+    PlainText,
+    Cpp,
+    Python,
+    Json,
+    JavaScript,
+    Jsx,
+    TypeScript,
+    Tsx,
+    Bash,
+    CShell,
+    M4,
+    Count
+};
 struct SyntaxDetectionOptions {
     bool autoSelect = true;
     bool noCgiGuess = false;
@@ -16,6 +29,8 @@ struct SyntaxStyle {
     unsigned int foreground;
     unsigned int background;
     bool bold;
+    bool italic = false;
+    bool eolFilled = false;
 };
 struct SyntaxKeywords {
     const char* text;

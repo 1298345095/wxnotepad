@@ -1,11 +1,11 @@
 #pragma once
 
 #include "settings/original_settings_constants.h"
-#include "syntax/syntax_catalog.h"
 #include "editor/display_units.h"
 #include "document/encoding/encoding_detection.h"
 #include "editor/caret_appearance.h"
 #include "settings/file_watching_options.h"
+#include "syntax/syntax_catalog.h"
 #include <wx/string.h>
 #include <array>
 #include <vector>
@@ -59,8 +59,14 @@ struct OriginalSettings {
     int defaultEOLMode = 0;
     bool warnLineEndings = true;
     OriginalTabs globalTabs;
-    std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> schemeTabs{
-        {{}, {}, {}, {2, 2, true, false}, {2, 2, true, false}, {}, {2, 2, true, false}, {}}};
+    std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> schemeTabs = [] {
+        std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> tabs{};
+        tabs.fill(OriginalTabs{});
+        tabs[static_cast<size_t>(SyntaxLanguage::Json)] = {2, 2, true, false};
+        tabs[static_cast<size_t>(SyntaxLanguage::JavaScript)] = {2, 2, true, false};
+        tabs[static_cast<size_t>(SyntaxLanguage::TypeScript)] = {2, 2, true, false};
+        return tabs;
+    }();
     bool tabIndents = true;
     bool autoIndent = true;
     bool detectIndentation = true;

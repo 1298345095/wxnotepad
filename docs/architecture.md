@@ -296,6 +296,14 @@ style IDs and language-specific properties; their differences are meaningful.
 The catalog should use the existing pinned sources and generation helpers.
 Completion-only lists remain a separate future input.
 
+Shell Script compiles the pinned `LexBash.cxx`. `update_bash_scheme.py` imports
+the two consumed keyword lists and style groups from `stlBash.cpp`; completion-only
+variables are omitted. Bash, C Shell and m4 share these data and the original
+`Shell Script` settings section, and install `lexer.lang` values 0, 1 and 2.
+Dialect properties, comments and shebangs live in the existing static descriptors.
+The document session applies the original UTF-8/LF shell defaults only to empty
+documents with zero Undo actions at language/load/save transitions, retaining BOMs.
+
 The build still needs an explicit delivered-lexer source list and upstream lexer
 registration. Document those together and verify agreement when adding a language;
 runtime metadata alone cannot change what is compiled. A plugin loader or a new
