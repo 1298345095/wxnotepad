@@ -11,6 +11,7 @@
 #include <wx/statusbr.h>
 #include <cstdio>
 #include <stdexcept>
+#include <string_view>
 
 namespace {
 void Require(bool value, const char* message) {
@@ -306,15 +307,60 @@ void Suppression(EditorFrame* frame) {
     }
     std::puts("PASS: shared original loss warning suppression and independent disk bytes");
 }
+wxString ExplicitOpenChooserState(const wxString& expected) {
+#ifdef __WXGTK__
+    const auto classify = [](const char* value, const wxString& target) {
+        return !value ? "none" : wxString::FromUTF8(value) == target ? "match" : "other";
+    };
+    wxString state = "chooser=none";
+    GList* windows = gtk_window_list_toplevels();
+    for (auto* item = windows; item; item = item->next) {
+        auto* widget = GTK_WIDGET(item->data);
+        if (!gtk_widget_get_visible(widget) || !GTK_IS_FILE_CHOOSER(widget)) continue;
+        char* folder = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
+        char* selected = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget));
+        auto* accept = gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_ACCEPT);
+        state = "chooser=present folder=" + wxString(classify(folder, wxFileName(expected).GetPath())) +
+                " selected=" + classify(selected, expected) + " accept=" +
+                (!accept                           ? "absent"
+                 : gtk_widget_is_sensitive(accept) ? "enabled"
+                                                   : "disabled") +
+                " filter='" + NativeDialogs::CurrentFileType(widget) + "'";
+        g_free(folder);
+        g_free(selected);
+        break;
+    }
+    g_list_free(windows);
+    return state;
+#else
+    (void)expected;
+    return {};
+#endif
+}
 void ExplicitOpen(EditorFrame* frame) {
     for (const auto& [label, encoding, input, text] :
          {std::tuple{"Open As Windows-1252...", FileEncoding::Windows1252, "\x80", "€"},
           std::tuple{"Open As DOS-437...", FileEncoding::Dos437, "\xec", "∞"}}) {
         const auto path = TestFiles::TemporaryDirectory("open-as-western.nfo");
         TestFiles::WriteBytes(path, input);
+        wxString previousState;
+        const auto trace = [label, expected = TestFiles::Filename(path), &previousState](const char* transition) {
+            const std::string_view phase(transition);
+            if (phase.starts_with("driver callback")) {
+                if (phase != "driver callback exit") return;
+                const auto state = ExplicitOpenChooserState(expected);
+                if (state.empty() || state == previousState) return;
+                previousState = state;
+                std::fprintf(stderr, "WESTERN-OPEN [%s] %s\n", label, state.utf8_str().data());
+            } else
+                std::fprintf(stderr, "WESTERN-OPEN [%s] %s\n", label, transition);
+            std::fflush(stderr);
+        };
         NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Open, wxID_OK,
-                                                TestFiles::Filename(path));
+                                                TestFiles::Filename(path), trace);
+        trace("command begin");
         Command(frame, "File", label);
+        trace("command returned");
         driver.Stop();
         Require(frame->DocumentEncoding() == encoding && TestEditor::Text(frame) == text,
                 "explicit native Open As overrides filename preference and keeps original bytes");
