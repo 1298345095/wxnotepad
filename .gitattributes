@@ -2,8 +2,8 @@
 *.py text eol=lf
 *.patch text eol=lf -whitespace
 *.sha256 text eol=lf
-tests/fixtures/encoding_175/*.bin -text
-tests/fixtures/encoding_175/*.utf8 -text
+tests/fixtures/encoding_175/*.bin binary
+tests/fixtures/encoding_175/*.utf8 binary
 
 # Preserve upstream notice formatting, including its final blank lines.
 licenses/*.txt text eol=lf -whitespace
