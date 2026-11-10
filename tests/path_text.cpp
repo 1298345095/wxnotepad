@@ -243,6 +243,7 @@ void DefaultEncodingCase(const std::filesystem::path& directory) {
 class PathTextApp final : public wxApp {
 public:
     bool OnInit() override {
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
         wxLog::SetActiveTarget(new wxLogStderr);
         auto* frame = new EditorFrame;
         frame->Show();

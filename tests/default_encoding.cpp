@@ -62,15 +62,7 @@ public:
                 auto* tree = wxDynamicCast(dialog->FindWindowByName("Default encoding", dialog), wxTreeCtrl);
                 Require(tree, "default picker uses default-selection context");
                 initial = tree->GetItemText(tree->GetSelection());
-                const auto visit = [&](auto&& self, wxTreeItemId parent) -> void {
-                    wxTreeItemIdValue cookie;
-                    for (auto item = tree->GetFirstChild(parent, cookie); item.IsOk();
-                         item = tree->GetNextChild(parent, cookie)) {
-                        if (tree->GetItemText(item) == selected) tree->SelectItem(item);
-                        self(self, item);
-                    }
-                };
-                visit(visit, tree->GetRootItem());
+                Require(NativeDialogs::SelectTreeLabel(*tree, selected), "requested default encoding exists in picker");
                 stage = 2;
                 Click(dialog->FindWindow(nestedOk ? wxID_OK : wxID_CANCEL));
                 return;
@@ -251,6 +243,37 @@ void Transitions(SettingsStore& settings) {
     frame->Destroy();
     std::puts("PASS: independent ASCII gate, clean empty scheme rules, BOM/history and next-Open tag preference");
 }
+void NativeDefaultPromotion(SettingsStore& settings) {
+    const auto native = NativeEncodingChoice();
+    if (!native) return; // Unsupported native pages retain their explicit refusal path.
+    for (const bool loadAsUtf8 : {false, true}) {
+        settings.values.encoding = {};
+        settings.values.encoding.defaultEncoding = 0;
+        settings.values.encoding.loadASCIIasUTF8 = loadAsUtf8;
+        settings.values.encoding.loadANSIasUTF8 = loadAsUtf8;
+        auto* frame = new EditorFrame(&settings);
+        frame->Show();
+        // Pinned Encoding_GetAnsiIndex always promotes native CP65001 to
+        // explicit UTF-8; either load flag also promotes supported legacy ACP.
+        const bool explicitEncoding = native->encoding == FileEncoding::Utf8 || loadAsUtf8;
+        const auto check = [&] {
+            Require(frame->DocumentEncoding() == native->encoding && !frame->DocumentIsModified() &&
+                        !frame->Editor()->Send(Scintilla::Message::CanUndo) &&
+                        frame->GetStatusBar()->GetStatusText().Contains("ANSI (") != explicitEncoding,
+                    "fresh native default resolves original ANSI identity independently of scheme override");
+        };
+        check();
+        const auto path = TestFiles::TemporaryDirectory(loadAsUtf8 ? "native-load-flag.txt" : "native-default.txt");
+        TestFiles::WriteBytes(path, "");
+        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
+                "native default empty fixture opens");
+        // ASCII-as-UTF8 governs empty Open separately from initial New.
+        Require(!frame->DocumentIsModified() && TestEditor::Text(frame).empty() && TestFiles::Bytes(path).empty(),
+                "native default promotion preserves empty document and disk state");
+        if (!loadAsUtf8) check();
+        frame->Destroy();
+    }
+}
 class DefaultEncodingApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -264,6 +287,7 @@ public:
                     Persist(settings_, mode);
                 else {
                     Run(settings_);
+                    NativeDefaultPromotion(settings_);
                     Transitions(settings_);
                 }
             } catch (const std::exception& error) {

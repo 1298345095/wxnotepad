@@ -71,18 +71,7 @@ public:
                 }
             } else {
                 auto* tree = wxDynamicCast(dialog->FindWindowByName("Current encoding", dialog), wxTreeCtrl);
-                const auto visit = [&](auto&& self, wxTreeItemId parent) -> void {
-                    wxTreeItemIdValue cookie;
-                    for (auto item = tree->GetFirstChild(parent, cookie); item.IsOk();
-                         item = tree->GetNextChild(parent, cookie)) {
-                        if (tree->GetItemText(item) == selected) {
-                            tree->SelectItem(item);
-                            found = true;
-                        }
-                        self(self, item);
-                    }
-                };
-                if (tree) visit(visit, tree->GetRootItem());
+                if (tree) found = NativeDialogs::SelectTreeLabel(*tree, selected);
             }
             wxCommandEvent event(wxEVT_BUTTON, found && !cancel ? wxID_OK : wxID_CANCEL);
             dialog->GetEventHandler()->ProcessEvent(event);

@@ -14,8 +14,10 @@ enum class FileDialogProfile : std::uint8_t { Open, Save };
 class FileCommandDriver final : public wxTimer {
 public:
     using Observer = std::function<void(const char*)>;
-    FileCommandDriver(FileDialogProfile profile, int choice, wxString destination = {}, Observer observer = {})
-        : profile_(profile), choice_(choice), destination_(std::move(destination)), observer_(std::move(observer)) {
+    FileCommandDriver(FileDialogProfile profile, int choice, wxString destination = {}, Observer observer = {},
+                      wxString fileType = {})
+        : profile_(profile), choice_(choice), destination_(std::move(destination)), observer_(std::move(observer)),
+          fileType_(std::move(fileType)) {
         Observe("driver start");
         Start(100);
     }
@@ -23,6 +25,7 @@ public:
     int prompts = 0;
     int choosers = 0;
     int errors = 0;
+    wxString initialType;
     void Notify() override {
         Observe("driver callback enter");
 #ifdef __WXMSW__
@@ -62,6 +65,8 @@ private:
             if (!chooserStage_++) {
                 ++choosers;
                 Observe("chooser selection begin");
+                initialType = CurrentFileType(window);
+                if (!fileType_.empty()) ChooseFileType(window, fileType_);
                 ChooseFile(window, destination_);
                 Observe("chooser selection end");
             }
@@ -78,6 +83,8 @@ private:
                 chooserStage_ = 1;
                 ++choosers;
                 Observe("chooser selection begin");
+                initialType = CurrentFileType(widget);
+                if (!fileType_.empty()) ChooseFileType(widget, fileType_);
                 ChooseFile(widget, destination_);
                 Observe("chooser selection end");
             } else if (chooserStage_ == 1 && !destination_.empty() && CanAcceptFile(widget, destination_)) {
@@ -119,5 +126,6 @@ private:
     wxString destination_;
     int chooserStage_ = 0;
     Observer observer_;
+    wxString fileType_;
 };
 } // namespace NativeDialogs

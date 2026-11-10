@@ -427,14 +427,20 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const EncodingLo
 
 void DocumentSession::CommitSaveState(const wxString& destination, std::optional<SaveFileType> fileType) {
     const auto previousLanguage = Language();
+    const auto previousDialect = EffectiveLanguage();
     if (fileType) {
         const auto* selected = std::get_if<SyntaxLanguage>(&*fileType);
-        if (selected)
+        if (selected) {
             languageOverride_ = *selected;
-        else if (std::get<SaveType>(*fileType) == SaveType::CurrentScheme)
+            // Original Save As keeps np2LexLangIndex when its selected lexer
+            // equals pLexCurrent (Notepad4.cpp::FileSave).
+            if (*selected != previousLanguage) markupDialect_.reset();
+        } else if (std::get<SaveType>(*fileType) == SaveType::CurrentScheme)
             languageOverride_ = previousLanguage;
-        else
+        else {
             languageOverride_.reset();
+            markupDialect_.reset();
+        }
         // The supported default scheme is Plain Text. Original first-save semantics
         // use the filename when default, current and selected schemes are all Plain.
         if (path_.empty() && previousLanguage == SyntaxLanguage::PlainText &&
@@ -447,9 +453,9 @@ void DocumentSession::CommitSaveState(const wxString& destination, std::optional
     if (fileType && !languageOverride_) DetectAutomaticLanguage();
     // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
-    if (previousLanguage != Language()) {
+    if (previousLanguage != Language() || previousDialect != EffectiveLanguage()) {
         ApplyEmptySchemeDefaults(false);
-        ApplySyntaxLanguage(editor_, Language());
+        ApplySyntaxLanguage(editor_, Language(), markupDialect_);
     }
 }
 
@@ -560,9 +566,10 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     bool unknownLanguage = false;
     if (!keepLanguage) {
         languageOverride_.reset();
+        markupDialect_.reset();
         unknownLanguage = !DetectAutomaticLanguage();
         ApplyEmptySchemeDefaults(false);
-        ApplySyntaxLanguage(editor_, Language());
+        ApplySyntaxLanguage(editor_, Language(), markupDialect_);
     }
     return {OpenStatus::Opened, {}, lineEndings, unknownLanguage};
 }
@@ -629,11 +636,20 @@ bool DocumentSession::SelectEncoding(EncodingChoice choice) {
 
 void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     const auto previous = Language();
+    const auto previousDialect = EffectiveLanguage();
+    markupDialect_.reset();
+    // Pinned Styles.cpp::Style_SelectLexer sniffs only the canonical Web/XML
+    // choices; explicit dialect choices retain the user's selected language.
+    if (language == SyntaxLanguage::Html || language == SyntaxLanguage::Xml) {
+        char prefix[4000]{};
+        editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
+        markupDialect_ = DetectMarkupDocType(prefix);
+    }
     languageOverride_ = language;
     if (!language) DetectAutomaticLanguage();
-    if (previous != Language()) {
+    if (previous != Language() || previousDialect != EffectiveLanguage()) {
         ApplyEmptySchemeDefaults(SyntaxSettingsLanguage(previous) != SyntaxSettingsLanguage(Language()));
-        ApplySyntaxLanguage(editor_, Language());
+        ApplySyntaxLanguage(editor_, Language(), markupDialect_);
     }
 }
 
@@ -647,10 +663,18 @@ void DocumentSession::ApplyEmptySchemeDefaults(bool overrideEncoding) {
     editor_.Send(Message::SetEOLMode, static_cast<uintptr_t>(shell ? Scintilla::EndOfLine::Lf : defaultEolMode_));
     // Style_SetLexer's LexerChanged_Override bit is set by a user switch to a
     // different scheme, but not by FileLoad/New or automatic save detection.
-    if (hasBom_ || (!shell && !overrideEncoding)) return;
-    const auto encoding = shell || encodingOptions_.loadASCIIasUTF8
-                              ? std::optional(EncodingChoice(FileEncoding::Utf8))
-                              : DefaultEncodingChoice(encodingOptions_.defaultEncoding);
+    if (hasBom_) return;
+    std::optional<EncodingChoice> encoding = CurrentEncoding();
+    if (shell || overrideEncoding)
+        encoding = shell || encodingOptions_.loadASCIIasUTF8 ? std::optional(EncodingChoice(FileEncoding::Utf8))
+                                                             : DefaultEncodingChoice(encodingOptions_.defaultEncoding);
+    // EditApplyDefaultEncoding resolves CPI_DEFAULT through Encoding_GetAnsiIndex
+    // even for New/FileLoad. Native UTF-8 is always explicit; either load flag
+    // also promotes a supported legacy ACP to its explicit catalog identity.
+    if (encoding && encoding->systemDefault &&
+        (encoding->encoding == FileEncoding::Utf8 || encodingOptions_.loadANSIasUTF8 ||
+         encodingOptions_.loadASCIIasUTF8))
+        encoding = EncodingChoice(encoding->encoding);
     if (encoding && *encoding != CurrentEncoding()) {
         encoding_ = encoding->encoding;
         hasBom_ = encoding->bom;
@@ -669,5 +693,14 @@ bool DocumentSession::DetectAutomaticLanguage() {
     editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
     const auto detected = DetectLanguage(path_, prefix, detection_);
     automaticLanguage_ = detected.value_or(SyntaxLanguage::PlainText);
+    markupDialect_.reset();
+    // Style_UpdateLexerLang sniffs .xml after its filename has selected lexXML.
+    // An ASP/HTML result changes the displayed dialect, keeping XML options,
+    // settings and the current-scheme Save filter from that matched filename.
+    if (detected && LanguageForPath(path_) == SyntaxLanguage::Xml &&
+        SyntaxSettingsLanguage(*detected) == SyntaxLanguage::Html) {
+        automaticLanguage_ = SyntaxLanguage::Xml;
+        markupDialect_ = detected;
+    }
     return detected.has_value();
 }

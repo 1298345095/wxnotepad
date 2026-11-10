@@ -82,6 +82,7 @@ const SyntaxDefinition& SyntaxFor(SyntaxLanguage language);
 SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language);
 const char* SyntaxSettingsSection(SyntaxLanguage language);
 SyntaxLanguage LanguageForPath(const wxString& path);
+std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view prefix);
 std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_view prefix,
                                              SyntaxDetectionOptions options = {});
 wxString LanguageName(SyntaxLanguage language);

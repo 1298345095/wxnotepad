@@ -53,6 +53,7 @@ struct Big5PuaRange {
 };
 constexpr Big5PuaRange big5PuaRanges[] = {{0x81, 0x8d, 0xeeb8}, {0x8e, 0xa0, 0xe311}, {0xfa, 0xfe, 0xe000}};
 constexpr unsigned Big5TrailsPerLead = 157;
+constexpr unsigned Big5LowTrailCount = 0x7e - 0x40 + 1;
 bool Big5Trail(unsigned trail) {
     return (trail >= 0x40 && trail <= 0x7e) || (trail >= 0xa1 && trail <= 0xfe);
 }
@@ -73,7 +74,7 @@ std::optional<wchar_t> CompatibilityDecode(std::string_view bytes, FileEncoding 
         for (const auto& range : big5PuaRanges) {
             if (lead >= range.firstLead && lead <= range.lastLead)
                 return static_cast<wchar_t>(range.unicode + (lead - range.firstLead) * Big5TrailsPerLead +
-                                            (trail <= 0x7e ? trail - 0x40 : trail - 0xa1 + 63));
+                                            (trail <= 0x7e ? trail - 0x40 : trail - 0xa1 + Big5LowTrailCount));
         }
     }
     return std::nullopt;
@@ -116,7 +117,7 @@ std::optional<std::string> CompatibilityEncode(unsigned scalar, FileEncoding enc
             const unsigned offset = scalar - range.unicode;
             const unsigned trail = offset % Big5TrailsPerLead;
             return PackedBytes(((range.firstLead + offset / Big5TrailsPerLead) << 8) |
-                               (trail < 63 ? trail + 0x40 : trail - 63 + 0xa1));
+                               (trail < Big5LowTrailCount ? trail + 0x40 : trail - Big5LowTrailCount + 0xa1));
         }
     }
     return std::nullopt;
@@ -141,12 +142,14 @@ std::optional<std::string> DecodeChinese(std::string_view bytes, FileEncoding en
         const auto lead = static_cast<unsigned char>(bytes[offset]);
         size_t width = 1;
         if (lead >= 0x81 && lead <= 0xfe) {
-            if (encoding == FileEncoding::Big5)
-                width = std::min(size_t{2}, bytes.size() - offset);
-            else if (bytes.size() - offset >= 4 && bytes[offset + 1] >= '0' && bytes[offset + 1] <= '9' &&
-                     static_cast<unsigned char>(bytes[offset + 2]) >= 0x81 &&
-                     static_cast<unsigned char>(bytes[offset + 2]) <= 0xfe && bytes[offset + 3] >= '0' &&
-                     bytes[offset + 3] <= '9')
+            if (encoding == FileEncoding::Big5) {
+                // CP950 consumes malformed pairs together except for NUL:
+                // the original Windows conversion retains that code unit.
+                if (bytes.size() - offset >= 2 && bytes[offset + 1] != '\0') width = 2;
+            } else if (bytes.size() - offset >= 4 && bytes[offset + 1] >= '0' && bytes[offset + 1] <= '9' &&
+                       static_cast<unsigned char>(bytes[offset + 2]) >= 0x81 &&
+                       static_cast<unsigned char>(bytes[offset + 2]) <= 0xfe && bytes[offset + 3] >= '0' &&
+                       bytes[offset + 3] <= '9')
                 width = 4;
             else if (bytes.size() - offset >= 2 && static_cast<unsigned char>(bytes[offset + 1]) >= 0x40 &&
                      static_cast<unsigned char>(bytes[offset + 1]) <= 0xfe && bytes[offset + 1] != '\x7f')

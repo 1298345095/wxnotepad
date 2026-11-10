@@ -2,6 +2,7 @@
 
 #include <wx/defs.h>
 #include <wx/string.h>
+#include <wx/treectrl.h>
 #include <cstdio>
 #include <stdexcept>
 #include <iterator>
@@ -16,6 +17,20 @@
 // Low-level operations on native modal widgets owned by the calling test.
 // Drivers retain their own dialog recognition, timer stages and assertions.
 namespace NativeDialogs {
+inline bool SelectTreeLabel(wxTreeCtrl& tree, const wxString& label) {
+    const auto visit = [&](auto&& self, wxTreeItemId parent) -> bool {
+        wxTreeItemIdValue cookie;
+        for (auto item = tree.GetFirstChild(parent, cookie); item.IsOk(); item = tree.GetNextChild(parent, cookie)) {
+            if (tree.GetItemText(item) == label) {
+                tree.SelectItem(item);
+                return true;
+            }
+            if (self(self, item)) return true;
+        }
+        return false;
+    };
+    return visit(visit, tree.GetRootItem());
+}
 inline bool PathEquals(const wxString& actual, const wxString& expected) {
     if (actual == expected) return true;
     std::fprintf(stderr, "Document path mismatch: expected='%s', actual='%s'\n", expected.utf8_str().data(),
@@ -23,6 +38,28 @@ inline bool PathEquals(const wxString& actual, const wxString& expected) {
     return false;
 }
 #ifdef __WXMSW__
+inline wxString CurrentFileType(HWND window) {
+    wxString type;
+    EnumChildWindows(
+        window,
+        [](HWND child, LPARAM data) -> BOOL {
+            wchar_t name[64]{};
+            GetClassNameW(child, name, static_cast<int>(std::size(name)));
+            if (!IsWindowVisible(child) || wxString(name) != "ComboBox") return TRUE;
+            const auto selected = SendMessageW(child, CB_GETCURSEL, 0, 0);
+            if (selected == CB_ERR) return TRUE;
+            const auto length = SendMessageW(child, CB_GETLBTEXTLEN, selected, 0);
+            if (length <= 0 || length >= 1024) return TRUE;
+            wchar_t label[1024]{};
+            SendMessageW(child, CB_GETLBTEXT, selected, reinterpret_cast<LPARAM>(label));
+            const wxString value(label);
+            if (!value.Contains(" (") || !value.EndsWith(")")) return TRUE;
+            *reinterpret_cast<wxString*>(data) = value;
+            return FALSE;
+        },
+        reinterpret_cast<LPARAM>(&type));
+    return type;
+}
 inline void ChooseFileType(HWND window, const wxString& choice) {
     struct Selection {
         const wxString& name;
@@ -88,6 +125,10 @@ inline void ChooseFile(HWND window, const wxString& destination) {
     }
 }
 #elif defined(__WXGTK__)
+inline wxString CurrentFileType(GtkWidget* widget) {
+    auto* filter = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(widget));
+    return filter ? wxString::FromUTF8(gtk_file_filter_get_name(filter)) : wxString{};
+}
 inline void ChooseFileType(GtkWidget* widget, const wxString& choice) {
     GSList* filters = gtk_file_chooser_list_filters(GTK_FILE_CHOOSER(widget));
     GtkFileFilter* selected = nullptr;

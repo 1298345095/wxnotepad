@@ -249,8 +249,9 @@ void EditorFrame::UpdateDocumentState() {
     const wxString eol = eolMode == Scintilla::EndOfLine::CrLf ? "CRLF"
                          : eolMode == Scintilla::EndOfLine::Cr ? "CR"
                                                                : "LF";
-    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " + LanguageName(document_.Language()) +
-                  (document_.LanguageOverride() ? " (override)" : "") + " | EOL: " + eol);
+    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " +
+                  LanguageName(document_.EffectiveLanguage()) + (document_.LanguageOverride() ? " (override)" : "") +
+                  " | EOL: " + eol);
     UpdatePositionStatus();
 }
 

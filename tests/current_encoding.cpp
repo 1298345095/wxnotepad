@@ -71,15 +71,7 @@ public:
                 return;
             }
             initial = tree->GetItemText(tree->GetSelection());
-            const auto visit = [&](auto&& self, wxTreeItemId parent) -> void {
-                wxTreeItemIdValue cookie;
-                for (auto item = tree->GetFirstChild(parent, cookie); item.IsOk();
-                     item = tree->GetNextChild(parent, cookie)) {
-                    if (tree->GetItemText(item) == selected) tree->SelectItem(item);
-                    self(self, item);
-                }
-            };
-            visit(visit, tree->GetRootItem());
+            Require(NativeDialogs::SelectTreeLabel(*tree, selected), "requested current encoding exists in picker");
             wxCommandEvent response(wxEVT_BUTTON, cancel ? wxID_CANCEL : wxID_OK);
             dialog->GetEventHandler()->ProcessEvent(response);
             return;

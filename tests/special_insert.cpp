@@ -355,6 +355,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
                 Guid(frame);
                 Controls(frame);
                 OriginalStates(frame);

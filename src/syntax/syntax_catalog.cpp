@@ -40,13 +40,36 @@ constexpr SyntaxProperty javascriptProperties[] = {{"lexer.lang", "0"}};
 constexpr SyntaxProperty jsxProperties[] = {{"lexer.lang", "1"}};
 constexpr SyntaxProperty typescriptProperties[] = {{"lexer.lang", "2"}};
 constexpr SyntaxProperty tsxProperties[] = {{"lexer.lang", "3"}};
-// Notepad4 Styles.cpp stores the HtmlOption bitfield as little endian bytes.
-constexpr SyntaxProperty htmlProperties[] = {{"lexer.lang", "\x0e\x10"}};
-constexpr SyntaxProperty htmlVbProperties[] = {{"lexer.lang", "\x0e\x20"}};
-constexpr SyntaxProperty jspProperties[] = {{"lexer.lang", "\x1e\x10"}};
-constexpr SyntaxProperty jspxProperties[] = {{"lexer.lang", "\x37\x10"}};
-constexpr SyntaxProperty xmlProperties[] = {{"lexer.lang", "\x01\x10"}};
-constexpr SyntaxProperty svgProperties[] = {{"lexer.lang", "\x05\x10"}};
+// Pinned Styles.cpp / LexHTML.cxx HtmlOption contract. lexer.lang stores
+// these flags as little endian bytes, rather than a decimal property string.
+enum HtmlOption : unsigned {
+    HtmlIsXml = 1,
+    HtmlAllowScript = 2,
+    HtmlAllowStyle = 4,
+    HtmlAllowAsp = 8,
+    HtmlAllowJspEl = 16,
+    HtmlAllowJspx = 32,
+    HtmlJavaScript = 1 << 12,
+    HtmlVbScript = 2 << 12,
+    HtmlBase = HtmlAllowScript | HtmlAllowStyle | HtmlAllowAsp,
+    JspBase = HtmlAllowScript | HtmlAllowStyle | HtmlAllowJspEl | HtmlJavaScript,
+    XmlDefault = HtmlIsXml | HtmlJavaScript,
+};
+constexpr auto HtmlOptionBytes(unsigned options) {
+    return std::array{static_cast<char>(options), static_cast<char>(options >> 8), '\0'};
+}
+constexpr auto htmlOptions = HtmlOptionBytes(HtmlBase | HtmlJavaScript);
+constexpr auto htmlVbOptions = HtmlOptionBytes(HtmlBase | HtmlVbScript);
+constexpr auto jspOptions = HtmlOptionBytes(JspBase | HtmlAllowAsp);
+constexpr auto jspxOptions = HtmlOptionBytes(JspBase | HtmlAllowJspx | HtmlIsXml);
+constexpr auto xmlOptions = HtmlOptionBytes(XmlDefault);
+constexpr auto svgOptions = HtmlOptionBytes(XmlDefault | HtmlAllowStyle);
+constexpr SyntaxProperty htmlProperties[] = {{"lexer.lang", htmlOptions.data()}};
+constexpr SyntaxProperty htmlVbProperties[] = {{"lexer.lang", htmlVbOptions.data()}};
+constexpr SyntaxProperty jspProperties[] = {{"lexer.lang", jspOptions.data()}};
+constexpr SyntaxProperty jspxProperties[] = {{"lexer.lang", jspxOptions.data()}};
+constexpr SyntaxProperty xmlProperties[] = {{"lexer.lang", xmlOptions.data()}};
+constexpr SyntaxProperty svgProperties[] = {{"lexer.lang", svgOptions.data()}};
 constexpr const char* aspExtensions[] = {"asp"};
 constexpr const char* aspxExtensions[] = {"aspx"};
 constexpr const char* jspExtensions[] = {"jsp"};
@@ -185,9 +208,11 @@ std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
     return std::nullopt;
 }
 
+} // namespace
+
 // Adapted from pinned Styles.cpp::Style_GetDocTypeLanguage. Its 4000-byte
 // header lookup precedes the ASP language directive and does not parse XML.
-std::optional<SyntaxLanguage> MarkupDocType(std::string_view text) {
+std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view text) {
     std::string lower(text.substr(0, 3999));
     for (auto& ch : lower) {
         if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
@@ -216,6 +241,7 @@ std::optional<SyntaxLanguage> MarkupDocType(std::string_view text) {
     return std::nullopt;
 }
 
+namespace {
 enum class FilenameMatch : uint8_t { Unknown, Associated, Config };
 FilenameMatch OriginalFilenameMatch(const wxString& path) {
     const wxFileName file(path);
@@ -339,7 +365,7 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
     const auto language = templateConfig ? SyntaxLanguage::PlainText : LanguageForPath(path);
     if (language != SyntaxLanguage::PlainText) {
         if (extension == "asp" || extension == "aspx" || extension == "xml")
-            return MarkupDocType(prefix).value_or(language);
+            return DetectMarkupDocType(prefix).value_or(language);
         return language;
     }
     if (extension == "txt") return language;
@@ -376,7 +402,7 @@ std::optional<SyntaxLanguage> DetectLanguage(const wxString& path, std::string_v
                     markup = SyntaxLanguage::Xml;
             }
         }
-        if (markup) return MarkupDocType(prefix).value_or(*markup);
+        if (markup) return DetectMarkupDocType(prefix).value_or(*markup);
     }
     if (interpreter) return interpreter;
     return match == FilenameMatch::Config ? std::optional{SyntaxLanguage::PlainText} : std::nullopt;

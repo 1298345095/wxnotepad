@@ -43,7 +43,7 @@ void ApplyLongLineColour(EditorControl& editor) {
     editor.Send(Scintilla::Message::SetEdgeColour, colour);
 }
 
-void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
+void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::optional<SyntaxLanguage> markupDialect) {
     using Scintilla::Message;
     const auto& definition = SyntaxFor(language);
     const bool fold = definition.canFold;
@@ -80,7 +80,7 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
     // A shared lexer can retain settings when switching dialects. Reset the
     // delivered property and keyword slots before installing the next scheme.
     editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>("0"));
-    for (size_t index = 0; index < 16; ++index)
+    for (int index = 0; index <= Scintilla::KeywordsetMax; ++index)
         editor.Send(Message::SetKeyWords, index, reinterpret_cast<intptr_t>(""));
     editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("fold"),
                 reinterpret_cast<intptr_t>(fold ? "1" : "0"));
@@ -99,7 +99,14 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language) {
         editor.Send(Message::IndicSetAlpha, indicator, 50);
         editor.Send(Message::IndicSetOutlineAlpha, indicator, 200);
     }
-    for (const auto& property : definition.properties)
+    // Style_SetLexer keeps the selected family even when a canonical menu
+    // choice sniffs a dialect from the other family. Only HTML dialects alter
+    // HTML options; XML keeps its own options for a conflicting ASP/HTML header.
+    const auto propertyLanguage =
+        markupDialect && SyntaxSettingsLanguage(language) == SyntaxLanguage::Html
+            ? (SyntaxSettingsLanguage(*markupDialect) == SyntaxLanguage::Html ? *markupDialect : SyntaxLanguage::Html)
+            : language;
+    for (const auto& property : SyntaxFor(propertyLanguage).properties)
         editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>(property.name),
                     reinterpret_cast<intptr_t>(property.value));
     for (size_t index = 0; index < definition.keywords.size(); ++index) {

@@ -47,18 +47,7 @@ public:
             auto* tree = wxDynamicCast(dialog->FindWindowByName("Current encoding", dialog), wxTreeCtrl);
             if (tree) {
                 initial = tree->GetItemText(tree->GetSelection());
-                const auto visit = [&](auto&& self, wxTreeItemId parent) -> void {
-                    wxTreeItemIdValue cookie;
-                    for (auto item = tree->GetFirstChild(parent, cookie); item.IsOk();
-                         item = tree->GetNextChild(parent, cookie)) {
-                        if (tree->GetItemText(item) == selected) {
-                            tree->SelectItem(item);
-                            found = true;
-                        }
-                        self(self, item);
-                    }
-                };
-                visit(visit, tree->GetRootItem());
+                found = NativeDialogs::SelectTreeLabel(*tree, selected);
             }
             wxCommandEvent response(wxEVT_BUTTON, cancel || !found ? wxID_CANCEL : wxID_OK);
             dialog->GetEventHandler()->ProcessEvent(response);
@@ -144,6 +133,11 @@ void Fixtures(EditorFrame* frame) {
          std::string("A中€\xc2\x80@\uEEB8\uE000\0B\r\n", 20),
          std::string("A\xa4\xa4\xa3\xe1\x80\x40\x81\x40\xfa\x40\0B\r\n", 15)},
         {FileEncoding::Big5, "A\x81\x42\x81", "A\uEEBA?", "A\x81\x42?"},
+        // Independent MultiByteToWideChar(950, 0) observation: a malformed
+        // lead does not consume the following NUL (Spec review #176).
+        {FileEncoding::Big5, std::string("A\x81\0B", 4), std::string("A?\0B", 4), std::string("A?\0B", 4)},
+        // The original GB18030 conversion retains the same NUL code unit.
+        {FileEncoding::Gb18030, std::string("A\x81\0B", 4), std::string("A?\0B", 4), std::string("A?\0B", 4)},
         {FileEncoding::Gb18030, "\xa6\xd9\xa8\xbc\xfe\x59\x84\x31\x82\x36\x81\x35\xf4\x37\x82\x35\x90\x37",
          "\uE78D\uE7C7\uE81E\uFE10\u1E3F\u9FB4",
          "\xa6\xd9\xa8\xbc\xfe\x59\x84\x31\x82\x36\x81\x35\xf4\x37\x82\x35\x90\x37"},

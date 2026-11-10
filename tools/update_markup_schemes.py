@@ -3,29 +3,14 @@ import argparse
 from pathlib import Path
 import re
 
-from scheme_data import provenance, read_pinned
+from scheme_data import provenance, read_pinned, style_initializers
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def styles(text, group, offset=""):
     table = text.split(f"static const EDITSTYLE Styles_{group}[] = {{", 1)[1].split("};", 1)[0]
-    result = []
-    for line in table.splitlines():
-        value = re.search(r'L"([^"]*)"', line)
-        if not value:
-            continue
-        value = value[1]
-        fore = re.search(r"fore:#([0-9A-Fa-f]{6})", value)
-        back = re.search(r"back:#([0-9A-Fa-f]{6})", value)
-        for style in re.findall(r"SCE_\w+", line):
-            if offset:
-                style = f"{offset}({style})"
-            result.append(f"    {{{style}, 0x{fore[1] if fore else '000000'}, "
-                          f"0x{back[1] if back else 'FFFFFF'}, "
-                          f"{str('bold' in value).lower()}, {str('italic' in value).lower()}, "
-                          f"{str('eolfilled' in value).lower()}}},")
-    return result
+    return style_initializers(table, "SCE_", eol_filled=True, offset=offset)
 
 
 def main():

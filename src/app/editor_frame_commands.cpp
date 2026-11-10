@@ -1295,8 +1295,9 @@ bool EditorFrame::HandleInsertionKey(const wxKeyEvent& event) {
         if (!event.AltDown() && !event.ShiftDown() && !event.MetaDown()) InsertEncodingIdentifier();
         return true;
     }
-    if (event.GetKeyCode() == WXK_F9 && event.ControlDown() && event.ShiftDown()) {
-        if (!event.AltDown() && !event.MetaDown()) InsertFileName(FileNamePart::FullPath);
+    if (event.GetKeyCode() == WXK_F9 && event.ControlDown()) {
+        if (!event.AltDown() && !event.MetaDown())
+            InsertFileName(event.ShiftDown() ? FileNamePart::FullPath : FileNamePart::FileName);
         return true;
     }
     if (event.GetKeyCode() == WXK_F9 && event.AltDown() && event.ShiftDown() && !event.ControlDown()) {
