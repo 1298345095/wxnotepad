@@ -533,7 +533,7 @@ if(BUILD_TESTING)
     add_editor_test(file_drop file_drop_open 60)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
         # Preserve timeout stacks through the existing Linux core/GDB collector.
-        set_tests_properties(open_new_native PROPERTIES
+        set_tests_properties(open_new_native original_markup_schemes PROPERTIES
             TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
     endif()
     add_editor_test(save_smoke save_existing 30)
@@ -592,6 +592,15 @@ if(BUILD_TESTING)
         target_link_options(steady_stopwatch PRIVATE -Wl,--wrap=clock_gettime -Wl,--wrap=gettimeofday)
         add_test(NAME native_monotonic_wait_clock COMMAND steady_stopwatch)
         set_tests_properties(native_monotonic_wait_clock PROPERTIES TIMEOUT 30)
+    endif()
+    if(UNIX AND NOT APPLE)
+        add_test(NAME native_file_accept_retry COMMAND syntax_markup)
+        set_tests_properties(native_file_accept_retry PROPERTIES TIMEOUT 30
+            ENVIRONMENT "WXNOTEPAD_TEST_BLOCK_FILE_ACCEPT=1")
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+            set_tests_properties(native_file_accept_retry PROPERTIES
+                TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+        endif()
     endif()
 endif()
 

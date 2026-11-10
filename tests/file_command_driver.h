@@ -92,6 +92,9 @@ private:
                 Observe("chooser accept begin");
                 Respond(widget, GTK_RESPONSE_ACCEPT);
                 Observe("chooser accept end");
+                // GTK may veto this response while its folder/selection changes.
+                // Stage 2 prevents reentry during Respond, not a later attempt.
+                chooserStage_ = 1;
             }
             return;
         }

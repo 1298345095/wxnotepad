@@ -149,6 +149,10 @@ inline void Respond(GtkWidget* dialog, int response) {
 }
 
 inline bool CanAcceptFile(GtkWidget* widget, const wxString& expected) {
+    // GTK3 uses the toplevel progress cursor during asynchronous folder and
+    // filename validation. Another click would cancel and restart that work.
+    auto* window = gtk_widget_get_window(widget);
+    if (!window || gdk_window_get_cursor(window)) return false;
     // GTK can finish changing folders/selection after set_filename returns.
     char* selected = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget));
     const bool matches = selected && wxString::FromUTF8(selected) == expected;
