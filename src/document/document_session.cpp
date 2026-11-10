@@ -426,7 +426,10 @@ void DocumentSession::CommitSaveState(const wxString& destination, std::optional
     if (fileType && !languageOverride_) DetectAutomaticLanguage();
     // Original EditSaveFile saves the conversion without changing editor text or history.
     editor_.Send(Scintilla::Message::SetSavePoint);
-    if (previousLanguage != Language()) ApplySyntaxLanguage(editor_, Language());
+    if (previousLanguage != Language()) {
+        ApplyEmptySchemeDefaults();
+        ApplySyntaxLanguage(editor_, Language());
+    }
 }
 
 bool DocumentSession::UpdateFileTime() {
@@ -495,7 +498,8 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     }
     auto& loaded = std::get<LoadedDocument>(candidate);
     const auto result = Replace(loaded.text, loadPath.GetFullPath(), loaded.encoding, loaded.bom, samePath);
-    systemDefaultEncoding_ = loaded.systemDefault;
+    systemDefaultEncoding_ = loaded.systemDefault && !(!samePath && loaded.text.empty() && !loaded.bom &&
+                                                       SyntaxSettingsLanguage(Language()) == SyntaxLanguage::Bash);
     originalEncoding_ = CurrentEncoding();
     fileVariables_ = std::move(loaded.variables);
     // FileLoad applies the loaded file's indentation before restoring its view
@@ -534,6 +538,7 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     if (!keepLanguage) {
         languageOverride_.reset();
         unknownLanguage = !DetectAutomaticLanguage();
+        ApplyEmptySchemeDefaults();
         ApplySyntaxLanguage(editor_, Language());
     }
     return {OpenStatus::Opened, {}, lineEndings, unknownLanguage};
@@ -601,7 +606,25 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     const auto previous = Language();
     languageOverride_ = language;
     if (!language) DetectAutomaticLanguage();
-    if (previous != Language()) ApplySyntaxLanguage(editor_, Language());
+    if (previous != Language()) {
+        ApplyEmptySchemeDefaults();
+        ApplySyntaxLanguage(editor_, Language());
+    }
+}
+
+void DocumentSession::ApplyEmptySchemeDefaults() {
+    // Pinned Styles.cpp::Style_SetLexer / Notepad4.cpp::EditApplyDefaultEncoding.
+    // Undo action count includes pending Redo; clean-but-edited empties retain
+    // their current encoding/EOL. Scheme defaults preserve an existing BOM.
+    using Scintilla::Message;
+    if (editor_.Send(Message::GetLength) || editor_.Send(Message::GetUndoActions)) return;
+    const bool shell = SyntaxSettingsLanguage(Language()) == SyntaxLanguage::Bash;
+    editor_.Send(Message::SetEOLMode, static_cast<uintptr_t>(shell ? Scintilla::EndOfLine::Lf : defaultEolMode_));
+    if (shell && !hasBom_ && CurrentEncoding() != EncodingChoice(FileEncoding::Utf8)) {
+        encoding_ = FileEncoding::Utf8;
+        systemDefaultEncoding_ = false;
+        originalEncoding_ = CurrentEncoding();
+    }
 }
 
 bool DocumentSession::DetectAutomaticLanguage() {

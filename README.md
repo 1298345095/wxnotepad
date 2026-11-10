@@ -43,7 +43,7 @@ the nearest bookmark as the main selection, preferring the earlier line on a
 tie. These commands share the bookmark marker used by Find All.
 
 Edit → Selection → Toggle Line Comment / Ctrl+/ (also Ctrl+keypad Divide) uses `//` for
-C/C++ and JSON, and `#` for Python. It follows the original common indentation,
+C/C++ and JSON, `#` for Python/Bash/C Shell, and `dnl ` for m4. It follows the original common indentation,
 mixed-line and selection rules, with one Undo step per edit. The command is
 available for these writable schemes; rectangular selections report the
 original unsupported-operation warning. `AutoInsertMask` controls optional
@@ -98,7 +98,7 @@ lists their Selection, Lines, Convert, Insert and Special groups:
 | Triple Single Quotes / Triple Double Quotes / Triple Backticks | Ctrl+3 / Ctrl+6 / Ctrl+9 |
 | Merge Duplicate Lines / Remove Duplicate Lines | Menu |
 
-The same operations serve Plain Text, C/C++, Python and JSON. Each retains its
+The same operations serve Plain Text, C/C++, Python, JSON and Shell Script. Each retains its
 original selection scope, rectangular-selection handling and history behavior.
 Save As remains F6; Ctrl+Shift+S converts selected tabs to spaces.
 
@@ -182,6 +182,9 @@ OK/Cancel. Accepting writes replacement bytes while retaining the editor text an
 establishing its save point. Newline insertion defaults to CRLF;
 loaded files use their detected newline style for Enter, while existing CRLF,
 LF and CR bytes remain intact when saved.
+Selecting a shell scheme for a fresh empty document with no Undo actions uses
+UTF-8/LF. Existing BOMs remain intact; an empty document with edit history keeps
+its encoding and newline mode.
 
 Automatic language selection uses these extensions, ignoring ASCII case:
 
@@ -190,12 +193,17 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 | C/C++ | `.c`, `.cpp`, `.cxx`, `.cc`, `.h`, `.hpp`, `.hxx`, `.hh` |
 | Python | `.py`, `.pyw`, `.pyi` |
 | JSON | `.json` |
+| Bash | `.sh`, `.zsh`, `.bash`, `.in` |
+| C Shell | `.csh`, `.tcsh` |
+| m4 | `.m4`, `.ac` |
 | JavaScript / JSX | `.js`, `.jse`, `.jsm`, `.cjs`, `.mjs`, `.qs` / `.jsx` |
 | TypeScript / TSX | `.ts`, `.cts`, `.mts`, `.ets`, `.osts` / `.tsx` |
 
-For unmatched filenames, Automatic also recognizes the original Python interpreter
-line forms, including direct paths, `env` and `winpty` wrappers, and `py*`/`ipy*`
-names, and Node.js interpreter names (`node*`). Known filename associations take precedence; languages whose lexer has not
+For unmatched filenames, Automatic also recognizes the original Python, shell and Node.js
+interpreter line forms, including direct paths and the original `env` and `winpty`
+token handling. Shell dotfiles (`.bash*`, `.profile`, case sensitive), `mozconfig`,
+`APKBUILD` and `PKGBUILD` select Bash. A trailing `.in` first checks the underlying
+filename association. Known filename associations take precedence; languages whose lexer has not
 been delivered retain the Plain Text fallback. The original `[Styles] AutoSelect`
 and `[Settings2] NoCGIGuess` settings control this selection. It runs on Open and
 explicit Automatic selection, without changing text or history; ordinary edits
@@ -227,7 +235,7 @@ Undo/Redo update syntax through the core's incremental styling lifecycle. The
 pinned original checkout; generated headers record revision, source hash and
 license, and omit completion-only lists.
 
-C/C++, Python, JSON, JavaScript/JSX and TypeScript/TSX support code folding. JavaScript
+C/C++, Python, JSON, Shell Script, JavaScript/JSX and TypeScript/TSX support code folding. JavaScript
 and TypeScript use the original shared JavaScript lexer with separate keyword lists
 and four dialect properties. Their tab settings default to two spaces; JSX shares
 the JavaScript section and TSX shares TypeScript. Click a header's margin marker to
