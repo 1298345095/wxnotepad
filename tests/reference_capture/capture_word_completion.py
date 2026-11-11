@@ -28,6 +28,7 @@ k.VirtualFreeEx.argtypes=[w.HANDLE,c.c_void_p,c.c_size_t,w.DWORD];k.CloseHandle.
 # SCI_AUTOCGETCURRENTTEXT plus original native Down routing freezes each item.
 fixtures=[('Plain Text','.txt','alpha alpine al'),('Plain Text','.txt','alpha al'),('Plain Text','.txt','alpha alpha'),('Plain Text','.txt','alpha '),('Plain Text','.txt','Alpha alpha alpine al'),('Plain Text','.txt','12345 12399 123'),('Plain Text','.txt','0xABCD 0xABEF 0xAB'),('Plain Text','.txt','中hello 中help 中he'),('Plain Text','.txt','a::hello a::help a::he'),('C/C++','.cpp','pri'),('C/C++','.cpp','#inc'),('Python','.py','@sta'),('HTML','.html','<scr'),('XML','.xml','<roo'),('Bash','.sh','$HO')]
 fixtures += [('JavaScript','.js','con'),('TypeScript','.ts','key'),('JSON','.json','tru'),('Rust','.rs','pri'),('Go','.go','app'),('Lua','.lua','tab'),('HTML','.html','<style>a{col'),('HTML','.html','<style>a:hov'),('HTML','.html','<script>con'),('HTML','.html','<% Dim a'+chr(13)+chr(10)+'Le'),('HTML','.html','<?php is_'),('XML Schema','.xsd','<xsd:ele'),('XSLT','.xsl','<xsl:tem')]
+fixtures += [('Markdown','.md','<di'),('Markdown','.md','</di'),('Markdown','.md','contented')]
 results=[]
 for language,ext,text in fixtures:
  p=host/('fixture'+ext);p.write_text('\ufeff',encoding='utf-8')

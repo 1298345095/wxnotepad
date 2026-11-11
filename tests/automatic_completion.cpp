@@ -109,6 +109,22 @@ void Behavior(EditorFrame* frame) {
     };
     WordCompletionSettings settings;
     scheme("Plain Text");
+    const auto ignoreCase = frame->GetMenuBar()->FindMenuItem("Settings", "Auto Completion Ignore Case");
+    Require(ignoreCase != wxNOT_FOUND, "original Ignore Case menu exists");
+    reset("Alpha alpine a");
+    Type(editor, 'l');
+    Require(Candidates(editor) == std::vector<std::string>{"alpine"}, "default automatic completion matches case");
+    NativeSearch::Command(frame, ignoreCase);
+    Require(!editor->Send(Message::AutoCActive), "Ignore Case menu cancels the existing popup");
+    reset("Alpha alpine a");
+    Type(editor, 'l');
+    Require(Candidates(editor) == std::vector<std::string>{"Alpha", "alpine"},
+            "Ignore Case menu immediately changes automatic candidates");
+    NativeSearch::Command(frame, ignoreCase);
+    reset("Alpha alpine a");
+    Type(editor, 'l');
+    Require(Candidates(editor) == std::vector<std::string>{"alpine"},
+            "turning Ignore Case off immediately restores case matching");
     reset("alpha alpine a");
     Type(editor, 'l');
     Key(editor, 40);
@@ -209,10 +225,17 @@ void Behavior(EditorFrame* frame) {
     settings = WordCompletionSettings{};
     settings.scanWordsTimeout = 50;
     editor->SetCompletionSettings(settings);
+    constexpr size_t DocumentWordCount = 2'000'000;
+    constexpr size_t WordsPerLine = 16;
+    const std::string word = "alpha ";
     std::string longDocument;
-    longDocument.reserve(12'000'001);
-    for (int i = 0; i < 2'000'000; ++i)
-        longDocument += "alpha ";
+    longDocument.reserve(DocumentWordCount * word.size() + 1);
+    // Exercise the same 12 MB document scan without making each GUI paint
+    // traverse a 12 MB single line under atomic coverage instrumentation.
+    for (size_t i = 0; i < DocumentWordCount; ++i) {
+        longDocument += word;
+        if (i % WordsPerLine == WordsPerLine - 1) longDocument.back() = '\n';
+    }
     longDocument += 'a';
     reset(longDocument.c_str());
     const auto started = std::chrono::steady_clock::now();

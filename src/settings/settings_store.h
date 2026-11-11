@@ -24,7 +24,8 @@ private:
     bool ReadBool(const wxString& key, bool fallback, const wxString& sectionName = "Settings") const;
     int ReadInt(const wxString& key, int fallback, const wxString& sectionName = "Settings") const;
     wxString ReadString(const wxString& key, const wxString& fallback) const;
-    void WriteString(const wxString& key, const wxString& value, const wxString& fallback);
+    void WriteString(const wxString& key, const wxString& value, const wxString& fallback,
+                     const wxString& sectionName = "Settings");
     wxString ReadDateTimeFormat(const wxString& key) const;
     std::vector<wxString> ReadHistory(const wxString& sectionName, size_t capacity,
                                       bool preserveWhitespace = false) const;
