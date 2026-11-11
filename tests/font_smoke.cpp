@@ -10,8 +10,13 @@
 
 namespace core = Scintilla::Internal;
 
-#ifdef __WXGTK__
 namespace {
+class FontFailure final : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
+#ifdef __WXGTK__
 void BufferedTextRaster(wxWindow& window, const core::Font& font, double scale) {
     constexpr int Width = 400;
     constexpr int Height = 80;
@@ -19,11 +24,13 @@ void BufferedTextRaster(wxWindow& window, const core::Font& font, double scale) 
     constexpr size_t Channels = 3;
     const core::PRectangle rectangle(0, 0, Width, Height);
     constexpr std::string_view Text = "Hg 0123456789 | ASCII | 中文";
-    wxBitmap directBitmap, copiedBitmap;
+    wxBitmap directBitmap;
+    wxBitmap copiedBitmap;
     directBitmap.CreateWithLogicalSize(Width, Height, scale);
     copiedBitmap.CreateWithLogicalSize(Width, Height, scale);
     {
-        wxMemoryDC directDC(directBitmap), copiedDC(copiedBitmap);
+        wxMemoryDC directDC(directBitmap);
+        wxMemoryDC copiedDC(copiedBitmap);
         auto direct = core::Surface::Allocate(Scintilla::Technology::Default);
         auto copied = core::Surface::Allocate(Scintilla::Technology::Default);
         direct->Init(&directDC, &window);
@@ -38,19 +45,20 @@ void BufferedTextRaster(wxWindow& window, const core::Font& font, double scale) 
     const auto direct = directBitmap.ConvertToImage();
     const auto copied = copiedBitmap.ConvertToImage();
     const auto pixels = static_cast<size_t>(direct.GetWidth()) * direct.GetHeight();
-    size_t ink = 0, different = 0;
+    size_t ink = 0;
+    size_t different = 0;
     for (size_t pixel = 0; pixel < pixels; ++pixel) {
         const auto* expected = direct.GetData() + pixel * Channels;
         const auto* actual = copied.GetData() + pixel * Channels;
-        ink += expected[0] != 255 || expected[1] != 255 || expected[2] != 255;
-        different += expected[0] != actual[0] || expected[1] != actual[1] || expected[2] != actual[2];
+        if (expected[0] != 255 || expected[1] != 255 || expected[2] != 255) ++ink;
+        if (expected[0] != actual[0] || expected[1] != actual[1] || expected[2] != actual[2]) ++different;
     }
     std::cout << "scale=" << scale << " ink_pixels=" << ink << " different_pixels=" << different << '\n';
     if (!ink || different)
-        throw std::runtime_error("Buffered editor text must retain the native raster resolution at the target scale");
+        throw FontFailure("Buffered editor text must retain the native raster resolution at the target scale");
 }
-} // namespace
 #endif
+} // namespace
 
 class FontApp final : public wxApp {
 public:
@@ -76,7 +84,7 @@ public:
                     frame->GetDPI().y, expected.x, direct, buffered, directHeight, bufferedHeight);
                 if (direct != expected.x || buffered != expected.x || directHeight != bufferedHeight ||
                     surface->LogPixelsY() != pixmap->LogPixelsY())
-                    throw std::runtime_error(
+                    throw FontFailure(
                         "Buffered and direct editor text must use the same native point size at the window DPI");
                 std::puts("PASS: buffered and direct font metrics match native window DPI");
 #ifdef __WXGTK__
@@ -85,7 +93,7 @@ public:
                 std::puts("PASS: buffered text pixels match direct native rendering at 100% and 200%");
 #endif
                 result_ = 0;
-            } catch (const std::exception& error) {
+            } catch (const FontFailure& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
             frame->Destroy();

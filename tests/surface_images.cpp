@@ -2,8 +2,8 @@
 #include <wx/wx.h>
 #include <wx/dcmemory.h>
 #include <array>
-#include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <stdexcept>
 
 namespace {
@@ -15,6 +15,11 @@ constexpr int OriginX = 2;
 constexpr int OriginY = 3;
 constexpr size_t RgbaChannels = 4;
 using ImageData = std::array<unsigned char, static_cast<size_t>(SourceWidth) * SourceHeight * RgbaChannels>;
+
+class ImageFailure final : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
 
 wxImage Render(wxWindow& window, int scale, wxSize size, const ImageData& data) {
     wxBitmap target;
@@ -52,34 +57,46 @@ void DestinationBounds(wxWindow& window, int scale, wxSize size) {
     for (int y = 0; y < image.GetHeight(); ++y)
         for (int x = 0; x < image.GetWidth(); ++x) {
             const unsigned char expected = bounds.Contains(x, y) ? 0 : 255;
-            different +=
-                image.GetRed(x, y) != 255 || image.GetGreen(x, y) != expected || image.GetBlue(x, y) != expected;
+            if (image.GetRed(x, y) != 255 || image.GetGreen(x, y) != expected || image.GetBlue(x, y) != expected)
+                ++different;
         }
-    std::printf("RGBA scale=%d destination=%dx%d different_pixels=%zu\n", scale, size.x, size.y, different);
-    if (different) throw std::runtime_error("RGBA images must fill exactly the destination rectangle");
+    std::cout << "RGBA scale=" << scale << " destination=" << size.x << 'x' << size.y
+              << " different_pixels=" << different << '\n';
+    if (different) throw ImageFailure("RGBA images must fill exactly the destination rectangle");
 }
 
-void NativeDetailAndAlpha(wxWindow& window, int scale) {
+unsigned char AlphaForRow(int row) {
+    // Opaque, transparent, and half-transparent pairs of scanlines.
+    if (row < 2) return 255;
+    if (row < 4) return 0;
+    return 128;
+}
+
+ImageData AlternatingPixels() {
     ImageData data{};
     for (int y = 0; y < SourceHeight; ++y)
         for (int x = 0; x < SourceWidth; ++x) {
             const size_t pixel = (y * SourceWidth + x) * RgbaChannels;
             data[pixel + (x % 2 == 0 ? 0 : 2)] = 255;
-            // Opaque, transparent, and half-transparent pairs of scanlines.
-            data[pixel + 3] = y < 2 ? 255 : y < 4 ? 0 : 128;
+            data[pixel + 3] = AlphaForRow(y);
         }
+    return data;
+}
+
+void NativeDetailAndAlpha(wxWindow& window, int scale) {
+    const auto data = AlternatingPixels();
     const auto image = Render(window, scale, wxSize(SourceWidth / scale, SourceHeight / scale), data);
     for (int y = 0; y < SourceHeight; ++y)
         for (int x = 0; x < SourceWidth; ++x) {
-            const int background = y < 2 ? 0 : y < 4 ? 255 : 127;
+            const int background = 255 - AlphaForRow(y);
             const int px = OriginX * scale + x;
             const int py = OriginY * scale + y;
             if (std::abs(image.GetRed(px, py) - (x % 2 == 0 ? 255 : background)) > 1 ||
                 std::abs(image.GetGreen(px, py) - background) > 1 ||
                 std::abs(image.GetBlue(px, py) - (x % 2 == 0 ? background : 255)) > 1)
-                throw std::runtime_error("RGBA images must preserve native pixel detail and alpha composition");
+                throw ImageFailure("RGBA images must preserve native pixel detail and alpha composition");
         }
-    std::printf("PASS: RGBA scale=%d retains alternating source pixels and alpha\n", scale);
+    std::cout << "PASS: RGBA scale=" << scale << " retains alternating source pixels and alpha\n";
 }
 } // namespace
 
@@ -96,8 +113,8 @@ public:
                     NativeDetailAndAlpha(*frame, scale);
                 }
                 result_ = 0;
-            } catch (const std::exception& error) {
-                std::fprintf(stderr, "FAIL: %s\n", error.what());
+            } catch (const ImageFailure& error) {
+                std::cerr << "FAIL: " << error.what() << '\n';
             }
             frame->Destroy();
             ExitMainLoop();
