@@ -74,6 +74,12 @@ constexpr const char* xsdExtensions[] = {"xsd"};
 constexpr const char* xsltExtensions[] = {"xsl", "xslt"};
 constexpr const char* dtdExtensions[] = {"dtd"};
 constexpr const char* plistExtensions[] = {"plist"};
+// Pinned stlDefault.cpp::lexTextFile uses the distinct Text Settings table.
+constexpr SyntaxOriginalMetadata plainOriginal = {
+    SyntaxLexerAttribute::NoLineComment | SyntaxLexerAttribute::NoBlockComment |
+        SyntaxLexerAttribute::IndentBasedFolding | SyntaxLexerAttribute::IndentLookForward |
+        SyntaxLexerAttribute::PlainTextFile,
+    4, 4, (1 << 1) | (1 << 2)};
 constexpr SyntaxDefinition definitions[] = {
     {"Plain Text",
      textExtensions,
@@ -87,7 +93,10 @@ constexpr SyntaxDefinition definitions[] = {
      nullptr,
      nullptr,
      0,
-     true},
+     true,
+     false,
+     nullptr,
+     plainOriginal},
     {"C/C++", cppExtensions, cppLists, cppStyles, cppProperties, SCLEX_CPP, SyntaxLanguage::Cpp, true, "//", "/*", "*/",
      SCE_C_COMMENTDOC_TAG_XML, false, false, nullptr, cppOriginal},
     {"Python",

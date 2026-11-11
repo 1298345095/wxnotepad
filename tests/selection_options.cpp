@@ -1,15 +1,37 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
+#include "native_search_helpers.h"
 #include <wx/wx.h>
 #include <wx/filename.h>
 #include <cstdio>
 #include <stdexcept>
+#include <tuple>
 
 namespace {
 using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
+}
+void CheckMenu(EditorFrame* frame, SettingsStore& settings, int option) {
+    auto* bar = frame->GetMenuBar();
+    for (const auto& [label, bit, message, enabled] :
+         {std::tuple{"Enable Multiple Selection", 1, Message::GetMultipleSelection, 1},
+          std::tuple{"Undo Redo Remember Selection", 8, Message::GetUndoSelectionHistory, 3}}) {
+        const int id = bar->FindMenuItem("Settings", label);
+        Require(id != wxNOT_FOUND, "original selection preference must be a native Settings menu command");
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        Require(bar->FindItem(id)->IsCheckable() && bar->IsChecked(id) == ((option & bit) != 0),
+                "selection preference checked state follows imported bit");
+        NativeSearch::Command(frame, id);
+        Require(settings.values.selectOption == (option ^ bit), "toggle preserves every unrelated selection bit");
+        Require(frame->Editor()->Send(message) == ((option & bit) ? 0 : enabled),
+                "native preference command applies to the existing core immediately");
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        Require(bar->IsChecked(id) == ((option & bit) == 0), "toggled native menu check follows the preference");
+        NativeSearch::Command(frame, id);
+        Require(settings.values.selectOption == option, "second toggle restores imported raw bits");
+    }
 }
 void Check(EditorControl& editor, int option) {
     Require(editor.Send(Message::GetMultipleSelection) == ((option & 1) != 0),
@@ -57,6 +79,29 @@ public:
             try {
                 const int option = wxAtoi(argv[1]);
                 Require(settings_->values.selectOption == option, "raw imported bits must survive unchanged");
+                CheckMenu(frame, *settings_, option);
+                if (argc > 2) {
+                    const wxString action = argv[2];
+                    if (action != "keep") {
+                        for (const char* label : {"Enable Multiple Selection", "Undo Redo Remember Selection"})
+                            NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", label));
+                        Require(settings_->values.selectOption == (option ^ 9), "lifecycle toggles only target bits");
+                        Require(frame->Editor()->Send(Message::GetMultipleSelection) == ((option & 1) ? 0 : 1) &&
+                                    frame->Editor()->Send(Message::GetUndoSelectionHistory) == ((option & 8) ? 0 : 3),
+                                "lifecycle commands apply both live options");
+                    }
+                    if (action == "disable-exit")
+                        NativeSearch::Command(frame,
+                                              frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings On Exit"));
+                    if (action == "explicit")
+                        NativeSearch::Command(frame,
+                                              frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
+                    std::printf("PASS: selection lifecycle imported=%d action=%s\n", option, action.utf8_str().data());
+                    result_ = 0;
+                    frame->Close(true);
+                    ExitMainLoop();
+                    return;
+                }
                 Check(*frame->Editor(), option);
                 Require(frame->NewDocument(), "New must succeed");
                 Check(*frame->Editor(), option);
