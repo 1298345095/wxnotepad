@@ -86,6 +86,33 @@ class ParallelCTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual([path.name for path in self.results.glob('*.done')], ['2.done'])
 
+    def test_nested_registered_test_executes_with_its_original_directory_and_environment(self):
+        nested = self.source / 'nested tests' / 'deep'
+        nested.mkdir(parents=True)
+        probe = nested / 'child.py'
+        probe.write_text(
+            'from pathlib import Path\nimport os,sys\n'
+            'assert Path.cwd().resolve()==Path(sys.argv[1]).resolve(), str(Path.cwd())\n'
+            'assert os.environ["WXNOTEPAD_CHILD_VALUE"]=="registered"\n'
+            'Path(sys.argv[2]).write_text("nested",encoding="utf-8")\n', encoding='utf-8')
+        (nested.parent / 'CMakeLists.txt').write_text('add_subdirectory(deep)\n', encoding='utf-8')
+        arguments = ' '.join(f'[==[{value}]==]' for value in
+                             [sys.executable, probe.as_posix(), (self.build / 'nested tests/deep').as_posix(),
+                              (self.results / 'nested.done').as_posix()])
+        (nested / 'CMakeLists.txt').write_text(
+            f'add_test(NAME owned-child COMMAND {arguments})\n'
+            'set_tests_properties(owned-child PROPERTIES ENVIRONMENT "WXNOTEPAD_CHILD_VALUE=registered")\n',
+            encoding='utf-8')
+        with (self.source / 'CMakeLists.txt').open('a', encoding='utf-8') as output:
+            output.write('add_subdirectory([==[nested tests]==])\n')
+        subprocess.run(['cmake', '-S', self.source, '-B', self.build],
+                       check=True, capture_output=True, text=True, encoding='utf-8')
+        shards = CI.test_shards(self.build, '^owned-child$', 2, self.directory / 'nested reports')
+        result = self.execute(shards[0])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.results / 'nested.done').read_text(encoding='utf-8'), 'nested')
+        self.assertEqual([path.name for path in self.results.glob('*.done')], ['nested.done'])
+
     def test_empty_selection_is_a_failure(self):
         with self.assertRaisesRegex(SystemExit, 'No CTest tests match'):
             CI.test_shards(self.build, '^missing-test$', 4, self.directory / 'reports')
