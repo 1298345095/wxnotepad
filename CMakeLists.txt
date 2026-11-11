@@ -85,6 +85,7 @@ add_library(editor_runtime STATIC
     src/editor/tab_conversion.cpp
     src/editor/number_radix.cpp
     src/editor/occurrence_marking.cpp
+    src/editor/auto_insertion.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
@@ -109,6 +110,7 @@ endif()
 
 add_library(editor_features STATIC
     src/editor/go_to_location.cpp
+    src/editor/completion_styles.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/file_variables.cpp
@@ -125,6 +127,7 @@ target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/dialogs/auto_completion_settings_dialog.cpp
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
@@ -528,6 +531,11 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
     set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
+    add_gui_program(auto_completion_settings tests/auto_completion_settings.cpp app_shell)
+    add_test(NAME original_auto_completion_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/auto_completion_settings_process.py" "$<TARGET_FILE:auto_completion_settings>")
+    set_tests_properties(original_auto_completion_settings PROPERTIES TIMEOUT 120)
+    add_editor_test(auto_insertion original_auto_insertion 90)
     add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(file_indentation original_file_indentation 60)
     add_editor_test(fold_python python_fold_margin 60)

@@ -49,6 +49,11 @@ available for these writable schemes; rectangular selections report the
 original unsupported-operation warning. `AutoInsertMask` controls optional
 spacing through the shared [settings lifecycle](docs/settings.md).
 
+Settings → Auto Completion Settings controls paired-character insertion, space
+after comma, space after comment and Auto Indent using the original option bits.
+Typing follows the pinned scheme's escape, quote, literal and generic-type rules,
+including original existing-delimiter checks and Undo/Redo grouping.
+
 View → Line Numbers / Ctrl+Shift+N toggles a margin sized for the current line
 count, font and display scale. View → Word Wrap / Ctrl+Shift+W wraps long lines
 to the window width without changing newline bytes. View → Show Whitespace /
