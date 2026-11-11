@@ -154,8 +154,15 @@ existing text INI files through the platform text converter.
 If an existing INI cannot be read completely, settings writes fail without replacing it.
 
 `[Settings] AutoInsertMask` defaults to `511` and uses the original integer-prefix
-parser. Toggle Line Comment reads bit `256` to insert or remove one optional
-space after the scheme prefix. The complete mask is retained through reloads,
+parser. Settings > Auto Completion Settings edits the original independent bits:
+parentheses `1`, braces `2`, square brackets `4`, angle brackets `8`, double quotes
+`16`, single quotes `32`, backticks `64`, space after comma `128`, and space after
+comment `256`. Typed insertion uses the pinned language/style, escape, character
+literal, generic-type and matching-delimiter rules. Tentative IME input and
+multiple-selection notifications retain the original suppression. The maintained
+core handles selection enclosure and overwrite typing. Toggle Line Comment reads
+the same bit `256`. OK commits these controls and Auto Indent; Cancel commits
+nothing. Other option bits remain intact. The complete mask is retained through reloads,
 Save Settings Now and enabled exit saving; the default `511` is omitted on Save.
 
 Tab settings use this same store. `[Settings]` defaults are `TabWidth=4`,
@@ -203,7 +210,7 @@ global/scheme settings. Language switches preserve file overrides; unrelated
 Open and New do not inherit them. Detection changes neither text nor history.
 
 `[Settings] AutoIndent` defaults to `1` and follows the same explicit/exit save
-rules. View > Auto Indent toggles the option. Enter preserves the original
+rules. Settings > Auto Indent and Auto Completion Settings share the option. Enter preserves the original
 leading whitespace and applies the pinned delimiter, colon and block-comment
 opener rules using the active file tab settings. These rules are shared by the
 delivered schemes; they do not add Python keyword completion or comment-prefix

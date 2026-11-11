@@ -46,6 +46,7 @@ void ApplyLongLineColour(EditorControl& editor) {
 void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::optional<SyntaxLanguage> markupDialect) {
     using Scintilla::Message;
     const auto& definition = SyntaxFor(language);
+    editor.SetCompletionStyles(CompletionStylesFor(definition));
     const bool fold = definition.canFold;
     editor.Send(Message::SetMarginTypeN, EditorMargin::Folding, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
     editor.Send(Message::SetMarginMaskN, EditorMargin::Folding, Scintilla::MaskFolders);
@@ -111,6 +112,7 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
                     reinterpret_cast<intptr_t>(property.value));
     for (size_t index = 0; index < definition.keywords.size(); ++index) {
         const auto& list = definition.keywords[index];
+        if (list.attributes & SyntaxKeywordAttribute::NoLexer) continue;
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
     InstallStyles(editor, definition.styles);

@@ -47,6 +47,9 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexBash.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexRust.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexGo.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexLua.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
@@ -82,6 +85,7 @@ add_library(editor_runtime STATIC
     src/editor/tab_conversion.cpp
     src/editor/number_radix.cpp
     src/editor/occurrence_marking.cpp
+    src/editor/auto_insertion.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
@@ -106,6 +110,7 @@ endif()
 
 add_library(editor_features STATIC
     src/editor/go_to_location.cpp
+    src/editor/completion_styles.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/file_variables.cpp
@@ -122,6 +127,7 @@ target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/dialogs/auto_completion_settings_dialog.cpp
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
@@ -478,6 +484,9 @@ if(BUILD_TESTING)
         --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/diagnostics/native")
     set_tests_properties(native_diagnostic_delivery PROPERTIES TIMEOUT 150)
     add_editor_test(open_smoke open_utf8 30)
+    add_editor_test(syntax_native_languages original_rust_go_lua_schemes 90)
+    target_compile_definitions(syntax_native_languages PRIVATE
+        "NATIVE_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/native_languages_reference.tsv\"")
     add_editor_test(syntax_cpp cpp_highlighting 30)
     add_editor_test(syntax_python python_highlighting 30)
     add_editor_test(syntax_shell shell_highlighting 60)
@@ -522,6 +531,11 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
     set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
+    add_gui_program(auto_completion_settings tests/auto_completion_settings.cpp app_shell)
+    add_test(NAME original_auto_completion_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/auto_completion_settings_process.py" "$<TARGET_FILE:auto_completion_settings>")
+    set_tests_properties(original_auto_completion_settings PROPERTIES TIMEOUT 120)
+    add_editor_test(auto_insertion original_auto_insertion 90)
     add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(file_indentation original_file_indentation 60)
     add_editor_test(fold_python python_fold_margin 60)

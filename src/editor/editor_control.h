@@ -2,6 +2,7 @@
 
 #include "settings/original_settings_constants.h"
 #include "editor/align_lines.h"
+#include "editor/completion_styles.h"
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
 #include "editor/caret_appearance.h"
@@ -76,6 +77,9 @@ public:
     void RemoveDuplicateLines();
     void SortLines(unsigned options = SortOption::Ascending);
     void SetIndentationWidths(int tabWidth, int indentWidth);
+    void SetAutoInsertMask(int mask);
+    bool IsOpenBraceMatched(intptr_t position, intptr_t startPosition);
+    void SetCompletionStyles(CompletionStyles styles) { completionStyles_ = std::move(styles); }
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     void Copy();
@@ -135,6 +139,9 @@ private:
     bool codeFoldingVisible_ = true;
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
+    int autoInsertMask_ = AutoInsertMask_Default;
+    CompletionStyles completionStyles_;
+    void AutoInsertCharacter(int ch);
     bool autoIndent_ = true;
     bool autoShrinkScrollWidth_ = false;
     bool matchBraces_ = true;
