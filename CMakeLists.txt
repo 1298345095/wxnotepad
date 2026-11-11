@@ -86,6 +86,7 @@ add_library(editor_runtime STATIC
     src/editor/number_radix.cpp
     src/editor/occurrence_marking.cpp
     src/editor/auto_insertion.cpp
+    src/editor/auto_close_tags.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
@@ -537,6 +538,8 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
     set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
+    add_gui_program(auto_close_tags tests/auto_close_tags.cpp app_shell)
+    add_test(NAME original_auto_close_tags COMMAND auto_close_tags)
     add_gui_program(auto_completion_settings tests/auto_completion_settings.cpp app_shell)
     add_test(NAME original_auto_completion_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_SOURCE_DIR}/tests/auto_completion_settings_process.py" "$<TARGET_FILE:auto_completion_settings>")

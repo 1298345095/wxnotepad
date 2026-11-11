@@ -174,6 +174,15 @@ the same bit `256`. OK commits these controls and Auto Indent; Cancel commits
 nothing. Other option bits remain intact. The complete mask is retained through reloads,
 Save Settings Now and enabled exit saving; the default `511` is omitted on Save.
 
+`[Settings] AutoCompleteOption` defaults to `7`. Its original bit `1` controls
+**Auto close HTML and XML tags** in the same dialog. OK applies the change to live
+typing and the shared completion settings; Cancel preserves it. Other completion
+bits and automatic-insertion choices survive. Typing `>` uses the original
+511-byte tag scan, HTML void-element exceptions (with `<p>` still closed), XML
+family differences, and language/style exclusions. See the
+[tag closure observations](observations/auto-close-tags.md) for frozen malformed
+markup, JSX/TSX, selection/history and encoded-file results.
+
 Tab settings use this same store. `[Settings]` defaults are `TabWidth=4`,
 `IndentWidth=4`, `TabsAsSpaces=0`, `TabIndents=1`, `BackspaceUnindents=2`, and
 `DetectIndentation=1`.

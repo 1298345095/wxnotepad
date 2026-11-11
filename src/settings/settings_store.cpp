@@ -146,6 +146,7 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.longLineMode = std::clamp(ReadInt("LongLineMode", defaults.longLineMode), 1, 2);
     values.selectOption = ReadInt("SelectOption", defaults.selectOption);
     values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
+    values.completion.completeOption = ReadInt("AutoCompleteOption", defaults.completion.completeOption);
     values.markOccurrences = ReadInt("MarkOccurrences", defaults.markOccurrences);
     values.saveFindReplace = ReadBool("SaveFindReplace", defaults.saveFindReplace);
     values.findReplaceOption = ReadInt("FindReplaceOption", defaults.findReplaceOption);
@@ -443,6 +444,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ResetFileWatching", values.fileWatching.resetOnNewFile, defaults.fileWatching.resetOnNewFile);
         WriteInt("SelectOption", values.selectOption, defaults.selectOption);
         WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
+        WriteInt("AutoCompleteOption", values.completion.completeOption, defaults.completion.completeOption);
         WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);
         WriteBool("SaveFindReplace", values.saveFindReplace, defaults.saveFindReplace);
         WriteInt("FindReplaceOption", values.findReplaceOption, defaults.findReplaceOption);
