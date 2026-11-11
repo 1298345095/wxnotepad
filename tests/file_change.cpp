@@ -17,6 +17,7 @@
 #include <thread>
 #include <stdexcept>
 #include <utility>
+#include <source_location>
 
 namespace {
 constexpr int EventPollIntervalMs = 10;
@@ -25,13 +26,16 @@ constexpr int NoChangeObservationMs = 200;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-template <typename Predicate> void Wait(Predicate predicate) {
+template <typename Predicate>
+void Wait(Predicate predicate, const std::source_location& caller = std::source_location::current()) {
     const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(6);
     while (!predicate() && std::chrono::steady_clock::now() < end) {
         wxYield();
         wxMilliSleep(EventPollIntervalMs);
     }
-    Require(predicate(), "external change must reach the live document");
+    if (!predicate())
+        throw std::runtime_error("external change must reach the live document at " + std::string(caller.file_name()) +
+                                 ":" + std::to_string(caller.line()));
 }
 void Peer(const wxString& path, const wxString& text, const wxString& action = "write", bool asynchronous = false) {
     const wxString arguments[] = {wxStandardPaths::Get().GetExecutablePath(), "--peer", path, text, action};
