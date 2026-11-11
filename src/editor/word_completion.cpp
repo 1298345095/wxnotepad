@@ -441,10 +441,11 @@ static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
     if (ch > ';' - '(') {
         return ch == '^' - '(';
     }
-    const uint32_t mask = (1 << ('(' - '(')) | (1 << (')' - '(')) | (1 << (',' - '(')) |
-                          (1 << ('.' - '('))
-                          //| (1 << (':' - '('))
-                          | (1 << (';' - '('));
+    // Bit zero is '(' after rebasing the character above.
+    const uint32_t mask = 1U | (1U << (')' - '(')) | (1U << (',' - '(')) |
+                          (1U << ('.' - '('))
+                          //| (1U << (':' - '('))
+                          | (1U << (';' - '('));
     return (mask >> ch) & true;
 #endif
 }
