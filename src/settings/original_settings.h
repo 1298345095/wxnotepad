@@ -46,6 +46,7 @@ struct OriginalSettings {
     int longLineMode = 1;
     int selectOption = SelectOption_Default;
     int autoInsertMask = AutoInsertMask_Default;
+    WordCompletionSettings completion;
     int markOccurrences = 1;
     bool saveFindReplace = false;
     bool saveRecentFiles = false;
@@ -73,7 +74,6 @@ struct OriginalSettings {
         return tabs;
     }();
     bool tabIndents = true;
-    WordCompletionSettings completion;
     bool autoIndent = true;
     bool detectIndentation = true;
     int backspaceUnindents = 2;

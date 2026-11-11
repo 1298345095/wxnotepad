@@ -87,6 +87,43 @@ void Visit(EditorFrame* frame, const std::function<void(wxDialog*)>& action) {
     NativeSearch::Command(frame, command);
     Require(opened, "settings dialog opens");
 }
+void TagSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
+    constexpr int OriginalOptions = PreservedBit | 7;
+    constexpr int DisabledOptions = OriginalOptions & ~1;
+    auto* editor = frame->Editor();
+    const auto type = [&](bool enabled) {
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Web Source Code"));
+        Reset(editor, "<div");
+        Character(editor, '>');
+        Require(NativeSearch::Text(editor) == (enabled ? "<div></div>" : "<div>"), "tag option changes live typing");
+    };
+    Require(settings.values.completion.completeOption == (reopen ? DisabledOptions : OriginalOptions),
+            "original completion options load exactly");
+    if (reopen) {
+        type(false);
+        return;
+    }
+    const auto insertion = settings.values.autoInsertMask;
+    const auto indent = settings.values.autoIndent;
+    type(true);
+    Visit(frame, [&](wxDialog* dialog) {
+        auto* tags = Check(dialog, "Auto close HTML and XML tags");
+        Require(tags->GetValue(), "native option reflects original enabled bit");
+        Click(tags);
+        Click(dialog->FindWindow(wxID_CANCEL));
+    });
+    Require(settings.values.completion.completeOption == OriginalOptions, "Cancel preserves tag option");
+    type(true);
+    Visit(frame, [&](wxDialog* dialog) {
+        Click(Check(dialog, "Auto close HTML and XML tags"));
+        Click(dialog->FindWindow(wxID_OK));
+    });
+    Require(settings.values.completion.completeOption == DisabledOptions, "OK changes only original CloseTags bit");
+    Require(settings.values.autoInsertMask == insertion && settings.values.autoIndent == indent,
+            "tag option preserves insertion and indent settings");
+    type(false);
+    Require(settings.Save(true), "tag option saves through shared settings store");
+}
 class SettingsApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -97,6 +134,15 @@ public:
             try {
                 long bit = 0;
                 Require(argc == 3 && argv[2].ToLong(&bit), "settings test requires mode and original bit");
+                if (argv[1] == "--tags" || argv[1] == "--tags-reopen") {
+                    TagSettings(frame, *settings_, argv[1] == "--tags-reopen");
+                    frame->Editor()->Send(Message::SetSavePoint);
+                    result_ = 0;
+                    std::puts("PASS: tag option Cancel/OK, live typing and persistence");
+                    frame->Destroy();
+                    ExitMainLoop();
+                    return;
+                }
                 const bool reopen = argv[1] == "--reopen";
                 const char* labels[] = {"Parentheses ()",    "Braces {}",         "Square brackets []",
                                         "Angle brackets <>", "Double quotes",     "Single quotes",

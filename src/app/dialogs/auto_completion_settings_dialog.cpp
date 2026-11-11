@@ -30,6 +30,10 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
         insertion->Add(control, 0, wxALL, dialog.FromDIP(3));
     }
     layout->Add(insertion, 0, wxEXPAND | wxALL, dialog.FromDIP(10));
+    auto* tags = new wxCheckBox(&dialog, wxID_ANY, "Auto close HTML and XML tags");
+    tags->SetName("Auto close HTML and XML tags");
+    tags->SetValue((preferences.completion.completeOption & WordCompletionOption::CloseTags) != 0);
+    layout->Add(tags, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(10));
     auto* indent = new wxCheckBox(&dialog, wxID_ANY, "Auto Indent");
     indent->SetName("Auto Indent");
     indent->SetValue(preferences.autoIndent);
@@ -44,6 +48,9 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
         preferences.autoInsertMask =
             controls[index]->GetValue() ? preferences.autoInsertMask | bit : preferences.autoInsertMask & ~bit;
     }
+    preferences.completion.completeOption =
+        tags->GetValue() ? preferences.completion.completeOption | WordCompletionOption::CloseTags
+                         : preferences.completion.completeOption & ~WordCompletionOption::CloseTags;
     preferences.autoIndent = indent->GetValue();
     return true;
 }

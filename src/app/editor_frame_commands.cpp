@@ -1710,6 +1710,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             auto& preferences = settings_ ? settings_->values : defaults_;
             if (ShowAutoCompletionSettingsDialog(this, preferences)) {
                 editor_->SetAutoInsertMask(preferences.autoInsertMask);
+                editor_->SetCompletionSettings(preferences.completion);
                 editor_->SetAutoIndent(preferences.autoIndent);
             }
         },

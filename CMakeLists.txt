@@ -88,6 +88,7 @@ add_library(editor_runtime STATIC
     src/editor/number_radix.cpp
     src/editor/occurrence_marking.cpp
     src/editor/auto_insertion.cpp
+    src/editor/auto_close_tags.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
@@ -544,6 +545,8 @@ if(BUILD_TESTING)
     add_gui_program(completion_settings tests/completion_settings.cpp app_shell)
     add_test(NAME original_completion_settings COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/completion_settings_process.py" "$<TARGET_FILE:completion_settings>")
     add_editor_test(completion_popup original_completion_popup 60)
+    add_gui_program(auto_close_tags tests/auto_close_tags.cpp app_shell)
+    add_test(NAME original_auto_close_tags COMMAND auto_close_tags)
     add_gui_program(auto_completion_settings tests/auto_completion_settings.cpp app_shell)
     add_test(NAME original_auto_completion_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_SOURCE_DIR}/tests/auto_completion_settings_process.py" "$<TARGET_FILE:auto_completion_settings>")
