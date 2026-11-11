@@ -10,6 +10,7 @@ output path as documented in the corresponding observation:
 - [Automatic tag closure](../../docs/observations/auto-close-tags.md)
 - [Caret appearance](../../docs/observations/caret-appearance.md)
 - [Header insertion](../../docs/observations/header-insertion.md)
+- [Manual word completion](../../docs/observations/word-completion.md)
 - [Selection preferences](../../docs/observations/selection-preferences.md)
 
 Raw captures belong in the external evidence directory. Reviewed reference data

@@ -78,8 +78,8 @@ public:
     void RemoveDuplicateLines();
     void SortLines(unsigned options = SortOption::Ascending);
     void SetIndentationWidths(int tabWidth, int indentWidth);
-    void SetAutoInsertMask(int mask);
     void SetCompletionSettings(const WordCompletionSettings& settings) { completionSettings_ = settings; }
+    void SetAutoInsertMask(int mask);
     bool IsOpenBraceMatched(intptr_t position, intptr_t startPosition);
     void SetCompletionStyles(CompletionStyles styles) { completionStyles_ = std::move(styles); }
     bool AutoIndentEnabled() const { return autoIndent_; }
@@ -141,9 +141,9 @@ private:
     bool codeFoldingVisible_ = true;
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
+    WordCompletionSettings completionSettings_;
     int autoInsertMask_ = AutoInsertMask_Default;
     CompletionStyles completionStyles_;
-    WordCompletionSettings completionSettings_;
     void AutoInsertCharacter(int ch);
     // False retains the original failed-tag member-arrow completion path.
     bool AutoCloseTag();
