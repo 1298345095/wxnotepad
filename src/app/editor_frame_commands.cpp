@@ -1702,6 +1702,18 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             }
         },
         longLineSettings);
+    const int autoCompletion = wxWindow::NewControlId();
+    view->Append(autoCompletion, "Auto &Completion Settings...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            if (ShowAutoCompletionSettingsDialog(this, preferences)) {
+                editor_->SetAutoInsertMask(preferences.autoInsertMask);
+                editor_->SetAutoIndent(preferences.autoIndent);
+            }
+        },
+        autoCompletion);
     const int ignoreCase = wxWindow::NewControlId();
     view->AppendCheckItem(ignoreCase, "Auto Completion I&gnore Case");
     Bind(
@@ -1719,18 +1731,6 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             event.Check(preferences.completion.ignoreCase);
         },
         ignoreCase);
-    const int autoCompletion = wxWindow::NewControlId();
-    view->Append(autoCompletion, "Auto &Completion Settings...");
-    Bind(
-        wxEVT_MENU,
-        [this](wxCommandEvent&) {
-            auto& preferences = settings_ ? settings_->values : defaults_;
-            if (ShowAutoCompletionSettingsDialog(this, preferences)) {
-                editor_->SetAutoInsertMask(preferences.autoInsertMask);
-                editor_->SetAutoIndent(preferences.autoIndent);
-            }
-        },
-        autoCompletion);
     const int autoIndent = wxWindow::NewControlId();
     view->AppendCheckItem(autoIndent, "Auto &Indent");
     Bind(

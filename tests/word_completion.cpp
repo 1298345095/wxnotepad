@@ -45,6 +45,12 @@ public:
                 TestEditor::ResetStream(editor, "alpha al", 8, 8);
                 const auto id = frame->GetMenuBar()->FindMenuItem("Edit", "Complete Word");
                 Require(id != wxNOT_FOUND, "Edit > Special > Complete Word exists");
+                TestEditor::ResetStream(editor, "", 0, 0);
+                frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+                Require(!frame->GetMenuBar()->IsEnabled(id), "empty document disables original Complete Word");
+                TestEditor::ResetStream(editor, "alpha al", 8, 8);
+                frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+                Require(frame->GetMenuBar()->IsEnabled(id), "nonempty document enables original Complete Word");
                 NativeSearch::Command(frame, id);
                 Require(TestEditor::Text(editor) == "alpha alpha", "manual completion inserts original sole candidate");
                 TestEditor::RequireSelection(editor, 11, 11, "single candidate caret");

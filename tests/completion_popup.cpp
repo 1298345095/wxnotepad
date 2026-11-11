@@ -112,7 +112,8 @@ public:
                 focusTarget->SetFocus();
                 wxYield();
                 Require(!editor->Send(Message::AutoCActive), "native focus loss ends popup lifetime");
-                std::puts("PASS: native completion popup placement, nonfocusable list, cancellation");
+                std::printf("PASS: native completion popup placement, nonfocusable list, cancellation; DPI=%dx%d",
+                            editor->GetDPI().x, editor->GetDPI().y);
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 result_ = 1;
