@@ -37,6 +37,9 @@ enum class SyntaxLanguage : uint8_t {
     Toml,
     Yaml,
     CMake,
+    MarkdownGitHub,
+    MarkdownGitLab,
+    MarkdownPandoc,
     Count
 };
 struct SyntaxDetectionOptions {
@@ -56,6 +59,9 @@ struct SyntaxStyle {
     bool bold;
     bool italic = false;
     bool eolFilled = false;
+    bool underline = false;
+    bool strike = false;
+    bool overline = false;
 };
 struct SyntaxKeywords {
     const char* text;

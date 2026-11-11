@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMES = {'Rust': 'Rust', 'Go': 'Go', 'Lua': 'Lua', 'CPP': 'CPP',
            'Python': 'Python', 'Bash': 'Bash', 'JavaScript': 'JS', 'TypeScript': 'TS',
            'JSON': 'JSON', 'HTML': 'HTML', 'XML': 'XML', 'CSS': 'CSS', 'VBS': 'VBS', 'PHP': 'PHP',
-           'TOML': 'TOML', 'YAML': 'YAML', 'CMake': 'CMake'}
+           'TOML': 'TOML', 'YAML': 'YAML', 'CMake': 'CMake', 'Markdown': 'Markdown'}
 
 
 def main(schemes=None):
