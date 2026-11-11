@@ -217,7 +217,13 @@ public:
             std::memcpy(image.GetData() + 3 * i, data + 4 * i, 3);
             image.GetAlpha()[i] = data[4 * i + 3];
         }
-        dc_->DrawBitmap(wxBitmap(image), r.left, r.top, true);
+        wxBitmap bitmap(image);
+        wxMemoryDC source(bitmap);
+        const auto destination = Rect(r);
+        // The core supplies logical marker dimensions separately from the
+        // source pixels. Let the native DC scale and composite the full image.
+        dc_->StretchBlit(destination.GetPosition(), destination.GetSize(), &source, wxPoint(0, 0),
+                         wxSize(width, height), wxCOPY, true);
     }
     void SCICALL Ellipse(PRectangle r, FillStroke s) override {
         StrokeSet(s.stroke);

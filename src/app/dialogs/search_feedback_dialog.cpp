@@ -13,8 +13,8 @@ SearchFeedbackDialog::SearchFeedbackDialog(wxWindow* parent, const wxString& key
     auto* contents = new wxBoxSizer(wxHORIZONTAL);
     contents->Add(
         new wxStaticBitmap(this, wxID_ANY,
-                           wxArtProvider::GetBitmap(confirm && title == "wxnotepad" ? wxART_INFORMATION : wxART_WARNING,
-                                                    wxART_MESSAGE_BOX)),
+                           wxArtProvider::GetBitmapBundle(
+                               confirm && title == "wxnotepad" ? wxART_INFORMATION : wxART_WARNING, wxART_MESSAGE_BOX)),
         0, wxALL, 16);
     auto* text = new wxStaticText(this, wxID_ANY, message);
     text->SetName(key);
