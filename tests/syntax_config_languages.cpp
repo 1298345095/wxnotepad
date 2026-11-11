@@ -269,7 +269,7 @@ void OriginalOperations(EditorFrame* frame) {
         TestSyntax::Paint(frame);
         const auto position = std::stoul(fields[3]);
         editor->Send(Message::SetSel, position, position);
-        const auto action = std::stoul(fields[4]);
+        const auto action = static_cast<size_t>(std::stoul(fields[4]));
         if (fields[1] == "navigation") {
             TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Search", navigation[action]));
         } else {

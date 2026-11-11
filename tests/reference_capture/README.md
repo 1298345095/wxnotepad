@@ -11,6 +11,7 @@ output path as documented in the corresponding observation:
 - [Caret appearance](../../docs/observations/caret-appearance.md)
 - [Header insertion](../../docs/observations/header-insertion.md)
 - [Selection preferences](../../docs/observations/selection-preferences.md)
+- [TOML/YAML/CMake schemes and operations](../../docs/observations/syntax-config-languages.md)
 
 Raw captures belong in the external evidence directory. Reviewed reference data
 belongs in `tests/`. Regenerate it deliberately when comparing original behavior.
@@ -18,4 +19,3 @@ belongs in `tests/`. Regenerate it deliberately when comparing original behavior
 Sonar's existing `sonar.tests=tests` and `tests/**/*.py` inclusion classify these
 utilities as test code. Application code and maintained production tools remain
 subject to the existing 80% new-code coverage gate.
-- [TOML/YAML/CMake schemes and operations](../../docs/observations/syntax-config-languages.md)
