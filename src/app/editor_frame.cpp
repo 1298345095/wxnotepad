@@ -66,7 +66,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                                                   settings->values.noHtmlGuess}
                          : SyntaxDetectionOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
-      fileChangeMonitor_(*this, [this] { HandleFileChange(); }), search_(*editor_) {
+      fileChangeMonitor_(*this, [this] { return HandleFileChange(); }), search_(*editor_) {
     const auto& preferences = settings ? settings->values : defaults_;
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();

@@ -467,6 +467,49 @@ void CheckResetTransitions(EditorFrame* frame, const std::filesystem::path& dire
               "Save and reload preserve monitoring");
 }
 
+constexpr const char* FirstReloadText = "first reload\n";
+constexpr const char* LatestReloadText = "written during reload UI update\n";
+class WriteDuringReload final : public wxEvtHandler {
+public:
+    WriteDuringReload(EditorFrame& frame, std::filesystem::path path) : frame_(frame), path_(std::move(path)) {
+        frame_.PushEventHandler(this);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) {
+                event.Skip();
+                if (!written_ && TestEditor::Text(frame_.Editor()) == FirstReloadText) {
+                    written_ = true;
+                    TestFiles::WriteBytes(path_, LatestReloadText);
+                    std::puts("Observed independent disk write during native reload UI update");
+                }
+            },
+            wxID_SAVE);
+    }
+    ~WriteDuringReload() override { frame_.PopEventHandler(false); }
+
+private:
+    EditorFrame& frame_;
+    std::filesystem::path path_;
+    bool written_ = false;
+};
+void CheckWriteDuringReload(EditorFrame* frame, const std::filesystem::path& directory) {
+    const auto path = directory / "write-during-reload.txt";
+    TestFiles::WriteBytes(path, "initial\n");
+    auto options = frame->FileWatching();
+    options.mode = FileWatchingMode::AutoReload;
+    options.flags |= FileWatchingOption_LogFile;
+    options.checkInterval = 20;
+    options.autoReloadDelay = 50;
+    frame->SetFileWatchingOptions(options);
+    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "reload race fixture opens");
+    WriteDuringReload writer(*frame, path);
+    Peer(TestFiles::Filename(path), FirstReloadText);
+    Wait([frame] { return TestEditor::Text(frame->Editor()) == LatestReloadText; });
+    Require(TestFiles::Bytes(path) == LatestReloadText && !frame->DocumentIsModified(),
+            "a write during reload remains observable and reaches the clean document");
+    std::puts("PASS: a later write during reload is not acknowledged before its bytes are displayed");
+}
+
 void CheckContinuousLogAndShutdown(EditorFrame*& frame, const std::filesystem::path& directory,
                                    ChangeDecision& decision, FileWatchingOptions& options) {
     const auto stream = directory / "stream.txt";
@@ -551,6 +594,7 @@ void CheckFileChangeScenarios(EditorFrame*& frame, const std::filesystem::path& 
     CheckNativeOptionsAndReloadFailures(frame, savedAs, decision, options);
     const auto firstSave = CheckFirstSaveAndLogTail(frame, directory, decision, options);
     CheckResetTransitions(frame, directory, firstSave, decision, options);
+    CheckWriteDuringReload(frame, directory);
     CheckContinuousLogAndShutdown(frame, directory, decision, options);
 }
 

@@ -14,7 +14,8 @@ class wxWindow;
 // as in the pinned InstallFileWatching/WatchTimerProc.
 class FileChangeMonitor final : public wxEvtHandler {
 public:
-    FileChangeMonitor(wxWindow& owner, std::function<void()> decide);
+    // The decision reports whether it loaded the current document's bytes.
+    FileChangeMonitor(wxWindow& owner, std::function<bool()> decide);
     ~FileChangeMonitor() override;
     void Refresh(const wxString& path, const FileWatchingOptions& options);
     void Stop();
@@ -31,7 +32,7 @@ private:
     void Check();
     void Decide();
     wxWindow& owner_;
-    std::function<void()> decide_;
+    std::function<bool()> decide_;
     std::unique_ptr<wxFileSystemWatcher> watcher_;
     wxTimer checkTimer_;
     wxTimer reloadTimer_;

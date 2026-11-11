@@ -135,7 +135,7 @@ private:
     void ShowLineEndingOptions();
     void ShowFileChangeNotificationOptions();
     void RefreshFileWatching();
-    void HandleFileChange();
+    bool HandleFileChange();
     void ReportFind(const FindResult& result);
     bool SearchMessage(SearchDirection direction);
     bool ShowSearchMessage(const wxString& key, const wxString& message, bool confirm);

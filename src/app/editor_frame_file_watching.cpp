@@ -17,8 +17,9 @@ void EditorFrame::ShowFileChangeNotificationOptions() {
     if (const auto options = ChooseFileWatchingOptions(this, fileWatchingOptions_)) SetFileWatchingOptions(*options);
 }
 
-void EditorFrame::HandleFileChange() {
+bool EditorFrame::HandleFileChange() {
     bool terminate = false;
+    bool reloaded = false;
     if (wxFileName::FileExists(document_.Path())) {
         const bool automatic = fileWatchingOptions_.mode == FileWatchingMode::AutoReload;
         if ((automatic && !document_.IsModified()) ||
@@ -30,6 +31,7 @@ void EditorFrame::HandleFileChange() {
                                                          1 ==
                                                      editor_->Send(Scintilla::Message::GetLineCount));
             const auto result = ReloadCurrentFile(followEnd);
+            reloaded = result.status == OpenStatus::Opened;
             if (result.status == OpenStatus::Failed)
                 wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
         }
@@ -44,4 +46,5 @@ void EditorFrame::HandleFileChange() {
         }
     }
     if (!terminate) RefreshFileWatching();
+    return reloaded;
 }

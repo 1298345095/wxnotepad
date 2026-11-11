@@ -4,7 +4,7 @@
 #include <wx/evtloop.h>
 #include <algorithm>
 
-FileChangeMonitor::FileChangeMonitor(wxWindow& owner, std::function<void()> decide)
+FileChangeMonitor::FileChangeMonitor(wxWindow& owner, std::function<bool()> decide)
     : owner_(owner), decide_(std::move(decide)), checkTimer_(this), reloadTimer_(this) {
     Bind(wxEVT_FSWATCHER, [this](wxFileSystemWatcherEvent&) { notified_ = true; });
     Bind(wxEVT_TIMER, [this](wxTimerEvent&) { Check(); }, checkTimer_.GetId());
@@ -83,5 +83,10 @@ void FileChangeMonitor::Decide() {
         reloadTimer_.StartOnce(std::max(options_.checkInterval, 1));
         return;
     }
-    decide_();
+    const auto versionBeforeReload = ReadIdentity();
+    if (decide_()) {
+        // Refresh during reload must not acknowledge a later write that was
+        // never loaded. The resumed timer observes it against this version.
+        baseline_ = versionBeforeReload;
+    }
 }
