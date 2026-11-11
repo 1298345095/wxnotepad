@@ -64,6 +64,9 @@ void CheckMenu(EditorFrame* frame) {
     Order(bar->GetMenu(5), {"Insert Tabs as Spaces", "Tab Settings...", "Long Line Settings...", "Auto Indent",
                             "Select and Edit Options", "Appearance", "File Change Notification...", "Other Settings",
                             "Save Settings On Exit", "Save Settings Now"});
+    Order(Submenu(bar->GetMenu(5), "Select and Edit Options"),
+          {"Enable Multiple Selection", "Copy Selection As Find Text", "Copy Paste Buffer As Find Text",
+           "Undo Redo Remember Selection", "Line Selection Mode"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
 }

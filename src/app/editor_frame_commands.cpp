@@ -1697,17 +1697,42 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         autoIndent);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoIndentEnabled()); }, autoIndent);
     auto* selection = new wxMenu;
-    if (settings_) {
-        for (const auto& [label, bit] :
-             {std::pair{"Copy Selection As Find Text", SelectOption_CopySelectionAsFindText},
-              std::pair{"Copy Paste Buffer As Find Text", SelectOption_CopyPasteBufferAsFindText}}) {
-            const int id = wxWindow::NewControlId();
-            selection->AppendCheckItem(id, label);
-            Bind(wxEVT_MENU, [this, bit](wxCommandEvent&) { settings_->values.selectOption ^= bit; }, id);
-            Bind(
-                wxEVT_UPDATE_UI,
-                [this, bit](wxUpdateUIEvent& event) { event.Check((settings_->values.selectOption & bit) != 0); }, id);
-        }
+    for (const auto& [label, bit] :
+         {std::pair{"Enable &Multiple Selection", SelectOption_EnableMultipleSelection},
+          std::pair{"Copy Selection As Find Text", SelectOption_CopySelectionAsFindText},
+          std::pair{"Copy Paste Buffer As Find Text", SelectOption_CopyPasteBufferAsFindText},
+          std::pair{"Undo Redo &Remember Selection", SelectOption_UndoRedoRememberSelection}}) {
+        if (!settings_ &&
+            (bit == SelectOption_CopySelectionAsFindText || bit == SelectOption_CopyPasteBufferAsFindText))
+            continue;
+        const int id = wxWindow::NewControlId();
+        selection->AppendCheckItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, bit](wxCommandEvent&) {
+                auto& preferences = settings_ ? settings_->values : defaults_;
+                const auto options = static_cast<unsigned>(preferences.selectOption) ^ static_cast<unsigned>(bit);
+                preferences.selectOption = static_cast<int>(options);
+                const bool enabled = (options & static_cast<unsigned>(bit)) != 0;
+                // Original Notepad4.cpp selection option commands preserve active selections and text history.
+                if (bit == SelectOption_EnableMultipleSelection) {
+                    editor_->Send(Scintilla::Message::SetMultipleSelection, enabled);
+                } else if (bit == SelectOption_UndoRedoRememberSelection) {
+                    const auto history = enabled
+                                             ? static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
+                                                   static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll)
+                                             : 0;
+                    editor_->Send(Scintilla::Message::SetUndoSelectionHistory, history);
+                }
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, bit](wxUpdateUIEvent& event) {
+                const auto options = static_cast<unsigned>((settings_ ? settings_->values : defaults_).selectOption);
+                event.Check((options & static_cast<unsigned>(bit)) != 0);
+            },
+            id);
     }
     AppendLineSelectionCommands(selection);
     view->AppendSubMenu(selection, "Select and &Edit Options");
