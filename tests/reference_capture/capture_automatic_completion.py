@@ -33,6 +33,8 @@ for count in (20,70):
  if count==20:fixtures.append(('.txt',text,[ord('a'),ord('b'),('key',8)],15))
 fixtures.append(('.txt','alpha alpine a',[ord('l')],15,True))
 fixtures.append(('.txt',chr(92)+'i',[ord('n'),('key',9)],13,False,True))
+for before,candidate in [('ar','array[]'),('ar[]','array[]'),('ve','vector<>'),('ve<>','vector<>')]:
+ fixtures.append(('.cpp',before,[('show',candidate),('key',13)],15))
 results=[]
 for fixture in fixtures:
  ext,text,events,fill=fixture[:4]
@@ -48,7 +50,10 @@ for fixture in fixtures:
   send(2101);send(2037,65001);send(2004);send(2001,len(data)-1,remote);send(2160,len(data)-1,len(data)-1);send(2014);send(2352,0,-1)
   if len(fixture)>4 and fixture[4]:send(2171,1)
   for event in events:
-   if isinstance(event,tuple):u.SendMessageW(editor,0x100,event[1],0)
+   if isinstance(event,tuple) and event[0]=='show':
+    data=event[1].encode()+b'\0';assert k.WriteProcessMemory(handle,remote,data,len(data),None)
+    send(2160,2,2);send(2100,2,remote)
+   elif isinstance(event,tuple):u.SendMessageW(editor,0x100,event[1],0)
    else:u.SendMessageW(editor,0x102,event,0)
   active=send(2102);items=[]
   if active:

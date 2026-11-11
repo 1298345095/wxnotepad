@@ -20,7 +20,10 @@ never read or write the clipboard. Raw JSON belongs outside the checkout.
 
 The frozen cases cover document candidates, function suffix/caret placement,
 Enter and Tab disabled, Space confirmation, deletion, member-arrow handling,
-read-only typing, LaTeX fallback and large-list refresh. The original preserves
+read-only typing, LaTeX fallback and large-list refresh. Four additional original
+native-list fixtures freeze array/generic suffix insertion and reuse of an
+already-present opening bracket; these exercise selection confirmation through
+the same public popup API. The original preserves
 an 80-item popup when typing leaves 70 matches, rebuilds it when only 20 remain,
 and restores 80 after deleting the character. Disabled Enter inserts CRLF;
 disabled Tab inserts a tab, or invokes the existing LaTeX input method when

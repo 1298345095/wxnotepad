@@ -65,6 +65,11 @@ void Frozen(EditorFrame* frame) {
         TestEditor::ResetStream(editor, ref.before, length, length);
         editor->Send(Message::Colourise, 0, -1);
         if (ref.readOnly) editor->Send(Message::SetReadOnly, 1);
+        if (*ref.popup) {
+            constexpr int SuffixPrefixBytes = 2;
+            editor->Send(Message::SetSel, SuffixPrefixBytes, SuffixPrefixBytes);
+            editor->Send(Message::AutoCShow, SuffixPrefixBytes, reinterpret_cast<intptr_t>(ref.popup));
+        }
         for (const auto& [key, ch] : ref.events) {
             if (key)
                 Key(editor, ch);
