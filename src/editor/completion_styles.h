@@ -13,6 +13,10 @@ struct CompletionStyles {
     int characterLiteralStyle = 0;
     int noneSingleQuotedStyle = 0;
     bool characterPrefix = false;
+    bool angleBracketGeneric = false;
+    bool xml = false;
+    int operatorStyle = 0;
+    int operatorStyle2 = 0;
 };
 CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition);
 inline bool CompletionStyleContains(const std::array<uint32_t, 8>& mask, unsigned value) {

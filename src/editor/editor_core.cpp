@@ -718,6 +718,8 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         if (notification.ch == '\r' || notification.ch == '\n') {
             if (window_.autoIndent_ && (pdoc->eolMode != Scintilla::EndOfLine::CrLf || notification.ch != '\n'))
                 window_.AutoIndent();
+        } else if (notification.ch == '>') {
+            window_.AutoCloseTag();
         } else {
             window_.AutoInsertCharacter(notification.ch);
         }
