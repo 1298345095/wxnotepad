@@ -19,6 +19,21 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
     case SyntaxLanguage::Lua:
         result.rawStrings[SCE_LUA_LITERALSTRING >> 5] |= (1U << (SCE_LUA_LITERALSTRING & 31));
         break;
+    case SyntaxLanguage::MarkdownGitHub:
+    case SyntaxLanguage::MarkdownGitLab:
+    case SyntaxLanguage::MarkdownPandoc:
+        result.comments[SCE_H_COMMENT >> 5] |= (1U << (SCE_H_COMMENT & 31));
+        result.comments[SCE_H_SGML_COMMENT >> 5] |= (1U << (SCE_H_SGML_COMMENT & 31));
+        result.comments[STYLE_COMMENT_LINK >> 5] |= (1U << (STYLE_COMMENT_LINK & 31));
+        result.strings[SCE_H_DOUBLESTRING >> 5] |= (1U << (SCE_H_DOUBLESTRING & 31));
+        result.strings[SCE_H_SINGLESTRING >> 5] |= (1U << (SCE_H_SINGLESTRING & 31));
+        result.strings[SCE_H_SGML_DOUBLESTRING >> 5] |= (1U << (SCE_H_SGML_DOUBLESTRING & 31));
+        result.strings[SCE_H_SGML_SIMPLESTRING >> 5] |= (1U << (SCE_H_SGML_SIMPLESTRING & 31));
+        result.plainText[SCE_H_DEFAULT >> 5] |= (1U << (SCE_H_DEFAULT & 31));
+        result.plainText[1] = UINT32_MAX;
+        result.plainText[2] = UINT32_MAX;
+        result.plainText[3] = UINT32_MAX;
+        break;
     case SyntaxLanguage::Rust:
         result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));
         result.wordCharacters[':' >> 5] |= (1 << (':' & 31));

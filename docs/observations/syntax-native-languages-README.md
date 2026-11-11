@@ -37,6 +37,11 @@ character-prefix, word, comment and string masks. TOML/YAML/CMake and Markdown
 should use these shared paths; genuine original format differences belong in
 small explicit adapters.
 
+Markdown now consumes this same importer and preserves its underline, strike,
+overline and filled-background attributes through the shared style installer.
+See [Markdown dialects](syntax-markdown.md) for its original HTML/link adapter,
+shared settings/filter identity, frozen dialect observations and native matrix.
+
 ## Independent reference and native matrix
 
 `tests/data/native_languages_reference.tsv` contains 12 states captured from the
