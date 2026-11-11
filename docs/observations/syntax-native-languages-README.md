@@ -62,7 +62,9 @@ clang-tidy 23 on Windows and 18 on Linux checked the catalog, scheme installatio
 settings consumer and native matrix. Compiler/analyzer checks passed; the new
 signed fold-mask warning was corrected. Existing header/API/enum diagnostics are
 retained, without a repository-wide warning-free claim. Python discovery passed
-30 tests with three platform skips using `python -X utf8`.
+30 tests with three platform skips using `python -X utf8`. After merging the
+shared paired-editing integration, the complete language matrix was rebuilt and
+passed again on Windows, X11 and Wayland (one native target per backend).
 
 Original executable, capture script, original JSON, source/build records,
 red/green logs, native test reports and analyzer diagnostics are retained under
