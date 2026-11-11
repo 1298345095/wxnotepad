@@ -72,6 +72,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
         event.Skip();
     });
+    editor_->SetAutoInsertMask(preferences.autoInsertMask);
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
     editor_->Occurrences().SetOptions(preferences.markOccurrences);
     editor_->SetCodeFoldingVisible(preferences.showCodeFolding);
