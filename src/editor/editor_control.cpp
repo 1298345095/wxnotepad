@@ -48,6 +48,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     }();
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     core_ = std::make_unique<Core>(*this, selectionOptions);
+    SetAutoInsertMask(autoInsertMask_);
     occurrences_ = std::make_unique<OccurrenceMarking>(*this);
     // Original Notepad4.cpp::CreateEditControl current-line preferences.
     Send(Message::SetCaretLineVisibleAlways, 1);

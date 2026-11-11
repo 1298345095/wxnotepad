@@ -718,10 +718,14 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         braceStyleChanged_ = true;
     // Notepad4.cpp SCN_CHARADDED: ignore tentative/multiple-selection typing.
     // The pinned CRLF condition handles CR, after the complete EOL is inserted.
-    if (notification.nmhdr.code == Scintilla::Notification::CharAdded && !notification.listType &&
-        window_.autoIndent_ && (notification.ch == '\r' || notification.ch == '\n') &&
-        (pdoc->eolMode != Scintilla::EndOfLine::CrLf || notification.ch != '\n'))
-        window_.AutoIndent();
+    if (notification.nmhdr.code == Scintilla::Notification::CharAdded && !notification.listType) {
+        if (notification.ch == '\r' || notification.ch == '\n') {
+            if (window_.autoIndent_ && (pdoc->eolMode != Scintilla::EndOfLine::CrLf || notification.ch != '\n'))
+                window_.AutoIndent();
+        } else {
+            window_.AutoInsertCharacter(notification.ch);
+        }
+    }
     SelectionRevision();
     if (notification.nmhdr.code == Scintilla::Notification::UpdateUI &&
         (static_cast<unsigned>(notification.updated) &
