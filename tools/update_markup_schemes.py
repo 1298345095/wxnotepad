@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 import re
 
-from scheme_data import provenance, read_pinned, style_initializers
+from scheme_data import generate_scheme, provenance, read_pinned, style_initializers
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,24 +18,11 @@ def main():
     parser.add_argument("--source", type=Path, required=True)
     args = parser.parse_args()
     output = ["// clang-format off"]
-    for filename, group, name, consumed, attrs in [
-            ("stlHTML.cpp", "HTML", "html", 8, [2, 2, 2, 2, 2, 3, 2, 2]),
-            ("stlXML.cpp", "XML", "xml", 7, [0, 0, 0, 0, 0, 0, 2])]:
-        path = "src/EditLexers/" + filename
-        data = read_pinned(args.source, path)
-        text = data.decode("utf-8").replace("\r\n", "\n")
-        output.extend(provenance("update_markup_schemes.py", path, data))
-        keywords = text.split(f"static const char * const Keywords_{group}[] = {{", 1)[1].split("};", 1)[0]
-        # The final attribute/value lists marked NoLexer are intentionally excluded.
-        keywords = keywords.split(f", // {consumed} ", 1)[0]
-        output += [f"constexpr const char* {name}KeywordText[] = {{" + keywords + "};",
-                   f"constexpr SyntaxKeywords {name}Lists[] = {{"]
-        output += [f'    {{{name}KeywordText[{index}] ? {name}KeywordText[{index}] : "", {attr}U << 8U}},'
-                   for index, attr in enumerate(attrs)]
-        output += ["};", f"constexpr SyntaxStyle {name}Styles[] = {{", *styles(text, group), "};"]
-        extensions = re.search(r'\n\s*L"([^"\n]+;[^"\n]+)"', text)[1].split("; ")
-        output += [f"constexpr const char* {name}Extensions[] = {{" +
-                   ", ".join(f'"{extension}"' for extension in extensions) + "};"]
+    for filename in ('HTML', 'XML'):
+        data = read_pinned(args.source, f'src/EditLexers/stl{filename}.cpp')
+        name = filename.lower()
+        header = generate_scheme(data, filename, filename, name)
+        (ROOT / f'src/syntax/generated/{name}_scheme_data.h').write_text(header, encoding='utf-8', newline='\n')
     output += ["constexpr SyntaxStyle markupEmbeddedStyles[] = {"]
     for filename, group, offset in [("stlJavaScript.cpp", "JS", "js_style"), ("stlCSS.cpp", "CSS", "css_style")]:
         path = "src/EditLexers/" + filename

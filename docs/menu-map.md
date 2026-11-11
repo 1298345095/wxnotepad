@@ -67,7 +67,7 @@ View
 Scheme
   Automatic; delivered syntax schemes
 Settings
-  Insert Tabs as Spaces; Tab Settings; Long Line Settings; Auto Indent
+  Insert Tabs as Spaces; Tab Settings; Long Line Settings; Auto Completion Settings; Auto Indent
   Select and Edit Options
     Enable Multiple Selection; Copy Selection As Find Text; Copy Paste Buffer As Find Text
     Undo Redo Remember Selection

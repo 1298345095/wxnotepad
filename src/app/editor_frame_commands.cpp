@@ -1,3 +1,4 @@
+#include "app/dialogs/auto_completion_settings_dialog.h"
 #include "app/editor_frame.h"
 #include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
@@ -1685,6 +1686,18 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             }
         },
         longLineSettings);
+    const int autoCompletion = wxWindow::NewControlId();
+    view->Append(autoCompletion, "Auto &Completion Settings...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            if (ShowAutoCompletionSettingsDialog(this, preferences)) {
+                editor_->SetAutoInsertMask(preferences.autoInsertMask);
+                editor_->SetAutoIndent(preferences.autoIndent);
+            }
+        },
+        autoCompletion);
     const int autoIndent = wxWindow::NewControlId();
     view->AppendCheckItem(autoIndent, "Auto &Indent");
     Bind(
