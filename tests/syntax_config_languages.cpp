@@ -5,6 +5,7 @@
 #include "settings/settings_store.h"
 #include "file_command_driver.h"
 #include "tab_settings_helpers.h"
+#include "native_paint_helpers.h"
 #include <SciLexer.h>
 #include <wx/wx.h>
 #include <wx/statusbr.h>
@@ -18,6 +19,14 @@ namespace {
 using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw TestEditor::Failure(message);
+}
+void PaintDocument(EditorFrame* frame) {
+    // These short fixtures fit the native viewport, and the oracle checks every
+    // byte. The shared prefix-only wait can finish before an edit past byte 128
+    // has received its asynchronous Wayland paint/style pass.
+    NativePaint::Complete(frame->Editor());
+    Require(frame->Editor()->Send(Message::GetEndStyled) >= frame->Editor()->Send(Message::GetLength),
+            "native paint must style the complete visible original fixture");
 }
 void Choose(EditorFrame* frame, const char* name) {
     const int id = frame->GetMenuBar()->FindMenuItem("Scheme", name);
@@ -54,7 +63,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         const auto path = TestFiles::TemporaryDirectory(std::string("workflow.") + fixture.extension);
         TestFiles::WriteBytes(path, fixture.text);
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "language workflow must Open");
-        TestSyntax::Paint(frame);
+        PaintDocument(frame);
         Require(editor->Send(Message::GetLexer) == fixture.lexer &&
                     frame->GetStatusBar()->GetStatusText().Contains(fixture.name),
                 "Open must install original dedicated lexer and report its language");
@@ -266,7 +275,7 @@ void OriginalOperations(EditorFrame* frame) {
         editor->Send(Message::SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
                 "original operation document opens through application lifecycle");
-        TestSyntax::Paint(frame);
+        PaintDocument(frame);
         const auto position = std::stoul(fields[3]);
         editor->Send(Message::SetSel, position, position);
         const auto action = static_cast<size_t>(std::stoul(fields[4]));
@@ -338,7 +347,7 @@ void OriginalOracle(EditorFrame* frame) {
         } else {
             TestSyntax::Command(frame, state == "undo" ? wxID_UNDO : wxID_REDO);
         }
-        TestSyntax::Paint(frame);
+        PaintDocument(frame);
         Require(TestEditor::Text(editor) == text, "incremental edit/Undo/Redo bytes must match the original");
         const auto styles = Unhex(styleHex);
         Require(styles.size() == text.size(), "original styles must cover every UTF-8 byte");

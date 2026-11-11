@@ -58,3 +58,21 @@ analyzer reports and platform results are retained in
 `E:/NewNotepad4/wxnotepad-evidence/completion-languages-2026-11-10/issue-194/`.
 Final Spec/Standards reviews and integrated IME checks are coordinated by the
 parent implementation task.
+
+Local validation passed nine syntax/save targets on Windows and X11. The eight
+existing targets passed on Wayland; the configuration-language target then passed
+on all three backends after its full-byte oracle was made to wait for completed
+native paints. Its CMake edit is past byte 128, beyond the shared helper's prefix
+readiness check. No expected style/fold values changed. All tracked C/C++ files
+pass canonical clang-format 23.1.2; affected native translation units pass the
+configured clang-tidy checks on Windows (23) and Linux (18). Python discovery
+passed 30 tests with three platform skips; both the new and existing shared
+import CLI checks passed.
+
+The broad syntax run also exposed a Python fixture interaction with the restored
+original pairing default: typing a replacement triple-string quote inserted a
+fourth quote. The lexer-only edit scenes now explicitly disable automatic
+insertion while preserving all original byte/style/history assertions. The
+enabled pairing behavior remains covered by its separate original oracle.
+`python-scene-native.log` retains the exact failure text, bytes and style before
+that fixture-only correction. Product pairing defaults are unchanged.
