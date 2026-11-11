@@ -51,6 +51,9 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexGo.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexLua.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexMarkdown.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexTOML.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexYAML.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCMake.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
@@ -62,6 +65,8 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/completion_selection.cpp
+    src/editor/platform/latex_input.cpp
     src/editor/caret_appearance.cpp
     src/editor/date_time.cpp
     src/editor/align_lines.cpp
@@ -98,7 +103,7 @@ add_library(editor_runtime STATIC
     src/editor/platform/sort_collation.cpp
     src/editor/platform/gtk_drag_drop.cpp
     src/editor/platform/wx_platform.cpp)
-target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
+target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/win32"
     "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
 target_link_libraries(editor_runtime PUBLIC notepad4_core)
 if(WXNOTEPAD_ENABLE_DIAGNOSTICS)
@@ -111,8 +116,9 @@ if(WXNOTEPAD_ENABLE_DIAGNOSTICS)
 endif()
 
 add_library(editor_features STATIC
-    src/editor/go_to_location.cpp
+    src/editor/word_completion.cpp
     src/editor/completion_styles.cpp
+    src/editor/go_to_location.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/file_variables.cpp
@@ -125,7 +131,7 @@ add_library(editor_features STATIC
     src/syntax/syntax_catalog.cpp
     src/syntax/syntax_scheme.cpp)
 # The GBK compatibility codec reuses the pinned Unicode conversion utilities.
-target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla/src")
+target_include_directories(editor_features PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/src")
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
@@ -495,6 +501,10 @@ if(BUILD_TESTING)
     add_editor_test(syntax_markdown original_markdown_dialects 90)
     target_compile_definitions(syntax_markdown PRIVATE
         "MARKDOWN_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markdown_reference.tsv\"")
+    add_editor_test(syntax_config_languages original_toml_yaml_cmake_schemes 90)
+    target_compile_definitions(syntax_config_languages PRIVATE
+        "CONFIG_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/config_languages_reference.tsv\""
+        "CONFIG_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/config_operations_reference.tsv\"")
     add_editor_test(syntax_native_languages original_rust_go_lua_schemes 90)
     target_compile_definitions(syntax_native_languages PRIVATE
         "NATIVE_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/native_languages_reference.tsv\"")
@@ -542,6 +552,10 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
     set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
+    add_editor_test(word_completion original_complete_word 60)
+    add_gui_program(completion_settings tests/completion_settings.cpp app_shell)
+    add_test(NAME original_completion_settings COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/completion_settings_process.py" "$<TARGET_FILE:completion_settings>")
+    add_editor_test(completion_popup original_completion_popup 60)
     add_gui_program(auto_close_tags tests/auto_close_tags.cpp app_shell)
     add_test(NAME original_auto_close_tags COMMAND auto_close_tags)
     add_gui_program(auto_completion_settings tests/auto_completion_settings.cpp app_shell)

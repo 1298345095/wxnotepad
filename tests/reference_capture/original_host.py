@@ -1,7 +1,7 @@
 """Observe the original application's owned editor through its public messages."""
 import ctypes as c
 from ctypes import wintypes as w
-import subprocess
+from private_desktop import Process
 import time
 
 user = c.WinDLL("user32", use_last_error=True)
@@ -18,19 +18,15 @@ kernel.ReadProcessMemory.argtypes = [w.HANDLE, c.c_void_p, c.c_void_p, c.c_size_
 kernel.VirtualFreeEx.argtypes = [w.HANDLE, c.c_void_p, c.c_size_t, w.DWORD]
 kernel.CloseHandle.argtypes = [w.HANDLE]
 CALLBACK = c.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
+user.EnumDesktopWindows.argtypes = [w.HANDLE, CALLBACK, w.LPARAM]
 
 
 class Original:
-    def __init__(self, executable, path=None, encoding="utf-8", desktop=None):
-        arguments = [str(executable), "/n", "/ns",
-                     "/e", encoding]
+    def __init__(self, path, executable, desktop, desktop_name):
+        arguments = [str(executable), "/n", "/ns", "/e", "utf-8"]
         if path:
             arguments.append(str(path))
-        if desktop:
-            from private_desktop import Process
-            self.process = Process(arguments, desktop)
-        else:
-            self.process = subprocess.Popen(arguments)
+        self.process = Process(arguments, desktop_name)
         self.hwnd = self.editor = None
         deadline = time.monotonic() + 15
         while time.monotonic() < deadline and not self.editor:
@@ -46,18 +42,13 @@ class Original:
                         return True
                     user.EnumChildWindows(hwnd, CALLBACK(child), 0)
                 return True
-            user.EnumWindows(CALLBACK(window), 0)
+            user.EnumDesktopWindows(desktop, CALLBACK(window), 0)
             time.sleep(.03)
         assert self.editor, "owned original editor appeared"
         self.handle = kernel.OpenProcess(0x38, False, self.process.pid)
         assert self.handle
         self.memory = kernel.VirtualAllocEx(self.handle, None, 1048576, 0x3000, 4)
         assert self.memory
-        if encoding == "ansi":
-            self.send(2181, 0, self.put(b"\0"))
-            self.send(2175)
-            self.send(2014)
-            self.command(40100)  # Actual Encoding > ANSI command, independent of ASCII load heuristics.
 
     def send(self, message, first=0, second=0):
         return user.SendMessageW(self.editor, message, first, second)

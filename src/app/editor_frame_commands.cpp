@@ -1642,6 +1642,22 @@ void EditorFrame::ToggleReadOnlyMode() {
 }
 
 void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
+    const int completeWord = wxWindow::NewControlId();
+    auto* completionItem = edit->Append(completeWord, "Complete &Word\tAlt+/");
+    completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_NUMPAD_DIVIDE, completeWord));
+    completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_DIVIDE, completeWord));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            CompleteWord(*editor_, SyntaxFor(document_.EffectiveLanguage()), preferences.completion);
+        },
+        completeWord);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        completeWord);
+    edit->AppendSeparator();
     for (const auto& [label, mapping] : {std::pair{"C&haracter to Hex\tCtrl+Alt+X", CustomCaseCommand::CharacterToHex},
                                          std::pair{"Hex to Cha&racter\tCtrl+Alt+C", CustomCaseCommand::HexToCharacter},
                                          std::pair{"Esca&pe C Chars\tCtrl+Alt+E", CustomCaseCommand::EscapeC},
@@ -1699,6 +1715,23 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             }
         },
         autoCompletion);
+    const int ignoreCase = wxWindow::NewControlId();
+    view->AppendCheckItem(ignoreCase, "Auto Completion I&gnore Case");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            preferences.completion.ignoreCase = !preferences.completion.ignoreCase;
+            editor_->Send(Scintilla::Message::AutoCCancel);
+        },
+        ignoreCase);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            event.Check(preferences.completion.ignoreCase);
+        },
+        ignoreCase);
     const int autoIndent = wxWindow::NewControlId();
     view->AppendCheckItem(autoIndent, "Auto &Indent");
     Bind(

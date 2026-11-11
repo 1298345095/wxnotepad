@@ -294,3 +294,26 @@ default. `[Settings2] NoFileVariables=0` controls the file-variable gate and is
 retained in place. The same SettingsStore loads these options before the frame
 creates its document session. See [encoding selection](encoding.md) for the
 precedence and remaining codec catalog.
+
+## Manual word completion
+
+Edit > Special > Complete Word (Alt+/ or Alt+keypad Divide) uses the original
+matching and document scan. Settings > Auto Completion Ignore Case cancels any
+open completion popup when toggled. These fields use the existing explicit and
+exit save lifecycle, omit defaults, and preserve unrelated INI text:
+
+| `[Settings]` key | Default | Import rule |
+| --- | --- | --- |
+| `AutoCompleteOption` | `7` | Original option bits, including document scan and document-only mode. |
+| `AutoCompleteScope` | `255` | Low four bits select completion scopes; upper bits select document scan scopes. |
+| `AutoCScanWordsTimeout` | `500` | At least 50 milliseconds. |
+| `AutoCIgnoreCase` | `0` | Original boolean parsing. |
+| `LaTeXInputMethod` | `0` | Original boolean parsing; enables the original sequence candidates. |
+| `AutoCVisibleItemCount` | `16` | At least 8 rows. |
+| `AutoCMinWordLength` | `1` | At least 1 byte. |
+| `AutoCMinNumberLength` | `3` | At least 0; zero excludes numbers. |
+| `AutoCFillUpMask` | `15` | Enter, Tab, Space and punctuation bits. |
+| `AutoCFillUpPunctuation` | `;,()[]{}\/` | First 31 characters, retaining ASCII punctuation. |
+
+Automatic triggers and the remaining completion settings controls are tracked in
+#192. See [manual completion evidence](observations/word-completion.md).

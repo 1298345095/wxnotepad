@@ -27,7 +27,6 @@ user.CloseDesktop.argtypes = [w.HANDLE]
 name = 'wxnotepad-original-markdown-195'
 desktop = user.CreateDesktopW(name, None, None, 0, 0x10000000, None)
 assert desktop
-user.EnumWindows = lambda callback, param: user.EnumDesktopWindows(desktop, callback, param)
 text = '''---
 title: Metadata
 ---
@@ -96,7 +95,7 @@ try:
         raw = fixture.encode('utf-8')
         path.write_bytes(raw)
         position = raw.index(token)
-        app = host.Original(exe, path, desktop=name)
+        app = host.Original(path, exe, desktop, name)
         try:
             app.command(command)
             def snapshot(stage):
