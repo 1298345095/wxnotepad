@@ -78,6 +78,12 @@ private:
     void Paste(bool) override;
     void NotifyChange() const noexcept override;
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override;
+    void RecordNotificationChanges(const Scintilla::NotificationData& notification) const noexcept;
+    void HandleCompletionNotification(const Scintilla::NotificationData& notification) const noexcept;
+    void HandleCharacterAdded(const Scintilla::NotificationData& notification) const noexcept;
+    void CompleteTagOrMemberAccess() const;
+    bool ShouldCompleteTypedWord(const Scintilla::NotificationData& notification) const;
+    void UpdateNotificationState(const Scintilla::NotificationData& notification) const noexcept;
     std::unique_ptr<Scintilla::Internal::CaseFolder> CaseFolderForEncoding() const override;
     std::string CaseMapString(const std::string& value, CaseMapping mapping) const override;
     bool SCICALL DragThreshold(Scintilla::Internal::Point start,

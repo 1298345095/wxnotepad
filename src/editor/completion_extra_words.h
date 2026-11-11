@@ -1,6 +1,6 @@
 // Original Notepad4 89b8b36 src/EditAutoC_Data0.h; licenses/Notepad4.txt.
 // clang-format off
-#define NP2_KEYWORDS_COUNT 4
+constexpr unsigned NP2_KEYWORDS_COUNT = 4;
 typedef const char* const NP2_KEYWORDS[NP2_KEYWORDS_COUNT];
 
 // Doxygen
