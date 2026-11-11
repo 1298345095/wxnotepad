@@ -13,6 +13,13 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
                              0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU};
     // Original pinned generated cache cases. Keep masks independent of display styles.
     switch (definition.language) {
+    case SyntaxLanguage::Toml:
+    case SyntaxLanguage::Yaml:
+    case SyntaxLanguage::CMake:
+        // Pinned InitAutoCompletionCache has no per-scheme overrides here.
+        // Keep raw/generic/character-prefix masks empty; the original scalar
+        // metadata below supplies each language's comment/string masks.
+        break;
     case SyntaxLanguage::Go:
         result.rawStrings[SCE_GO_RAW_STRING >> 5] |= (1U << (SCE_GO_RAW_STRING & 31));
         break;

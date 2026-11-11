@@ -16,3 +16,4 @@ belongs in `tests/`. Regenerate it deliberately when comparing original behavior
 Sonar's existing `sonar.tests=tests` and `tests/**/*.py` inclusion classify these
 utilities as test code. Application code and maintained production tools remain
 subject to the existing 80% new-code coverage gate.
+- [TOML/YAML/CMake schemes and operations](../../docs/observations/syntax-config-languages.md)

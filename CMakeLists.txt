@@ -50,6 +50,9 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexRust.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexGo.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexLua.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexTOML.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexYAML.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCMake.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
@@ -484,6 +487,10 @@ if(BUILD_TESTING)
         --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/diagnostics/native")
     set_tests_properties(native_diagnostic_delivery PROPERTIES TIMEOUT 150)
     add_editor_test(open_smoke open_utf8 30)
+    add_editor_test(syntax_config_languages original_toml_yaml_cmake_schemes 90)
+    target_compile_definitions(syntax_config_languages PRIVATE
+        "CONFIG_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/config_languages_reference.tsv\""
+        "CONFIG_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/config_operations_reference.tsv\"")
     add_editor_test(syntax_native_languages original_rust_go_lua_schemes 90)
     target_compile_definitions(syntax_native_languages PRIVATE
         "NATIVE_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/native_languages_reference.tsv\"")
