@@ -16,6 +16,7 @@ namespace {
 #include "syntax/generated/rust_scheme_data.h"
 #include "syntax/generated/go_scheme_data.h"
 #include "syntax/generated/lua_scheme_data.h"
+#include "syntax/generated/markdown_scheme_data.h"
 #include "syntax/generated/toml_scheme_data.h"
 #include "syntax/generated/yaml_scheme_data.h"
 #include "syntax/generated/cmake_scheme_data.h"
@@ -32,6 +33,9 @@ constexpr SyntaxProperty cppProperties[] = {{"lexer.lang", "0"}};
 constexpr SyntaxProperty bashProperties[] = {{"lexer.lang", "0"}};
 constexpr SyntaxProperty cShellProperties[] = {{"lexer.lang", "1"}};
 constexpr SyntaxProperty m4Properties[] = {{"lexer.lang", "2"}};
+constexpr SyntaxProperty markdownGitHubProperties[] = {{"lexer.lang", "0"}};
+constexpr SyntaxProperty markdownGitLabProperties[] = {{"lexer.lang", "1"}};
+constexpr SyntaxProperty markdownPandocProperties[] = {{"lexer.lang", "2"}};
 constexpr const char* jsxExtensions[] = {"jsx"};
 constexpr const char* tsxExtensions[] = {"tsx"};
 constexpr SyntaxProperty javascriptProperties[] = {{"lexer.lang", "0"}};
@@ -222,6 +226,41 @@ constexpr SyntaxDefinition definitions[] = {
      false,
      "lua",
      luaOriginal},
+    {"GitHub GFM", markdownExtensions, markdownLists, markdownStyles, markdownGitHubProperties, SCLEX_MARKDOWN,
+     SyntaxLanguage::MarkdownGitHub, true, nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr,
+     markdownOriginal},
+    {"GitLab GLFM",
+     {},
+     markdownLists,
+     markdownStyles,
+     markdownGitLabProperties,
+     SCLEX_MARKDOWN,
+     SyntaxLanguage::MarkdownGitLab,
+     true,
+     nullptr,
+     "<!--",
+     "-->",
+     SCE_H_COMMENT,
+     false,
+     false,
+     nullptr,
+     markdownOriginal},
+    {"Pandoc",
+     {},
+     markdownLists,
+     markdownStyles,
+     markdownPandocProperties,
+     SCLEX_MARKDOWN,
+     SyntaxLanguage::MarkdownPandoc,
+     true,
+     nullptr,
+     "<!--",
+     "-->",
+     SCE_H_COMMENT,
+     false,
+     false,
+     nullptr,
+     markdownOriginal},
     {"TOML",
      tomlExtensions,
      tomlLists,
@@ -431,6 +470,9 @@ SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
         return SyntaxLanguage::JavaScript;
     case SyntaxLanguage::Tsx:
         return SyntaxLanguage::TypeScript;
+    case SyntaxLanguage::MarkdownGitLab:
+    case SyntaxLanguage::MarkdownPandoc:
+        return SyntaxLanguage::MarkdownGitHub;
     default:
         return language;
     }
@@ -460,6 +502,8 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return goSettingsSection;
     case SyntaxLanguage::Lua:
         return luaSettingsSection;
+    case SyntaxLanguage::MarkdownGitHub:
+        return markdownSettingsSection;
     case SyntaxLanguage::Toml:
         return tomlSettingsSection;
     case SyntaxLanguage::Yaml:
