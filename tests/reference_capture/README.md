@@ -12,6 +12,7 @@ output path as documented in the corresponding observation:
 - [Header insertion](../../docs/observations/header-insertion.md)
 - [Manual word completion](../../docs/observations/word-completion.md)
 - [Selection preferences](../../docs/observations/selection-preferences.md)
+- [TOML/YAML/CMake schemes and operations](../../docs/observations/syntax-config-languages.md)
 
 Raw captures belong in the external evidence directory. Reviewed reference data
 belongs in `tests/`. Regenerate it deliberately when comparing original behavior.

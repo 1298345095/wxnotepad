@@ -34,6 +34,9 @@ enum class SyntaxLanguage : uint8_t {
     Rust,
     Go,
     Lua,
+    Toml,
+    Yaml,
+    CMake,
     Count
 };
 struct SyntaxDetectionOptions {
