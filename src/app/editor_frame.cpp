@@ -73,6 +73,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         event.Skip();
     });
     editor_->SetAutoInsertMask(preferences.autoInsertMask);
+    editor_->SetCompletionSettings(preferences.completion);
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
     editor_->Occurrences().SetOptions(preferences.markOccurrences);
     editor_->SetCodeFoldingVisible(preferences.showCodeFolding);

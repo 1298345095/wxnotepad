@@ -3,6 +3,7 @@
 #include "settings/original_settings_constants.h"
 #include "editor/align_lines.h"
 #include "editor/completion_styles.h"
+#include "editor/word_completion.h"
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
 #include "editor/caret_appearance.h"
@@ -78,6 +79,7 @@ public:
     void SortLines(unsigned options = SortOption::Ascending);
     void SetIndentationWidths(int tabWidth, int indentWidth);
     void SetAutoInsertMask(int mask);
+    void SetCompletionSettings(const WordCompletionSettings& settings) { completionSettings_ = settings; }
     bool IsOpenBraceMatched(intptr_t position, intptr_t startPosition);
     void SetCompletionStyles(CompletionStyles styles) { completionStyles_ = std::move(styles); }
     bool AutoIndentEnabled() const { return autoIndent_; }
@@ -141,7 +143,10 @@ private:
     bool highlightCurrentBlock_ = true;
     int autoInsertMask_ = AutoInsertMask_Default;
     CompletionStyles completionStyles_;
+    WordCompletionSettings completionSettings_;
     void AutoInsertCharacter(int ch);
+    // False retains the original failed-tag member-arrow completion path.
+    bool AutoCloseTag();
     bool autoIndent_ = true;
     bool autoShrinkScrollWidth_ = false;
     bool matchBraces_ = true;

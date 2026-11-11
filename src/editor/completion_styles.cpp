@@ -4,6 +4,10 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
     CompletionStyles result;
     result.lexer = definition.lexer;
     const auto& original = definition.original;
+    result.angleBracketGeneric = (original.lexerAttributes & SyntaxLexerAttribute::AngleBracketGeneric) != 0;
+    result.xml = SyntaxSettingsLanguage(definition.language) == SyntaxLanguage::Xml;
+    result.operatorStyle = original.operatorStyle;
+    result.operatorStyle2 = original.operatorStyle2;
     result.escapeCharacterStart = original.escapeCharacterStart;
     result.escapeCharacterStyle = original.escapeCharacterStyle;
     result.characterLiteralStyle = original.characterLiteralStyle;

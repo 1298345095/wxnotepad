@@ -89,6 +89,7 @@ add_library(editor_runtime STATIC
     src/editor/number_radix.cpp
     src/editor/occurrence_marking.cpp
     src/editor/auto_insertion.cpp
+    src/editor/auto_close_tags.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
@@ -238,6 +239,9 @@ if(BUILD_TESTING)
     add_test(NAME original_selection_option_gates COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_options_process.py" "$<TARGET_FILE:selection_options>")
     set_tests_properties(original_selection_option_gates PROPERTIES TIMEOUT 60)
+    add_test(NAME original_selection_preferences_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_preferences_process.py" "$<TARGET_FILE:selection_options>")
+    set_tests_properties(original_selection_preferences_lifecycle PROPERTIES TIMEOUT 120)
     add_test(NAME original_shebang_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/shebang_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_shebang_settings PROPERTIES TIMEOUT 60)
@@ -404,6 +408,9 @@ if(BUILD_TESTING)
         set_tests_properties(native_peer_geometry_ready PROPERTIES TIMEOUT 20 SKIP_RETURN_CODE 77)
     endif()
     add_editor_test(selection_modifiers selection_modifiers 60)
+    add_editor_test(selection_preferences original_selection_preferences 90)
+    target_compile_definitions(selection_preferences PRIVATE
+        "SELECTION_PREFERENCES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_preferences_reference.tsv\"")
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(current_line original_current_line_highlight 60)
@@ -538,6 +545,8 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
     set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
+    add_gui_program(auto_close_tags tests/auto_close_tags.cpp app_shell)
+    add_test(NAME original_auto_close_tags COMMAND auto_close_tags)
     add_gui_program(auto_completion_settings tests/auto_completion_settings.cpp app_shell)
     add_test(NAME original_auto_completion_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_SOURCE_DIR}/tests/auto_completion_settings_process.py" "$<TARGET_FILE:auto_completion_settings>")
