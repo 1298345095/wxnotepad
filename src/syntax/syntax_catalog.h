@@ -55,6 +55,33 @@ struct SyntaxKeywords {
     const char* text;
     uintptr_t attributes;
 };
+// Original KeywordAttr values in SCI_SETKEYWORDS' attribute byte.
+namespace SyntaxKeywordAttribute {
+inline constexpr uintptr_t MakeLower = 1U << 8U;
+inline constexpr uintptr_t PreSorted = 2U << 8U;
+inline constexpr uintptr_t NoLexer = 4U << 8U;
+inline constexpr uintptr_t NoAutoComp = 8U << 8U;
+} // namespace SyntaxKeywordAttribute
+
+// Pinned EditLexer.h::EDITLEXER generated defaults, shared by editing consumers.
+struct SyntaxOriginalMetadata {
+    uint32_t lexerAttributes = 0;
+    int tabWidth = 4;
+    int indentWidth = 4;
+    int foldLevelMask = 0;
+    int foldIgnoreInner = 0;
+    int escapeCharacterStart = 0;
+    int escapeCharacterStyle = 0;
+    int formatSpecifierStyle = 0;
+    int autoIndentWordStyle = 0;
+    int characterLiteralStyle = 0;
+    int noneSingleQuotedStyle = 0;
+    int operatorStyle = 0;
+    int operatorStyle2 = 0;
+    int commentStyleMarker = 0;
+    int stringStyleFirst = 0;
+    int stringStyleLast = 0;
+};
 struct SyntaxProperty {
     const char* name;
     const char* value;
@@ -80,6 +107,7 @@ struct SyntaxDefinition {
     bool indentLookForward = false;
     bool encodingHeader = false;
     const char* scriptInterpreter = nullptr;
+    SyntaxOriginalMetadata original;
 };
 
 std::span<const SyntaxDefinition> SyntaxCatalog();
