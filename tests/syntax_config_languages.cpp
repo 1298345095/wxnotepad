@@ -54,6 +54,24 @@ constexpr SchemeFixture schemes[] = {
      "#", "#[[", "]]", "CMake Script"},
 };
 
+void CommentCommands(EditorFrame* frame, const SchemeFixture& fixture) {
+    auto* editor = frame->Editor();
+    TestEditor::ResetStream(editor, "call()\n");
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
+    Require(TestEditor::Text(editor) == std::string(fixture.lineComment) + " call()\n",
+            "shared comment command must use original language delimiter");
+    TestSyntax::Command(frame, wxID_UNDO);
+    editor->Send(Message::SetSel, 0, 6);
+    if (fixture.blockOpen) {
+        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
+        const auto commented = TestEditor::Text(editor);
+        Require(commented.starts_with(fixture.blockOpen) && commented.find(fixture.blockClose) != std::string::npos,
+                "shared CMake block-comment command uses original bracket delimiter");
+        TestSyntax::Command(frame, wxID_UNDO);
+    }
+    Require(TestEditor::Text(editor) == "call()\n", "language comment edits must remain undoable");
+    editor->Send(Message::SetSavePoint);
+}
 void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFixture& fixture, intptr_t fontSize) {
     auto* editor = frame->Editor();
     constexpr auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
@@ -115,21 +133,7 @@ void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFix
     Require(editor->Send(Message::GetLineVisible, static_cast<uintptr_t>(header + 1)),
             "Expand All restores each language's fold body");
 
-    TestEditor::ResetStream(editor, "call()\n");
-    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
-    Require(TestEditor::Text(editor) == std::string(fixture.lineComment) + " call()\n",
-            "shared comment command must use original language delimiter");
-    TestSyntax::Command(frame, wxID_UNDO);
-    editor->Send(Message::SetSel, 0, 6);
-    if (fixture.blockOpen) {
-        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
-        const auto commented = TestEditor::Text(editor);
-        Require(commented.starts_with(fixture.blockOpen) && commented.find(fixture.blockClose) != std::string::npos,
-                "shared CMake block-comment command uses original bracket delimiter");
-        TestSyntax::Command(frame, wxID_UNDO);
-    }
-    Require(TestEditor::Text(editor) == "call()\n", "language comment edits must remain undoable");
-    editor->Send(Message::SetSavePoint);
+    CommentCommands(frame, fixture);
 
     TabDialog::Show(frame, [inherited](wxDialog* dialog) {
         Require(TabDialog::Option(dialog, "Use Global Tab Settings")->GetValue() == inherited,

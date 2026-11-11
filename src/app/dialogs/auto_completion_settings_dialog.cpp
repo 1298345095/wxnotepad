@@ -124,7 +124,7 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     dialog.CentreOnParent();
     // Numeric controls use the original edit's input restriction, not wx's
     // modal validation: invalid programmatic text is normalized only on OK.
-    dialog.Bind(wxEVT_BUTTON, [&](wxCommandEvent&) { dialog.EndModal(wxID_OK); }, wxID_OK);
+    dialog.Bind(wxEVT_BUTTON, [&dialog](wxCommandEvent&) { dialog.EndModal(wxID_OK); }, wxID_OK);
     if (dialog.ShowModal() != wxID_OK) return false;
     const auto commitFlags = [](const std::vector<Flag>& controls, int mask) {
         for (const auto& [control, bit] : controls)

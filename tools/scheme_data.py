@@ -86,7 +86,7 @@ def original_scheme(data, symbol):
     # Count lists from separators after removing string contents.
     count = len(re.sub(r'"(?:[^"\\]|\\.)*"', '', literals).split(','))
     flags = [0] * count
-    for index, expression in re.findall(r'KeywordAttr(?:32|64)\((\d+),\s*([^)]*)\)', attributes):
+    for index, expression in re.findall(r'KeywordAttr(?:32|64)\((\d+),([^)]*)\)', attributes):
         flags[int(index)] = _attributes(expression, 'KeywordAttr_', KEYWORD_ATTRIBUTES)
     extensions = re.search(r'\n\s*L"([^"\n]+)"\s*,\s*Keywords_' + symbol, text)[1]
     title = re.search(r'EDITLEXER_HOLE\(L"([^"]+)"', text)[1]
