@@ -11,6 +11,7 @@
 #include <string>
 #include <algorithm>
 #include <cstdlib>
+#include <cctype>
 #include <limits>
 #ifdef __WXMSW__
 #include <shlobj.h>
@@ -145,6 +146,23 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.markLongLines = ReadBool("MarkLongLines", defaults.markLongLines);
     values.longLineMode = std::clamp(ReadInt("LongLineMode", defaults.longLineMode), 1, 2);
     values.selectOption = ReadInt("SelectOption", defaults.selectOption);
+    auto& completion=values.completion;
+    const auto& defaultCompletion=defaults.completion;
+    completion.completeOption=ReadInt("AutoCompleteOption",defaultCompletion.completeOption);
+    const int scopes=ReadInt("AutoCompleteScope",255);
+    completion.completeScope=scopes&15;
+    completion.scanWordScope=scopes>>4;
+    completion.scanWordsTimeout=std::max(ReadInt("AutoCScanWordsTimeout",defaultCompletion.scanWordsTimeout),50);
+    completion.ignoreCase=ReadBool("AutoCIgnoreCase",defaultCompletion.ignoreCase);
+    completion.latexInputMethod=ReadBool("LaTeXInputMethod",defaultCompletion.latexInputMethod);
+    completion.visibleItemCount=std::max(ReadInt("AutoCVisibleItemCount",defaultCompletion.visibleItemCount),8);
+    completion.minWordLength=std::max(ReadInt("AutoCMinWordLength",defaultCompletion.minWordLength),1);
+    completion.minNumberLength=std::max(ReadInt("AutoCMinNumberLength",defaultCompletion.minNumberLength),0);
+    completion.fillUpMask=ReadInt("AutoCFillUpMask",defaultCompletion.fillUpMask);
+    const auto punctuation=ReadString("AutoCFillUpPunctuation",defaultCompletion.fillUpPunctuation).Left(31);
+    completion.fillUpPunctuation.clear();
+    for(const wxUniChar ch:punctuation)
+        if(ch.GetValue()<128 && std::ispunct(static_cast<unsigned char>(ch.GetValue()))) completion.fillUpPunctuation+=ch;
     values.autoInsertMask = ReadInt("AutoInsertMask", defaults.autoInsertMask);
     values.markOccurrences = ReadInt("MarkOccurrences", defaults.markOccurrences);
     values.saveFindReplace = ReadBool("SaveFindReplace", defaults.saveFindReplace);
@@ -390,6 +408,47 @@ void SettingsStore::WriteInt(const wxString& key, int value, int fallback, const
     lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + wxString::Format("=%d", value));
 }
 
+void SettingsStore::WriteString(const wxString& key, const wxString& value, const wxString& fallback) {
+    const wxString sectionName="Settings";
+    bool settings = false;
+    bool foundSection = false;
+    size_t insertion = lines_.size();
+    for (size_t index = 0; index < lines_.size();) {
+        wxString line = lines_[index];
+        line.Trim().Trim(false);
+        if (line.StartsWith("[")) {
+            settings = line.CmpNoCase("[" + sectionName + "]") == 0;
+            if (settings && !foundSection) {
+                insertion = index + 1;
+                foundSection = true;
+            }
+        } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
+            lines_.erase(lines_.begin() + static_cast<std::ptrdiff_t>(index));
+            continue;
+        }
+        ++index;
+    }
+    if (value == fallback) return;
+    if (!foundSection) {
+        lines_.push_back("[" + sectionName + "]");
+        insertion = lines_.size();
+    }
+    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + "=" + value);
+}
+wxString SettingsStore::ReadString(const wxString& key,const wxString& fallback) const {
+    bool section=false;
+    for(auto line:lines_) {
+        line.Trim().Trim(false);
+        if(line.StartsWith("[")) section=line.CmpNoCase("[Settings]")==0;
+        else if(section && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false)==key) {
+            wxString value=line.AfterFirst('=').Trim().Trim(false);
+            if(value.StartsWith("\"") && value.EndsWith("\"") && value.length()>=2) value=value.Mid(1,value.length()-2);
+            return value.empty() ? fallback : value;
+        }
+    }
+    return fallback;
+}
+
 bool SettingsStore::Save(bool explicitSave) {
     const OriginalSettings defaults;
     if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
@@ -442,6 +501,18 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteInt("FileWatchingOption", values.fileWatching.flags, defaults.fileWatching.flags);
         WriteBool("ResetFileWatching", values.fileWatching.resetOnNewFile, defaults.fileWatching.resetOnNewFile);
         WriteInt("SelectOption", values.selectOption, defaults.selectOption);
+        const auto& completion=values.completion;
+        const auto& defaultCompletion=defaults.completion;
+        WriteInt("AutoCompleteOption",completion.completeOption,defaultCompletion.completeOption);
+        WriteInt("AutoCompleteScope",completion.completeScope | (completion.scanWordScope << 4),255);
+        WriteInt("AutoCScanWordsTimeout",completion.scanWordsTimeout,defaultCompletion.scanWordsTimeout);
+        WriteBool("AutoCIgnoreCase",completion.ignoreCase,defaultCompletion.ignoreCase);
+        WriteBool("LaTeXInputMethod",completion.latexInputMethod,defaultCompletion.latexInputMethod);
+        WriteInt("AutoCVisibleItemCount",completion.visibleItemCount,defaultCompletion.visibleItemCount);
+        WriteInt("AutoCMinWordLength",completion.minWordLength,defaultCompletion.minWordLength);
+        WriteInt("AutoCMinNumberLength",completion.minNumberLength,defaultCompletion.minNumberLength);
+        WriteInt("AutoCFillUpMask",completion.fillUpMask,defaultCompletion.fillUpMask);
+        WriteString("AutoCFillUpPunctuation",completion.fillUpPunctuation,defaultCompletion.fillUpPunctuation);
         WriteInt("AutoInsertMask", values.autoInsertMask, defaults.autoInsertMask);
         WriteInt("MarkOccurrences", values.markOccurrences, defaults.markOccurrences);
         WriteBool("SaveFindReplace", values.saveFindReplace, defaults.saveFindReplace);

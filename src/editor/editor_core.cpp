@@ -695,6 +695,10 @@ void EditorControl::Core::NotifyChange() const noexcept {
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
+    if(notification.nmhdr.code==Scintilla::Notification::AutoCSelection) {
+        AcceptWordCompletion(window_, window_.completionSettings_, notification);
+        return;
+    }
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&
         (static_cast<unsigned>(notification.modificationType) &
          static_cast<unsigned>(Scintilla::ModificationFlags::DeleteText)))

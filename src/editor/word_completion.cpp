@@ -688,7 +688,7 @@ void AutoC_AddDocWord(WordList &pWList, const std::array<uint32_t,8>& ignoredSty
 	const Sci_Position textLength = iRootLen + (prefix ? 1 : 0);
 	const Sci_Position iCurrentPos = Call(Message::GetCurrentPos) - textLength;
 	const Sci_Position iDocLen = Call(Message::GetLength);
-	Sci_TextToFindFull ft = { { 0, iDocLen }, pFind.data(), static_cast<Sci_PositionU>(textLength), { 0, 0 } };
+	Sci_TextToFindFull ft = { { 0, iDocLen }, pFind.data(), textLength, { 0, 0 } };
 
 	Sci_Position iPosFind = Call(Message::FindTextFull, findFlag, &ft);
 	const auto deadline=std::chrono::steady_clock::now()+std::chrono::milliseconds(settings_.scanWordsTimeout);
@@ -1138,5 +1138,6 @@ bool Run(bool autoInsert) {
 };
 }
 void CompleteWord(EditorControl& editor,const SyntaxDefinition& definition,const WordCompletionSettings& settings,bool autoInsert) {
+ editor.SetCompletionSettings(settings);
  Collector(editor,definition,settings).Run(autoInsert);
 }

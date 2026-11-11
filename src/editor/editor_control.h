@@ -5,6 +5,7 @@
 #include "editor/sort_lines.h"
 #include "editor/date_time.h"
 #include "editor/caret_appearance.h"
+#include "editor/word_completion.h"
 #include "editor/special_insert.h"
 #include "editor/url_conversion.h"
 #include "editor/occurrence_marking.h"
@@ -76,6 +77,7 @@ public:
     void RemoveDuplicateLines();
     void SortLines(unsigned options = SortOption::Ascending);
     void SetIndentationWidths(int tabWidth, int indentWidth);
+    void SetCompletionSettings(const WordCompletionSettings& settings) { completionSettings_ = settings; }
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
     void Copy();
@@ -135,6 +137,7 @@ private:
     bool codeFoldingVisible_ = true;
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
+    WordCompletionSettings completionSettings_;
     bool autoIndent_ = true;
     bool autoShrinkScrollWidth_ = false;
     bool matchBraces_ = true;

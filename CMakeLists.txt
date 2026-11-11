@@ -61,6 +61,8 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/completion_selection.cpp
+    src/editor/platform/latex_input.cpp
     src/editor/caret_appearance.cpp
     src/editor/date_time.cpp
     src/editor/align_lines.cpp
@@ -95,7 +97,7 @@ add_library(editor_runtime STATIC
     src/editor/platform/sort_collation.cpp
     src/editor/platform/gtk_drag_drop.cpp
     src/editor/platform/wx_platform.cpp)
-target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
+target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/win32"
     "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
 target_link_libraries(editor_runtime PUBLIC notepad4_core)
 if(WXNOTEPAD_ENABLE_DIAGNOSTICS)
@@ -531,6 +533,8 @@ if(BUILD_TESTING)
     set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
     add_editor_test(word_completion original_complete_word 60)
+    add_gui_program(completion_settings tests/completion_settings.cpp app_shell)
+    add_test(NAME original_completion_settings COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/completion_settings_process.py" "$<TARGET_FILE:completion_settings>")
     add_editor_test(completion_popup original_completion_popup 60)
     add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(file_indentation original_file_indentation 60)

@@ -18,3 +18,6 @@ struct WordCompletionSettings {
 };
 void CompleteWord(EditorControl& editor, const SyntaxDefinition& definition,
                   const WordCompletionSettings& settings, bool autoInsert = true);
+
+namespace Scintilla { struct NotificationData; }
+void AcceptWordCompletion(EditorControl& editor, const WordCompletionSettings& settings, const Scintilla::NotificationData& notification);
