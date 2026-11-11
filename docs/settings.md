@@ -145,6 +145,15 @@ destination line start, while Normal publishes stream text. Cut keeps the
 expanded caret column on the next line, or the previous line in Old Visual
 Studio mode. Explicit Ctrl+Shift+C/X line commands use the same tag option.
 
+Settings → Select and Edit Options → Enable Multiple Selection and Undo Redo
+Remember Selection update `SelectOption` bits `1` and `8` immediately. Both
+default to enabled. Other bits survive toggling and the existing explicit/exit
+save lifecycle. Disabling multiple selection retains any active additional
+ranges until the next operation applies the original core's selection rules.
+Disabling selection memory drops stored selection snapshots, while preserving
+the text undo stack and save point; enabling it again does not recover the old
+snapshots. Frames without a settings store keep both preferences in memory.
+
 Save Settings On Exit is enabled by default. A disabled exit save writes only
 `SaveSettings=0`, retaining the previously stored view choices. Save Settings Now
 writes current choices even while exit saving is disabled. Default-valued fields
@@ -164,6 +173,15 @@ core handles selection enclosure and overwrite typing. Toggle Line Comment reads
 the same bit `256`. OK commits these controls and Auto Indent; Cancel commits
 nothing. Other option bits remain intact. The complete mask is retained through reloads,
 Save Settings Now and enabled exit saving; the default `511` is omitted on Save.
+
+`[Settings] AutoCompleteOption` defaults to `7`. Its original bit `1` controls
+**Auto close HTML and XML tags** in the same dialog. OK applies the change to live
+typing and the shared completion settings; Cancel preserves it. Other completion
+bits and automatic-insertion choices survive. Typing `>` uses the original
+511-byte tag scan, HTML void-element exceptions (with `<p>` still closed), XML
+family differences, and language/style exclusions. See the
+[tag closure observations](observations/auto-close-tags.md) for frozen malformed
+markup, JSX/TSX, selection/history and encoded-file results.
 
 Tab settings use this same store. `[Settings]` defaults are `TabWidth=4`,
 `IndentWidth=4`, `TabsAsSpaces=0`, `TabIndents=1`, `BackspaceUnindents=2`, and

@@ -61,9 +61,13 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(bar->GetMenu(2), "Goto"),
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});
-    Order(bar->GetMenu(5), {"Insert Tabs as Spaces", "Tab Settings...", "Long Line Settings...", "Auto Indent",
-                            "Select and Edit Options", "Appearance", "File Change Notification...", "Other Settings",
-                            "Save Settings On Exit", "Save Settings Now"});
+    Order(bar->GetMenu(5),
+          {"Insert Tabs as Spaces", "Tab Settings...", "Long Line Settings...", "Auto Completion Settings...",
+           "Auto Indent", "Select and Edit Options", "Appearance", "File Change Notification...", "Other Settings",
+           "Save Settings On Exit", "Save Settings Now"});
+    Order(Submenu(bar->GetMenu(5), "Select and Edit Options"),
+          {"Enable Multiple Selection", "Copy Selection As Find Text", "Copy Paste Buffer As Find Text",
+           "Undo Redo Remember Selection", "Line Selection Mode"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
 }
