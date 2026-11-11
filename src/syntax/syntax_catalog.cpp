@@ -11,18 +11,13 @@ namespace {
 #include "syntax/generated/javascript_scheme_data.h"
 #include "syntax/generated/typescript_scheme_data.h"
 #include "syntax/generated/markup_scheme_data.h"
+#include "syntax/generated/html_scheme_data.h"
+#include "syntax/generated/xml_scheme_data.h"
+#include "syntax/generated/rust_scheme_data.h"
+#include "syntax/generated/go_scheme_data.h"
+#include "syntax/generated/lua_scheme_data.h"
 #include "syntax/generated/detection_extensions.h"
 
-template <size_t N> constexpr auto Keywords(const char* const (&text)[N], uintptr_t attributes) {
-    std::array<SyntaxKeywords, N> result{};
-    for (size_t index = 0; index < N; ++index)
-        result[index] = {text[index], attributes};
-    return result;
-}
-constexpr auto cppLists = Keywords(cppKeywords, 0);
-constexpr auto pythonLists = Keywords(pythonKeywords, 2U << 8U);
-constexpr auto jsonLists = Keywords(jsonKeywords, jsonKeywordAttributes);
-constexpr auto bashLists = Keywords(bashKeywords, 2U << 8U);
 constexpr const char* textExtensions[] = {"txt"};
 constexpr const char* cppExtensions[] = {"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"};
 constexpr const char* pythonExtensions[] = {"py", "pyw", "pyi"};
@@ -94,7 +89,7 @@ constexpr SyntaxDefinition definitions[] = {
      0,
      true},
     {"C/C++", cppExtensions, cppLists, cppStyles, cppProperties, SCLEX_CPP, SyntaxLanguage::Cpp, true, "//", "/*", "*/",
-     SCE_C_COMMENTDOC_TAG_XML},
+     SCE_C_COMMENTDOC_TAG_XML, false, false, nullptr, cppOriginal},
     {"Python",
      pythonExtensions,
      pythonLists,
@@ -109,7 +104,8 @@ constexpr SyntaxDefinition definitions[] = {
      SCE_PY_TASKMARKER,
      true,
      true,
-     "python3"},
+     "python3",
+     pythonOriginal},
     {"JSON",
      jsonExtensions,
      jsonLists,
@@ -121,47 +117,99 @@ constexpr SyntaxDefinition definitions[] = {
      "//",
      "/*",
      "*/",
-     SCE_JSON_BLOCKCOMMENT},
+     SCE_JSON_BLOCKCOMMENT,
+     false,
+     false,
+     nullptr,
+     jsonOriginal},
     {"JavaScript", javascriptExtensions, javascriptLists, javascriptStyles, javascriptProperties, SCLEX_JAVASCRIPT,
-     SyntaxLanguage::JavaScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+     SyntaxLanguage::JavaScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node", javascriptOriginal},
     {"JSX", jsxExtensions, javascriptLists, javascriptStyles, jsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Jsx,
-     true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node", javascriptOriginal},
     {"TypeScript", typescriptExtensions, typescriptLists, typescriptStyles, typescriptProperties, SCLEX_JAVASCRIPT,
-     SyntaxLanguage::TypeScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER},
+     SyntaxLanguage::TypeScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, nullptr, typescriptOriginal},
     {"TSX", tsxExtensions, typescriptLists, typescriptStyles, tsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Tsx,
-     true, "//", "/*", "*/", SCE_JS_TASKMARKER},
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, nullptr, typescriptOriginal},
     {"Bash", bashExtensions, bashLists, bashStyles, bashProperties, SCLEX_BASH, SyntaxLanguage::Bash, true, "#",
-     nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/bash"},
+     nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/bash", bashOriginal},
     {"C Shell", cShellExtensions, bashLists, bashStyles, cShellProperties, SCLEX_BASH, SyntaxLanguage::CShell, true,
-     "#", nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/csh"},
+     "#", nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/csh", bashOriginal},
     {"m4", m4Extensions, bashLists, bashStyles, m4Properties, SCLEX_BASH, SyntaxLanguage::M4, true, "dnl ", nullptr,
-     nullptr, SCE_SH_COMMENTLINE, false, false, "m4"},
+     nullptr, SCE_SH_COMMENTLINE, false, false, "m4", bashOriginal},
     {"Web Source Code", htmlExtensions, htmlLists, htmlStyles, htmlProperties, SCLEX_HTML, SyntaxLanguage::Html, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"ASP VBScript", aspExtensions, htmlLists, htmlStyles, htmlVbProperties, SCLEX_HTML, SyntaxLanguage::AspVb, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"ASP JavaScript", aspExtensions, htmlLists, htmlStyles, htmlProperties, SCLEX_HTML, SyntaxLanguage::AspJs, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"ASP.NET C#", aspxExtensions, htmlLists, htmlStyles, htmlProperties, SCLEX_HTML, SyntaxLanguage::AspxCs, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"ASP.NET VB", aspxExtensions, htmlLists, htmlStyles, htmlVbProperties, SCLEX_HTML, SyntaxLanguage::AspxVb, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"JSP", jspExtensions, htmlLists, htmlStyles, jspProperties, SCLEX_HTML, SyntaxLanguage::Jsp, true, nullptr, "<!--",
-     "-->", SCE_H_COMMENT},
+     "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"JSPX", jspxExtensions, htmlLists, htmlStyles, jspxProperties, SCLEX_HTML, SyntaxLanguage::Jspx, true, nullptr,
-     "<!--", "-->", SCE_H_COMMENT},
+     "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"XML Document", xmlExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Xml, true, nullptr,
-     "<!--", "-->", SCE_H_COMMENT},
+     "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"SVG", svgExtensions, xmlLists, xmlStyles, svgProperties, SCLEX_HTML, SyntaxLanguage::Svg, true, nullptr, "<!--",
-     "-->", SCE_H_COMMENT},
+     "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"XML Schema", xsdExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Xsd, true, nullptr,
-     "<!--", "-->", SCE_H_COMMENT},
+     "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"XSLT", xsltExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Xslt, true, nullptr,
-     "<!--", "-->", SCE_H_COMMENT},
+     "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"DTD", dtdExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Dtd, true, nullptr, "<!--",
-     "-->", SCE_H_COMMENT},
+     "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"Property List", plistExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Plist, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
+    {"Rust",
+     rustExtensions,
+     rustLists,
+     rustStyles,
+     {},
+     SCLEX_RUST,
+     SyntaxLanguage::Rust,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_RUST_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     rustOriginal},
+    {"Go",
+     goExtensions,
+     goLists,
+     goStyles,
+     {},
+     SCLEX_GO,
+     SyntaxLanguage::Go,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_GO_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     goOriginal},
+    {"Lua",
+     luaExtensions,
+     luaLists,
+     luaStyles,
+     {},
+     SCLEX_LUA,
+     SyntaxLanguage::Lua,
+     true,
+     "--",
+     "--[[",
+     "]]",
+     SCE_LUA_COMMENTLINE,
+     false,
+     false,
+     "lua",
+     luaOriginal},
 };
 
 bool Space(char ch) {
@@ -206,6 +254,7 @@ std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
         if (letters.starts_with(shell)) return SyntaxLanguage::Bash;
     }
     if (letters.starts_with("node")) return SyntaxLanguage::JavaScript;
+    if (letters.starts_with("lua") || letters.starts_with("wlua")) return SyntaxLanguage::Lua;
     return std::nullopt;
 }
 
@@ -345,6 +394,12 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return "JavaScript";
     case SyntaxLanguage::TypeScript:
         return "TypeScript";
+    case SyntaxLanguage::Rust:
+        return rustSettingsSection;
+    case SyntaxLanguage::Go:
+        return goSettingsSection;
+    case SyntaxLanguage::Lua:
+        return luaSettingsSection;
     default:
         return "Text File";
     }

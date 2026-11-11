@@ -111,6 +111,7 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
                     reinterpret_cast<intptr_t>(property.value));
     for (size_t index = 0; index < definition.keywords.size(); ++index) {
         const auto& list = definition.keywords[index];
+        if (list.attributes & SyntaxKeywordAttribute::NoLexer) continue;
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
     InstallStyles(editor, definition.styles);
