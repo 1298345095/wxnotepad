@@ -69,6 +69,21 @@ void Check(EditorControl& editor, int option) {
             "Ctrl-click adds a caret only with multiple selection enabled");
     editor.Send(Message::SetSavePoint);
 }
+void Lifecycle(EditorFrame* frame, SettingsStore& settings, int option, const wxString& action) {
+    if (action != "keep") {
+        for (const char* label : {"Enable Multiple Selection", "Undo Redo Remember Selection"})
+            NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", label));
+        Require(settings.values.selectOption == (option ^ 9), "lifecycle toggles only target bits");
+        Require(frame->Editor()->Send(Message::GetMultipleSelection) == ((option & 1) ? 0 : 1) &&
+                    frame->Editor()->Send(Message::GetUndoSelectionHistory) == ((option & 8) ? 0 : 3),
+                "lifecycle commands apply both live options");
+    }
+    if (action == "disable-exit")
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings On Exit"));
+    if (action == "explicit")
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
+    std::printf("PASS: selection lifecycle imported=%d action=%s\n", option, action.utf8_str().data());
+}
 class SelectionOptionsApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -81,22 +96,7 @@ public:
                 Require(settings_->values.selectOption == option, "raw imported bits must survive unchanged");
                 CheckMenu(frame, *settings_, option);
                 if (argc > 2) {
-                    const wxString action = argv[2];
-                    if (action != "keep") {
-                        for (const char* label : {"Enable Multiple Selection", "Undo Redo Remember Selection"})
-                            NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", label));
-                        Require(settings_->values.selectOption == (option ^ 9), "lifecycle toggles only target bits");
-                        Require(frame->Editor()->Send(Message::GetMultipleSelection) == ((option & 1) ? 0 : 1) &&
-                                    frame->Editor()->Send(Message::GetUndoSelectionHistory) == ((option & 8) ? 0 : 3),
-                                "lifecycle commands apply both live options");
-                    }
-                    if (action == "disable-exit")
-                        NativeSearch::Command(frame,
-                                              frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings On Exit"));
-                    if (action == "explicit")
-                        NativeSearch::Command(frame,
-                                              frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
-                    std::printf("PASS: selection lifecycle imported=%d action=%s\n", option, action.utf8_str().data());
+                    Lifecycle(frame, *settings_, option, wxString(argv[2]));
                     result_ = 0;
                     frame->Close(true);
                     ExitMainLoop();

@@ -76,6 +76,41 @@ void EncodedFiles(EditorFrame* frame) {
             throw std::runtime_error("tag closure saves exact original encoded bytes");
     }
 }
+void OriginalCases(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    unsigned index = 0;
+    for (const auto& item : AutoCloseTagsReference::cases) {
+        std::printf("case %u language=%d ch=%d\n", index++, static_cast<int>(item.language), item.character);
+        editor->Send(Message::SetReadOnly, 0);
+        ApplySyntaxLanguage(*editor, item.language);
+        editor->Send(Message::SetUndoSelectionHistory, 0);
+        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(item.before));
+        editor->Send(Message::SetSel, item.anchor, item.position);
+        if (item.extraCaret >= 0) editor->Send(Message::AddSelection, item.extraCaret, item.extraAnchor);
+        editor->Send(Message::SetOvertype, item.overtype);
+        editor->Send(Message::EmptyUndoBuffer);
+        editor->Send(Message::SetSavePoint);
+        editor->Send(Message::SetUndoSelectionHistory, 3);
+        editor->Send(Message::Colourise, 0, -1);
+        editor->Send(Message::SetReadOnly, item.readOnly);
+        Character(frame, item.character, std::string_view(item.before) == "<div" && !item.readOnly);
+        State(editor, item.after);
+        for (const auto& state : item.undo) {
+            editor->Send(Message::Undo);
+            State(editor, state);
+        }
+        for (const auto& state : item.redo) {
+            editor->Send(Message::Redo);
+            State(editor, state);
+        }
+        DocumentSession document(*editor);
+        const auto path = TestFiles::TemporaryDirectory("auto-close-tags.txt");
+        if (document.SaveCopy(TestFiles::Filename(path)).status != SaveStatus::Saved ||
+            TestFiles::Bytes(path) != item.saved)
+            throw std::runtime_error("saved bytes reproduce independently captured original file");
+    }
+    editor->Send(Message::SetReadOnly, 0);
+}
 class AutoCloseTagsApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -85,41 +120,7 @@ public:
             NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
                 try {
                     if (!presented) throw std::runtime_error("owned editor must be presented for native typing");
-                    auto* editor = frame->Editor();
-                    unsigned index = 0;
-                    for (const auto& item : AutoCloseTagsReference::cases) {
-                        std::printf("case %u language=%d ch=%d\n", index++, static_cast<int>(item.language),
-                                    item.character);
-                        editor->Send(Message::SetReadOnly, 0);
-                        ApplySyntaxLanguage(*editor, item.language);
-                        editor->Send(Message::SetUndoSelectionHistory, 0);
-                        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(item.before));
-                        editor->Send(Message::SetSel, item.anchor, item.position);
-                        if (item.extraCaret >= 0)
-                            editor->Send(Message::AddSelection, item.extraCaret, item.extraAnchor);
-                        editor->Send(Message::SetOvertype, item.overtype);
-                        editor->Send(Message::EmptyUndoBuffer);
-                        editor->Send(Message::SetSavePoint);
-                        editor->Send(Message::SetUndoSelectionHistory, 3);
-                        editor->Send(Message::Colourise, 0, -1);
-                        editor->Send(Message::SetReadOnly, item.readOnly);
-                        Character(frame, item.character, std::string_view(item.before) == "<div" && !item.readOnly);
-                        State(editor, item.after);
-                        for (const auto& state : item.undo) {
-                            editor->Send(Message::Undo);
-                            State(editor, state);
-                        }
-                        for (const auto& state : item.redo) {
-                            editor->Send(Message::Redo);
-                            State(editor, state);
-                        }
-                        DocumentSession document(*editor);
-                        const auto path = TestFiles::TemporaryDirectory("auto-close-tags.txt");
-                        if (document.SaveCopy(TestFiles::Filename(path)).status != SaveStatus::Saved ||
-                            TestFiles::Bytes(path) != item.saved)
-                            throw std::runtime_error("saved bytes reproduce independently captured original file");
-                    }
-                    editor->Send(Message::SetReadOnly, 0);
+                    OriginalCases(frame);
                     EncodedFiles(frame);
                     std::puts("PASS: original character notifications, styles, read-only state and Undo/Redo");
                     result_ = 0;

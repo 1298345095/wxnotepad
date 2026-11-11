@@ -51,7 +51,7 @@ void Typing(EditorFrame* frame, int bit, bool enabled) {
 }
 class DialogDriver final : public wxModalDialogHook {
 public:
-    DialogDriver(std::function<void(wxDialog*)> action) : action_(std::move(action)) { Register(); }
+    explicit DialogDriver(std::function<void(wxDialog*)> action) : action_(std::move(action)) { Register(); }
     int Enter(wxDialog* dialog) override {
         if (dialog->GetTitle() == "Auto Completion Settings")
             wxTheApp->CallAfter([this, dialog] {
@@ -98,11 +98,11 @@ void Click(wxWindow* control) {
     gtk_button_clicked(GTK_BUTTON(control->GetHandle()));
 #endif
 }
-void Visit(EditorFrame* frame, const std::function<void(wxDialog*)>& action) {
+template <class Action> void Visit(EditorFrame* frame, const Action& action) {
     const int command = frame->GetMenuBar()->FindMenuItem("Settings", "Auto Completion Settings...");
     Require(command != wxNOT_FOUND, "Settings exposes native Auto Completion Settings");
     bool opened = false;
-    DialogDriver driver([&](wxDialog* dialog) {
+    DialogDriver driver([&opened, &action](wxDialog* dialog) {
         opened = true;
         action(dialog);
     });
@@ -114,7 +114,7 @@ void TagSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
     constexpr int OriginalOptions = PreservedBit | 7;
     constexpr int DisabledOptions = OriginalOptions & ~1;
     auto* editor = frame->Editor();
-    const auto type = [&](bool enabled) {
+    const auto type = [frame, editor](bool enabled) {
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Web Source Code"));
         Reset(editor, "<div");
         Character(editor, '>');
@@ -129,7 +129,7 @@ void TagSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
     const auto insertion = settings.values.autoInsertMask;
     const auto indent = settings.values.autoIndent;
     type(true);
-    Visit(frame, [&](wxDialog* dialog) {
+    Visit(frame, [](wxDialog* dialog) {
         auto* tags = Check(dialog, "Auto close HTML and XML tags");
         Require(tags->GetValue(), "native option reflects original enabled bit");
         Click(tags);
@@ -137,7 +137,7 @@ void TagSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
     });
     Require(settings.values.completion.completeOption == OriginalOptions, "Cancel preserves tag option");
     type(true);
-    Visit(frame, [&](wxDialog* dialog) {
+    Visit(frame, [](wxDialog* dialog) {
         Click(Check(dialog, "Auto close HTML and XML tags"));
         Click(dialog->FindWindow(wxID_OK));
     });
@@ -168,7 +168,7 @@ void WordSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
         "Complete inside comments", "Complete inside strings",  "Complete inside plain text", "Scan inside comments",
         "Scan inside strings",      "Scan inside plain text",   "Complete with Enter",        "Complete with Tab",
         "Complete with Space",      "Complete with punctuation"};
-    const auto edit = [&](wxDialog* dialog) {
+    const auto edit = [&options](wxDialog* dialog) {
         for (const char* name : options)
             Click(Check(dialog, name));
         Click(Check(dialog, "Auto close HTML and XML tags"));
@@ -178,7 +178,7 @@ void WordSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
         Field(dialog, "Scan timeout")->SetValue("75 ms");
         Field(dialog, "Fill-up punctuation")->SetValue(wxString::FromUTF8("a!中? :!9"));
     };
-    Visit(frame, [&](wxDialog* dialog) {
+    Visit(frame, [&edit](wxDialog* dialog) {
         edit(dialog);
         Click(dialog->FindWindow(wxID_CANCEL));
     });
@@ -186,7 +186,7 @@ void WordSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
                 value.fillUpMask == 15 && value.minWordLength == 1 && value.minNumberLength == 3 &&
                 value.visibleItemCount == 16 && value.scanWordsTimeout == 500,
             "Cancel leaves every word completion preference untouched");
-    Visit(frame, [&](wxDialog* dialog) {
+    Visit(frame, [&edit](wxDialog* dialog) {
         edit(dialog);
         Click(dialog->FindWindow(wxID_OK));
     });
@@ -196,14 +196,14 @@ void WordSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
     Require(value.completeOption == 24 && value.completeScope == 8 && value.scanWordScope == 8 &&
                 value.fillUpMask == 0 && value.fillUpPunctuation == "!?:!",
             "OK commits scope bits and ASCII punctuation normalization");
-    Visit(frame, [&](wxDialog* dialog) {
+    Visit(frame, [](wxDialog* dialog) {
         Field(dialog, "Scan timeout")->SetValue("invalid");
         Field(dialog, "Minimum word length")->SetValue("invalid");
         Click(dialog->FindWindow(wxID_OK));
     });
     Require(value.scanWordsTimeout == 75 && value.minWordLength == 1,
             "invalid timeout retains prior value while invalid unsigned word length clamps");
-    Visit(frame, [&](wxDialog* dialog) {
+    Visit(frame, [](wxDialog* dialog) {
         Field(dialog, "Minimum word length")->SetValue("2");
         Click(dialog->FindWindow(wxID_OK));
     });
@@ -254,7 +254,7 @@ public:
                     Require(settings_->values.autoInsertMask == (PreservedBit | 511),
                             "imports original insertion bits");
                     Typing(frame, bit, true);
-                    Visit(frame, [&](wxDialog* dialog) {
+                    Visit(frame, [&labels, index](wxDialog* dialog) {
                         for (const auto* name : labels)
                             Require(Check(dialog, name)->GetValue(), "native controls reflect imported bits");
                         Click(Check(dialog, labels[index]));
@@ -264,7 +264,7 @@ public:
                     Require(settings_->values.autoInsertMask == (PreservedBit | 511) &&
                                 frame->Editor()->AutoIndentEnabled(),
                             "Cancel commits no delivered preference");
-                    Visit(frame, [&](wxDialog* dialog) {
+                    Visit(frame, [&labels, index](wxDialog* dialog) {
                         Click(Check(dialog, labels[index]));
                         Click(Check(dialog, "Auto Indent"));
                         Click(dialog->FindWindow(wxID_OK));

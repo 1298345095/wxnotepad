@@ -432,7 +432,9 @@ public:
         });
     }
     bool AcceptsFocus() const override { return false; }
-    void SetFocus() override {}
+    void SetFocus() override {
+        // Completion keeps keyboard input and IME composition in the editor.
+    }
     void Notify(ListBoxEvent::EventType type) {
         if (delegate) {
             ListBoxEvent event(type);
@@ -475,7 +477,9 @@ public:
         popup->SetSizer(sizer);
         wid = popup;
     }
-    void SetAverageCharWidth(int, double) noexcept override {}
+    void SetAverageCharWidth(int, double) noexcept override {
+        // GetDesiredRect measures the actual labels using the native list font.
+    }
     void SetVisibleRows(int rows) noexcept override { rows_ = rows; }
     int GetVisibleRows() const noexcept override { return rows_; }
     PRectangle GetDesiredRect() override {
@@ -498,9 +502,15 @@ public:
     }
     int GetSelection() const noexcept override { return list_->GetSelection(); }
     std::string GetValue(int item) const override { return list_->labels[item].ToStdString(wxConvUTF8); }
-    void RegisterImage(int, const char*) override {}
-    void RegisterRGBAImage(int, int, int, const unsigned char*) override {}
-    void ClearRegisteredImages() noexcept override {}
+    void RegisterImage(int, const char*) override {
+        // This text-only candidate list does not retain registered images.
+    }
+    void RegisterRGBAImage(int, int, int, const unsigned char*) override {
+        // This text-only candidate list does not retain registered images.
+    }
+    void ClearRegisteredImages() noexcept override {
+        // There are no retained candidate images to release.
+    }
     void SetDelegate(IListBoxDelegate* delegate) noexcept override { list_->delegate = delegate; }
     void SetList(const char* value, char separator, char typeSeparator) override {
         Clear();
@@ -511,7 +521,9 @@ public:
         list_->SetItemCount(list_->labels.size());
         list_->Measure();
     }
-    void SCICALL SetOptions(const ListOptions&) noexcept override {}
+    void SCICALL SetOptions(const ListOptions&) noexcept override {
+        // The native text-only list uses system selection colors and its own metrics.
+    }
 };
 std::unique_ptr<ListBox> ListBox::Allocate() {
     return std::make_unique<WxListBox>();

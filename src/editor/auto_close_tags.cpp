@@ -20,6 +20,17 @@ bool IsVoidTag(std::string tag) {
         ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
     return VoidTags.find(" " + tag + " ") != std::string_view::npos;
 }
+bool IsPreprocessorLine(EditorControl& editor, intptr_t position) {
+    using Scintilla::Message;
+    auto lineStart = editor.Send(Message::PositionFromLine, editor.Send(Message::LineFromPosition, position));
+    int ch = 0;
+    while (lineStart < position) {
+        ch = static_cast<int>(editor.Send(Message::GetCharAt, lineStart));
+        if (ch != ' ' && ch != '\t') break;
+        ++lineStart;
+    }
+    return ch == '#' && editor.Send(Message::GetStyleIndexAt, lineStart) == SCE_C_PREPROCESSOR;
+}
 } // namespace
 
 bool EditorControl::AutoCloseTag() {
@@ -33,16 +44,7 @@ bool EditorControl::AutoCloseTag() {
     if (styles.angleBracketGeneric &&
         (currentStyle == 0 || currentStyle == styles.operatorStyle || currentStyle == styles.operatorStyle2))
         return false;
-    if (styles.lexer == SCLEX_CPP) {
-        auto lineStart = Send(Message::PositionFromLine, Send(Message::LineFromPosition, position));
-        int ch = 0;
-        while (lineStart < position) {
-            ch = static_cast<int>(Send(Message::GetCharAt, lineStart));
-            if (ch != ' ' && ch != '\t') break;
-            ++lineStart;
-        }
-        if (ch == '#' && Send(Message::GetStyleIndexAt, lineStart) == SCE_C_PREPROCESSOR) return false;
-    }
+    if (styles.lexer == SCLEX_CPP && IsPreprocessorLine(*this, position)) return false;
     std::array<char, TagLookBackBytes + 1> text{};
     for (intptr_t index = 0; index < size; ++index)
         text[index] = static_cast<char>(Send(Message::GetCharAt, start + index));

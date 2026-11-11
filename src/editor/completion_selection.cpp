@@ -36,6 +36,38 @@ bool CompleteLatex(EditorControl& editor) {
     editor.Send(Message::SetSel, position + text.size(), position + text.size());
     return true;
 }
+struct CompletionText {
+    std::string text;
+    intptr_t offset;
+    bool closeBrace = false;
+};
+CompletionText PrepareCompletionText(EditorControl& editor, const char* text, intptr_t caret) {
+    CompletionText result{text, 0};
+    const auto braces = result.text.find_first_of("([{<");
+    if (braces == std::string::npos) {
+        result.offset = result.text.size();
+        return result;
+    }
+    auto position = caret;
+    auto ch = editor.Send(Message::GetCharAt, position);
+    while (ch == ' ' || ch == '\t')
+        ch = editor.Send(Message::GetCharAt, ++position);
+    result.offset = braces + 1;
+    const char brace = result.text[braces];
+    if (brace == ch) {
+        result.text.resize(braces);
+        result.offset += position - caret;
+        return result;
+    }
+    const int closing = brace == '(' ? ')' : brace + 2;
+    if (ch == closing) {
+        if (editor.Send(Message::BraceMatch, position, editor.Send(Message::PositionBefore, caret)) < 0)
+            result.text.resize(braces + 1);
+    } else {
+        result.closeBrace = brace != '<' && result.text[braces + 1] == closing;
+    }
+    return result;
+}
 } // namespace
 void AcceptWordCompletion(EditorControl& editor, const WordCompletionSettings& settings,
                           const Scintilla::NotificationData& notification) {
@@ -50,37 +82,15 @@ void AcceptWordCompletion(EditorControl& editor, const WordCompletionSettings& s
             editor.Send(Message::Tab);
         return;
     }
-    std::string text(notification.text);
-    const auto braces = text.find_first_of("([{<");
     const auto caret = editor.Send(Message::GetCurrentPos);
-    intptr_t offset;
-    bool closeBrace = false;
-    if (braces != std::string::npos) {
-        auto position = caret;
-        auto ch = editor.Send(Message::GetCharAt, position);
-        while (ch == ' ' || ch == '\t')
-            ch = editor.Send(Message::GetCharAt, ++position);
-        offset = braces + 1;
-        const char brace = text[braces];
-        if (brace == ch) {
-            text.resize(braces);
-            offset += position - caret;
-        } else {
-            const int closing = brace == '(' ? ')' : brace + 2;
-            if (ch == closing) {
-                if (editor.Send(Message::BraceMatch, position, editor.Send(Message::PositionBefore, caret)) < 0)
-                    text.resize(braces + 1);
-            } else
-                closeBrace = brace != '<' && text[braces + 1] == closing;
-        }
-    } else
-        offset = text.size();
-    const auto newPosition = notification.position + offset;
+    const auto completion = PrepareCompletionText(editor, notification.text, caret);
+    const auto newPosition = notification.position + completion.offset;
     editor.Send(Message::BeginUndoAction);
     editor.Send(Message::SetSel, notification.position, caret);
-    editor.Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(text.c_str()));
+    editor.Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(completion.text.c_str()));
     editor.Send(Message::SetSel, newPosition, newPosition);
-    if (closeBrace && editor.IsOpenBraceMatched(newPosition - 1, newPosition + 1)) editor.Send(Message::Clear);
+    if (completion.closeBrace && editor.IsOpenBraceMatched(newPosition - 1, newPosition + 1))
+        editor.Send(Message::Clear);
     editor.Send(Message::EndUndoAction);
     editor.Send(Message::AutoCCancel);
     if (method == CompletionMethods::Tab && settings.latexInputMethod) CompleteLatex(editor);

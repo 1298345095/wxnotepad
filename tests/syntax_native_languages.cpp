@@ -41,109 +41,113 @@ constexpr SchemeFixture schemes[] = {
     {"Lua", SyntaxLanguage::Lua, SCLEX_LUA, "lua", "function main()\n    print(42)\nend\n", "--", "--[[", "]]"},
 };
 
+void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFixture& fixture, intptr_t fontSize) {
+    auto* editor = frame->Editor();
+    constexpr auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+    const auto path = TestFiles::TemporaryDirectory(std::string("workflow.") + fixture.extension);
+    TestFiles::WriteBytes(path, fixture.text);
+    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "language workflow must Open");
+    TestSyntax::Paint(frame);
+    Require(editor->Send(Message::GetLexer) == fixture.lexer &&
+                frame->GetStatusBar()->GetStatusText().Contains(fixture.name),
+            "Open must install original dedicated lexer and report its language");
+    Require(editor->Send(Message::GetTabWidth) == 7 && editor->Send(Message::GetIndent) == 3 &&
+                !editor->Send(Message::GetUseTabs),
+            "all three original schemes inherit the selected global indentation defaults");
+    Require(editor->Send(Message::StyleGetSizeFractional, defaultStyle) == fontSize,
+            "language installation must retain native font point size");
+    const auto original = TestEditor::Text(editor);
+    Choose(frame, "Plain Text");
+    Require(editor->Send(Message::GetLexer) == SCLEX_NULL && !editor->Send(Message::CanUndo),
+            "Plain Text suspends highlighting without changing history");
+    Choose(frame, fixture.name);
+    Require(editor->Send(Message::GetLexer) == fixture.lexer && TestEditor::Text(editor) == original &&
+                !frame->DocumentIsModified(),
+            "manual scheme restores highlighting without changing text or save point");
+    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
+                frame->GetStatusBar()->GetStatusText().Contains("(override)"),
+            "same-path reopen retains the explicit scheme");
+    Choose(frame, "Automatic");
+    intptr_t header = -1;
+    for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line) {
+        if (static_cast<unsigned>(editor->Send(Message::GetFoldLevel, static_cast<uintptr_t>(line))) &
+            static_cast<unsigned>(Scintilla::FoldLevel::HeaderFlag)) {
+            header = line;
+            break;
+        }
+    }
+    Require(header >= 0, "fixture must expose an original fold header");
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    Require(!editor->Send(Message::GetLineVisible, static_cast<uintptr_t>(header + 1)),
+            "Collapse All hides each language's original fold body");
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
+    Require(editor->Send(Message::GetLineVisible, static_cast<uintptr_t>(header + 1)),
+            "Expand All restores each language's fold body");
+
+    TestEditor::ResetStream(editor, "call()\n");
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
+    Require(TestEditor::Text(editor) == std::string(fixture.lineComment) + " call()\n",
+            "shared comment command must use original language delimiter");
+    TestSyntax::Command(frame, wxID_UNDO);
+    editor->Send(Message::SetSel, 0, 6);
+    TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
+    const auto commented = TestEditor::Text(editor);
+    Require(commented.starts_with(fixture.blockOpen) && commented.find(fixture.blockClose) != std::string::npos,
+            "shared block-comment command must use original language delimiters");
+    TestSyntax::Command(frame, wxID_UNDO);
+    Require(TestEditor::Text(editor) == "call()\n", "language comment edits must remain undoable");
+    editor->Send(Message::SetSavePoint);
+
+    TabDialog::Show(frame, [](wxDialog* dialog) {
+        Require(TabDialog::Option(dialog, "Use Global Tab Settings")->GetValue(),
+                "new scheme must inherit global tab settings");
+        TabDialog::Toggle(TabDialog::Option(dialog, "Use Global Tab Settings"), false);
+        Require(TabDialog::Width(dialog, "Scheme Tab Width")->GetValue() == 4 &&
+                    TabDialog::Width(dialog, "Scheme Indentation Width")->GetValue() == 4,
+                "all three schemes retain original independent 4/4 defaults");
+        TabDialog::Width(dialog, "Scheme Tab Width")->SetValue(5);
+        TabDialog::Width(dialog, "Scheme Indentation Width")->SetValue(2);
+    });
+    Require(editor->Send(Message::GetTabWidth) == 5 && editor->Send(Message::GetIndent) == 2,
+            "native Tab Settings must apply the language's independent settings");
+    SettingsStore reloaded;
+    const auto& saved = reloaded.values.schemeTabs[static_cast<size_t>(fixture.language)];
+    Require(saved.tabWidth == 5 && saved.indentWidth == 2 && !saved.useGlobal,
+            "Tab Settings must persist to the original language section");
+    settings.values.schemeTabs[static_cast<size_t>(fixture.language)] = OriginalTabs{};
+    Require(settings.SaveSchemeTabs(fixture.language), "fixture tab defaults must restore");
+
+    // A BOM and mixed CRLF/LF must survive ordinary Save and every naming path.
+    const std::string bytes =
+        std::string("\xEF\xBB\xBF") + fixture.lineComment + " UTF-8 \xE7\x95\x8C\r\n" + fixture.text;
+    TestFiles::WriteBytes(path, bytes);
+    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "BOM fixture must Open");
+    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == bytes,
+            "ordinary Save preserves original BOM, encoding, mixed EOL and text");
+    const auto renamed = TestFiles::TemporaryDirectory(std::string("renamed.") + fixture.extension);
+    Choose(frame, "Plain Text");
+    Require(frame->SaveAs(TestFiles::Filename(renamed), {}, SaveType::AllFiles).status == SaveStatus::Saved &&
+                editor->Send(Message::GetLexer) == fixture.lexer && TestFiles::Bytes(renamed) == bytes,
+            "All Files Save As recognizes the language and retains exact disk bytes");
+    const auto explicitPath = TestFiles::TemporaryDirectory(std::string("explicit-") + fixture.extension + ".txt");
+    Require(frame->SaveAs(TestFiles::Filename(explicitPath), {}, fixture.language).status == SaveStatus::Saved &&
+                editor->Send(Message::GetLexer) == fixture.lexer && TestFiles::Bytes(explicitPath) == bytes,
+            "specific Save As type overrides the extension and preserves exact bytes");
+    Require(frame->NewDocument(), "clean language document must allow New");
+    Choose(frame, fixture.name);
+    TestEditor::Append(frame, fixture.text);
+    const auto first = TestFiles::TemporaryDirectory(std::string("first.") + fixture.extension);
+    Require(frame->SaveFirst(TestFiles::Filename(first)).status == SaveStatus::Saved &&
+                editor->Send(Message::GetLexer) == fixture.lexer && TestFiles::Bytes(first) == fixture.text,
+            "first Save retains manual language and typed bytes");
+}
 void Workflows(EditorFrame* frame, SettingsStore& settings) {
     auto* editor = frame->Editor();
     editor->Send(Message::SetSavePoint);
     constexpr auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
     const auto fontSize = editor->Send(Message::StyleGetSizeFractional, defaultStyle);
-    for (const auto& fixture : schemes) {
-        const auto path = TestFiles::TemporaryDirectory(std::string("workflow.") + fixture.extension);
-        TestFiles::WriteBytes(path, fixture.text);
-        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "language workflow must Open");
-        TestSyntax::Paint(frame);
-        Require(editor->Send(Message::GetLexer) == fixture.lexer &&
-                    frame->GetStatusBar()->GetStatusText().Contains(fixture.name),
-                "Open must install original dedicated lexer and report its language");
-        Require(editor->Send(Message::GetTabWidth) == 7 && editor->Send(Message::GetIndent) == 3 &&
-                    !editor->Send(Message::GetUseTabs),
-                "all three original schemes inherit the selected global indentation defaults");
-        Require(editor->Send(Message::StyleGetSizeFractional, defaultStyle) == fontSize,
-                "language installation must retain native font point size");
-        const auto original = TestEditor::Text(editor);
-        Choose(frame, "Plain Text");
-        Require(editor->Send(Message::GetLexer) == SCLEX_NULL && !editor->Send(Message::CanUndo),
-                "Plain Text suspends highlighting without changing history");
-        Choose(frame, fixture.name);
-        Require(editor->Send(Message::GetLexer) == fixture.lexer && TestEditor::Text(editor) == original &&
-                    !frame->DocumentIsModified(),
-                "manual scheme restores highlighting without changing text or save point");
-        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
-                    frame->GetStatusBar()->GetStatusText().Contains("(override)"),
-                "same-path reopen retains the explicit scheme");
-        Choose(frame, "Automatic");
-        intptr_t header = -1;
-        for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line) {
-            if (static_cast<unsigned>(editor->Send(Message::GetFoldLevel, static_cast<uintptr_t>(line))) &
-                static_cast<unsigned>(Scintilla::FoldLevel::HeaderFlag)) {
-                header = line;
-                break;
-            }
-        }
-        Require(header >= 0, "fixture must expose an original fold header");
-        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
-        Require(!editor->Send(Message::GetLineVisible, static_cast<uintptr_t>(header + 1)),
-                "Collapse All hides each language's original fold body");
-        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
-        Require(editor->Send(Message::GetLineVisible, static_cast<uintptr_t>(header + 1)),
-                "Expand All restores each language's fold body");
-
-        TestEditor::ResetStream(editor, "call()\n");
-        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
-        Require(TestEditor::Text(editor) == std::string(fixture.lineComment) + " call()\n",
-                "shared comment command must use original language delimiter");
-        TestSyntax::Command(frame, wxID_UNDO);
-        editor->Send(Message::SetSel, 0, 6);
-        TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
-        const auto commented = TestEditor::Text(editor);
-        Require(commented.starts_with(fixture.blockOpen) && commented.find(fixture.blockClose) != std::string::npos,
-                "shared block-comment command must use original language delimiters");
-        TestSyntax::Command(frame, wxID_UNDO);
-        Require(TestEditor::Text(editor) == "call()\n", "language comment edits must remain undoable");
-        editor->Send(Message::SetSavePoint);
-
-        TabDialog::Show(frame, [](wxDialog* dialog) {
-            Require(TabDialog::Option(dialog, "Use Global Tab Settings")->GetValue(),
-                    "new scheme must inherit global tab settings");
-            TabDialog::Toggle(TabDialog::Option(dialog, "Use Global Tab Settings"), false);
-            Require(TabDialog::Width(dialog, "Scheme Tab Width")->GetValue() == 4 &&
-                        TabDialog::Width(dialog, "Scheme Indentation Width")->GetValue() == 4,
-                    "all three schemes retain original independent 4/4 defaults");
-            TabDialog::Width(dialog, "Scheme Tab Width")->SetValue(5);
-            TabDialog::Width(dialog, "Scheme Indentation Width")->SetValue(2);
-        });
-        Require(editor->Send(Message::GetTabWidth) == 5 && editor->Send(Message::GetIndent) == 2,
-                "native Tab Settings must apply the language's independent settings");
-        SettingsStore reloaded;
-        const auto& saved = reloaded.values.schemeTabs[static_cast<size_t>(fixture.language)];
-        Require(saved.tabWidth == 5 && saved.indentWidth == 2 && !saved.useGlobal,
-                "Tab Settings must persist to the original language section");
-        settings.values.schemeTabs[static_cast<size_t>(fixture.language)] = OriginalTabs{};
-        Require(settings.SaveSchemeTabs(fixture.language), "fixture tab defaults must restore");
-
-        // A BOM and mixed CRLF/LF must survive ordinary Save and every naming path.
-        const std::string bytes =
-            std::string("\xEF\xBB\xBF") + fixture.lineComment + " UTF-8 \xE7\x95\x8C\r\n" + fixture.text;
-        TestFiles::WriteBytes(path, bytes);
-        Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "BOM fixture must Open");
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == bytes,
-                "ordinary Save preserves original BOM, encoding, mixed EOL and text");
-        const auto renamed = TestFiles::TemporaryDirectory(std::string("renamed.") + fixture.extension);
-        Choose(frame, "Plain Text");
-        Require(frame->SaveAs(TestFiles::Filename(renamed), {}, SaveType::AllFiles).status == SaveStatus::Saved &&
-                    editor->Send(Message::GetLexer) == fixture.lexer && TestFiles::Bytes(renamed) == bytes,
-                "All Files Save As recognizes the language and retains exact disk bytes");
-        const auto explicitPath = TestFiles::TemporaryDirectory(std::string("explicit-") + fixture.extension + ".txt");
-        Require(frame->SaveAs(TestFiles::Filename(explicitPath), {}, fixture.language).status == SaveStatus::Saved &&
-                    editor->Send(Message::GetLexer) == fixture.lexer && TestFiles::Bytes(explicitPath) == bytes,
-                "specific Save As type overrides the extension and preserves exact bytes");
-        Require(frame->NewDocument(), "clean language document must allow New");
-        Choose(frame, fixture.name);
-        TestEditor::Append(frame, fixture.text);
-        const auto first = TestFiles::TemporaryDirectory(std::string("first.") + fixture.extension);
-        Require(frame->SaveFirst(TestFiles::Filename(first)).status == SaveStatus::Saved &&
-                    editor->Send(Message::GetLexer) == fixture.lexer && TestFiles::Bytes(first) == fixture.text,
-                "first Save retains manual language and typed bytes");
-    }
+    for (const auto& fixture : schemes)
+        SchemeWorkflow(frame, settings, fixture, fontSize);
     for (const auto* extension : {"RS", "GO", "gop", "ql", "wlua", "nse", "luadoc", "luax", "LuA"}) {
         const auto path = TestFiles::TemporaryDirectory(std::string("extra.") + extension);
         TestFiles::WriteBytes(path, "\n");
