@@ -1,5 +1,6 @@
 #include "native_selection_helpers.h"
 #include "native_key_helpers.h"
+#include "native_paint_helpers.h"
 #include <fstream>
 #include <filesystem>
 #include <sstream>
@@ -18,9 +19,7 @@ void Reset(EditorControl* editor, const char* text) {
     TestEditor::ResetStream(editor, text);
     editor->Send(Message::SetFirstVisibleLine, 0);
     editor->Send(Message::SetXOffset, 0);
-    editor->Refresh(false);
-    editor->Update();
-    wxYield();
+    NativePaint::Complete(editor);
 }
 void CheckReference(EditorControl* editor, const std::string& name) {
     std::ifstream input{std::filesystem::path(SELECTION_PREFERENCES_REFERENCE)};
@@ -73,14 +72,29 @@ void History(EditorFrame* frame) {
             for (int line = 0; line < 80; ++line)
                 text += longLine;
             Reset(editor, text.c_str());
-            editor->Send(Message::SetSel, reverse ? 2426 : 2422, reverse ? 2422 : 2426);
+            const auto textLeft = editor->Send(Message::PointXFromPosition, 0, 0);
+            const auto lineWidth = editor->Send(Message::PointXFromPosition, 0, 120) - textLeft;
+            const auto clientWidth = editor->GetClientSize().x;
+            const std::string prefix =
+                std::string("history-") + (enabled ? "True-" : "False-") + (reverse ? "True-" : "False-");
+            std::printf("History scene: dpi=%d client=%d line=%lld scroll=%lld; %s\n", editor->GetDPI().x, clientWidth,
+                        static_cast<long long>(lineWidth),
+                        static_cast<long long>(editor->Send(Message::GetScrollWidth)), prefix.c_str());
+            Require(lineWidth > clientWidth && editor->Send(Message::GetScrollWidth) > clientWidth,
+                    "history fixture must have a genuinely scrollable horizontal viewport");
+            editor->Send(Message::SetSel, reverse ? 2444 : 2440, reverse ? 2440 : 2444);
             editor->Send(Message::SetFirstVisibleLine, 15);
             editor->Send(Message::SetXOffset, 20);
+            // Both directions must keep the caret visible after restoring the
+            // frozen 20-pixel scroll offset, including at 96 DPI.
+            for (const auto position : {2440, 2444}) {
+                const auto x = editor->Send(Message::PointXFromPosition, 0, position);
+                Require(x >= textLeft && x < clientWidth,
+                        "both history selection endpoints must remain inside the scrolled text viewport");
+            }
             editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
             editor->Send(Message::SetSel, 615, 615);
             editor->Send(Message::SetFirstVisibleLine, 5);
-            const std::string prefix =
-                std::string("history-") + (enabled ? "True-" : "False-") + (reverse ? "True-" : "False-");
             const auto changed = TestEditor::Text(editor);
             CheckReference(editor, prefix + "edited");
             editor->Send(Message::Undo);
@@ -94,7 +108,7 @@ void History(EditorFrame* frame) {
     Command(frame, "Undo Redo Remember Selection");
     Reset(editor, longLine);
     editor->Send(Message::SetXOffset, 20);
-    editor->Send(Message::SetSel, 6, 2);
+    editor->Send(Message::SetSel, 24, 20);
     editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
     CheckReference(editor, "history-toggle-before");
     Command(frame, "Undo Redo Remember Selection");
@@ -205,7 +219,14 @@ void Gestures(EditorFrame* frame) {
 class SelectionPreferencesApp final : public wxApp {
 public:
     bool OnInit() override {
+#ifdef __WXMSW__
+        if (wxGetenv("WXNOTEPAD_SELECTION_DPI96")) {
+            Require(SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE) != nullptr,
+                    "create complementary 96-DPI selection window");
+        }
+#endif
         auto* frame = new EditorFrame;
+        frame->SetClientSize(frame->FromDIP(wxSize(420, 600)));
         frame->ShowWithoutActivating();
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
             try {

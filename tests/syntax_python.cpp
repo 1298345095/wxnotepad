@@ -186,6 +186,10 @@ public:
                 Require(frame->NewDocument(), "clean unnamed document must reset");
                 std::puts("PASS: extensions, native menu choices, transitions and Save As language reidentification");
 
+                // These lexer edit fixtures replace literal delimiters. Pairing
+                // behavior with the original enabled default has its own oracle.
+                constexpr int literalEditingMask = 0;
+                editor->SetAutoInsertMask(literalEditingMask);
                 const std::string triple = "doc = \"\"\"中文\ninside\n\"\"\"\nreturn 42\n";
                 std::ofstream(path, std::ios::binary) << triple;
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "triple string fixture must open");

@@ -21,6 +21,9 @@ void InstallStyles(EditorControl& editor, std::span<const SyntaxStyle> styles) {
         editor.Send(Message::StyleSetBold, style.id, style.bold);
         editor.Send(Message::StyleSetItalic, style.id, style.italic);
         editor.Send(Message::StyleSetEOLFilled, style.id, style.eolFilled);
+        editor.Send(Message::StyleSetUnderline, style.id, style.underline);
+        editor.Send(Message::StyleSetStrike, style.id, style.strike);
+        editor.Send(Message::StyleSetOverline, style.id, style.overline);
     }
 }
 } // namespace
@@ -91,6 +94,9 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
     // Keep the native font/point size already installed on STYLE_DEFAULT.
     editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(Scintilla::StylesCommon::Default), Colour(0x000000));
     editor.Send(Message::StyleSetBack, static_cast<uintptr_t>(Scintilla::StylesCommon::Default), Colour(0xFFFFFF));
+    for (const auto message : {Message::StyleSetBold, Message::StyleSetItalic, Message::StyleSetUnderline,
+                               Message::StyleSetStrike, Message::StyleSetOverline, Message::StyleSetEOLFilled})
+        editor.Send(message, static_cast<uintptr_t>(Scintilla::StylesCommon::Default), false);
     editor.Send(Message::StyleClearAll);
     // Original stlDefault.cpp / Styles.cpp: brace feedback uses independent
     // translucent overlays, preserving the current font and DPI settings.
@@ -119,6 +125,16 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
         editor.Send(Message::SetKeyWords, index | list.attributes, reinterpret_cast<intptr_t>(list.text));
     }
     InstallStyles(editor, definition.styles);
+    if (definition.lexer == SCLEX_MARKDOWN) {
+        // Styles.cpp::Style_SetLexer copies global link styles and the HTML
+        // table through SCE_H_QUESTION, without HTML's VBScript styles.
+        for (const auto style : {SCE_MARKDOWN_PLAIN_LINK, SCE_MARKDOWN_PAREN_LINK, SCE_MARKDOWN_ANGLE_LINK})
+            editor.Send(Message::StyleSetFore, style, Colour(0x648000));
+        for (const auto& style : SyntaxFor(SyntaxLanguage::Html).styles) {
+            InstallStyles(editor, {&style, 1});
+            if (style.id == SCE_H_QUESTION) break;
+        }
+    }
     if (definition.lexer == SCLEX_HTML) InstallStyles(editor, MarkupEmbeddedStyles());
     editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(Scintilla::StylesCommon::IndentGuide), Colour(0xFF8000));
     ApplyLongLineColour(editor);
