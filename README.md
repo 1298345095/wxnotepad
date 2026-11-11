@@ -50,7 +50,7 @@ original unsupported-operation warning. `AutoInsertMask` controls optional
 spacing through the shared [settings lifecycle](docs/settings.md).
 
 Settings → Auto Completion Settings controls paired-character insertion, space
-after comma, space after comment and Auto Indent using the original option bits.
+after comma, space after comment, HTML/XML tag closure and Auto Indent using the original option bits.
 Typing follows the pinned scheme's escape, quote, literal and generic-type rules,
 including original existing-delimiter checks and Undo/Redo grouping.
 
