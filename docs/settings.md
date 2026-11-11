@@ -145,6 +145,15 @@ destination line start, while Normal publishes stream text. Cut keeps the
 expanded caret column on the next line, or the previous line in Old Visual
 Studio mode. Explicit Ctrl+Shift+C/X line commands use the same tag option.
 
+Settings → Select and Edit Options → Enable Multiple Selection and Undo Redo
+Remember Selection update `SelectOption` bits `1` and `8` immediately. Both
+default to enabled. Other bits survive toggling and the existing explicit/exit
+save lifecycle. Disabling multiple selection retains any active additional
+ranges until the next operation applies the original core's selection rules.
+Disabling selection memory drops stored selection snapshots, while preserving
+the text undo stack and save point; enabling it again does not recover the old
+snapshots. Frames without a settings store keep both preferences in memory.
+
 Save Settings On Exit is enabled by default. A disabled exit save writes only
 `SaveSettings=0`, retaining the previously stored view choices. Save Settings Now
 writes current choices even while exit saving is disabled. Default-valued fields

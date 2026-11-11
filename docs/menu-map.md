@@ -69,7 +69,8 @@ Scheme
 Settings
   Insert Tabs as Spaces; Tab Settings; Long Line Settings; Auto Completion Settings; Auto Indent
   Select and Edit Options
-    Copy Selection As Find Text; Copy Paste Buffer As Find Text
+    Enable Multiple Selection; Copy Selection As Find Text; Copy Paste Buffer As Find Text
+    Undo Redo Remember Selection
     Line Selection Mode > None; Visual Studio; Old Visual Studio; Normal
   Appearance > Auto-Shrink Horizontal Scrollbar
   File Change Notification (Alt+F5)
