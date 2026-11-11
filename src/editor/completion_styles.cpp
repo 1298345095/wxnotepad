@@ -13,6 +13,24 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
                              0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU};
     // Original pinned generated cache cases. Keep masks independent of display styles.
     switch (definition.language) {
+    case SyntaxLanguage::Go:
+        result.rawStrings[SCE_GO_RAW_STRING >> 5] |= (1U << (SCE_GO_RAW_STRING & 31));
+        break;
+    case SyntaxLanguage::Lua:
+        result.rawStrings[SCE_LUA_LITERALSTRING >> 5] |= (1U << (SCE_LUA_LITERALSTRING & 31));
+        break;
+    case SyntaxLanguage::Rust:
+        result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));
+        result.wordCharacters[':' >> 5] |= (1 << (':' & 31));
+        result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31));
+        result.rawStrings[SCE_RUST_RAW_STRING >> 5] |= (1U << (SCE_RUST_RAW_STRING & 31));
+        result.rawStrings[SCE_RUST_RAW_BYTESTRING >> 5] |= (1U << (SCE_RUST_RAW_BYTESTRING & 31));
+        result.genericTypes[SCE_RUST_TYPE >> 5] |= (1U << (SCE_RUST_TYPE & 31));
+        result.genericTypes[SCE_RUST_STRUCT >> 5] |= (1U << (SCE_RUST_STRUCT & 31));
+        result.genericTypes[SCE_RUST_TRAIT >> 5] |= (1U << (SCE_RUST_TRAIT & 31));
+        result.genericTypes[SCE_RUST_ENUMERATION >> 5] |= (1U << (SCE_RUST_ENUMERATION & 31));
+        result.genericTypes[SCE_RUST_UNION >> 5] |= (1U << (SCE_RUST_UNION & 31));
+        break;
     case SyntaxLanguage::PlainText:
 
         result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));
