@@ -14,6 +14,24 @@ import sys
 import time
 import original_host as h
 
+# Pinned Scintilla.h and original Notepad4 resource.h identifiers.
+SCI_GETSTYLEINDEXAT = 2038
+SCI_REDO = 2011
+SCI_AUTOCCANCEL = 2101
+SCI_AUTOCACTIVE = 2102
+SCI_AUTOCSELECT = 2108
+SCI_UNDO = 2176
+SCI_BRACEBADLIGHT = 2352
+SCI_AUTOCGETCURRENT = 2445
+SCI_AUTOCGETCURRENTTEXT = 2610
+IDM_EDIT_COMPLETEWORD = 40373
+
+# Win32 message, virtual-key and desktop access identifiers.
+WM_KEYDOWN = 0x0100
+VK_DOWN = 0x28
+VK_RETURN = 0x0D
+GENERIC_ALL = 0x10000000
+
 original = Path(sys.argv[1]).resolve()
 out = Path(sys.argv[2]).resolve()
 out.mkdir(parents=True, exist_ok=True)
@@ -121,7 +139,7 @@ user.CreateDesktopW.argtypes = [w.LPCWSTR, w.LPCWSTR, c.c_void_p, w.DWORD, w.DWO
 user.CreateDesktopW.restype = w.HANDLE
 user.CloseDesktop.argtypes = [w.HANDLE]
 name = 'wxnotepad-completion-behaviors'
-desktop = user.CreateDesktopW(name, None, None, 0, 0x10000000, None)
+desktop = user.CreateDesktopW(name, None, None, 0, GENERIC_ALL, None)
 assert desktop
 
 
@@ -134,16 +152,16 @@ def state(app):
 def candidates(app):
     words = []
     previous = -1
-    while app.send(2102):
-        current = app.send(2445)
+    while app.send(SCI_AUTOCACTIVE):
+        current = app.send(SCI_AUTOCGETCURRENT)
         if current == previous:
             break
         previous = current
-        size = app.send(2610, 0, app.memory)
+        size = app.send(SCI_AUTOCGETCURRENTTEXT, 0, app.memory)
         buffer = c.create_string_buffer(size + 1)
         assert h.kernel.ReadProcessMemory(app.handle, app.memory, buffer, size + 1, None)
         words.append(buffer.value.decode('utf-8'))
-        user.SendMessageW(app.editor, 0x100, 0x28, 0)
+        user.SendMessageW(app.editor, WM_KEYDOWN, VK_DOWN, 0)
     return words
 
 
@@ -161,21 +179,21 @@ try:
         try:
             data = before.encode('utf-8')
             app.reset(data, caret, caret)
-            app.send(2352, 0, -1)
+            app.send(SCI_BRACEBADLIGHT, 0, -1)
             result = dict(scheme=scheme, before=before, initialCaret=caret, options=options, ignore=ignore, latex=latex, scope=scope)
-            result['styles'] = [app.send(2038, index) for index in range(len(data))]
-            result['currentStyle'] = app.send(2038, caret)
-            app.command(40373)
+            result['styles'] = [app.send(SCI_GETSTYLEINDEXAT, index) for index in range(len(data))]
+            result['currentStyle'] = app.send(SCI_GETSTYLEINDEXAT, caret)
+            app.command(IDM_EDIT_COMPLETEWORD)
             result['command'] = state(app)
             result['items'] = candidates(app)
             if result['items']:
-                app.send(2108, 0, app.put(result['items'][0].encode('utf-8') + b'\0'))
-                user.SendMessageW(app.editor, 0x100, 13, 0)
+                app.send(SCI_AUTOCSELECT, 0, app.put(result['items'][0].encode('utf-8') + b'\0'))
+                user.SendMessageW(app.editor, WM_KEYDOWN, VK_RETURN, 0)
             result['confirmed'] = state(app)
-            app.send(2101)
-            app.send(2176)
+            app.send(SCI_AUTOCCANCEL)
+            app.send(SCI_UNDO)
             result['undo'] = state(app)
-            app.send(2011)
+            app.send(SCI_REDO)
             result['redo'] = state(app)
             results.append(result)
             print(scheme, repr(before), '=>', result['command']['text'], result['items'], flush=True)
