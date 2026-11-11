@@ -485,6 +485,14 @@ void EditorControl::Core::Scroll(wxScrollWinEvent& event) {
 }
 
 void EditorControl::Core::Wheel(wxMouseEvent& event) {
+    // Pinned ScintillaWin sends wheel input to its active native completion list.
+    if (ac.Active()) {
+        auto* popup = static_cast<wxWindow*>(ac.lb->GetID());
+        wxMouseEvent routed(event);
+        routed.SetEventObject(popup);
+        popup->GetEventHandler()->ProcessEvent(routed);
+        return;
+    }
     // Pinned ScintillaWin: horizontal/Shift precedes Ctrl; the physical
     // wheel axis chooses the accumulator even when Shift changes scrolling.
     const bool horizontalAxis = event.GetWheelAxis() == wxMOUSE_WHEEL_HORIZONTAL;
@@ -695,7 +703,7 @@ void EditorControl::Core::NotifyChange() const noexcept {
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
-    if(notification.nmhdr.code==Scintilla::Notification::AutoCSelection) {
+    if (notification.nmhdr.code == Scintilla::Notification::AutoCSelection) {
         AcceptWordCompletion(window_, window_.completionSettings_, notification);
         return;
     }

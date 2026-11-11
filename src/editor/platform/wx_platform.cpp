@@ -335,7 +335,10 @@ std::unique_ptr<Surface> Surface::Allocate(Scintilla::Technology) {
 }
 
 void Window::Destroy() noexcept {
-    if (wid) Host(wid)->Destroy();
+    if (wid) {
+        Host(wid)->Hide();
+        Host(wid)->Destroy();
+    }
     wid = nullptr;
 }
 PRectangle Window::GetPosition() const noexcept {
@@ -346,8 +349,16 @@ void SCICALL Window::SetPosition(PRectangle r) noexcept {
 }
 void SCICALL Window::SetPositionRelative(PRectangle r, const Window* relative) noexcept {
     if (wid) {
-        auto p = Host(relative->wid)->ClientToScreen(wxPoint(r.left, r.top));
-        Host(wid)->SetSize(p.x, p.y, r.Width(), r.Height());
+        auto point = Host(relative->wid)->ClientToScreen(wxPoint(r.left, r.top));
+        int display = wxDisplay::GetFromPoint(point);
+        if (display == wxNOT_FOUND) display = wxDisplay::GetFromWindow(Host(relative->wid));
+        if (display == wxNOT_FOUND) display = 0;
+        const auto bounds = wxDisplay(display).GetClientArea();
+        const int width = std::min(static_cast<int>(r.Width()), bounds.width);
+        const int height = std::min(static_cast<int>(r.Height()), bounds.height);
+        point.x = std::clamp(point.x, bounds.x, bounds.GetRight() + 1 - width);
+        point.y = std::clamp(point.y, bounds.y, bounds.GetBottom() + 1 - height);
+        Host(wid)->SetSize(point.x, point.y, width, height);
     }
 }
 PRectangle Window::GetClientPosition() const noexcept {
@@ -381,7 +392,7 @@ PRectangle SCICALL Window::GetMonitorRect(Point point) const noexcept {
 // wxSTCListBox. The original core retains all keyboard and completion state.
 class CompletionPopup final : public wxPopupWindow {
 public:
-    explicit CompletionPopup(wxWindow* parent) : wxPopupWindow(parent, wxPU_CONTAINS_CONTROLS) {
+    explicit CompletionPopup(wxWindow* parent) : wxPopupWindow(parent, wxPU_CONTAINS_CONTROLS | wxBORDER_NONE) {
         SetName("Word completion");
     }
     bool AcceptsFocus() const override { return false; }
@@ -415,7 +426,10 @@ public:
         SetName("Completion candidates");
         Bind(wxEVT_LISTBOX, [this](wxCommandEvent&) { Notify(ListBoxEvent::EventType::selectionChange); });
         Bind(wxEVT_LISTBOX_DCLICK, [this](wxCommandEvent&) { Notify(ListBoxEvent::EventType::doubleClick); });
-        Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) { Measure(); event.Skip(); });
+        Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+            Measure();
+            event.Skip();
+        });
     }
     bool AcceptsFocus() const override { return false; }
     void SetFocus() override {}
@@ -425,19 +439,24 @@ public:
             delegate->ListNotify(&event);
         }
     }
-    void Measure() { itemHeight = GetCharHeight() + 2 * FromDIP(2); RefreshAll(); }
+    void Measure() {
+        itemHeight = GetCharHeight() + 2 * FromDIP(2);
+        RefreshAll();
+    }
+
 private:
     wxCoord OnMeasureItem(size_t) const override { return itemHeight; }
     void OnDrawItem(wxDC& dc, const wxRect& rect, size_t item) const override {
         dc.SetFont(GetFont());
-        dc.SetTextForeground(wxSystemSettings::GetColour(IsSelected(item) ? wxSYS_COLOUR_HIGHLIGHTTEXT
-                                                                         : wxSYS_COLOUR_LISTBOXTEXT));
+        dc.SetTextForeground(
+            wxSystemSettings::GetColour(IsSelected(item) ? wxSYS_COLOUR_HIGHLIGHTTEXT : wxSYS_COLOUR_LISTBOXTEXT));
         dc.DrawText(labels[item], rect.x + FromDIP(2), rect.y + (rect.height - GetCharHeight()) / 2);
     }
 };
 class WxListBox final : public ListBox {
     CompletionList* list_ = nullptr;
     int rows_ = 8;
+
 public:
     void SetFont(std::shared_ptr<Font> font) noexcept override {
         list_->SetFont(static_cast<WxFont*>(font.get())->font);
@@ -446,6 +465,11 @@ public:
     void SCICALL Create(Window& parent, int id, Point, int, int, Scintilla::Technology) noexcept override {
         auto* popup = new CompletionPopup(Host(parent.GetID()));
         list_ = new CompletionList(popup, id);
+        popup->Bind(wxEVT_MOUSEWHEEL, [list = list_](wxMouseEvent& event) {
+            wxMouseEvent routed(event);
+            routed.SetEventObject(list);
+            list->GetEventHandler()->ProcessEvent(routed);
+        });
         auto* sizer = new wxBoxSizer(wxVERTICAL);
         sizer->Add(list_, 1, wxEXPAND | wxALL, popup->FromDIP(1));
         popup->SetSizer(sizer);
@@ -456,13 +480,17 @@ public:
     int GetVisibleRows() const noexcept override { return rows_; }
     PRectangle GetDesiredRect() override {
         int width = list_->GetCharWidth() * 3;
-        for (const auto& label : list_->labels) width = std::max(width, list_->GetTextExtent(label).x);
+        for (const auto& label : list_->labels)
+            width = std::max(width, list_->GetTextExtent(label).x);
         width += list_->GetCharWidth() * 3 + CaretFromEdge() * 2;
         if (Length() > rows_) width += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X, list_);
-        return PRectangle(0, 0, width, std::min(Length(), rows_) * list_->itemHeight + list_->FromDIP(2));
+        return PRectangle(0, 0, width, std::min(Length(), rows_) * list_->itemHeight + 2 * list_->FromDIP(1));
     }
     int CaretFromEdge() const noexcept override { return list_->FromDIP(3); }
-    void Clear() noexcept override { list_->labels.clear(); list_->SetItemCount(0); }
+    void Clear() noexcept override {
+        list_->labels.clear();
+        list_->SetItemCount(0);
+    }
     int Length() const noexcept override { return static_cast<int>(list_->labels.size()); }
     void Select(int item) override {
         list_->SetSelection(item);

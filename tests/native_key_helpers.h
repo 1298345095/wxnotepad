@@ -236,6 +236,10 @@ inline void FocusEditor(EditorFrame* frame, const wxString& focusName, wxString&
 inline wxString KeyName(int key) {
     if (key >= WXK_F1 && key <= WXK_F24) return wxString::Format("F%d", key - WXK_F1 + 1);
     switch (key) {
+    case '/':
+        return "slash";
+    case WXK_NUMPAD_DIVIDE:
+        return "KP_Divide";
     case '[':
         return "bracketleft";
     case ']':

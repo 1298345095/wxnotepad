@@ -126,7 +126,7 @@ add_library(editor_features STATIC
     src/syntax/syntax_catalog.cpp
     src/syntax/syntax_scheme.cpp)
 # The GBK compatibility codec reuses the pinned Unicode conversion utilities.
-target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla/src")
+target_include_directories(editor_features PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/src")
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
