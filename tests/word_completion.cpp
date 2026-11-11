@@ -1,6 +1,8 @@
 #include "native_completion_helpers.h"
 #include <wx/vlbox.h>
 #include "completion_reference.h"
+#include "completion_behavior_reference.h"
+#include "settings/settings_store.h"
 #include "syntax/syntax_catalog.h"
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
@@ -67,10 +69,63 @@ void FrozenCompletion(EditorFrame* frame, int id) {
     }
     std::puts("PASS: frozen original candidate lists, case, numbers, CJK, keywords and prefix fallbacks");
 }
+void RequireDocumentState(EditorControl* editor, const CompletionDocumentState& state) {
+    Require(TestEditor::Text(editor) == state.text, "original completion document bytes");
+    TestEditor::RequireSelection(editor, state.anchor, state.caret, "original completion selection");
+    Require(static_cast<bool>(editor->Send(Message::GetModify)) == state.modified &&
+                static_cast<bool>(editor->Send(Message::CanUndo)) == state.undo &&
+                static_cast<bool>(editor->Send(Message::CanRedo)) == state.redo,
+            "original completion save point and history state");
+}
+void FrozenBehaviors(EditorFrame* frame, SettingsStore& store, int command) {
+    auto* editor = frame->Editor();
+    for (const auto& ref : completionBehaviors) {
+        std::fprintf(stderr, "Reference behavior %s: %s\n", ref.scheme, ref.before);
+        editor->Send(Message::AutoCCancel);
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", ref.scheme));
+        auto& settings = store.values.completion;
+        settings = WordCompletionSettings{};
+        settings.completeOption = ref.options;
+        settings.ignoreCase = ref.ignoreCase;
+        settings.latexInputMethod = ref.latex;
+        settings.completeScope = ref.scopes & WordCompletionLimits::ScopeMask;
+        settings.scanWordScope = ref.scopes >> WordCompletionLimits::ScanScopeShift;
+        TestEditor::ResetStream(editor, ref.before, ref.initialCaret, ref.initialCaret);
+        editor->Send(Message::Colourise, 0, -1);
+        const auto* focus = wxWindow::FindFocus();
+        NativeSearch::Command(frame, command);
+        RequireDocumentState(editor, ref.command);
+        const auto actual = Candidates(editor);
+        if (actual != ref.items) {
+            for (const auto& item : actual)
+                std::fprintf(stderr, "[%s] ", item.c_str());
+            std::fprintf(stderr, "\n");
+        }
+        Require(actual == ref.items, "original document and language candidate order");
+        if (!ref.items.empty()) {
+            editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>(ref.items.front().c_str()));
+#ifdef __WXMSW__
+            NativeCompletion::Key(editor, VK_RETURN);
+#else
+            NativeCompletion::Key(editor, GDK_KEY_Return);
+#endif
+        }
+        RequireDocumentState(editor, ref.confirmed);
+        Require(wxWindow::FindFocus() == focus, "native completion preserves editor keyboard focus");
+        editor->Send(Message::AutoCCancel);
+        editor->Send(Message::Undo);
+        RequireDocumentState(editor, ref.undo);
+        editor->Send(Message::Redo);
+        RequireDocumentState(editor, ref.redo);
+    }
+    store.values.completion = WordCompletionSettings{};
+    std::puts("PASS: original document candidates, language prefixes, bytes, caret, save point, Undo/Redo and focus");
+}
 class WordCompletionApp final : public wxApp {
 public:
     bool OnInit() override {
-        auto* frame = new EditorFrame;
+        settings_.values = OriginalSettings{};
+        auto* frame = new EditorFrame(&settings_);
 #ifdef __WXMSW__
         frame->ShowWithoutActivating();
 #else
@@ -114,6 +169,7 @@ public:
                 }
 #endif
                 FrozenCompletion(frame, id);
+                FrozenBehaviors(frame, settings_, id);
                 editor->Send(Message::AutoCCancel);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 const std::string longestKeyword(124, 'x');
@@ -156,6 +212,7 @@ public:
     }
 
 private:
+    SettingsStore settings_;
     int result_ = 0;
 };
 } // namespace

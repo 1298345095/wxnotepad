@@ -9,8 +9,11 @@ The original Scintilla document owns completion, selection and Undo state.
 `89b8b36e0ee2c23f73be922315f17261ccfbbe1a` `EditAutoC.cpp`'s word-list tree,
 prefix boundaries, number/CJK cases, bounded document scan, keyword attributes,
 style exclusions and special-prefix fallbacks. It consumes the shared full scheme
-tables and `completion_styles.cpp` cache. CSS/VBScript/PHP embedded completion
-groups use the same `update_schemes.py` importer. Additional Doxygen/XML groups
+tables and `completion_styles.cpp` cache. CSS/VBScript embedded completion
+groups use the same `update_schemes.py` importer. The imported original PHP
+table is retained, but the delivered HTML lexer treats `<?...?>` as an XML
+processing instruction and emits no PHP styles; the original no-PHP-candidate
+result is frozen separately. Additional Doxygen/XML groups
 come from the pinned `EditAutoC_Data0.h`.
 
 The native host follows wxWidgets 3.3.3 `src/stc/PlatWX.cpp`'s nonactivating popup
@@ -36,6 +39,18 @@ fallbacks. Final review added the original Markdown HTML candidates: `<di` and
 `contenteditable`. The shared original HTML tag/attribute/value groups apply to
 all three delivered Markdown dialects. Fresh private original-process captures
 are retained under `review-fixes/spec-original-cases/` in the batch evidence.
+
+`tests/reference_capture/capture_completion_behaviors.py ORIGINAL_EXE OUTPUT_DIR GROUP`
+captures the additional document, string, interior-caret, embedded-language,
+scope and fallback groups on an owned private desktop. The 76 reviewed cases in
+`tests/completion_behavior_reference.h` check the real Complete Word menu with
+the shared settings store. They include multi-part document words, long roots,
+raw/escaped strings, Doxygen/JSDoc, CSS at-rules and pseudo selectors, VBScript,
+numeric prefixes and language/scanning scopes. Each case preserves the original
+command/confirmation bytes, caret, save point and Undo/Redo states; the native
+popup also retains keyboard focus. A caret inside a styled region is tested
+separately from the same prefix at end of document, where its style can be zero.
+Raw captures are under `review-fixes-followup/` in the batch evidence.
 
 The public application/native regressions are:
 
