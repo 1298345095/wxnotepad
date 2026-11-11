@@ -77,6 +77,16 @@ jobs:
         id: build
         shell: bash
         run: python -X utf8 .github/scripts/ci.py build
+      - name: Verify pinned scheme importer CLIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -X utf8 tests/scheme_import_cli.py --source .ci/build/upstream \
+            2>&1 | tee .ci/reports/scheme-import-rust-go-lua.log
+          python -X utf8 tests/config_scheme_import_cli.py --source .ci/build/upstream \
+            2>&1 | tee .ci/reports/scheme-import-config.log
+          python -X utf8 tests/markdown_import_cli.py --source .ci/build/upstream \
+            2>&1 | tee .ci/reports/scheme-import-markdown.log
       - name: Record ordinary compilation cache statistics
         if: ${{ !cancelled() && steps.compiler_cache.outcome == 'success' && steps.build.outcome != 'skipped' }}
         shell: bash
@@ -220,6 +230,16 @@ jobs:
         id: build
         shell: bash
         run: .ci/coverage-venv/bin/python -m coverage run .github/scripts/ci.py coverage-build
+      - name: Measure pinned scheme importer CLIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          .ci/coverage-venv/bin/python -X utf8 -m coverage run tests/scheme_import_cli.py --source .ci/build/upstream \
+            2>&1 | tee .ci/reports/coverage/scheme-import-rust-go-lua.log
+          .ci/coverage-venv/bin/python -X utf8 -m coverage run tests/config_scheme_import_cli.py --source .ci/build/upstream \
+            2>&1 | tee .ci/reports/coverage/scheme-import-config.log
+          .ci/coverage-venv/bin/python -X utf8 -m coverage run tests/markdown_import_cli.py --source .ci/build/upstream \
+            2>&1 | tee .ci/reports/coverage/scheme-import-markdown.log
       - name: Enable Linux native core dumps
         shell: bash
         run: |
