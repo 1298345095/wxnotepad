@@ -238,6 +238,8 @@ inline wxString KeyName(int key) {
     switch (key) {
     case ' ':
         return "space";
+    case WXK_TAB:
+        return "Tab";
     case '/':
         return "slash";
     case WXK_NUMPAD_DIVIDE:

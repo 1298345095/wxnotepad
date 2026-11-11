@@ -1,6 +1,6 @@
 """Capture pinned original completion dialog normalization on an owned desktop.
 
-Usage: python tests/reference_capture/capture_word_completion.py ORIGINAL_EXE OUTPUT_DIR
+Usage: python tests/reference_capture/capture_completion_dialog.py ORIGINAL_EXE OUTPUT_DIR
 Creates a separate portable host; does not use the clipboard or desktop input.
 """
 import ctypes as c

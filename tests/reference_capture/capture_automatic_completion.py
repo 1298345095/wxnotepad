@@ -1,6 +1,6 @@
 """Capture pinned original automatic completion behavior on an owned desktop.
 
-Usage: python tests/reference_capture/capture_word_completion.py ORIGINAL_EXE OUTPUT_DIR
+Usage: python tests/reference_capture/capture_automatic_completion.py ORIGINAL_EXE OUTPUT_DIR
 Creates a separate portable host; does not use the clipboard or desktop input.
 """
 import ctypes as c

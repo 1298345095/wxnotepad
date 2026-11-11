@@ -26,6 +26,10 @@ void Key(EditorControl* editor, int key) {
 #ifdef __WXMSW__
     NativeCompletion::Key(editor, key);
 #else
+    if (key == 9) {
+        NativeKeys::Shortcut(wxDynamicCast(editor->GetParent(), EditorFrame), WXK_TAB, false);
+        return;
+    }
     NativeCompletion::Key(editor, key == 8    ? GDK_KEY_BackSpace
                                   : key == 9  ? GDK_KEY_Tab
                                   : key == 13 ? GDK_KEY_Return
