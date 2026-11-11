@@ -26,34 +26,8 @@ void InstallStyles(EditorControl& editor, std::span<const SyntaxStyle> styles) {
         editor.Send(Message::StyleSetOverline, style.id, style.overline);
     }
 }
-} // namespace
-
-void ApplyIndentationGuides(EditorControl& editor, SyntaxLanguage language, bool show, bool simple) {
-    // Notepad4 89b8b36 Styles.cpp::Style_SetIndentGuides.
-    const auto mode = !show                                   ? Scintilla::IndentView::None
-                      : simple                                ? Scintilla::IndentView::Real
-                      : SyntaxFor(language).indentLookForward ? Scintilla::IndentView::LookForward
-                                                              : Scintilla::IndentView::LookBoth;
-    editor.Send(Scintilla::Message::SetIndentationGuides, static_cast<uintptr_t>(mode));
-}
-
-void ApplyLongLineColour(EditorControl& editor) {
-    // The original default style supplies a line foreground but no background.
-    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_3DLIGHT);
-    const auto colour = editor.Send(Scintilla::Message::GetEdgeMode) == 1
-                            ? Colour(0xFFC000)
-                            : background.Red() | (background.Green() << 8U) | (background.Blue() << 16U);
-    editor.Send(Scintilla::Message::SetEdgeColour, colour);
-}
-
-void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::optional<SyntaxLanguage> markupDialect) {
+void InstallFolding(EditorControl& editor, bool fold) {
     using Scintilla::Message;
-    const auto& definition = SyntaxFor(language);
-    editor.SetWordCompletionHandler([&editor, language](WordCompletionCondition condition) {
-        CompleteWord(editor, SyntaxFor(language), editor.GetCompletionSettings(), false, condition);
-    });
-    editor.SetCompletionStyles(CompletionStylesFor(definition));
-    const bool fold = definition.canFold;
     editor.Send(Message::SetMarginTypeN, EditorMargin::Folding, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
     editor.Send(Message::SetMarginMaskN, EditorMargin::Folding, Scintilla::MaskFolders);
     editor.Send(Message::SetMarginSensitiveN, EditorMargin::Folding, true);
@@ -83,6 +57,36 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
         editor.Send(Message::MarkerSetBackSelectedTranslucent, marker, 0xFF000000U | Colour(0xFF0000));
         editor.Send(Message::MarkerSetStrokeWidth, marker, editor.FromDIP(100));
     }
+}
+} // namespace
+
+void ApplyIndentationGuides(EditorControl& editor, SyntaxLanguage language, bool show, bool simple) {
+    // Notepad4 89b8b36 Styles.cpp::Style_SetIndentGuides.
+    const auto mode = !show                                   ? Scintilla::IndentView::None
+                      : simple                                ? Scintilla::IndentView::Real
+                      : SyntaxFor(language).indentLookForward ? Scintilla::IndentView::LookForward
+                                                              : Scintilla::IndentView::LookBoth;
+    editor.Send(Scintilla::Message::SetIndentationGuides, static_cast<uintptr_t>(mode));
+}
+
+void ApplyLongLineColour(EditorControl& editor) {
+    // The original default style supplies a line foreground but no background.
+    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_3DLIGHT);
+    const auto colour = editor.Send(Scintilla::Message::GetEdgeMode) == 1
+                            ? Colour(0xFFC000)
+                            : background.Red() | (background.Green() << 8U) | (background.Blue() << 16U);
+    editor.Send(Scintilla::Message::SetEdgeColour, colour);
+}
+
+void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::optional<SyntaxLanguage> markupDialect) {
+    using Scintilla::Message;
+    const auto& definition = SyntaxFor(language);
+    editor.SetWordCompletionHandler([&editor, language](WordCompletionCondition condition) {
+        CompleteWord(editor, SyntaxFor(language), editor.GetCompletionSettings(), false, condition);
+    });
+    editor.SetCompletionStyles(CompletionStylesFor(definition));
+    const bool fold = definition.canFold;
+    InstallFolding(editor, fold);
     editor.Send(Message::SetLexer, definition.lexer);
     // A shared lexer can retain settings when switching dialects. Reset the
     // delivered property and keyword slots before installing the next scheme.

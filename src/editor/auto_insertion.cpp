@@ -39,6 +39,12 @@ bool IsEscapedInsertion(EditorControl& editor, const CompletionStyles& styles, i
     const int previous2 = before2 + 1 == position - 2 ? static_cast<int>(editor.Send(Message::GetCharAt, before2)) : 0;
     return previous != previous2;
 }
+bool InCharacterLiteral(const CompletionStyles& styles, int previousStyle, int nextStyle) {
+    if (previousStyle == 0 || !styles.characterLiteralStyle) return false;
+    if (previousStyle == styles.characterLiteralStyle && nextStyle == styles.characterLiteralStyle) return true;
+    return styles.lexer == SCLEX_RUST && previousStyle == SCE_RUST_BYTE_CHARACTER &&
+           nextStyle == SCE_RUST_BYTE_CHARACTER;
+}
 std::optional<AutoInsertCharacter> AutoInsertIndex(int ch) {
     switch (ch) {
     case '(':
@@ -91,12 +97,7 @@ void EditorControl::AutoInsertCharacter(int ch) {
     const int previousStyle = static_cast<int>(Send(Message::GetStyleIndexAt, position - 2));
     const int nextStyle = static_cast<int>(Send(Message::GetStyleIndexAt, position));
     const auto& styles = completionStyles_;
-    if (previousStyle != 0 && styles.characterLiteralStyle) {
-        if (previousStyle == styles.characterLiteralStyle && nextStyle == styles.characterLiteralStyle) return;
-        if (styles.lexer == SCLEX_RUST && previousStyle == SCE_RUST_BYTE_CHARACTER &&
-            nextStyle == SCE_RUST_BYTE_CHARACTER)
-            return;
-    }
+    if (InCharacterLiteral(styles, previousStyle, nextStyle)) return;
     if (ch != ',' && IsEscapedInsertion(*this, styles, position)) return;
     // Original GenerateAutoInsertMask(): matching ASCII closing character offsets.
     ch += (169U >> (2 * index)) & 3;

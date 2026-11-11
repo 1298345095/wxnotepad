@@ -44,7 +44,7 @@ bool StrNotEmpty(const char* text) {
     return text && *text;
 }
 bool IsASpaceOrTab(int ch) {
-    return ch == ' ' || ch == '	';
+    return ch == ' ' || ch == '\t';
 }
 bool IsAlpha(int ch) {
     return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
@@ -132,6 +132,8 @@ struct WordList {
         }
     }
     void AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) noexcept;
+    void AddWordPrefixes(char* word, unsigned end, unsigned rootLength, std::span<const char* const> words,
+                         std::span<const unsigned> starts) noexcept;
 };
 
 // TODO: replace _stricmp() and CompareNoCase() with other functions
@@ -439,10 +441,11 @@ static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
     if (ch > ';' - '(') {
         return ch == '^' - '(';
     }
-    const uint32_t mask = (1 << ('(' - '(')) | (1 << (')' - '(')) | (1 << (',' - '(')) |
-                          (1 << ('.' - '('))
-                          //| (1 << (':' - '('))
-                          | (1 << (';' - '('));
+    // Bit zero is '(' after rebasing the character above.
+    const uint32_t mask = 1U | (1U << (')' - '(')) | (1U << (',' - '(')) |
+                          (1U << ('.' - '('))
+                          //| (1U << (':' - '('))
+                          | (1U << (';' - '('));
     return (mask >> ch) & true;
 #endif
 }
@@ -498,6 +501,18 @@ void WordList::AddListEx(const char* pList) noexcept {
     // printf("%s duration=%.6f\n", __func__, duration);
 }
 
+void WordList::AddWordPrefixes(char* word, unsigned end, unsigned rootLength, std::span<const char* const> words,
+                               std::span<const unsigned> starts) noexcept {
+    const char separator = word[end];
+    word[end] = '\0';
+    AddWord(word, end);
+    for (size_t index = 0; index < words.size(); ++index) {
+        const unsigned length = end - starts[index];
+        if (length >= rootLength) AddWord(words[index], length);
+    }
+    word[end] = separator;
+}
+
 void WordList::AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) noexcept {
     /*
     when pRoot is 'b', split 'bugprone-branch-clone' as following:
@@ -513,15 +528,7 @@ void WordList::AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) n
         const char ch = pWord[i];
         if (ch != '.' && ch != '-' && ch != ':') continue;
         if (i >= iRootLen) {
-            pWord[i] = '\0';
-            AddWord(pWord, i);
-            for (unsigned j = 0; j < count; j++) {
-                const unsigned subLen = i - starts[j];
-                if (subLen >= iRootLen) {
-                    AddWord(words[j], subLen);
-                }
-            }
-            pWord[i] = ch;
+            AddWordPrefixes(pWord, i, iRootLen, {words, count}, {starts, count});
         }
         if (ch != '.' && (pWord[i + 1] == '>' || pWord[i + 1] == ':')) {
             ++i;
@@ -1085,7 +1092,9 @@ class Collector final {
                              int chPrev2) {
         if ((definition_.original.lexerAttributes & LexerAttr_CppPreprocessor) &&
             (chPrev == '#' || IsASpaceOrTab(chPrev))) {
-            if (const auto previous = ReadPreprocessorPrefix(iStartWordPos, iLineStartPos, chPrev)) ch = *previous;
+            if (const auto previous = ReadPreprocessorPrefix(iStartWordPos, iLineStartPos, chPrev);
+                previous.has_value())
+                ch = *previous;
             chPrev = 0;
         } else if (IsSpecialStartChar(chPrev, chPrev2)) {
             ch = chPrev;
