@@ -5,12 +5,12 @@
 #include <LaTeXInput.h>
 namespace {
 using Scintilla::Message;
-void CompleteLatex(EditorControl& editor) {
+bool CompleteLatex(EditorControl& editor) {
     if (editor.Send(Message::AutoCActive) || editor.Send(Message::GetSelections) > 1 ||
         !editor.Send(Message::GetSelectionEmpty) || editor.Send(Message::GetReadOnly))
-        return;
+        return false;
     const auto caret = editor.Send(Message::GetCurrentPos);
-    if (caret <= MinLaTeXInputSequenceLength) return;
+    if (caret <= MinLaTeXInputSequenceLength) return false;
     auto position = caret - 1;
     char buffer[MaxLaTeXInputBufferLength];
     char* ptr = buffer + sizeof(buffer) - 1;
@@ -23,10 +23,10 @@ void CompleteLatex(EditorControl& editor) {
         --ptr;
         *ptr = ch;
     } while (position >= 0 && ptr != buffer);
-    if (ch != 92) return;
+    if (ch != 92) return false;
     const auto length = buffer + sizeof(buffer) - 1 - ptr;
     const uint32_t character = GetLaTeXInputUnicodeCharacter(ptr, length);
-    if (!character) return;
+    if (!character) return false;
     const char16_t utf16[] = {static_cast<char16_t>(character & 0xffff), static_cast<char16_t>(character >> 16), 0};
     const auto text = wxString(reinterpret_cast<const char*>(utf16), wxMBConvUTF16LE(), 2 * (1 + (utf16[1] != 0)))
                           .ToStdString(wxConvUTF8);
@@ -34,6 +34,7 @@ void CompleteLatex(EditorControl& editor) {
     editor.Send(Message::SetTargetEnd, caret);
     editor.Send(Message::ReplaceTarget, text.size(), reinterpret_cast<intptr_t>(text.c_str()));
     editor.Send(Message::SetSel, position + text.size(), position + text.size());
+    return true;
 }
 } // namespace
 void AcceptWordCompletion(EditorControl& editor, const WordCompletionSettings& settings,
@@ -43,7 +44,10 @@ void AcceptWordCompletion(EditorControl& editor, const WordCompletionSettings& s
     if ((method == CompletionMethods::Newline && !(settings.fillUpMask & CompletionFillUp::Enter)) ||
         (method == CompletionMethods::Tab && !(settings.fillUpMask & CompletionFillUp::Tab))) {
         editor.Send(Message::AutoCCancel);
-        editor.Send(method == CompletionMethods::Newline ? Message::NewLine : Message::Tab);
+        if (method == CompletionMethods::Newline)
+            editor.Send(Message::NewLine);
+        else if (!settings.latexInputMethod || !CompleteLatex(editor))
+            editor.Send(Message::Tab);
         return;
     }
     std::string text(notification.text);

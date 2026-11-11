@@ -36,3 +36,20 @@ with tempfile.TemporaryDirectory(prefix='wxnotepad-auto-close-tags-') as name:
     assert 'AutoCompleteOption=32774' in saved.splitlines(),saved
     assert 'AutoInsertMask=33279' in saved.splitlines() and 'Unrelated=keep' in saved,saved
 print('PASS: tag closure uses the original shared completion key and preserves unrelated settings')
+
+with tempfile.TemporaryDirectory(prefix='wxnotepad-word-preferences-') as name:
+    folder=Path(name); executable=folder/source.name
+    shutil.copy2(source,executable)
+    env=dict(os.environ,PATH=str(source.parent)+os.pathsep+os.environ['PATH'])
+    config=folder/'Notepad4.ini'
+    config.write_text(chr(10).join(('[Settings]', 'Unrelated=keep', '')),encoding='utf-16')
+    for mode in ('--words','--words-reopen'):
+        result=subprocess.run([executable,mode,'1'],cwd=folder,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=30)
+        print(result.stdout.decode('utf-8',errors='replace'),end='',flush=True)
+        result.check_returncode()
+    saved=config.read_text(encoding='utf-16')
+    for line in ('AutoCompleteOption=24', 'AutoCompleteScope=136', 'AutoCScanWordsTimeout=75', 'AutoCVisibleItemCount=8',
+                 'AutoCMinWordLength=2', 'AutoCMinNumberLength=0', 'AutoCFillUpMask=0', 'AutoCFillUpPunctuation=!?:!'):
+        assert line in saved.splitlines(),saved
+    assert 'Unrelated=keep' in saved,saved
+print('PASS: all original word completion preferences survive independent save/reopen')

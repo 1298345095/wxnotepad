@@ -724,17 +724,43 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
         (static_cast<unsigned>(notification.modificationType) &
          static_cast<unsigned>(Scintilla::ModificationFlags::ChangeStyle | Scintilla::ModificationFlags::LexerState)))
         braceStyleChanged_ = true;
-    // Notepad4.cpp SCN_CHARADDED: ignore tentative/multiple-selection typing.
-    // The pinned CRLF condition handles CR, after the complete EOL is inserted.
+    if (notification.nmhdr.code == Scintilla::Notification::AutoCCharDeleted && window_.wordCompletionHandler_)
+        window_.wordCompletionHandler_(WordCompletionCondition::CharacterDeleted);
+    if (notification.nmhdr.code == Scintilla::Notification::AutoCCompleted ||
+        notification.nmhdr.code == Scintilla::Notification::AutoCCancelled)
+        window_.completionState_ = {};
+    // Original Notepad4.cpp SCN_CHARADDED: listType excludes tentative input
+    // and multiple-selection typing. Bracket and tag paths return before words.
     if (notification.nmhdr.code == Scintilla::Notification::CharAdded && !notification.listType) {
-        if (notification.ch == '\r' || notification.ch == '\n') {
-            if (window_.autoIndent_ && (pdoc->eolMode != Scintilla::EndOfLine::CrLf || notification.ch != '\n'))
+        const int ch = notification.ch;
+        const auto& settings = window_.completionSettings_;
+        bool word = true;
+        if (ch == '\r' || ch == '\n') {
+            if (window_.autoIndent_ && (pdoc->eolMode != Scintilla::EndOfLine::CrLf || ch != '\n'))
                 window_.AutoIndent();
-        } else if (notification.ch == '>') {
-            window_.AutoCloseTag();
-        } else {
-            window_.AutoInsertCharacter(notification.ch);
+            word = false;
+        } else if (ch == '>') {
+            if (settings.completeOption & (WordCompletionOption::CloseTags | WordCompletionOption::CompleteWord)) {
+                if (!window_.AutoCloseTag() && (settings.completeOption & WordCompletionOption::CompleteWord) &&
+                    window_.Send(Message::GetCharAt, window_.Send(Message::GetCurrentPos) - 2) == '-' &&
+                    window_.wordCompletionHandler_)
+                    window_.wordCompletionHandler_(WordCompletionCondition::Normal);
+            }
+            word = false;
+        } else if (ch == '(' || ch == '{' || ch == '[' || ch == '<' || ch == '"' || ch == '\'' || ch == '`' ||
+                   ch == ',') {
+            window_.AutoInsertCharacter(ch);
+            word = false;
         }
+        if (word && (settings.completeOption & WordCompletionOption::CompleteWord) &&
+            (notification.characterSource == Scintilla::CharacterSource::DirectInput ||
+             (ch < 0x80 && !(settings.completeOption & WordCompletionOption::EnglishIMEModeOnly))) &&
+            (ch < 0x80
+                 ? CompletionStyleContains(window_.completionStyles_.wordCharacters, ch)
+                 : window_.Send(Message::GetCharacterClass, ch) == static_cast<int>(Scintilla::CharacterClass::word)) &&
+            window_.wordCompletionHandler_)
+            window_.wordCompletionHandler_(window_.Send(Message::AutoCActive) ? WordCompletionCondition::CharacterAdded
+                                                                              : WordCompletionCondition::Normal);
     }
     SelectionRevision();
     if (notification.nmhdr.code == Scintilla::Notification::UpdateUI &&

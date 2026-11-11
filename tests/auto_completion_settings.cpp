@@ -2,7 +2,9 @@
 #include "settings/settings_store.h"
 #include "syntax/syntax_scheme.h"
 #include <wx/checkbox.h>
+#include <wx/textctrl.h>
 #include <wx/button.h>
+#include <wx/display.h>
 #include <wx/modalhook.h>
 #include <wx/wx.h>
 #include <cstdio>
@@ -54,12 +56,32 @@ public:
         if (dialog->GetTitle() == "Auto Completion Settings")
             wxTheApp->CallAfter([this, dialog] {
                 NativeKeys::AfterPresentation(dialog, [this, dialog](bool presented) {
-                    Require(presented, "owned settings dialog is presented");
-                    action_(dialog);
+                    try {
+                        Require(presented, "owned settings dialog is presented");
+                        const auto area = wxDisplay(wxDisplay::GetFromWindow(dialog)).GetClientArea();
+                        std::printf("Dialog %dx%d; work area %dx%d; DPI %dx%d", dialog->GetSize().x,
+                                    dialog->GetSize().y, area.width, area.height, dialog->GetDPI().x,
+                                    dialog->GetDPI().y);
+                        Require(area.Contains(dialog->GetScreenRect()),
+                                "completion settings dialog fits native work area at active font/DPI");
+                        for (auto* child : dialog->GetChildren())
+                            if (child->IsShown() &&
+                                (wxDynamicCast(child, wxCheckBox) || wxDynamicCast(child, wxTextCtrl) ||
+                                 wxDynamicCast(child, wxButton)))
+                                Require(
+                                    dialog->GetScreenRect().Contains(child->GetScreenRect()),
+                                    "every completion setting and dialog button remains visible at active font/DPI");
+                        action_(dialog);
+                    } catch (...) {
+                        failure = std::current_exception();
+                        dialog->EndModal(wxID_CANCEL);
+                    }
                 });
             });
         return wxID_NONE;
     }
+
+    std::exception_ptr failure;
 
 private:
     std::function<void(wxDialog*)> action_;
@@ -85,6 +107,7 @@ void Visit(EditorFrame* frame, const std::function<void(wxDialog*)>& action) {
         action(dialog);
     });
     NativeSearch::Command(frame, command);
+    if (driver.failure) std::rethrow_exception(driver.failure);
     Require(opened, "settings dialog opens");
 }
 void TagSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
@@ -124,6 +147,69 @@ void TagSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
     type(false);
     Require(settings.Save(true), "tag option saves through shared settings store");
 }
+wxTextCtrl* Field(wxDialog* dialog, const char* name) {
+    auto* field = wxDynamicCast(wxWindow::FindWindowByName(name, dialog), wxTextCtrl);
+    Require(field, "original native word completion numeric/text control exists");
+    return field;
+}
+void WordSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
+    auto& value = settings.values.completion;
+    if (reopen) {
+        Require(value.minWordLength == 2 && value.minNumberLength == 0 && value.visibleItemCount == 8 &&
+                    value.scanWordsTimeout == 75,
+                "word completion numeric values reopen");
+        Require(value.completeOption == 24 && value.completeScope == 8 && value.scanWordScope == 8 &&
+                    value.fillUpMask == 0 && value.fillUpPunctuation == "!?:!",
+                "word completion flags and normalized punctuation reopen");
+        return;
+    }
+    const char* options[] = {
+        "Complete words",           "Scan words in document",   "Only words in document",     "English IME mode only",
+        "Complete inside comments", "Complete inside strings",  "Complete inside plain text", "Scan inside comments",
+        "Scan inside strings",      "Scan inside plain text",   "Complete with Enter",        "Complete with Tab",
+        "Complete with Space",      "Complete with punctuation"};
+    const auto edit = [&](wxDialog* dialog) {
+        for (const char* name : options)
+            Click(Check(dialog, name));
+        Click(Check(dialog, "Auto close HTML and XML tags"));
+        Field(dialog, "Minimum word length")->SetValue("2");
+        Field(dialog, "Minimum number length")->SetValue("0");
+        Field(dialog, "Visible rows")->SetValue("0");
+        Field(dialog, "Scan timeout")->SetValue("75 ms");
+        Field(dialog, "Fill-up punctuation")->SetValue(wxString::FromUTF8("a!中? :!9"));
+    };
+    Visit(frame, [&](wxDialog* dialog) {
+        edit(dialog);
+        Click(dialog->FindWindow(wxID_CANCEL));
+    });
+    Require(value.completeOption == 7 && value.completeScope == 15 && value.scanWordScope == 15 &&
+                value.fillUpMask == 15 && value.minWordLength == 1 && value.minNumberLength == 3 &&
+                value.visibleItemCount == 16 && value.scanWordsTimeout == 500,
+            "Cancel leaves every word completion preference untouched");
+    Visit(frame, [&](wxDialog* dialog) {
+        edit(dialog);
+        Click(dialog->FindWindow(wxID_OK));
+    });
+    Require(value.minWordLength == 2 && value.minNumberLength == 0 && value.visibleItemCount == 8 &&
+                value.scanWordsTimeout == 75,
+            "OK commits original numeric lower clamps and timeout suffix");
+    Require(value.completeOption == 24 && value.completeScope == 8 && value.scanWordScope == 8 &&
+                value.fillUpMask == 0 && value.fillUpPunctuation == "!?:!",
+            "OK commits scope bits and ASCII punctuation normalization");
+    Visit(frame, [&](wxDialog* dialog) {
+        Field(dialog, "Scan timeout")->SetValue("invalid");
+        Field(dialog, "Minimum word length")->SetValue("invalid");
+        Click(dialog->FindWindow(wxID_OK));
+    });
+    Require(value.scanWordsTimeout == 75 && value.minWordLength == 1,
+            "invalid timeout retains prior value while invalid unsigned word length clamps");
+    Visit(frame, [&](wxDialog* dialog) {
+        Field(dialog, "Minimum word length")->SetValue("2");
+        Click(dialog->FindWindow(wxID_OK));
+    });
+    Require(settings.Save(true), "word completion preferences persist through existing settings lifecycle");
+}
+
 class SettingsApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -139,6 +225,15 @@ public:
                     frame->Editor()->Send(Message::SetSavePoint);
                     result_ = 0;
                     std::puts("PASS: tag option Cancel/OK, live typing and persistence");
+                    frame->Destroy();
+                    ExitMainLoop();
+                    return;
+                }
+                if (argv[1] == "--words" || argv[1] == "--words-reopen") {
+                    WordSettings(frame, *settings_, argv[1] == "--words-reopen");
+                    frame->Editor()->Send(Message::SetSavePoint);
+                    result_ = 0;
+                    std::puts("PASS: native word completion dialog controls, Cancel/OK, normalization and reopen");
                     frame->Destroy();
                     ExitMainLoop();
                     return;
