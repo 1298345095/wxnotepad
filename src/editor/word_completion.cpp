@@ -19,6 +19,8 @@
 #include <cstdlib>
 #include <cctype>
 #include <type_traits>
+#include <memory>
+#include <vector>
 using Scintilla::Message;
 namespace {
 using Sci_Position = Scintilla::Position;
@@ -27,14 +29,13 @@ using Sci_Line = intptr_t;
 using Sci_TextRangeFull = Scintilla::TextRangeFull;
 using Sci_TextToFindFull = Scintilla::TextToFindFull;
 using Scintilla::CharacterClass;
-void* Allocate(size_t bytes) {
-    return std::calloc(bytes, 1);
+int LowerAscii(unsigned char ch) {
+    return ch >= 'A' && ch <= 'Z' ? ch + 'a' - 'A' : ch;
 }
 int CompareNoCase(const char* left, const char* right, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         const auto a = static_cast<unsigned char>(left[i]), b = static_cast<unsigned char>(right[i]);
-        const auto lower = [](unsigned char ch) { return ch >= 'A' && ch <= 'Z' ? ch + 'a' - 'A' : ch; };
-        const int difference = lower(a) - lower(b);
+        const int difference = LowerAscii(a) - LowerAscii(b);
         if (difference || !a || !b) return difference;
     }
     return 0;
@@ -66,35 +67,28 @@ constexpr int AutoCompleteScope_PlainText = 4;
 #define NP2_AUTOC_CACHE_SORT_KEY 1
 #define NP2_AUTOC_USE_WORD_POINTER 0            // used for debug
 #define NP2_AUTOC_MAX_WORD_LENGTH (128 - 3 - 1) // SP + '(' + ')' + '\0'
-#define NP2_AUTOC_WORD_BUFFER_SIZE 128
+constexpr unsigned NP2_AUTOC_WORD_BUFFER_SIZE = 128;
 #define NP2_AUTOC_INIT_BUFFER_SIZE (4096)
 
 // optimization for small string
 template <size_t StackSize = 32> class CharBuffer {
     char* ptr;
-    char buffer[StackSize];
+    char buffer[StackSize]{};
+    std::unique_ptr<char[]> heap;
 
 public:
     explicit CharBuffer(size_t size) noexcept {
         if (size <= StackSize) {
             ptr = buffer;
-            memset(buffer, 0, StackSize);
         } else {
-            ptr = static_cast<char*>(Allocate(size));
+            heap = std::make_unique<char[]>(size);
+            ptr = heap.get();
         }
     }
+    CharBuffer(const CharBuffer&) = delete;
+    CharBuffer& operator=(const CharBuffer&) = delete;
     char* data() noexcept { return ptr; }
     char& operator[](size_t index) noexcept { return ptr[index]; }
-    ~CharBuffer() {
-        if (ptr != buffer) {
-            std::free(ptr);
-        }
-    }
-};
-
-// memory buffer
-struct WordListBuffer {
-    WordListBuffer* next;
 };
 
 struct WordNode;
@@ -102,7 +96,7 @@ struct WordList {
     int (*WL_strcmp)(const char*, const char*);
     int (*WL_strncmp)(const char*, const char*, size_t);
 #if NP2_AUTOC_CACHE_SORT_KEY
-    uint32_t (*WL_SortKeyFunc)(const void*, uint32_t);
+    uint32_t (*WL_SortKeyFunc)(const char*, uint32_t);
 #endif
 
     WordNode* pListHead;
@@ -117,13 +111,18 @@ struct WordList {
 
     unsigned offset;
     unsigned capacity;
-    WordListBuffer* buffer;
+    std::byte* buffer = nullptr;
+    std::vector<std::unique_ptr<std::byte[]>> buffers;
+
+    WordList() = default;
+    WordList(const WordList&) = delete;
+    WordList& operator=(const WordList&) = delete;
 
     void Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) noexcept;
-    void Free() const noexcept;
-    char* GetList() const noexcept;
+    std::unique_ptr<char[]> GetList() const;
     void AddBuffer() noexcept;
     void AddWord(const char* pWord, unsigned len) noexcept;
+    int CompareNode(const WordNode& node, const char* word, unsigned length, unsigned sortKey) const noexcept;
     void UpdateRoot(const char* pRoot, unsigned iRootLen) noexcept;
     bool StartsWith(const char* pWord) const noexcept;
     void AddListEx(const char* pList) noexcept;
@@ -139,9 +138,9 @@ struct WordList {
 // which correctly case insensitively compares UTF-8 string and ANSI/DBCS string.
 
 #if NP2_AUTOC_CACHE_SORT_KEY
-#define NP2_AUTOC_SORT_KEY_LENGTH 4
+constexpr unsigned NP2_AUTOC_SORT_KEY_LENGTH = 4;
 
-uint32_t WordList_SortKey(const void* pWord, uint32_t len) noexcept {
+uint32_t WordList_SortKey(const char* pWord, uint32_t len) noexcept {
 #if 0
 	uint32_t high = 0;
 	const uint8_t *ptr = static_cast<const uint8_t *>(pWord);
@@ -164,10 +163,10 @@ uint32_t WordList_SortKey(const void* pWord, uint32_t len) noexcept {
     return high;
 }
 
-uint32_t WordList_SortKeyCase(const void* pWord, uint32_t len) noexcept {
+uint32_t WordList_SortKeyCase(const char* pWord, uint32_t len) noexcept {
 #if 1
     uint32_t high = 0;
-    const uint8_t* ptr = static_cast<const uint8_t*>(pWord);
+    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(pWord);
     len = std::min<uint32_t>(len, NP2_AUTOC_SORT_KEY_LENGTH);
     for (uint32_t i = 0; i < len; i++) {
         const uint8_t ch = *ptr++;
@@ -213,7 +212,7 @@ struct WordNode {
     unsigned level;
 };
 
-#define NP2_TREE_HEIGHT_LIMIT 32
+constexpr unsigned NP2_TREE_HEIGHT_LIMIT = 32;
 // store word right after the node as most word are short.
 #define WordNode_GetWord(node) (reinterpret_cast<char*>(node) + sizeof(WordNode))
 // TODO: since the tree is sorted, nodes greater than some level can be deleted to reduce total words.
@@ -221,28 +220,38 @@ struct WordNode {
 
 // Andersson Tree, source from https://www.eternallyconfuzzled.com/tuts/datastructures/jsw_tut_andersson.aspx
 // see also https://en.wikipedia.org/wiki/AA_tree
-#define aa_tree_skew(t)                                                                                                \
-    if ((t)->level && (t)->left && (t)->level == (t)->left->level) {                                                   \
-        WordNode* save = (t)->left;                                                                                    \
-        (t)->left = save->right;                                                                                       \
-        save->right = (t);                                                                                             \
-        (t) = save;                                                                                                    \
+WordNode* SkewTree(WordNode* node) noexcept {
+    if (node->level && node->left && node->level == node->left->level) {
+        WordNode* save = node->left;
+        node->left = save->right;
+        save->right = node;
+        return save;
     }
-#define aa_tree_split(t)                                                                                               \
-    if ((t)->level && (t)->right && (t)->right->right && (t)->level == (t)->right->right->level) {                     \
-        WordNode* save = (t)->right;                                                                                   \
-        (t)->right = save->left;                                                                                       \
-        save->left = (t);                                                                                              \
-        (t) = save;                                                                                                    \
-        ++(t)->level;                                                                                                  \
+    return node;
+}
+WordNode* SplitTree(WordNode* node) noexcept {
+    if (node->level && node->right && node->right->right && node->level == node->right->right->level) {
+        WordNode* save = node->right;
+        node->right = save->left;
+        save->left = node;
+        ++save->level;
+        return save;
     }
+    return node;
+}
 
 #define WordList_AddNode() (reinterpret_cast<WordNode*>(reinterpret_cast<char*>(buffer) + offset))
 void WordList::AddBuffer() noexcept {
-    WordListBuffer* block = static_cast<WordListBuffer*>(Allocate(capacity));
-    block->next = buffer;
-    offset = NP2_align_up(sizeof(WordListBuffer), alignof(WordNode));
-    buffer = block;
+    buffers.push_back(std::make_unique<std::byte[]>(capacity));
+    offset = 0;
+    buffer = buffers.back().get();
+}
+
+int WordList::CompareNode(const WordNode& node, const char* word, unsigned length, unsigned sortKey) const noexcept {
+    int difference = static_cast<int>(node.sortKey - sortKey);
+    if (difference == 0 && (length > NP2_AUTOC_SORT_KEY_LENGTH || node.len > NP2_AUTOC_SORT_KEY_LENGTH || bIgnoreCase))
+        difference = WL_strcmp(reinterpret_cast<const char*>(&node) + sizeof(WordNode), word);
+    return difference;
 }
 
 void WordList::AddWord(const char* pWord, unsigned len) noexcept {
@@ -273,10 +282,7 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
         for (;;) {
             path[top++] = iter;
 #if NP2_AUTOC_CACHE_SORT_KEY
-            dir = static_cast<int>(iter->sortKey - sortKey);
-            if (dir == 0 && (len > NP2_AUTOC_SORT_KEY_LENGTH || iter->len > NP2_AUTOC_SORT_KEY_LENGTH || bIgnoreCase)) {
-                dir = WL_strcmp(WordNode_GetWord(iter), pWord);
-            }
+            dir = CompareNode(*iter, pWord, len, sortKey);
 #else
             dir = WL_strcmp(WordNode_GetWord(iter), pWord);
 #endif
@@ -314,8 +320,7 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
             if (top != 0) {
                 dir = path[top - 1]->right == path[top];
             }
-            aa_tree_skew(path[top]);
-            aa_tree_split(path[top]);
+            path[top] = SplitTree(SkewTree(path[top]));
             // fix the parent
             if (top != 0) {
                 path[top - 1]->link[dir] = path[top];
@@ -331,20 +336,12 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
     offset += NP2_align_up(len + 1 + sizeof(WordNode), alignof(WordNode));
 }
 
-void WordList::Free() const noexcept {
-    WordListBuffer* block = buffer;
-    while (block) {
-        WordListBuffer* const next = block->next;
-        std::free(block);
-        block = next;
-    }
-}
-
-char* WordList::GetList() const noexcept {
+std::unique_ptr<char[]> WordList::GetList() const {
     WordNode* root = pListHead;
     WordNode* path[NP2_TREE_HEIGHT_LIMIT]{};
     int top = 0;
-    char* buf = static_cast<char*>(Allocate(nTotalLen + 1)); // additional separator
+    auto list = std::make_unique<char[]>(nTotalLen + 1); // additional separator
+    char* buf = list.get();
     char* const pList = buf;
 
     while (root || top > 0) {
@@ -363,11 +360,15 @@ char* WordList::GetList() const noexcept {
     if (buf != pList) {
         *(--buf) = '\0';
     }
-    return pList;
+    return list;
 }
 
 void WordList::Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) noexcept {
-    memset(this, 0, sizeof(struct WordList));
+    pListHead = nullptr;
+    nWordCount = 0;
+    nTotalLen = 0;
+    offset = 0;
+    capacity = 0;
     pWordStart = pRoot;
     iStartLen = iRootLen;
 
@@ -461,6 +462,9 @@ void WordList::AddListEx(const char* pList) noexcept {
         } while (!WordList_IsSeparator(ch));
 
         unsigned lenSub = static_cast<unsigned>(sub - pList - 1);
+        // Prefix markers can use the suffix reserve. Restore the word limit
+        // before subtracting, copying another segment, or appending "()".
+        len = std::min<unsigned>(len, NP2_AUTOC_MAX_WORD_LENGTH);
         lenSub = std::min<unsigned>(NP2_AUTOC_MAX_WORD_LENGTH - len, lenSub);
         memcpy(word + len, pList, lenSub);
         len += lenSub;
@@ -507,31 +511,30 @@ void WordList::AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) n
 
     for (unsigned i = 0; i < wordLength - 1; i++) {
         const char ch = pWord[i];
-        if (ch == '.' || ch == '-' || ch == ':') {
-            if (i >= iRootLen) {
-                pWord[i] = '\0';
-                AddWord(pWord, i);
-                for (unsigned j = 0; j < count; j++) {
-                    const unsigned subLen = i - starts[j];
-                    if (subLen >= iRootLen) {
-                        AddWord(words[j], subLen);
-                    }
+        if (ch != '.' && ch != '-' && ch != ':') continue;
+        if (i >= iRootLen) {
+            pWord[i] = '\0';
+            AddWord(pWord, i);
+            for (unsigned j = 0; j < count; j++) {
+                const unsigned subLen = i - starts[j];
+                if (subLen >= iRootLen) {
+                    AddWord(words[j], subLen);
                 }
-                pWord[i] = ch;
             }
-            if (ch != '.' && (pWord[i + 1] == '>' || pWord[i + 1] == ':')) {
-                ++i;
-            }
+            pWord[i] = ch;
+        }
+        if (ch != '.' && (pWord[i + 1] == '>' || pWord[i + 1] == ':')) {
+            ++i;
+        }
 
-            const unsigned subLen = wordLength - (i + 1);
-            const char* pSubRoot = pWord + i + 1;
-            if (subLen >= iRootLen && StartsWith(pSubRoot)) {
-                AddWord(pSubRoot, subLen);
-                if (count < std::size(words)) {
-                    words[count] = pSubRoot;
-                    starts[count] = i + 1;
-                    ++count;
-                }
+        const unsigned subLen = wordLength - (i + 1);
+        const char* pSubRoot = pWord + i + 1;
+        if (subLen >= iRootLen && StartsWith(pSubRoot)) {
+            AddWord(pSubRoot, subLen);
+            if (count < std::size(words)) {
+                words[count] = pSubRoot;
+                starts[count] = i + 1;
+                ++count;
             }
         }
     }
@@ -677,6 +680,142 @@ class Collector final {
         return p != nullptr && p[-1] == ' ' && p[length] == ' ';
     }
 
+    Sci_Position MemberWordEnd(Sci_Position wordEnd, Sci_Position iDocLen, int style) noexcept {
+        const Sci_Position before = wordEnd;
+        const int ch = Call(Message::GetCharAt, wordEnd);
+        Sci_Position width = 0;
+        int chNext = Call(Message::GetCharacterAndWidth, wordEnd + 1, &width);
+        if ((ch == '-' && chNext == '>') || (ch == ':' && chNext == ':')) {
+            chNext = Call(Message::GetCharacterAndWidth, wordEnd + 2, &width);
+            if (IsAutoCompletionWordCharacter(chNext)) {
+                wordEnd += 2;
+            }
+        } else if (ch == '.' || (ch == '-' && style == Call(Message::GetStyleIndexAt, wordEnd))) {
+            if (IsAutoCompletionWordCharacter(chNext)) {
+                ++wordEnd;
+            }
+        }
+        if (wordEnd == before) return wordEnd;
+
+        while (wordEnd < iDocLen && (chNext < 0x80 && !IsDefaultWordChar(chNext))) {
+            wordEnd += width;
+            chNext = Call(Message::GetCharacterAndWidth, wordEnd, &width);
+            if (!IsAutoCompletionWordCharacter(chNext)) {
+                break;
+            }
+        }
+
+        wordEnd = Call(Message::WordEndPosition, wordEnd, true);
+        return wordEnd;
+    }
+
+    std::pair<Sci_Position, bool> ExtendDocumentWord(Sci_Position iPosFind, Sci_Position wordEnd, Sci_Position iDocLen,
+                                                     int style) noexcept {
+        // find all word after '::', '->', '.' and '-'
+        bool bSubWord = false;
+        while (wordEnd < iDocLen) {
+            const int ch = Call(Message::GetCharAt, wordEnd);
+            if (!(ch == ':' || ch == '.' || ch == '-')) {
+                if (ch == '!' && definition_.lexer == SCLEX_RUST && style == SCE_RUST_MACRO) {
+                    // macro: println!()
+                    ++wordEnd;
+                }
+                break;
+            }
+
+            const auto before = wordEnd;
+            wordEnd = MemberWordEnd(wordEnd, iDocLen, style);
+            if (wordEnd == before) break;
+            if (wordEnd - iPosFind > NP2_AUTOC_MAX_WORD_LENGTH) {
+                wordEnd = before;
+                break;
+            }
+            bSubWord = true;
+        }
+
+        return {wordEnd, bSubWord};
+    }
+
+    void SkipDocumentPrefix(char*& pWord, int& wordLength, Sci_Position iPosFind, int style, char prefix) noexcept {
+        const Sci_Position before = Call(Message::PositionBefore, iPosFind);
+        if (before + 1 == iPosFind) {
+            const int chPrev = Call(Message::GetCharAt, before);
+            // word after escape character or format specifier
+            if (chPrev == '%' || chPrev == definition_.original.escapeCharacterStart) {
+                if (IsEscapeCharOrFormatSpecifier(before, static_cast<uint8_t>(pWord[0]), chPrev, style, false)) {
+                    pWord++;
+                    --wordLength;
+                }
+            }
+        }
+        if (prefix && prefix == pWord[0]) {
+            pWord++;
+            --wordLength;
+        }
+    }
+
+    void AppendDocumentSuffix(char* pWord, int& wordLength, Sci_Position& wordEnd, int style) noexcept {
+        bool space = false;
+        if (!(definition_.lexer == SCLEX_CPP && style == SCE_C_MACRO)) {
+            while (IsASpaceOrTab(Call(Message::GetCharAt, wordEnd))) {
+                space = true;
+                wordEnd++;
+            }
+        }
+
+        const int chWordEnd = Call(Message::GetCharAt, wordEnd);
+        if ((definition_.lexer == SCLEX_JULIA || definition_.lexer == SCLEX_RUST) && chWordEnd == '!') {
+            const int chNext = Call(Message::GetCharAt, wordEnd + 1);
+            if (chNext == '(') {
+                wordEnd += 2;
+                pWord[wordLength++] = '!';
+                pWord[wordLength++] = '(';
+                pWord[wordLength++] = ')';
+            }
+        } else if (chWordEnd == '(') {
+            if (space && NeedSpaceAfterKeyword(pWord, wordLength)) {
+                pWord[wordLength++] = ' ';
+            }
+
+            pWord[wordLength++] = '(';
+            pWord[wordLength++] = ')';
+            wordEnd++;
+        }
+    }
+
+    void CollectDocumentWord(WordList& pWList, Sci_Position iPosFind, Sci_Position& wordEnd, int style, char prefix,
+                             bool bSubWord) noexcept {
+        const int iRootLen = pWList.iStartLen;
+        if (wordEnd - iPosFind < iRootLen) return;
+        char wordBuf[NP2_AUTOC_WORD_BUFFER_SIZE];
+        char* pWord = wordBuf;
+        const Sci_TextRangeFull tr = {{iPosFind, std::min(iPosFind + NP2_AUTOC_MAX_WORD_LENGTH, wordEnd)}, pWord};
+        int wordLength = static_cast<int>(Call(Message::GetTextRangeFull, 0, &tr));
+
+        SkipDocumentPrefix(pWord, wordLength, iPosFind, style, prefix);
+        // if (definition_.lexer == SCLEX_PHPSCRIPT && wordLength >= 2 && pWord[0] == '$' && pWord[1] ==
+        // '$') { 	pWord++;
+        //	--wordLength;
+        // }
+        while (wordLength > 0 &&
+               (pWord[wordLength - 1] == '-' || pWord[wordLength - 1] == ':' || pWord[wordLength - 1] == '.')) {
+            --wordLength;
+            pWord[wordLength] = '\0';
+        }
+
+        if (wordLength >= iRootLen && (pWord[0] != ':' || pWord[1] == ':') && pWList.StartsWith(pWord)) {
+            AppendDocumentSuffix(pWord, wordLength, wordEnd, style);
+
+            if (wordLength >= iRootLen) {
+                pWord[wordLength] = '\0';
+                pWList.AddWord(pWord, wordLength);
+                if (bSubWord) {
+                    pWList.AddSubWord(pWord, wordLength, iRootLen);
+                }
+            }
+        }
+    }
+
     void AutoC_AddDocWord(WordList& pWList, const std::array<uint32_t, 8>& ignoredStyleMask, bool bIgnoreCase,
                           char prefix) noexcept {
         const char* const pRoot = pWList.pWordStart;
@@ -703,122 +842,9 @@ class Collector final {
             const int style = Call(Message::GetStyleIndexAt, wordEnd - 1);
             wordEnd = ft.chrgText.cpMax;
             if (iPosFind != iCurrentPos && !CompletionStyleContains(ignoredStyleMask, style)) {
-                // find all word after '::', '->', '.' and '-'
-                bool bSubWord = false;
-                while (wordEnd < iDocLen) {
-                    const int ch = Call(Message::GetCharAt, wordEnd);
-                    if (!(ch == ':' || ch == '.' || ch == '-')) {
-                        if (ch == '!' && definition_.lexer == SCLEX_RUST && style == SCE_RUST_MACRO) {
-                            // macro: println!()
-                            ++wordEnd;
-                        }
-                        break;
-                    }
-
-                    const Sci_Position before = wordEnd;
-                    Sci_Position width = 0;
-                    int chNext = Call(Message::GetCharacterAndWidth, wordEnd + 1, &width);
-                    if ((ch == '-' && chNext == '>') || (ch == ':' && chNext == ':')) {
-                        chNext = Call(Message::GetCharacterAndWidth, wordEnd + 2, &width);
-                        if (IsAutoCompletionWordCharacter(chNext)) {
-                            wordEnd += 2;
-                        }
-                    } else if (ch == '.' || (ch == '-' && style == Call(Message::GetStyleIndexAt, wordEnd))) {
-                        if (IsAutoCompletionWordCharacter(chNext)) {
-                            ++wordEnd;
-                        }
-                    }
-                    if (wordEnd == before) {
-                        break;
-                    }
-
-                    while (wordEnd < iDocLen && (chNext < 0x80 && !IsDefaultWordChar(chNext))) {
-                        wordEnd += width;
-                        chNext = Call(Message::GetCharacterAndWidth, wordEnd, &width);
-                        if (!IsAutoCompletionWordCharacter(chNext)) {
-                            break;
-                        }
-                    }
-
-                    wordEnd = Call(Message::WordEndPosition, wordEnd, true);
-                    if (wordEnd - iPosFind > NP2_AUTOC_MAX_WORD_LENGTH) {
-                        wordEnd = before;
-                        break;
-                    }
-                    bSubWord = true;
-                }
-
-                if (wordEnd - iPosFind >= iRootLen) {
-                    char wordBuf[NP2_AUTOC_WORD_BUFFER_SIZE];
-                    char* pWord = wordBuf;
-                    const Sci_TextRangeFull tr = {{iPosFind, std::min(iPosFind + NP2_AUTOC_MAX_WORD_LENGTH, wordEnd)},
-                                                  pWord};
-                    int wordLength = static_cast<int>(Call(Message::GetTextRangeFull, 0, &tr));
-
-                    const Sci_Position before = Call(Message::PositionBefore, iPosFind);
-                    if (before + 1 == iPosFind) {
-                        const int chPrev = Call(Message::GetCharAt, before);
-                        // word after escape character or format specifier
-                        if (chPrev == '%' || chPrev == definition_.original.escapeCharacterStart) {
-                            if (IsEscapeCharOrFormatSpecifier(before, static_cast<uint8_t>(pWord[0]), chPrev, style,
-                                                              false)) {
-                                pWord++;
-                                --wordLength;
-                            }
-                        }
-                    }
-                    if (prefix && prefix == pWord[0]) {
-                        pWord++;
-                        --wordLength;
-                    }
-
-                    // if (definition_.lexer == SCLEX_PHPSCRIPT && wordLength >= 2 && pWord[0] == '$' && pWord[1] ==
-                    // '$') { 	pWord++;
-                    //	--wordLength;
-                    // }
-                    while (wordLength > 0 && (pWord[wordLength - 1] == '-' || pWord[wordLength - 1] == ':' ||
-                                              pWord[wordLength - 1] == '.')) {
-                        --wordLength;
-                        pWord[wordLength] = '\0';
-                    }
-
-                    if (wordLength >= iRootLen && (pWord[0] != ':' || pWord[1] == ':') && pWList.StartsWith(pWord)) {
-                        bool space = false;
-                        if (!(definition_.lexer == SCLEX_CPP && style == SCE_C_MACRO)) {
-                            while (IsASpaceOrTab(Call(Message::GetCharAt, wordEnd))) {
-                                space = true;
-                                wordEnd++;
-                            }
-                        }
-
-                        const int chWordEnd = Call(Message::GetCharAt, wordEnd);
-                        if ((definition_.lexer == SCLEX_JULIA || definition_.lexer == SCLEX_RUST) && chWordEnd == '!') {
-                            const int chNext = Call(Message::GetCharAt, wordEnd + 1);
-                            if (chNext == '(') {
-                                wordEnd += 2;
-                                pWord[wordLength++] = '!';
-                                pWord[wordLength++] = '(';
-                                pWord[wordLength++] = ')';
-                            }
-                        } else if (chWordEnd == '(') {
-                            if (space && NeedSpaceAfterKeyword(pWord, wordLength)) {
-                                pWord[wordLength++] = ' ';
-                            }
-
-                            pWord[wordLength++] = '(';
-                            pWord[wordLength++] = ')';
-                            wordEnd++;
-                        }
-
-                        if (wordLength >= iRootLen) {
-                            pWord[wordLength] = '\0';
-                            pWList.AddWord(pWord, wordLength);
-                            if (bSubWord) {
-                                pWList.AddSubWord(pWord, wordLength, iRootLen);
-                            }
-                        }
-                    }
-                }
+                const auto extended = ExtendDocumentWord(iPosFind, wordEnd, iDocLen, style);
+                wordEnd = extended.first;
+                CollectDocumentWord(pWList, iPosFind, wordEnd, style, prefix, extended.second);
             }
 
             ft.chrg.cpMin = wordEnd;
@@ -848,106 +874,124 @@ class Collector final {
             else if (currentStyle >= SCE_HB_DEFAULT)
                 add(vbsLists);
         }
-        if (definition_.lexer == SCLEX_JAVASCRIPT) {
+        if (definition_.lexer == SCLEX_JAVASCRIPT || definition_.lexer == SCLEX_MARKDOWN) {
             const auto& html = SyntaxFor(SyntaxLanguage::Html);
             for (const auto index : {0, 7, 8})
                 AddList(words, html, index);
         }
     }
     enum AddWordResult { AddWordResult_None, AddWordResult_Finish, AddWordResult_IgnoreLexer };
-    AddWordResult AutoC_AddSpecWord(WordList& words, int currentStyle, int previousStyle, int ch, int previous) {
-        if ((ch == 92 || (previous == 92 && (ch == '^' || ch == ':'))) && settings_.latexInputMethod)
-            words.AddList(ch == ':' ? EmojiInputSequenceString : LaTeXInputSequenceString);
-        if (definition_.lexer == SCLEX_HTML) {
-            if (currentStyle >= css_style(SCE_CSS_DEFAULT) && currentStyle < SCE_PHP_DEFAULT) {
-                currentStyle -= css_style(SCE_CSS_DEFAULT);
-                previousStyle -= css_style(SCE_CSS_DEFAULT);
-                if (ch == '@' && currentStyle == SCE_CSS_DEFAULT) {
-                    words.AddList(cssKeywords[1]);
-                    return AddWordResult_IgnoreLexer;
-                }
-                if (ch == ':' && (currentStyle == SCE_CSS_DEFAULT || currentStyle == SCE_CSS_OPERATOR)) {
-                    if (previous == ':') {
-                        words.AddList(cssKeywords[3]);
-                        return AddWordResult_IgnoreLexer;
-                    }
-                    if (previousStyle != SCE_CSS_PROPERTY && previousStyle != SCE_CSS_UNKNOWN_PROPERTY) {
-                        words.AddList(cssKeywords[2]);
-                        return AddWordResult_IgnoreLexer;
-                    }
-                }
-                if ((ch == '$' || ch == '@' || ch == '#') && IsDocWordChar(ch)) return AddWordResult_IgnoreLexer;
-                return AddWordResult_None;
-            }
-            if (currentStyle >= js_style(SCE_JS_DEFAULT) && currentStyle < css_style(SCE_CSS_DEFAULT)) {
-                currentStyle -= js_style(SCE_JS_DEFAULT);
-                if (ch == '@' && currentStyle >= SCE_JS_COMMENTLINE && currentStyle <= SCE_JS_TASKMARKER) {
-                    AddList(words, SyntaxFor(SyntaxLanguage::JavaScript), 10);
-                    return AddWordResult_Finish;
-                }
-                if ((ch == '$' || ch == '@' || ch == '#') && IsDocWordChar(ch)) return AddWordResult_IgnoreLexer;
-                return AddWordResult_None;
-            }
-        }
-        const auto scheme = SyntaxSettingsLanguage(definition_.language);
-        if (definition_.lexer == SCLEX_BASH && ch == '$') {
-            AddList(words, definition_, 2);
+
+    AddWordResult AddCssSpecialWord(WordList& words, int currentStyle, int previousStyle, int ch, int previous) {
+        currentStyle -= css_style(SCE_CSS_DEFAULT);
+        previousStyle -= css_style(SCE_CSS_DEFAULT);
+        if (ch == '@' && currentStyle == SCE_CSS_DEFAULT) {
+            words.AddList(cssKeywords[1]);
             return AddWordResult_IgnoreLexer;
         }
-        if (definition_.lexer == SCLEX_CPP) {
-            if (IsCppCommentStyle(currentStyle) && (ch == '@' || ch == '\\')) {
-                for (const char* group : kwDoxyDoc)
-                    words.AddList(group);
+        if (ch == ':' && (currentStyle == SCE_CSS_DEFAULT || currentStyle == SCE_CSS_OPERATOR)) {
+            if (previous == ':') {
+                words.AddList(cssKeywords[3]);
+                return AddWordResult_IgnoreLexer;
+            }
+            if (previousStyle != SCE_CSS_PROPERTY && previousStyle != SCE_CSS_UNKNOWN_PROPERTY) {
+                words.AddList(cssKeywords[2]);
+                return AddWordResult_IgnoreLexer;
+            }
+        }
+        if ((ch == '$' || ch == '@' || ch == '#') && IsDocWordChar(ch)) return AddWordResult_IgnoreLexer;
+        return AddWordResult_None;
+    }
+    AddWordResult AddJavaScriptSpecialWord(WordList& words, int currentStyle, int ch) {
+        currentStyle -= js_style(SCE_JS_DEFAULT);
+        if (ch == '@' && currentStyle >= SCE_JS_COMMENTLINE && currentStyle <= SCE_JS_TASKMARKER) {
+            AddList(words, SyntaxFor(SyntaxLanguage::JavaScript), 10);
+            return AddWordResult_Finish;
+        }
+        if ((ch == '$' || ch == '@' || ch == '#') && IsDocWordChar(ch)) return AddWordResult_IgnoreLexer;
+        return AddWordResult_None;
+    }
+    AddWordResult AddCppSpecialWord(WordList& words, int currentStyle, int ch) {
+        if (IsCppCommentStyle(currentStyle) && (ch == '@' || ch == '\\')) {
+            for (const char* group : kwDoxyDoc)
+                words.AddList(group);
+            return AddWordResult_Finish;
+        }
+        if (currentStyle == SCE_C_DEFAULT) {
+            if (ch == '#') {
+                AddList(words, definition_, 2);
                 return AddWordResult_Finish;
             }
-            if (currentStyle == SCE_C_DEFAULT) {
-                if (ch == '#') {
-                    AddList(words, definition_, 2);
-                    return AddWordResult_Finish;
-                }
-                if (ch == '@') {
-                    AddList(words, definition_, 3);
-                    return AddWordResult_IgnoreLexer;
-                }
+            if (ch == '@') {
+                AddList(words, definition_, 3);
+                return AddWordResult_IgnoreLexer;
             }
         }
-        if (definition_.lexer == SCLEX_HTML && (ch == '<' || (previous == '<' && ch == '/'))) {
-            AddList(words, definition_, 0);
-            if (const auto* extra = ExtraWords()) words.AddList((*extra)[0]);
-            return AddWordResult_IgnoreLexer;
-        }
-        if (definition_.lexer == SCLEX_JAVASCRIPT &&
-            (ch == '@' || (ch == '<' && scheme == SyntaxLanguage::TypeScript)) && currentStyle >= SCE_JS_COMMENTLINE &&
+        return AddWordResult_None;
+    }
+
+    AddWordResult AddJavaScriptCommentWord(WordList& words, int currentStyle, int ch) {
+        const auto scheme = SyntaxSettingsLanguage(definition_.language);
+        if ((ch == '@' || (ch == '<' && scheme == SyntaxLanguage::TypeScript)) && currentStyle >= SCE_JS_COMMENTLINE &&
             currentStyle <= SCE_JS_TASKMARKER) {
             AddList(words, definition_, 10);
             if (scheme != SyntaxLanguage::JavaScript) AddList(words, SyntaxFor(SyntaxLanguage::JavaScript), 10);
             return AddWordResult_Finish;
         }
-        if (definition_.lexer == SCLEX_PYTHON && ch == '@' && currentStyle == SCE_PY_DEFAULT) {
-            AddList(words, definition_, 7);
-            return AddWordResult_IgnoreLexer;
+        return AddWordResult_None;
+    }
+    AddWordResult AddMarkupTagWords(WordList& words, int ch, int previous) {
+        if (ch != '<' && !(previous == '<' && ch == '/')) return AddWordResult_None;
+        if (definition_.lexer == SCLEX_MARKDOWN) {
+            AddList(words, SyntaxFor(SyntaxLanguage::Html), 0);
+        } else {
+            AddList(words, definition_, 0);
+            if (const auto* extra = ExtraWords()) words.AddList((*extra)[0]);
         }
+        return AddWordResult_IgnoreLexer;
+    }
+    AddWordResult AddSchemeSpecialWord(WordList& words, int currentStyle, int ch, int previous) {
+        switch (definition_.lexer) {
+        case SCLEX_BASH:
+            if (ch == '$') {
+                AddList(words, definition_, 2);
+                return AddWordResult_IgnoreLexer;
+            }
+            break;
+        case SCLEX_CPP:
+            return AddCppSpecialWord(words, currentStyle, ch);
+        case SCLEX_HTML:
+        case SCLEX_MARKDOWN:
+            return AddMarkupTagWords(words, ch, previous);
+        case SCLEX_JAVASCRIPT:
+            return AddJavaScriptCommentWord(words, currentStyle, ch);
+        case SCLEX_PYTHON:
+            if (ch == '@' && currentStyle == SCE_PY_DEFAULT) {
+                AddList(words, definition_, 7);
+                return AddWordResult_IgnoreLexer;
+            }
+            break;
+        default:
+            break;
+        }
+        return AddWordResult_None;
+    }
+    AddWordResult AutoC_AddSpecWord(WordList& words, int currentStyle, int previousStyle, int ch, int previous) {
+        if ((ch == '\\' || (previous == '\\' && (ch == '^' || ch == ':'))) && settings_.latexInputMethod)
+            words.AddList(ch == ':' ? EmojiInputSequenceString : LaTeXInputSequenceString);
+        if (definition_.lexer == SCLEX_HTML && currentStyle >= css_style(SCE_CSS_DEFAULT) &&
+            currentStyle < SCE_PHP_DEFAULT)
+            return AddCssSpecialWord(words, currentStyle, previousStyle, ch, previous);
+        if (definition_.lexer == SCLEX_HTML && currentStyle >= js_style(SCE_JS_DEFAULT) &&
+            currentStyle < css_style(SCE_CSS_DEFAULT))
+            return AddJavaScriptSpecialWord(words, currentStyle, ch);
+        const auto result = AddSchemeSpecialWord(words, currentStyle, ch, previous);
+        if (result != AddWordResult_None) return result;
         if ((ch == '$' || ch == '@' || ch == '#') && IsDocWordChar(ch)) return AddWordResult_IgnoreLexer;
         return AddWordResult_None;
     }
 
-public:
-    Collector(EditorControl& editor, const SyntaxDefinition& definition, const WordCompletionSettings& settings)
-        : editor_(editor), definition_(definition), settings_(settings), styles_(CompletionStylesFor(definition)) {}
-    std::string FillUps() const {
-        std::string text;
-        if (settings_.fillUpMask & CompletionFillUp::Space) text += ' ';
-        if (settings_.fillUpMask & CompletionFillUp::Punctuation)
-            for (const wxUniChar ch : settings_.fillUpPunctuation)
-                if (ch.GetValue() < 128 && std::ispunct(static_cast<unsigned char>(ch.GetValue())))
-                    text += static_cast<char>(ch.GetValue());
-        return text;
-    }
-    bool Run(bool autoInsert, WordCompletionCondition condition, WordCompletionState& state) {
-        const Sci_Position iCurrentPos = Call(Message::GetCurrentPos);
-        const Sci_Line iLine = Call(Message::LineFromPosition, iCurrentPos);
-        const Sci_Position iLineStartPos = Call(Message::PositionFromLine, iLine);
-
+    Sci_Position FindWordStart(Sci_Position iCurrentPos, Sci_Position iLineStartPos) {
         // word before current position
         Sci_Position iStartWordPos = iCurrentPos;
         do {
@@ -975,40 +1019,35 @@ public:
                 }
             }
         } while (iStartWordPos > iLineStartPos);
-        if (iStartWordPos == iCurrentPos) {
-            return false;
-        }
+        return iStartWordPos;
+    }
 
-        // beginning of word
-        int ch = Call(Message::GetCharAt, iStartWordPos);
-
-        int chPrev = '\0';
-        int chPrev2 = '\0';
-        if (ch < 0x80 && iStartWordPos > iLineStartPos) {
-            const Sci_Position before = Call(Message::PositionBefore, iStartWordPos);
-            if (before + 1 == iStartWordPos) {
-                chPrev = Call(Message::GetCharAt, before);
-                const Sci_Position before2 = Call(Message::PositionBefore, before);
-                if (before2 >= iLineStartPos && before2 + 1 == before) {
-                    chPrev2 = Call(Message::GetCharAt, before2);
-                }
-                // word after escape character or format specifier
-                if (chPrev == '%' || (chPrev == definition_.original.escapeCharacterStart &&
-                                      (definition_.original.lexerAttributes & LexerAttr_EscapePunctuation) == 0)) {
-                    const int style = Call(Message::GetStyleIndexAt, iStartWordPos);
-                    if (IsEscapeCharOrFormatSpecifier(before, ch, chPrev, style, false)) {
-                        ++iStartWordPos;
-                        ch = Call(Message::GetCharAt, iStartWordPos);
-                        chPrev = '\0';
-                    }
-                }
+    void ReadWordPrefix(Sci_Position& iStartWordPos, Sci_Position iLineStartPos, int& ch, int& chPrev, int& chPrev2) {
+        chPrev = 0;
+        chPrev2 = 0;
+        if (ch >= 0x80 || iStartWordPos <= iLineStartPos) return;
+        const Sci_Position before = Call(Message::PositionBefore, iStartWordPos);
+        if (before + 1 != iStartWordPos) return;
+        chPrev = Call(Message::GetCharAt, before);
+        const Sci_Position before2 = Call(Message::PositionBefore, before);
+        if (before2 >= iLineStartPos && before2 + 1 == before) chPrev2 = Call(Message::GetCharAt, before2);
+        // Word after an escape character or format specifier.
+        if (chPrev == '%' || (chPrev == definition_.original.escapeCharacterStart &&
+                              (definition_.original.lexerAttributes & LexerAttr_EscapePunctuation) == 0)) {
+            const int style = Call(Message::GetStyleIndexAt, iStartWordPos);
+            if (IsEscapeCharOrFormatSpecifier(before, ch, chPrev, style, false)) {
+                ++iStartWordPos;
+                ch = Call(Message::GetCharAt, iStartWordPos);
+                chPrev = 0;
             }
         }
+    }
 
+    int MinimumRootLength(int ch, Sci_Position iStartWordPos) {
         int iRootLen = settings_.minWordLength;
         if (ch >= '0' && ch <= '9') {
             if (settings_.minNumberLength <= 0) { // ignore number
-                return false;
+                return -1;
             }
 
             iRootLen = settings_.minNumberLength;
@@ -1020,94 +1059,45 @@ public:
                 }
             }
         }
+        return iRootLen;
+    }
 
-        if (iCurrentPos - iStartWordPos < iRootLen) {
-            return false;
+    std::optional<int> ReadPreprocessorPrefix(Sci_Position iStartWordPos, Sci_Position iLineStartPos, int chPrev) {
+        Sci_Position before = iStartWordPos - 1;
+        if (chPrev != '#') {
+            while (before >= iLineStartPos) {
+                chPrev = Call(Message::GetCharAt, before);
+                if (!IsASpaceOrTab(chPrev)) break;
+                --before;
+            }
         }
+        if (chPrev != '#') return std::nullopt;
+        if (before > iLineStartPos) {
+            --before;
+            while (before >= iLineStartPos && IsASpaceOrTab(Call(Message::GetCharAt, before)))
+                --before;
+            if (before >= iLineStartPos) chPrev = 0;
+        }
+        return chPrev;
+    }
 
-        // preprocessor like: # space preprocessor
+    void AdjustSpecialPrefix(Sci_Position iStartWordPos, Sci_Position iLineStartPos, int& ch, int& chPrev,
+                             int chPrev2) {
         if ((definition_.original.lexerAttributes & LexerAttr_CppPreprocessor) &&
             (chPrev == '#' || IsASpaceOrTab(chPrev))) {
-            Sci_Position before = iStartWordPos - 1;
-            if (chPrev != '#') {
-                while (before >= iLineStartPos) {
-                    chPrev = Call(Message::GetCharAt, before);
-                    if (!IsASpaceOrTab(chPrev)) {
-                        break;
-                    }
-                    --before;
-                }
-            }
-            if (chPrev == '#') {
-                if (before > iLineStartPos) {
-                    --before;
-                    while (before >= iLineStartPos && IsASpaceOrTab(Call(Message::GetCharAt, before))) {
-                        --before;
-                    }
-                    if (before >= iLineStartPos) {
-                        chPrev = '\0';
-                    }
-                }
-                ch = chPrev;
-            }
-            chPrev = '\0';
+            if (const auto previous = ReadPreprocessorPrefix(iStartWordPos, iLineStartPos, chPrev)) ch = *previous;
+            chPrev = 0;
         } else if (IsSpecialStartChar(chPrev, chPrev2)) {
             ch = chPrev;
             chPrev = chPrev2;
         }
+    }
 
-        CharBuffer<> pRoot(iCurrentPos - iStartWordPos + 1);
-        const Sci_TextRangeFull tr = {{iStartWordPos, iCurrentPos}, pRoot.data()};
-        Call(Message::GetTextRangeFull, 0, &tr);
-        iRootLen = static_cast<int>(strlen(pRoot.data()));
-
-#if 0
-	StopWatch watch;
-	watch.Start();
-#endif
-
-        bool bIgnoreLexer = (settings_.completeOption & AutoCompletionOption_OnlyWordsInDocument) != 0 ||
-                            (pRoot[0] >= '0' && pRoot[0] <= '9'); // number
-        const bool bIgnoreCase = bIgnoreLexer || settings_.ignoreCase;
-        WordList pWList;
-        pWList.Init(pRoot.data(), iRootLen, bIgnoreCase);
-        bool bIgnoreDoc = false;
-        char prefix = '\0';
-
-        int iCurrentStyle = Call(Message::GetStyleIndexAt, iCurrentPos);
-        if (!bIgnoreLexer && IsSpecialStartChar(ch, chPrev)) {
-            int iPrevStyle = 0;
-            if (ch == ':' && chPrev != ':') {
-                const Sci_Position iPos = Call(Message::WordStartPosition, iStartWordPos - 1, false);
-                iPrevStyle = Call(Message::GetStyleIndexAt, iPos);
-            }
-
-            const AddWordResult result = AutoC_AddSpecWord(pWList, iCurrentStyle, iPrevStyle, ch, chPrev);
-            if (result == AddWordResult_Finish) {
-                bIgnoreLexer = true;
-                bIgnoreDoc = true;
-            } else if (result == AddWordResult_IgnoreLexer) {
-                bIgnoreLexer = true;
-                // HTML/XML Tag
-                if (ch == '/' || ch == '>') {
-                    ch = '<';
-                }
-                prefix = static_cast<char>(ch);
-            }
-        }
-
-        if (iCurrentStyle == 0) {
-            // word not yet styled, or is plain text
-            iCurrentStyle = Call(Message::GetStyleIndexAt, iStartWordPos);
-        }
-
-        bool retry = true;
-        std::array<uint32_t, 8> ignoredStyleMask{};
-        const bool bScanWordsInDocument = (settings_.completeOption & AutoCompletionOption_ScanWordsInDocument) != 0;
+    bool CompletionScopeEnabled(int iCurrentStyle, bool bScanWordsInDocument) {
         if (definition_.lexer == SCLEX_NULL || (definition_.original.lexerAttributes & LexerAttr_PlainTextFile)) {
             if (!bScanWordsInDocument || !(settings_.completeScope & AutoCompleteScope_PlainText) ||
                 !(settings_.scanWordScope & AutoCompleteScope_PlainText)) {
-                retry = false;
+                return false;
             }
         } else {
             if ((!(settings_.completeScope & AutoCompleteScope_Commont) && IsCommentStyle(iCurrentStyle)) ||
@@ -1115,29 +1105,57 @@ public:
                  CompletionStyleContains(styles_.strings, iCurrentStyle)) ||
                 (!(settings_.completeScope & AutoCompleteScope_PlainText) &&
                  CompletionStyleContains(styles_.plainText, iCurrentStyle))) {
-                retry = false;
+                return false;
             }
-            if (retry && bScanWordsInDocument) {
-                ignoredStyleMask = styles_.ignoredWords;
-                if (!(settings_.scanWordScope & AutoCompleteScope_Commont) && !IsCommentStyle(iCurrentStyle)) {
-                    for (unsigned i = 0; i < 8; i++) {
-                        ignoredStyleMask[i] |= styles_.comments[i];
-                    }
+        }
+
+        return true;
+    }
+
+    std::array<uint32_t, 8> IgnoredDocumentStyles(int iCurrentStyle, bool bScanWordsInDocument) {
+        std::array<uint32_t, 8> ignoredStyleMask{};
+        if (bScanWordsInDocument) {
+            ignoredStyleMask = styles_.ignoredWords;
+            if (!(settings_.scanWordScope & AutoCompleteScope_Commont) && !IsCommentStyle(iCurrentStyle)) {
+                for (unsigned i = 0; i < 8; i++) {
+                    ignoredStyleMask[i] |= styles_.comments[i];
                 }
-                if (!(settings_.scanWordScope & AutoCompleteScope_String) &&
-                    !CompletionStyleContains(styles_.strings, iCurrentStyle)) {
-                    for (unsigned i = 0; i < 8; i++) {
-                        ignoredStyleMask[i] |= styles_.strings[i];
-                    }
+            }
+            if (!(settings_.scanWordScope & AutoCompleteScope_String) &&
+                !CompletionStyleContains(styles_.strings, iCurrentStyle)) {
+                for (unsigned i = 0; i < 8; i++) {
+                    ignoredStyleMask[i] |= styles_.strings[i];
                 }
-                if (!(settings_.scanWordScope & AutoCompleteScope_PlainText) &&
-                    !CompletionStyleContains(styles_.plainText, iCurrentStyle)) {
-                    for (unsigned i = 0; i < 8; i++) {
-                        ignoredStyleMask[i] |= styles_.plainText[i];
-                    }
+            }
+            if (!(settings_.scanWordScope & AutoCompleteScope_PlainText) &&
+                !CompletionStyleContains(styles_.plainText, iCurrentStyle)) {
+                for (unsigned i = 0; i < 8; i++) {
+                    ignoredStyleMask[i] |= styles_.plainText[i];
                 }
             }
         }
+        return ignoredStyleMask;
+    }
+
+    bool RetrySubRoot(WordList& words) {
+        if (words.iStartLen == 0) return false;
+        const char* root = strpbrk(words.pWordStart, ":.#@<\\/->$%");
+        if (!root) return false;
+        while (IsSpecialStart(*root))
+            ++root;
+        if (!*root) return false;
+        words.UpdateRoot(root, static_cast<unsigned>(strlen(root)));
+        return true;
+    }
+
+    void CollectCandidates(WordList& pWList, int iCurrentStyle, bool bIgnoreLexer, bool bIgnoreDoc, char prefix) {
+        const bool bScanWordsInDocument = (settings_.completeOption & AutoCompletionOption_ScanWordsInDocument) != 0;
+        const bool bIgnoreCase = pWList.bIgnoreCase;
+        bool retry = CompletionScopeEnabled(iCurrentStyle, bScanWordsInDocument);
+        const auto ignoredStyleMask =
+            definition_.lexer == SCLEX_NULL || (definition_.original.lexerAttributes & LexerAttr_PlainTextFile)
+                ? std::array<uint32_t, 8>{}
+                : IgnoredDocumentStyles(iCurrentStyle, retry && bScanWordsInDocument);
 
         while (retry) {
             if (!bIgnoreLexer) {
@@ -1155,23 +1173,130 @@ public:
             }
 
             retry = false;
-            if (pWList.nWordCount == 0 && iRootLen != 0) {
-                const char* pSubRoot = strpbrk(pWList.pWordStart, ":.#@<\\/->$%");
-                if (pSubRoot) {
-                    while (IsSpecialStart(*pSubRoot)) {
-                        pSubRoot++;
-                    }
-                    if (*pSubRoot) {
-                        iRootLen = static_cast<int>(strlen(pSubRoot));
-                        pWList.UpdateRoot(pSubRoot, iRootLen);
-                        retry = true;
-                        bIgnoreLexer = false;
-                        bIgnoreDoc = false;
-                        prefix = '\0';
-                    }
-                }
+            if (pWList.nWordCount == 0 && RetrySubRoot(pWList)) {
+                retry = true;
+                bIgnoreLexer = false;
+                bIgnoreDoc = false;
+                prefix = 0;
             }
         }
+    }
+
+    void ShowCandidates(const WordList& pWList, bool bIgnoreCase, bool autoInsert) {
+        const auto pList = pWList.GetList();
+        const auto fillUps = FillUps();
+        Call(Message::AutoCSetOptions, SC_AUTOCOMPLETE_FIXED_SIZE);
+        // Call(Message::AutoCSetOrder, SC_ORDER_PRESORTED); // pre-sorted is default
+        Call(Message::AutoCSetIgnoreCase, bIgnoreCase); // case sensitivity
+        Call(Message::AutoCSetCaseInsensitiveBehaviour, bIgnoreCase);
+        // Call(Message::AutoCSetSeparator, '\n');
+        // Call(Message::AutoCSetTypeSeparator, '\t');
+        Call(Message::AutoCSetFillUps, 0, fillUps.c_str());
+        // Call(Message::AutoCSetDropRestOfWord, true); // delete orginal text: pRoot
+        Call(Message::AutoCSetMaxHeight,
+             std::min(pWList.nWordCount, static_cast<unsigned>(settings_.visibleItemCount))); // visible rows
+        Call(Message::AutoCSetCancelAtStart, false); // don't cancel the list when deleting character
+        Call(Message::AutoCSetChooseSingle, autoInsert);
+        Call(Message::AutoCSetSeparator, '\n');
+        Call(Message::AutoCShow, pWList.iStartLen, pList.get());
+    }
+
+    struct SpecialSources {
+        bool ignoreLexer;
+        bool ignoreDocument = false;
+        char prefix = 0;
+    };
+    SpecialSources PrepareSpecialSources(WordList& pWList, int iCurrentStyle, Sci_Position iStartWordPos, int ch,
+                                         int chPrev, bool ignoreLexer) {
+        SpecialSources sources{ignoreLexer};
+
+        if (!sources.ignoreLexer && IsSpecialStartChar(ch, chPrev)) {
+            int iPrevStyle = 0;
+            if (ch == ':' && chPrev != ':') {
+                const Sci_Position iPos = Call(Message::WordStartPosition, iStartWordPos - 1, false);
+                iPrevStyle = Call(Message::GetStyleIndexAt, iPos);
+            }
+
+            const AddWordResult result = AutoC_AddSpecWord(pWList, iCurrentStyle, iPrevStyle, ch, chPrev);
+            if (result == AddWordResult_Finish) {
+                sources.ignoreLexer = true;
+                sources.ignoreDocument = true;
+            } else if (result == AddWordResult_IgnoreLexer) {
+                sources.ignoreLexer = true;
+                // HTML/XML Tag
+                if (ch == '/' || ch == '>') {
+                    ch = '<';
+                }
+                sources.prefix = static_cast<char>(ch);
+            }
+        }
+        return sources;
+    }
+
+public:
+    Collector(EditorControl& editor, const SyntaxDefinition& definition, const WordCompletionSettings& settings)
+        : editor_(editor), definition_(definition), settings_(settings), styles_(CompletionStylesFor(definition)) {}
+    std::string FillUps() const {
+        std::string text;
+        if (settings_.fillUpMask & CompletionFillUp::Space) text += ' ';
+        if (settings_.fillUpMask & CompletionFillUp::Punctuation)
+            for (const wxUniChar ch : settings_.fillUpPunctuation)
+                if (ch.GetValue() < 128 && std::ispunct(static_cast<unsigned char>(ch.GetValue())))
+                    text += static_cast<char>(ch.GetValue());
+        return text;
+    }
+    bool Run(bool autoInsert, WordCompletionCondition condition, WordCompletionState& state) {
+        const Sci_Position iCurrentPos = Call(Message::GetCurrentPos);
+        const Sci_Line iLine = Call(Message::LineFromPosition, iCurrentPos);
+        const Sci_Position iLineStartPos = Call(Message::PositionFromLine, iLine);
+
+        Sci_Position iStartWordPos = FindWordStart(iCurrentPos, iLineStartPos);
+        if (iStartWordPos == iCurrentPos) {
+            return false;
+        }
+
+        // beginning of word
+        int ch = Call(Message::GetCharAt, iStartWordPos);
+
+        int chPrev = 0;
+        int chPrev2 = 0;
+        ReadWordPrefix(iStartWordPos, iLineStartPos, ch, chPrev, chPrev2);
+
+        int iRootLen = MinimumRootLength(ch, iStartWordPos);
+        if (iRootLen < 0) return false;
+
+        if (iCurrentPos - iStartWordPos < iRootLen) {
+            return false;
+        }
+
+        AdjustSpecialPrefix(iStartWordPos, iLineStartPos, ch, chPrev, chPrev2);
+
+        CharBuffer<> pRoot(iCurrentPos - iStartWordPos + 1);
+        const Sci_TextRangeFull tr = {{iStartWordPos, iCurrentPos}, pRoot.data()};
+        Call(Message::GetTextRangeFull, 0, &tr);
+        iRootLen = static_cast<int>(strlen(pRoot.data()));
+
+#if 0
+	StopWatch watch;
+	watch.Start();
+#endif
+
+        bool bIgnoreLexer = (settings_.completeOption & AutoCompletionOption_OnlyWordsInDocument) != 0 ||
+                            (pRoot[0] >= '0' && pRoot[0] <= '9'); // number
+        const bool bIgnoreCase = bIgnoreLexer || settings_.ignoreCase;
+        WordList pWList;
+        pWList.Init(pRoot.data(), iRootLen, bIgnoreCase);
+
+        int iCurrentStyle = Call(Message::GetStyleIndexAt, iCurrentPos);
+        const auto sources = PrepareSpecialSources(pWList, iCurrentStyle, iStartWordPos, ch, chPrev, bIgnoreLexer);
+
+        if (iCurrentStyle == 0) {
+            // word not yet styled, or is plain text
+            iCurrentStyle = Call(Message::GetStyleIndexAt, iStartWordPos);
+        }
+
+        CollectCandidates(pWList, iCurrentStyle, sources.ignoreLexer, sources.ignoreDocument, sources.prefix);
+        iRootLen = static_cast<int>(pWList.iStartLen);
 
 #if 0
 	watch.Stop();
@@ -1189,26 +1314,9 @@ public:
             (condition == WordCompletionCondition::CharacterDeleted && state.previousItemCount < pWList.nWordCount);
         if (bShow && updated) {
             state.previousItemCount = pWList.nWordCount;
-            char* pList = pWList.GetList();
-            const auto fillUps = FillUps();
-            Call(Message::AutoCSetOptions, SC_AUTOCOMPLETE_FIXED_SIZE);
-            // Call(Message::AutoCSetOrder, SC_ORDER_PRESORTED); // pre-sorted is default
-            Call(Message::AutoCSetIgnoreCase, bIgnoreCase); // case sensitivity
-            Call(Message::AutoCSetCaseInsensitiveBehaviour, bIgnoreCase);
-            // Call(Message::AutoCSetSeparator, '\n');
-            // Call(Message::AutoCSetTypeSeparator, '\t');
-            Call(Message::AutoCSetFillUps, 0, fillUps.c_str());
-            // Call(Message::AutoCSetDropRestOfWord, true); // delete orginal text: pRoot
-            Call(Message::AutoCSetMaxHeight,
-                 std::min(pWList.nWordCount, static_cast<unsigned>(settings_.visibleItemCount))); // visible rows
-            Call(Message::AutoCSetCancelAtStart, false); // don't cancel the list when deleting character
-            Call(Message::AutoCSetChooseSingle, autoInsert);
-            Call(Message::AutoCSetSeparator, '\n');
-            Call(Message::AutoCShow, pWList.iStartLen, pList);
-            std::free(pList);
+            ShowCandidates(pWList, bIgnoreCase, autoInsert);
         }
 
-        pWList.Free();
         return bShow;
     }
 };

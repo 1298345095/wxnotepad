@@ -139,4 +139,8 @@ inline const CompletionReference completionReference[] = {
     {"HTML", "<?php is_", "<?php is_", 9, {}, nullptr, 0},
     {"XML Schema", "<xsd:ele", "<xsd:ele", 8, {"element", "elementFormDefault"}, "<xsd:element", 12},
     {"XSLT", "<xsl:tem", "<xsl:template", 13, {}, nullptr, 0},
+    // review-fixes/spec-original-cases/results.json, pinned original public command.
+    {"GitHub GFM", "<di", "<di", 3, {"dialog", "dir", "div"}, nullptr, 0},
+    {"GitLab GLFM", "</di", "</di", 4, {"dialog", "dir", "div"}, nullptr, 0},
+    {"Pandoc", "contented", "contenteditable", 15, {}, nullptr, 0},
 };

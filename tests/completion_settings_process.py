@@ -36,4 +36,16 @@ with tempfile.TemporaryDirectory(prefix='wxnotepad-completion-') as directory:
         if mode=='bounds':
             assert 'AutoCScanWordsTimeout=50' in saved and 'AutoCVisibleItemCount=8' in saved
             assert 'AutoCMinWordLength=' not in saved and 'AutoCMinNumberLength=0' in saved
+    duplicate_settings = (base + custom + '[Other]\nAutoCMinWordLength=untouched\n'
+                          'AutoCFillUpPunctuation=unrelated\n[sEtTiNgS]\n; duplicate section preserved\n'
+                          'AutoCMinWordLength=99\nAutoCFillUpPunctuation=duplicate\n')
+    ini.write_text(duplicate_settings, encoding='utf-16')
+    result = subprocess.run([str(executable), 'custom', 'explicit'], capture_output=True,
+                            text=True, timeout=30, env=env)
+    if result.returncode: raise RuntimeError(result.stdout + result.stderr)
+    saved = ini.read_text(encoding='utf-16')
+    assert saved.count('AutoCMinWordLength=2') == 1 and 'AutoCMinWordLength=99' not in saved
+    assert saved.count('AutoCFillUpPunctuation=!?:') == 1 and 'AutoCFillUpPunctuation=duplicate' not in saved
+    assert ('[Other]\nAutoCMinWordLength=untouched\nAutoCFillUpPunctuation=unrelated\n'
+            '[sEtTiNgS]\n; duplicate section preserved\n') in saved
 print('PASS: completion defaults, import, bounds, unknown keys and explicit/exit saves')

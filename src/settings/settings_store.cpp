@@ -388,34 +388,11 @@ void SettingsStore::WriteHistory(const wxString& sectionName, const std::vector<
 }
 
 void SettingsStore::WriteInt(const wxString& key, int value, int fallback, const wxString& sectionName) {
-    bool settings = false;
-    bool foundSection = false;
-    size_t insertion = lines_.size();
-    for (size_t index = 0; index < lines_.size();) {
-        wxString line = lines_[index];
-        line.Trim().Trim(false);
-        if (line.StartsWith("[")) {
-            settings = line.CmpNoCase("[" + sectionName + "]") == 0;
-            if (settings && !foundSection) {
-                insertion = index + 1;
-                foundSection = true;
-            }
-        } else if (settings && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
-            lines_.erase(lines_.begin() + static_cast<std::ptrdiff_t>(index));
-            continue;
-        }
-        ++index;
-    }
-    if (value == fallback) return;
-    if (!foundSection) {
-        lines_.push_back("[" + sectionName + "]");
-        insertion = lines_.size();
-    }
-    lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + wxString::Format("=%d", value));
+    WriteString(key, wxString::Format("%d", value), wxString::Format("%d", fallback), sectionName);
 }
 
-void SettingsStore::WriteString(const wxString& key, const wxString& value, const wxString& fallback) {
-    const wxString sectionName = "Settings";
+void SettingsStore::WriteString(const wxString& key, const wxString& value, const wxString& fallback,
+                                const wxString& sectionName) {
     bool settings = false;
     bool foundSection = false;
     size_t insertion = lines_.size();

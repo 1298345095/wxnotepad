@@ -28,10 +28,14 @@ pinned algorithm and tables.
 creates a separate portable original host and captures command results plus each
 candidate through the original public completion API and native Down/Enter
 messages. It does not use the clipboard. Reviewed literals are frozen in
-`tests/completion_reference.h`: 28 Plain Text, C/C++, Python, Bash, JSON,
+`tests/completion_reference.h`: 31 Plain Text, C/C++, Python, Bash, JSON,
 JavaScript/TypeScript, Rust/Go/Lua, Web Source Code and XML/XSD/XSLT cases,
 including embedded CSS/JavaScript, case matching, numbers, CJK and prefix
-fallbacks.
+fallbacks. Final review added the original Markdown HTML candidates: `<di` and
+`</di` offer `dialog`, `dir`, `div`, and `contented` completes to
+`contenteditable`. The shared original HTML tag/attribute/value groups apply to
+all three delivered Markdown dialects. Fresh private original-process captures
+are retained under `review-fixes/spec-original-cases/` in the batch evidence.
 
 The public application/native regressions are:
 
@@ -45,7 +49,9 @@ The public application/native regressions are:
   windows.
 - `original_completion_settings`: independent-process default/import/bound
   checks, live Ignore Case cancellation, explicit/exit-save behavior and
-  preservation of unknown settings.
+  preservation of unknown settings and unrelated sections while removing
+  duplicate known keys. The automatic-completion regression also checks that
+  the Ignore Case menu immediately changes subsequent typing candidates.
 
 These targets passed native Windows (150% DPI) and isolated X11/Wayland at
 `GDK_SCALE=1` and `2`. Windows native message/accelerator tests ran on an owned

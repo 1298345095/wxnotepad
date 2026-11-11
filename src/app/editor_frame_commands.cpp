@@ -1682,26 +1682,7 @@ wxMenu* EditorFrame::CreateSearchMenu() {
     return search;
 }
 
-wxMenu* EditorFrame::CreateSettingsMenu() {
-    auto* view = new wxMenu;
-    AppendIndentationOptions(view);
-    const int longLineSettings = wxWindow::NewControlId();
-    view->Append(longLineSettings, "Long Line Settings...");
-    Bind(
-        wxEVT_MENU,
-        [this](wxCommandEvent&) {
-            auto& preferences = settings_ ? settings_->values : defaults_;
-            int limit = static_cast<int>(editor_->Send(Scintilla::Message::GetEdgeColumn));
-            int mode = preferences.longLineMode;
-            if (ShowLongLineSettingsDialog(this, limit, mode)) {
-                preferences.longLinesLimit = limit;
-                preferences.longLineMode = mode;
-                editor_->Send(Scintilla::Message::SetEdgeColumn, limit);
-                editor_->Send(Scintilla::Message::SetEdgeMode, mode);
-                ApplyLongLineColour(*editor_);
-            }
-        },
-        longLineSettings);
+void EditorFrame::AppendCompletionOptions(wxMenu* view) {
     const int autoCompletion = wxWindow::NewControlId();
     view->Append(autoCompletion, "Auto &Completion Settings...");
     Bind(
@@ -1722,6 +1703,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         [this](wxCommandEvent&) {
             auto& preferences = settings_ ? settings_->values : defaults_;
             preferences.completion.ignoreCase = !preferences.completion.ignoreCase;
+            editor_->SetCompletionSettings(preferences.completion);
             editor_->Send(Scintilla::Message::AutoCCancel);
         },
         ignoreCase);
@@ -1732,17 +1714,9 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             event.Check(preferences.completion.ignoreCase);
         },
         ignoreCase);
-    const int autoIndent = wxWindow::NewControlId();
-    view->AppendCheckItem(autoIndent, "Auto &Indent");
-    Bind(
-        wxEVT_MENU,
-        [this](wxCommandEvent&) {
-            auto& preferences = settings_ ? settings_->values : defaults_;
-            preferences.autoIndent = !preferences.autoIndent;
-            editor_->SetAutoIndent(preferences.autoIndent);
-        },
-        autoIndent);
-    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoIndentEnabled()); }, autoIndent);
+}
+
+void EditorFrame::AppendSelectionOptions(wxMenu* view) {
     auto* selection = new wxMenu;
     for (const auto& [label, bit] :
          {std::pair{"Enable &Multiple Selection", SelectOption_EnableMultipleSelection},
@@ -1783,6 +1757,41 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     }
     AppendLineSelectionCommands(selection);
     view->AppendSubMenu(selection, "Select and &Edit Options");
+}
+
+wxMenu* EditorFrame::CreateSettingsMenu() {
+    auto* view = new wxMenu;
+    AppendIndentationOptions(view);
+    const int longLineSettings = wxWindow::NewControlId();
+    view->Append(longLineSettings, "Long Line Settings...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            int limit = static_cast<int>(editor_->Send(Scintilla::Message::GetEdgeColumn));
+            int mode = preferences.longLineMode;
+            if (ShowLongLineSettingsDialog(this, limit, mode)) {
+                preferences.longLinesLimit = limit;
+                preferences.longLineMode = mode;
+                editor_->Send(Scintilla::Message::SetEdgeColumn, limit);
+                editor_->Send(Scintilla::Message::SetEdgeMode, mode);
+                ApplyLongLineColour(*editor_);
+            }
+        },
+        longLineSettings);
+    AppendCompletionOptions(view);
+    const int autoIndent = wxWindow::NewControlId();
+    view->AppendCheckItem(autoIndent, "Auto &Indent");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            preferences.autoIndent = !preferences.autoIndent;
+            editor_->SetAutoIndent(preferences.autoIndent);
+        },
+        autoIndent);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoIndentEnabled()); }, autoIndent);
+    AppendSelectionOptions(view);
     view->AppendSeparator();
     auto* appearance = new wxMenu;
     const int shrinkScrollWidth = wxWindow::NewControlId();

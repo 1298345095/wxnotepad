@@ -108,6 +108,8 @@ private:
     void AppendLineEndingCommands(wxMenu* edit);
     void AppendLineSelectionCommands(wxMenu* edit);
     void AppendIndentationOptions(wxMenu* view);
+    void AppendCompletionOptions(wxMenu* view);
+    void AppendSelectionOptions(wxMenu* view);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
     void AppendMarginCommands(wxMenu* view);
