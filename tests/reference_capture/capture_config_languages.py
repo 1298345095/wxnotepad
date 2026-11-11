@@ -113,17 +113,17 @@ try:
 
         finally:app.close()
 finally:user.CloseDesktop(desktop)
-(root/'original.json').write_text(json.dumps(rows,indent=2),encoding='utf-8')
+(root/'original.json').write_text(json.dumps(rows,indent=2),encoding='utf-8', newline='\n')
 lines=['# Frozen Notepad4 89b8b36 states; capture_config_languages.py on a private Windows desktop.', '# filename\tstate\tdeleted-byte-position\tutf8-hex\tstyle-bytes-hex\tfold-levels']
 for row in rows:
     for state in row['states']:
         lines.append('\t'.join([row['name'],state['stage'],str(row['position']),state['text'],state['styles'],','.join(map(str,state['folds']))]))
-(root/'config_languages_reference.tsv').write_text('\n'.join(lines)+'\n',encoding='utf-8')
+(root/'config_languages_reference.tsv').write_text('\n'.join(lines)+'\n',encoding='utf-8', newline='\n')
 print('PASS: independently captured 3 original languages, 12 incremental states',[(r['name'],r['lexer']) for r in rows])
 
 lines=['# Frozen original public navigation and typed-character operations; capture_config_languages.py.']
 for row in operations:
     lines.append('\t'.join(str(row.get(key,'')) for key in ['name','kind','before','position','action','after','anchor','caret','undo','redo']))
-(root/'config_operations_reference.tsv').write_text('\n'.join(lines)+'\n',encoding='utf-8')
-(root/'original-operations.json').write_text(json.dumps(operations,indent=2),encoding='utf-8')
+(root/'config_operations_reference.tsv').write_text('\n'.join(lines)+'\n',encoding='utf-8', newline='\n')
+(root/'original-operations.json').write_text(json.dumps(operations,indent=2),encoding='utf-8', newline='\n')
 print('PASS: captured',len(operations),'original navigation and character operations')
