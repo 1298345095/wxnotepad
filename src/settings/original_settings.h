@@ -62,11 +62,13 @@ struct OriginalSettings {
     OriginalTabs globalTabs;
     std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> schemeTabs = [] {
         std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> tabs{};
-        tabs.fill(OriginalTabs{});
-        tabs[static_cast<size_t>(SyntaxLanguage::Json)] = {2, 2, true, false};
-        tabs[static_cast<size_t>(SyntaxLanguage::JavaScript)] = {2, 2, true, false};
-        tabs[static_cast<size_t>(SyntaxLanguage::TypeScript)] = {2, 2, true, false};
-        tabs[static_cast<size_t>(SyntaxLanguage::Html)] = {2, 2, true, false};
+        for (const auto& scheme : SyntaxCatalog()) {
+            const auto& original = scheme.original;
+            tabs[static_cast<size_t>(scheme.language)] = {
+                original.tabWidth, original.indentWidth,
+                (original.lexerAttributes & SyntaxLexerAttribute::TabsAsSpaces) != 0,
+                (original.lexerAttributes & SyntaxLexerAttribute::NoGlobalTabSettings) == 0};
+        }
         return tabs;
     }();
     bool tabIndents = true;

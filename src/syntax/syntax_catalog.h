@@ -31,6 +31,9 @@ enum class SyntaxLanguage : uint8_t {
     Xslt,
     Dtd,
     Plist,
+    Rust,
+    Go,
+    Lua,
     Count
 };
 struct SyntaxDetectionOptions {
@@ -62,6 +65,16 @@ inline constexpr uintptr_t PreSorted = 2U << 8U;
 inline constexpr uintptr_t NoLexer = 4U << 8U;
 inline constexpr uintptr_t NoAutoComp = 8U << 8U;
 } // namespace SyntaxKeywordAttribute
+namespace SyntaxLexerAttribute {
+inline constexpr uint32_t TabsAsSpaces = 1U << 0U;
+inline constexpr uint32_t NoGlobalTabSettings = 1U << 1U;
+inline constexpr uint32_t IndentLookForward = 1U << 5U;
+inline constexpr uint32_t PrintfFormatSpecifier = 1U << 6U;
+inline constexpr uint32_t AngleBracketGeneric = 1U << 7U;
+inline constexpr uint32_t CppPreprocessor = 1U << 8U;
+inline constexpr uint32_t CharacterPrefix = 1U << 9U;
+inline constexpr uint32_t EscapePunctuation = 1U << 10U;
+} // namespace SyntaxLexerAttribute
 
 // Pinned EditLexer.h::EDITLEXER generated defaults, shared by editing consumers.
 struct SyntaxOriginalMetadata {
