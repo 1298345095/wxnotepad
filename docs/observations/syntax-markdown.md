@@ -55,3 +55,14 @@ Windows observed 144 DPI with a 12-point font and 28-pixel line height. Native
 backend results and analyzer diagnostics are retained with that evidence. The
 parent task owns final combined Spec/Standards reviews and integrated platform
 verification; no Linux IME or model screenshot inspection is claimed here.
+
+Local validation passed the Markdown workflow on private Windows, X11 and
+Wayland. Canonical clang-format 23.1.2 passed all tracked C/C++ sources. Native
+clang-tidy 23 (Windows) and 18 (Linux) passed the six affected translation units
+under the repository analyzer error gate; generated signed-mask and inherited
+API warnings remain in the logs. Python discovery passed 30 tests with three
+platform skips using UTF-8 mode, and both the Markdown and shared import CLI
+checks passed. A stale Linux archive timestamp initially left incompatible
+settings objects; rebuilding current headers resolved it. The GTK file-filter
+regression now checks the original single Markdown type rather than counting
+its two additional Scheme-only dialect choices as file types.

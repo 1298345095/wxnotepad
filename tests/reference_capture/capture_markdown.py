@@ -113,12 +113,20 @@ try:
             states.append(snapshot('undo'))
             app.send(2011)
             states.append(snapshot('redo'))
+            navigation_text = (b'# Native Markdown\nH~2~O x^2^ ~~strike~~ *emphasis* **strong**\n\n'
+                               b'> filled quote\n\n---\n\n## Nested\nneedle\n')
+            app.reset(navigation_text)
+            app.send(4003, 0, -1)
+            found = navigation_text.index(b'needle')
+            app.send(2160, found, found + 6)
+            app.command(40485)  # Search > Goto Block Start
+            navigation = dict(text=navigation_text.hex(), anchor=app.send(2009), caret=app.send(2008))
             attributes = {str(style): {key: app.send(message, style) for key, message in
                           [('fore', 2481), ('back', 2482), ('bold', 2483), ('italic', 2484),
                            ('size', 2062), ('eolfill', 2487), ('underline', 2488), ('strike', 2283)]}
                           for style in sorted(set(bytes.fromhex(states[0]['styles'])))}
             rows.append(dict(name=dialect, position=position, lexer=app.send(4002),
-                             states=states, attributes=attributes))
+                             states=states, attributes=attributes, navigation=navigation))
         finally:
             app.close()
 finally:

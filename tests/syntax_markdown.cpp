@@ -222,6 +222,10 @@ void NativeStylesAndFoldSearch(EditorFrame* frame) {
     Require(editor->Send(Message::GetLineVisible, 8), "search unfolds the matched Markdown heading body");
     wxDynamicCast(query->GetParent(), wxDialog)->Hide();
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Search", "Goto Block Start"));
+    // Independently observed for this sample with original command 40485.
+    constexpr intptr_t originalBlockStartByte = 90;
+    NativeSearch::Selection(editor, originalBlockStartByte, originalBlockStartByte,
+                            "Markdown block navigation matches the original heading byte position");
     Require(TestEditor::Text(editor) == sample && !editor->Send(Message::CanUndo) && !frame->DocumentIsModified(),
             "folding, native search, navigation and style rendering preserve bytes, history and save point");
     std::puts("PASS: actual native overline rendering, retained style sample, folding/search and navigation");
