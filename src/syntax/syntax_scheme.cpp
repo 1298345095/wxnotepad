@@ -46,6 +46,9 @@ void ApplyLongLineColour(EditorControl& editor) {
 void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::optional<SyntaxLanguage> markupDialect) {
     using Scintilla::Message;
     const auto& definition = SyntaxFor(language);
+    editor.SetWordCompletionHandler([&editor, language](WordCompletionCondition condition) {
+        CompleteWord(editor, SyntaxFor(language), editor.GetCompletionSettings(), false, condition);
+    });
     editor.SetCompletionStyles(CompletionStylesFor(definition));
     const bool fold = definition.canFold;
     editor.Send(Message::SetMarginTypeN, EditorMargin::Folding, static_cast<intptr_t>(Scintilla::MarginType::Symbol));

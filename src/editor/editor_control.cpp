@@ -313,6 +313,10 @@ void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
 }
 
 intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam) {
+    if (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer) {
+        core_->WndProc(Message::AutoCCancel, 0, 0);
+        completionState_ = {};
+    }
     if (occurrences_ &&
         (message == Message::ClearAll || message == Message::SetText || message == Message::SetDocPointer))
         occurrences_->Stop();

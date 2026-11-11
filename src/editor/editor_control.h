@@ -14,6 +14,7 @@
 #include <wx/control.h>
 #include <wx/timer.h>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -79,6 +80,13 @@ public:
     void SortLines(unsigned options = SortOption::Ascending);
     void SetIndentationWidths(int tabWidth, int indentWidth);
     void SetCompletionSettings(const WordCompletionSettings& settings) { completionSettings_ = settings; }
+    const WordCompletionSettings& GetCompletionSettings() const { return completionSettings_; }
+    WordCompletionState& CompletionState() { return completionState_; }
+    void SetWordCompletionHandler(std::function<void(WordCompletionCondition)> handler) {
+        Send(Scintilla::Message::AutoCCancel);
+        completionState_ = {};
+        wordCompletionHandler_ = std::move(handler);
+    }
     void SetAutoInsertMask(int mask);
     bool IsOpenBraceMatched(intptr_t position, intptr_t startPosition);
     void SetCompletionStyles(CompletionStyles styles) { completionStyles_ = std::move(styles); }
@@ -142,6 +150,8 @@ private:
     bool foldMarginWidthDirty_ = true;
     bool highlightCurrentBlock_ = true;
     WordCompletionSettings completionSettings_;
+    WordCompletionState completionState_;
+    std::function<void(WordCompletionCondition)> wordCompletionHandler_;
     int autoInsertMask_ = AutoInsertMask_Default;
     CompletionStyles completionStyles_;
     void AutoInsertCharacter(int ch);

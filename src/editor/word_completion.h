@@ -17,6 +17,13 @@ inline constexpr int Space = 4;
 inline constexpr int Punctuation = 8;
 inline constexpr int Default = Enter | Tab | Space | Punctuation;
 } // namespace CompletionFillUp
+namespace WordCompletionScope {
+inline constexpr int Comment = 1;
+inline constexpr int String = 2;
+inline constexpr int PlainText = 4;
+inline constexpr int Other = 8;
+inline constexpr int All = Comment | String | PlainText | Other;
+} // namespace WordCompletionScope
 namespace WordCompletionLimits {
 inline constexpr int MinScanTimeoutMs = 50;
 inline constexpr int MinVisibleRows = 8;
@@ -32,8 +39,8 @@ struct WordCompletionSettings {
     bool ignoreCase = false;
     bool latexInputMethod = false;
     int completeOption = WordCompletionOption::Default;
-    int completeScope = 15;
-    int scanWordScope = 15;
+    int completeScope = WordCompletionScope::All;
+    int scanWordScope = WordCompletionScope::All;
     int scanWordsTimeout = 500;
     int visibleItemCount = 16;
     int minWordLength = 1;
@@ -41,8 +48,12 @@ struct WordCompletionSettings {
     int fillUpMask = CompletionFillUp::Default;
     wxString fillUpPunctuation = ";,()[]{}\\/";
 };
+enum class WordCompletionCondition { Normal, CharacterAdded, CharacterDeleted };
+struct WordCompletionState {
+    unsigned previousItemCount = 0;
+};
 void CompleteWord(EditorControl& editor, const SyntaxDefinition& definition, const WordCompletionSettings& settings,
-                  bool autoInsert = true);
+                  bool autoInsert = true, WordCompletionCondition condition = WordCompletionCondition::Normal);
 
 namespace Scintilla {
 struct NotificationData;

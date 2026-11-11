@@ -943,7 +943,7 @@ public:
                     text += static_cast<char>(ch.GetValue());
         return text;
     }
-    bool Run(bool autoInsert) {
+    bool Run(bool autoInsert, WordCompletionCondition condition, WordCompletionState& state) {
         const Sci_Position iCurrentPos = Call(Message::GetCurrentPos);
         const Sci_Line iLine = Call(Message::LineFromPosition, iCurrentPos);
         const Sci_Position iLineStartPos = Call(Message::PositionFromLine, iLine);
@@ -1182,7 +1182,13 @@ public:
         const bool bShow = pWList.nWordCount > 0 &&
                            !(pWList.nWordCount == 1 && pWList.nTotalLen == static_cast<unsigned>(iRootLen + 1));
 
-        if (bShow) {
+        const bool updated =
+            state.previousItemCount == 0 ||
+            (condition == WordCompletionCondition::CharacterAdded &&
+             state.previousItemCount - pWList.nWordCount > static_cast<unsigned>(settings_.visibleItemCount)) ||
+            (condition == WordCompletionCondition::CharacterDeleted && state.previousItemCount < pWList.nWordCount);
+        if (bShow && updated) {
+            state.previousItemCount = pWList.nWordCount;
             char* pList = pWList.GetList();
             const auto fillUps = FillUps();
             Call(Message::AutoCSetOptions, SC_AUTOCOMPLETE_FIXED_SIZE);
@@ -1208,7 +1214,15 @@ public:
 };
 } // namespace
 void CompleteWord(EditorControl& editor, const SyntaxDefinition& definition, const WordCompletionSettings& settings,
-                  bool autoInsert) {
+                  bool autoInsert, WordCompletionCondition condition) {
+    auto& state = editor.CompletionState();
+    if (condition == WordCompletionCondition::CharacterAdded &&
+        state.previousItemCount <= 2U * static_cast<unsigned>(settings.visibleItemCount))
+        return;
+    if (condition == WordCompletionCondition::Normal) state.previousItemCount = 0;
     editor.SetCompletionSettings(settings);
-    Collector(editor, definition, settings).Run(autoInsert);
+    if (!Collector(editor, definition, settings).Run(autoInsert, condition, state)) {
+        state.previousItemCount = 0;
+        if (condition != WordCompletionCondition::Normal) editor.Send(Message::AutoCCancel);
+    }
 }
