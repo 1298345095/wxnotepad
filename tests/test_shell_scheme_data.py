@@ -31,7 +31,7 @@ KeywordAttr32(0, KeywordAttr_PreSorted) | KeywordAttr32(1, KeywordAttr_PreSorted
 EDITLEXER_HOLE(L"Shell Script", Keywords_Bash, Styles_Bash),
 L"sh; bash",
 Keywords_Bash
-};''' 
+};'''
         # Keep each upstream style record on one line, as in pinned stlBash.cpp.
         source = source.replace(b'NP2StyleX_String,\n  L', b'NP2StyleX_String, L')
         output = generate_scheme(source, 'Bash', 'Bash', 'bash')
