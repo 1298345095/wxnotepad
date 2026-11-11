@@ -53,7 +53,6 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
         result.ignoredWords[SCE_C_PREPROCESSOR >> 5] |= (1U << (SCE_C_PREPROCESSOR & 31));
         result.ignoredWords[SCE_C_ASM_REGISTER >> 5] |= (1U << (SCE_C_ASM_REGISTER & 31));
         result.ignoredWords[SCE_C_ASM_INSTRUCTION >> 5] |= (1U << (SCE_C_ASM_INSTRUCTION & 31));
-        np2_LexKeyword = &kwDoxyDoc;
         break;
     case SyntaxLanguage::Html:
     case SyntaxLanguage::AspVb:

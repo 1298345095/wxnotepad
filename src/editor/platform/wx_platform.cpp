@@ -1,5 +1,5 @@
 // wx rendering and window adapter for the pinned Notepad4 Scintilla core.
-// Basic LTR rendering is supported; complex layout and popup UI are not implemented.
+// Basic LTR rendering and native nonactivating completion UI.
 #include "core_headers.h"
 #include "editor/display_units.h"
 #include <wx/wx.h>
@@ -9,7 +9,10 @@
 #include <wx/graphics.h>
 #endif
 #include <wx/display.h>
-#include <wx/listbox.h>
+#include <wx/popupwin.h>
+#include <wx/vlbox.h>
+#include <wx/sizer.h>
+#include <wx/renderer.h>
 #ifdef __WXGTK__
 #include <pango/pango.h>
 #endif
@@ -367,65 +370,121 @@ void Window::SetCursor(Cursor c) const noexcept {
                                                           : wxCURSOR_ARROW));
 }
 PRectangle SCICALL Window::GetMonitorRect(Point point) const noexcept {
-    int index = wxDisplay::GetFromPoint(wxPoint(point.x, point.y));
+    const auto screen = Host(wid)->ClientToScreen(wxPoint(point.x, point.y));
+    int index = wxDisplay::GetFromPoint(screen);
     if (index == wxNOT_FOUND) index = 0;
-    return Area(wxDisplay(index).GetClientArea());
+    auto bounds = wxDisplay(index).GetClientArea();
+    bounds.SetPosition(Host(wid)->ScreenToClient(bounds.GetPosition()));
+    return Area(bounds);
 }
-class WxListBox final : public ListBox {
-    wxListBox* list_ = nullptr;
-    int rows_ = 8;
-    IListBoxDelegate* delegate_ = nullptr;
-
+// Adapted from wxWidgets 3.3.3 src/stc/PlatWX.cpp: wxSTCPopupBase,
+// wxSTCListBox. The original core retains all keyboard and completion state.
+class CompletionPopup final : public wxPopupWindow {
 public:
-    void SetFont(std::shared_ptr<Font> f) noexcept override {
-        if (list_) list_->SetFont(static_cast<WxFont*>(f.get())->font);
+    explicit CompletionPopup(wxWindow* parent) : wxPopupWindow(parent, wxPU_CONTAINS_CONTROLS) {
+        SetName("Word completion");
     }
-    void SCICALL Create(Window& p, int id, Point at, int, int, Scintilla::Technology) noexcept override {
-        list_ = new wxListBox(Host(p.GetID()), id, wxPoint(at.x, at.y));
-        wid = list_;
-        list_->Bind(wxEVT_LISTBOX, [this](wxCommandEvent&) {
-            if (delegate_) {
-                ListBoxEvent e(ListBoxEvent::EventType::selectionChange);
-                delegate_->ListNotify(&e);
-            }
-        });
+    bool AcceptsFocus() const override { return false; }
+#ifdef __WXMSW__
+    bool Show(bool show) override {
+        if (!show) return wxPopupWindow::Show(false);
+        const bool changed = wxWindowBase::Show(true);
+        if (changed) {
+            ::ShowWindow(static_cast<HWND>(GetHandle()), SW_SHOWNA);
+            ::SetWindowPos(static_cast<HWND>(GetHandle()), HWND_NOTOPMOST, 0, 0, 0, 0,
+                           SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+        return changed;
     }
-    void SetAverageCharWidth(int, double) noexcept override {
-        // The native list box handles character sizing; popup sizing uses fixed rows.
+    bool MSWHandleMessage(WXLRESULT* result, WXUINT message, WXWPARAM first, WXLPARAM second) override {
+        if (message == WM_MOUSEACTIVATE) {
+            *result = MA_NOACTIVATE;
+            return true;
+        }
+        return wxPopupWindow::MSWHandleMessage(result, message, first, second);
     }
-    void SetVisibleRows(int rows) noexcept override { rows_ = rows; }
-    int GetVisibleRows() const noexcept override { return rows_; }
-    PRectangle GetDesiredRect() override { return PRectangle(0, 0, 240, rows_ * 22); }
-    int CaretFromEdge() const noexcept override { return 0; }
-    void Clear() noexcept override {
-        if (list_) list_->Clear();
+#endif
+};
+class CompletionList final : public wxVListBox {
+public:
+    std::vector<wxString> labels;
+    IListBoxDelegate* delegate = nullptr;
+    int itemHeight = 1;
+    explicit CompletionList(wxWindow* parent, int id)
+        : wxVListBox(parent, id, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE) {
+        SetName("Completion candidates");
+        Bind(wxEVT_LISTBOX, [this](wxCommandEvent&) { Notify(ListBoxEvent::EventType::selectionChange); });
+        Bind(wxEVT_LISTBOX_DCLICK, [this](wxCommandEvent&) { Notify(ListBoxEvent::EventType::doubleClick); });
+        Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) { Measure(); event.Skip(); });
     }
-    int Length() const noexcept override { return list_ ? list_->GetCount() : 0; }
-    void Select(int n) override {
-        if (list_) list_->SetSelection(n);
-    }
-    int GetSelection() const noexcept override { return list_ ? list_->GetSelection() : -1; }
-    std::string GetValue(int n) const override { return list_ ? list_->GetString(n).ToStdString(wxConvUTF8) : ""; }
-    void RegisterImage(int, const char*) override {
-        // The wx list box displays text items without registered image decoration.
-    }
-    void RegisterRGBAImage(int, int, int, const unsigned char*) override {
-        // The wx list box displays text items without RGBA image decoration.
-    }
-    void ClearRegisteredImages() noexcept override {
-        // The text-only list box retains no registered image resources.
-    }
-    void SetDelegate(IListBoxDelegate* d) noexcept override { delegate_ = d; }
-    void SetList(const char* value, char separator, char) override {
-        if (list_) {
-            list_->Clear();
-            for (const auto& s : wxSplit(wxString::FromUTF8(value), separator))
-                list_->Append(s);
+    bool AcceptsFocus() const override { return false; }
+    void SetFocus() override {}
+    void Notify(ListBoxEvent::EventType type) {
+        if (delegate) {
+            ListBoxEvent event(type);
+            delegate->ListNotify(&event);
         }
     }
-    void SCICALL SetOptions(const ListOptions&) noexcept override {
-        // Native list-box presentation currently uses the toolkit's default options.
+    void Measure() { itemHeight = GetCharHeight() + 2 * FromDIP(2); RefreshAll(); }
+private:
+    wxCoord OnMeasureItem(size_t) const override { return itemHeight; }
+    void OnDrawItem(wxDC& dc, const wxRect& rect, size_t item) const override {
+        dc.SetFont(GetFont());
+        dc.SetTextForeground(wxSystemSettings::GetColour(IsSelected(item) ? wxSYS_COLOUR_HIGHLIGHTTEXT
+                                                                         : wxSYS_COLOUR_LISTBOXTEXT));
+        dc.DrawText(labels[item], rect.x + FromDIP(2), rect.y + (rect.height - GetCharHeight()) / 2);
     }
+};
+class WxListBox final : public ListBox {
+    CompletionList* list_ = nullptr;
+    int rows_ = 8;
+public:
+    void SetFont(std::shared_ptr<Font> font) noexcept override {
+        list_->SetFont(static_cast<WxFont*>(font.get())->font);
+        list_->Measure();
+    }
+    void SCICALL Create(Window& parent, int id, Point, int, int, Scintilla::Technology) noexcept override {
+        auto* popup = new CompletionPopup(Host(parent.GetID()));
+        list_ = new CompletionList(popup, id);
+        auto* sizer = new wxBoxSizer(wxVERTICAL);
+        sizer->Add(list_, 1, wxEXPAND | wxALL, popup->FromDIP(1));
+        popup->SetSizer(sizer);
+        wid = popup;
+    }
+    void SetAverageCharWidth(int, double) noexcept override {}
+    void SetVisibleRows(int rows) noexcept override { rows_ = rows; }
+    int GetVisibleRows() const noexcept override { return rows_; }
+    PRectangle GetDesiredRect() override {
+        int width = list_->GetCharWidth() * 3;
+        for (const auto& label : list_->labels) width = std::max(width, list_->GetTextExtent(label).x);
+        width += list_->GetCharWidth() * 3 + CaretFromEdge() * 2;
+        if (Length() > rows_) width += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X, list_);
+        return PRectangle(0, 0, width, std::min(Length(), rows_) * list_->itemHeight + list_->FromDIP(2));
+    }
+    int CaretFromEdge() const noexcept override { return list_->FromDIP(3); }
+    void Clear() noexcept override { list_->labels.clear(); list_->SetItemCount(0); }
+    int Length() const noexcept override { return static_cast<int>(list_->labels.size()); }
+    void Select(int item) override {
+        list_->SetSelection(item);
+        if (item >= 0) list_->ScrollToRow(item);
+        list_->Notify(ListBoxEvent::EventType::selectionChange);
+    }
+    int GetSelection() const noexcept override { return list_->GetSelection(); }
+    std::string GetValue(int item) const override { return list_->labels[item].ToStdString(wxConvUTF8); }
+    void RegisterImage(int, const char*) override {}
+    void RegisterRGBAImage(int, int, int, const unsigned char*) override {}
+    void ClearRegisteredImages() noexcept override {}
+    void SetDelegate(IListBoxDelegate* delegate) noexcept override { list_->delegate = delegate; }
+    void SetList(const char* value, char separator, char typeSeparator) override {
+        Clear();
+        for (auto label : wxSplit(wxString::FromUTF8(value), separator)) {
+            if (const auto type = label.find(typeSeparator); type != wxString::npos) label.Truncate(type);
+            list_->labels.push_back(label);
+        }
+        list_->SetItemCount(list_->labels.size());
+        list_->Measure();
+    }
+    void SCICALL SetOptions(const ListOptions&) noexcept override {}
 };
 std::unique_ptr<ListBox> ListBox::Allocate() {
     return std::make_unique<WxListBox>();

@@ -4,6 +4,7 @@
 #include "editor/display_units.h"
 #include "document/encoding/encoding_detection.h"
 #include "editor/caret_appearance.h"
+#include "editor/word_completion.h"
 #include "settings/file_watching_options.h"
 #include "syntax/syntax_catalog.h"
 #include <wx/string.h>
@@ -70,6 +71,7 @@ struct OriginalSettings {
         return tabs;
     }();
     bool tabIndents = true;
+    WordCompletionSettings completion;
     bool autoIndent = true;
     bool detectIndentation = true;
     int backspaceUnindents = 2;

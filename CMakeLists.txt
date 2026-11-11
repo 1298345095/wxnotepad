@@ -105,6 +105,8 @@ if(WXNOTEPAD_ENABLE_DIAGNOSTICS)
 endif()
 
 add_library(editor_features STATIC
+    src/editor/word_completion.cpp
+    src/editor/completion_styles.cpp
     src/editor/go_to_location.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
@@ -522,6 +524,8 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
     set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
+    add_editor_test(word_completion original_complete_word 60)
+    add_editor_test(completion_popup original_completion_popup 60)
     add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(file_indentation original_file_indentation 60)
     add_editor_test(fold_python python_fold_margin 60)
