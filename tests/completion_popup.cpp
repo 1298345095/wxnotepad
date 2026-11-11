@@ -100,6 +100,14 @@ public:
                 editor->Send(Message::AutoCShow, 2,
                              reinterpret_cast<intptr_t>("alpha alpine amber amble ample anchor ancient angel anger "
                                                         "angle animal annual answer antenna antique"));
+                list = CompletionList(editor);
+#ifdef __WXMSW__
+                NativeCompletion::Key(editor, VK_DOWN);
+#else
+                NativeCompletion::Key(editor,GDK_KEY_Down);
+#endif
+                Require(list && list->IsRowVisible(0),
+                        "native Down keeps earlier visible rows while the new selection fits");
                 editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>("antique"));
                 NativeCompletion::Wheel(editor);
                 Require(editor->Send(Message::GetFirstVisibleLine) == firstLine && editor->Send(Message::AutoCActive),

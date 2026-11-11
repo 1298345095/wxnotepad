@@ -494,7 +494,6 @@ public:
     int Length() const noexcept override { return static_cast<int>(list_->labels.size()); }
     void Select(int item) override {
         list_->SetSelection(item);
-        if (item >= 0) list_->ScrollToRow(item);
         list_->Notify(ListBoxEvent::EventType::selectionChange);
     }
     int GetSelection() const noexcept override { return list_->GetSelection(); }
