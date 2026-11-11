@@ -201,6 +201,9 @@ Automatic language selection uses these extensions, ignoring ASCII case:
 | TypeScript / TSX | `.ts`, `.cts`, `.mts`, `.ets`, `.osts` / `.tsx` |
 | Web Source Code | `.html`, `.htm`, `.shtml`, `.xhtml`, `.asp`, `.aspx`, `.asax`, `.ascx`, `.cshtml`, `.vbhtml`, `.razor`, `.jsp`, `.jspf`, `.jspx`, `.rhtml`, `.vue`, `.hbs`, `.svelte`, `.mht`, `.htd`, `.htt`, `.hta`, `.htc`, `.cfm`, `.tpl`, `.jd` |
 | XML Document | `.xml`, `.xsl`, `.xslt`, `.xsd`, `.dtd`, `.rss`, `.svg`, `.xul`, `.axl`, `.rdf`, `.xaml`, `.resx`, `.plist`, `.pom`, `.mm`, `.xrc`, `.fbp`, `.wxml` |
+| Rust | `.rs` |
+| Go | `.go`, `.gop`, `.ql` |
+| Lua | `.lua`, `.wlua`, `.nse`, `.luadoc`, `.luax` |
 
 HTML and XML share the original HTML lexer. The Scheme menu and status expose ASP
 VBScript/JavaScript, ASP.NET C#/VB, JSP/JSPX, SVG, XML Schema, XSLT, DTD and Property
@@ -245,15 +248,22 @@ Text to use the existing no-lexer path. See the
 [original scheme behavior validation record](docs/observations/original-scheme-README.md).
 JavaScript/TypeScript fixture comparisons and workflow checks are described in the
 [JavaScript validation record](docs/observations/javascript-README.md).
+Rust, Go and Lua use their original dedicated lexers and inherit global tab
+settings by default, retaining independent four-column tab/indent defaults.
+Their original captures and native workflow matrix are documented in the
+[Rust/Go/Lua validation record](docs/observations/syntax-native-languages-README.md).
 
 Highlighting uses the pinned original lexers, consumed keyword lists and default
 light syntax colors while retaining the native font and point size. Typing and
 Undo/Redo update syntax through the core's incremental styling lifecycle. The
-`tools/update_*_scheme.py` and `tools/update_markup_schemes.py` scripts reproduce the checked-in data from the
-pinned original checkout; generated headers record revision, source hash and
-license, and omit completion-only lists.
+`tools/update_schemes.py --source <original-checkout>` command reproduces the
+full scheme tables from the pinned original checkout. Generated headers record
+revision, source hash and license, preserving completion-only groups and original
+attributes. Only lexer-consumed lists are installed in the original lexer.
+The historical per-language commands remain aliases; markup embedded style
+offsets are reproduced by `tools/update_markup_schemes.py`.
 
-C/C++, Python, JSON, Shell Script, HTML, XML, JavaScript/JSX and TypeScript/TSX support code folding. JavaScript
+C/C++, Python, JSON, Shell Script, HTML, XML, JavaScript/JSX, TypeScript/TSX, Rust, Go and Lua support code folding. JavaScript
 and TypeScript use the original shared JavaScript lexer with separate keyword lists
 and four dialect properties. Their tab settings default to two spaces; JSX shares
 the JavaScript section and TSX shares TypeScript. Click a header's margin marker to
