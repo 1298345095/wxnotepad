@@ -58,7 +58,7 @@ verification; no Linux IME or model screenshot inspection is claimed here.
 
 Local validation passed the Markdown workflow on private Windows, X11 and
 Wayland. Canonical clang-format 23.1.2 passed all tracked C/C++ sources. Native
-clang-tidy 23 (Windows) and 18 (Linux) passed the six affected translation units
+clang-tidy 23 (Windows) and 18 (Linux) passed the seven affected translation units
 under the repository analyzer error gate; generated signed-mask and inherited
 API warnings remain in the logs. Python discovery passed 30 tests with three
 platform skips using UTF-8 mode, and both the Markdown and shared import CLI
@@ -66,3 +66,15 @@ checks passed. A stale Linux archive timestamp initially left incompatible
 settings objects; rebuilding current headers resolved it. The GTK file-filter
 regression now checks the original single Markdown type rather than counting
 its two additional Scheme-only dialect choices as file types.
+
+After merging completion integration through `9039c90` (including #191 and
+#194), the rebuilt five-target matrix passed 5/5 on private Windows, 5/5 on X11
+and 5/5 on Wayland: `original_markdown_dialects`,
+`original_toml_yaml_cmake_schemes`, `original_rust_go_lua_schemes`,
+`original_markup_schemes`, and `automatic_language_save`. Both native analyzers
+passed the seven affected units again. The final Windows style sample is
+`windows-native-style-final.png`; its run passed at 144 DPI, 12 points and a
+28-pixel line height. `evidence-record.json` records source/binary/reference
+hashes. The generic reference-process helper is shared with the configuration
+language capture utilities, and recapturing Markdown after that merge produced
+identical frozen snapshots.

@@ -21,11 +21,11 @@ def _style_line_initializers(line, prefix, *, eol_filled, offset):
     value = re.search(r'L"([^"]*)"', line)[1]
     fore = re.search(r"fore:#([0-9A-Fa-f]{6})", value)
     back = re.search(r"back:#([0-9A-Fa-f]{6})", value)
+    decorations = tuple(attribute in value for attribute in ('underline', 'strike', 'overline'))
     extra = (f", {str('italic' in value).lower()}, {str('eolfilled' in value).lower()}"
-             if eol_filled else "")
-    if any(attribute in value for attribute in ('underline', 'strike', 'overline')):
-        extra += ', ' + ', '.join(str(attribute in value).lower()
-                                 for attribute in ('underline', 'strike', 'overline'))
+             if eol_filled or any(decorations) else "")
+    if any(decorations):
+        extra += ', ' + ', '.join(str(enabled).lower() for enabled in decorations)
     output = []
     for style in re.findall(rf"{prefix}\w+", line):
         if offset:
