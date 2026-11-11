@@ -413,6 +413,11 @@ if(BUILD_TESTING)
     endif()
     add_editor_test(selection_modifiers selection_modifiers 60)
     add_editor_test(selection_preferences original_selection_preferences 90)
+    if(WIN32)
+        add_test(NAME original_selection_preferences_dpi96 COMMAND selection_preferences)
+        set_tests_properties(original_selection_preferences_dpi96 PROPERTIES TIMEOUT 90
+            ENVIRONMENT "WXNOTEPAD_SELECTION_DPI96=1")
+    endif()
     target_compile_definitions(selection_preferences PRIVATE
         "SELECTION_PREFERENCES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_preferences_reference.tsv\"")
     add_editor_test(editing_keys original_editing_keys 30)

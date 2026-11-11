@@ -24,6 +24,18 @@ axes, text Undo/Redo/save state, snapshot clearing, and native line typing.
 History fixtures use long lines and visible caret columns so their offsets are
 valid across native font and viewport sizes.
 
+The hosted 96-DPI run exposed that column 2 lies left of a 20-pixel horizontal
+offset with its smaller font. The pinned original also scrolls back to zero when
+Undo restores that reversed caret. The fixture now selects columns 20–24 in a
+420-DIP-wide frame, verifies that the text and scroll width exceed the client
+width, and checks both endpoints stay inside the scrolled viewport. New original
+captures at 96 and 144 DPI agree on all 23 frozen states; exact horizontal and
+vertical scroll assertions remain enabled. Windows also registers
+`original_selection_preferences_dpi96`, using an unaware test thread without
+changing monitor scaling. The fixture waits for completed native editor paints
+before measuring scroll width: `Update()` alone does not complete the asynchronous
+wxGTK/Wayland paint that updates this value.
+
 The regressions exercise these public boundaries:
 
 - `original_selection_option_gates`: independent INI imports, native menu command
