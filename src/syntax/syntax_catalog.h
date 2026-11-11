@@ -68,12 +68,16 @@ inline constexpr uintptr_t NoAutoComp = 8U << 8U;
 namespace SyntaxLexerAttribute {
 inline constexpr uint32_t TabsAsSpaces = 1U << 0U;
 inline constexpr uint32_t NoGlobalTabSettings = 1U << 1U;
+inline constexpr uint32_t NoLineComment = 1U << 2U;
+inline constexpr uint32_t NoBlockComment = 1U << 3U;
+inline constexpr uint32_t IndentBasedFolding = 1U << 4U;
 inline constexpr uint32_t IndentLookForward = 1U << 5U;
 inline constexpr uint32_t PrintfFormatSpecifier = 1U << 6U;
 inline constexpr uint32_t AngleBracketGeneric = 1U << 7U;
 inline constexpr uint32_t CppPreprocessor = 1U << 8U;
 inline constexpr uint32_t CharacterPrefix = 1U << 9U;
 inline constexpr uint32_t EscapePunctuation = 1U << 10U;
+inline constexpr uint32_t PlainTextFile = 1U << 11U;
 } // namespace SyntaxLexerAttribute
 
 // Pinned EditLexer.h::EDITLEXER generated defaults, shared by editing consumers.
