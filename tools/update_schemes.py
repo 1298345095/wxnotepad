@@ -22,7 +22,7 @@ def main(schemes=None):
         data = read_pinned(args.source, f'src/EditLexers/stl{filename}.cpp')
         name = filename.lower()
         output = generate_scheme(data, filename, SCHEMES[filename], name,
-                                 include_extensions=filename in {'Rust', 'Go', 'Lua', 'JavaScript', 'TypeScript', 'HTML', 'XML'})
+                                 include_extensions=filename not in {'CPP', 'Python', 'JSON', 'Bash'})
         (args.output_dir / f'{name}_scheme_data.h').write_text(output, encoding='utf-8', newline='\n')
 
 

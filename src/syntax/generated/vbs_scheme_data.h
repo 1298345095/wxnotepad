@@ -102,4 +102,5 @@ constexpr SyntaxStyle vbsStyles[] = {
 };
 constexpr SyntaxOriginalMetadata vbsOriginal = {8, 4, 4, (1 << 0), SCE_VB_FUNCTION_DEFINITION, '\0', SCE_VB_ESCAPECHAR, SCE_VB_FORMAT_SPECIFIER, 0, 0, SCE_VB_COMMENTLINE, SCE_VB_OPERATOR, SCE_VB_OPERATOR2, SCE_VB_COMMENTLINE, SCE_VB_STRING, SCE_VB_PLACEHOLDER};
 constexpr const char* vbsSettingsSection = "VBScript";
+constexpr const char* vbsExtensions[] = {"vbs", "dsm"};
 // clang-format on

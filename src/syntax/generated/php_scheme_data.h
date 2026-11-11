@@ -468,4 +468,5 @@ constexpr SyntaxStyle phpStyles[] = {
 };
 constexpr SyntaxOriginalMetadata phpOriginal = {64, 4, 4, (1 << 1) | (1 << 2), SCE_PHP_FUNCTION_DEFINITION, '\\', SCE_PHP_ESCAPECHAR, SCE_PHP_FORMAT_SPECIFIER, 0, 0, 0, SCE_PHP_OPERATOR, SCE_PHP_OPERATOR2, 0, SCE_PHP_ESCAPECHAR, SCE_PHP_NOWDOC_ID};
 constexpr const char* phpSettingsSection = "PHP Script";
+constexpr const char* phpExtensions[] = {"php", "phps", "phpt", "phtml", "php_cs", "eyecode"};
 // clang-format on
