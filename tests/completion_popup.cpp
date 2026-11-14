@@ -88,7 +88,27 @@ public:
                              reinterpret_cast<intptr_t>("alpha alpine alphabetically_long_candidate"));
                 wxYield();
                 list = CompletionList(editor);
-                Require(list && bounds.Contains(list->GetParent()->GetScreenRect()),
+                const auto scrolledPopup = list ? list->GetParent()->GetScreenRect() : wxRect();
+                if (!list || !bounds.Contains(scrolledPopup)) {
+                    const auto frameRect = frame->GetScreenRect();
+                    const auto editorRect = editor->GetScreenRect();
+                    const auto position = editor->Send(Message::GetCurrentPos);
+                    const auto caret =
+                        editor->ClientToScreen(wxPoint(editor->Send(Message::PointXFromPosition, 0, position),
+                                                       editor->Send(Message::PointYFromPosition, 0, position)));
+                    std::fprintf(stderr,
+                                 "completion boundary: bounds=%d,%d,%d,%d popup=%d,%d,%d,%d list=%p active=%zd "
+                                 "frame=%d,%d,%d,%d editor=%d,%d,%d,%d caret=%d,%d DPI=%d,%d scale=%g "
+                                 "first=%zd xOffset=%zd\n",
+                                 bounds.x, bounds.y, bounds.width, bounds.height, scrolledPopup.x, scrolledPopup.y,
+                                 scrolledPopup.width, scrolledPopup.height, static_cast<void*>(list),
+                                 editor->Send(Message::AutoCActive), frameRect.x, frameRect.y, frameRect.width,
+                                 frameRect.height, editorRect.x, editorRect.y, editorRect.width, editorRect.height,
+                                 caret.x, caret.y, editor->GetDPI().x, editor->GetDPI().y,
+                                 editor->GetContentScaleFactor(), editor->Send(Message::GetFirstVisibleLine),
+                                 editor->Send(Message::GetXOffset));
+                }
+                Require(list && bounds.Contains(scrolledPopup),
                         "scrolled popup fits monitor work area at bottom-right edge");
                 const auto current = editor->Send(Message::GetCurrentPos);
                 const auto caretY =
