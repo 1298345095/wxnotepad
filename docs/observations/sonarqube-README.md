@@ -151,3 +151,28 @@ formatting or repository-owned fixture sources.
 
 Issue-specific transitions and review receipts are retained with the local
 `sonar-gate-fixes-2026-11-07` evidence. No rule profile or gate threshold is changed.
+
+## Completion integration ownership review
+
+The completion integration's S5025 reports follow the same native ownership
+contract. `ShowAutoCompletionSettingsDialog` transfers its nested sizers through
+`Add` and `SetSizerAndFit`; its controls are children of the stack-owned dialog.
+`WxListBox::Create` records the popup in `ListBox::wid`, parents the native list
+to that popup and transfers its layout with `SetSizer`. Core cancellation and
+native parent destruction release this hierarchy. Native regression frames are
+wxApp-owned top-level windows and call `Destroy` after both successful and caught
+failure paths; their focus-target buttons are child windows. Independent smart
+pointers must not also own these objects. Each reported allocation received its
+own source-to-owner explanation and false-positive disposition.
+
+The `update_schemes.py` output directory is an explicit local developer CLI
+destination, following the existing generator contract. Its `--schemes` values
+come from argparse's fixed registry choices, so generated basenames cannot
+contain caller-supplied separators or parent components. Original input paths
+are fixed Git object names at the pinned revision. The reported path-traversal
+finding assumes a trusted caller selected an unintended output destination;
+it does not identify untrusted project data reaching that destination. Its
+individual disposition preserves this intentional CLI behavior.
+
+Raw review responses and native regression logs are retained in the local
+`completion-languages-2026-11-10` evidence directory.

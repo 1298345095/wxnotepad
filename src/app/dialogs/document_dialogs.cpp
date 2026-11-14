@@ -29,6 +29,9 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
                                              const wxString& path, const SaveFileLocation& initial) {
     wxString wildcard;
     std::vector<SaveFileType> types;
+    // Original Markdown has one file-filter identity and three menu dialects.
+    // Keep the active dialect when its shared current filter is accepted.
+    const bool currentMarkdown = SyntaxSettingsLanguage(currentLanguage) == SyntaxLanguage::MarkdownGitHub;
     const auto addLanguage = [&](const SyntaxDefinition& definition, bool current) {
         wxArrayString patterns;
         for (const auto* extension : definition.extensions)
@@ -37,11 +40,16 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
         if (current && !extension.empty() && patterns.Index("*." + extension, false) == wxNOT_FOUND)
             patterns.Add("*." + extension);
         const auto pattern = wxJoin(patterns, ';');
-        wildcard += wxString(definition.name) + " (" + pattern + ")|" + pattern + "|";
-        types.emplace_back(definition.language);
+        const bool markdown = definition.language == SyntaxLanguage::MarkdownGitHub;
+        wildcard += wxString(markdown ? "Markdown" : definition.name) + " (" + pattern + ")|" + pattern + "|";
+        types.emplace_back(current && markdown ? currentLanguage : definition.language);
     };
-    addLanguage(SyntaxFor(currentLanguage), true);
+    addLanguage(SyntaxFor(currentMarkdown ? SyntaxLanguage::MarkdownGitHub : currentLanguage), true);
     for (const auto& definition : SyntaxCatalog()) {
+        if (definition.language == SyntaxLanguage::MarkdownGitLab ||
+            definition.language == SyntaxLanguage::MarkdownPandoc ||
+            (currentMarkdown && definition.language == SyntaxLanguage::MarkdownGitHub))
+            continue;
         if (definition.language != currentLanguage) addLanguage(definition, false);
     }
     wildcard += "All Files (*)|*";

@@ -47,6 +47,13 @@ add_library(notepad4_core OBJECT ${core_sources} ${lexlib_sources}
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCPP.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexPython.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexBash.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexRust.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexGo.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexLua.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexMarkdown.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexTOML.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexYAML.cxx"
+    "${NOTEPAD4_SOURCE}/scintilla/lexers/LexCMake.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJSON.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexHTML.cxx"
     "${NOTEPAD4_SOURCE}/scintilla/lexers/LexJavaScript.cxx")
@@ -58,6 +65,8 @@ target_link_libraries(notepad4_core PUBLIC wx::core wx::base)
 
 # Core objects and their platform symbols share one archive to avoid static link-order cycles.
 add_library(editor_runtime STATIC
+    src/editor/completion_selection.cpp
+    src/editor/platform/latex_input.cpp
     src/editor/caret_appearance.cpp
     src/editor/date_time.cpp
     src/editor/align_lines.cpp
@@ -82,6 +91,8 @@ add_library(editor_runtime STATIC
     src/editor/tab_conversion.cpp
     src/editor/number_radix.cpp
     src/editor/occurrence_marking.cpp
+    src/editor/auto_insertion.cpp
+    src/editor/auto_close_tags.cpp
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
@@ -92,7 +103,7 @@ add_library(editor_runtime STATIC
     src/editor/platform/sort_collation.cpp
     src/editor/platform/gtk_drag_drop.cpp
     src/editor/platform/wx_platform.cpp)
-target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform
+target_include_directories(editor_runtime PUBLIC src PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/win32"
     "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
 target_link_libraries(editor_runtime PUBLIC notepad4_core)
 if(WXNOTEPAD_ENABLE_DIAGNOSTICS)
@@ -105,6 +116,8 @@ if(WXNOTEPAD_ENABLE_DIAGNOSTICS)
 endif()
 
 add_library(editor_features STATIC
+    src/editor/word_completion.cpp
+    src/editor/completion_styles.cpp
     src/editor/go_to_location.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
@@ -118,10 +131,11 @@ add_library(editor_features STATIC
     src/syntax/syntax_catalog.cpp
     src/syntax/syntax_scheme.cpp)
 # The GBK compatibility codec reuses the pinned Unicode conversion utilities.
-target_include_directories(editor_features PRIVATE "${NOTEPAD4_SOURCE}/scintilla/src")
+target_include_directories(editor_features PRIVATE src/editor/platform "${NOTEPAD4_SOURCE}/scintilla/src")
 target_link_libraries(editor_features PUBLIC editor_runtime)
 
 add_library(app_shell STATIC
+    src/app/dialogs/auto_completion_settings_dialog.cpp
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
@@ -146,9 +160,9 @@ add_library(app_shell STATIC
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
-    target_sources(editor_runtime PRIVATE src/editor/platform/windows_ime.cpp)
+    target_sources(editor_runtime PRIVATE src/editor/platform/windows_ime.cpp src/editor/platform/text_measurement_msw.cpp)
     target_link_libraries(editor_features PRIVATE advapi32)
-    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32)
+    target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32 gdi32)
     target_link_libraries(app_shell PRIVATE shell32 ole32)
 endif()
 
@@ -161,6 +175,7 @@ foreach(target notepad4_core editor_runtime editor_features app_shell)
     endif()
 endforeach()
 if(UNIX AND NOT APPLE)
+    target_sources(editor_runtime PRIVATE src/editor/platform/text_measurement_gtk.cpp)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
     pkg_check_modules(WAYLAND REQUIRED IMPORTED_TARGET wayland-egl wayland-cursor)
@@ -229,6 +244,9 @@ if(BUILD_TESTING)
     add_test(NAME original_selection_option_gates COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_options_process.py" "$<TARGET_FILE:selection_options>")
     set_tests_properties(original_selection_option_gates PROPERTIES TIMEOUT 60)
+    add_test(NAME original_selection_preferences_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_preferences_process.py" "$<TARGET_FILE:selection_options>")
+    set_tests_properties(original_selection_preferences_lifecycle PROPERTIES TIMEOUT 120)
     add_test(NAME original_shebang_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/shebang_settings_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_shebang_settings PROPERTIES TIMEOUT 60)
@@ -395,6 +413,14 @@ if(BUILD_TESTING)
         set_tests_properties(native_peer_geometry_ready PROPERTIES TIMEOUT 20 SKIP_RETURN_CODE 77)
     endif()
     add_editor_test(selection_modifiers selection_modifiers 60)
+    add_editor_test(selection_preferences original_selection_preferences 90)
+    if(WIN32)
+        add_test(NAME original_selection_preferences_dpi96 COMMAND selection_preferences)
+        set_tests_properties(original_selection_preferences_dpi96 PROPERTIES TIMEOUT 90
+            ENVIRONMENT "WXNOTEPAD_SELECTION_DPI96=1")
+    endif()
+    target_compile_definitions(selection_preferences PRIVATE
+        "SELECTION_PREFERENCES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_preferences_reference.tsv\"")
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
     add_editor_test(current_line original_current_line_highlight 60)
@@ -445,10 +471,14 @@ if(BUILD_TESTING)
     add_editor_test(character_hex original_character_hex 60)
     add_editor_test(duplicate_transpose original_duplicate_transpose 60)
     add_editor_test(font_smoke native_font_metrics 20)
+    add_editor_test(measurement_threads native_parallel_measurement 90)
+    target_include_directories(measurement_threads PRIVATE src/editor/platform
+        "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     add_editor_test(surface_images native_surface_images 20)
     target_include_directories(surface_images PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     add_editor_test(word_wrap word_wrap_view 60)
+    add_editor_test(wrap_resize native_wrapped_resize 120)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.27)
         set_tests_properties(word_wrap_view PROPERTIES TIMEOUT_SIGNAL_NAME SIGQUIT)
     endif()
@@ -478,6 +508,16 @@ if(BUILD_TESTING)
         --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/diagnostics/native")
     set_tests_properties(native_diagnostic_delivery PROPERTIES TIMEOUT 150)
     add_editor_test(open_smoke open_utf8 30)
+    add_editor_test(syntax_markdown original_markdown_dialects 90)
+    target_compile_definitions(syntax_markdown PRIVATE
+        "MARKDOWN_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/markdown_reference.tsv\"")
+    add_editor_test(syntax_config_languages original_toml_yaml_cmake_schemes 90)
+    target_compile_definitions(syntax_config_languages PRIVATE
+        "CONFIG_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/config_languages_reference.tsv\""
+        "CONFIG_OPERATIONS_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/config_operations_reference.tsv\"")
+    add_editor_test(syntax_native_languages original_rust_go_lua_schemes 90)
+    target_compile_definitions(syntax_native_languages PRIVATE
+        "NATIVE_LANGUAGES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/native_languages_reference.tsv\"")
     add_editor_test(syntax_cpp cpp_highlighting 30)
     add_editor_test(syntax_python python_highlighting 30)
     add_editor_test(syntax_shell shell_highlighting 60)
@@ -522,6 +562,18 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/wrap_symbol_reference.tsv")
     set_tests_properties(original_line_symbol_settings PROPERTIES TIMEOUT 180)
     add_editor_test(indentation_options indentation_options 60)
+    add_editor_test(automatic_completion original_automatic_completion 120)
+    add_editor_test(word_completion original_complete_word 60)
+    add_gui_program(completion_settings tests/completion_settings.cpp app_shell)
+    add_test(NAME original_completion_settings COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/completion_settings_process.py" "$<TARGET_FILE:completion_settings>")
+    add_editor_test(completion_popup original_completion_popup 60)
+    add_gui_program(auto_close_tags tests/auto_close_tags.cpp app_shell)
+    add_test(NAME original_auto_close_tags COMMAND auto_close_tags)
+    add_gui_program(auto_completion_settings tests/auto_completion_settings.cpp app_shell)
+    add_test(NAME original_auto_completion_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_SOURCE_DIR}/tests/auto_completion_settings_process.py" "$<TARGET_FILE:auto_completion_settings>")
+    set_tests_properties(original_auto_completion_settings PROPERTIES TIMEOUT 120)
+    add_editor_test(auto_insertion original_auto_insertion 90)
     add_editor_test(autoindent original_newline_autoindent 60)
     add_editor_test(file_indentation original_file_indentation 60)
     add_editor_test(fold_python python_fold_margin 60)

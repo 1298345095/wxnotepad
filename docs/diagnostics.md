@@ -33,6 +33,11 @@ completed record is flushed before returning to the observed boundary. An
 abnormal process exit leaves the completed prefix available to the existing
 test and crash-evidence collection.
 
+`layout.measurement` records completed native width measurements, with only the
+surface identity and input byte count. Its native thread ID can be compared with
+the process header to identify layout-worker activity. This event does not record
+text or alter scheduling; normal builds compile it out with the other traces.
+
 Native test logs are retained under `Testing/Temporary/diagnostics/` alongside
 the existing test evidence. Enabled and disabled runs are separate processes;
 private X11/Wayland driver records use the same gesture identity as the

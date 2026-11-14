@@ -145,6 +145,15 @@ destination line start, while Normal publishes stream text. Cut keeps the
 expanded caret column on the next line, or the previous line in Old Visual
 Studio mode. Explicit Ctrl+Shift+C/X line commands use the same tag option.
 
+Settings → Select and Edit Options → Enable Multiple Selection and Undo Redo
+Remember Selection update `SelectOption` bits `1` and `8` immediately. Both
+default to enabled. Other bits survive toggling and the existing explicit/exit
+save lifecycle. Disabling multiple selection retains any active additional
+ranges until the next operation applies the original core's selection rules.
+Disabling selection memory drops stored selection snapshots, while preserving
+the text undo stack and save point; enabling it again does not recover the old
+snapshots. Frames without a settings store keep both preferences in memory.
+
 Save Settings On Exit is enabled by default. A disabled exit save writes only
 `SaveSettings=0`, retaining the previously stored view choices. Save Settings Now
 writes current choices even while exit saving is disabled. Default-valued fields
@@ -154,9 +163,25 @@ existing text INI files through the platform text converter.
 If an existing INI cannot be read completely, settings writes fail without replacing it.
 
 `[Settings] AutoInsertMask` defaults to `511` and uses the original integer-prefix
-parser. Toggle Line Comment reads bit `256` to insert or remove one optional
-space after the scheme prefix. The complete mask is retained through reloads,
+parser. Settings > Auto Completion Settings edits the original independent bits:
+parentheses `1`, braces `2`, square brackets `4`, angle brackets `8`, double quotes
+`16`, single quotes `32`, backticks `64`, space after comma `128`, and space after
+comment `256`. Typed insertion uses the pinned language/style, escape, character
+literal, generic-type and matching-delimiter rules. Tentative IME input and
+multiple-selection notifications retain the original suppression. The maintained
+core handles selection enclosure and overwrite typing. Toggle Line Comment reads
+the same bit `256`. OK commits these controls and Auto Indent; Cancel commits
+nothing. Other option bits remain intact. The complete mask is retained through reloads,
 Save Settings Now and enabled exit saving; the default `511` is omitted on Save.
+
+`[Settings] AutoCompleteOption` defaults to `7`. Its original bit `1` controls
+**Auto close HTML and XML tags** in the same dialog. OK applies the change to live
+typing and the shared completion settings; Cancel preserves it. Other completion
+bits and automatic-insertion choices survive. Typing `>` uses the original
+511-byte tag scan, HTML void-element exceptions (with `<p>` still closed), XML
+family differences, and language/style exclusions. See the
+[tag closure observations](observations/auto-close-tags.md) for frozen malformed
+markup, JSX/TSX, selection/history and encoded-file results.
 
 Tab settings use this same store. `[Settings]` defaults are `TabWidth=4`,
 `IndentWidth=4`, `TabsAsSpaces=0`, `TabIndents=1`, `BackspaceUnindents=2`, and
@@ -203,7 +228,7 @@ global/scheme settings. Language switches preserve file overrides; unrelated
 Open and New do not inherit them. Detection changes neither text nor history.
 
 `[Settings] AutoIndent` defaults to `1` and follows the same explicit/exit save
-rules. View > Auto Indent toggles the option. Enter preserves the original
+rules. Settings > Auto Indent and Auto Completion Settings share the option. Enter preserves the original
 leading whitespace and applies the pinned delimiter, colon and block-comment
 opener rules using the active file tab settings. These rules are shared by the
 delivered schemes; they do not add Python keyword completion or comment-prefix
@@ -269,3 +294,26 @@ default. `[Settings2] NoFileVariables=0` controls the file-variable gate and is
 retained in place. The same SettingsStore loads these options before the frame
 creates its document session. See [encoding selection](encoding.md) for the
 precedence and remaining codec catalog.
+
+## Manual word completion
+
+Edit > Special > Complete Word (Alt+/ or Alt+keypad Divide) uses the original
+matching and document scan. Settings > Auto Completion Ignore Case cancels any
+open completion popup when toggled. These fields use the existing explicit and
+exit save lifecycle, omit defaults, and preserve unrelated INI text:
+
+| `[Settings]` key | Default | Import rule |
+| --- | --- | --- |
+| `AutoCompleteOption` | `7` | Original option bits, including document scan and document-only mode. |
+| `AutoCompleteScope` | `255` | Low four bits select completion scopes; upper bits select document scan scopes. |
+| `AutoCScanWordsTimeout` | `500` | At least 50 milliseconds. |
+| `AutoCIgnoreCase` | `0` | Original boolean parsing. |
+| `LaTeXInputMethod` | `0` | Original boolean parsing; enables the original sequence candidates. |
+| `AutoCVisibleItemCount` | `16` | At least 8 rows. |
+| `AutoCMinWordLength` | `1` | At least 1 byte. |
+| `AutoCMinNumberLength` | `3` | At least 0; zero excludes numbers. |
+| `AutoCFillUpMask` | `15` | Enter, Tab, Space and punctuation bits. |
+| `AutoCFillUpPunctuation` | `;,()[]{}\/` | First 31 characters, retaining ASCII punctuation. |
+
+Automatic triggers and the remaining completion settings controls are tracked in
+#192. See [manual completion evidence](observations/word-completion.md).

@@ -108,6 +108,8 @@ private:
     void AppendLineEndingCommands(wxMenu* edit);
     void AppendLineSelectionCommands(wxMenu* edit);
     void AppendIndentationOptions(wxMenu* view);
+    void AppendCompletionOptions(wxMenu* view);
+    void AppendSelectionOptions(wxMenu* view);
     void AppendZoomCommands(wxMenu* view);
     void AppendDisplayCommands(wxMenu* view);
     void AppendMarginCommands(wxMenu* view);
@@ -133,7 +135,7 @@ private:
     void ShowLineEndingOptions();
     void ShowFileChangeNotificationOptions();
     void RefreshFileWatching();
-    void HandleFileChange();
+    bool HandleFileChange();
     void ReportFind(const FindResult& result);
     bool SearchMessage(SearchDirection direction);
     bool ShowSearchMessage(const wxString& key, const wxString& message, bool confirm);

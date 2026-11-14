@@ -1,3 +1,4 @@
+#include "app/dialogs/auto_completion_settings_dialog.h"
 #include "app/editor_frame.h"
 #include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
@@ -1641,6 +1642,22 @@ void EditorFrame::ToggleReadOnlyMode() {
 }
 
 void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
+    const int completeWord = wxWindow::NewControlId();
+    auto* completionItem = edit->Append(completeWord, "Complete &Word\tAlt+/");
+    completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_NUMPAD_DIVIDE, completeWord));
+    completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_DIVIDE, completeWord));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            CompleteWord(*editor_, SyntaxFor(document_.EffectiveLanguage()), preferences.completion);
+        },
+        completeWord);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        completeWord);
+    edit->AppendSeparator();
     for (const auto& [label, mapping] : {std::pair{"C&haracter to Hex\tCtrl+Alt+X", CustomCaseCommand::CharacterToHex},
                                          std::pair{"Hex to Cha&racter\tCtrl+Alt+C", CustomCaseCommand::HexToCharacter},
                                          std::pair{"Esca&pe C Chars\tCtrl+Alt+E", CustomCaseCommand::EscapeC},
@@ -1665,6 +1682,83 @@ wxMenu* EditorFrame::CreateSearchMenu() {
     return search;
 }
 
+void EditorFrame::AppendCompletionOptions(wxMenu* view) {
+    const int autoCompletion = wxWindow::NewControlId();
+    view->Append(autoCompletion, "Auto &Completion Settings...");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            if (ShowAutoCompletionSettingsDialog(this, preferences)) {
+                editor_->SetAutoInsertMask(preferences.autoInsertMask);
+                editor_->SetCompletionSettings(preferences.completion);
+                editor_->SetAutoIndent(preferences.autoIndent);
+            }
+        },
+        autoCompletion);
+    const int ignoreCase = wxWindow::NewControlId();
+    view->AppendCheckItem(ignoreCase, "Auto Completion I&gnore Case");
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            preferences.completion.ignoreCase = !preferences.completion.ignoreCase;
+            editor_->SetCompletionSettings(preferences.completion);
+            editor_->Send(Scintilla::Message::AutoCCancel);
+        },
+        ignoreCase);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            const auto& preferences = settings_ ? settings_->values : defaults_;
+            event.Check(preferences.completion.ignoreCase);
+        },
+        ignoreCase);
+}
+
+void EditorFrame::AppendSelectionOptions(wxMenu* view) {
+    auto* selection = new wxMenu;
+    for (const auto& [label, bit] :
+         {std::pair{"Enable &Multiple Selection", SelectOption_EnableMultipleSelection},
+          std::pair{"Copy Selection As Find Text", SelectOption_CopySelectionAsFindText},
+          std::pair{"Copy Paste Buffer As Find Text", SelectOption_CopyPasteBufferAsFindText},
+          std::pair{"Undo Redo &Remember Selection", SelectOption_UndoRedoRememberSelection}}) {
+        if (!settings_ &&
+            (bit == SelectOption_CopySelectionAsFindText || bit == SelectOption_CopyPasteBufferAsFindText))
+            continue;
+        const int id = wxWindow::NewControlId();
+        selection->AppendCheckItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, bit](wxCommandEvent&) {
+                auto& preferences = settings_ ? settings_->values : defaults_;
+                const auto options = static_cast<unsigned>(preferences.selectOption) ^ static_cast<unsigned>(bit);
+                preferences.selectOption = static_cast<int>(options);
+                const bool enabled = (options & static_cast<unsigned>(bit)) != 0;
+                // Original Notepad4.cpp selection option commands preserve active selections and text history.
+                if (bit == SelectOption_EnableMultipleSelection) {
+                    editor_->Send(Scintilla::Message::SetMultipleSelection, enabled);
+                } else if (bit == SelectOption_UndoRedoRememberSelection) {
+                    const auto history = enabled
+                                             ? static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
+                                                   static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll)
+                                             : 0;
+                    editor_->Send(Scintilla::Message::SetUndoSelectionHistory, history);
+                }
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, bit](wxUpdateUIEvent& event) {
+                const auto options = static_cast<unsigned>((settings_ ? settings_->values : defaults_).selectOption);
+                event.Check((options & static_cast<unsigned>(bit)) != 0);
+            },
+            id);
+    }
+    AppendLineSelectionCommands(selection);
+    view->AppendSubMenu(selection, "Select and &Edit Options");
+}
+
 wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
     AppendIndentationOptions(view);
@@ -1685,6 +1779,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             }
         },
         longLineSettings);
+    AppendCompletionOptions(view);
     const int autoIndent = wxWindow::NewControlId();
     view->AppendCheckItem(autoIndent, "Auto &Indent");
     Bind(
@@ -1696,21 +1791,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         },
         autoIndent);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->AutoIndentEnabled()); }, autoIndent);
-    auto* selection = new wxMenu;
-    if (settings_) {
-        for (const auto& [label, bit] :
-             {std::pair{"Copy Selection As Find Text", SelectOption_CopySelectionAsFindText},
-              std::pair{"Copy Paste Buffer As Find Text", SelectOption_CopyPasteBufferAsFindText}}) {
-            const int id = wxWindow::NewControlId();
-            selection->AppendCheckItem(id, label);
-            Bind(wxEVT_MENU, [this, bit](wxCommandEvent&) { settings_->values.selectOption ^= bit; }, id);
-            Bind(
-                wxEVT_UPDATE_UI,
-                [this, bit](wxUpdateUIEvent& event) { event.Check((settings_->values.selectOption & bit) != 0); }, id);
-        }
-    }
-    AppendLineSelectionCommands(selection);
-    view->AppendSubMenu(selection, "Select and &Edit Options");
+    AppendSelectionOptions(view);
     view->AppendSeparator();
     auto* appearance = new wxMenu;
     const int shrinkScrollWidth = wxWindow::NewControlId();

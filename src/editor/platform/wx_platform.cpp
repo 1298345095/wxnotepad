@@ -1,7 +1,9 @@
 // wx rendering and window adapter for the pinned Notepad4 Scintilla core.
-// Basic LTR rendering is supported; complex layout and popup UI are not implemented.
+// Basic LTR rendering and native nonactivating completion UI.
 #include "core_headers.h"
 #include "editor/display_units.h"
+#include "text_measurement.h"
+#include "diagnostics/trace.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
@@ -9,10 +11,10 @@
 #include <wx/graphics.h>
 #endif
 #include <wx/display.h>
-#include <wx/listbox.h>
-#ifdef __WXGTK__
-#include <pango/pango.h>
-#endif
+#include <wx/popupwin.h>
+#include <wx/vlbox.h>
+#include <wx/sizer.h>
+#include <wx/renderer.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdarg>
@@ -39,11 +41,13 @@ static wxColour Color(ColourRGBA c) {
 class WxFont final : public Font {
 public:
     wxFont font;
+    MeasurementFont measurement;
     explicit WxFont(const FontParameters& p)
         : font(wxFontInfo(p.size)
                    .FaceName(wxString::FromUTF8(p.faceName))
                    .Weight(static_cast<wxFontWeight>(static_cast<int>(p.weight)))
-                   .Italic(p.italic)) {}
+                   .Italic(p.italic)),
+          measurement(font) {}
 };
 std::shared_ptr<Font> Font::Allocate(const FontParameters& p) {
     return std::make_shared<WxFont>(p);
@@ -53,6 +57,7 @@ class WxSurface final : public Surface {
     std::unique_ptr<wxDC> owned_;
     wxBitmap bitmap_;
     std::vector<std::unique_ptr<wxDCClipper>> clips_;
+    std::unique_ptr<TextMeasurement> measurement_;
     bool utf8_ = true;
     void FontSet(const Font* f) { dc_->SetFont(static_cast<const WxFont*>(f)->font); }
     wxString String(std::string_view s) const {
@@ -61,29 +66,17 @@ class WxSurface final : public Surface {
     void StrokeSet(Stroke s) {
         dc_->SetPen(wxPen(Color(s.colour), std::max(1, static_cast<int>(std::lround(s.width)))));
     }
-#ifdef __WXGTK__
-    std::vector<PangoLogAttr> CursorPositions(const wxString& characters, std::string_view text,
-                                              const wxArrayInt& extents) const {
-        if (!utf8_ || extents.empty() ||
-            std::none_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; }))
-            return {};
-        // wxGTK 3.3.3's Cairo extents compact Pango cursor clusters, then pad
-        // to the character count. Expand those same cursor boundaries while
-        // retaining the native DC's font, DPI and measured cluster advances.
-        const auto utf8 = characters.utf8_str();
-        std::vector<PangoLogAttr> positions(characters.length() + 1);
-        pango_get_log_attrs(utf8.data(), static_cast<int>(utf8.length()), 0, pango_language_get_default(),
-                            positions.data(), static_cast<int>(positions.size()));
-        return positions;
-    }
-#endif
 
 public:
     void Init(WindowID id) noexcept override {
         owned_ = std::make_unique<wxClientDC>(Host(id));
         dc_ = owned_.get();
+        measurement_ = std::make_unique<TextMeasurement>(*dc_);
     }
-    void Init(SurfaceID dc, WindowID, bool) noexcept override { dc_ = static_cast<wxDC*>(dc); }
+    void Init(SurfaceID dc, WindowID, bool) noexcept override {
+        dc_ = static_cast<wxDC*>(dc);
+        measurement_ = std::make_unique<TextMeasurement>(*dc_);
+    }
     std::unique_ptr<Surface> AllocatePixMap(int width, int height) override {
         auto p = std::make_unique<WxSurface>();
         // GTK logical coordinates need a full-resolution backing bitmap; MSW
@@ -93,6 +86,7 @@ public:
         dc->SelectObject(p->bitmap_);
         p->dc_ = dc.get();
         p->owned_ = std::move(dc);
+        p->measurement_ = std::make_unique<TextMeasurement>(*p->dc_);
         return p;
     }
     void SetMode(SurfaceMode m) noexcept override { utf8_ = m.codePage == Scintilla::CpUtf8; }
@@ -101,6 +95,7 @@ public:
     }
     void Release() noexcept override {
         clips_.clear();
+        measurement_.reset();
         owned_.reset();
         dc_ = nullptr;
     }
@@ -260,38 +255,11 @@ public:
         DrawTextNoClip(r, f, base, text, fore, back);
     }
     void SCICALL MeasureWidths(const Font* f, std::string_view text, XYPOSITION* positions) override {
-        FontSet(f);
-        wxArrayInt extents;
-        const auto characters = String(text);
-        dc_->GetPartialTextExtents(characters, extents);
-#ifdef __WXGTK__
-        const auto cursorPositions = CursorPositions(characters, text, extents);
-        size_t cursorExtent = 0;
-#endif
-        size_t character = 0;
-        for (size_t byte = 0; byte < text.size();) {
-            const unsigned char lead = text[byte];
-            size_t width = 1;
-            if (utf8_ && lead >= 0xc0) width = lead < 0xe0 ? 2 : lead < 0xf0 ? 3 : 4;
-            width = std::min(width, text.size() - byte);
-            const size_t units = utf8_ && width == 4 && sizeof(wchar_t) == 2 ? 2 : 1;
-            character += units;
-            size_t extent = character - 1;
-#ifdef __WXGTK__
-            if (!cursorPositions.empty()) {
-                extent = cursorExtent;
-                if (character < cursorPositions.size() && cursorPositions[character].is_cursor_position) ++cursorExtent;
-            }
-#endif
-            const double x = extent < extents.size() ? extents[extent] : 0;
-            for (size_t j = 0; j < width; ++j)
-                positions[byte + j] = x;
-            byte += width;
-        }
+        measurement_->MeasureWidths(static_cast<const WxFont*>(f)->measurement, text, utf8_, positions);
+        WXNOTE_TRACE("layout.measurement", "\tsurface=%p\tbytes=%zu", static_cast<void*>(this), text.size());
     }
     XYPOSITION WidthText(const Font* f, std::string_view text) override {
-        FontSet(f);
-        return dc_->GetTextExtent(String(text)).x;
+        return measurement_->WidthText(static_cast<const WxFont*>(f)->measurement, text, utf8_);
     }
     void SCICALL DrawTextNoClipUTF8(PRectangle r, const Font* f, XYPOSITION y, std::string_view t, ColourRGBA a,
                                     ColourRGBA b) override {
@@ -309,12 +277,11 @@ public:
         DrawTextTransparent(r, f, y, t, a);
     }
     void SCICALL MeasureWidthsUTF8(const Font* f, std::string_view t, XYPOSITION* p) override {
-        utf8_ = true;
-        MeasureWidths(f, t, p);
+        measurement_->MeasureWidths(static_cast<const WxFont*>(f)->measurement, t, true, p);
+        WXNOTE_TRACE("layout.measurement", "\tsurface=%p\tbytes=%zu", static_cast<void*>(this), t.size());
     }
     XYPOSITION WidthTextUTF8(const Font* f, std::string_view t) override {
-        utf8_ = true;
-        return WidthText(f, t);
+        return measurement_->WidthText(static_cast<const WxFont*>(f)->measurement, t, true);
     }
     void SCICALL SetClip(PRectangle r) noexcept override {
         clips_.push_back(std::make_unique<wxDCClipper>(*dc_, Rect(r)));
@@ -332,7 +299,10 @@ std::unique_ptr<Surface> Surface::Allocate(Scintilla::Technology) {
 }
 
 void Window::Destroy() noexcept {
-    if (wid) Host(wid)->Destroy();
+    if (wid) {
+        Host(wid)->Hide();
+        Host(wid)->Destroy();
+    }
     wid = nullptr;
 }
 PRectangle Window::GetPosition() const noexcept {
@@ -343,8 +313,16 @@ void SCICALL Window::SetPosition(PRectangle r) noexcept {
 }
 void SCICALL Window::SetPositionRelative(PRectangle r, const Window* relative) noexcept {
     if (wid) {
-        auto p = Host(relative->wid)->ClientToScreen(wxPoint(r.left, r.top));
-        Host(wid)->SetSize(p.x, p.y, r.Width(), r.Height());
+        auto point = Host(relative->wid)->ClientToScreen(wxPoint(r.left, r.top));
+        int display = wxDisplay::GetFromPoint(point);
+        if (display == wxNOT_FOUND) display = wxDisplay::GetFromWindow(Host(relative->wid));
+        if (display == wxNOT_FOUND) display = 0;
+        const auto bounds = wxDisplay(display).GetClientArea();
+        const int width = std::min(static_cast<int>(r.Width()), bounds.width);
+        const int height = std::min(static_cast<int>(r.Height()), bounds.height);
+        point.x = std::clamp(point.x, bounds.x, bounds.GetRight() + 1 - width);
+        point.y = std::clamp(point.y, bounds.y, bounds.GetBottom() + 1 - height);
+        Host(wid)->SetSize(point.x, point.y, width, height);
     }
 }
 PRectangle Window::GetClientPosition() const noexcept {
@@ -367,64 +345,148 @@ void Window::SetCursor(Cursor c) const noexcept {
                                                           : wxCURSOR_ARROW));
 }
 PRectangle SCICALL Window::GetMonitorRect(Point point) const noexcept {
-    int index = wxDisplay::GetFromPoint(wxPoint(point.x, point.y));
+    const auto screen = Host(wid)->ClientToScreen(wxPoint(point.x, point.y));
+    int index = wxDisplay::GetFromPoint(screen);
     if (index == wxNOT_FOUND) index = 0;
-    return Area(wxDisplay(index).GetClientArea());
+    auto bounds = wxDisplay(index).GetClientArea();
+    bounds.SetPosition(Host(wid)->ScreenToClient(bounds.GetPosition()));
+    return Area(bounds);
 }
-class WxListBox final : public ListBox {
-    wxListBox* list_ = nullptr;
-    int rows_ = 8;
-    IListBoxDelegate* delegate_ = nullptr;
-
+// Adapted from wxWidgets 3.3.3 src/stc/PlatWX.cpp: wxSTCPopupBase,
+// wxSTCListBox. The original core retains all keyboard and completion state.
+class CompletionPopup final : public wxPopupWindow {
 public:
-    void SetFont(std::shared_ptr<Font> f) noexcept override {
-        if (list_) list_->SetFont(static_cast<WxFont*>(f.get())->font);
+    explicit CompletionPopup(wxWindow* parent) : wxPopupWindow(parent, wxPU_CONTAINS_CONTROLS | wxBORDER_NONE) {
+        SetName("Word completion");
     }
-    void SCICALL Create(Window& p, int id, Point at, int, int, Scintilla::Technology) noexcept override {
-        list_ = new wxListBox(Host(p.GetID()), id, wxPoint(at.x, at.y));
-        wid = list_;
-        list_->Bind(wxEVT_LISTBOX, [this](wxCommandEvent&) {
-            if (delegate_) {
-                ListBoxEvent e(ListBoxEvent::EventType::selectionChange);
-                delegate_->ListNotify(&e);
-            }
+    bool AcceptsFocus() const override { return false; }
+#ifdef __WXMSW__
+    bool Show(bool show) override {
+        if (!show) return wxPopupWindow::Show(false);
+        const bool changed = wxWindowBase::Show(true);
+        if (changed) {
+            ::ShowWindow(static_cast<HWND>(GetHandle()), SW_SHOWNA);
+            ::SetWindowPos(static_cast<HWND>(GetHandle()), HWND_NOTOPMOST, 0, 0, 0, 0,
+                           SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+        return changed;
+    }
+    bool MSWHandleMessage(WXLRESULT* result, WXUINT message, WXWPARAM first, WXLPARAM second) override {
+        if (message == WM_MOUSEACTIVATE) {
+            *result = MA_NOACTIVATE;
+            return true;
+        }
+        return wxPopupWindow::MSWHandleMessage(result, message, first, second);
+    }
+#endif
+};
+class CompletionList final : public wxVListBox {
+public:
+    std::vector<wxString> labels;
+    IListBoxDelegate* delegate = nullptr;
+    int itemHeight = 1;
+    explicit CompletionList(wxWindow* parent, int id)
+        : wxVListBox(parent, id, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE) {
+        SetName("Completion candidates");
+        Bind(wxEVT_LISTBOX, [this](wxCommandEvent&) { Notify(ListBoxEvent::EventType::selectionChange); });
+        Bind(wxEVT_LISTBOX_DCLICK, [this](wxCommandEvent&) { Notify(ListBoxEvent::EventType::doubleClick); });
+        Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+            Measure();
+            event.Skip();
         });
     }
+    bool AcceptsFocus() const override { return false; }
+    void SetFocus() override {
+        // Completion keeps keyboard input and IME composition in the editor.
+    }
+    void Notify(ListBoxEvent::EventType type) {
+        if (delegate) {
+            ListBoxEvent event(type);
+            delegate->ListNotify(&event);
+        }
+    }
+    void Measure() {
+        itemHeight = GetCharHeight() + 2 * FromDIP(2);
+        RefreshAll();
+    }
+
+private:
+    wxCoord OnMeasureItem(size_t) const override { return itemHeight; }
+    void OnDrawItem(wxDC& dc, const wxRect& rect, size_t item) const override {
+        dc.SetFont(GetFont());
+        dc.SetTextForeground(
+            wxSystemSettings::GetColour(IsSelected(item) ? wxSYS_COLOUR_HIGHLIGHTTEXT : wxSYS_COLOUR_LISTBOXTEXT));
+        dc.DrawText(labels[item], rect.x + FromDIP(2), rect.y + (rect.height - GetCharHeight()) / 2);
+    }
+};
+class WxListBox final : public ListBox {
+    CompletionList* list_ = nullptr;
+    int rows_ = 8;
+
+public:
+    void SetFont(std::shared_ptr<Font> font) noexcept override {
+        list_->SetFont(static_cast<WxFont*>(font.get())->font);
+        list_->Measure();
+    }
+    void SCICALL Create(Window& parent, int id, Point, int, int, Scintilla::Technology) noexcept override {
+        auto* popup = new CompletionPopup(Host(parent.GetID()));
+        list_ = new CompletionList(popup, id);
+        popup->Bind(wxEVT_MOUSEWHEEL, [list = list_](wxMouseEvent& event) {
+            wxMouseEvent routed(event);
+            routed.SetEventObject(list);
+            list->GetEventHandler()->ProcessEvent(routed);
+        });
+        auto* sizer = new wxBoxSizer(wxVERTICAL);
+        sizer->Add(list_, 1, wxEXPAND | wxALL, popup->FromDIP(1));
+        popup->SetSizer(sizer);
+        wid = popup;
+    }
     void SetAverageCharWidth(int, double) noexcept override {
-        // The native list box handles character sizing; popup sizing uses fixed rows.
+        // GetDesiredRect measures the actual labels using the native list font.
     }
     void SetVisibleRows(int rows) noexcept override { rows_ = rows; }
     int GetVisibleRows() const noexcept override { return rows_; }
-    PRectangle GetDesiredRect() override { return PRectangle(0, 0, 240, rows_ * 22); }
-    int CaretFromEdge() const noexcept override { return 0; }
+    PRectangle GetDesiredRect() override {
+        int width = list_->GetCharWidth() * 3;
+        for (const auto& label : list_->labels)
+            width = std::max(width, list_->GetTextExtent(label).x);
+        width += list_->GetCharWidth() * 3 + CaretFromEdge() * 2;
+        if (Length() > rows_) width += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X, list_);
+        return PRectangle(0, 0, width, std::min(Length(), rows_) * list_->itemHeight + 2 * list_->FromDIP(1));
+    }
+    int CaretFromEdge() const noexcept override { return list_->FromDIP(3); }
     void Clear() noexcept override {
-        if (list_) list_->Clear();
+        list_->labels.clear();
+        list_->SetItemCount(0);
     }
-    int Length() const noexcept override { return list_ ? list_->GetCount() : 0; }
-    void Select(int n) override {
-        if (list_) list_->SetSelection(n);
+    int Length() const noexcept override { return static_cast<int>(list_->labels.size()); }
+    void Select(int item) override {
+        list_->SetSelection(item);
+        list_->Notify(ListBoxEvent::EventType::selectionChange);
     }
-    int GetSelection() const noexcept override { return list_ ? list_->GetSelection() : -1; }
-    std::string GetValue(int n) const override { return list_ ? list_->GetString(n).ToStdString(wxConvUTF8) : ""; }
+    int GetSelection() const noexcept override { return list_->GetSelection(); }
+    std::string GetValue(int item) const override { return list_->labels[item].ToStdString(wxConvUTF8); }
     void RegisterImage(int, const char*) override {
-        // The wx list box displays text items without registered image decoration.
+        // This text-only candidate list does not retain registered images.
     }
     void RegisterRGBAImage(int, int, int, const unsigned char*) override {
-        // The wx list box displays text items without RGBA image decoration.
+        // This text-only candidate list does not retain registered images.
     }
     void ClearRegisteredImages() noexcept override {
-        // The text-only list box retains no registered image resources.
+        // There are no retained candidate images to release.
     }
-    void SetDelegate(IListBoxDelegate* d) noexcept override { delegate_ = d; }
-    void SetList(const char* value, char separator, char) override {
-        if (list_) {
-            list_->Clear();
-            for (const auto& s : wxSplit(wxString::FromUTF8(value), separator))
-                list_->Append(s);
+    void SetDelegate(IListBoxDelegate* delegate) noexcept override { list_->delegate = delegate; }
+    void SetList(const char* value, char separator, char typeSeparator) override {
+        Clear();
+        for (auto label : wxSplit(wxString::FromUTF8(value), separator)) {
+            if (const auto type = label.find(typeSeparator); type != wxString::npos) label.Truncate(type);
+            list_->labels.push_back(label);
         }
+        list_->SetItemCount(list_->labels.size());
+        list_->Measure();
     }
     void SCICALL SetOptions(const ListOptions&) noexcept override {
-        // Native list-box presentation currently uses the toolkit's default options.
+        // The native text-only list uses system selection colors and its own metrics.
     }
 };
 std::unique_ptr<ListBox> ListBox::Allocate() {

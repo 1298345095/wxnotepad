@@ -11,6 +11,14 @@ enum SelectOption {
 };
 
 enum AutoInsertMask {
+    AutoInsertMask_Parenthesis = 1,
+    AutoInsertMask_Brace = 2,
+    AutoInsertMask_SquareBracket = 4,
+    AutoInsertMask_AngleBracket = 8,
+    AutoInsertMask_DoubleQuote = 16,
+    AutoInsertMask_SingleQuote = 32,
+    AutoInsertMask_Backtick = 64,
+    AutoInsertMask_SpaceAfterComma = 128,
     AutoInsertMask_SpaceAfterComment = 256,
     AutoInsertMask_Default = 511,
 };

@@ -42,7 +42,7 @@ void CheckMenu(EditorFrame* frame) {
           {"Move Up", "Move Down", "Transpose", "Sort Lines...", "Modify Lines...", "Align Lines...", "Duplicate Line",
            "Cut Line", "Copy Line", "Delete Line", "Join Lines", "Split Lines", "Column Wrap...", "Join Paragraphs"});
     Order(Submenu(bar->GetMenu(1), "Special"),
-          {"Character to Hex", "Hex to Character", "Escape C Chars", "Unescape C Chars"});
+          {"Complete Word", "Character to Hex", "Hex to Character", "Escape C Chars", "Unescape C Chars"});
     Order(Submenu(bar->GetMenu(0), "Line Endings"),
           {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)", "Default..."});
     // Notepad4.rc at 89b8b36: CMD_RELOADUTF8, separator, IDM_RECODE_SELECT,
@@ -61,9 +61,13 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(bar->GetMenu(2), "Goto"),
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});
-    Order(bar->GetMenu(5), {"Insert Tabs as Spaces", "Tab Settings...", "Long Line Settings...", "Auto Indent",
-                            "Select and Edit Options", "Appearance", "File Change Notification...", "Other Settings",
-                            "Save Settings On Exit", "Save Settings Now"});
+    Order(bar->GetMenu(5),
+          {"Insert Tabs as Spaces", "Tab Settings...", "Long Line Settings...", "Auto Completion Settings...",
+           "Auto Completion Ignore Case", "Auto Indent", "Select and Edit Options", "Appearance",
+           "File Change Notification...", "Other Settings", "Save Settings On Exit", "Save Settings Now"});
+    Order(Submenu(bar->GetMenu(5), "Select and Edit Options"),
+          {"Enable Multiple Selection", "Copy Selection As Find Text", "Copy Paste Buffer As Find Text",
+           "Undo Redo Remember Selection", "Line Selection Mode"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
 }

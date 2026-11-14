@@ -11,18 +11,17 @@ namespace {
 #include "syntax/generated/javascript_scheme_data.h"
 #include "syntax/generated/typescript_scheme_data.h"
 #include "syntax/generated/markup_scheme_data.h"
+#include "syntax/generated/html_scheme_data.h"
+#include "syntax/generated/xml_scheme_data.h"
+#include "syntax/generated/rust_scheme_data.h"
+#include "syntax/generated/go_scheme_data.h"
+#include "syntax/generated/lua_scheme_data.h"
+#include "syntax/generated/markdown_scheme_data.h"
+#include "syntax/generated/toml_scheme_data.h"
+#include "syntax/generated/yaml_scheme_data.h"
+#include "syntax/generated/cmake_scheme_data.h"
 #include "syntax/generated/detection_extensions.h"
 
-template <size_t N> constexpr auto Keywords(const char* const (&text)[N], uintptr_t attributes) {
-    std::array<SyntaxKeywords, N> result{};
-    for (size_t index = 0; index < N; ++index)
-        result[index] = {text[index], attributes};
-    return result;
-}
-constexpr auto cppLists = Keywords(cppKeywords, 0);
-constexpr auto pythonLists = Keywords(pythonKeywords, 2U << 8U);
-constexpr auto jsonLists = Keywords(jsonKeywords, jsonKeywordAttributes);
-constexpr auto bashLists = Keywords(bashKeywords, 2U << 8U);
 constexpr const char* textExtensions[] = {"txt"};
 constexpr const char* cppExtensions[] = {"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"};
 constexpr const char* pythonExtensions[] = {"py", "pyw", "pyi"};
@@ -34,6 +33,9 @@ constexpr SyntaxProperty cppProperties[] = {{"lexer.lang", "0"}};
 constexpr SyntaxProperty bashProperties[] = {{"lexer.lang", "0"}};
 constexpr SyntaxProperty cShellProperties[] = {{"lexer.lang", "1"}};
 constexpr SyntaxProperty m4Properties[] = {{"lexer.lang", "2"}};
+constexpr SyntaxProperty markdownGitHubProperties[] = {{"lexer.lang", "0"}};
+constexpr SyntaxProperty markdownGitLabProperties[] = {{"lexer.lang", "1"}};
+constexpr SyntaxProperty markdownPandocProperties[] = {{"lexer.lang", "2"}};
 constexpr const char* jsxExtensions[] = {"jsx"};
 constexpr const char* tsxExtensions[] = {"tsx"};
 constexpr SyntaxProperty javascriptProperties[] = {{"lexer.lang", "0"}};
@@ -79,6 +81,12 @@ constexpr const char* xsdExtensions[] = {"xsd"};
 constexpr const char* xsltExtensions[] = {"xsl", "xslt"};
 constexpr const char* dtdExtensions[] = {"dtd"};
 constexpr const char* plistExtensions[] = {"plist"};
+// Pinned stlDefault.cpp::lexTextFile uses the distinct Text Settings table.
+constexpr SyntaxOriginalMetadata plainOriginal = {
+    SyntaxLexerAttribute::NoLineComment | SyntaxLexerAttribute::NoBlockComment |
+        SyntaxLexerAttribute::IndentBasedFolding | SyntaxLexerAttribute::IndentLookForward |
+        SyntaxLexerAttribute::PlainTextFile,
+    4, 4, (1 << 1) | (1 << 2)};
 constexpr SyntaxDefinition definitions[] = {
     {"Plain Text",
      textExtensions,
@@ -92,9 +100,12 @@ constexpr SyntaxDefinition definitions[] = {
      nullptr,
      nullptr,
      0,
-     true},
+     true,
+     false,
+     nullptr,
+     plainOriginal},
     {"C/C++", cppExtensions, cppLists, cppStyles, cppProperties, SCLEX_CPP, SyntaxLanguage::Cpp, true, "//", "/*", "*/",
-     SCE_C_COMMENTDOC_TAG_XML},
+     SCE_C_COMMENTDOC_TAG_XML, false, false, nullptr, cppOriginal},
     {"Python",
      pythonExtensions,
      pythonLists,
@@ -109,7 +120,8 @@ constexpr SyntaxDefinition definitions[] = {
      SCE_PY_TASKMARKER,
      true,
      true,
-     "python3"},
+     "python3",
+     pythonOriginal},
     {"JSON",
      jsonExtensions,
      jsonLists,
@@ -121,47 +133,182 @@ constexpr SyntaxDefinition definitions[] = {
      "//",
      "/*",
      "*/",
-     SCE_JSON_BLOCKCOMMENT},
+     SCE_JSON_BLOCKCOMMENT,
+     false,
+     false,
+     nullptr,
+     jsonOriginal},
     {"JavaScript", javascriptExtensions, javascriptLists, javascriptStyles, javascriptProperties, SCLEX_JAVASCRIPT,
-     SyntaxLanguage::JavaScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+     SyntaxLanguage::JavaScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node", javascriptOriginal},
     {"JSX", jsxExtensions, javascriptLists, javascriptStyles, jsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Jsx,
-     true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node"},
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, "node", javascriptOriginal},
     {"TypeScript", typescriptExtensions, typescriptLists, typescriptStyles, typescriptProperties, SCLEX_JAVASCRIPT,
-     SyntaxLanguage::TypeScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER},
+     SyntaxLanguage::TypeScript, true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, nullptr, typescriptOriginal},
     {"TSX", tsxExtensions, typescriptLists, typescriptStyles, tsxProperties, SCLEX_JAVASCRIPT, SyntaxLanguage::Tsx,
-     true, "//", "/*", "*/", SCE_JS_TASKMARKER},
+     true, "//", "/*", "*/", SCE_JS_TASKMARKER, false, false, nullptr, typescriptOriginal},
     {"Bash", bashExtensions, bashLists, bashStyles, bashProperties, SCLEX_BASH, SyntaxLanguage::Bash, true, "#",
-     nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/bash"},
+     nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/bash", bashOriginal},
     {"C Shell", cShellExtensions, bashLists, bashStyles, cShellProperties, SCLEX_BASH, SyntaxLanguage::CShell, true,
-     "#", nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/csh"},
+     "#", nullptr, nullptr, SCE_SH_COMMENTLINE, false, false, "/bin/csh", bashOriginal},
     {"m4", m4Extensions, bashLists, bashStyles, m4Properties, SCLEX_BASH, SyntaxLanguage::M4, true, "dnl ", nullptr,
-     nullptr, SCE_SH_COMMENTLINE, false, false, "m4"},
+     nullptr, SCE_SH_COMMENTLINE, false, false, "m4", bashOriginal},
     {"Web Source Code", htmlExtensions, htmlLists, htmlStyles, htmlProperties, SCLEX_HTML, SyntaxLanguage::Html, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"ASP VBScript", aspExtensions, htmlLists, htmlStyles, htmlVbProperties, SCLEX_HTML, SyntaxLanguage::AspVb, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"ASP JavaScript", aspExtensions, htmlLists, htmlStyles, htmlProperties, SCLEX_HTML, SyntaxLanguage::AspJs, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"ASP.NET C#", aspxExtensions, htmlLists, htmlStyles, htmlProperties, SCLEX_HTML, SyntaxLanguage::AspxCs, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"ASP.NET VB", aspxExtensions, htmlLists, htmlStyles, htmlVbProperties, SCLEX_HTML, SyntaxLanguage::AspxVb, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"JSP", jspExtensions, htmlLists, htmlStyles, jspProperties, SCLEX_HTML, SyntaxLanguage::Jsp, true, nullptr, "<!--",
-     "-->", SCE_H_COMMENT},
+     "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"JSPX", jspxExtensions, htmlLists, htmlStyles, jspxProperties, SCLEX_HTML, SyntaxLanguage::Jspx, true, nullptr,
-     "<!--", "-->", SCE_H_COMMENT},
+     "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, htmlOriginal},
     {"XML Document", xmlExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Xml, true, nullptr,
-     "<!--", "-->", SCE_H_COMMENT},
+     "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"SVG", svgExtensions, xmlLists, xmlStyles, svgProperties, SCLEX_HTML, SyntaxLanguage::Svg, true, nullptr, "<!--",
-     "-->", SCE_H_COMMENT},
+     "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"XML Schema", xsdExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Xsd, true, nullptr,
-     "<!--", "-->", SCE_H_COMMENT},
+     "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"XSLT", xsltExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Xslt, true, nullptr,
-     "<!--", "-->", SCE_H_COMMENT},
+     "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"DTD", dtdExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Dtd, true, nullptr, "<!--",
-     "-->", SCE_H_COMMENT},
+     "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
     {"Property List", plistExtensions, xmlLists, xmlStyles, xmlProperties, SCLEX_HTML, SyntaxLanguage::Plist, true,
-     nullptr, "<!--", "-->", SCE_H_COMMENT},
+     nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr, xmlOriginal},
+    {"Rust",
+     rustExtensions,
+     rustLists,
+     rustStyles,
+     {},
+     SCLEX_RUST,
+     SyntaxLanguage::Rust,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_RUST_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     rustOriginal},
+    {"Go",
+     goExtensions,
+     goLists,
+     goStyles,
+     {},
+     SCLEX_GO,
+     SyntaxLanguage::Go,
+     true,
+     "//",
+     "/*",
+     "*/",
+     SCE_GO_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     goOriginal},
+    {"Lua",
+     luaExtensions,
+     luaLists,
+     luaStyles,
+     {},
+     SCLEX_LUA,
+     SyntaxLanguage::Lua,
+     true,
+     "--",
+     "--[[",
+     "]]",
+     SCE_LUA_COMMENTLINE,
+     false,
+     false,
+     "lua",
+     luaOriginal},
+    {"GitHub GFM", markdownExtensions, markdownLists, markdownStyles, markdownGitHubProperties, SCLEX_MARKDOWN,
+     SyntaxLanguage::MarkdownGitHub, true, nullptr, "<!--", "-->", SCE_H_COMMENT, false, false, nullptr,
+     markdownOriginal},
+    {"GitLab GLFM",
+     {},
+     markdownLists,
+     markdownStyles,
+     markdownGitLabProperties,
+     SCLEX_MARKDOWN,
+     SyntaxLanguage::MarkdownGitLab,
+     true,
+     nullptr,
+     "<!--",
+     "-->",
+     SCE_H_COMMENT,
+     false,
+     false,
+     nullptr,
+     markdownOriginal},
+    {"Pandoc",
+     {},
+     markdownLists,
+     markdownStyles,
+     markdownPandocProperties,
+     SCLEX_MARKDOWN,
+     SyntaxLanguage::MarkdownPandoc,
+     true,
+     nullptr,
+     "<!--",
+     "-->",
+     SCE_H_COMMENT,
+     false,
+     false,
+     nullptr,
+     markdownOriginal},
+    {"TOML",
+     tomlExtensions,
+     tomlLists,
+     tomlStyles,
+     {},
+     SCLEX_TOML,
+     SyntaxLanguage::Toml,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_TOML_COMMENT,
+     false,
+     false,
+     nullptr,
+     tomlOriginal},
+    {"YAML",
+     yamlExtensions,
+     yamlLists,
+     yamlStyles,
+     {},
+     SCLEX_YAML,
+     SyntaxLanguage::Yaml,
+     true,
+     "#",
+     nullptr,
+     nullptr,
+     SCE_YAML_COMMENT,
+     true,
+     false,
+     nullptr,
+     yamlOriginal},
+    {"CMake",
+     cmakeExtensions,
+     cmakeLists,
+     cmakeStyles,
+     {},
+     SCLEX_CMAKE,
+     SyntaxLanguage::CMake,
+     true,
+     "#",
+     "#[[",
+     "]]",
+     SCE_CMAKE_TASKMARKER,
+     false,
+     false,
+     nullptr,
+     cmakeOriginal},
 };
 
 bool Space(char ch) {
@@ -206,6 +353,7 @@ std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
         if (letters.starts_with(shell)) return SyntaxLanguage::Bash;
     }
     if (letters.starts_with("node")) return SyntaxLanguage::JavaScript;
+    if (letters.starts_with("lua") || letters.starts_with("wlua")) return SyntaxLanguage::Lua;
     return std::nullopt;
 }
 
@@ -322,6 +470,9 @@ SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
         return SyntaxLanguage::JavaScript;
     case SyntaxLanguage::Tsx:
         return SyntaxLanguage::TypeScript;
+    case SyntaxLanguage::MarkdownGitLab:
+    case SyntaxLanguage::MarkdownPandoc:
+        return SyntaxLanguage::MarkdownGitHub;
     default:
         return language;
     }
@@ -345,6 +496,20 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
         return "JavaScript";
     case SyntaxLanguage::TypeScript:
         return "TypeScript";
+    case SyntaxLanguage::Rust:
+        return rustSettingsSection;
+    case SyntaxLanguage::Go:
+        return goSettingsSection;
+    case SyntaxLanguage::Lua:
+        return luaSettingsSection;
+    case SyntaxLanguage::MarkdownGitHub:
+        return markdownSettingsSection;
+    case SyntaxLanguage::Toml:
+        return tomlSettingsSection;
+    case SyntaxLanguage::Yaml:
+        return yamlSettingsSection;
+    case SyntaxLanguage::CMake:
+        return cmakeSettingsSection;
     default:
         return "Text File";
     }
@@ -352,6 +517,8 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
 
 SyntaxLanguage LanguageForPath(const wxString& path) {
     const auto name = wxFileName(path).GetFullName();
+    // Pinned Styles.cpp::Style_GetLexerFromFile checks these .txt names first.
+    if (name.CmpNoCase("CMakeLists.txt") == 0 || name.CmpNoCase("CMakeCache.txt") == 0) return SyntaxLanguage::CMake;
     const auto originalExtension = FileExtension(path);
     if (name.StartsWith(".") && (originalExtension.StartsWith("bash") || originalExtension == "profile"))
         return SyntaxLanguage::Bash;

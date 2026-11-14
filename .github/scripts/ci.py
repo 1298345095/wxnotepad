@@ -141,11 +141,17 @@ def test_shards(cmake_dir, expression, jobs, directory):
 
     # Separate CTest workspaces keep cost data, LastTest logs and JUnit output
     # independent, while the registered commands and working directories stay intact.
+    # CTest resolves subdirs() against its current workspace, not the included file.
+    child_files = [path for path in cmake_dir.rglob('CTestTestfile.cmake') if path.parent != cmake_dir]
     shards = []
     for index in range(min(jobs, len(tests))):
         selected = tests[index::min(jobs, len(tests))]
         workspace = directory / f'shard-{index + 1}'
         workspace.mkdir(parents=True, exist_ok=True)
+        for source in child_files:
+            target = workspace / source.relative_to(cmake_dir)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(f'include({literal(source.as_posix())})\n', encoding='utf-8')
         registration = f'include({literal((cmake_dir / "CTestTestfile.cmake").as_posix())})\n'
         for item in selected:
             properties = {entry['name']: entry['value'] for entry in item.get('properties', [])}

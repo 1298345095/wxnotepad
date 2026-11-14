@@ -95,6 +95,10 @@ void AutomaticScrollWidth(EditorFrame* frame) {
         editor->Refresh(false);
         editor->Update();
         wxYield();
+        if (editor->GetClientSize().y != height || editor->GetScrollRange(wxHORIZONTAL) != range)
+            std::fprintf(stderr, "bottom-edge paint=%d height=%d/%d range=%d/%d width=%lld\n", paint, height,
+                         editor->GetClientSize().y, range, editor->GetScrollRange(wxHORIZONTAL),
+                         static_cast<long long>(editor->Send(Message::GetScrollWidth)));
         Require(editor->GetClientSize().y == height && editor->GetScrollRange(wxHORIZONTAL) == range,
                 "a bottom-edge long line must not oscillate horizontal scrollbar visibility across paints");
     }
@@ -181,6 +185,10 @@ std::string Bytes(const wxString& path) {
 class WordWrapApp final : public wxApp {
 public:
     bool OnInit() override {
+#ifdef __WXMSW__
+        if (wxString(wxGetenv("WXNOTEPAD_TEST_DPI")) == "96")
+            SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE_GDISCALED);
+#endif
         auto* frame = new EditorFrame;
         frame->SetSize(500, 400);
         frame->Show();
@@ -189,6 +197,9 @@ public:
                 Require(presented, "the native view is presented before layout-dependent scenarios");
                 auto* editor = frame->Editor();
                 Layout(frame);
+                std::printf("DPI=%d,%d client=%d,%d line=%lld\n", editor->GetDPI().x, editor->GetDPI().y,
+                            editor->GetClientSize().x, editor->GetClientSize().y,
+                            static_cast<long long>(editor->Send(Message::TextHeight, 0)));
                 std::printf("blank horizontal range=%d thumb=%d offset=%d\n", editor->GetScrollRange(wxHORIZONTAL),
                             editor->GetScrollThumb(wxHORIZONTAL), editor->GetScrollPos(wxHORIZONTAL));
                 Require(editor->GetScrollRange(wxHORIZONTAL) <= editor->GetScrollThumb(wxHORIZONTAL),
