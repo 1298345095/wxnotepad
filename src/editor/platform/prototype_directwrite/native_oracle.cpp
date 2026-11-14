@@ -15,9 +15,9 @@ constexpr int Workers = 4;
 constexpr int Iterations = 64;
 constexpr std::array PointSizes{8, 12, 22};
 constexpr std::array Dpis{96, 144, 192};
-enum class FontStyle { Normal, Bold, Italic };
+enum class FontStyle : std::uint8_t { Normal, Bold, Italic };
 constexpr std::array FontStyles{FontStyle::Normal, FontStyle::Bold, FontStyle::Italic};
-enum class RasterCase { OriginalDirect, AdaptedDirect, OriginalBuffered, AdaptedBuffered };
+enum class RasterCase : std::uint8_t { OriginalDirect, AdaptedDirect, OriginalBuffered, AdaptedBuffered };
 constexpr std::array RasterCases{RasterCase::OriginalDirect, RasterCase::AdaptedDirect, RasterCase::OriginalBuffered,
                                  RasterCase::AdaptedBuffered};
 constexpr std::array Utf8Samples{std::string_view("Wim 0123456789"), std::string_view("A中😀Z"),

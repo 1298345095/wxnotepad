@@ -67,6 +67,9 @@ public:
             } catch (const std::system_error& error) {
                 status_ = static_cast<HRESULT>(error.code().value());
                 return;
+            } catch (const std::bad_alloc&) {
+                status_ = E_OUTOFMEMORY;
+                return;
             }
             const auto size = window_->GetClientSize();
             const auto desired = D2D1::SizeU(std::max(1, size.x), std::max(1, size.y));

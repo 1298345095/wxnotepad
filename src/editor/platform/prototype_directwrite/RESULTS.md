@@ -115,7 +115,10 @@ Full text and save-point assertions passed in every process.
   static initialization/vector allocation warnings were corrected. Canonical
   clang-format passes. Existing inherited warnings remain documented in logs.
 
-Performance is recorded after the final code changes. No further timing run is
-authorized by the completed window. Raw logs, binary hashes, executables, images,
+The measured binaries were built from `2941dea`. Subsequent changes report native
+target allocation failure through HRESULT and narrow the oracle enum storage;
+neither changes the measured successful application path. The original measured
+binaries/hashes are retained, and no performance repeat was run. No further timing
+run is authorized by the completed window. Raw logs, binary hashes, executables, images,
 reports and the summarizer remain in the Windows evidence directory listed in
 [README.md](README.md). Linux's Pango/Cairo code is unchanged by this experiment.
