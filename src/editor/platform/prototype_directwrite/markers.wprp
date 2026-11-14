@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WindowsPerformanceRecorder Version="1.0" Author="wxnotepad" Comments="Prototype diagnostic phase markers">
+  <Profiles>
+    <EventCollector Id="WxNotepadMarkersCollector" Name="wxnotepad diagnostic markers">
+      <BufferSize Value="64" />
+      <Buffers Value="8" />
+    </EventCollector>
+    <EventProvider Id="WxNotepadMarkersProvider" Name="0F0BE3AA-4C34-4F96-A363-6C15FF2B3619" Level="5">
+      <Keywords><Keyword Value="0x1" /></Keywords>
+    </EventProvider>
+    <Profile Id="WxNotepadMarkers.Verbose.File" Name="WxNotepadMarkers" Description="Prototype diagnostic phase markers" LoggingMode="File" DetailLevel="Verbose">
+      <Collectors>
+        <EventCollectorId Value="WxNotepadMarkersCollector">
+          <EventProviders><EventProviderId Value="WxNotepadMarkersProvider" /></EventProviders>
+        </EventCollectorId>
+      </Collectors>
+    </Profile>
+  </Profiles>
+</WindowsPerformanceRecorder>

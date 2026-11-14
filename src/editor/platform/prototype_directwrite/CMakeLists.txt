@@ -21,11 +21,24 @@ endif()
 execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/prepare_sources.py"
     "${CORE_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}" COMMAND_ERROR_IS_FATAL ANY)
 set(profile_root "${CMAKE_CURRENT_SOURCE_DIR}/../prototype_worker_measurement")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/prepare_sources.py" "${CMAKE_CURRENT_SOURCE_DIR}/prepare_diagnostics.py"
+    "${profile_root}/prepare_sources.py" "${PORT_ROOT}/src/editor/editor_core.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/directwrite_surface.cpp" "${CORE_ROOT}/scintilla/win32/SurfaceD2D.cxx")
 execute_process(COMMAND "${Python3_EXECUTABLE}" "${profile_root}/prepare_sources.py"
+    "${PORT_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}" COMMAND_ERROR_IS_FATAL ANY)
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/prepare_diagnostics.py"
     "${PORT_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}" COMMAND_ERROR_IS_FATAL ANY)
 add_library(directwrite_platform OBJECT directwrite_surface.cpp "${PORT_ROOT}/src/editor/platform/wx_platform.cpp")
 add_library(directwrite_host OBJECT "${PORT_ROOT}/src/editor/editor_core.cpp")
 add_library(directwrite_profile OBJECT "${CMAKE_CURRENT_BINARY_DIR}/editor_core_probe.cpp")
+add_library(directwrite_diagnostic_objects OBJECT
+    "${CMAKE_CURRENT_BINARY_DIR}/directwrite_surface_diagnostic.cpp"
+    "${CMAKE_CURRENT_BINARY_DIR}/editor_core_diagnostic.cpp")
+add_executable(directwrite_diagnostic WIN32 "${CMAKE_CURRENT_BINARY_DIR}/diagnostic_probe.cpp"
+    $<TARGET_OBJECTS:directwrite_diagnostic_objects>
+    "${PORT_ROOT}/src/editor/platform/wx_platform.cpp")
+add_executable(directwrite_native_memory WIN32 native_memory_control.cpp)
 add_executable(directwrite_app WIN32 "${PORT_ROOT}/src/app/main.cpp"
     $<TARGET_OBJECTS:directwrite_platform> $<TARGET_OBJECTS:directwrite_host>)
 add_executable(directwrite_resize WIN32 "${PORT_ROOT}/tests/wrap_resize.cpp"
@@ -38,9 +51,9 @@ foreach(probe caret_appearance auto_insertion automatic_completion completion_po
     add_executable(directwrite_${probe} WIN32 "${PORT_ROOT}/tests/${probe}.cpp"
         $<TARGET_OBJECTS:directwrite_platform> $<TARGET_OBJECTS:directwrite_host>)
 endforeach()
-foreach(target directwrite_platform directwrite_host directwrite_profile directwrite_app directwrite_resize directwrite_oracle directwrite_layout
+foreach(target directwrite_platform directwrite_host directwrite_profile directwrite_diagnostic_objects directwrite_diagnostic directwrite_native_memory directwrite_app directwrite_resize directwrite_oracle directwrite_layout
         directwrite_caret_appearance directwrite_auto_insertion directwrite_automatic_completion directwrite_completion_popup)
-    target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}" "${profile_root}" "${PORT_ROOT}/src"
+    target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}" "${profile_root}" "${PORT_ROOT}/src"
         "${PORT_ROOT}/tests" "${PORT_ROOT}/src/editor/platform" "${CORE_ROOT}/scintilla/include"
         "${CORE_ROOT}/scintilla/src" "${CORE_ROOT}/scintilla/lexlib" "${CORE_ROOT}/scintilla/win32")
     target_compile_definitions(${target} PRIVATE WXNOTEPAD_PROTOTYPE_DIRECTWRITE __WX__ BOOST_REGEX_STANDALONE
@@ -55,9 +68,10 @@ foreach(target directwrite_platform directwrite_host directwrite_profile directw
             "${PORT_BUILD}/editor_runtime.lib" imm32 shlwapi ole32 gdi32 advapi32 shell32)
     endif()
 endforeach()
-foreach(target directwrite_platform directwrite_host directwrite_profile)
+foreach(target directwrite_platform directwrite_host directwrite_profile directwrite_diagnostic_objects directwrite_native_memory)
     target_compile_options(${target} PRIVATE /GR- /Zc:char8_t-)
 endforeach()
+set_source_files_properties("${PORT_ROOT}/src/editor/platform/wx_platform.cpp" PROPERTIES COMPILE_OPTIONS "/GR-;/Zc:char8_t-")
 enable_testing()
 add_test(NAME directwrite_wrapped_resize COMMAND directwrite_resize)
 set_tests_properties(directwrite_wrapped_resize PROPERTIES TIMEOUT 120)
