@@ -44,6 +44,41 @@ constexpr std::array Reference{Geometry{992, 14661, 14642},  Geometry{872, 16144
 void Require(bool condition, const char* message) {
     if (!condition) throw TestEditor::Failure(message);
 }
+void ReportGeometryFailure(EditorControl* editor, const char* phase, int requestedWidth) {
+    auto* frame = wxGetTopLevelParent(editor);
+    const auto outer = frame->GetSize();
+    const auto frameClient = frame->GetClientSize();
+    const auto client = editor->GetClientSize();
+    const auto style = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+    std::string face(static_cast<size_t>(editor->Send(Message::StyleGetFont, style)) + 1, char{});
+    editor->Send(Message::StyleGetFont, style, reinterpret_cast<intptr_t>(face.data()));
+    std::string locale(static_cast<size_t>(editor->Send(Message::GetFontLocale)) + 1, char{});
+    editor->Send(Message::GetFontLocale, 0, reinterpret_cast<intptr_t>(locale.data()));
+    const auto width = [editor, style](const char* text) {
+        return static_cast<long long>(editor->Send(Message::TextWidth, style, reinterpret_cast<intptr_t>(text)));
+    };
+    std::fprintf(
+        stderr,
+        "native viewport failure: phase=%s requested=%dx%d actual=%dx%d frame=%dx%d frame_client=%dx%d "
+        "screen=%dx%d max_track=%dx%d dpi=%d technology=%lld face=%s size_fractional=%lld locale=%s "
+        "font_quality=%lld line_height=%lld screen_lines=%lld margins=%lld,%lld,%lld,%lld,%lld left=%lld right=%lld "
+        "width_W=%lld width_Chinese=%lld width_emoji=%lld\n",
+        phase, requestedWidth, ViewportHeight, client.x, client.y, outer.x, outer.y, frameClient.x, frameClient.y,
+        GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), GetSystemMetrics(SM_CXMAXTRACK),
+        GetSystemMetrics(SM_CYMAXTRACK), editor->GetDPI().y,
+        static_cast<long long>(editor->Send(Message::GetTechnology)), face.c_str(),
+        static_cast<long long>(editor->Send(Message::StyleGetSizeFractional, style)), locale.c_str(),
+        static_cast<long long>(editor->Send(Message::GetFontQuality)),
+        static_cast<long long>(editor->Send(Message::TextHeight, 0)),
+        static_cast<long long>(editor->Send(Message::LinesOnScreen)),
+        static_cast<long long>(editor->Send(Message::GetMarginWidthN, 0)),
+        static_cast<long long>(editor->Send(Message::GetMarginWidthN, 1)),
+        static_cast<long long>(editor->Send(Message::GetMarginWidthN, 2)),
+        static_cast<long long>(editor->Send(Message::GetMarginWidthN, 3)),
+        static_cast<long long>(editor->Send(Message::GetMarginWidthN, 4)),
+        static_cast<long long>(editor->Send(Message::GetMarginLeft)),
+        static_cast<long long>(editor->Send(Message::GetMarginRight)), width("W"), width("中文"), width("😀"));
+}
 void Resize(EditorFrame* frame, int width, bool setup) {
     auto* editor = frame->Editor();
     const wxSize desired(width, ViewportHeight);
@@ -53,14 +88,17 @@ void Resize(EditorFrame* frame, int width, bool setup) {
         NativePaint::Complete(editor);
         if (editor->GetClientSize() == desired) return;
     }
+    ReportGeometryFailure(editor, "resize", width);
     Require(false, "the editor reaches the exact original physical viewport");
 }
 void Check(EditorControl* editor, const Geometry& reference) {
     const auto wrap = editor->Send(Message::WrapCount, 0);
     const auto first = editor->Send(Message::GetFirstVisibleLine);
-    if (wrap != reference.wrap || first != reference.firstVisible)
+    if (wrap != reference.wrap || first != reference.firstVisible) {
+        ReportGeometryFailure(editor, "reference", reference.width);
         std::fprintf(stderr, "width=%d wrap=%zd first=%zd expected=%zd,%zd\n", reference.width, wrap, first,
                      reference.wrap, reference.firstVisible);
+    }
     Require(wrap == reference.wrap && first == reference.firstVisible,
             "resize wrap and physical viewport match the pinned original observations");
     Require(editor->Send(Message::TextHeight, 0) == LineHeight && editor->Send(Message::LinesOnScreen) == ScreenLines,
