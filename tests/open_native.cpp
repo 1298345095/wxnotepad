@@ -75,7 +75,9 @@ private:
         g_free(selected);
         if (self.held_ || !requested) return;
         self.held_ = true;
-        self.holdSource_ = g_idle_add(
+        // Establish the pending selection before the driver's next native response.
+        self.holdSource_ = g_idle_add_full(
+            G_PRIORITY_HIGH,
             [](gpointer data) -> gboolean {
                 auto& self = *static_cast<DelayedFileSelection*>(data);
                 self.holdSource_ = 0;
@@ -98,7 +100,7 @@ private:
                     data);
                 return G_SOURCE_REMOVE;
             },
-            data);
+            data, nullptr);
     }
     wxString expected_, previous_;
     GtkFileChooser* chooser_ = nullptr;
