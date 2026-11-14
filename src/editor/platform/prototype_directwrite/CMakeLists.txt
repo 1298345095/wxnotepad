@@ -24,6 +24,7 @@ set(profile_root "${CMAKE_CURRENT_SOURCE_DIR}/../prototype_worker_measurement")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/prepare_sources.py" "${CMAKE_CURRENT_SOURCE_DIR}/prepare_diagnostics.py"
     "${profile_root}/prepare_sources.py" "${PORT_ROOT}/src/editor/editor_core.cpp"
+    "${profile_root}/benchmark_probe.cpp" "${CORE_ROOT}/wxnotepad-source.json"
     "${CMAKE_CURRENT_SOURCE_DIR}/directwrite_surface.cpp" "${CORE_ROOT}/scintilla/win32/SurfaceD2D.cxx")
 execute_process(COMMAND "${Python3_EXECUTABLE}" "${profile_root}/prepare_sources.py"
     "${PORT_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}" COMMAND_ERROR_IS_FATAL ANY)

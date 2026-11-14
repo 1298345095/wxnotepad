@@ -63,7 +63,8 @@ before running `run-diagnostics.ps1 -OutputDirectory <fresh Windows folder>`.
 Profiles: CPU, GPU, VirtualAllocation and a private phase marker provider. The
 collector uses its own unique instance, never cancels an unrelated recording,
 waits at most 90 seconds for the controller and always attempts to stop/save.
-The owned test process has a 60-second bound. On stop failure, only its named
+The two owned test processes share a 60-second budget, and any still-running
+owned child is stopped before reporting controller failure. On stop failure, only its named
 collectors are stopped; raw ETLs are copied before cancelling that WPR instance.
 Normal completion and all failures retain stdout, stderr and status JSON.
 

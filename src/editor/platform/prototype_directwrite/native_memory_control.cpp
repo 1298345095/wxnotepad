@@ -6,6 +6,7 @@ HANDLE g_hDefaultHeap = GetProcessHeap();
 namespace {
 constexpr int ClientWidth = 1020;
 constexpr int ClientHeight = 600;
+constexpr DWORD MemorySettleMilliseconds = 1000;
 void Check(HRESULT result, const char* operation) {
     if (FAILED(result)) throw std::runtime_error(operation);
 }
@@ -62,14 +63,14 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
                                          core::ColourRGBA(0, 0, 0));
         surface->Release();
         Check(target->EndDraw(), "present original native target");
-        Sleep(1000);
+        Sleep(MemorySettleMilliseconds);
         DWriteDiagnosis::Memory("native-after-first-paint");
         surface.reset();
         font.reset();
         target.Reset();
         DestroyWindow(window);
         window = nullptr;
-        Sleep(1000);
+        Sleep(MemorySettleMilliseconds);
         DWriteDiagnosis::Memory("native-after-target-destroy");
         DWriteDiagnosis::Finish();
         std::puts("PASS: original native target memory control; no wx window or layout scheduler");
