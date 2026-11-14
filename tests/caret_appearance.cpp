@@ -1,3 +1,4 @@
+#include "native_renderer_helpers.h"
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "encoded_file_helpers.h"
@@ -377,6 +378,7 @@ public:
         }
 #endif
         auto* frame = new EditorFrame;
+        TestRenderer::Select(frame->Editor());
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {

@@ -332,7 +332,7 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     }
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
-        message == Message::StyleSetItalic || message == Message::SetZoom) {
+        message == Message::StyleSetItalic || message == Message::SetZoom || message == Message::SetTechnology) {
         lineNumberWidthDirty_ = true;
         bookmarkMarginWidthDirty_ = true;
         foldMarginWidthDirty_ = true;
