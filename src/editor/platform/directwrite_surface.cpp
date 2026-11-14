@@ -68,7 +68,7 @@ public:
     void Init(SurfaceID id, WindowID window, bool printing) noexcept override {
         window_ = static_cast<wxWindow*>(window);
         auto* dc = static_cast<wxDC*>(id);
-        // Paint directly to HWND. Offscreen probes use a DC target with the
+        // Paint directly to HWND. Offscreen drawing uses a DC target with the
         // same original text renderer; no GDI text-measurement fallback.
         if (dc->IsKindOf(wxCLASSINFO(wxPaintDC))) {
             try {
@@ -107,7 +107,7 @@ public:
     }
     std::unique_ptr<Surface> AllocatePixMap(int width, int height) override {
         if (!drawing_) {
-            // A measurement-only surface can explicitly request a test pixmap.
+            // A measurement-only surface may later need an offscreen drawing target.
             ownedDC_ = std::make_unique<wxClientDC>(window_);
             Init(ownedDC_.get(), window_, false);
         }
@@ -150,7 +150,7 @@ void EnsureDirectWrite() {
 bool DirectWriteAvailable() noexcept {
     return LoadD2D();
 }
-void DropDirectWriteTarget(wxWindow& window) noexcept {
+void DropDirectWriteTarget(wxWindow& window) {
     // Discarded together with the core's compatible pixmaps on technology change.
     const auto target = TargetForExisting(window);
     if (target) target->target.Reset();

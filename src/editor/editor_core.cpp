@@ -409,7 +409,11 @@ void EditorControl::Core::Draw(wxDC& dc) {
 
 void EditorControl::Core::Resize() {
     ChangeSize();
+    // Original ScintillaWin::SizeWindow leaves wrapping to paint for both
+    // native technologies, preserving the physical viewport on resize.
+#ifndef __WXMSW__
     if (Wrapping()) UpdateWrapLayout();
+#endif
 }
 
 void EditorControl::Core::UpdateWrapLayout() {

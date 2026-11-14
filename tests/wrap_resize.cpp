@@ -1,3 +1,4 @@
+#include "native_renderer_helpers.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "native_key_helpers.h"
@@ -142,6 +143,7 @@ public:
         settings_->values.wordWrap = true;
         settings_->values.fileWatching.mode = FileWatchingMode::None;
         auto* frame = new EditorFrame(settings_.get());
+        TestRenderer::Select(frame->Editor());
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-wrap-resize");

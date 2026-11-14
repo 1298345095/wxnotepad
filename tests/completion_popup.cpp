@@ -1,3 +1,4 @@
+#include "native_renderer_helpers.h"
 #include "native_completion_helpers.h"
 #include <wx/button.h>
 #include <wx/popupwin.h>
@@ -20,6 +21,7 @@ class CompletionPopupApp final : public wxApp {
 public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
+        TestRenderer::Select(frame->Editor());
 #ifdef __WXMSW__
         frame->ShowWithoutActivating();
 #else
