@@ -116,6 +116,16 @@ jobs:
           if ($bounds.Width -lt $testDisplayWidth -or $bounds.Height -lt $testDisplayHeight) {
             throw "Native test display is $($bounds.Width)x$($bounds.Height); expected at least ${testDisplayWidth}x${testDisplayHeight}."
           }
+      - name: Collect independent original GDI viewport reference
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -X utf8 tools/native_original_reference.py \
+            --archive .ci/build/notepad4-source.tar \
+            --build-dir .ci/original-reference \
+            --output .ci/reports/original-gdi-viewport.tsv \
+            2>&1 | tee .ci/reports/original-gdi-reference.log
       - name: Test Windows
         if: runner.os == 'Windows'
         shell: bash
