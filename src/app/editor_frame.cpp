@@ -67,6 +67,8 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                          : SyntaxDetectionOptions{}),
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { return HandleFileChange(); }), search_(*editor_) {
+    // Establish the single editor child before preferences calculate wrapped geometry.
+    Layout();
     const auto& preferences = settings ? settings->values : defaults_;
 #ifdef __WXMSW__
     editor_->Send(Scintilla::Message::SetTechnology, preferences.renderingTechnology);
