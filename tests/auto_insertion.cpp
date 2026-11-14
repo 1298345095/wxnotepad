@@ -1,3 +1,4 @@
+#include "native_renderer_helpers.h"
 #include "native_search_helpers.h"
 #include "syntax/syntax_scheme.h"
 #include "document/document_session.h"
@@ -40,6 +41,7 @@ class AutoInsertionApp final : public wxApp {
 public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
+        TestRenderer::Select(frame->Editor());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             try {

@@ -248,12 +248,21 @@ public:
                 editor->Send(Message::ScrollCaret);
                 Layout(frame);
                 const auto rows = editor->Send(Message::WrapCount, 0);
+#ifdef __WXMSW__
+                const auto firstVisible = editor->Send(Message::GetFirstVisibleLine);
+#endif
                 frame->SetSize(280, 240);
                 Layout(frame);
                 Require(editor->Send(Message::WrapCount, 0) > rows, "resizing recomputes continuation rows");
+#ifdef __WXMSW__
+                Require(editor->Send(Message::GetFirstVisibleLine) == firstVisible,
+                        "native resizing preserves the original physical viewport");
+                editor->Send(Message::ScrollCaret);
+                Layout(frame);
+#endif
                 const auto caretY = editor->Send(Message::PointYFromPosition, 0, textEnd);
                 Require(caretY >= 0 && caretY + editor->Send(Message::TextHeight, 0) <= editor->GetClientSize().y,
-                        "resizing wrapped text keeps the caret visible");
+                        "caret reveal after resizing keeps the caret visible");
                 NativeSearch::Selection(editor, 6, textEnd, "resizing retains the selection byte range");
                 NativeSearch::Command(frame, wrap);
                 Layout(frame);

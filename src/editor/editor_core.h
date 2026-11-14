@@ -38,6 +38,7 @@ public:
     void CaptureLost();
     void SyncSystemCaret();
 #ifdef __WXMSW__
+    void RenderingSettingsChanged(bool force);
     std::optional<intptr_t> ImeMessage(unsigned message, uintptr_t wParam, intptr_t& lParam);
 #endif
     void RepairFoldSelection();

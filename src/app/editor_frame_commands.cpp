@@ -1832,6 +1832,30 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             saveRecent);
         view->AppendSubMenu(other, "Other Sett&ings");
     }
+#ifdef __WXMSW__
+    view->AppendSeparator();
+    auto* advanced = new wxMenu;
+    auto* rendering = new wxMenu;
+    for (const auto& [label, technology] : {std::pair{"&Legacy GDI", Scintilla::Technology::Default},
+                                            std::pair{"&Direct2D", Scintilla::Technology::DirectWrite}}) {
+        const int id = wxWindow::NewControlId();
+        rendering->AppendRadioItem(id, label);
+        Bind(
+            wxEVT_MENU,
+            [this, technology](wxCommandEvent&) {
+                editor_->Send(Scintilla::Message::SetTechnology, static_cast<uintptr_t>(technology));
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, technology](wxUpdateUIEvent& event) {
+                event.Check(editor_->Send(Scintilla::Message::GetTechnology) == static_cast<intptr_t>(technology));
+            },
+            id);
+    }
+    advanced->AppendSubMenu(rendering, "Ren&dering Technology");
+    view->AppendSubMenu(advanced, "A&dvanced Settings");
+#endif
     AppendSettingsCommands(view);
     return view;
 }

@@ -69,3 +69,29 @@ invalidation and font metrics. Complex shaping, completion/calltip/popup UI,
 accessibility, drag-and-drop, full DPI behavior and input/IME are not established
 by this slice. Unused abstract platform operations remain minimal adapters until
 their ticket needs the behavior.
+
+## Windows DirectWrite renderer
+
+Windows builds also run tools/prepare_directwrite.py against this same verified
+prepared source. The generated directwrite/original_directwrite.inc retains
+the original SurfaceD2D.cxx copyright and license notice. Preparation removes
+final from SurfaceD2D so the wx host can adapt native initialization, and
+omits the original Font/Surface allocation entry points supplied by the wx host.
+Native factory loading, font formats, Unicode byte-position mapping, shaping,
+drawing and compatible pixmap algorithms remain the pinned original code.
+
+The production adapter selects GDI or DirectWrite per editor through the public
+SetTechnology/GetTechnology messages. DirectWrite HWND targets are retained
+across paints and discarded with compatible graphics on a technology switch or
+target loss. The normal Windows runtime always includes both backends; Linux
+continues its Pango/Cairo implementation. Prototype collectors, diagnostic caps
+and native-message transports are not part of these targets.
+
+The native_directwrite_original_metrics_and_raster test retains the original
+numeric, four-worker/64-iteration and exact direct/buffered raster comparisons.
+The native_directwrite_original_resize_viewport test freezes thirteen observations
+from the unmodified pinned application in the retained
+original-directwrite-comparison-2026-11-14/measure-02/results.json evidence.
+It uses the same complete TOML fixture and physical font/viewport scene through
+the real editor commands. Existing caret, completion, insertion and both
+80-resize-loop checks also run with the selected DirectWrite renderer.

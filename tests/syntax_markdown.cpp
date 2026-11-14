@@ -109,7 +109,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
             Require(editor->Send(Message::GetTabWidth) == 5 && editor->Send(Message::GetIndent) == 2,
                     "all Markdown dialects share the original Markdown tab settings");
         }
-        SettingsStore reloaded;
+        SettingsStore reloaded(settings.Path());
         const auto saved = reloaded.values.schemeTabs[static_cast<size_t>(SyntaxLanguage::MarkdownGitHub)];
         Require(saved.tabWidth == 5 && saved.indentWidth == 2 && !saved.useGlobal,
                 "native Tab Settings persists to the shared original Markdown section");
@@ -256,7 +256,7 @@ class MarkdownApp final : public wxApp {
 public:
     bool OnInit() override {
         wxInitAllImageHandlers();
-        settings_ = std::make_unique<SettingsStore>();
+        settings_ = std::make_unique<SettingsStore>(TestFiles::Filename(TestFiles::TemporaryDirectory("Notepad4.ini")));
         settings_->values = OriginalSettings{};
         settings_->values.wordWrap = false;
         settings_->values.warnLineEndings = false;

@@ -92,6 +92,7 @@ public:
                 NativeDialogs::FileCommandDriver selectDirectory(
                     NativeDialogs::FileDialogProfile::Open, wxID_CANCEL, chosen,
                     [&observation](const char* transition) { observation.Observe(transition); });
+                selectDirectory.WaitForInitialDirectory();
                 Drop(frame, {TestFiles::Filename(directory)});
                 selectDirectory.Stop();
                 Require(selectDirectory.choosers == 1 && selectDirectory.prompts == 1 &&

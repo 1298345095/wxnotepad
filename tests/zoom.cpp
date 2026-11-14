@@ -9,9 +9,27 @@
 #include <cstdio>
 #include <stdexcept>
 #include <string>
+#include <array>
+#ifdef __WXMSW__
+#include "editor/platform/directwrite_surface.h"
+#include "PlatWin.h"
+#endif
 
 namespace {
 using Scintilla::Message;
+#ifdef __WXMSW__
+long OriginalDirectWriteWidth(EditorControl* editor, const char* face, int points, std::string_view text) {
+    namespace core = Scintilla::Internal;
+    auto surface = core::OriginalDirectWriteSurface();
+    surface->Init(editor->GetHandle());
+    const core::FontWin font(
+        core::FontParameters(face, points * editor->GetDPI().y / static_cast<double>(core::pointsPerInch),
+                             Scintilla::FontWeight::Normal, Scintilla::FontStretch::Normal, false,
+                             Scintilla::FontQuality::QualityDefault, Scintilla::Technology::DirectWrite));
+    // Pinned Editor::TextWidth rounds the original surface width at the message boundary.
+    return std::lround(surface->WidthTextUTF8(&font, text));
+}
+#endif
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -120,6 +138,11 @@ public:
         CallAfter([this, frame] {
             auto* editor = frame->Editor();
             try {
+#ifdef __WXMSW__
+                const auto initialTechnology = static_cast<Scintilla::Technology>(editor->Send(Message::GetTechnology));
+                Require(initialTechnology == Scintilla::Technology::DirectWrite,
+                        "Windows zoom commands exercise the application default DirectWrite renderer");
+#endif
                 Require(editor->Send(Message::GetZoom) == 100, "original default zoom is 100 percent");
                 Key(editor, '+');
                 Require(editor->Send(Message::GetZoom) == 110, "Ctrl+plus zooms in by original ten percent step");
@@ -209,40 +232,73 @@ public:
                 char font[100]{};
                 editor->Send(Message::StyleGetFont, static_cast<uintptr_t>(Scintilla::StylesCommon::Default),
                              reinterpret_cast<intptr_t>(font));
-                intptr_t normalHeight = 0;
-                for (const auto [zoom, points] : {std::pair{100, 12}, {200, 24}, {50, 6}, {175, 21}, {100, 12}}) {
-                    editor->Send(Message::SetZoom, zoom);
-                    editor->Refresh();
-                    editor->Update();
-                    wxYield();
-                    wxClientDC native(editor);
-                    native.SetFont(wxFont(wxFontInfo(points).FaceName(wxString::FromUTF8(font))));
-                    Require(editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("WWWWWW")) ==
-                                native.GetTextExtent("WWWWWW").x,
-                            "zoomed text uses native point size at the window DPI");
-                    Require(editor->Send(Message::GetMarginWidthN, 0) ==
-                                native.GetTextExtent("999").x + editor->FromDIP(8),
-                            "line-number margin uses zoomed native glyph metrics and DPI padding");
-                    const auto height = editor->Send(Message::TextHeight, 0);
-                    if (zoom == 100) normalHeight = height;
-                    if (zoom == 200) Require(height > normalHeight, "zoom grows text line height");
-                    for (intptr_t position : {3, 9, 203}) {
-                        const auto x = editor->Send(Message::PointXFromPosition, 0, position);
-                        const auto y = editor->Send(Message::PointYFromPosition, 0, position);
-                        Require(editor->Send(Message::PositionFromPointClose, x + 1, y + height / 2) == position,
-                                "hit testing follows zoomed text coordinates and margin offset");
+#ifdef __WXMSW__
+                constexpr std::array technologies{Scintilla::Technology::DirectWrite, Scintilla::Technology::Default};
+#else
+                constexpr std::array technologies{Scintilla::Technology::Default};
+#endif
+                for (const auto technology : technologies) {
+#ifdef __WXMSW__
+                    editor->Send(Message::SetTechnology, static_cast<uintptr_t>(technology));
+                    Require(editor->Send(Message::GetTechnology) == static_cast<intptr_t>(technology),
+                            "zoom geometry uses the requested native renderer");
+#endif
+                    intptr_t normalHeight = 0;
+                    for (const auto [zoom, points] : {std::pair{100, 12}, {200, 24}, {50, 6}, {175, 21}, {100, 12}}) {
+                        editor->Send(Message::SetZoom, zoom);
+                        editor->Refresh();
+                        editor->Update();
+                        wxYield();
+                        wxClientDC native(editor);
+                        native.SetFont(wxFont(wxFontInfo(points).FaceName(wxString::FromUTF8(font))));
+#ifdef __WXMSW__
+                        if (technology == Scintilla::Technology::DirectWrite) {
+                            Require(
+                                editor->Send(Message::TextWidth,
+                                             static_cast<uintptr_t>(Scintilla::StylesCommon::Default),
+                                             reinterpret_cast<intptr_t>("WWWWWW")) ==
+                                    OriginalDirectWriteWidth(editor, font, points, "WWWWWW"),
+                                "zoomed DirectWrite text matches the pinned original at the same point size and DPI");
+                            Require(
+                                editor->Send(Message::GetMarginWidthN, 0) ==
+                                    OriginalDirectWriteWidth(editor, font, points, "999") + editor->FromDIP(8),
+                                "DirectWrite line-number margin matches original native glyph metrics and DPI padding");
+                        } else
+#endif
+                        {
+                            Require(editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("WWWWWW")) ==
+                                        native.GetTextExtent("WWWWWW").x,
+                                    "zoomed text uses native point size at the window DPI");
+                            Require(editor->Send(Message::GetMarginWidthN, 0) ==
+                                        native.GetTextExtent("999").x + editor->FromDIP(8),
+                                    "line-number margin uses zoomed native glyph metrics and DPI padding");
+                        }
+                        const auto height = editor->Send(Message::TextHeight, 0);
+                        if (zoom == 100) normalHeight = height;
+                        if (zoom == 200) Require(height > normalHeight, "zoom grows text line height");
+                        for (intptr_t position : {3, 9, 203}) {
+                            const auto x = editor->Send(Message::PointXFromPosition, 0, position);
+                            const auto y = editor->Send(Message::PointYFromPosition, 0, position);
+                            Require(editor->Send(Message::PositionFromPointClose, x + 1, y + height / 2) == position,
+                                    "hit testing follows zoomed text coordinates and margin offset");
+                        }
+                        Require(editor->Send(Message::StyleGetSize,
+                                             static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == 12 &&
+                                    Text(editor) == bytes && editor->DocumentRevision() == revision &&
+                                    editor->Send(Message::GetAnchor) == 3 &&
+                                    editor->Send(Message::GetCurrentPos) == 9 && editor->Send(Message::CanUndo) &&
+                                    editor->Send(Message::CanRedo) && editor->Send(Message::GetModify),
+                                "zoom preserves base point size, bytes, selection, save point and undo/redo state");
+                        std::printf("PASS: technology=%d zoom=%d native_points=%d dpi=%d height=%lld margin=%lld "
+                                    "text/hit geometry\n",
+                                    static_cast<int>(technology), zoom, points, editor->GetDPI().y,
+                                    static_cast<long long>(height),
+                                    static_cast<long long>(editor->Send(Message::GetMarginWidthN, 0)));
                     }
-                    Require(editor->Send(Message::StyleGetSize,
-                                         static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == 12 &&
-                                Text(editor) == bytes && editor->DocumentRevision() == revision &&
-                                editor->Send(Message::GetAnchor) == 3 && editor->Send(Message::GetCurrentPos) == 9 &&
-                                editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
-                                editor->Send(Message::GetModify),
-                            "zoom preserves base point size, bytes, selection, save point and undo/redo state");
-                    std::printf("PASS: zoom=%d native_points=%d dpi=%d height=%lld margin=%lld text/hit geometry\n",
-                                zoom, points, editor->GetDPI().y, static_cast<long long>(height),
-                                static_cast<long long>(editor->Send(Message::GetMarginWidthN, 0)));
                 }
+#ifdef __WXMSW__
+                editor->Send(Message::SetTechnology, static_cast<uintptr_t>(initialTechnology));
+#endif
                 editor->Send(Message::Undo);
                 Require(Text(editor) == text && !editor->Send(Message::GetModify), "Undo still reaches the save point");
                 editor->Send(Message::Redo);

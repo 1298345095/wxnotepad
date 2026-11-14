@@ -216,6 +216,8 @@ public:
             if (!dialog || !dialog->IsModal() ||
                 dialog->GetTitle() != (yesNo ? "Encoding Conversion" : "Encoding character loss"))
                 continue;
+            // Native input yields while the closing dialog still reports modal.
+            Stop();
             ++shown;
             auto* check = wxDynamicCast(dialog->FindWindowByName("Suppress message", dialog), wxCheckBox);
             checkbox = check != nullptr;

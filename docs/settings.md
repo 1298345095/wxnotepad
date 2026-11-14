@@ -162,6 +162,20 @@ use the original Unicode INI format (UTF-16LE with BOM); the reader also accepts
 existing text INI files through the platform text converter.
 If an existing INI cannot be read completely, settings writes fail without replacing it.
 
+Windows restores `[Settings] RenderingTechnology`, defaulting to `1` (DirectWrite).
+Settings > Advanced Settings > Rendering Technology retains the original labels
+Legacy GDI (`0`) and Direct2D (`1`). The radio state reports the actual renderer.
+Import retains the original integer-prefix parsing and `0..4` clamp. Only `0`
+and `1` are supported: unavailable or unsupported requests leave the usable
+renderer unchanged. Startup constructs GDI before applying the imported request.
+Explicit/enabled exit saves persist the actual renderer, omitting default `1`;
+disabled exit saving retains the stored choice. Switching does not choose a
+renderer based on the file or change document contents or history.
+
+Linux retains native Pango/Cairo rendering and exposes no Windows rendering
+choices. Its normal settings saves preserve the Windows `RenderingTechnology`
+entry, allowing portable configuration to retain that preference.
+
 `[Settings] AutoInsertMask` defaults to `511` and uses the original integer-prefix
 parser. Settings > Auto Completion Settings edits the original independent bits:
 parentheses `1`, braces `2`, square brackets `4`, angle brackets `8`, double quotes

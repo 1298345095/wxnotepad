@@ -269,8 +269,9 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     if backend == "x11":
                         windows = xdo("search", "--onlyvisible", "--name", request[6:]).splitlines()
                         if not windows: time.sleep(.03); continue
-                        acknowledge(focus)
+                        # Finish native focus before the waiting test can open a popup.
                         xdo("windowfocus", "--sync", windows[0])
+                        acknowledge(focus)
                     else:
                         acknowledge(focus)
                         xdo("windowfocus", "--sync", weston_window)

@@ -1,3 +1,4 @@
+#include "native_renderer_helpers.h"
 #include "native_completion_helpers.h"
 #include "automatic_completion_reference.h"
 #include <wx/vlbox.h>
@@ -253,6 +254,7 @@ class CompletionApp final : public wxApp {
 public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
+        TestRenderer::Select(frame->Editor());
 #ifdef __WXMSW__
         frame->ShowWithoutActivating();
 #else

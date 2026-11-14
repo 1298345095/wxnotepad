@@ -101,9 +101,36 @@ jobs:
           command -v gdb
           mkdir -p .ci/reports/cores
           sudo sysctl -w "kernel.core_pattern=$PWD/.ci/reports/cores/core.%p.%E"
+      - name: Prepare Windows native test display
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # The original viewport fixture needs more than the runner's default 1024-pixel desktop.
+          $testDisplayWidth = 1920
+          $testDisplayHeight = 1080
+          Set-DisplayResolution -Width $testDisplayWidth -Height $testDisplayHeight -Force
+          Add-Type -AssemblyName System.Windows.Forms
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bounds | ConvertTo-Json | Tee-Object -FilePath .ci/reports/windows-display.json
+          if ($bounds.Width -lt $testDisplayWidth -or $bounds.Height -lt $testDisplayHeight) {
+            throw "Native test display is $($bounds.Width)x$($bounds.Height); expected at least ${testDisplayWidth}x${testDisplayHeight}."
+          }
+      - name: Collect independent original GDI viewport reference
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -X utf8 tests/reference_capture/native_original_reference.py \
+            --archive .ci/build/notepad4-source.tar \
+            --build-dir .ci/original-reference \
+            --output .ci/reports/original-gdi-viewport.tsv --compiler-cache \
+            2>&1 | tee .ci/reports/original-gdi-reference.log
       - name: Test Windows
         if: runner.os == 'Windows'
         shell: bash
+        env:
+          WXNOTEPAD_ORIGINAL_GDI_REFERENCE: ${{ github.workspace }}/.ci/reports/original-gdi-viewport.tsv
         run: python -X utf8 .github/scripts/ci.py test --backend windows
       - name: Test private X11
         if: runner.os == 'Linux'

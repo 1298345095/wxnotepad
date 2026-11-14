@@ -75,6 +75,7 @@ Settings
   Appearance > Auto-Shrink Horizontal Scrollbar
   File Change Notification (Alt+F5)
   Other Settings > Remember Search Options; Remember Recent Files
+  Advanced Settings > Rendering Technology > Legacy GDI; Direct2D (Windows)
   Save Settings On Exit; Save Settings Now
 ```
 

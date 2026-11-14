@@ -212,6 +212,7 @@ public:
             if (!dialog || !dialog->IsModal() || !dialog->GetTitle().EndsWith("character loss")) continue;
             auto* button = dialog->FindWindow(accept ? wxID_OK : wxID_CANCEL);
             if (!button) continue;
+            Stop();
             ++shown;
             NativeSearch::Click(dialog, accept ? wxID_OK : wxID_CANCEL);
             return;
@@ -224,6 +225,7 @@ public:
                 wchar_t title[128]{};
                 GetWindowTextW(window, title, static_cast<int>(std::size(title)));
                 if (IsWindowVisible(window) && wxString(title).EndsWith("character loss")) {
+                    driver.Stop();
                     ++driver.shown;
                     SendMessageW(window, TDM_CLICK_BUTTON, driver.accept ? IDOK : IDCANCEL, 0);
                 }
@@ -236,6 +238,7 @@ public:
             auto* widget = GTK_WIDGET(item->data);
             if (GTK_IS_MESSAGE_DIALOG(widget) && gtk_widget_get_visible(widget) &&
                 wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))).EndsWith("character loss")) {
+                Stop();
                 ++shown;
                 NativeDialogs::Respond(widget, accept ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
             }

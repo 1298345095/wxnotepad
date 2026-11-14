@@ -7,6 +7,7 @@
 #include "editor/word_completion.h"
 #include "settings/file_watching_options.h"
 #include "syntax/syntax_catalog.h"
+#include <ScintillaTypes.h>
 #include <wx/string.h>
 #include <array>
 #include <vector>
@@ -39,6 +40,7 @@ struct OriginalSettings {
     FileWatchingOptions fileWatching;
     EncodingOptions encoding;
     int zoomLevel = DisplayUnits::ZoomPercentScale;
+    int renderingTechnology = static_cast<int>(Scintilla::Technology::DirectWrite);
     CaretAppearance caret;
     int highlightCurrentLine = 12;
     int longLinesLimit = 80;

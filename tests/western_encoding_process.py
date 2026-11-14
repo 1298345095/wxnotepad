@@ -27,7 +27,10 @@ def main():
             assert "Keep=1" in saved and "SaveSettings=0" in saved, saved
         config.write_text("[Suppressed Messages]\nMsgConv3=2\n", encoding="utf-16")
         environment["WXNOTEPAD_WESTERN_SUPPRESSION"] = "never"
-        subprocess.run([str(executable)], env=environment, check=True, timeout=40)
+        result = subprocess.run([str(executable)], env=environment, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, encoding="utf-8", timeout=40)
+        print(result.stdout, end="")
+        result.check_returncode()
         assert "MsgConv3=2" in config.read_text(encoding="utf-16")
     print("PASS: original MsgConv3 writes with SaveSettings off and is restored by next process")
 

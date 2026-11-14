@@ -22,6 +22,7 @@ public:
         Start(100);
     }
     ~FileCommandDriver() override { Observe("driver destructor"); }
+    void WaitForInitialDirectory() { waitForInitialDirectory_ = true; }
     int prompts = 0;
     int choosers = 0;
     int errors = 0;
@@ -80,6 +81,12 @@ private:
         if (!gtk_widget_get_visible(widget)) return;
         if (GTK_IS_FILE_CHOOSER(widget)) {
             if (chooserStage_ == 0) {
+                if (waitForInitialDirectory_) {
+                    // Observe initial directory state before ChooseFile changes it.
+                    auto* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
+                    if (!directory) return;
+                    g_free(directory);
+                }
                 chooserStage_ = 1;
                 ++choosers;
                 Observe("chooser selection begin");
@@ -138,6 +145,7 @@ private:
     int choice_;
     wxString destination_;
     int chooserStage_ = 0;
+    bool waitForInitialDirectory_ = false;
     Observer observer_;
     wxString fileType_;
 };

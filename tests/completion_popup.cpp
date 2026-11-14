@@ -1,4 +1,6 @@
+#include "native_renderer_helpers.h"
 #include "native_completion_helpers.h"
+#include "native_paint_helpers.h"
 #include <wx/button.h>
 #include <wx/popupwin.h>
 #include <wx/vlbox.h>
@@ -20,6 +22,7 @@ class CompletionPopupApp final : public wxApp {
 public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
+        TestRenderer::Select(frame->Editor());
 #ifdef __WXMSW__
         frame->ShowWithoutActivating();
 #else
@@ -29,6 +32,14 @@ public:
             try {
                 Require(presented, "native compositor presents completion test editor");
                 auto* editor = frame->Editor();
+#ifdef __WXGTK__
+                // Start popup assertions with the editor's acknowledged native focus.
+                wxString focusFile;
+                NativeKeys::FocusEditor(frame, "wxnotepad", focusFile);
+                NativePaint::Complete(editor);
+                Require(editor->HasFocus() && editor->Send(Message::GetFocus),
+                        "editor owns native focus after presentation settles");
+#endif
                 TestEditor::ResetStream(editor, "al", 2, 2);
                 editor->Send(Message::AutoCSetSeparator, 32);
                 editor->Send(Message::AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
@@ -86,7 +97,27 @@ public:
                              reinterpret_cast<intptr_t>("alpha alpine alphabetically_long_candidate"));
                 wxYield();
                 list = CompletionList(editor);
-                Require(list && bounds.Contains(list->GetParent()->GetScreenRect()),
+                const auto scrolledPopup = list ? list->GetParent()->GetScreenRect() : wxRect();
+                if (!list || !bounds.Contains(scrolledPopup)) {
+                    const auto frameRect = frame->GetScreenRect();
+                    const auto editorRect = editor->GetScreenRect();
+                    const auto position = editor->Send(Message::GetCurrentPos);
+                    const auto caret =
+                        editor->ClientToScreen(wxPoint(editor->Send(Message::PointXFromPosition, 0, position),
+                                                       editor->Send(Message::PointYFromPosition, 0, position)));
+                    std::fprintf(stderr,
+                                 "completion boundary: bounds=%d,%d,%d,%d popup=%d,%d,%d,%d list=%p active=%zd "
+                                 "frame=%d,%d,%d,%d editor=%d,%d,%d,%d caret=%d,%d DPI=%d,%d scale=%g "
+                                 "first=%zd xOffset=%zd\n",
+                                 bounds.x, bounds.y, bounds.width, bounds.height, scrolledPopup.x, scrolledPopup.y,
+                                 scrolledPopup.width, scrolledPopup.height, static_cast<void*>(list),
+                                 editor->Send(Message::AutoCActive), frameRect.x, frameRect.y, frameRect.width,
+                                 frameRect.height, editorRect.x, editorRect.y, editorRect.width, editorRect.height,
+                                 caret.x, caret.y, editor->GetDPI().x, editor->GetDPI().y,
+                                 editor->GetContentScaleFactor(), editor->Send(Message::GetFirstVisibleLine),
+                                 editor->Send(Message::GetXOffset));
+                }
+                Require(list && bounds.Contains(scrolledPopup),
                         "scrolled popup fits monitor work area at bottom-right edge");
                 const auto current = editor->Send(Message::GetCurrentPos);
                 const auto caretY =
@@ -95,6 +126,13 @@ public:
                         "popup opens above caret near monitor bottom");
                 editor->Send(Message::AutoCCancel);
                 Require(!editor->Send(Message::AutoCActive), "cancel ends completion lifetime");
+#ifdef __WXGTK__
+                // Finish native allocation and clamp before saving the wheel baseline;
+                // the core's deferred widening timer also performs this clamp.
+                editor->SendSizeEvent();
+                NativePaint::Complete(editor);
+                editor->Send(Message::LineScroll, 0, 0);
+#endif
                 const auto firstLine = editor->Send(Message::GetFirstVisibleLine);
                 editor->Send(Message::AutoCSetMaxHeight, 4);
                 editor->Send(Message::AutoCShow, 2,
@@ -109,7 +147,19 @@ public:
                 Require(list && list->IsRowVisible(0),
                         "native Down keeps earlier visible rows while the new selection fits");
                 editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>("antique"));
+                const auto lineBeforeWheel = editor->Send(Message::GetFirstVisibleLine);
+                const auto activeBeforeWheel = editor->Send(Message::AutoCActive);
+                auto* focusBeforeWheel = wxWindow::FindFocus();
                 NativeCompletion::Wheel(editor);
+                const auto lineAfterWheel = editor->Send(Message::GetFirstVisibleLine);
+                const auto activeAfterWheel = editor->Send(Message::AutoCActive);
+                if (lineAfterWheel != firstLine || !activeAfterWheel)
+                    std::fprintf(stderr,
+                                 "completion wheel: first=%zd before=%zd after=%zd active=%zd,%zd "
+                                 "focus=%p,%p editor=%p list=%p\n",
+                                 firstLine, lineBeforeWheel, lineAfterWheel, activeBeforeWheel, activeAfterWheel,
+                                 static_cast<void*>(focusBeforeWheel), static_cast<void*>(wxWindow::FindFocus()),
+                                 static_cast<void*>(editor), static_cast<void*>(list));
                 Require(editor->Send(Message::GetFirstVisibleLine) == firstLine && editor->Send(Message::AutoCActive),
                         "native wheel scrolls the active completion list while document stays fixed");
                 editor->Send(Message::AutoCCancel);
