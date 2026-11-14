@@ -707,6 +707,14 @@ if(BUILD_TESTING)
         set_tests_properties(native_renderer_commands PROPERTIES TIMEOUT 60)
     endif()
 
+    add_editor_test(rendering_settings original_rendering_settings_menu 60)
+    if(WIN32)
+        target_link_libraries(rendering_settings PRIVATE imm32)
+    endif()
+    add_test(NAME original_rendering_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/rendering_settings_process.py" "$<TARGET_FILE:rendering_settings>")
+    set_tests_properties(original_rendering_settings_lifecycle PROPERTIES TIMEOUT 120)
+
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

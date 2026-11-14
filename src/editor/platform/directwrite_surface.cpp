@@ -172,9 +172,8 @@ std::unique_ptr<Surface> OriginalDirectWriteSurface() {
     EnsureDirectWrite();
     return std::make_unique<SurfaceD2D>();
 }
-wxFont DirectWriteListFont(const Font& font) {
-    wxNativeFontInfo info;
-    info.lf = static_cast<const FontWin&>(font).lf;
+wxFont DirectWriteListFont(const Font& font, const wxWindow& window) {
+    const wxNativeFontInfo info(static_cast<const FontWin&>(font).lf, &window);
     return wxFont(info);
 }
 bool FinishDirectWriteDrawing(Surface& surface) {
