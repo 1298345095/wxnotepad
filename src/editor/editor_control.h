@@ -172,6 +172,7 @@ private:
     void OnKeyDown(wxKeyEvent& event);
     void OnSize(wxSizeEvent& event);
 #ifdef __WXMSW__
+    void OnHostMove(wxMoveEvent& event);
     WXLRESULT MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam) override;
 #endif
 };

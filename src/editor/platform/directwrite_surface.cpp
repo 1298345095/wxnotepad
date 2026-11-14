@@ -14,7 +14,15 @@ void CheckResult(HRESULT result, const char* operation) {
 
 struct WindowTarget {
     ComPtr<ID2D1HwndRenderTarget> target;
+    HWND nativeWindow = nullptr;
+    HMONITOR hCurrentMonitor = nullptr;
+    WriteRenderingParams defaultRenderingParams;
+    WriteRenderingParams customRenderingParams;
+    static constexpr auto technology = Technology::DirectWrite;
+    HWND MainHWND() const noexcept { return nativeWindow; }
+    bool UpdateRenderingParams(bool force) noexcept;
 };
+#include "original_rendering_params.inc"
 
 // GUI-only targets survive individual paints, as in ScintillaWin. Native pixmaps
 // cached by EditView must stay in the same D2D resource domain between paints.
@@ -27,27 +35,30 @@ std::shared_ptr<WindowTarget> TargetForExisting(wxWindow& window) {
     const auto found = targets.find(&window);
     return found != targets.end() ? found->second : nullptr;
 }
+std::shared_ptr<WindowTarget> StateFor(wxWindow& window) {
+    auto& targets = WindowTargets();
+    const auto found = targets.find(&window);
+    if (found != targets.end()) return found->second;
+    auto state = std::make_shared<WindowTarget>();
+    state->nativeWindow = static_cast<HWND>(window.GetHandle());
+    targets.emplace(&window, state);
+    window.Bind(wxEVT_DESTROY, [host = &window](wxWindowDestroyEvent& event) {
+        if (event.GetEventObject() == host) WindowTargets().erase(host);
+        event.Skip();
+    });
+    return state;
+}
 std::shared_ptr<WindowTarget> TargetFor(wxWindow& window) {
-    auto& windowTargets = WindowTargets();
-    const auto found = windowTargets.find(&window);
-    if (found != windowTargets.end() && found->second->target) return found->second;
-    auto target = found != windowTargets.end() ? found->second : std::make_shared<WindowTarget>();
+    auto target = StateFor(window);
+    if (target->target) return target;
     const auto size = window.GetClientSize();
     const auto properties = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT,
                                                          D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE),
                                                          dpiDefault, dpiDefault);
-    const auto nativeWindow = static_cast<HWND>(window.GetHandle());
     const auto windowProperties =
-        D2D1::HwndRenderTargetProperties(nativeWindow, D2D1::SizeU(std::max(1, size.x), std::max(1, size.y)));
+        D2D1::HwndRenderTargetProperties(target->nativeWindow, D2D1::SizeU(std::max(1, size.x), std::max(1, size.y)));
     CheckResult(pD2DFactory->CreateHwndRenderTarget(properties, windowProperties, &target->target),
                 "CreateHwndRenderTarget");
-    if (found == windowTargets.end()) {
-        windowTargets.emplace(&window, target);
-        window.Bind(wxEVT_DESTROY, [host = &window](wxWindowDestroyEvent& event) {
-            if (event.GetEventObject() == host) WindowTargets().erase(host);
-            event.Skip();
-        });
-    }
     return target;
 }
 
@@ -87,6 +98,12 @@ public:
                 status_ = windowTarget_->target->Resize(desired);
             drawing_ = windowTarget_->target.Get();
         } else {
+            try {
+                windowTarget_ = StateFor(*window_);
+            } catch (const std::bad_alloc&) {
+                status_ = E_OUTOFMEMORY;
+                return;
+            }
             const auto properties = D2D1::RenderTargetProperties(
                 D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE),
                 dpiDefault, dpiDefault);
@@ -102,7 +119,9 @@ public:
             drawing_ = nullptr;
             return;
         }
+        windowTarget_->UpdateRenderingParams(false);
         SurfaceD2D::Init(drawing_, window_->GetHandle(), printing);
+        SetRenderingParams(windowTarget_->defaultRenderingParams.Get(), windowTarget_->customRenderingParams.Get());
         drawing_->BeginDraw();
     }
     std::unique_ptr<Surface> AllocatePixMap(int width, int height) override {
@@ -153,7 +172,16 @@ bool DirectWriteAvailable() noexcept {
 void DropDirectWriteTarget(wxWindow& window) {
     // Discarded together with the core's compatible pixmaps on technology change.
     const auto target = TargetForExisting(window);
-    if (target) target->target.Reset();
+    if (target) {
+        target->target.Reset();
+        target->defaultRenderingParams.Reset();
+        target->customRenderingParams.Reset();
+        target->hCurrentMonitor = nullptr;
+    }
+}
+bool RefreshDirectWriteRenderingParams(wxWindow& window, bool force) {
+    EnsureDirectWrite();
+    return StateFor(window)->UpdateRenderingParams(force);
 }
 
 std::shared_ptr<Font> AllocateDirectWriteFont(const FontParameters& parameters) {
