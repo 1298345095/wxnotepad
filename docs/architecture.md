@@ -386,6 +386,8 @@ Keep temporary I/O buffers short-lived and avoid additional persistent copies.
 Measure a large-file styling policy separately before choosing a threshold, a
 streaming design or an upstream storage change. Switching an already-styled
 document to Plain Text must not be assumed to release its allocated style buffer.
+Native parallel measurement verification and its resource comparison are recorded
+in [the measurement report](observations/parallel-measurement-README.md).
 
 ## Restructuring and verification
 
