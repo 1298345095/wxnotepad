@@ -434,6 +434,10 @@ if(BUILD_TESTING)
         "SELECTION_PREFERENCES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_preferences_reference.tsv\"")
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
+    if(WIN32)
+        target_include_directories(zoom PRIVATE "${NOTEPAD4_SOURCE}/scintilla/win32"
+            "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+    endif()
     add_editor_test(current_line original_current_line_highlight 60)
     add_editor_test(bookmark_history original_bookmark_history 90)
     target_compile_definitions(bookmark_history PRIVATE
