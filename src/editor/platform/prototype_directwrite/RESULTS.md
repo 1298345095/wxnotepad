@@ -17,7 +17,11 @@ Keep both prototype branches. The follow-up below localizes much of blank-window
 memory to native graphics initialization and warm time to drawing, including
 color glyphs. It restores a missing original buffering setting, but does not
 resolve the warm long-line regression. No application memory budget has been
-agreed, and no production merge is made here.
+agreed, and no production merge is made here. The later
+[original-application comparison](ORIGINAL_COMPARISON.md) also corrects resize
+viewport behavior and finds 1256.56 ms original versus 929.38 ms wx for 12 warm
+resizes in the same scene. It does not reproduce a wx-specific slowdown, while
+the earlier GDI comparison has a different timing boundary and remains separate.
 
 ## Controlled Windows comparison
 
@@ -171,8 +175,9 @@ Long-line private-memory medians at default cap, MiB:
 The correction restores original behavior; it does not remove the large native
 graphics cost or retained process memory. [DIAGNOSIS.md](DIAGNOSIS.md) records
 the separate native initialization control and sampled color-glyph hotspot,
-with attribution limits. The original application has not yet been measured
-through this exact resize sequence.
+with attribution limits. The subsequent [original-application experiment](ORIGINAL_COMPARISON.md)
+uses a common external resize/paint timing boundary and reports its results
+separately from this buffer-only comparison.
 
 Evidence: `E:/NewNotepad4/wxnotepad-evidence/directwrite-diagnosis-2026-11-14/buffer-comparison/`.
 `run-01/results.json` and per-process logs retain all measurements;

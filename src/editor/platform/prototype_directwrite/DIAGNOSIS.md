@@ -178,8 +178,17 @@ the main performance fix. Detailed medians for both fixtures/caps are in
 [RESULTS.md](RESULTS.md); raw results, matched binaries, sources and the validating
 summarizer are in `buffer-comparison/` under the evidence root.
 
-Remaining comparison: run the original application's DirectWrite renderer
-through the same long-line viewport/resize sequence to distinguish common
-native color-glyph work from host-specific work. Source reuse alone is not a
-measurement of the original application's interaction cost. This has not run;
-any further performance capture needs fresh readiness.
+The original-application comparison exposed a second concrete host difference before
+timing: wx's resize handler eagerly wrapped and pulled the viewport to the
+caret, whereas the original SizeWindow path preserves it. The prototype-only
+correction passes the exact paired viewport/scroll oracle and all seven existing
+checks. See [ORIGINAL_COMPARISON.md](ORIGINAL_COMPARISON.md) for the common
+external driver, original-app normalization and retained red/green evidence.
+After fresh readiness, three interleaved pairs complete with identical scenes,
+all 13 viewport/scroll observations and whole styled-document hashes. Original
+DirectWrite takes 1256.56 ms median and corrected wx takes 929.38 ms for 12 warm
+resizes under the common external timing boundary. Thus this scene does not
+reproduce a wx-specific slowdown; the original also pays warm native drawing
+cost. It is not a same-boundary comparison with the earlier GDI results or an
+isolated speed measurement of the viewport correction. The controlled window
+has ended; any further capture needs fresh readiness.

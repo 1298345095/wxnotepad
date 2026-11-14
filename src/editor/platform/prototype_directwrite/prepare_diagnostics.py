@@ -49,9 +49,9 @@ adapter = replace_once(adapter, '            status_ = drawing_->EndDraw();',
 
 core = (output / 'editor_core_probe.cpp').read_text(encoding='utf-8')
 core = scope(core, 'void EditorControl::Core::Draw', 'CorePaint')
+core = replace_once(core, 'void EditorControl::Core::Resize() {\n    ChangeSize();',
+    'void EditorControl::Core::Resize() {\n    {\n        DWriteDiagnosis::Scope diagnosticScope(DWriteDiagnosis::Metric::CoreChangeSize);\n        ChangeSize();\n    }')
 core = scope(core, 'void EditorControl::Core::Resize', 'CoreResize')
-core = replace_once(core, '    ChangeSize();\n    if (Wrapping()) UpdateWrapLayout();',
-    '    {\n        DWriteDiagnosis::Scope diagnosticScope(DWriteDiagnosis::Metric::CoreChangeSize);\n        ChangeSize();\n    }\n    if (Wrapping()) UpdateWrapLayout();')
 core = replace_once(core, '    WrapLines(WrapScope::wsAll);',
     '    {\n        DWriteDiagnosis::Scope diagnosticScope(DWriteDiagnosis::Metric::CoreWrap);\n        WrapLines(WrapScope::wsAll);\n    }')
 (output / 'editor_core_diagnostic.cpp').write_text('#include "diagnostic_metrics.h"\n' + core, encoding='utf-8')

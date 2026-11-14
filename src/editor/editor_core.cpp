@@ -397,7 +397,12 @@ void EditorControl::Core::Draw(wxDC& dc) {
 
 void EditorControl::Core::Resize() {
     ChangeSize();
+#ifndef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
     if (Wrapping()) UpdateWrapLayout();
+#else
+    // Original ScintillaWin::SizeWindow leaves wrapping to paint and preserves
+    // the viewport instead of pulling it to the caret on every resize.
+#endif
 }
 
 void EditorControl::Core::UpdateWrapLayout() {
