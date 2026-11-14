@@ -4,6 +4,8 @@ Question: can the original Notepad4 Direct2D/DirectWrite backend provide matchin
 measurement and rendering through wxWidgets while retaining parallel layout?
 This is a throwaway Windows experiment, not a production renderer switch.
 
+See [RESULTS.md](RESULTS.md) for the measured speed/memory tradeoffs and verdict.
+
 Branch: `codex/prototype-directwrite`, forked at `efc1366`. The prior GDI/Pango
 experiment remains on `codex/prototype-worker-measurement` with its evidence.
 Linux retains the parent branch's Pango/Cairo implementation.
@@ -90,4 +92,15 @@ preedit appearance and candidate positioning still require user verification.
 
 Full build, numerical, raster and test evidence is retained at
 `E:/NewNotepad4/wxnotepad-evidence/directwrite-prototype-2026-11-14/`.
-No speedup or memory-cost conclusion is drawn before controlled measurements.
+The controlled window has ended. A new performance run needs a fresh ready
+response. The separately built `directwrite_layout` target reuses the parent's
+benchmark and diagnostic cap hook; normal applications/correctness targets do
+not include it. To reproduce a comparison after that response, place it and the
+parent's `worker_fixed_layout` executable (plus their matching runtime DLLs) in
+one output directory, then use the parent's `run-comparison.py` with
+`--baseline-name <GDI basename> --candidate-name <DirectWrite basename> --suffix .exe --require-geometry`.
+In that runner's existing report schema, `baseline` denotes GDI and `worker-owned`
+denotes DirectWrite; binary paths and hashes identify the exact variants.
+Require renderer-local repeated CHECK/geometry equality and equal client
+viewports. Keep natural differences between the backends' original font metrics
+and report them, as done in RESULTS.md.
