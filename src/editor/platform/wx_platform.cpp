@@ -9,6 +9,7 @@
 #include <wx/dcmemory.h>
 #ifdef __WXMSW__
 #include <wx/graphics.h>
+#include "directwrite_surface.h"
 #endif
 #include <wx/display.h>
 #include <wx/popupwin.h>
@@ -50,6 +51,9 @@ public:
           measurement(font) {}
 };
 std::shared_ptr<Font> Font::Allocate(const FontParameters& p) {
+#ifdef __WXMSW__
+    if (p.technology == Technology::DirectWrite) return AllocateDirectWriteFont(p);
+#endif
     return std::make_shared<WxFont>(p);
 }
 class WxSurface final : public Surface {
@@ -294,7 +298,10 @@ public:
         // wxDC drawing is synchronous and has no adapter-owned command buffer.
     }
 };
-std::unique_ptr<Surface> Surface::Allocate(Scintilla::Technology) {
+std::unique_ptr<Surface> Surface::Allocate([[maybe_unused]] Scintilla::Technology technology) {
+#ifdef __WXMSW__
+    if (technology == Technology::DirectWrite) return AllocateDirectWriteSurface();
+#endif
     return std::make_unique<WxSurface>();
 }
 
@@ -422,13 +429,20 @@ private:
 class WxListBox final : public ListBox {
     CompletionList* list_ = nullptr;
     int rows_ = 8;
+    Technology technology_ = Technology::Default;
 
 public:
     void SetFont(std::shared_ptr<Font> font) noexcept override {
-        list_->SetFont(static_cast<WxFont*>(font.get())->font);
+#ifdef __WXMSW__
+        if (technology_ == Technology::DirectWrite)
+            list_->SetFont(DirectWriteListFont(*font));
+        else
+#endif
+            list_->SetFont(static_cast<WxFont*>(font.get())->font);
         list_->Measure();
     }
-    void SCICALL Create(Window& parent, int id, Point, int, int, Scintilla::Technology) noexcept override {
+    void SCICALL Create(Window& parent, int id, Point, int, int, Scintilla::Technology technology) noexcept override {
+        technology_ = technology;
         auto* popup = new CompletionPopup(Host(parent.GetID()));
         list_ = new CompletionList(popup, id);
         popup->Bind(wxEVT_MOUSEWHEEL, [list = list_](wxMouseEvent& event) {

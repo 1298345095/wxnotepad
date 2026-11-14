@@ -160,7 +160,17 @@ add_library(app_shell STATIC
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
-    target_sources(editor_runtime PRIVATE src/editor/platform/windows_ime.cpp src/editor/platform/text_measurement_msw.cpp)
+    find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+    set(directwrite_generated "${CMAKE_CURRENT_BINARY_DIR}/directwrite")
+    execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_directwrite.py"
+        "${NOTEPAD4_SOURCE}" "${directwrite_generated}" COMMAND_ERROR_IS_FATAL ANY)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_directwrite.py"
+        "${NOTEPAD4_SOURCE}/scintilla/win32/SurfaceD2D.cxx")
+    target_sources(editor_runtime PRIVATE src/editor/platform/windows_ime.cpp src/editor/platform/text_measurement_msw.cpp
+        src/editor/platform/directwrite_surface.cpp)
+    target_include_directories(editor_runtime PRIVATE "${directwrite_generated}")
+    target_compile_definitions(editor_runtime PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
     target_link_libraries(editor_features PRIVATE advapi32)
     target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32 gdi32)
     target_link_libraries(app_shell PRIVATE shell32 ole32)
@@ -199,6 +209,11 @@ add_gui_program(wxnotepad src/app/main.cpp app_shell)
 
 include(CTest)
 if(BUILD_TESTING)
+    if(WIN32)
+        add_gui_program(native_renderer tests/native_renderer.cpp editor_runtime)
+        add_test(NAME native_renderer_commands COMMAND native_renderer)
+        set_tests_properties(native_renderer_commands PROPERTIES TIMEOUT 60)
+    endif()
     add_executable(date_time_format tests/date_time_format.cpp)
     target_link_libraries(date_time_format PRIVATE editor_runtime)
     if(MSVC)

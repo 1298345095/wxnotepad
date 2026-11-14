@@ -1,4 +1,7 @@
 #include "editor/editor_core.h"
+#ifdef __WXMSW__
+#include "editor/platform/directwrite_surface.h"
+#endif
 #include "editor/display_units.h"
 #include "editor/editor_ids.h"
 #include "editor/platform/native_encoding.h"
@@ -201,6 +204,25 @@ intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_
     // Read-only enclosure can intentionally attempt a target beyond EOF after
     // the preceding insertion was rejected, then continue selection repair.
     try {
+#ifdef __WXMSW__
+        if (message == Message::SetTechnology) {
+            const auto requested = static_cast<Scintilla::Technology>(wParam);
+            if ((requested == Scintilla::Technology::Default || requested == Scintilla::Technology::DirectWrite) &&
+                technology != requested &&
+                (requested == Scintilla::Technology::Default || core::DirectWriteAvailable())) {
+                // Original ScintillaWin technology switch: native target buffering,
+                // graphics, fonts and layouts change as one operation.
+                core::DropDirectWriteTarget(window_);
+                DropGraphics();
+                if (requested == Scintilla::Technology::Default) bidirectional = Scintilla::Bidirectional::Disabled;
+                view.bufferedDraw = requested == Scintilla::Technology::Default;
+                technology = requested;
+                vs.fontsValid = false;
+                InvalidateStyleRedraw();
+            }
+            return 0;
+        }
+#endif
         const auto result = ScintillaBase::WndProc(message, wParam, lParam);
         if ((message == Message::SetText || message == Message::ClearAll) && !pdoc->IsReadOnly())
             ScintillaBase::WndProc(Message::SetScrollWidth, 1, 0);
@@ -338,8 +360,18 @@ intptr_t EditorControl::Core::SelectionCharacterCount() {
 
 void EditorControl::Core::Draw(wxDC& dc) {
     window_.UpdateLineNumberMargin();
-    auto surface = core::Surface::Allocate(Scintilla::Technology::Default);
+    auto surface = core::Surface::Allocate(technology);
     surface->Init(&dc, &window_);
+#ifdef __WXMSW__
+    if (technology == Scintilla::Technology::DirectWrite && !surface->Initialised()) {
+        if (!core::FinishDirectWriteDrawing(*surface)) {
+            DropGraphics();
+            window_.Refresh(false);
+            return;
+        }
+        throw std::runtime_error("Direct2D paint target initialization failed");
+    }
+#endif
     surface->SetMode({Scintilla::CpUtf8});
     const auto size = window_.GetClientSize();
     rcPaint = core::PRectangle(0, 0, size.x, size.y);
@@ -351,6 +383,12 @@ void EditorControl::Core::Draw(wxDC& dc) {
         view.lineWidthMaxSeen = 0;
     }
     Paint(surface.get(), rcPaint);
+#ifdef __WXMSW__
+    if (technology == Scintilla::Technology::DirectWrite && !core::FinishDirectWriteDrawing(*surface)) {
+        DropGraphics();
+        window_.Refresh(false);
+    }
+#endif
     paintState = PaintState::notPainting;
     if (shrink && view.lineWidthMaxSeen < scrollWidth) {
         // Reuse the core's normal visible-line measurements, avoiding a full
