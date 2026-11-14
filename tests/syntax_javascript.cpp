@@ -157,7 +157,7 @@ void SchemeSettings(SettingsStore& settings) {
                            "0\n[TypeScript]\nTabWidth=6\nIndentWidth=6\nTabsAsSpaces=0\nUseGlobalTabSettings=0\n"),
             "write independent original INI fixture");
     }
-    SettingsStore loaded;
+    SettingsStore loaded(settings.Path());
     const auto js = static_cast<size_t>(SyntaxLanguage::JavaScript);
     const auto ts = static_cast<size_t>(SyntaxLanguage::TypeScript);
     Require(loaded.values.schemeTabs[js].tabWidth == 3 && loaded.values.schemeTabs[ts].tabWidth == 6,
@@ -166,7 +166,7 @@ void SchemeSettings(SettingsStore& settings) {
     Require(loaded.SaveSchemeTabs(SyntaxLanguage::Jsx), "JSX saves the original JavaScript section");
     loaded.values.schemeTabs[ts].tabWidth = 8;
     Require(loaded.SaveSchemeTabs(SyntaxLanguage::Tsx), "TSX saves the original TypeScript section");
-    SettingsStore reloaded;
+    SettingsStore reloaded(settings.Path());
     Require(reloaded.values.schemeTabs[js].tabWidth == 7 && reloaded.values.schemeTabs[ts].tabWidth == 8,
             "dialect saves persist in independent canonical sections");
     std::puts("PASS: original independent JavaScript/TypeScript settings load/save through JSX/TSX aliases");
@@ -200,7 +200,9 @@ void TabPrecedence(EditorFrame* frame, SettingsStore& settings, const std::files
 class JavaScriptApp final : public wxApp {
 public:
     bool OnInit() override {
-        settings_ = std::make_unique<SettingsStore>();
+        const auto ini = TestFiles::TemporaryDirectory("Notepad4.ini");
+        TestFiles::WriteBytes(ini, "[Notepad4]\n");
+        settings_ = std::make_unique<SettingsStore>(TestFiles::Filename(ini));
         settings_->values = OriginalSettings{};
         settings_->values.detectIndentation = false;
         settings_->values.warnLineEndings = false;

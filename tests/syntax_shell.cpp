@@ -157,7 +157,7 @@ void ShellOperations(EditorFrame* frame, SettingsStore& settings, const std::fil
                     !editor->Send(Message::GetUseTabs),
                 "all shell dialects share the original Shell Script section");
     }
-    SettingsStore reloaded;
+    SettingsStore reloaded(settings.Path());
     const auto& saved = reloaded.values.schemeTabs[static_cast<size_t>(SyntaxLanguage::Bash)];
     Require(saved.tabWidth == 7 && saved.indentWidth == 3 && saved.tabsAsSpaces && !saved.useGlobal,
             "accepting Tab Settings must immediately persist the canonical Shell Script section");
@@ -224,7 +224,7 @@ void EmptyShellBoms(EditorFrame* frame, EditorControl* editor, const std::filesy
 class ShellApp final : public wxApp {
 public:
     bool OnInit() override {
-        settings_ = std::make_unique<SettingsStore>();
+        settings_ = std::make_unique<SettingsStore>(TestFiles::Filename(TestFiles::TemporaryDirectory("Notepad4.ini")));
         settings_->values = OriginalSettings{};
         settings_->values.wordWrap = false;
         settings_->values.warnLineEndings = false;

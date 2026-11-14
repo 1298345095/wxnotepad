@@ -58,7 +58,7 @@ void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFix
     });
     Require(editor->Send(Message::GetTabWidth) == 5 && editor->Send(Message::GetIndent) == 2,
             "native Tab Settings must apply the language's independent settings");
-    SettingsStore reloaded;
+    SettingsStore reloaded(settings.Path());
     const auto& saved = reloaded.values.schemeTabs[static_cast<size_t>(fixture.language)];
     Require(saved.tabWidth == 5 && saved.indentWidth == 2 && !saved.useGlobal,
             "Tab Settings must persist to the original language section");
@@ -107,7 +107,7 @@ class LanguagesApp final : public wxApp {
 public:
     bool OnInit() override {
         wxInitAllImageHandlers();
-        settings_ = std::make_unique<SettingsStore>();
+        settings_ = std::make_unique<SettingsStore>(TestFiles::Filename(TestFiles::TemporaryDirectory("Notepad4.ini")));
         settings_->values = OriginalSettings{};
         settings_->values.wordWrap = false;
         settings_->values.warnLineEndings = false;
