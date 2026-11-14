@@ -212,11 +212,13 @@ intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_
                 (requested == Scintilla::Technology::Default || core::DirectWriteAvailable())) {
                 // Original ScintillaWin technology switch: native target buffering,
                 // graphics, fonts and layouts change as one operation.
-                core::DropDirectWriteTarget(window_);
                 DropGraphics();
+                core::DropDirectWriteTarget(window_);
                 if (requested == Scintilla::Technology::Default) bidirectional = Scintilla::Bidirectional::Disabled;
                 view.bufferedDraw = requested == Scintilla::Technology::Default;
                 technology = requested;
+                if (technology == Scintilla::Technology::DirectWrite)
+                    core::RefreshDirectWriteRenderingParams(window_, true);
                 vs.fontsValid = false;
                 InvalidateStyleRedraw();
             }
@@ -360,6 +362,10 @@ intptr_t EditorControl::Core::SelectionCharacterCount() {
 
 void EditorControl::Core::Draw(wxDC& dc) {
     window_.UpdateLineNumberMargin();
+#ifdef __WXMSW__
+    if (technology == Scintilla::Technology::DirectWrite && core::RefreshDirectWriteRenderingParams(window_, false))
+        DropGraphics();
+#endif
     auto surface = core::Surface::Allocate(technology);
     surface->Init(&dc, &window_);
 #ifdef __WXMSW__
@@ -420,6 +426,19 @@ void EditorControl::Core::UpdateWrapLayout() {
     WrapLines(WrapScope::wsAll);
     EnsureCaretVisible();
 }
+
+#ifdef __WXMSW__
+void EditorControl::Core::RenderingSettingsChanged(bool force) {
+    if (technology == Scintilla::Technology::DirectWrite) {
+        if (!force && !core::RefreshDirectWriteRenderingParams(window_, false)) return;
+        // Cached pixmaps borrow the original rendering parameters. On a forced
+        // settings refresh, release them before replacing those parameters.
+        DropGraphics();
+        if (force) core::RefreshDirectWriteRenderingParams(window_, true);
+        InvalidateStyleRedraw();
+    }
+}
+#endif
 
 void EditorControl::Core::DpiChanged() {
     for (int marker = static_cast<int>(Scintilla::MarkerOutline::FolderEnd);

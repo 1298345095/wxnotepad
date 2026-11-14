@@ -166,7 +166,8 @@ if(WIN32)
         "${NOTEPAD4_SOURCE}" "${directwrite_generated}" COMMAND_ERROR_IS_FATAL ANY)
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_directwrite.py"
-        "${NOTEPAD4_SOURCE}/scintilla/win32/SurfaceD2D.cxx")
+        "${NOTEPAD4_SOURCE}/scintilla/win32/SurfaceD2D.cxx"
+        "${NOTEPAD4_SOURCE}/scintilla/win32/ScintillaWin.cxx")
     target_sources(editor_runtime PRIVATE src/editor/platform/windows_ime.cpp src/editor/platform/text_measurement_msw.cpp
         src/editor/platform/directwrite_surface.cpp)
     target_include_directories(editor_runtime PRIVATE "${directwrite_generated}")
@@ -678,7 +679,23 @@ if(BUILD_TESTING)
             "${NOTEPAD4_SOURCE}/scintilla/lexlib")
         target_compile_definitions(native_directwrite PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
         add_test(NAME native_directwrite_original_metrics_and_raster COMMAND native_directwrite)
-        set_tests_properties(native_directwrite_original_metrics_and_raster PROPERTIES TIMEOUT 90)
+        # The oracle requires unmodified native DWrite parameters; MacType honors
+        # this process-local exclusion, without changing the user's desktop profile.
+        set_tests_properties(native_directwrite_original_metrics_and_raster PROPERTIES TIMEOUT 90
+            ENVIRONMENT "MACTYPE_FORCE_EXCLUDE=1")
+        # Replace only the OS contrast query in this test's copy of the production
+        # adapter. Native targets/fonts/raster and the pinned oracle remain real.
+        add_gui_program(native_directwrite_contrast tests/native_directwrite.cpp app_shell)
+        target_sources(native_directwrite_contrast PRIVATE tests/directwrite_contrast_surface.cpp)
+        target_include_directories(native_directwrite_contrast PRIVATE src/editor/platform
+            "${NOTEPAD4_SOURCE}/scintilla/win32" "${NOTEPAD4_SOURCE}/scintilla/src"
+            "${NOTEPAD4_SOURCE}/scintilla/lexlib" "${directwrite_generated}")
+        target_compile_definitions(native_directwrite_contrast PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00
+            WXNOTEPAD_TEST_CLEARTYPE_CONTRAST)
+        add_test(NAME native_directwrite_original_custom_contrast COMMAND native_directwrite_contrast)
+        set_tests_properties(native_directwrite_original_custom_contrast PROPERTIES TIMEOUT 90
+            ENVIRONMENT "MACTYPE_FORCE_EXCLUDE=1")
+
         foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup)
             add_gui_program(directwrite_${probe} tests/${probe}.cpp app_shell)
             target_compile_definitions(directwrite_${probe} PRIVATE WXNOTEPAD_TEST_DIRECTWRITE)

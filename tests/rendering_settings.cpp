@@ -8,6 +8,7 @@
 
 namespace {
 using Scintilla::Message;
+using Scintilla::Technology;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -15,6 +16,18 @@ void Require(bool value, const char* message) {
 constexpr int PopupFontPoints = 12;
 constexpr int PopupZoomPercent = 125;
 constexpr int ZoomedPopupFontPoints = 15;
+struct FontDefinition {
+    std::string face;
+    intptr_t size;
+    bool operator==(const FontDefinition&) const = default;
+};
+FontDefinition ConfiguredFont(EditorControl* editor, Scintilla::StylesCommon style) {
+    const auto index = static_cast<uintptr_t>(style);
+    std::string face(static_cast<size_t>(editor->Send(Message::StyleGetFont, index)) + 1, char{});
+    editor->Send(Message::StyleGetFont, index, reinterpret_cast<intptr_t>(face.data()));
+    face.pop_back();
+    return {face, editor->Send(Message::StyleGetSizeFractional, index)};
+}
 wxVListBox* CompletionList(wxWindow* parent) {
     for (auto* child : parent->GetChildren()) {
         if (auto* list = wxDynamicCast(child, wxVListBox)) return list;
@@ -34,21 +47,26 @@ void DocumentAndPopup(EditorFrame* frame, int gdi, int d2d) {
     editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("edited"));
     editor->Send(Message::Undo);
     editor->Send(Message::SetSel, 23, 5);
-    for (const auto& [id, actual] : {std::pair{gdi, 0}, std::pair{d2d, 1}, std::pair{gdi, 0}}) {
+    const auto configuredFont = ConfiguredFont(editor, Scintilla::StylesCommon::Default);
+    for (const auto& [id, actual] : {std::pair{gdi, Technology::Default}, std::pair{d2d, Technology::DirectWrite},
+                                     std::pair{gdi, Technology::Default}}) {
         NativeSearch::Command(frame, id);
         editor->Update();
-        Require(editor->Send(Message::GetTechnology) == actual && TestEditor::Text(editor) == text &&
-                    editor->Send(Message::GetAnchor) == 23 && editor->Send(Message::GetCurrentPos) == 5 &&
-                    !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                    editor->Send(Message::CanRedo),
+        Require(ConfiguredFont(editor, Scintilla::StylesCommon::Default) == configuredFont,
+                "switching retains the configured primary font family and fractional point size");
+        Require(editor->Send(Message::GetTechnology) == static_cast<intptr_t>(actual) &&
+                    TestEditor::Text(editor) == text && editor->Send(Message::GetAnchor) == 23 &&
+                    editor->Send(Message::GetCurrentPos) == 5 && !editor->Send(Message::GetModify) &&
+                    !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
                 "switching a populated document retains bytes, reversed selection, save point and history");
         Require(editor->Send(Message::GetLexer) == SCLEX_CPP &&
                     editor->Send(Message::GetStyleIndexAt, 0) == SCE_C_WORD2 && editor->Send(Message::WrapCount, 0) > 1,
                 "switching retains current C++ language and styles while rebuilding wrapped layout");
         editor->Send(Message::SetTechnology, static_cast<uintptr_t>(Scintilla::Technology::DirectWriteDC));
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-        Require(editor->Send(Message::GetTechnology) == actual && bar->IsChecked(gdi) == (actual == 0) &&
-                    bar->IsChecked(d2d) == (actual == 1),
+        Require(editor->Send(Message::GetTechnology) == static_cast<intptr_t>(actual) &&
+                    bar->IsChecked(gdi) == (actual == Technology::Default) &&
+                    bar->IsChecked(d2d) == (actual == Technology::DirectWrite),
                 "unsupported requests retain truthful actual menu radio state");
     }
     editor->Send(Message::Redo);
@@ -75,7 +93,8 @@ void DocumentAndPopup(EditorFrame* frame, int gdi, int d2d) {
         editor->Send(Message::AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
         editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>("alpine"));
         Require(editor->Send(Message::AutoCActive), "completion is open before switching renderer");
-        editor->Send(Message::SetTechnology, after == gdi ? 0 : 1);
+        editor->Send(Message::SetTechnology,
+                     static_cast<uintptr_t>(after == gdi ? Technology::Default : Technology::DirectWrite));
         wxYield();
         editor->Update();
         Require(editor->Send(Message::AutoCActive), "renderer switch retains already-open completion");
@@ -90,6 +109,12 @@ void DocumentAndPopup(EditorFrame* frame, int gdi, int d2d) {
         if (context) ImmReleaseContext(static_cast<HWND>(editor->GetHandle()), context);
         Require(read && ime.lfHeight == -MulDiv(ZoomedPopupFontPoints, editor->GetDPI().y, DisplayUnits::PointsPerInch),
                 "native IME font retains 12-point style at 125 percent with active renderer and native DPI");
+        const auto primary = ConfiguredFont(editor, Scintilla::StylesCommon::Default);
+        Require(wxString(ime.lfFaceName).CmpNoCase(wxString::FromUTF8(primary.face)) == 0,
+                "both renderers preserve the configured primary family in the native IME font");
+        std::printf("renderer=%lld primary=%s point_size=%lld IME=%s height=%ld\n",
+                    static_cast<long long>(editor->Send(Message::GetTechnology)), primary.face.c_str(),
+                    static_cast<long long>(primary.size), wxString(ime.lfFaceName).ToUTF8().data(), ime.lfHeight);
         editor->Send(Message::AutoCCancel);
         editor->Send(Message::AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
         list = CompletionList(editor);
@@ -120,10 +145,11 @@ public:
                     const int expected = wxAtoi(argv[1]);
                     Require(settings_.values.renderingTechnology == expected, "original technology setting loads");
 #ifdef __WXMSW__
-                    Require(frame->Editor()->Send(Message::GetTechnology) == (expected == 1 ? 1 : 0),
+                    Require(frame->Editor()->Send(Message::GetTechnology) ==
+                                static_cast<intptr_t>(expected == 1 ? Technology::DirectWrite : Technology::Default),
                             "application applies supported request or preserves usable GDI fallback");
 #else
-                    Require(frame->Editor()->Send(Message::GetTechnology) == 0, "Linux retains native renderer");
+                    Require(frame->Editor()->Send(Message::GetTechnology) == static_cast<intptr_t>(Technology::Default), "Linux retains native renderer");
 #endif
                     if (argc > 2 && argv[2] != "keep") {
 #ifdef __WXMSW__
@@ -140,20 +166,26 @@ public:
 #ifdef __WXMSW__
                 auto* editor = frame->Editor();
                 auto* bar = frame->GetMenuBar();
-                Require(editor->Send(Message::GetTechnology) == 1, "Windows application defaults to DirectWrite");
+                Require(editor->Send(Message::GetTechnology) == static_cast<intptr_t>(Technology::DirectWrite),
+                        "Windows application defaults to DirectWrite");
                 const int gdi = bar->FindMenuItem("Settings", "Legacy GDI");
                 const int d2d = bar->FindMenuItem("Settings", "Direct2D");
                 Require(gdi != wxNOT_FOUND && d2d != wxNOT_FOUND, "original rendering choices exist");
-                for (const auto& [id, actual] : {std::pair{gdi, 0}, std::pair{d2d, 1}}) {
+                for (const auto& [id, actual] : {std::pair{gdi, Technology::Default}, std::pair {
+                                                     d2d,
+                                                     Technology::DirectWrite
+                                                 }}) {
                     NativeSearch::Command(frame, id);
                     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-                    Require(editor->Send(Message::GetTechnology) == actual, "menu switches actual renderer");
-                    Require(bar->IsChecked(gdi) == (actual == 0) && bar->IsChecked(d2d) == (actual == 1),
+                    Require(editor->Send(Message::GetTechnology) == static_cast<intptr_t>(actual),
+                            "menu switches actual renderer");
+                    Require(bar->IsChecked(gdi) == (actual == Technology::Default) &&
+                                bar->IsChecked(d2d) == (actual == Technology::DirectWrite),
                             "radio state reports actual renderer");
                 }
                 DocumentAndPopup(frame, gdi, d2d);
 #else
-                Require(frame->Editor()->Send(Message::GetTechnology) == 0, "Linux retains native rendering");
+                Require(frame->Editor()->Send(Message::GetTechnology) == static_cast<intptr_t>(Technology::Default), "Linux retains native rendering");
                 Require(frame->GetMenuBar()->FindMenuItem("Settings", "Legacy GDI") == wxNOT_FOUND &&
                             frame->GetMenuBar()->FindMenuItem("Settings", "Direct2D") == wxNOT_FOUND,
                         "Linux does not expose Windows rendering choices");

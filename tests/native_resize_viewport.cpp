@@ -102,11 +102,11 @@ public:
                                  ReferencePointSizeFractional * ReferenceDpi / editor->GetDPI().y);
                 }
                 editor->Send(Message::SetZoom, 100);
-                editor->Send(Message::SetPhasesDraw, 1);
+                editor->Send(Message::SetPhasesDraw, static_cast<uintptr_t>(Scintilla::PhasesDraw::Two));
                 editor->Send(Message::SetWrapVisualFlags, 0);
                 editor->Send(Message::SetWrapVisualFlagsLocation, 0);
                 editor->Send(Message::SetWrapStartIndent, 0);
-                editor->Send(Message::SetWrapIndentMode, 0);
+                editor->Send(Message::SetWrapIndentMode, static_cast<uintptr_t>(Scintilla::WrapIndentMode::Fixed));
                 editor->Send(Message::SetExtraAscent, 0);
                 editor->Send(Message::SetExtraDescent, 0);
                 editor->Send(Message::Colourise, 0, -1);
