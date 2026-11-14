@@ -215,10 +215,6 @@ intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_
 
 EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_(window) {
     wMain = static_cast<wxWindow*>(&window_);
-    // The native core shares its measuring surface between layout workers.
-    // wxDC and its font references must stay on the GUI thread on every port.
-    hardwareConcurrency = 1;
-    UpdateParallelLayoutThreshold();
     Initialise();
     // Original Notepad4.cpp: wrapped Home/End visit visual then logical boundaries.
     WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(Scintilla::Keys::Home),

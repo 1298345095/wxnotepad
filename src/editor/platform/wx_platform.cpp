@@ -2,6 +2,8 @@
 // Basic LTR rendering and native nonactivating completion UI.
 #include "core_headers.h"
 #include "editor/display_units.h"
+#include "text_measurement.h"
+#include "diagnostics/trace.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
@@ -13,9 +15,6 @@
 #include <wx/vlbox.h>
 #include <wx/sizer.h>
 #include <wx/renderer.h>
-#ifdef __WXGTK__
-#include <pango/pango.h>
-#endif
 #include <algorithm>
 #include <chrono>
 #include <cstdarg>
@@ -42,11 +41,13 @@ static wxColour Color(ColourRGBA c) {
 class WxFont final : public Font {
 public:
     wxFont font;
+    MeasurementFont measurement;
     explicit WxFont(const FontParameters& p)
         : font(wxFontInfo(p.size)
                    .FaceName(wxString::FromUTF8(p.faceName))
                    .Weight(static_cast<wxFontWeight>(static_cast<int>(p.weight)))
-                   .Italic(p.italic)) {}
+                   .Italic(p.italic)),
+          measurement(font) {}
 };
 std::shared_ptr<Font> Font::Allocate(const FontParameters& p) {
     return std::make_shared<WxFont>(p);
@@ -56,6 +57,7 @@ class WxSurface final : public Surface {
     std::unique_ptr<wxDC> owned_;
     wxBitmap bitmap_;
     std::vector<std::unique_ptr<wxDCClipper>> clips_;
+    std::unique_ptr<TextMeasurement> measurement_;
     bool utf8_ = true;
     void FontSet(const Font* f) { dc_->SetFont(static_cast<const WxFont*>(f)->font); }
     wxString String(std::string_view s) const {
@@ -64,29 +66,17 @@ class WxSurface final : public Surface {
     void StrokeSet(Stroke s) {
         dc_->SetPen(wxPen(Color(s.colour), std::max(1, static_cast<int>(std::lround(s.width)))));
     }
-#ifdef __WXGTK__
-    std::vector<PangoLogAttr> CursorPositions(const wxString& characters, std::string_view text,
-                                              const wxArrayInt& extents) const {
-        if (!utf8_ || extents.empty() ||
-            std::none_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; }))
-            return {};
-        // wxGTK 3.3.3's Cairo extents compact Pango cursor clusters, then pad
-        // to the character count. Expand those same cursor boundaries while
-        // retaining the native DC's font, DPI and measured cluster advances.
-        const auto utf8 = characters.utf8_str();
-        std::vector<PangoLogAttr> positions(characters.length() + 1);
-        pango_get_log_attrs(utf8.data(), static_cast<int>(utf8.length()), 0, pango_language_get_default(),
-                            positions.data(), static_cast<int>(positions.size()));
-        return positions;
-    }
-#endif
 
 public:
     void Init(WindowID id) noexcept override {
         owned_ = std::make_unique<wxClientDC>(Host(id));
         dc_ = owned_.get();
+        measurement_ = std::make_unique<TextMeasurement>(*dc_);
     }
-    void Init(SurfaceID dc, WindowID, bool) noexcept override { dc_ = static_cast<wxDC*>(dc); }
+    void Init(SurfaceID dc, WindowID, bool) noexcept override {
+        dc_ = static_cast<wxDC*>(dc);
+        measurement_ = std::make_unique<TextMeasurement>(*dc_);
+    }
     std::unique_ptr<Surface> AllocatePixMap(int width, int height) override {
         auto p = std::make_unique<WxSurface>();
         // GTK logical coordinates need a full-resolution backing bitmap; MSW
@@ -96,6 +86,7 @@ public:
         dc->SelectObject(p->bitmap_);
         p->dc_ = dc.get();
         p->owned_ = std::move(dc);
+        p->measurement_ = std::make_unique<TextMeasurement>(*p->dc_);
         return p;
     }
     void SetMode(SurfaceMode m) noexcept override { utf8_ = m.codePage == Scintilla::CpUtf8; }
@@ -104,6 +95,7 @@ public:
     }
     void Release() noexcept override {
         clips_.clear();
+        measurement_.reset();
         owned_.reset();
         dc_ = nullptr;
     }
@@ -263,38 +255,11 @@ public:
         DrawTextNoClip(r, f, base, text, fore, back);
     }
     void SCICALL MeasureWidths(const Font* f, std::string_view text, XYPOSITION* positions) override {
-        FontSet(f);
-        wxArrayInt extents;
-        const auto characters = String(text);
-        dc_->GetPartialTextExtents(characters, extents);
-#ifdef __WXGTK__
-        const auto cursorPositions = CursorPositions(characters, text, extents);
-        size_t cursorExtent = 0;
-#endif
-        size_t character = 0;
-        for (size_t byte = 0; byte < text.size();) {
-            const unsigned char lead = text[byte];
-            size_t width = 1;
-            if (utf8_ && lead >= 0xc0) width = lead < 0xe0 ? 2 : lead < 0xf0 ? 3 : 4;
-            width = std::min(width, text.size() - byte);
-            const size_t units = utf8_ && width == 4 && sizeof(wchar_t) == 2 ? 2 : 1;
-            character += units;
-            size_t extent = character - 1;
-#ifdef __WXGTK__
-            if (!cursorPositions.empty()) {
-                extent = cursorExtent;
-                if (character < cursorPositions.size() && cursorPositions[character].is_cursor_position) ++cursorExtent;
-            }
-#endif
-            const double x = extent < extents.size() ? extents[extent] : 0;
-            for (size_t j = 0; j < width; ++j)
-                positions[byte + j] = x;
-            byte += width;
-        }
+        measurement_->MeasureWidths(static_cast<const WxFont*>(f)->measurement, text, utf8_, positions);
+        WXNOTE_TRACE("layout.measurement", "\tsurface=%p\tbytes=%zu", static_cast<void*>(this), text.size());
     }
     XYPOSITION WidthText(const Font* f, std::string_view text) override {
-        FontSet(f);
-        return dc_->GetTextExtent(String(text)).x;
+        return measurement_->WidthText(static_cast<const WxFont*>(f)->measurement, text, utf8_);
     }
     void SCICALL DrawTextNoClipUTF8(PRectangle r, const Font* f, XYPOSITION y, std::string_view t, ColourRGBA a,
                                     ColourRGBA b) override {
@@ -312,12 +277,11 @@ public:
         DrawTextTransparent(r, f, y, t, a);
     }
     void SCICALL MeasureWidthsUTF8(const Font* f, std::string_view t, XYPOSITION* p) override {
-        utf8_ = true;
-        MeasureWidths(f, t, p);
+        measurement_->MeasureWidths(static_cast<const WxFont*>(f)->measurement, t, true, p);
+        WXNOTE_TRACE("layout.measurement", "\tsurface=%p\tbytes=%zu", static_cast<void*>(this), t.size());
     }
     XYPOSITION WidthTextUTF8(const Font* f, std::string_view t) override {
-        utf8_ = true;
-        return WidthText(f, t);
+        return measurement_->WidthText(static_cast<const WxFont*>(f)->measurement, t, true);
     }
     void SCICALL SetClip(PRectangle r) noexcept override {
         clips_.push_back(std::make_unique<wxDCClipper>(*dc_, Rect(r)));

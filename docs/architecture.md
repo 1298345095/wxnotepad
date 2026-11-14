@@ -50,8 +50,14 @@ protocols in feature implementations, rather than wrap every message individuall
 
 ## Module arrangement
 
-Arrows below denote calls/dependencies, not copies of document state. All current
-editor and UI operations remain on the GUI thread.
+Arrows below denote calls/dependencies, not copies of document state. Document
+mutations, editor commands and wx GUI operations remain on the GUI thread. The
+original core's parallel layout workers use native-only text measurement behind
+`platform/text_measurement.h`: immutable font snapshots are captured on the GUI
+thread, and separate GDI or Pango/Cairo resources protect mutable measurement
+state. Workers never select fonts into a drawing wxDC or change wxFont references.
+The core retains its original hardware concurrency and joins layout workers
+before graphics or fonts are replaced.
 
 ```mermaid
 flowchart TD
