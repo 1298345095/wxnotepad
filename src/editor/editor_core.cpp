@@ -222,6 +222,8 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
 #ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
     // PROTOTYPE: match the original DirectWrite font/device-unit convention.
     technology = Scintilla::Technology::DirectWrite;
+    // Original ScintillaWin::SetTechnology uses Direct2D's own buffering.
+    WndProc(Message::SetBufferedDraw, 0, 0);
 #endif
     // Original Notepad4.cpp: wrapped Home/End visit visual then logical boundaries.
     WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(Scintilla::Keys::Home),

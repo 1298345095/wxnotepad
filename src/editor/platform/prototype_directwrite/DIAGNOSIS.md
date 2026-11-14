@@ -85,5 +85,72 @@ resize evidence; initialization memory checkpoints are retained as observations.
 One attempted geometry smoke used a stale generated probe and produced an
 uncontrolled multiline run; its timing data is excluded. CMake now tracks all
 generator inputs, and the corrected geometry-only check passes. WPR's provider
-listing now shows the marker GUID after its braces were removed. The next
-capture keeps the probe at the original standard-user integrity level.
+listing now shows the marker GUID after its braces were removed. The successful
+second capture keeps the probe at the original standard-user integrity level.
+
+## Successful WPT observations
+
+`wpt-02/diagnosis.etl` completed both probes and saved successfully, with zero
+lost events and buffers. Exact executables, PDBs, generated sources and compile
+commands are retained in `wpt-02/binary-record/`. Original failed recordings
+remain preserved separately.
+
+Private commit at HWND target creation rises from 5.07 to 36.11 MiB in the
+native control, and from 11.12 to 42.06 MiB in the wx probe. The roughly 31 MiB
+increase is therefore reproduced without wx or its editor scheduler. Graphics
+driver modules load at this boundary; module snapshots alone do not establish
+allocation ownership. First-painted blank windows are 49.02 and 48.28 MiB,
+respectively. This is a control of the graphics API path, not a benchmark of
+the full original Notepad4 application.
+
+The 60 instrumented warm long-line resizes take 6733.73 ms wall and 6046.88 ms
+process CPU. Nested scope totals are:
+
+| Scope | Calls | Summed elapsed ms |
+| --- | ---: | ---: |
+| Core paint | 134 | 4944.19 |
+| DrawTextCommon | 12408 | 3684.10 |
+| CreateTextLayout | 12542 | 17.41 |
+| Core resize | 60 | 311.23 |
+| Core WrapAll | 60 | 179.29 |
+| EndDraw | 134 | 125.07 |
+| Pixmap creation | 360 | 41.32 |
+| Target resize | 60 | 23.80 |
+| MeasureWidths | 0 | 0.00 |
+
+Warm measurement caching is effective. Creating the text-layout object itself
+does not dominate; the broader drawing scope includes lazy layout work and
+native drawing. These instrumented timings identify the area to inspect and
+are not replacement throughput results. The all-event stack report mixes CPU,
+graphics and allocation events; its hit percentages are not CPU percentages.
+
+The subsequent `Sampled Profile`-only export filters the owned probe PID and
+exact warm marker interval. Of 5813 samples, `DrawTextLayout` has 3535 inclusive
+hits (60.81%); its color-glyph path reaches `TranslateColorGlyphRun` with 3120
+hits (53.67%). `GetPaletteEntries` has 1818 exclusive hits (31.27%). This fixture
+contains emoji, and the original backend enables color fonts too. MacType is
+on the drawing call chain, but its presence and inclusive hits do not establish
+its incremental cost. Some stacks have incomplete roots, and tracing itself
+adds kernel work; these sample shares are attribution within this capture,
+not an uninstrumented timing prediction. See `warm-sampled-stacks.html`, its
+extracted JSON and `warm-sampled-summary.txt`.
+
+## Original buffering contract
+
+Comparing that drawing path found a concrete host omission: pinned
+`ScintillaWin.cxx`, `SetTechnology`, sets `view.bufferedDraw` to false for
+DirectWrite, whose render target already supplies buffering. The prototype
+selected the technology but retained the default extra Scintilla line pixmap.
+
+The native oracle now checks technology and buffering on an actual EditorFrame.
+The buffering assertion failed before the fix (`buffer-contract-red.log`).
+Setting `SetBufferedDraw(0)` only in DirectWrite prototype initialization makes
+it pass. All seven existing checks pass, including unchanged exact original
+metric/raster comparisons, worker loops, both 80-resize loops and timeouts.
+Canonical clang-format and native clang-tidy also pass their existing checks.
+
+Matched uninstrumented binaries are saved in `buffer-comparison/`, with the
+buffer state explicitly observed alongside unchanged geometry assertions.
+The GDI branch and Linux backend are unchanged. Whether this omission explains
+the measured warm regression still requires the controlled A/B measurement;
+the correctness fix alone does not prove its performance effect.

@@ -1,5 +1,7 @@
 // PROTOTYPE: compare the wx adapter with the original DirectWrite backend.
 #include "directwrite_surface.h"
+#include "app/editor_frame.h"
+#include "editor/editor_control.h"
 #include <wx/wx.h>
 #include <wx/dcmemory.h>
 #include "PlatWin.h"
@@ -208,10 +210,16 @@ public:
         wxInitAllImageHandlers();
         const auto evidence =
             argc == 2 ? std::filesystem::path(wxString(argv[1]).ToStdWstring()) : std::filesystem::path{};
-        auto* frame = new wxFrame(nullptr, wxID_ANY, "PROTOTYPE - native DirectWrite correctness");
+        auto* frame = new EditorFrame;
+        frame->SetTitle("PROTOTYPE - native DirectWrite correctness");
         frame->Show();
         CallAfter([this, frame, evidence] {
             try {
+                Require(frame->Editor()->Send(Scintilla::Message::GetTechnology) ==
+                            static_cast<intptr_t>(Scintilla::Technology::DirectWrite),
+                        "actual editor uses the original DirectWrite technology");
+                Require(frame->Editor()->Send(Scintilla::Message::GetBufferedDraw) == 0,
+                        "original DirectWrite technology disables the extra Scintilla line pixmap buffer");
                 Metrics(*frame);
                 Raster(*frame, evidence);
                 result_ = 0;

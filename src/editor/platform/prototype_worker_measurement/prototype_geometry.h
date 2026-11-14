@@ -24,8 +24,9 @@ struct EditorCoreObservation {
                       : -1;
 #endif
         std::printf("{\"metric\":\"geometry\",\"requested\":%d,\"outer\":%d,\"client\":%d,\"drawing\":%d,\"overlay\":%"
-                    "d,\"wrapped\":%d,\"wrap_width\":%d,\"text_start\":%g,\"right_margin\":%g}\n",
+                    "d,\"wrapped\":%d,\"wrap_width\":%d,\"text_start\":%g,\"right_margin\":%g,\"buffered_draw\":%d}\n",
                     requestedWidth, editor.GetSize().x, client.x, drawing, overlay, wrapped, core->wrapWidth,
-                    static_cast<double>(core->vs.textStart), static_cast<double>(core->vs.rightMarginWidth));
+                    static_cast<double>(core->vs.textStart), static_cast<double>(core->vs.rightMarginWidth),
+                    static_cast<int>(editor.Send(Scintilla::Message::GetBufferedDraw)));
     }
 };
