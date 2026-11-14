@@ -8,6 +8,7 @@
 /cmake-build-*/
 /out/
 /dist/
+/vcpkg_installed/
 
 # In-source CMake artifacts and local presets
 /CMakeFiles/
