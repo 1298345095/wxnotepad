@@ -96,9 +96,10 @@ for language, suffix in [("PlainText", "txt"), ("Cpp", "cpp"), ("Python", "py"),
 (output/'original.json').write_text(json.dumps(dict(revision='89b8b36e0ee2c23f73be922315f17261ccfbbe1a',cases=rows),indent=2)+'\n')
 lines=['// Captured from original Notepad4 89b8b36; see capture_auto_insertion.py.', '#pragma once', 'namespace AutoInsertionReference {', 'struct Selection { intptr_t anchor, caret; };', 'struct State { const char* text; intptr_t anchor, caret; bool modified, canUndo, canRedo; std::initializer_list<Selection> selections; };', 'struct Case { SyntaxLanguage language; const char* before; intptr_t position; int character; bool readOnly; intptr_t anchor, extraAnchor, extraCaret; bool overtype; const char* saved; State after; std::initializer_list<State> undo, redo; };', 'inline const Case cases[] = {']
 def lit(x):return json.dumps(x,ensure_ascii=True)
-def state_lit(s):return '{'+lit(s[0])+', '+', '.join(str(x) for x in s[1:6])+', {'+', '.join('{'+str(a)+', '+str(b)+'}' for a,b in s[6])+'}}'
+def bool_lit(x):return 'true' if x else 'false'
+def state_lit(s):return '{'+lit(s[0])+', '+', '.join(str(x) for x in s[1:3])+', '+', '.join(bool_lit(x) for x in s[3:6])+', {'+', '.join('{'+str(a)+', '+str(b)+'}' for a,b in s[6])+'}}'
 for r in rows:
-    lines.append('{SyntaxLanguage::'+r['language']+', '+lit(r['before'])+', '+str(r['position'])+', '+str(r['character'])+', '+str(int(r['readonly']))+', '+', '.join(str(r[k]) for k in ['anchor','extraAnchor','extraCaret'])+', '+str(int(r['overtype']))+', '+lit(r['saved'])+', '+state_lit(r['after'])+', {'+', '.join(map(state_lit,r['undo']))+'}, {'+', '.join(map(state_lit,r['redo']))+'}},')
+    lines.append('{SyntaxLanguage::'+r['language']+', '+lit(r['before'])+', '+str(r['position'])+', '+str(r['character'])+', '+bool_lit(r['readonly'])+', '+', '.join(str(r[k]) for k in ['anchor','extraAnchor','extraCaret'])+', '+bool_lit(r['overtype'])+', '+lit(r['saved'])+', '+state_lit(r['after'])+', {'+', '.join(map(state_lit,r['undo']))+'}, {'+', '.join(map(state_lit,r['redo']))+'}},')
 lines+=['};','} // namespace AutoInsertionReference']
 Path(__file__).resolve().parents[1].joinpath('auto_insertion_reference.h').write_text('\n'.join(lines)+'\n')
 print(f'Captured {len(rows)} original cases')
