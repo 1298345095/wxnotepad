@@ -474,6 +474,7 @@ if(BUILD_TESTING)
     target_include_directories(surface_images PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     add_editor_test(word_wrap word_wrap_view 60)
+    add_editor_test(wrap_resize native_wrapped_resize 120)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.27)
         set_tests_properties(word_wrap_view PROPERTIES TIMEOUT_SIGNAL_NAME SIGQUIT)
     endif()
