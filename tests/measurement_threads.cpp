@@ -46,7 +46,24 @@ Measurement Measure(core::Surface& surface, const core::Font& font, std::string_
     return result;
 }
 
-void Equal(const Measurement& actual, const Measurement& expected) {
+void Equal(const Measurement& actual, const Measurement& expected, int context, bool utf8, int worker, size_t font,
+           size_t sample, int iteration) {
+    if (actual.positions != expected.positions || actual.width != expected.width) {
+        size_t byte = 0;
+        while (byte < actual.positions.size() && byte < expected.positions.size() &&
+               actual.positions[byte] == expected.positions[byte])
+            ++byte;
+        const bool positionMismatch = byte < actual.positions.size() || byte < expected.positions.size();
+        std::fprintf(stderr,
+                     "context=%d utf8=%d worker=%d font=%zu sample=%zu iteration=%d actual-width=%.17g "
+                     "expected-width=%.17g first-byte=%td actual-position=%.17g expected-position=%.17g "
+                     "actual-bytes=%zu expected-bytes=%zu\n",
+                     context, utf8, worker, font, sample, iteration, actual.width, expected.width,
+                     positionMismatch ? static_cast<std::ptrdiff_t>(byte) : -1,
+                     byte < actual.positions.size() ? actual.positions[byte] : -1,
+                     byte < expected.positions.size() ? expected.positions[byte] : -1, actual.positions.size(),
+                     expected.positions.size());
+    }
     Require(actual.positions == expected.positions && actual.width == expected.width,
             "concurrent measurement must preserve every serial byte position and text width");
 }
@@ -119,7 +136,9 @@ void CheckSurface(wxFrame& frame, int context, bool utf8, bool serialOnly) {
             for (size_t sample = 0; sample < samples.size(); ++sample) {
                 const auto measured = Measure(*surface, *fonts.back(), samples[sample], false);
                 NativeReference(*reference, samples[sample], utf8, sample, measured);
-                if (utf8) Equal(Measure(*surface, *fonts.back(), samples[sample], true), measured);
+                if (utf8)
+                    Equal(Measure(*surface, *fonts.back(), samples[sample], true), measured, context, utf8, -1,
+                          fonts.size() - 1, sample, -1);
                 expected.back().push_back(measured);
                 if (serialOnly) {
                     std::printf("context=%d utf8=%d font=%zu sample=%zu width=%g positions=", context, utf8,
@@ -144,7 +163,7 @@ void CheckSurface(wxFrame& frame, int context, bool utf8, bool serialOnly) {
                     const auto font = (static_cast<size_t>(worker) * 3 + iteration) % fonts.size();
                     for (size_t sample = 0; sample < samples.size(); ++sample)
                         Equal(Measure(*surface, *fonts[font], samples[sample], utf8 && (iteration + worker) % 2),
-                              expected[font][sample]);
+                              expected[font][sample], context, utf8, worker, font, sample, iteration);
                 }
             } catch (...) {
                 failures[worker] = std::current_exception();

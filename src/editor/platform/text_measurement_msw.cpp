@@ -52,7 +52,12 @@ public:
     SelectedFont(HDC dc, HFONT font) : dc_(dc), previous_(SelectObject(dc, font)) {
         if (!previous_ || previous_ == HGDI_ERROR) ThrowLastError("SelectObject measurement font");
     }
-    ~SelectedFont() { SelectObject(dc_, previous_); }
+    ~SelectedFont() {
+        SelectObject(dc_, previous_);
+        // GDI batches are per-thread. Complete queued state changes before
+        // the measurement mutex lets another worker take this native DC.
+        GdiFlush();
+    }
     SelectedFont(const SelectedFont&) = delete;
     SelectedFont& operator=(const SelectedFont&) = delete;
 
