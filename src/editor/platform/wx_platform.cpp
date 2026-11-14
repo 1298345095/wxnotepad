@@ -10,6 +10,9 @@
 #ifdef __WXMSW__
 #include <wx/graphics.h>
 #endif
+#ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
+#include "prototype_directwrite/directwrite_surface.h"
+#endif
 #include <wx/display.h>
 #include <wx/popupwin.h>
 #include <wx/vlbox.h>
@@ -38,6 +41,14 @@ static PRectangle Area(wxRect r) {
 static wxColour Color(ColourRGBA c) {
     return wxColour(c.GetRed(), c.GetGreen(), c.GetBlue(), c.GetAlpha());
 }
+#ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
+std::shared_ptr<Font> Font::Allocate(const FontParameters& p) {
+    return AllocateDirectWriteFont(p);
+}
+std::unique_ptr<Surface> Surface::Allocate(Scintilla::Technology) {
+    return AllocateDirectWriteSurface();
+}
+#else
 class WxFont final : public Font {
 public:
     wxFont font;
@@ -297,6 +308,7 @@ public:
 std::unique_ptr<Surface> Surface::Allocate(Scintilla::Technology) {
     return std::make_unique<WxSurface>();
 }
+#endif
 
 void Window::Destroy() noexcept {
     if (wid) {
@@ -425,7 +437,11 @@ class WxListBox final : public ListBox {
 
 public:
     void SetFont(std::shared_ptr<Font> font) noexcept override {
+#ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
+        list_->SetFont(DirectWriteListFont(*font));
+#else
         list_->SetFont(static_cast<WxFont*>(font.get())->font);
+#endif
         list_->Measure();
     }
     void SCICALL Create(Window& parent, int id, Point, int, int, Scintilla::Technology) noexcept override {

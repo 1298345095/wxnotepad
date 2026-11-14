@@ -1,4 +1,7 @@
 #include "editor/editor_core.h"
+#ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
+#include "editor/platform/prototype_directwrite/directwrite_surface.h"
+#endif
 #include "editor/display_units.h"
 #include "editor/editor_ids.h"
 #include "editor/platform/native_encoding.h"
@@ -216,6 +219,10 @@ intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_
 EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_(window) {
     wMain = static_cast<wxWindow*>(&window_);
     Initialise();
+#ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
+    // PROTOTYPE: match the original DirectWrite font/device-unit convention.
+    technology = Scintilla::Technology::DirectWrite;
+#endif
     // Original Notepad4.cpp: wrapped Home/End visit visual then logical boundaries.
     WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(Scintilla::Keys::Home),
             static_cast<intptr_t>(Message::VCHomeWrap));
@@ -338,8 +345,11 @@ intptr_t EditorControl::Core::SelectionCharacterCount() {
 
 void EditorControl::Core::Draw(wxDC& dc) {
     window_.UpdateLineNumberMargin();
-    auto surface = core::Surface::Allocate(Scintilla::Technology::Default);
+    auto surface = core::Surface::Allocate(technology);
     surface->Init(&dc, &window_);
+#ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
+    if (!surface->Initialised()) throw std::runtime_error("Direct2D paint target initialization failed");
+#endif
     surface->SetMode({Scintilla::CpUtf8});
     const auto size = window_.GetClientSize();
     rcPaint = core::PRectangle(0, 0, size.x, size.y);
@@ -351,6 +361,13 @@ void EditorControl::Core::Draw(wxDC& dc) {
         view.lineWidthMaxSeen = 0;
     }
     Paint(surface.get(), rcPaint);
+#ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
+    if (!core::FinishDirectWriteDrawing(*surface)) {
+        // Original ScintillaWin drops all compatible pixmaps on device loss.
+        view.DropGraphics();
+        window_.Refresh(false);
+    }
+#endif
     paintState = PaintState::notPainting;
     if (shrink && view.lineWidthMaxSeen < scrollWidth) {
         // Reuse the core's normal visible-line measurements, avoiding a full
