@@ -13,10 +13,11 @@ establish DirectWrite as the default backend: initial wrapping and multiline
 resize interactions improve substantially, but private memory increases and
 warm long-line resizing regresses.
 
-Keep both prototype branches. Investigate the blank-window graphics cost and
-the warm long-line rendering/resize cost before deciding on production adoption.
-Their internal causes have not been isolated by this experiment. No application
-memory budget has been agreed, and no production merge is made here.
+Keep both prototype branches. The follow-up below localizes much of blank-window
+memory to native graphics initialization and warm time to drawing, including
+color glyphs. It restores a missing original buffering setting, but does not
+resolve the warm long-line regression. No application memory budget has been
+agreed, and no production merge is made here.
 
 ## Controlled Windows comparison
 
@@ -118,7 +119,65 @@ Full text and save-point assertions passed in every process.
 The measured binaries were built from `2941dea`. Subsequent changes report native
 target allocation failure through HRESULT and narrow the oracle enum storage;
 neither changes the measured successful application path. The original measured
-binaries/hashes are retained, and no performance repeat was run. No further timing
-run is authorized by the completed window. Raw logs, binary hashes, executables, images,
+binaries/hashes are retained. A separate buffer-only comparison is reported
+below. Raw logs, binary hashes, executables, images,
 reports and the summarizer remain in the Windows evidence directory listed in
 [README.md](README.md). Linux's Pango/Cairo code is unchanged by this experiment.
+
+## Buffer-contract follow-up
+
+Measured fix: `882f3e9`. The before binary retains the extra Scintilla line
+pixmap buffer; the after binary disables it, following the original
+ScintillaWin DirectWrite technology switch. Both share the same geometry and
+buffer-state reporting, unchanged fixtures and 12-resize sequence, MSVC Release
+settings and runtime DLLs. This compares two wx DirectWrite variants, not the
+original application's total cost.
+
+The user again closed high-load applications. Three repeats interleave both
+variants at cap one and default cap 20: 24 processes, all successful. All 14
+geometry records per process match within each fixture across variants and
+caps after separating the intentionally changed buffer-state field. CHECK
+records match, full text/save points are preserved, and reported thread caps
+remain one and 20. No profiler/exporter ran concurrently. The sampling window
+has ended; further performance runs require fresh readiness.
+
+Median interaction times, milliseconds:
+
+| Fixture / phase | Cap 1 before | Cap 1 after | Cap 20 before | Cap 20 after |
+| --- | ---: | ---: | ---: | ---: |
+| Multiline initial wrap + paints | 379.65 | 372.65 | 207.21 | 189.72 |
+| Multiline 12 resizes | 3405.49 | 3414.99 | 2090.54 | 2069.67 |
+| Long-line initial wrap + paints | 918.50 | 905.56 | 580.64 | 545.79 |
+| Warm long-line 12 resizes | 1241.10 | 995.38 | 1142.11 | 1116.29 |
+
+Default-cap warm long-line observations are 1209.01/1127.56/1142.11 before and
+1046.89/1116.29/1124.45 after. Median wall time falls 2.3%; median process CPU
+falls from 1078.12 to 937.50 ms. With only three repeats, the small default-cap
+wall change does not establish a general speedup or resolve the earlier warm
+GDI regression. The larger cap-one result does not justify reducing production
+parallelism. Default-cap multiline 12-resize process CPU medians rise from
+23421.88 to 25593.75 ms despite nearly unchanged wall time; these retain the
+original interaction/adaptive-work interpretation, not fixed-work throughput.
+
+Long-line private-memory medians at default cap, MiB:
+
+| Stage | Before | After |
+| --- | ---: | ---: |
+| Blank window | 48.26 | 47.78 |
+| After initial wrap | 76.59 | 75.43 |
+| After resizes | 80.97 | 80.93 |
+| After New Document | 81.57 | 81.84 |
+
+The correction restores original behavior; it does not remove the large native
+graphics cost or retained process memory. [DIAGNOSIS.md](DIAGNOSIS.md) records
+the separate native initialization control and sampled color-glyph hotspot,
+with attribution limits. The original application has not yet been measured
+through this exact resize sequence.
+
+Evidence: `E:/NewNotepad4/wxnotepad-evidence/directwrite-diagnosis-2026-11-14/buffer-comparison/`.
+`run-01/results.json` and per-process logs retain all measurements;
+`summarize.py` validates geometry, CHECK records, buffer state and thread caps
+before printing `summary.log`. Binaries, PDBs, generated sources and hashes
+identify both variants. Existing seven correctness checks, canonical format,
+native tidy and separate Spec/Standards reviews passed for the source fix;
+this follow-up changes only documentation.

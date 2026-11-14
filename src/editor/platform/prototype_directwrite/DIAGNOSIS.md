@@ -151,6 +151,35 @@ Canonical clang-format and native clang-tidy also pass their existing checks.
 
 Matched uninstrumented binaries are saved in `buffer-comparison/`, with the
 buffer state explicitly observed alongside unchanged geometry assertions.
-The GDI branch and Linux backend are unchanged. Whether this omission explains
-the measured warm regression still requires the controlled A/B measurement;
-the correctness fix alone does not prove its performance effect.
+The GDI branch and Linux backend are unchanged.
+
+## Controlled buffering A/B result
+
+After a fresh user-ready response, all 24 original-probe processes completed:
+three interleaved repeats, both fixtures, diagnostic cap one and unchanged
+default cap 20. No profiler or offline export ran during the measurement.
+Both binaries include the same buffer-state observation. Every fixture's
+geometry and CHECK records match across variants, repetitions and caps, while
+the expected `buffered_draw` value changes from one to zero. Full text and
+save-point assertions remain unchanged and pass.
+
+At default cap, warm long-line resizing changes from 1142.11 to 1116.29 ms
+median (2.3% lower); the three observations span 1127.56–1209.01 versus
+1046.89–1124.45 ms. The small median change does not establish a general speedup
+from only three repeats or resolve the prior GDI comparison's warm regression.
+The cap-one control changes from 1241.10 to 995.38 ms; this is a diagnostic
+result, not a reason to change the application's concurrency.
+
+The memory result is similarly limited: blank long-line windows change from
+48.26 to 47.78 MiB, while after New Document they are 81.57 versus 81.84 MiB.
+Removing the extra line buffer does not remove the graphics initialization or
+retained-memory costs. Keep the original-behavior fix, but do not present it as
+the main performance fix. Detailed medians for both fixtures/caps are in
+[RESULTS.md](RESULTS.md); raw results, matched binaries, sources and the validating
+summarizer are in `buffer-comparison/` under the evidence root.
+
+Remaining comparison: run the original application's DirectWrite renderer
+through the same long-line viewport/resize sequence to distinguish common
+native color-glyph work from host-specific work. Source reuse alone is not a
+measurement of the original application's interaction cost. This has not run;
+any further performance capture needs fresh readiness.
