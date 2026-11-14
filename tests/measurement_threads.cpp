@@ -135,6 +135,7 @@ void CheckSurface(wxFrame& frame, int context, bool utf8, bool serialOnly) {
     std::array<std::exception_ptr, WorkerCount> failures{};
     std::barrier start(WorkerCount);
     std::vector<std::thread> workers;
+    workers.reserve(WorkerCount);
     for (int worker = 0; worker < WorkerCount; ++worker) {
         workers.emplace_back([&, worker] {
             start.arrive_and_wait();
