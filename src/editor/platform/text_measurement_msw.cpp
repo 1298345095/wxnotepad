@@ -1,3 +1,4 @@
+// PROTOTYPE: independently owned worker measurement resources; not for main.
 // Native measurement follows Notepad4 89b8b36 SurfaceGDI.cxx. Font scaling and
 // italic bounds retain wxWidgets 3.3.3's MSW DC/text-measurement conventions.
 #include "text_measurement.h"
@@ -12,6 +13,7 @@
 #include <mutex>
 #include <stdexcept>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 namespace Scintilla::Internal {
@@ -54,8 +56,8 @@ public:
     }
     ~SelectedFont() {
         SelectObject(dc_, previous_);
-        // GDI batches are per-thread. Complete queued state changes before
-        // the measurement mutex lets another worker take this native DC.
+        // Complete this thread's GDI queue before font ownership can be
+        // released by the GUI thread after the core joins its workers.
         GdiFlush();
     }
     SelectedFont(const SelectedFont&) = delete;
@@ -88,16 +90,17 @@ struct MeasurementFont::Data {
     LOGFONTW description{};
     double points = 0;
     mutable std::mutex mutex;
-    mutable std::map<int, OwnedFont> fonts;
+    mutable std::map<std::pair<DWORD, int>, OwnedFont> fonts;
 
     HFONT Handle(int fontDpi) const {
         auto logical = description;
         logical.lfHeight = -static_cast<LONG>(std::lround(points * fontDpi / PointsPerInch));
+        const auto key = std::pair{GetCurrentThreadId(), static_cast<int>(logical.lfHeight)};
         const std::lock_guard lock(mutex);
-        if (const auto found = fonts.find(logical.lfHeight); found != fonts.end()) return found->second.get();
+        if (const auto found = fonts.find(key); found != fonts.end()) return found->second.get();
         OwnedFont font(CreateFontIndirectW(&logical));
         if (!font) ThrowLastError("CreateFontIndirectW");
-        return fonts.emplace(logical.lfHeight, std::move(font)).first->second.get();
+        return fonts.emplace(key, std::move(font)).first->second.get();
     }
 };
 
@@ -109,27 +112,48 @@ MeasurementFont::MeasurementFont(const wxFont& font) : data_(std::make_unique<Da
 }
 MeasurementFont::~MeasurementFont() = default;
 
-struct TextMeasurement::Data {
+namespace {
+struct WorkerContext {
     OwnedBitmap bitmap;
     OwnedContext dc;
-    int fontDpi;
-    std::mutex mutex;
-    explicit Data(wxDC& source)
-        : dc(CreateCompatibleDC(static_cast<HDC>(source.GetHDC()))), fontDpi(source.GetPPI().y) {
+    int planes;
+    int bitsPerPixel;
+    explicit WorkerContext(const BITMAP& target)
+        : dc(CreateCompatibleDC(nullptr)), planes(target.bmPlanes), bitsPerPixel(target.bmBitsPixel) {
         if (!dc) ThrowLastError("CreateCompatibleDC");
-        const auto sourceDC = static_cast<HDC>(source.GetHDC());
-        // The default monochrome memory bitmap changes italic overhang
-        // metrics. Match the drawing target's pixel format as well as its DPI.
-        bitmap.reset(CreateCompatibleBitmap(sourceDC, 1, 1));
-        if (!bitmap) ThrowLastError("CreateCompatibleBitmap");
+        bitmap.reset(CreateBitmap(1, 1, planes, bitsPerPixel, nullptr));
+        if (!bitmap) ThrowLastError("CreateBitmap");
         const auto previous = SelectObject(dc.get(), bitmap.get());
         if (!previous || previous == HGDI_ERROR) ThrowLastError("SelectObject measurement bitmap");
-        SetMapMode(dc.get(), GetMapMode(sourceDC));
-        SIZE window{}, viewport{};
+    }
+};
+} // namespace
+
+struct TextMeasurement::Data {
+    BITMAP target{};
+    int fontDpi;
+    int mapMode;
+    SIZE window{}, viewport{};
+    explicit Data(wxDC& source) : fontDpi(source.GetPPI().y) {
+        const auto sourceDC = static_cast<HDC>(source.GetHDC());
+        // Capture the compatible target's format on the GUI thread. Workers
+        // create native objects from this value, without touching the source DC.
+        const OwnedBitmap bitmap(CreateCompatibleBitmap(sourceDC, 1, 1));
+        if (!bitmap) ThrowLastError("CreateCompatibleBitmap");
+        if (!GetObjectW(bitmap.get(), sizeof(target), &target)) ThrowLastError("GetObject measurement bitmap");
+        target.bmBits = nullptr;
+        mapMode = GetMapMode(sourceDC);
         GetWindowExtEx(sourceDC, &window);
         GetViewportExtEx(sourceDC, &viewport);
-        SetWindowExtEx(dc.get(), window.cx, window.cy, nullptr);
-        SetViewportExtEx(dc.get(), viewport.cx, viewport.cy, nullptr);
+    }
+    HDC ThreadContext() const {
+        static thread_local std::unique_ptr<WorkerContext> worker;
+        if (!worker || worker->planes != target.bmPlanes || worker->bitsPerPixel != target.bmBitsPixel)
+            worker = std::make_unique<WorkerContext>(target);
+        SetMapMode(worker->dc.get(), mapMode);
+        SetWindowExtEx(worker->dc.get(), window.cx, window.cy, nullptr);
+        SetViewportExtEx(worker->dc.get(), viewport.cx, viewport.cy, nullptr);
+        return worker->dc.get();
     }
 };
 
@@ -142,19 +166,18 @@ void TextMeasurement::MeasureWidths(const MeasurementFont& font, std::string_vie
     const auto characters = Characters(text, utf8);
     std::vector<int> extents(characters.size());
     if (!characters.empty()) {
-        const std::lock_guard lock(data_->mutex);
-        const SelectedFont selected(data_->dc.get(), font.data_->Handle(data_->fontDpi));
+        const auto dc = data_->ThreadContext();
+        const SelectedFont selected(dc, font.data_->Handle(data_->fontDpi));
         SIZE size{};
         int fitted = 0;
-        if (!GetTextExtentExPointW(data_->dc.get(), characters.data(), static_cast<int>(characters.size()), INT_MAX,
-                                   &fitted, extents.data(), &size))
+        if (!GetTextExtentExPointW(dc, characters.data(), static_cast<int>(characters.size()), INT_MAX, &fitted,
+                                   extents.data(), &size))
             ThrowLastError("GetTextExtentExPointW");
         // Match wxTextMeasure's tab correction; the editor normally represents
         // tabs separately, but the Surface interface also accepts them directly.
         int offset = 0;
         const auto tab = characters.find(L'\t');
-        const int tabWidth =
-            tab == std::wstring::npos ? 0 : TextWidth(data_->dc.get(), L"\t", font.data_->description.lfItalic);
+        const int tabWidth = tab == std::wstring::npos ? 0 : TextWidth(dc, L"\t", font.data_->description.lfItalic);
         for (size_t index = 0; index < characters.size(); ++index) {
             if (characters[index] == L'\t') offset += tabWidth;
             extents[index] += offset;
@@ -177,8 +200,8 @@ void TextMeasurement::MeasureWidths(const MeasurementFont& font, std::string_vie
 
 double TextMeasurement::WidthText(const MeasurementFont& font, std::string_view text, bool utf8) const {
     const auto characters = Characters(text, utf8);
-    const std::lock_guard lock(data_->mutex);
-    const SelectedFont selected(data_->dc.get(), font.data_->Handle(data_->fontDpi));
-    return TextWidth(data_->dc.get(), characters, font.data_->description.lfItalic);
+    const auto dc = data_->ThreadContext();
+    const SelectedFont selected(dc, font.data_->Handle(data_->fontDpi));
+    return TextWidth(dc, characters, font.data_->description.lfItalic);
 }
 } // namespace Scintilla::Internal

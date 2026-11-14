@@ -1,3 +1,4 @@
+// PROTOTYPE: worker-owned Pango state, reused across async worker lifetimes.
 #include "editor/platform/text_measurement.h"
 #include <wx/dc.h>
 #include <wx/font.h>
@@ -6,9 +7,12 @@
 #include <gtk/gtk.h>
 #include <pango/pangocairo.h>
 #include <algorithm>
+#include <atomic>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -25,34 +29,81 @@ using FontDescription = std::unique_ptr<PangoFontDescription, decltype(&pango_fo
 using FontOptions = std::unique_ptr<cairo_font_options_t, decltype(&cairo_font_options_destroy)>;
 using LayoutIterator = std::unique_ptr<PangoLayoutIter, decltype(&pango_layout_iter_free)>;
 
-struct FontMapState {
+struct WorkerState {
     ObjectPtr<PangoFontMap> map;
-    std::mutex mutex;
+    ObjectPtr<PangoContext> context;
+    ObjectPtr<PangoLayout> layout;
+    std::unique_ptr<WorkerState> next;
+    uint64_t snapshot = 0;
+
+    WorkerState(cairo_font_type_t type, double resolution) : map(pango_cairo_font_map_new_for_font_type(type)) {
+        if (!map) throw std::runtime_error("The native Pango measurement font map is unavailable");
+        pango_cairo_font_map_set_resolution(PANGO_CAIRO_FONT_MAP(map.get()), resolution);
+        context.reset(pango_font_map_create_context(map.get()));
+        layout.reset(pango_layout_new(context.get()));
+    }
 };
 
-std::shared_ptr<FontMapState> PrivateFontMap(PangoFontMap* source) {
-    // Constructors run on the GUI thread. Retain its private native font cache
-    // across short-lived paint/measurement surfaces, and rebuild it when the
-    // source map's font configuration changes. Workers never access this cache
-    // or the GUI map: they retain only the independent native map and its lock.
+struct WorkerPool {
+    const cairo_font_type_t type;
+    const double resolution;
+    std::mutex mutex;
+    std::unique_ptr<WorkerState> idle;
+
+    WorkerPool(cairo_font_type_t type_, double resolution_) : type(type_), resolution(resolution_) {}
+    std::unique_ptr<WorkerState> Acquire() {
+        {
+            const std::lock_guard lock(mutex);
+            if (idle) {
+                auto state = std::move(idle);
+                idle = std::move(state->next);
+                return state;
+            }
+        }
+        return std::make_unique<WorkerState>(type, resolution);
+    }
+    void Release(std::unique_ptr<WorkerState> state) {
+        const std::lock_guard lock(mutex);
+        state->next = std::move(idle);
+        idle = std::move(state);
+    }
+};
+
+std::shared_ptr<WorkerPool> MeasurementPool(PangoFontMap* source) {
+    // Only GUI-thread construction inspects the source. Each borrowed worker
+    // state owns a separate native font map/context/layout with exclusive use.
     struct Cache {
         PangoFontMap* source = nullptr;
         guint serial = 0;
         double resolution = 0;
-        std::shared_ptr<FontMapState> state;
+        std::shared_ptr<WorkerPool> pool;
     };
     static thread_local Cache cache;
     const auto serial = pango_font_map_get_serial(source);
     const auto resolution = pango_cairo_font_map_get_resolution(PANGO_CAIRO_FONT_MAP(source));
     if (cache.source != source || cache.serial != serial || cache.resolution != resolution) {
-        auto state = std::make_shared<FontMapState>();
-        state->map.reset(
-            pango_cairo_font_map_new_for_font_type(pango_cairo_font_map_get_font_type(PANGO_CAIRO_FONT_MAP(source))));
-        if (!state->map) throw std::runtime_error("The native Pango measurement font map is unavailable");
-        pango_cairo_font_map_set_resolution(PANGO_CAIRO_FONT_MAP(state->map.get()), resolution);
-        cache = {source, serial, resolution, std::move(state)};
+        auto pool =
+            std::make_shared<WorkerPool>(pango_cairo_font_map_get_font_type(PANGO_CAIRO_FONT_MAP(source)), resolution);
+        cache = {source, serial, resolution, std::move(pool)};
     }
-    return cache.state;
+    return cache.pool;
+}
+
+WorkerState& ThreadState(const std::shared_ptr<WorkerPool>& pool) {
+    struct Lease {
+        std::shared_ptr<WorkerPool> owner;
+        std::unique_ptr<WorkerState> state;
+        explicit Lease(std::shared_ptr<WorkerPool> pool_) : owner(std::move(pool_)), state(owner->Acquire()) {}
+        ~Lease() { owner->Release(std::move(state)); }
+    };
+    // Linux's original async workers are short-lived. Return their states to
+    // the GUI-owned pool at thread exit so subsequent jobs keep native caches.
+    static thread_local std::unique_ptr<Lease> lease;
+    if (!lease || lease->owner != pool) {
+        lease.reset();
+        lease = std::make_unique<Lease>(pool);
+    }
+    return *lease->state;
 }
 
 struct Characters {
@@ -136,22 +187,40 @@ MeasurementFont::MeasurementFont(const wxFont& font) : data_(std::make_unique<Da
 MeasurementFont::~MeasurementFont() = default;
 
 struct TextMeasurement::Data {
-    // Every snapshot owns its native context/layout, and shares the backend's
-    // private font cache under its native lock. None use the GUI font map.
-    std::shared_ptr<FontMapState> fontMap;
-    ObjectPtr<PangoContext> context;
-    ObjectPtr<PangoLayout> layout;
+    std::shared_ptr<WorkerPool> pool;
+    FontOptions options{nullptr, cairo_font_options_destroy};
+    std::optional<PangoMatrix> matrix;
+    double resolution = 0;
+    PangoDirection direction{};
+    PangoGravity gravity{};
+    PangoGravityHint gravityHint{};
+    gboolean rounded = true;
     PangoLanguage* language = nullptr;
     float fontScale = 1;
+    const uint64_t serial = NextSerial();
 
-    ~Data() {
-        if (!fontMap) return;
-        const std::lock_guard lock(fontMap->mutex);
-        layout.reset();
-        context.reset();
+    static uint64_t NextSerial() {
+        static std::atomic<uint64_t> next{1};
+        return next.fetch_add(1, std::memory_order_relaxed);
+    }
+    WorkerState& Context() const {
+        auto& worker = ThreadState(pool);
+        if (worker.snapshot != serial) {
+            pango_cairo_context_set_resolution(worker.context.get(), resolution);
+            pango_context_set_matrix(worker.context.get(), matrix ? &*matrix : nullptr);
+            pango_context_set_base_dir(worker.context.get(), direction);
+            pango_context_set_base_gravity(worker.context.get(), gravity);
+            pango_context_set_gravity_hint(worker.context.get(), gravityHint);
+            pango_context_set_round_glyph_positions(worker.context.get(), rounded);
+            pango_context_set_language(worker.context.get(), language);
+            pango_cairo_context_set_font_options(worker.context.get(), options.get());
+            pango_layout_context_changed(worker.layout.get());
+            worker.snapshot = serial;
+        }
+        return worker;
     }
 
-    void SetText(const MeasurementFont::Data& font, const Characters& characters) const {
+    void SetText(WorkerState& worker, const MeasurementFont::Data& font, const Characters& characters) const {
         FontDescription scaled(nullptr, pango_font_description_free);
         const auto* description = font.description.get();
         if (fontScale != 1) {
@@ -163,8 +232,8 @@ struct TextMeasurement::Data {
                                             static_cast<int>(std::lround(points * fontScale * PANGO_SCALE)));
             description = scaled.get();
         }
-        pango_layout_set_font_description(layout.get(), description);
-        pango_layout_set_text(layout.get(), characters.text.data(), static_cast<int>(characters.text.size()));
+        pango_layout_set_font_description(worker.layout.get(), description);
+        pango_layout_set_text(worker.layout.get(), characters.text.data(), static_cast<int>(characters.text.size()));
     }
 };
 
@@ -175,18 +244,14 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
         throw std::runtime_error("The native Cairo measurement context is unavailable");
 
     ObjectPtr<PangoContext> source(pango_cairo_create_context(cairo));
-    data_->fontMap = PrivateFontMap(pango_context_get_font_map(source.get()));
-    const std::lock_guard lock(data_->fontMap->mutex);
-    data_->context.reset(pango_font_map_create_context(data_->fontMap->map.get()));
-    pango_cairo_context_set_resolution(data_->context.get(), pango_cairo_context_get_resolution(source.get()));
-    pango_context_set_matrix(data_->context.get(), pango_context_get_matrix(source.get()));
-    pango_context_set_base_dir(data_->context.get(), pango_context_get_base_dir(source.get()));
-    pango_context_set_base_gravity(data_->context.get(), pango_context_get_base_gravity(source.get()));
-    pango_context_set_gravity_hint(data_->context.get(), pango_context_get_gravity_hint(source.get()));
-    pango_context_set_round_glyph_positions(data_->context.get(),
-                                            pango_context_get_round_glyph_positions(source.get()));
+    data_->pool = MeasurementPool(pango_context_get_font_map(source.get()));
+    data_->resolution = pango_cairo_context_get_resolution(source.get());
+    if (const auto* matrix = pango_context_get_matrix(source.get())) data_->matrix = *matrix;
+    data_->direction = pango_context_get_base_dir(source.get());
+    data_->gravity = pango_context_get_base_gravity(source.get());
+    data_->gravityHint = pango_context_get_gravity_hint(source.get());
+    data_->rounded = pango_context_get_round_glyph_positions(source.get());
     data_->language = pango_context_get_language(source.get());
-    pango_context_set_language(data_->context.get(), data_->language);
 
     // pango_cairo_context_get_font_options omits the target surface options.
     // Merge both sources exactly as pango_cairo_update_context does internally.
@@ -197,11 +262,10 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
     cairo_font_options_merge(options.get(), explicitOptions.get());
     if (cairo_font_options_status(options.get()) != CAIRO_STATUS_SUCCESS)
         throw std::runtime_error("The native Cairo measurement font options are unavailable");
-    pango_cairo_context_set_font_options(data_->context.get(), options.get());
+    data_->options = std::move(options);
 
     auto* screen = gdk_screen_get_default();
     data_->fontScale = screen ? static_cast<float>(gdk_screen_get_resolution(screen) / DefaultFontDpi) : 1;
-    data_->layout.reset(pango_layout_new(data_->context.get()));
 }
 
 TextMeasurement::~TextMeasurement() = default;
@@ -209,9 +273,9 @@ TextMeasurement::~TextMeasurement() = default;
 void TextMeasurement::MeasureWidths(const MeasurementFont& font, std::string_view text, bool utf8,
                                     double* positions) const {
     const auto characters = Decode(text, utf8);
-    const std::lock_guard lock(data_->fontMap->mutex);
-    data_->SetText(*font.data_, characters);
-    const auto extents = PartialExtents(data_->layout.get(), characters.count);
+    auto& worker = data_->Context();
+    data_->SetText(worker, *font.data_, characters);
+    const auto extents = PartialExtents(worker.layout.get(), characters.count);
     std::vector<PangoLogAttr> cursorPositions;
     if (utf8 && !extents.empty() &&
         std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch >= 0x80; })) {
@@ -240,10 +304,10 @@ void TextMeasurement::MeasureWidths(const MeasurementFont& font, std::string_vie
 
 double TextMeasurement::WidthText(const MeasurementFont& font, std::string_view text, bool utf8) const {
     const auto characters = Decode(text, utf8);
-    const std::lock_guard lock(data_->fontMap->mutex);
-    data_->SetText(*font.data_, characters);
+    auto& worker = data_->Context();
+    data_->SetText(worker, *font.data_, characters);
     int width = 0;
-    pango_layout_get_pixel_size(data_->layout.get(), &width, nullptr);
+    pango_layout_get_pixel_size(worker.layout.get(), &width, nullptr);
     return width;
 }
 } // namespace Scintilla::Internal
