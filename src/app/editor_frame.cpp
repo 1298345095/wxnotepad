@@ -68,6 +68,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
       fileWatchingOptions_(settings ? settings->values.fileWatching : FileWatchingOptions{}),
       fileChangeMonitor_(*this, [this] { return HandleFileChange(); }), search_(*editor_) {
     const auto& preferences = settings ? settings->values : defaults_;
+#ifdef __WXMSW__
+    editor_->Send(Scintilla::Message::SetTechnology, preferences.renderingTechnology);
+#endif
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
         event.Skip();
@@ -153,6 +156,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
 
 bool EditorFrame::SaveSettings(bool explicitSave) {
     if (!settings_) return true;
+#ifdef __WXMSW__
+    settings_->values.renderingTechnology = static_cast<int>(editor_->Send(Scintilla::Message::GetTechnology));
+#endif
     settings_->values.markLongLines = editor_->Send(Scintilla::Message::GetEdgeMode) != 0;
     settings_->values.showIndentGuides = editor_->Send(Scintilla::Message::GetIndentationGuides) != 0;
     settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;

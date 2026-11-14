@@ -133,6 +133,9 @@ SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
     values.encoding.noFileVariables = ReadBool("NoFileVariables", defaults.encoding.noFileVariables, "Settings2");
     values.zoomLevel =
         std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
+    values.renderingTechnology = std::clamp(ReadInt("RenderingTechnology", defaults.renderingTechnology),
+                                            static_cast<int>(Scintilla::Technology::Default),
+                                            static_cast<int>(Scintilla::Technology::DirectWrite1));
     int caretStyle = ReadInt("CaretStyle", defaults.caret.lineWidth);
     values.caret.blockAfterSelection = caretStyle >= 100;
     caretStyle %= 100;
@@ -467,6 +470,9 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("LoadNFOasOEM", values.encoding.loadNFOasOEM, defaults.encoding.loadNFOasOEM);
         WriteBool("NoEncodingTags", values.encoding.noEncodingTags, defaults.encoding.noEncodingTags);
         WriteInt("ZoomLevel", values.zoomLevel, defaults.zoomLevel);
+#ifdef __WXMSW__
+        WriteInt("RenderingTechnology", values.renderingTechnology, defaults.renderingTechnology);
+#endif
         WriteInt("CaretStyle",
                  values.caret.lineWidth + 10 * values.caret.overstrikeBlock + 100 * values.caret.blockAfterSelection,
                  defaults.caret.lineWidth);

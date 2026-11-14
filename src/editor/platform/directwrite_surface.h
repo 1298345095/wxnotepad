@@ -10,7 +10,7 @@ bool DirectWriteAvailable() noexcept;
 void DropDirectWriteTarget(wxWindow& window);
 std::shared_ptr<Font> AllocateDirectWriteFont(const FontParameters& parameters);
 std::unique_ptr<Surface> AllocateDirectWriteSurface();
-wxFont DirectWriteListFont(const Font& font);
+wxFont DirectWriteListFont(const Font& font, const wxWindow& window);
 bool FinishDirectWriteDrawing(Surface& surface);
 // Direct original-backend oracle; takes native HWND/ID2D1RenderTarget identifiers.
 std::unique_ptr<Surface> OriginalDirectWriteSurface();

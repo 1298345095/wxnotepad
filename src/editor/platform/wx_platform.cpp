@@ -435,7 +435,7 @@ public:
     void SetFont(std::shared_ptr<Font> font) noexcept override {
 #ifdef __WXMSW__
         if (technology_ == Technology::DirectWrite)
-            list_->SetFont(DirectWriteListFont(*font));
+            list_->SetFont(DirectWriteListFont(*font, *list_));
         else
 #endif
             list_->SetFont(static_cast<WxFont*>(font.get())->font);
