@@ -121,10 +121,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -X utf8 tools/native_original_reference.py \
+          python -X utf8 tests/reference_capture/native_original_reference.py \
             --archive .ci/build/notepad4-source.tar \
             --build-dir .ci/original-reference \
-            --output .ci/reports/original-gdi-viewport.tsv \
+            --output .ci/reports/original-gdi-viewport.tsv --compiler-cache \
             2>&1 | tee .ci/reports/original-gdi-reference.log
       - name: Test Windows
         if: runner.os == 'Windows'
