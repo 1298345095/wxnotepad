@@ -5,6 +5,7 @@
 #include "settings/settings_store.h"
 #include <SciLexer.h>
 #include <array>
+#include <chrono>
 #include <filesystem>
 
 namespace {
@@ -38,9 +39,19 @@ void Resize(EditorFrame* frame, int width) {
     // Invalidate cached widths at their supported default capacity so each
     // resize measures the real styled text again.
     editor->Send(Message::SetPositionCache, editor->Send(Message::GetPositionCache));
-    frame->SetClientSize(frame->FromDIP(wxSize(width, 360)));
-    frame->Layout();
-    NativePaint::Complete(frame->Editor());
+    const auto requested = frame->FromDIP(wxSize(width, 360));
+    frame->SetClientSize(requested);
+    // X11 configures the top-level window asynchronously. A paint can finish
+    // before that configure reaches the editor, so observe the actual viewport.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    do {
+        frame->Layout();
+        NativePaint::Complete(editor);
+        if (frame->GetClientSize() == requested && editor->GetSize() == requested) return;
+        wxYield();
+        wxMilliSleep(1);
+    } while (std::chrono::steady_clock::now() < deadline);
+    Require(false, "the native frame and editor must reach the requested resize geometry");
 }
 
 void RepeatedLineLayout(EditorFrame* frame, const std::filesystem::path& directory) {
@@ -58,7 +69,9 @@ void RepeatedLineLayout(EditorFrame* frame, const std::filesystem::path& directo
     TestFiles::WriteBytes(large, text);
     // The control has enough lines to show the same native scrollbar, but
     // remains below the core's parallel block-layout threshold.
-    constexpr std::array Widths{180, 320, 540, 760};
+    // Stay above GTK's native minimum width, which can override a narrower
+    // request after the first paint and invalidate the equal-viewport oracle.
+    constexpr std::array Widths{360, 480, 640, 800};
     std::array<intptr_t, Widths.size()> expected{};
     Prepare(frame, small);
     for (size_t index = 0; index < Widths.size(); ++index) {
@@ -79,6 +92,13 @@ void RepeatedLineLayout(EditorFrame* frame, const std::filesystem::path& directo
             if (actual != expected[index])
                 std::fprintf(stderr, "pass=%d line=%d width=%d expected=%zd actual=%zd\n", pass, line, Widths[index],
                              expected[index], actual);
+            if (actual != expected[index])
+                std::fprintf(stderr, "frame-client=%d,%d editor-client=%d,%d margins=%zd,%zd,%zd text=%zd\n",
+                             frame->GetClientSize().x, frame->GetClientSize().y, editor->GetClientSize().x,
+                             editor->GetClientSize().y, editor->Send(Message::GetMarginWidthN, 0),
+                             editor->Send(Message::GetMarginWidthN, 1), editor->Send(Message::GetMarginWidthN, 2),
+                             editor->Send(Message::TextWidth, SCE_TOML_STRING_DQ,
+                                          reinterpret_cast<intptr_t>("words 中文😀 with spaces")));
             Require(actual == expected[index], "repeated styled lines wrap exactly like the small control");
         }
     }
@@ -99,7 +119,7 @@ void LongLineLayout(EditorFrame* frame, const std::filesystem::path& directory) 
     TestFiles::WriteBytes(path, text);
     Prepare(frame, path);
     for (int pass = 0; pass < ResizePasses; ++pass) {
-        Resize(frame, pass % 2 ? 540 : 180);
+        Resize(frame, pass % 2 ? 640 : 360);
         Require(frame->Editor()->Send(Message::WrapCount, 0) > 1, "the long styled line remains word wrapped");
     }
     Require(TestEditor::Text(frame) == text && !frame->DocumentIsModified(),
