@@ -97,6 +97,11 @@ public:
                         "popup opens above caret near monitor bottom");
                 editor->Send(Message::AutoCCancel);
                 Require(!editor->Send(Message::AutoCActive), "cancel ends completion lifetime");
+#ifdef __WXGTK__
+                // Clamp the completed fixture scroll before saving the wheel baseline;
+                // the core's deferred widening timer also performs this clamp.
+                editor->Send(Message::LineScroll, 0, 0);
+#endif
                 const auto firstLine = editor->Send(Message::GetFirstVisibleLine);
                 editor->Send(Message::AutoCSetMaxHeight, 4);
                 editor->Send(Message::AutoCShow, 2,
