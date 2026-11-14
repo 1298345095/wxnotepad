@@ -6,6 +6,7 @@
 class SettingsStore final {
 public:
     SettingsStore();
+    explicit SettingsStore(const wxString& path);
     OriginalSettings values;
     const wxString& Path() const { return path_; }
     bool Save(bool explicitSave);

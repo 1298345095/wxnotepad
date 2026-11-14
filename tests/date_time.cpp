@@ -178,6 +178,7 @@ void SavedBytes(EditorFrame* frame) {
 class DateTimeApp final : public wxApp {
 public:
     bool OnInit() override {
+        settings_.values.wordWrap = true;
         settings_.values.dateTimeShort = "short:%Y-%m-%d %H:%M:%S";
         settings_.values.dateTimeLong = "long:%Y-%m-%d %H:%M:%S";
         auto* frame = new EditorFrame(&settings_);

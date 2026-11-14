@@ -48,6 +48,11 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     }();
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     core_ = std::make_unique<Core>(*this, selectionOptions);
+#ifdef __WXMSW__
+    // A top-level move can change monitor calibration without changing DPI.
+    // The wx member-function binding disconnects when this editor is destroyed.
+    wxGetTopLevelParent(this)->Bind(wxEVT_MOVE, &EditorControl::OnHostMove, this);
+#endif
     SetAutoInsertMask(autoInsertMask_);
     occurrences_ = std::make_unique<OccurrenceMarking>(*this);
     // Original Notepad4.cpp::CreateEditControl current-line preferences.
@@ -332,7 +337,7 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     }
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
-        message == Message::StyleSetItalic || message == Message::SetZoom) {
+        message == Message::StyleSetItalic || message == Message::SetZoom || message == Message::SetTechnology) {
         lineNumberWidthDirty_ = true;
         bookmarkMarginWidthDirty_ = true;
         foldMarginWidthDirty_ = true;
@@ -485,6 +490,11 @@ void EditorControl::OnSize(wxSizeEvent& event) {
 }
 
 #ifdef __WXMSW__
+void EditorControl::OnHostMove(wxMoveEvent& event) {
+    core_->RenderingSettingsChanged(false);
+    event.Skip();
+}
+
 WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam) {
 #ifdef WXNOTEPAD_DIAGNOSTICS
     if (message == WM_DESTROYCLIPBOARD) WXNOTE_TRACE("clipboard.cleared", "\ttarget=%p", static_cast<void*>(this));
@@ -493,6 +503,7 @@ WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM
                      static_cast<unsigned long long>(wParam));
 #endif
     if (core_) {
+        if (message == WM_SETTINGCHANGE) core_->RenderingSettingsChanged(true);
         if (const auto result = core_->ImeMessage(message, wParam, lParam)) return *result;
     }
     return wxControl::MSWWindowProc(message, wParam, lParam);

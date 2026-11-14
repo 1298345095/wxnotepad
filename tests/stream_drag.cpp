@@ -957,6 +957,8 @@ void NativeFileDrop(EditorFrame* frame) {
                 frame->DocumentPath() == TestFiles::Filename(second),
             "actual native file offer Save must write the original document before opening the next");
     std::puts("PASS: native directory chooser ordering and file Cancel/Save retain document and disk semantics");
+    // Peer teardown pumps events; stop observing the fixture before deleting it.
+    frame->SetFileWatchingOptions({FileWatchingMode::None});
     std::filesystem::remove_all(directory);
 }
 class DragApp final : public wxApp {

@@ -160,7 +160,18 @@ add_library(app_shell STATIC
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
 if(WIN32)
-    target_sources(editor_runtime PRIVATE src/editor/platform/windows_ime.cpp src/editor/platform/text_measurement_msw.cpp)
+    find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+    set(directwrite_generated "${CMAKE_CURRENT_BINARY_DIR}/directwrite")
+    execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_directwrite.py"
+        "${NOTEPAD4_SOURCE}" "${directwrite_generated}" COMMAND_ERROR_IS_FATAL ANY)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_directwrite.py"
+        "${NOTEPAD4_SOURCE}/scintilla/win32/SurfaceD2D.cxx"
+        "${NOTEPAD4_SOURCE}/scintilla/win32/ScintillaWin.cxx")
+    target_sources(editor_runtime PRIVATE src/editor/platform/windows_ime.cpp src/editor/platform/text_measurement_msw.cpp
+        src/editor/platform/directwrite_surface.cpp)
+    target_include_directories(editor_runtime PRIVATE "${directwrite_generated}")
+    target_compile_definitions(editor_runtime PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
     target_link_libraries(editor_features PRIVATE advapi32)
     target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32 gdi32)
     target_link_libraries(app_shell PRIVATE shell32 ole32)
@@ -423,6 +434,10 @@ if(BUILD_TESTING)
         "SELECTION_PREFERENCES_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/selection_preferences_reference.tsv\"")
     add_editor_test(editing_keys original_editing_keys 30)
     add_editor_test(zoom original_zoom_commands 30)
+    if(WIN32)
+        target_include_directories(zoom PRIVATE "${NOTEPAD4_SOURCE}/scintilla/win32"
+            "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+    endif()
     add_editor_test(current_line original_current_line_highlight 60)
     add_editor_test(bookmark_history original_bookmark_history 90)
     target_compile_definitions(bookmark_history PRIVATE
@@ -660,6 +675,67 @@ if(BUILD_TESTING)
                 TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
         endif()
     endif()
+    # Append native renderer checks to retain existing display shard membership.
+    if(WIN32)
+        add_gui_program(native_directwrite tests/native_directwrite.cpp app_shell)
+        target_include_directories(native_directwrite PRIVATE src/editor/platform
+            "${NOTEPAD4_SOURCE}/scintilla/win32" "${NOTEPAD4_SOURCE}/scintilla/src"
+            "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+        target_compile_definitions(native_directwrite PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
+        add_test(NAME native_directwrite_original_metrics_and_raster COMMAND native_directwrite)
+        # The oracle requires unmodified native DWrite parameters; MacType honors
+        # this process-local exclusion, without changing the user's desktop profile.
+        set_tests_properties(native_directwrite_original_metrics_and_raster PROPERTIES TIMEOUT 90
+            ENVIRONMENT "MACTYPE_FORCE_EXCLUDE=1")
+        # Replace only the OS contrast query in this test's copy of the production
+        # adapter. Native targets/fonts/raster and the pinned oracle remain real.
+        add_gui_program(native_directwrite_contrast tests/native_directwrite.cpp app_shell)
+        target_sources(native_directwrite_contrast PRIVATE tests/directwrite_contrast_surface.cpp)
+        target_include_directories(native_directwrite_contrast PRIVATE src/editor/platform
+            "${NOTEPAD4_SOURCE}/scintilla/win32" "${NOTEPAD4_SOURCE}/scintilla/src"
+            "${NOTEPAD4_SOURCE}/scintilla/lexlib" "${directwrite_generated}")
+        target_compile_definitions(native_directwrite_contrast PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00
+            WXNOTEPAD_TEST_CLEARTYPE_CONTRAST)
+        add_test(NAME native_directwrite_original_custom_contrast COMMAND native_directwrite_contrast)
+        set_tests_properties(native_directwrite_original_custom_contrast PROPERTIES TIMEOUT 90
+            ENVIRONMENT "MACTYPE_FORCE_EXCLUDE=1")
+
+        foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup)
+            add_gui_program(directwrite_${probe} tests/${probe}.cpp app_shell)
+            target_compile_definitions(directwrite_${probe} PRIVATE WXNOTEPAD_TEST_DIRECTWRITE)
+        endforeach()
+        add_test(NAME native_directwrite_wrapped_resize COMMAND directwrite_wrap_resize)
+        set_tests_properties(native_directwrite_wrapped_resize PROPERTIES TIMEOUT 120)
+        add_test(NAME native_directwrite_caret_appearance COMMAND directwrite_caret_appearance)
+        set_tests_properties(native_directwrite_caret_appearance PROPERTIES TIMEOUT 60)
+        add_test(NAME native_directwrite_caret_dpi96 COMMAND directwrite_caret_appearance)
+        set_tests_properties(native_directwrite_caret_dpi96 PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_CARET_DPI96=1")
+        add_test(NAME native_directwrite_auto_insertion COMMAND directwrite_auto_insertion)
+        set_tests_properties(native_directwrite_auto_insertion PROPERTIES TIMEOUT 90)
+        add_test(NAME native_directwrite_automatic_completion COMMAND directwrite_automatic_completion)
+        set_tests_properties(native_directwrite_automatic_completion PROPERTIES TIMEOUT 120)
+        add_test(NAME native_directwrite_completion_popup COMMAND directwrite_completion_popup)
+        set_tests_properties(native_directwrite_completion_popup PROPERTIES TIMEOUT 60)
+        add_gui_program(native_gdi_resize_viewport tests/native_resize_viewport.cpp app_shell)
+        target_compile_definitions(native_gdi_resize_viewport PRIVATE WXNOTEPAD_TEST_GDI)
+        add_test(NAME native_gdi_original_resize_viewport COMMAND native_gdi_resize_viewport)
+        set_tests_properties(native_gdi_original_resize_viewport PROPERTIES TIMEOUT 120)
+        add_gui_program(native_resize_viewport tests/native_resize_viewport.cpp app_shell)
+        add_test(NAME native_directwrite_original_resize_viewport COMMAND native_resize_viewport)
+        set_tests_properties(native_directwrite_original_resize_viewport PROPERTIES TIMEOUT 120)
+        add_gui_program(native_renderer tests/native_renderer.cpp editor_runtime)
+        add_test(NAME native_renderer_commands COMMAND native_renderer)
+        set_tests_properties(native_renderer_commands PROPERTIES TIMEOUT 60)
+    endif()
+
+    add_editor_test(rendering_settings original_rendering_settings_menu 60)
+    if(WIN32)
+        target_link_libraries(rendering_settings PRIVATE imm32)
+    endif()
+    add_test(NAME original_rendering_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/rendering_settings_process.py" "$<TARGET_FILE:rendering_settings>")
+    set_tests_properties(original_rendering_settings_lifecycle PROPERTIES TIMEOUT 120)
+
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised
