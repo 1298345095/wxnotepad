@@ -14,6 +14,7 @@ constexpr int ResizePasses = 80;
 constexpr int ControlLines = 32;
 constexpr int RepeatedLines = 128;
 constexpr size_t ParallelLayoutBlockBytes = 4096;
+constexpr size_t LongLineFixtureBytes = size_t{1024} * 1024;
 constexpr std::string_view Row = "name = \"words 中文😀 with spaces\" # comment 中文\n";
 
 void Require(bool condition, const char* message) {
@@ -111,13 +112,19 @@ void RepeatedLineLayout(EditorFrame* frame, const std::filesystem::path& directo
 
 void LongLineLayout(EditorFrame* frame, const std::filesystem::path& directory) {
     std::string text = "name = [";
-    for (int item = 0; item < RepeatedLines; ++item)
-        text += "\"words 中文😀 with spaces\", ";
+    text.reserve(LongLineFixtureBytes + 128);
+    // Number each styled string so the position cache cannot satisfy every
+    // segment. A full line also exceeds the core's adaptive layout threshold.
+    for (int item = 0; text.size() < LongLineFixtureBytes; ++item)
+        text += "\"" + std::to_string(item) + " words 中文😀 with spaces\", ";
     text += "0]\n";
-    Require(text.size() > ParallelLayoutBlockBytes, "the long styled line exceeds the parallel layout threshold");
+    Require(text.size() > ParallelLayoutBlockBytes, "the long-line fixture size exceeds the block-layout baseline");
     const auto path = directory / "long-line.toml";
     TestFiles::WriteBytes(path, text);
     Prepare(frame, path);
+    // Keep the caret at the long line's content end, before the final newline,
+    // so incremental visible-prefix layout must measure the complete line.
+    frame->Editor()->Send(Message::GotoPos, text.size() - 1);
     for (int pass = 0; pass < ResizePasses; ++pass) {
         Resize(frame, pass % 2 ? 640 : 360);
         Require(frame->Editor()->Send(Message::WrapCount, 0) > 1, "the long styled line remains word wrapped");
