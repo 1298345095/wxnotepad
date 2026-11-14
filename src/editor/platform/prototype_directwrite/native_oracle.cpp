@@ -15,6 +15,11 @@ constexpr int Workers = 4;
 constexpr int Iterations = 64;
 constexpr std::array PointSizes{8, 12, 22};
 constexpr std::array Dpis{96, 144, 192};
+enum class FontStyle { Normal, Bold, Italic };
+constexpr std::array FontStyles{FontStyle::Normal, FontStyle::Bold, FontStyle::Italic};
+enum class RasterCase { OriginalDirect, AdaptedDirect, OriginalBuffered, AdaptedBuffered };
+constexpr std::array RasterCases{RasterCase::OriginalDirect, RasterCase::AdaptedDirect, RasterCase::OriginalBuffered,
+                                 RasterCase::AdaptedBuffered};
 constexpr std::array Utf8Samples{std::string_view("Wim 0123456789"), std::string_view("A中😀Z"),
                                  std::string_view("Café"),           std::string_view("👩‍💻"),
                                  std::string_view("AΩ中😀א"),        std::string_view("office ffi"),
@@ -56,13 +61,17 @@ void Metrics(wxWindow& window) {
                                       : std::vector(ByteSamples.begin(), ByteSamples.end());
             std::vector<std::shared_ptr<core::Font>> fonts;
             std::vector<std::vector<Measurement>> expected;
+            fonts.reserve(PointSizes.size() * FontStyles.size());
+            expected.reserve(PointSizes.size() * FontStyles.size());
             for (const auto points : PointSizes) {
-                for (int style = 0; style < 3; ++style) {
-                    const auto weight = style == 1 ? Scintilla::FontWeight::Bold : Scintilla::FontWeight::Normal;
+                for (const auto style : FontStyles) {
+                    const auto weight =
+                        style == FontStyle::Bold ? Scintilla::FontWeight::Bold : Scintilla::FontWeight::Normal;
                     // Original DWrite FontParameters take device pixels, not points.
                     fonts.push_back(core::Font::Allocate(core::FontParameters(
-                        core::Platform::DefaultFont(), points * dpi / 72.0, weight, Scintilla::FontStretch::Normal,
-                        style == 2, Scintilla::FontQuality::QualityDefault, Scintilla::Technology::DirectWrite)));
+                        core::Platform::DefaultFont(), points * dpi / static_cast<double>(core::pointsPerInch), weight,
+                        Scintilla::FontStretch::Normal, style == FontStyle::Italic,
+                        Scintilla::FontQuality::QualityDefault, Scintilla::Technology::DirectWrite)));
                     expected.emplace_back();
                     for (const auto sample : samples) {
                         const auto reference = Measure(*original, *fonts.back(), sample, utf8);
@@ -76,12 +85,14 @@ void Metrics(wxWindow& window) {
             std::array<std::exception_ptr, Workers> errors{};
             std::barrier start(Workers);
             std::vector<std::thread> threads;
+            threads.reserve(Workers);
             for (int worker = 0; worker < Workers; ++worker) {
                 threads.emplace_back([&, worker] {
                     start.arrive_and_wait();
                     try {
                         for (int iteration = 0; iteration < Iterations; ++iteration) {
-                            const auto font = (static_cast<size_t>(worker) * 3 + iteration) % fonts.size();
+                            const auto font =
+                                (static_cast<size_t>(worker) * FontStyles.size() + iteration) % fonts.size();
                             for (size_t sample = 0; sample < samples.size(); ++sample)
                                 Require(Measure(*adapted, *fonts[font], samples[sample], utf8) ==
                                             expected[font][sample],
@@ -116,25 +127,27 @@ void Draw(core::Surface& surface, const core::Font& font) {
 }
 void Raster(wxWindow& window, const std::filesystem::path& evidence) {
     const auto font = core::Font::Allocate(
-        core::FontParameters(core::Platform::DefaultFont(), 12.0 * window.GetDPI().y / 72,
+        core::FontParameters(core::Platform::DefaultFont(), 12.0 * window.GetDPI().y / core::pointsPerInch,
                              Scintilla::FontWeight::Normal, Scintilla::FontStretch::Normal, false,
                              Scintilla::FontQuality::QualityDefault, Scintilla::Technology::DirectWrite));
-    std::array<wxBitmap, 4> bitmaps{wxBitmap(RasterWidth, RasterHeight), wxBitmap(RasterWidth, RasterHeight),
-                                    wxBitmap(RasterWidth, RasterHeight), wxBitmap(RasterWidth, RasterHeight)};
-    for (size_t version = 0; version < bitmaps.size(); ++version) {
+    std::array<wxBitmap, RasterCases.size()> bitmaps{
+        wxBitmap(RasterWidth, RasterHeight), wxBitmap(RasterWidth, RasterHeight), wxBitmap(RasterWidth, RasterHeight),
+        wxBitmap(RasterWidth, RasterHeight)};
+    for (const auto rasterCase : RasterCases) {
+        const auto version = static_cast<size_t>(rasterCase);
         wxMemoryDC dc(bitmaps[version]);
-        if (version == 0 || version == 2) {
+        if (rasterCase == RasterCase::OriginalDirect || rasterCase == RasterCase::OriginalBuffered) {
             core::DCRenderTarget target;
             const auto properties = D2D1::RenderTargetProperties(
                 D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE),
-                96, 96);
+                core::dpiDefault, core::dpiDefault);
             Require(SUCCEEDED(core::CreateDCRenderTarget(&properties, target)), "original native DC render target");
             const RECT rectangle{0, 0, RasterWidth, RasterHeight};
             Require(SUCCEEDED(target->BindDC(static_cast<HDC>(dc.GetHDC()), &rectangle)), "bind original raster DC");
             auto surface = core::OriginalDirectWriteSurface();
             surface->Init(target.Get(), window.GetHandle());
             target->BeginDraw();
-            if (version == 0)
+            if (rasterCase == RasterCase::OriginalDirect)
                 Draw(*surface, *font);
             else {
                 auto buffered = surface->AllocatePixMap(RasterWidth, RasterHeight);
@@ -147,7 +160,7 @@ void Raster(wxWindow& window, const std::filesystem::path& evidence) {
             auto surface = core::AllocateDirectWriteSurface();
             surface->Init(&dc, &window);
             Require(surface->Initialised(), "adapted native DC render target");
-            if (version == 1)
+            if (rasterCase == RasterCase::AdaptedDirect)
                 Draw(*surface, *font);
             else {
                 auto buffered = surface->AllocatePixMap(RasterWidth, RasterHeight);
@@ -165,7 +178,8 @@ void Raster(wxWindow& window, const std::filesystem::path& evidence) {
             "native raster contains text ink");
     constexpr std::array Names{"original-direct.png", "adapted-direct.png", "original-buffered.png",
                                "adapted-buffered.png"};
-    for (size_t version = 0; version < bitmaps.size(); ++version) {
+    for (const auto rasterCase : RasterCases) {
+        const auto version = static_cast<size_t>(rasterCase);
         const auto image = bitmaps[version].ConvertToImage();
         if (!evidence.empty())
             Require(image.SaveFile(wxString((evidence / Names[version]).wstring()), wxBITMAP_TYPE_PNG),
@@ -176,8 +190,10 @@ void Raster(wxWindow& window, const std::filesystem::path& evidence) {
             ink += image.GetData()[channel] != 255;
         }
         std::printf("raster=%zu changed_channels_from_direct=%zu ink_channels=%zu\n", version, changed, ink);
-        if (version == 1 || version == 3) {
-            const auto reference = bitmaps[version - 1].ConvertToImage();
+        if (rasterCase == RasterCase::AdaptedDirect || rasterCase == RasterCase::AdaptedBuffered) {
+            const auto originalCase =
+                rasterCase == RasterCase::AdaptedDirect ? RasterCase::OriginalDirect : RasterCase::OriginalBuffered;
+            const auto reference = bitmaps[static_cast<size_t>(originalCase)].ConvertToImage();
             Require(std::equal(reference.GetData(), reference.GetData() + RasterBytes, image.GetData()),
                     "wx-adapted direct/buffered raster matches the corresponding original DirectWrite path exactly");
         }

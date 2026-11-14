@@ -348,7 +348,14 @@ void EditorControl::Core::Draw(wxDC& dc) {
     auto surface = core::Surface::Allocate(technology);
     surface->Init(&dc, &window_);
 #ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
-    if (!surface->Initialised()) throw std::runtime_error("Direct2D paint target initialization failed");
+    if (!surface->Initialised()) {
+        if (!core::FinishDirectWriteDrawing(*surface)) {
+            DropGraphics();
+            window_.Refresh(false);
+            return;
+        }
+        throw std::runtime_error("Direct2D paint target initialization failed");
+    }
 #endif
     surface->SetMode({Scintilla::CpUtf8});
     const auto size = window_.GetClientSize();
@@ -364,7 +371,7 @@ void EditorControl::Core::Draw(wxDC& dc) {
 #ifdef WXNOTEPAD_PROTOTYPE_DIRECTWRITE
     if (!core::FinishDirectWriteDrawing(*surface)) {
         // Original ScintillaWin drops all compatible pixmaps on device loss.
-        view.DropGraphics();
+        DropGraphics();
         window_.Refresh(false);
     }
 #endif

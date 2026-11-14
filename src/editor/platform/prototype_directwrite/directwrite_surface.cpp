@@ -18,8 +18,8 @@ struct WindowTarget {
 
 // GUI-only targets survive individual paints, as in ScintillaWin. Native pixmaps
 // cached by EditView must stay in the same D2D resource domain between paints.
-std::map<wxWindow*, std::shared_ptr<WindowTarget>> windowTargets;
 std::shared_ptr<WindowTarget> TargetFor(wxWindow& window) {
+    static std::map<wxWindow*, std::shared_ptr<WindowTarget>> windowTargets;
     const auto found = windowTargets.find(&window);
     if (found != windowTargets.end() && found->second->target) return found->second;
     auto target = found != windowTargets.end() ? found->second : std::make_shared<WindowTarget>();
