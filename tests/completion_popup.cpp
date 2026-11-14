@@ -111,7 +111,19 @@ public:
                 Require(list && list->IsRowVisible(0),
                         "native Down keeps earlier visible rows while the new selection fits");
                 editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>("antique"));
+                const auto lineBeforeWheel = editor->Send(Message::GetFirstVisibleLine);
+                const auto activeBeforeWheel = editor->Send(Message::AutoCActive);
+                auto* focusBeforeWheel = wxWindow::FindFocus();
                 NativeCompletion::Wheel(editor);
+                const auto lineAfterWheel = editor->Send(Message::GetFirstVisibleLine);
+                const auto activeAfterWheel = editor->Send(Message::AutoCActive);
+                if (lineAfterWheel != firstLine || !activeAfterWheel)
+                    std::fprintf(stderr,
+                                 "completion wheel: first=%zd before=%zd after=%zd active=%zd,%zd "
+                                 "focus=%p,%p editor=%p list=%p\n",
+                                 firstLine, lineBeforeWheel, lineAfterWheel, activeBeforeWheel, activeAfterWheel,
+                                 static_cast<void*>(focusBeforeWheel), static_cast<void*>(wxWindow::FindFocus()),
+                                 static_cast<void*>(editor), static_cast<void*>(list));
                 Require(editor->Send(Message::GetFirstVisibleLine) == firstLine && editor->Send(Message::AutoCActive),
                         "native wheel scrolls the active completion list while document stays fixed");
                 editor->Send(Message::AutoCCancel);
