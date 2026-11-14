@@ -1,5 +1,6 @@
 #include "native_renderer_helpers.h"
 #include "native_completion_helpers.h"
+#include "native_paint_helpers.h"
 #include <wx/button.h>
 #include <wx/popupwin.h>
 #include <wx/vlbox.h>
@@ -31,6 +32,14 @@ public:
             try {
                 Require(presented, "native compositor presents completion test editor");
                 auto* editor = frame->Editor();
+#ifdef __WXGTK__
+                // Start popup assertions with the editor's acknowledged native focus.
+                wxString focusFile;
+                NativeKeys::FocusEditor(frame, "wxnotepad", focusFile);
+                NativePaint::Complete(editor);
+                Require(editor->HasFocus() && editor->Send(Message::GetFocus),
+                        "editor owns native focus after presentation settles");
+#endif
                 TestEditor::ResetStream(editor, "al", 2, 2);
                 editor->Send(Message::AutoCSetSeparator, 32);
                 editor->Send(Message::AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
@@ -118,8 +127,10 @@ public:
                 editor->Send(Message::AutoCCancel);
                 Require(!editor->Send(Message::AutoCActive), "cancel ends completion lifetime");
 #ifdef __WXGTK__
-                // Clamp the completed fixture scroll before saving the wheel baseline;
+                // Finish native allocation and clamp before saving the wheel baseline;
                 // the core's deferred widening timer also performs this clamp.
+                editor->SendSizeEvent();
+                NativePaint::Complete(editor);
                 editor->Send(Message::LineScroll, 0, 0);
 #endif
                 const auto firstLine = editor->Send(Message::GetFirstVisibleLine);
