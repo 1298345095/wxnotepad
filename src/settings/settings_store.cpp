@@ -84,7 +84,10 @@ wxString ParseDateTimeFormat(wxString value) {
 }
 } // namespace
 
-SettingsStore::SettingsStore() : path_(ConfigurationPath()) {
+SettingsStore::SettingsStore() : SettingsStore(ConfigurationPath()) {
+}
+
+SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     const OriginalSettings defaults;
     LoadLines();
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
