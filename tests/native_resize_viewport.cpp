@@ -4,6 +4,7 @@
 #include "native_paint_helpers.h"
 #include "settings/settings_store.h"
 #include <array>
+#include <sstream>
 
 namespace {
 using Scintilla::Message;
@@ -44,6 +45,44 @@ constexpr std::array Reference{Geometry{992, 14661, 14642},  Geometry{872, 16144
 void Require(bool condition, const char* message) {
     if (!condition) throw TestEditor::Failure(message);
 }
+#ifdef WXNOTEPAD_TEST_GDI
+auto OriginalReference(int dpi) {
+    auto reference = Reference;
+    wxString filename;
+    if (!wxGetEnv("WXNOTEPAD_ORIGINAL_GDI_REFERENCE", &filename)) {
+        std::puts("GDI oracle: frozen original reference-machine records");
+        return reference;
+    }
+    std::ifstream input{std::filesystem::path(filename.ToStdWstring())};
+    Require(input.is_open(), "open the explicitly requested independent original GDI reference");
+    std::string line;
+    Require(std::getline(input, line) &&
+                line == "notepad4-gdi-viewport-v1\t89b8b36e0ee2c23f73be922315f17261ccfbbe1a\t1048597\tConsolas\t24",
+            "independent original reference uses the pinned source and exact fixture/font scene");
+    Require(std::getline(input, line) && line == "width\theight\tdpi\twrap\tfirst_visible\tline_height\tscreen_lines",
+            "independent original reference has the expected columns");
+    for (auto& record : reference) {
+        Require(static_cast<bool>(std::getline(input, line)),
+                "independent original reference contains all thirteen rows");
+        std::istringstream row(line);
+        Geometry original{};
+        int height = 0, originalDpi = 0, lineHeight = 0, screenLines = 0;
+        std::string extra;
+        Require((row >> original.width >> height >> originalDpi >> original.wrap >> original.firstVisible >>
+                 lineHeight >> screenLines) &&
+                    !(row >> extra),
+                "independent original reference contains complete numeric rows without extra columns");
+        Require(original.width == record.width && height == ViewportHeight && originalDpi == dpi &&
+                    lineHeight == LineHeight && screenLines == ScreenLines && original.wrap > 0 &&
+                    original.firstVisible >= 0 && original.firstVisible < original.wrap,
+                "independent original reference matches viewport sequence, DPI and exact vertical metrics");
+        record = original;
+    }
+    Require(!std::getline(input, line), "independent original reference contains exactly thirteen rows");
+    std::puts("GDI oracle: independent same-host pinned original; exact comparisons for all thirteen records");
+    return reference;
+}
+#endif
 void ReportGeometryFailure(EditorControl* editor, const char* phase, int requestedWidth) {
     auto* frame = wxGetTopLevelParent(editor);
     const auto outer = frame->GetSize();
@@ -131,9 +170,14 @@ public:
                 TestFiles::WriteBytes(path, text);
                 Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "open shared fixture");
                 auto* editor = frame->Editor();
+#ifdef WXNOTEPAD_TEST_GDI
+                const auto reference = OriginalReference(editor->GetDPI().y);
+#else
+                const auto& reference = Reference;
+#endif
                 editor->Send(Message::SetTechnology, static_cast<uintptr_t>(Technology));
                 editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::None));
-                // Preserve the original physical 18-pixel em at any monitor DPI.
+                // Preserve the original physical 24-pixel em at any monitor DPI.
                 for (int style = 0; style < StyleCount; ++style) {
                     editor->Send(Message::StyleSetFont, style, reinterpret_cast<intptr_t>("Consolas"));
                     editor->Send(Message::StyleSetSizeFractional, style,
@@ -158,13 +202,13 @@ public:
                 editor->Send(Message::SetSel, FixtureBytes - 1, FixtureBytes - 1);
                 editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::Word));
                 NativePaint::Complete(editor);
-                Resize(frame, Reference[0].width, true);
+                Resize(frame, reference[0].width, true);
                 editor->Send(Message::GotoPos, FixtureBytes - 1);
                 NativePaint::Complete(editor);
-                Check(editor, Reference[0]);
-                for (size_t index = 1; index < Reference.size(); ++index) {
-                    Resize(frame, Reference[index].width, false);
-                    Check(editor, Reference[index]);
+                Check(editor, reference[0]);
+                for (size_t index = 1; index < reference.size(); ++index) {
+                    Resize(frame, reference[index].width, false);
+                    Check(editor, reference[index]);
                 }
                 Require(TestEditor::Text(editor) == text && !frame->DocumentIsModified(),
                         "original viewport resizing preserves all document bytes and save point");

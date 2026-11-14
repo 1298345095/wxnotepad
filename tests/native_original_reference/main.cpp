@@ -182,6 +182,8 @@ int wmain(int count, wchar_t** arguments) {
         Scene(text);
         std::ofstream output{std::filesystem::path(arguments[1])};
         Require(static_cast<bool>(output), "open original reference output");
+        // Version identifies this fixed native scene; the CLI verifies the archive hash.
+        output << "notepad4-gdi-viewport-v1\t89b8b36e0ee2c23f73be922315f17261ccfbbe1a\t1048597\tConsolas\t24\n";
         output << "width\theight\tdpi\twrap\tfirst_visible\tline_height\tscreen_lines\n";
         Resize(frame, Widths.front(), true);
         Send(Message::GotoPos, FixtureBytes - 1);
