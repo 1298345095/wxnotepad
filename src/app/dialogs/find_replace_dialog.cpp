@@ -177,8 +177,10 @@ FindReplaceDialog::~FindReplaceDialog() {
 }
 
 void FindReplaceDialog::OnEditorState(wxCommandEvent& event) {
-    if (!search_.MatchCount().has_value() &&
-        (!findAllErrorRevision_.has_value() || *findAllErrorRevision_ != editor_.DocumentRevision())) {
+    const auto count = search_.MatchCount();
+    if (count.has_value()) {
+        UpdateFindAllCount(*count);
+    } else if (!findAllErrorRevision_.has_value() || *findAllErrorRevision_ != editor_.DocumentRevision()) {
         findAllResult_->SetLabel("");
         findAllErrorRevision_.reset();
     }
@@ -191,9 +193,18 @@ void FindReplaceDialog::FindAll() {
     const auto result = search_.FindAll();
     findAllErrorRevision_ =
         result.status == FindStatus::InvalidPattern ? std::optional(editor_.DocumentRevision()) : std::nullopt;
-    findAllResult_->SetLabel(result.status == FindStatus::InvalidPattern
-                                 ? _("Invalid regular expression")
-                                 : wxString::Format(wxPLURAL("%zu match", "%zu matches", result.count), result.count));
+    if (result.status == FindStatus::InvalidPattern) {
+        findAllResult_->SetLabel(_("Invalid regular expression"));
+        GetSizer()->Fit(this);
+    } else {
+        UpdateFindAllCount(result.count);
+    }
+}
+
+void FindReplaceDialog::UpdateFindAllCount(size_t count) {
+    const auto label = wxString::Format(wxPLURAL("%zu match", "%zu matches", count), count);
+    if (findAllResult_->GetLabel() == label) return;
+    findAllResult_->SetLabel(label);
     GetSizer()->Fit(this);
 }
 
