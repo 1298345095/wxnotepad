@@ -1,4 +1,5 @@
 """Verify original settings through independent application processes."""
+from english_settings import english_settings
 import argparse
 import os
 from pathlib import Path
@@ -85,10 +86,10 @@ def main():
         executable = executable_folder / source.name
         shutil.copy2(source, executable)
         seed = executable_folder / "Notepad4.ini-default"
-        seed.write_text("[Settings]\nWordWrap=invalid\nAutoIndent=invalid\nShowLineNumbers=1\nViewWhiteSpace=0\n"
+        seed.write_text(english_settings("[Settings]\nWordWrap=invalid\nAutoIndent=invalid\nShowLineNumbers=1\nViewWhiteSpace=0\n"
                         "DefaultEOLMode=1\nWarnLineEndings=0\n"
                         "UnrelatedSetting=keep\n[Styles]\nUnrelatedStyle=保留\n"
-                        "[wxnotepad]\nAutoShrinkScrollWidth=invalid\nUnrelatedCustom=keep\n", encoding="utf-16")
+                        "[wxnotepad]\nAutoShrinkScrollWidth=invalid\nUnrelatedCustom=keep\n"), encoding="utf-16")
         startup = folder / "startup.txt"
         startup.write_bytes(b"settings survive\r\nstartup file loading\nlast")
         app = Application(executable, folder, environment)
@@ -161,7 +162,7 @@ def main():
         for value, mode in (("0", "0"), ("1", "2"), ("2", "1"), ("-1", "0"), ("99", "1"), ("invalid", "0"),
                             ("4294967296", "1"), ("-4294967297", "0"), ("1suffix", "2")):
             (config_folder / "Notepad4.ini").write_text(
-                "[Settings]\nSaveSettings=0\nWarnLineEndings=0\nDefaultEOLMode=" + value + "\n", encoding="utf-16")
+                english_settings("[Settings]\nSaveSettings=0\nWarnLineEndings=0\nDefaultEOLMode=" + value + "\n"), encoding="utf-16")
             app = Application(executable, folder, environment)
             try:
                 assert app.state["eol_mode"] == mode, (value, app.state)
@@ -169,10 +170,10 @@ def main():
             finally:
                 app.stop()
         config = config_folder / "Notepad4.ini"
-        config.write_text("[Settings]\nAutoIndent=0\nTabWidth=7\nIndentWidth=3\nTabsAsSpaces=1\nTabIndents=0\n"
+        config.write_text(english_settings("[Settings]\nAutoIndent=0\nTabWidth=7\nIndentWidth=3\nTabsAsSpaces=1\nTabIndents=0\n"
                           "BackspaceUnindents=3\n[Python Script]\nTabWidth=9\nIndentWidth=0\n"
                           "TabsAsSpaces=0\nUseGlobalTabSettings=0\n[JSON Document]\nUseGlobalTabSettings=1\n"
-                          "[C/C++ Source]\nTabWidth=999\nIndentWidth=-5\nUseGlobalTabSettings=0\n", encoding="utf-16")
+                          "[C/C++ Source]\nTabWidth=999\nIndentWidth=-5\nUseGlobalTabSettings=0\n"), encoding="utf-16")
         app = Application(executable, folder, environment)
         try:
             tabs(app.state, 7, 3, 0, 0, 3)
@@ -192,8 +193,8 @@ def main():
         saved = config.read_text(encoding="utf-16")
         assert "TabWidth=7" in saved and "IndentWidth=3" in saved and "BackspaceUnindents=3" in saved, saved
         assert "[Python Script]" in saved and "TabWidth=9" in saved and "IndentWidth=0" in saved, saved
-        config.write_text("[Settings]\nSaveSettings=0\nTabWidth=6\n[Shell Script]\nTabWidth=9\n"
-                          "IndentWidth=2\nTabsAsSpaces=1\nUseGlobalTabSettings=0\n", encoding="utf-16")
+        config.write_text(english_settings("[Settings]\nSaveSettings=0\nTabWidth=6\n[Shell Script]\nTabWidth=9\n"
+                          "IndentWidth=2\nTabsAsSpaces=1\nUseGlobalTabSettings=0\n"), encoding="utf-16")
         app = Application(executable, folder, environment)
         try:
             for dialect in ("Bash", "C Shell", "m4"):

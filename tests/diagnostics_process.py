@@ -35,6 +35,7 @@ def main():
         folder = Path(name)
         executable = folder / source.name
         shutil.copy2(source, executable)
+        (folder / "Notepad4.ini").write_text('[Settings2]\nUILanguage=1033\n', encoding="utf-16")
         base = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         base.pop("WXNOTEPAD_DIAGNOSTICS", None)
         base.pop("WXNOTEPAD_DIAGNOSTIC_LOG", None)

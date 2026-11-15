@@ -1,4 +1,5 @@
 """Original bookmark/history settings through independent application processes."""
+from english_settings import english_settings
 import argparse
 import os
 from pathlib import Path
@@ -23,8 +24,8 @@ def main():
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ['PATH'])
         config = folder / 'Notepad4.ini'
         seed = folder / 'Notepad4.ini-default'
-        seed.write_text('; keep comment\n[Settings]\nSaveSettings=0\nShowBookmarkMargin=1suffix\n'
-                        'ChangeHistoryMarker=7suffix\nUnrelated=keep\n[Styles]\nUnrelatedStyle=保留\n', encoding='utf-16')
+        seed.write_text(english_settings('; keep comment\n[Settings]\nSaveSettings=0\nShowBookmarkMargin=1suffix\n'
+                        'ChangeHistoryMarker=7suffix\nUnrelated=keep\n[Styles]\nUnrelatedStyle=保留\n'), encoding='utf-16')
         app = Application(executable, folder, environment)
         try:
             state(app, 1, 7)
@@ -59,7 +60,7 @@ def main():
         for value, bookmark, history in [('0', 0, 0), ('1', 1, 1), ('2', 0, 2), ('3', 0, 3),
                                          ('4', 0, 4), ('5', 0, 5), ('7', 0, 7), ('99', 0, 99),
                                          ('-1', 0, -1), ('1suffix', 1, 1), ('3suffix', 0, 3), ('invalid', 0, 0)]:
-            config.write_text(f'[Settings]\nSaveSettings=0\nShowBookmarkMargin={value}\nChangeHistoryMarker={value}\n',
+            config.write_text(english_settings(f'[Settings]\nSaveSettings=0\nShowBookmarkMargin={value}\nChangeHistoryMarker={value}\n'),
                               encoding='utf-16')
             app = Application(executable, folder, environment)
             try:
