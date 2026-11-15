@@ -13,6 +13,8 @@ class Dialogs:
     def __init__(self):
         if sys.platform == 'win32':
             self.user = ctypes.WinDLL('user32', use_last_error=True)
+            self.user.SetProcessDpiAwarenessContext.argtypes = [wintypes.HANDLE]
+            assert self.user.SetProcessDpiAwarenessContext(wintypes.HANDLE(-4)), ctypes.WinError(ctypes.get_last_error())
             self.user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
             self.user.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
             self.user.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
