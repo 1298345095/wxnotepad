@@ -18,6 +18,46 @@ using namespace NativeSearch;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+void Load(EditorControl* editor, const std::string& bytes) {
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
+    editor->Send(Message::MarkerDeleteAll, 0);
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    NativePaint::Complete(editor);
+}
+void SlicedFindAll(EditorControl* editor, wxTextCtrl* query, wxButton* action, wxStaticText* result) {
+    // The first search slice covers at most its initial 1 MiB
+    // window plus a line. Short lines keep the trailing matches
+    // outside that window without relying on elapsed search time.
+    std::string slicedText;
+    constexpr size_t ShortLineBytes = 64;
+    const std::string shortLine = std::string(ShortLineBytes - 1, 'x') + '\n';
+    constexpr size_t PrefixLines = size_t{48} * 1024;
+    for (size_t line = 0; line < PrefixLines; ++line)
+        slicedText += shortLine;
+    slicedText += "cat cat cat\n";
+    Load(editor, slicedText);
+    query->SetValue("cat");
+#ifdef __WXMSW__
+    const auto handle = static_cast<HWND>(action->GetHandle());
+    SendMessageW(static_cast<HWND>(query->GetParent()->GetHandle()), WM_COMMAND,
+                 MAKEWPARAM(GetDlgCtrlID(handle), BN_CLICKED), reinterpret_cast<LPARAM>(handle));
+#elif defined(__WXGTK__)
+    gtk_button_clicked(GTK_BUTTON(action->GetHandle()));
+#endif
+    Require(result->GetLabel() == "0 matches", "Find All initially reports the unfinished search count");
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+    while (result->GetLabel() != "3 matches" && std::chrono::steady_clock::now() < deadline) {
+        wxYield();
+        if (result->GetLabel() != "3 matches") wxMilliSleep(1);
+    }
+    Require(editor->Send(Message::IndicatorValueAt, 8, static_cast<intptr_t>(slicedText.rfind("cat"))),
+            "sliced Find All reaches the last match");
+    Require(result->GetLabel() == "3 matches", "Find All refreshes its count after later search slices");
+    Require(Text(editor) == slicedText && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+            "sliced Find All preserves bytes and history");
+    std::puts("PASS: native Find All refreshes the initial partial count after asynchronous search");
+}
 class FindAllApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -58,13 +98,7 @@ public:
                     Click(query->GetParent(), action->GetId());
                     NativePaint::Complete(editor);
                 };
-                const auto load = [&](const std::string& bytes) {
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
-                    editor->Send(Message::MarkerDeleteAll, 0);
-                    editor->Send(Message::EmptyUndoBuffer);
-                    editor->Send(Message::SetSavePoint);
-                    NativePaint::Complete(editor);
-                };
+                const auto load = [&](const std::string& bytes) { Load(editor, bytes); };
                 Toggle(bookmark, true);
                 run();
                 Require((editor->Send(Message::MarkerGet, 0) & 1) && (editor->Send(Message::MarkerGet, 1) & 1),
@@ -154,38 +188,7 @@ public:
                         "matching preserves Unicode bytes and clean history");
                 std::puts("PASS: multiline regex bookmark scope and Unicode byte boundaries");
 
-                // The first search slice covers at most its initial 1 MiB
-                // window plus a line. Short lines keep the trailing matches
-                // outside that window without relying on elapsed search time.
-                std::string slicedText;
-                constexpr size_t ShortLineBytes = 64;
-                const std::string shortLine = std::string(ShortLineBytes - 1, 'x') + '\n';
-                constexpr size_t PrefixLines = size_t{48} * 1024;
-                for (size_t line = 0; line < PrefixLines; ++line)
-                    slicedText += shortLine;
-                slicedText += "cat cat cat\n";
-                load(slicedText);
-                query->SetValue("cat");
-#ifdef __WXMSW__
-                const auto handle = static_cast<HWND>(action->GetHandle());
-                SendMessageW(static_cast<HWND>(query->GetParent()->GetHandle()), WM_COMMAND,
-                             MAKEWPARAM(GetDlgCtrlID(handle), BN_CLICKED), reinterpret_cast<LPARAM>(handle));
-#elif defined(__WXGTK__)
-                gtk_button_clicked(GTK_BUTTON(action->GetHandle()));
-#endif
-                Require(result->GetLabel() == "0 matches", "Find All initially reports the unfinished search count");
-                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-                while (result->GetLabel() != "3 matches" && std::chrono::steady_clock::now() < deadline) {
-                    wxYield();
-                    if (result->GetLabel() != "3 matches") wxMilliSleep(1);
-                }
-                Require(marked(static_cast<intptr_t>(slicedText.rfind("cat"))),
-                        "sliced Find All reaches the last match");
-                Require(result->GetLabel() == "3 matches", "Find All refreshes its count after later search slices");
-                Require(Text(editor) == slicedText && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo),
-                        "sliced Find All preserves bytes and history");
-                std::puts("PASS: native Find All refreshes the initial partial count after asynchronous search");
+                SlicedFindAll(editor, query, action, result);
 
                 load("void f() {\n  needle();\n}\n");
                 const auto cpp = frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++");

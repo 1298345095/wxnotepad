@@ -18,6 +18,13 @@ wxString Text(std::string_view text) {
     return wxString::FromUTF8(text.data(), text.size());
 }
 
+bool LoadCatalogs(wxTranslations& translations, const wxString& domain) {
+    if (!translations.AddAvailableCatalog("wxstd", wxLANGUAGE_ENGLISH)) return false;
+    if (!translations.IsLoaded("wxstd")) return false;
+    if (!translations.AddAvailableCatalog(domain, wxLANGUAGE_ENGLISH)) return false;
+    return translations.IsLoaded(domain);
+}
+
 #ifdef __WXMSW__
 class NamedWindowAccessible final : public wxAccessible {
 public:
@@ -79,13 +86,11 @@ void Initialize(uint16_t preference) {
     // wxWidgets searches the most recently loaded catalog first. Load stock first
     // so application wording takes precedence while other toolkit keys fall back.
     const wxLogNull noGuiLog;
-    if (effective != sourceLanguage &&
-        (!translations->AddAvailableCatalog("wxstd", wxLANGUAGE_ENGLISH) || !translations->IsLoaded("wxstd") ||
-         !translations->AddAvailableCatalog(domain, wxLANGUAGE_ENGLISH) || !translations->IsLoaded(domain))) {
-        translations = new wxTranslations;
-        translations->SetLanguage(sourceLanguage);
-        wxTranslations::Set(translations);
-    }
+    if (effective == sourceLanguage) return;
+    if (LoadCatalogs(*translations, domain)) return;
+    translations = new wxTranslations;
+    translations->SetLanguage(sourceLanguage);
+    wxTranslations::Set(translations);
 }
 
 void SetAccessibleName(wxWindow& window, const wxString& name) {
