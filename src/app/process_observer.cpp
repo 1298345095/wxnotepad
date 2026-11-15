@@ -48,7 +48,8 @@ void DispatchObservedCommand(EditorFrame& frame, const wxString& operation, cons
     result = "failed";
     if (operation == "open" && !source.empty())
         result = frame.Open(source).status == OpenStatus::Opened ? "ok" : "failed";
-    if (operation == "save") result = frame.Save().status == SaveStatus::Saved ? "ok" : "failed";
+    if (operation == "save")
+        result = (source.empty() ? frame.Save() : frame.SaveAs(source)).status == SaveStatus::Saved ? "ok" : "failed";
     if (operation == "close") result = "ok";
     if (operation == "menu") {
         long numericId = 0;
@@ -118,6 +119,7 @@ void ProcessObserver::Publish() {
     lastDirty_ = frame_->Editor()->Send(Scintilla::Message::GetModify) != 0;
     lastActive_ = frame_->IsActive();
     lastCaret_ = frame_->Editor()->Send(Scintilla::Message::GetCurrentPos);
+    lastReadOnly_ = frame_->Editor()->Send(Scintilla::Message::GetReadOnly) != 0;
     wxString backend = "Windows";
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
@@ -252,7 +254,7 @@ std::optional<ProcessObserver::Command> ProcessObserver::ConsumeCommand(const wx
 }
 
 void ProcessObserver::Observe() {
-    if (!frame_) return;
+    if (!frame_ || dispatching_) return;
     const wxString path = observation_ + "/command";
     if (wxFileExists(path)) {
         const auto command = ConsumeCommand(path);
@@ -262,7 +264,9 @@ void ProcessObserver::Observe() {
         WXNOTE_TRACE("observer.request", "\ttarget=%p\trequest=%llu", static_cast<void*>(frame_),
                      DiagnosticRequest(sequence_));
         const auto& operation = command->operation;
+        dispatching_ = true;
         DispatchObservedCommand(*frame_, operation, command->source, result_);
+        dispatching_ = false;
         Publish();
         WXNOTE_TRACE("observer.ack", "\ttarget=%p\trequest=%llu\tok=%d", static_cast<void*>(frame_),
                      DiagnosticRequest(sequence_), result_ == "ok");
@@ -271,6 +275,7 @@ void ProcessObserver::Observe() {
         commandPending_ = false;
         if (publishPending_ || (frame_->Editor()->Send(Scintilla::Message::GetModify) != 0) != lastDirty_ ||
             frame_->Editor()->Send(Scintilla::Message::GetCurrentPos) != lastCaret_ ||
+            (frame_->Editor()->Send(Scintilla::Message::GetReadOnly) != 0) != lastReadOnly_ ||
             frame_->IsActive() != lastActive_)
             Publish();
     }

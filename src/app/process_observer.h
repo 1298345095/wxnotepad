@@ -27,8 +27,10 @@ private:
     bool lastDirty_ = false;
     bool lastActive_ = false;
     long long lastCaret_ = 0;
+    bool lastReadOnly_ = false;
     bool publishPending_ = false;
     bool commandPending_ = false;
+    bool dispatching_ = false;
     void Publish();
     void CommandFailure(const char* stage, unsigned long error);
     std::optional<Command> ConsumeCommand(const wxString& path);
