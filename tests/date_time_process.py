@@ -1,4 +1,5 @@
 """Verify original Settings2 insertion templates through independent application processes and saved bytes."""
+from english_settings import english_settings
 from datetime import datetime
 import os
 from pathlib import Path
@@ -48,7 +49,7 @@ def main():
         for short, long, mode in cases:
             original = ("[Settings]\nUnrelated=keep\n[Settings2]\n"
                         f"DateTimeShort={short}\nDateTimeLong={long}\nOther=preserved\n")
-            config.write_text(original, encoding="utf-16")
+            config.write_text(english_settings(original), encoding="utf-16")
             for label, is_short in (("Time/Date (Short Form)", True), ("Time/Date (Long Form)", False)):
                 document.write_bytes(b"")
                 app = Application(executable, folder, environment, document)
@@ -78,7 +79,7 @@ def main():
                 assert "Other=preserved" in saved and "Unrelated=keep" in saved, saved
         # Missing and empty load-only fields retain the host defaults without creating keys.
         for fields in ("", "DateTimeShort=\nDateTimeLong=\n", 'DateTimeShort=""\nDateTimeLong=\'\'\n'):
-            config.write_text("[Settings2]\n" + fields, encoding="utf-16")
+            config.write_text(english_settings("[Settings2]\n" + fields), encoding="utf-16")
             for label, short in (("Time/Date (Short Form)", True), ("Time/Date (Long Form)", False)):
                 document.write_bytes(b"")
                 app = Application(executable, folder, environment, document)

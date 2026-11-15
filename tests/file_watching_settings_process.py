@@ -1,4 +1,5 @@
 """Round-trip original file-watching preferences through independent applications."""
+from english_settings import english_settings
 import argparse
 import os
 from pathlib import Path
@@ -27,7 +28,7 @@ def main():
                         f"ResetFileWatching={reset}\nUnrelatedSetting=keep\n"
                         f"[Settings2]\nFileCheckInterval={interval}\nAutoReloadTimeout={delay}\n"
                         "UnrelatedTimer=keep\n")
-            configuration.write_text(text, encoding="utf-16")
+            configuration.write_text(english_settings(text), encoding="utf-16")
             environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
             for _ in range(2):
                 app = Application(executable, folder, environment)
@@ -46,7 +47,7 @@ def main():
         executable = folder / source.name
         shutil.copy2(source, executable)
         (folder / "Notepad4.ini").write_text(
-            "[Settings2]\nFileCheckInterval=20\nAutoReloadTimeout=50\n", encoding="utf-16")
+            english_settings("[Settings2]\nFileCheckInterval=20\nAutoReloadTimeout=50\n"), encoding="utf-16")
         fixture = folder / "startup.txt"
         fixture.write_bytes(b"initial startup document\n")
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])

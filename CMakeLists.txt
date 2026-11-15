@@ -298,6 +298,9 @@ if(BUILD_TESTING)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME observed_numeric_menu COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/observer_menu_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(observed_numeric_menu PROPERTIES TIMEOUT 45)
     add_test(NAME observed_process_shutdown COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/observed_shutdown_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(observed_process_shutdown PROPERTIES TIMEOUT 45)
