@@ -26,6 +26,9 @@ class Dialogs:
             self.user.EnumChildWindows.argtypes = [wintypes.HWND, self.callback, wintypes.LPARAM]
             ctypes.OleDLL('ole32').CoInitialize(None)
         else:
+            # Ubuntu packages the native GI bindings here. Keep CMake's selected
+            # interpreter (including coverage's isolated venv) and its packages.
+            sys.path.append('/usr/lib/python3/dist-packages')
             import gi
             gi.require_version('Atspi', '2.0')
             from gi.repository import Atspi
@@ -95,6 +98,15 @@ class Dialogs:
             for window in observed:
                 if self.title(window) == title:
                     return window
+                if sys.platform != 'win32' and window.get_role() == self.atspi.Role.ALERT:
+                    # GTK3 exposes the alert type (Question/Error) as its AT-SPI
+                    # name. Select the actual visible application message.
+                    fragments = {'wxnotepad': 'Changing the UI language requires a restart of wxnotepad, restart now?',
+                                 'Save changes?': 'Save changes to ',
+                                 'Restart failed': 'Could not restart wxnotepad.',
+                                 'Could not save settings': 'Could not write '}
+                    if title in fragments and any(fragments[title] in text for text in self.texts(window)):
+                        return window
             time.sleep(.03)
         raise AssertionError(f'Native dialog {title!r} not shown: {[self.title(w) for w in observed]}')
 
@@ -106,11 +118,21 @@ class Dialogs:
                     return
         else:
             for child in self.children(window):
-                if child.get_role() == self.atspi.Role.PUSH_BUTTON and plain(child.get_name()) == caption:
+                if child.get_role() in (self.atspi.Role.PUSH_BUTTON, self.atspi.Role.CHECK_BOX) and plain(child.get_name()) == caption:
                     action = child.get_action_iface()
                     assert action and action.do_action(0), caption
                     return
         raise AssertionError(f'Native button {caption!r} not present: {self.texts(window)}')
+
+    def wait_text(self, window, text):
+        deadline = time.monotonic() + 10
+        observed = []
+        while time.monotonic() < deadline:
+            observed = self.texts(window)
+            if text in observed:
+                return
+            time.sleep(.03)
+        raise AssertionError((text, observed))
 
     def cancel(self, window):
         if sys.platform == 'win32':
