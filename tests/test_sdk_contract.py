@@ -69,14 +69,20 @@ class SdkContract(unittest.TestCase):
             output.write(f'wxWidgets_DIR:PATH={(self.root / "other SDK").as_posix()}\n')
         self.assertFalse(SDK.inspect(self.build)['success'])
 
-    def test_stc_artifacts_in_release_or_debug_fail(self):
+    def test_stc_and_standalone_core_artifacts_in_release_or_debug_fail(self):
         prefix = self.configure()
-        forbidden = prefix / 'debug/bin/wxmsw333ud_stc_vc_x64_custom.pdb'
-        forbidden.parent.mkdir(parents=True)
-        forbidden.touch()
-        report = SDK.inspect(self.build)
-        self.assertFalse(report['success'])
-        self.assertEqual(report['forbidden_sdk_artifacts'], [str(forbidden)])
+        names = ('debug/bin/wxmsw333ud_stc_vc_x64_custom.pdb', 'lib/Scintilla.lib',
+                 'debug/lib/Lexilla.lib', 'lib/libscintilla.a', 'lib/liblexilla.a',
+                 'bin/Scintilla.dll', 'lib/liblexilla.so.5')
+        for name in names:
+            with self.subTest(name=name):
+                forbidden = prefix / name
+                forbidden.parent.mkdir(parents=True, exist_ok=True)
+                forbidden.touch()
+                report = SDK.inspect(self.build)
+                self.assertFalse(report['success'])
+                self.assertEqual(report['forbidden_sdk_artifacts'], [str(forbidden)])
+                forbidden.unlink()
 
     def test_linux_helper_archives_fail_but_gtk_codec_dependencies_are_allowed(self):
         prefix = self.configure('x64-linux')

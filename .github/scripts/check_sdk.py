@@ -7,8 +7,9 @@ import re
 
 def stc_artifact(path):
     name = path.name.lower()
-    return (name.startswith(('wx', 'libwx')) and
-            any(part in name for part in ('_stc', 'scintilla', 'lexilla')) and
+    core_library = name.startswith(('scintilla', 'lexilla', 'libscintilla', 'liblexilla'))
+    wx_stc = name.startswith(('wx', 'libwx')) and any(part in name for part in ('_stc', 'scintilla', 'lexilla'))
+    return ((core_library or wx_stc) and
             (path.suffix.lower() in ('.lib', '.dll', '.pdb', '.a') or '.so' in path.suffixes))
 
 
