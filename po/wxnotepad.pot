@@ -58,11 +58,15 @@ msgstr ""
 msgid "%s tabs as spaces"
 msgstr ""
 
+#. TRANSLATORS: Status arguments: encoding name, optional BOM annotation, syntax name,
+#. optional manual syntax override annotation, and line-ending name (CRLF, CR or LF).
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "%s%s | %s%s | EOL: %s"
 msgstr ""
 
+#. TRANSLATORS: Window title arguments: modified marker ("*" or empty), document path or untitled name,
+#. and optional read-only file/mode annotation.
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "%s%s%s - wxnotepad"

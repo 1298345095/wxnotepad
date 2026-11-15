@@ -19,12 +19,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_READONLY_FILE.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_READONLY_FILE.
 #: src/app/editor_frame.cpp
 msgid " (Read Only File)"
 msgstr " (只读文件)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_READONLY_MODE.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_READONLY_MODE.
 #: src/app/editor_frame.cpp
 msgid " (Read Only Mode)"
 msgstr " (只读模式)"
@@ -38,7 +38,7 @@ msgstr " (手动指定)"
 msgid " | Sel %lld"
 msgstr " | 选中 %lld"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_READONLY_SAVE.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_READONLY_SAVE.
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "\"%s\" is read only. Save to a different file?"
@@ -64,11 +64,15 @@ msgstr "%s 制表符宽度"
 msgid "%s tabs as spaces"
 msgstr "%s 插入制表符为空格"
 
+#. TRANSLATORS: Status arguments: encoding name, optional BOM annotation, syntax name,
+#. optional manual syntax override annotation, and line-ending name (CRLF, CR or LF).
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "%s%s | %s%s | EOL: %s"
 msgstr "%s%s | %s%s | 换行符: %s"
 
+#. TRANSLATORS: Window title arguments: modified marker ("*" or empty), document path or untitled name,
+#. and optional read-only file/mode annotation.
 #: src/app/editor_frame.cpp
 #, c-format
 msgid "%s%s%s - wxnotepad"
@@ -86,17 +90,17 @@ msgid "%zu replacement"
 msgid_plural "%zu replacements"
 msgstr[0] "%zu 处替换"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_WARNLINEENDS / IDC_WARNINCONSISTENTEOLS.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_WARNLINEENDS / IDC_WARNINCONSISTENTEOLS.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Always show this dialog."
 msgstr "总是显示此对话框(&A)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP2.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP2.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "&Append text to lines:"
 msgstr "每行后缀文本(&A):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_AUTO_RELOAD.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_AUTO_RELOAD.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Auto-reload (unmodified)."
 msgstr "自动重新加载(如未修改)(&A)。"
@@ -105,12 +109,12 @@ msgstr "自动重新加载(如未修改)(&A)。"
 msgid "&Automatic"
 msgstr "自动(&A)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_MARGIN.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_MARGIN.
 #: src/app/editor_frame_commands.cpp
 msgid "&Bookmark Margin\tCtrl+Shift+M"
 msgstr "书签边界(&M)\tCtrl+Shift+M"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_MARKOCCURRENCES_BOOKMARK.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_MARKOCCURRENCES_BOOKMARK.
 #: src/app/editor_frame_commands.cpp
 msgid "&Bookmark Matched Line"
 msgstr "为匹配的行添加书签(&M)"
@@ -123,17 +127,17 @@ msgstr "边界(&B):"
 msgid "&Cancel"
 msgstr "取消(&C)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN / IDC_ALIGN_CENTER.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN / IDC_ALIGN_CENTER.
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "&Center."
 msgstr "居中对齐(&C)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKCLEAR.
+# Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKCLEAR.
 #: src/app/editor_frame_commands.cpp
 msgid "&Clear All\tAlt+F2"
 msgstr "全部清除(&C)\tAlt+F2"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_INSERTTAG / IDC_MODIFY_LINE_TIP2.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_INSERTTAG / IDC_MODIFY_LINE_TIP2.
 #: src/app/dialogs/insert_tag_dialog.cpp
 msgid "&Closing tag (can be edited):"
 msgstr "闭合标签(可编辑)(&C):"
@@ -142,23 +146,23 @@ msgstr "闭合标签(可编辑)(&C):"
 msgid "&Collapse All"
 msgstr "全部折叠(&C)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_LINENUM / IDC_COLUMN_RANGE.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_LINENUM / IDC_COLUMN_RANGE.
 #: src/app/dialogs/go_to_line_dialog.cpp
 #, c-format
 msgid "&Column (empty or 1 - %lld):"
 msgstr "列(留空或 1 - %lld)(&C):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_COLUMN.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_COLUMN.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Column sort (rectangular selection)."
 msgstr "行列排序(矩形选择)(&C)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPY.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPY.
 #: src/app/editor_frame_commands.cpp
 msgid "&Copy\tCtrl+C"
 msgstr "复制(&C)\tCtrl+C"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPYLINE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPYLINE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Copy Line\tCtrl+Shift+C"
 msgstr "复制行(&C)\tCtrl+Shift+C"
@@ -171,7 +175,7 @@ msgstr "默认编码(&D):"
 msgid "&Default line ending mode:"
 msgstr "默认换行模式(&D):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_ENCODING_SETDEFAULT / IDM_LINEENDINGS_SETDEFAULT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_ENCODING_SETDEFAULT / IDM_LINEENDINGS_SETDEFAULT.
 #: src/app/editor_frame_commands.cpp
 msgid "&Default..."
 msgstr "默认(&D)..."
@@ -184,42 +188,42 @@ msgstr "&Direct2D"
 msgid "&Discard"
 msgstr "放弃(&D)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_WARNLINEENDS / IDC_STATIC.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_WARNLINEENDS / IDC_STATIC.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Do you want to normalize the line endings?"
 msgstr "是否标准化换行符？(&D)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_INFOBOX / IDC_INFOBOXCHECK.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_INFOBOX / IDC_INFOBOXCHECK.
 #: src/app/dialogs/search_feedback_dialog.cpp
 msgid "&Don't show this message again."
 msgstr "不再显示此消息(&D)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELECTIONDUPLICATE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELECTIONDUPLICATE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Duplicate\tAlt+D"
 msgstr "重复(&D)\tAlt+D"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_DUPLICATELINE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_DUPLICATELINE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Duplicate Line\tCtrl+D"
 msgstr "重复行(&D)\tCtrl+D"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Edit menu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Edit menu.
 #: src/app/editor_frame_commands.cpp
 msgid "&Edit"
 msgstr "编辑(&E)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Enclose Selection submenu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Enclose Selection submenu.
 #: src/app/editor_frame_commands.cpp
 msgid "&Enclose Selection"
 msgstr "包围选中文本(&E)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Encoding submenu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Encoding submenu.
 #: src/app/editor_frame_commands.cpp
 msgid "&Encoding"
 msgstr "编码(&E)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_ENCODING.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_ENCODING.
 #: src/app/editor_frame_commands.cpp
 msgid "&Encoding Identifier\tCtrl+F8"
 msgstr "编码标识符(&E)\tCtrl+F8"
@@ -232,12 +236,12 @@ msgstr "保存时确保换行符一致(&E)。"
 msgid "&Expand All"
 msgstr "全部展开(&E)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / File menu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / File menu.
 #: src/app/editor_frame_commands.cpp
 msgid "&File"
 msgstr "文件(&F)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, CMD_COPYFILENAME_NOEXT / CMD_INSERTFILENAME_NOEXT.
+# Original: locale/zh-Hans/Notepad4.rc, CMD_COPYFILENAME_NOEXT / CMD_INSERTFILENAME_NOEXT.
 #: src/app/editor_frame_commands.cpp
 msgid "&File Name"
 msgstr "文件名(&F)"
@@ -246,7 +250,7 @@ msgstr "文件名(&F)"
 msgid "&Find All"
 msgstr "查找全部(&F)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FIND.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FIND.
 #: src/app/editor_frame_commands.cpp
 msgid "&Find...\tCtrl+F"
 msgstr "查找(&F)...\tCtrl+F"
@@ -255,22 +259,22 @@ msgstr "查找(&F)...\tCtrl+F"
 msgid "&Goto"
 msgstr "跳转(&G)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTOLINE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTOLINE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Goto Line...\tCtrl+G"
 msgstr "跳转到行(&G)...\tCtrl+G"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_XMLTAG.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_XMLTAG.
 #: src/app/editor_frame_commands.cpp
 msgid "&HTML/XML Tag...\tAlt+X"
 msgstr "HTML/XML 标签(&H)...\tAlt+X"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INDENT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INDENT.
 #: src/app/editor_frame_commands.cpp
 msgid "&Indent"
 msgstr "增加缩进(&I)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_JOINLINES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_JOINLINES.
 #: src/app/editor_frame_commands.cpp
 msgid "&Join Lines\tCtrl+J"
 msgstr "行合并(&J)\tCtrl+J"
@@ -279,17 +283,17 @@ msgstr "行合并(&J)\tCtrl+J"
 msgid "&Justify."
 msgstr "两端对齐(&J)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_KEEP_AT_END.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_KEEP_AT_END.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Keep at document end after reloading."
 msgstr "重新加载后保持在文件结尾(&K)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Language submenu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Language submenu.
 #: src/app/language_commands.cpp
 msgid "&Language"
 msgstr "语言(&L)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN / IDC_ALIGN_LEFT.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN / IDC_ALIGN_LEFT.
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "&Left."
 msgstr "左对齐(&L)。"
@@ -302,7 +306,7 @@ msgstr "传统 &GDI"
 msgid "&Limit for long lines:"
 msgstr "长行限定(&L):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_LINENUM / IDC_LINE_RANGE.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_LINENUM / IDC_LINE_RANGE.
 #: src/app/dialogs/go_to_line_dialog.cpp
 #, c-format
 msgid "&Line (empty or 1 - %lld):"
@@ -312,17 +316,17 @@ msgstr "行(留空或 1 - %lld)(&L):"
 msgid "&Lines"
 msgstr "行(&L)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_LONGLINEMARKER.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_LONGLINEMARKER.
 #: src/app/editor_frame_commands.cpp
 msgid "&Long Line Marker\tCtrl+Shift+L"
 msgstr "长行标记(&L)\tCtrl+Shift+L"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTLOWERCASE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTLOWERCASE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Lower Case\tCtrl+U"
 msgstr "小写(&L)\tCtrl+U"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_MERGE_DUP.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_MERGE_DUP.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Merge duplicate lines."
 msgstr "合并重复行(&M)。"
@@ -331,17 +335,17 @@ msgstr "合并重复行(&M)。"
 msgid "&Millisecond (ms)"
 msgstr "毫秒(&m) (ms)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MODIFYLINES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MODIFYLINES.
 #: src/app/editor_frame_commands.cpp
 msgid "&Modify Lines...\tAlt+M"
 msgstr "行修改(&M)...\tAlt+M"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_LOG_FILE (repaired missing mnemonic ampersand).
+# Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_LOG_FILE (repaired missing mnemonic ampersand).
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Monitor continuously updated file (e.g. log file)."
 msgstr "监听连续更新的文件(比如日志文件)(&M)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_ENCODING_SELECT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_ENCODING_SELECT.
 #: src/app/editor_frame_commands.cpp
 msgid "&More...\tF9"
 msgstr "更多(&M)...\tF9"
@@ -350,7 +354,7 @@ msgstr "更多(&M)...\tF9"
 msgid "&Nanosecond (ns)"
 msgstr "纳秒(&n) (ns)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_NEW.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_NEW.
 #: src/app/editor_frame_commands.cpp
 msgid "&New\tCtrl+N"
 msgstr "新建(&N)\tCtrl+N"
@@ -387,12 +391,12 @@ msgstr "关闭(&O)"
 msgid "&Old Visual Studio"
 msgstr "旧版 Visual Studio(&O)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_OPEN.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_OPEN.
 #: src/app/editor_frame_commands.cpp
 msgid "&Open...\tCtrl+O"
 msgstr "打开(&O)...\tCtrl+O"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_INSERTTAG / IDC_STATIC.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_INSERTTAG / IDC_STATIC.
 #: src/app/dialogs/insert_tag_dialog.cpp
 msgid "&Opening tag (with attributes):"
 msgstr "开始标签(附属性)(&O):"
@@ -401,42 +405,42 @@ msgstr "开始标签(附属性)(&O):"
 msgid "&Other Timestamps"
 msgstr "其他时间戳(&O)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_PADWITHSPACES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_PADWITHSPACES.
 #: src/app/editor_frame_commands.cpp
 msgid "&Pad With Spaces\tAlt+P"
 msgstr "填充空格(&P)\tAlt+P"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_PASTE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_PASTE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Paste\tCtrl+V"
 msgstr "粘贴(&P)\tCtrl+V"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_STATIC.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_STATIC.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "&Prefix text to lines:"
 msgstr "每行前缀文本(&P):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_READONLY_MODE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_READONLY_MODE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Read Only Mode\tF10"
 msgstr "只读模式(&R)\tF10"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REDO.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REDO.
 #: src/app/editor_frame_commands.cpp
 msgid "&Redo\tCtrl+Y"
 msgstr "重做(&R)\tCtrl+Y"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Reload submenu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Reload submenu.
 #: src/app/editor_frame_commands.cpp
 msgid "&Reload"
 msgstr "重新载入(&D)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_FILEMRU / IDC_SAVEMRU.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_FILEMRU / IDC_SAVEMRU.
 #: src/app/dialogs/recent_files_dialog.cpp
 msgid "&Remember recent files on exit"
 msgstr "退出时记住最近的文件(&R)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_REMOVE_DUP.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_REMOVE_DUP.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "&Remove duplicate lines."
 msgstr "移除重复行(&R)。"
@@ -445,12 +449,12 @@ msgstr "移除重复行(&R)。"
 msgid "&Replace"
 msgstr "替换(&R)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_RESETZOOM.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_RESETZOOM.
 #: src/app/editor_frame_commands.cpp
 msgid "&Reset Zoom\tCtrl+\\"
 msgstr "重置缩放(&R)\tCtrl+\\"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_RESET_WATCH.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_RESET_WATCH.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Reset if a new file is opened."
 msgstr "新文件被打开时重置(&R)。"
@@ -459,12 +463,12 @@ msgstr "新文件被打开时重置(&R)。"
 msgid "&Restart"
 msgstr "重新启动(&T)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_REVERT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_REVERT.
 #: src/app/editor_frame_commands.cpp
 msgid "&Revert\tF5"
 msgstr "还原(&V)\tF5"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN / IDC_ALIGN_RIGHT.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN / IDC_ALIGN_RIGHT.
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "&Right."
 msgstr "右对齐(&R)。"
@@ -473,42 +477,42 @@ msgstr "右对齐(&R)。"
 msgid "&Save"
 msgstr "保存(&S)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Save\tCtrl+S"
 msgstr "保存(&S)\tCtrl+S"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Search menu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Search menu.
 #: src/app/editor_frame_commands.cpp
 msgid "&Search"
 msgstr "搜索(&S)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKSELECT.
+# Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKSELECT.
 #: src/app/editor_frame_commands.cpp
 msgid "&Select All\tAlt+F6"
 msgstr "选择全部(&S)\tAlt+F6"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Selection submenu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Selection submenu.
 #: src/app/editor_frame_commands.cpp
 msgid "&Selection"
 msgstr "选中文本(&S)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SENTENCECASE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SENTENCECASE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Sentence Case\tCtrl+Alt+O"
 msgstr "句首大写(&S)\tCtrl+Alt+O"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_SHOW_MSG.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_SHOW_MSG.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Show message."
 msgstr "显示消息(&S)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_SKIP_EMPTY.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_SKIP_EMPTY.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "&Skip empty lines."
 msgstr "跳过空行(&S)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SPLITLINES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SPLITLINES.
 #: src/app/editor_frame_commands.cpp
 msgid "&Split Lines\tCtrl+I"
 msgstr "行切分(&S)\tCtrl+I"
@@ -517,12 +521,12 @@ msgstr "行切分(&S)\tCtrl+I"
 msgid "&Strip trailing blanks when saving."
 msgstr "保存时移除行尾空白(&S)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_TABSETTINGS.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_TABSETTINGS.
 #: src/app/editor_frame_commands.cpp
 msgid "&Tab Settings..."
 msgstr "制表符设置(&T)..."
 
-#. Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKTOGGLE.
+# Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKTOGGLE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Toggle\tCtrl+F2"
 msgstr "切换(&T)\tCtrl+F2"
@@ -531,22 +535,22 @@ msgstr "切换(&T)\tCtrl+F2"
 msgid "&Toggle Folds"
 msgstr "切换折叠(&T)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_UTC_DATETIME.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_UTC_DATETIME.
 #: src/app/editor_frame_commands.cpp
 msgid "&UTC Date Time"
 msgstr "UTC 日期和时间(&U)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNDO.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNDO.
 #: src/app/editor_frame_commands.cpp
 msgid "&Undo\tCtrl+Z"
 msgstr "撤销(&U)\tCtrl+Z"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNESCAPECCHARS.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNESCAPECCHARS.
 #: src/app/editor_frame_commands.cpp
 msgid "&Unescape C Chars\tCtrl+Alt+R"
 msgstr "反转义 C 字符(&U)\tCtrl+Alt+R"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNINDENT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_UNINDENT.
 #: src/app/editor_frame_commands.cpp
 msgid "&Unindent"
 msgstr "减少缩进(&U)"
@@ -555,12 +559,12 @@ msgstr "减少缩进(&U)"
 msgid "&Unix/macOS (LF)"
 msgstr "&Unix/macOS (LF)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTUPPERCASE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTUPPERCASE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Upper Case\tCtrl+Shift+U"
 msgstr "大写(&U)\tCtrl+Shift+U"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / View menu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / View menu.
 #: src/app/editor_frame_commands.cpp
 msgid "&View"
 msgstr "查看(&V)"
@@ -577,12 +581,12 @@ msgstr "通配符搜索(&I)"
 msgid "&Windows (CR+LF)"
 msgstr "&Windows (CR+LF)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ENCLOSESELECTION.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ENCLOSESELECTION.
 #: src/app/editor_frame_commands.cpp
 msgid "&With...\tAlt+Q"
 msgstr "自定义(&W)...\tAlt+Q"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_WORDWRAP.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_WORDWRAP.
 #: src/app/editor_frame_commands.cpp
 msgid "&Word Wrap\tCtrl+Shift+W"
 msgstr "自动换行(&R)\tCtrl+Shift+W"
@@ -635,12 +639,12 @@ msgstr "ASP.NET VB"
 msgid "ASS — Activate &symmetric swapping"
 msgstr "ASS — 启用对称交换(&S)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ALIGN.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ALIGN.
 #: src/app/editor_frame_commands.cpp
 msgid "Alig&n Lines...\tAlt+J"
 msgstr "行对齐(&N)...\tAlt+J"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN.
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Align Lines"
 msgstr "行对齐"
@@ -665,7 +669,7 @@ msgstr "外观(&R)"
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr "适用于字面文本搜索。正则表达式中请使用单词边界。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, CMD_RELOADUTF8.
+# Original: locale/zh-Hans/Notepad4.rc, CMD_RELOADUTF8.
 #: src/app/editor_frame_commands.cpp
 msgid "As &UTF-8\tShift+F8"
 msgstr "作为 UTF-&8\tShift+F8"
@@ -682,7 +686,7 @@ msgstr "自动缩进(&I)"
 msgid "Auto Completion I&gnore Case"
 msgstr "自动完成忽略大小写(&G)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_AUTOCOMPLETION.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_AUTOCOMPLETION.
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Auto Completion Settings"
 msgstr "自动完成设置"
@@ -703,7 +707,7 @@ msgstr "自动收缩水平滚动条"
 msgid "Automatically insert"
 msgstr "自动插入"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_HIGHLIGHTCURRENTLINE_BACK.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_HIGHLIGHTCURRENTLINE_BACK.
 #: src/app/editor_frame_commands.cpp
 msgid "Background &Color\tCtrl+Shift+I"
 msgstr "背景颜色(&C)\tCtrl+Shift+I"
@@ -736,7 +740,7 @@ msgstr "块状(覆盖模式)(&O)"
 msgid "Boo&kmark matched line"
 msgstr "为匹配的行添加书签(&K)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Bookmarks submenu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Bookmarks submenu.
 #: src/app/editor_frame_commands.cpp
 msgid "Boo&kmarks"
 msgstr "书签(&K)"
@@ -758,7 +762,7 @@ msgstr "C Shell"
 msgid "C&aret Style"
 msgstr "光标样式(&A)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CHAR2HEX.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CHAR2HEX.
 #: src/app/editor_frame_commands.cpp
 msgid "C&haracter to Hex\tCtrl+Alt+X"
 msgstr "字符转十六进制(&H)\tCtrl+Alt+X"
@@ -787,7 +791,7 @@ msgstr[0] "CR: %llu 行。"
 msgid "Case &insensitive."
 msgstr "不区分大小写(&I)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_ERR_UNICODE2.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_ERR_UNICODE2.
 #: src/app/editor_frame.cpp
 msgid "Certain characters in the current text are not supported by the selected encoding, and may be replaced by default placeholders when saving. It's recommended to choose another file encoding. Continue?"
 msgstr "当前文本中的某些字符在所选编码中不支持，如果保存将可能被替换为默认的占位字符。推荐选择其他文件编码。要继续吗？"
@@ -800,7 +804,7 @@ msgstr "修改历史标记(&H)"
 msgid "Change &background color."
 msgstr "改变背景色(&B)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_CHANGE_LANG_RESTART (application name adapted).
+# Original: locale/zh-Hans/Notepad4.rc, IDS_CHANGE_LANG_RESTART (application name adapted).
 #: src/app/language_commands.cpp
 msgid "Changing the UI language requires a restart of wxnotepad, restart now?"
 msgstr "更改界面语言需要重新启动 wxnotepad，现在就重新启动吗？"
@@ -825,17 +829,17 @@ msgstr "选择要打开的现有文件。"
 msgid "Classic &Mac OS (CR)"
 msgstr "经典 &Mac OS (CR)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_EOLMODENAME_CR.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_EOLMODENAME_CR.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Classic Mac OS (CR)"
 msgstr "经典 Mac OS (CR)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CLEARCLIPBOARD.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CLEARCLIPBOARD.
 #: src/app/editor_frame_commands.cpp
 msgid "Clear Clip&board"
 msgstr "清空剪贴板(&B)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_FIND / IDC_CLEAR_FIND.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_FIND / IDC_CLEAR_FIND.
 #: src/app/dialogs/recent_files_dialog.cpp
 msgid "Clear History"
 msgstr "清除历史"
@@ -857,7 +861,7 @@ msgstr "代码页 %d (不可用)"
 msgid "Column"
 msgstr "列"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COLUMNWRAP.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COLUMNWRAP.
 #: src/app/editor_frame_commands.cpp
 msgid "Column &Wrap..."
 msgstr "段落切分(&W)..."
@@ -870,7 +874,7 @@ msgstr "段落切分"
 msgid "Comments"
 msgstr "注释"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COMPLETEWORD.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COMPLETEWORD.
 #: src/app/editor_frame_commands.cpp
 msgid "Complete &Word\tAlt+/"
 msgstr "单词自动完成(&W)\tAlt+/"
@@ -883,7 +887,7 @@ msgstr "输入时自动完成单词"
 msgid "Complete words inside"
 msgstr "在以下内容中启用单词自动完成"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COMPRESSWS.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COMPRESSWS.
 #: src/app/editor_frame_commands.cpp
 msgid "Compress &Whitespace\tAlt+W"
 msgstr "压缩空白(&W)\tAlt+W"
@@ -892,27 +896,27 @@ msgstr "压缩空白(&W)\tAlt+W"
 msgid "Con&vert"
 msgstr "转换(&V)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP_ZCN.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP_ZCN.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Continuous number (zero-based)."
 msgstr "连续编号(从 0 开始)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP_CN.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP_CN.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Continuous number."
 msgstr "连续编号。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Copy to Clipboard submenu.
+# Original: locale/zh-Hans/Notepad4.rc, IDR_MAINWND / Copy to Clipboard submenu.
 #: src/app/editor_frame_commands.cpp
 msgid "Cop&y to Clipboard"
 msgstr "复制到剪贴板(&Y)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPYALL.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPYALL.
 #: src/app/editor_frame_commands.cpp
 msgid "Copy &All\tAlt+A"
 msgstr "复制全部(&A)\tAlt+A"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPYADD.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_COPYADD.
 #: src/app/editor_frame_commands.cpp
 msgid "Copy A&dd\tCtrl+E"
 msgstr "复制追加(&D)\tCtrl+E"
@@ -993,22 +997,22 @@ msgstr "无法写入 %s"
 msgid "Could not write the complete file. Check free space and access permissions."
 msgstr "无法完整写入文件。请检查可用空间和访问权限。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CUT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CUT.
 #: src/app/editor_frame_commands.cpp
 msgid "Cu&t\tCtrl+X"
 msgstr "剪切(&T)\tCtrl+X"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CUTLINE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CUTLINE.
 #: src/app/editor_frame_commands.cpp
 msgid "Cu&t Line\tCtrl+Shift+X"
 msgstr "剪切行(&T)\tCtrl+Shift+X"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_LOC_DATE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_LOC_DATE.
 #: src/app/editor_frame_commands.cpp
 msgid "Current &Date"
 msgstr "当前日期(&D)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_LOC_DATETIME.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_LOC_DATETIME.
 #: src/app/editor_frame_commands.cpp
 msgid "Current Date &Time"
 msgstr "当前日期和时间(&T)"
@@ -1017,7 +1021,7 @@ msgstr "当前日期和时间(&T)"
 msgid "Current encoding"
 msgstr "当前编码"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_DELETELINE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_DELETELINE.
 #: src/app/editor_frame_commands.cpp
 msgid "D&elete Line\tCtrl+Shift+D"
 msgstr "删除行(&E)\tCtrl+Shift+D"
@@ -1042,12 +1046,12 @@ msgstr "默认换行模式"
 msgid "Detect Indentation"
 msgstr "自动检查制表符和缩进设置"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP_DLN.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES / IDC_MODIFY_LINE_TIP_DLN.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Document line number."
 msgstr "文档行号。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_NONE.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_NONE.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Don't &sort."
 msgstr "不排序(&S)。"
@@ -1092,7 +1096,7 @@ msgstr "仅在英文输入法模式下触发自动完成"
 msgid "Enter"
 msgstr "回车键"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ESCAPECCHARS.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_ESCAPECCHARS.
 #: src/app/editor_frame_commands.cpp
 msgid "Esca&pe C Chars\tCtrl+Alt+E"
 msgstr "转义 C 字符(&P)\tCtrl+Alt+E"
@@ -1118,17 +1122,17 @@ msgstr "文件变更通知(&F)...\tAlt+F5"
 msgid "File &Mode"
 msgstr "文件模式(&M)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY.
 #: src/app/dialogs/document_dialogs.cpp src/app/editor_frame_file_watching.cpp
 msgid "File Change Notification"
 msgstr "文件变更通知"
 
-#. Original: locale/zh-Hans/Notepad4.rc, CMD_COPYFILENAME.
+# Original: locale/zh-Hans/Notepad4.rc, CMD_COPYFILENAME.
 #: src/app/editor_frame_commands.cpp
 msgid "File Name and &Ext.\tShift+F9"
 msgstr "文件名和扩展名(&E)\tShift+F9"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_FILENAME.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_FILENAME.
 #: src/app/editor_frame_commands.cpp
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr "文件名和扩展名(&X)\tCtrl+F9"
@@ -1145,7 +1149,7 @@ msgstr "查找"
 msgid "Find &Next"
 msgstr "查找下一个(&N)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FINDNEXT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FINDNEXT.
 #: src/app/editor_frame_commands.cpp
 msgid "Find &Next\tF3"
 msgstr "查找下一个(&N)\tF3"
@@ -1154,17 +1158,17 @@ msgstr "查找下一个(&N)\tF3"
 msgid "Find &Previous"
 msgstr "查找上一个(&P)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FINDPREV.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FINDPREV.
 #: src/app/editor_frame_commands.cpp
 msgid "Find &Previous\tShift+F3"
 msgstr "查找上一个(&P)\tShift+F3"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_FIND / IDC_STATIC.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_FIND / IDC_STATIC.
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Find &what:"
 msgstr "搜索字符串(&G):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FINDMATCHINGBRACE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_FINDMATCHINGBRACE.
 #: src/app/editor_frame_commands.cpp
 msgid "Find Matching &Brace\tCtrl+B"
 msgstr "查找配对括号(&B)\tCtrl+B"
@@ -1177,12 +1181,12 @@ msgstr "搜索字符串"
 msgid "Finish completion (Esc cancels)"
 msgstr "用于执行自动完成的按键(使用 Esc 键取消)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, CMD_COPYPATHNAME.
+# Original: locale/zh-Hans/Notepad4.rc, CMD_COPYPATHNAME.
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tAlt+Shift+F9"
 msgstr "完整路径名称(&P)\tAlt+Shift+F9"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_PATHNAME.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_PATHNAME.
 #: src/app/editor_frame_commands.cpp
 msgid "Full &Path Name\tCtrl+Shift+F9"
 msgstr "完整路径名称(&P)\tCtrl+Shift+F9"
@@ -1203,67 +1207,67 @@ msgstr "全局设置"
 msgid "Go"
 msgstr "Go"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_LINENUM (caption expanded for clarity).
+# Original: locale/zh-Hans/Notepad4.rc, IDD_LINENUM (caption expanded for clarity).
 #: src/app/dialogs/go_to_line_dialog.cpp
 msgid "Go To Line"
 msgstr "跳转到行"
 
-#. Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKNEXT.
+# Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKNEXT.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto &Next\tF2"
 msgstr "转到下一个(&N)\tF2"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_NEXT_BLOCK.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_NEXT_BLOCK.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto &Next Block\tAlt+."
 msgstr "跳转到下一个代码块(&N)\tAlt+."
 
-#. Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKPREV.
+# Original: locale/zh-Hans/Notepad4.rc, BME_EDIT_BOOKMARKPREV.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto &Previous\tShift+F2"
 msgstr "转到上一个(&P)\tShift+F2"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_PREVIOUS_BLOCK.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_PREVIOUS_BLOCK.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto &Previous Block\tAlt+,"
 msgstr "跳转到上一个代码块(&P)\tAlt+,"
 
-#. Original: locale/zh-Hans/Notepad4.rc, CMD_JUMP2SELSTART.
+# Original: locale/zh-Hans/Notepad4.rc, CMD_JUMP2SELSTART.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto &Selection Start\tCtrl+Shift+,"
 msgstr "跳转到选区开始(&S)\tCtrl+Shift+,"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_BLOCK_START.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_BLOCK_START.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto Blo&ck Start\tAlt+["
 msgstr "跳转到代码块开始(&C)\tAlt+["
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_BLOCK_END.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_BLOCK_END.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto Bloc&k End\tAlt+]"
 msgstr "跳转到代码块结束(&K)\tAlt+]"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_NEXT_SIBLING_BLOCK.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_NEXT_SIBLING_BLOCK.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto N&ext Sibling Block\tCtrl+Alt+."
 msgstr "跳转到下一个同级别代码块(&E)\tCtrl+Alt+."
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_PREV_SIBLING_BLOCK.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_GOTO_PREV_SIBLING_BLOCK.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto P&revious Sibling Block\tCtrl+Alt+,"
 msgstr "跳转到上一个同级别代码块(&R)\tCtrl+Alt+,"
 
-#. Original: locale/zh-Hans/Notepad4.rc, CMD_JUMP2SELEND.
+# Original: locale/zh-Hans/Notepad4.rc, CMD_JUMP2SELEND.
 #: src/app/editor_frame_commands.cpp
 msgid "Goto Selec&tion End\tCtrl+Shift+."
 msgstr "跳转到选区结束(&T)\tCtrl+Shift+."
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_GROUPBY_FILE_TYPE.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_GROUPBY_FILE_TYPE.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Group by file &type."
 msgstr "按文件类型分组(&T)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_HEX2CHAR.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_HEX2CHAR.
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
 msgstr "十六进制转字符(&R)\tCtrl+Alt+C"
@@ -1296,17 +1300,17 @@ msgstr "ISS — 禁用对称交换(&Y)"
 msgid "In &Selection"
 msgstr "在选区内(&S)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INVERTCASE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INVERTCASE.
 #: src/app/editor_frame_commands.cpp
 msgid "In&vert Case\tCtrl+Alt+U"
 msgstr "反转大小写(&V)\tCtrl+Alt+U"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_WARNLINEENDS.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_WARNLINEENDS.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Inconsistent Line Endings"
 msgstr "换行符不一致"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWINDENTGUIDES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWINDENTGUIDES.
 #: src/app/editor_frame_commands.cpp
 msgid "Indentation &Guides\tCtrl+Shift+G"
 msgstr "缩进指示(&G)\tCtrl+Shift+G"
@@ -1315,17 +1319,17 @@ msgstr "缩进指示(&G)\tCtrl+Shift+G"
 msgid "Indentation Width (0–256):"
 msgstr "缩进尺寸 (0–256):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_ENCLOSESELECTION / IDC_MODIFY_LINE_TIP2.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_ENCLOSESELECTION / IDC_MODIFY_LINE_TIP2.
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Insert &after selection:"
 msgstr "选中部分之后插入(&A):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_ENCLOSESELECTION / IDC_STATIC.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_ENCLOSESELECTION / IDC_STATIC.
 #: src/app/dialogs/enclose_selection_dialog.cpp
 msgid "Insert &before selection:"
 msgstr "选中部分之前插入(&B):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_INSERTTAG.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_INSERTTAG.
 #: src/app/dialogs/insert_tag_dialog.cpp
 msgid "Insert HTML/XML Tag"
 msgstr "插入 HTML/XML 标签"
@@ -1358,12 +1362,12 @@ msgstr "JSX"
 msgid "JavaScript"
 msgstr "JavaScript"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_JOINLINESEX.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_JOINLINESEX.
 #: src/app/editor_frame_commands.cpp
 msgid "Join &Paragraphs\tCtrl+Shift+J"
 msgstr "段落合并(&P)\tCtrl+Shift+J"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN / IDC_ALIGN_JUSTIFY_PAR.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_ALIGN / IDC_ALIGN_JUSTIFY_PAR.
 #: src/app/dialogs/align_lines_dialog.cpp
 msgid "Justify (&Paragraph mode)."
 msgstr "两端对齐(段落模式)(&P)。"
@@ -1406,7 +1410,7 @@ msgstr "长行限定"
 msgid "Line"
 msgstr "行"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_LINENUMBERS.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_LINENUMBERS.
 #: src/app/editor_frame_commands.cpp
 msgid "Line &Numbers\tCtrl+Shift+N"
 msgstr "行号(&N)\tCtrl+Shift+N"
@@ -1444,7 +1448,7 @@ msgstr "换行符转换"
 msgid "Ln %llu, Col %llu"
 msgstr "行 %llu, 列 %llu"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_LOGICAL_NUMBER.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_LOGICAL_NUMBER.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Logical &number comparison."
 msgstr "逻辑数字比较(&N)。"
@@ -1493,12 +1497,12 @@ msgstr "最大文件数(&F):"
 msgid "Maximum recent files"
 msgstr "最大文件数"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MERGEBLANKLINES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MERGEBLANKLINES.
 #: src/app/editor_frame_commands.cpp
 msgid "Merge Blank Lines\tAlt+B"
 msgstr "合并空行\tAlt+B"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MERGEDUPLICATELINE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MERGEDUPLICATELINE.
 #: src/app/editor_frame_commands.cpp
 msgid "Merge Duplicate Lines"
 msgstr "合并重复行"
@@ -1515,17 +1519,17 @@ msgstr "数字最小长度"
 msgid "Minimum word length"
 msgstr "单词最小长度"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_MODIFYLINES.
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Modify Lines"
 msgstr "行修改"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MOVELINEDOWN.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MOVELINEDOWN.
 #: src/app/editor_frame_commands.cpp
 msgid "Move &Down\tAlt+Down"
 msgstr "下移(&V)\tAlt+Down"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MOVELINEUP.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_MOVELINEUP.
 #: src/app/editor_frame_commands.cpp
 msgid "Move &Up\tAlt+Up"
 msgstr "上移(&U)\tAlt+Up"
@@ -1542,17 +1546,19 @@ msgstr "NODS — 使用标准(欧洲)数字字形(&G)"
 msgid "New &GUID"
 msgstr "新的 &GUID"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_NEWWINDOW.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_NEWWINDOW.
 #: src/app/editor_frame_commands.cpp
 msgid "New &Window\tAlt+N"
 msgstr "新建窗口(&W)\tAlt+N"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_ERR_MRUDLG.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_ERR_MRUDLG.
 #: src/app/dialogs/recent_files_dialog.cpp
 msgid ""
 "No access to the selected file!\n"
 "Would you like to remove it from the list?"
-msgstr "没有权限访问选中的文件！\n要从列表中移除它吗？"
+msgstr ""
+"没有权限访问选中的文件！\n"
+"要从列表中移除它吗？"
 
 #: src/app/editor_frame.cpp
 msgid "No match found"
@@ -1602,7 +1608,7 @@ msgstr "打开文件"
 msgid "Other Sett&ings"
 msgstr "其他设置(&O)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_HIGHLIGHTCURRENTLINE_FRAME.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_HIGHLIGHTCURRENTLINE_FRAME.
 #: src/app/editor_frame_commands.cpp
 msgid "Outline &Frame\tCtrl+Shift+F"
 msgstr "轮廓外框(&F)\tCtrl+Shift+F"
@@ -1644,7 +1650,7 @@ msgstr "标点符号"
 msgid "Python"
 msgstr "Python"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REPLACE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REPLACE.
 #: src/app/editor_frame_commands.cpp
 msgid "R&eplace...\tCtrl+H"
 msgstr "替换(&E)...\tCtrl+H"
@@ -1669,12 +1675,12 @@ msgstr "RLO — 开始从右到左覆盖(&V)"
 msgid "RS — Record Separator (&Block separator)"
 msgstr "RS — 记录分隔符(块分隔符)(&K)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_FIND_WRAPRE (adapted to 文档末尾).
+# Original: locale/zh-Hans/Notepad4.rc, IDS_FIND_WRAPRE (adapted to 文档末尾).
 #: src/app/editor_frame.cpp
 msgid "Reached the beginning of the document, restarting search at the end."
 msgstr "已到文档开头，从文档末尾重新搜索。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_FIND_WRAPFW.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_FIND_WRAPFW.
 #: src/app/editor_frame.cpp
 msgid "Reached the end of the document, restarting search at the beginning."
 msgstr "已到文档末尾，从文档开头重新搜索。"
@@ -1683,7 +1689,7 @@ msgstr "已到文档末尾，从文档开头重新搜索。"
 msgid "Read only file"
 msgstr "只读文件"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_RECENT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_RECENT.
 #: src/app/editor_frame_commands.cpp
 msgid "Recent (&History)...\tAlt+H"
 msgstr "最近文件(历史)(&H)...\tAlt+H"
@@ -1696,7 +1702,7 @@ msgstr "最近文件"
 msgid "Recent files"
 msgstr "最近文件"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_ASK_RECODE.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_ASK_RECODE.
 #: src/app/editor_frame.cpp
 msgid "Recoding requires reloading file from disk, unsaved changes will be lost!"
 msgstr "重新编码需要从磁盘重新加载文件，未保存的修改将会丢失！"
@@ -1721,17 +1727,17 @@ msgstr "记住最近的文件(&R)"
 msgid "Remember &Search Options"
 msgstr "记住搜索选项(&S)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_REMOVE_UNIQUE.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_REMOVE_UNIQUE.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Remove &unique lines."
 msgstr "移除唯一行(&U)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REMOVEBLANKLINES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REMOVEBLANKLINES.
 #: src/app/editor_frame_commands.cpp
 msgid "Remove Blank Lines\tAlt+R"
 msgstr "移除空行\tAlt+R"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REMOVEDUPLICATELINE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_REMOVEDUPLICATELINE.
 #: src/app/editor_frame_commands.cpp
 msgid "Remove Duplicate Lines"
 msgstr "移除重复行"
@@ -1768,7 +1774,7 @@ msgstr "重新启动失败"
 msgid "Revert"
 msgstr "还原"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_ASK_REVERT.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_ASK_REVERT.
 #: src/app/editor_frame.cpp
 msgid "Revert file to last saved state? Your changes will be lost!"
 msgstr "还原文件到上次保存时的状态？您的修改将会丢失！"
@@ -1777,12 +1783,12 @@ msgstr "还原文件到上次保存时的状态？您的修改将会丢失！"
 msgid "Rust"
 msgstr "Rust"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SORTLINES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SORTLINES.
 #: src/app/editor_frame_commands.cpp
 msgid "S&ort Lines...\tAlt+O"
 msgstr "行排序(&O)...\tAlt+O"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SWAP.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SWAP.
 #: src/app/editor_frame_commands.cpp
 msgid "S&wap\tCtrl+K"
 msgstr "交换(&W)\tCtrl+K"
@@ -1795,7 +1801,7 @@ msgstr "SHY — 软连字符(&Q)"
 msgid "SVG"
 msgstr "SVG"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEAS.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEAS.
 #: src/app/editor_frame_commands.cpp
 msgid "Save &As...\tF6"
 msgstr "另存为(&A)...\tF6"
@@ -1804,7 +1810,7 @@ msgstr "另存为(&A)...\tF6"
 msgid "Save As"
 msgstr "另存为"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVECOPY.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVECOPY.
 #: src/app/editor_frame_commands.cpp
 msgid "Save Cop&y...\tCtrl+F6"
 msgstr "保存副本(&Y)...\tCtrl+F6"
@@ -1859,7 +1865,7 @@ msgstr "保存修改？"
 msgid "Save file"
 msgstr "保存文件"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEORIGINALTIMESTAMP.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEORIGINALTIMESTAMP.
 #: src/app/editor_frame_commands.cpp
 msgid "Save with Original Time"
 msgstr "以原始时间戳保存"
@@ -1884,7 +1890,7 @@ msgstr "语法高亮(&M)"
 msgid "Scheme"
 msgstr "语法高亮"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_SHEBANG.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_SHEBANG.
 #: src/app/editor_frame_commands.cpp
 msgid "Script She&bang Line"
 msgstr "脚本 Shebang 行(&B)"
@@ -1897,12 +1903,12 @@ msgstr "搜索已循环"
 msgid "Select &default encoding:"
 msgstr "选择默认编码(&D):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SELECT_ENCODING.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SELECT_ENCODING.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select Encoding"
 msgstr "选择编码"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELECTLINE_BLOCK.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELECTLINE_BLOCK.
 #: src/app/editor_frame_commands.cpp
 msgid "Select Lines in &Current Block\tAlt+Shift+]"
 msgstr "选择当前代码块中的行(&C)\tAlt+Shift+]"
@@ -1911,27 +1917,27 @@ msgstr "选择当前代码块中的行(&C)\tAlt+Shift+]"
 msgid "Select and &Edit Options"
 msgstr "选择和编辑选项(&E)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT_CURRENT_ENCODING.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT_CURRENT_ENCODING.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select current file &encoding:"
 msgstr "选择当前文件编码(&E):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT_RELOAD_ENCODING.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT_RELOAD_ENCODING.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select source &encoding to reload file:"
 msgstr "选择重新载入文件使用的编码(&S):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELTOMATCHINGBRACE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELTOMATCHINGBRACE.
 #: src/app/editor_frame_commands.cpp
 msgid "Select to Matching B&race\tCtrl+Shift+B"
 msgstr "选择到配对括号(&R)\tCtrl+Shift+B"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELTONEXT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELTONEXT.
 #: src/app/editor_frame_commands.cpp
 msgid "Select to Ne&xt\tCtrl+Alt+F2"
 msgstr "选择到下一个(&X)\tCtrl+Alt+F2"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELTOPREV.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELTOPREV.
 #: src/app/editor_frame_commands.cpp
 msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
 msgstr "选择到上一个(&S)\tCtrl+Alt+Shift+F2"
@@ -1940,12 +1946,12 @@ msgstr "选择到上一个(&S)\tCtrl+Alt+Shift+F2"
 msgid "Sett&ings"
 msgstr "设置(&T)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_SAVEDSETTINGS.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_SAVEDSETTINGS.
 #: src/app/editor_frame_commands.cpp
 msgid "Settings saved"
 msgstr "当前程序设置已被保存"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWWHITESPACE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWWHITESPACE.
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Whitespace\tCtrl+Shift+8"
 msgstr "显示空白(&W)\tCtrl+Shift+8"
@@ -1954,17 +1960,17 @@ msgstr "显示空白(&W)\tCtrl+Shift+8"
 msgid "Show &edge line."
 msgstr "显示边缘线(&G)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOW_FOLDING.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOW_FOLDING.
 #: src/app/editor_frame_commands.cpp
 msgid "Show Code &Folding\tCtrl+Shift+Alt+F"
 msgstr "显示代码折叠(&F)\tCtrl+Shift+Alt+F"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWEOLS.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWEOLS.
 #: src/app/editor_frame_commands.cpp
 msgid "Show Line &Endings\tCtrl+Shift+9"
 msgstr "显示换行符(&E)\tCtrl+Shift+9"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_WORDWRAPSYMBOLS.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_WORDWRAPSYMBOLS.
 #: src/app/editor_frame_commands.cpp
 msgid "Show Wrap S&ymbols\tCtrl+Shift+0"
 msgstr "显示换行标记(&Y)\tCtrl+Shift+0"
@@ -1973,7 +1979,7 @@ msgstr "显示换行标记(&Y)\tCtrl+Shift+0"
 msgid "Show inconsistent line endings warning on loading."
 msgstr "加载时显示换行符不一致警告。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_SHUFFLE (repaired malformed mnemonic parentheses).
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_SHUFFLE (repaired malformed mnemonic parentheses).
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Shu&ffle lines."
 msgstr "随机排序(&F)。"
@@ -1994,17 +2000,17 @@ msgstr "单引号"
 msgid "Skip statistical &Unicode (UTF-16) detection."
 msgstr "跳过统计性 Unicode (UTF-16) 检测(&U)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_ASC.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_ASC.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Sort &ascending."
 msgstr "升序排序(&A)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_DESC.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT / IDC_SORT_DESC.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Sort &descending."
 msgstr "降序排序(&D)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_SORT.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_SORT.
 #: src/app/dialogs/sort_lines_dialog.cpp
 msgid "Sort Lines"
 msgstr "行排序"
@@ -2037,22 +2043,22 @@ msgstr "方括号 []"
 msgid "Strings"
 msgstr "字符串"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_STRIP1STCHAR.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_STRIP1STCHAR.
 #: src/app/editor_frame_commands.cpp
 msgid "Strip &First Character\tAlt+Z"
 msgstr "移除首个字符(&F)\tAlt+Z"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_STRIPLASTCHAR.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_STRIPLASTCHAR.
 #: src/app/editor_frame_commands.cpp
 msgid "Strip &Last Character\tAlt+L"
 msgstr "移除末尾字符(&L)\tAlt+L"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_TRIMLINES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_TRIMLINES.
 #: src/app/editor_frame_commands.cpp
 msgid "Strip &Trailing Blanks\tAlt+T"
 msgstr "移除行尾空白(&T)\tAlt+T"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_TRIMLEAD.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_TRIMLEAD.
 #: src/app/editor_frame_commands.cpp
 msgid "Strip Leading Blan&ks"
 msgstr "移除前导空白(&K)"
@@ -2065,7 +2071,7 @@ msgstr "转至查找"
 msgid "Switch to Replace"
 msgstr "转至替换"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_ASK_ENCODING.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_ASK_ENCODING.
 #: src/app/editor_frame.cpp
 msgid "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text with default characters, and the undo history will be cleared. Continue?"
 msgstr "将文件编码从 ANSI 切换到非 ANSI (或反之)可能将不支持的字符替换为默认字符，并且编辑历史将被清除。要继续吗？"
@@ -2074,12 +2080,12 @@ msgstr "将文件编码从 ANSI 切换到非 ANSI (或反之)可能将不支持�
 msgid "System Language"
 msgstr "系统语言"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_LINECOMMENT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_LINECOMMENT.
 #: src/app/editor_frame_commands.cpp
 msgid "T&oggle Line Comment\tCtrl+/"
 msgstr "切换行注释(&O)\tCtrl+/"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_LINETRANSPOSE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_LINETRANSPOSE.
 #: src/app/editor_frame_commands.cpp
 msgid "T&ranspose\tAlt+S"
 msgstr "与上一行交换(&R)\tAlt+S"
@@ -2100,7 +2106,7 @@ msgstr "制表键"
 msgid "Tab Indents"
 msgstr "制表键重新格式化缩进"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_TABSETTINGS.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_TABSETTINGS.
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Tab Settings"
 msgstr "制表符设置"
@@ -2109,12 +2115,12 @@ msgstr "制表符设置"
 msgid "Tab Width (1–256):"
 msgstr "制表符宽度 (1–256):"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTSPACES2.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTSPACES2.
 #: src/app/editor_frame_commands.cpp
 msgid "Tabify Indent\tCtrl+Alt+T"
 msgstr "使用制表符缩进\tCtrl+Alt+T"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTSPACES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTSPACES.
 #: src/app/editor_frame_commands.cpp
 msgid "Tabify Selection\tCtrl+Shift+T"
 msgstr "空格转制表符\tCtrl+Shift+T"
@@ -2127,12 +2133,12 @@ msgstr "插入制表符为空格"
 msgid "Text files (*.txt)"
 msgstr "文本文件 (*.txt)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_FILECHANGENOTIFY2.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_FILECHANGENOTIFY2.
 #: src/app/editor_frame_file_watching.cpp
 msgid "The current file has been deleted. Save now?"
 msgstr "当前文件已被删除。是否立即保存？"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_FILECHANGENOTIFY.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_FILECHANGENOTIFY.
 #: src/app/editor_frame_file_watching.cpp
 msgid "The current file has been modified by an external program. Reload?"
 msgstr "当前文件已被外部程序修改。是否重新载入？"
@@ -2169,7 +2175,7 @@ msgstr "文件不是有效的 UTF-16LE。"
 msgid "The file is not valid UTF-8. No other encoding was assumed."
 msgstr "文件不是有效的 UTF-8。未采用其他编码。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDD_WARNLINEENDS / IDC_STATIC.
+# Original: locale/zh-Hans/Notepad4.rc, IDD_WARNLINEENDS / IDC_STATIC.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "The line endings in this file are not consistent:"
 msgstr "该文件中的换行符不一致:"
@@ -2179,7 +2185,7 @@ msgstr "该文件中的换行符不一致:"
 msgid "The selected encoding (code page %u) is not migrated. The document was not changed."
 msgstr "所选编码(代码页 %u)尚未迁移。文档未作更改。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_NOTFOUND.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_NOTFOUND.
 #: src/app/editor_frame.cpp
 msgid "The specified text was not found."
 msgstr "未找到指定的文本。"
@@ -2188,12 +2194,12 @@ msgstr "未找到指定的文本。"
 msgid "This document already has a file name."
 msgstr "此文档已有文件名。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_BUFFERTOOSMALL.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_BUFFERTOOSMALL.
 #: src/app/editor_frame_commands.cpp
 msgid "This operation can't be performed (lines too long)."
 msgstr "此操作不能执行(行太长)。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT.
 #: src/app/dialogs/enclose_selection_dialog.cpp
 #: src/app/dialogs/find_replace_dialog.cpp
 #: src/app/dialogs/insert_tag_dialog.cpp
@@ -2201,42 +2207,42 @@ msgstr "此操作不能执行(行太长)。"
 msgid "This operation can't be performed within a rectangular selection."
 msgstr "此操作不能在矩形选区内执行。"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_LONGDATE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_LONGDATE.
 #: src/app/editor_frame_commands.cpp
 msgid "Time/Date (&Long Form)\tCtrl+Shift+F5"
 msgstr "时间/日期(长格式)(&L)\tCtrl+Shift+F5"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_SHORTDATE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_SHORTDATE.
 #: src/app/editor_frame_commands.cpp
 msgid "Time/Date (&Short Form)\tCtrl+F5"
 msgstr "时间/日期(短格式)(&S)\tCtrl+F5"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_TITLECASE.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_TITLECASE.
 #: src/app/editor_frame_commands.cpp
 msgid "Title &Case\tCtrl+Alt+I"
 msgstr "词首大写(&C)\tCtrl+Alt+I"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_NUM2BIN.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_NUM2BIN.
 #: src/app/editor_frame_commands.cpp
 msgid "To &Binary\tCtrl+Alt+B"
 msgstr "转二进制(&B)\tCtrl+Alt+B"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_NUM2DEC.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_NUM2DEC.
 #: src/app/editor_frame_commands.cpp
 msgid "To &Decimal\tCtrl+Alt+D"
 msgstr "转十进制(&D)\tCtrl+Alt+D"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_NUM2HEX.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_NUM2HEX.
 #: src/app/editor_frame_commands.cpp
 msgid "To &Hexadecimal\tCtrl+Alt+H"
 msgstr "转十六进制(&H)\tCtrl+Alt+H"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_NUM2OCT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_NUM2OCT.
 #: src/app/editor_frame_commands.cpp
 msgid "To &Octet"
 msgstr "转八进制(&O)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_STREAMCOMMENT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_STREAMCOMMENT.
 #: src/app/editor_frame_commands.cpp
 msgid "Toggle Block &Comment\tCtrl+Q"
 msgstr "切换块注释(&C)\tCtrl+Q"
@@ -2249,17 +2255,17 @@ msgstr "繁体中文 (Big5, Big5-HKSCS)"
 msgid "Transform &backslashes"
 msgstr "转义反斜线(&T)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, CMD_ENCLOSE_TRIPLE_BT.
+# Original: locale/zh-Hans/Notepad4.rc, CMD_ENCLOSE_TRIPLE_BT.
 #: src/app/editor_frame_commands.cpp
 msgid "Triple &Backticks\tCtrl+9"
 msgstr "三重反引号(&B)\tCtrl+9"
 
-#. Original: locale/zh-Hans/Notepad4.rc, CMD_ENCLOSE_TRIPLE_DQ.
+# Original: locale/zh-Hans/Notepad4.rc, CMD_ENCLOSE_TRIPLE_DQ.
 #: src/app/editor_frame_commands.cpp
 msgid "Triple &Double Quotes\tCtrl+6"
 msgstr "三重双引号(&D)\tCtrl+6"
 
-#. Original: locale/zh-Hans/Notepad4.rc, CMD_ENCLOSE_TRIPLE_SQ.
+# Original: locale/zh-Hans/Notepad4.rc, CMD_ENCLOSE_TRIPLE_SQ.
 #: src/app/editor_frame_commands.cpp
 msgid "Triple &Single Quotes\tCtrl+3"
 msgstr "三重单引号(&S)\tCtrl+3"
@@ -2312,7 +2318,7 @@ msgstr "Unicode"
 msgid "Unicode &Control Character"
 msgstr "Unicode 控制字符(&C)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_TIMESTAMP.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_INSERT_TIMESTAMP.
 #: src/app/editor_frame_commands.cpp
 msgid "Unix Timesta&mp"
 msgstr "Unix 时间戳(&M)"
@@ -2321,22 +2327,22 @@ msgstr "Unix 时间戳(&M)"
 msgid "Unix/macOS (LF)"
 msgstr "Unix/macOS (LF)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTTABS2.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTTABS2.
 #: src/app/editor_frame_commands.cpp
 msgid "Untabify Indent\tCtrl+Alt+S"
 msgstr "使用空格缩进\tCtrl+Alt+S"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTTABS.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_CONVERTTABS.
 #: src/app/editor_frame_commands.cpp
 msgid "Untabify Selection\tCtrl+Shift+S"
 msgstr "制表符转空格\tCtrl+Shift+S"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_UNTITLED.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_UNTITLED.
 #: src/app/editor_frame.cpp src/document/document_session.cpp
 msgid "Untitled"
 msgstr "未命名"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_UPDATE_TIMESTAMP.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_UPDATE_TIMESTAMP.
 #: src/app/editor_frame_commands.cpp
 msgid "Update File Time"
 msgstr "更新文件时间"
@@ -2353,7 +2359,7 @@ msgstr "使用文件类型设置"
 msgid "Visible rows"
 msgstr "显示项目数"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_MATCHBRACES.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_MATCHBRACES.
 #: src/app/editor_frame_commands.cpp
 msgid "Visual &Brace Matching\tCtrl+Shift+V"
 msgstr "凸显配对括号(&V)\tCtrl+Shift+V"
@@ -2366,7 +2372,7 @@ msgstr "WJ — 单词连接符(&W)"
 msgid "Web Source Code"
 msgstr "Web 源代码"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_ENCODINGGROUP_WESTERNEURO.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_ENCODINGGROUP_WESTERNEURO.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Western European"
 msgstr "西欧"
@@ -2403,7 +2409,7 @@ msgstr "XSLT"
 msgid "YAML"
 msgstr "YAML"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDS_ASK_ENCODING2.
+# Original: locale/zh-Hans/Notepad4.rc, IDS_ASK_ENCODING2.
 #: src/app/editor_frame.cpp
 msgid "You are about to change the encoding of an empty file from ANSI to non-ANSI. Note that this will clear the undo history, as it can't be synchronized with the new encoding. Continue?"
 msgstr "您即将更改一个空文件的编码，从 ANSI 到非 ANSI。请注意，这将清除编辑历史，因历史记录无法与新的编码同步。要继续吗？"
@@ -2420,17 +2426,17 @@ msgstr "ZWNJ — 零宽非连接符(&N)"
 msgid "ZWSP — &Zero width space"
 msgstr "ZWSP — 零宽空格(&Z)"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOMIN.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOMIN.
 #: src/app/editor_frame_commands.cpp
 msgid "Zoom &In\tCtrl++"
 msgstr "放大(&I)\tCtrl++"
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOM_LEVEL.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOM_LEVEL.
 #: src/app/editor_frame_commands.cpp
 msgid "Zoom &Level..."
 msgstr "缩放级别(&L)..."
 
-#. Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOMOUT.
+# Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_ZOOMOUT.
 #: src/app/editor_frame_commands.cpp
 msgid "Zoom &Out\tCtrl+-"
 msgstr "缩小(&O)\tCtrl+-"

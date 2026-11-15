@@ -37,13 +37,17 @@ private:
 namespace AppLocalization {
 uint16_t MenuPreference(uint16_t preference) {
     if (preference == UILanguage::System) return preference;
-    const auto primary = preference & 0x3ff;
-    const auto sublanguage = preference >> 10;
+    const auto primary = preference & UILanguage::PrimaryLanguageMask;
+    const auto sublanguage = preference >> UILanguage::SublanguageShift;
     // Original IsChineseTraditionalSubLang: Taiwan, Hong Kong and Macau.
-    const bool traditional = sublanguage == 1 || sublanguage == 3 || sublanguage == 5;
+    const bool traditional = sublanguage == UILanguage::ChineseTaiwanSublanguage ||
+                             sublanguage == UILanguage::ChineseHongKongSublanguage ||
+                             sublanguage == UILanguage::ChineseMacauSublanguage;
     for (const auto& language : LanguageDefinitions) {
-        if ((language.langId & 0x3ff) != primary) continue;
-        if (primary != 0x04 || ((language.langId >> 10) == 1) == traditional) return language.langId;
+        if ((language.langId & UILanguage::PrimaryLanguageMask) != primary) continue;
+        if (primary != UILanguage::ChinesePrimaryLanguage ||
+            ((language.langId >> UILanguage::SublanguageShift) == UILanguage::ChineseTaiwanSublanguage) == traditional)
+            return language.langId;
     }
     return preference;
 }

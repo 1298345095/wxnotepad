@@ -283,12 +283,16 @@ void EditorFrame::UpdateDocumentState() {
     const wxString protection = document_.IsReadOnlyFile()                       ? _(" (Read Only File)")
                                 : editor_->Send(Scintilla::Message::GetReadOnly) ? _(" (Read Only Mode)")
                                                                                  : wxString{};
+    // TRANSLATORS: Window title arguments: modified marker ("*" or empty), document path or untitled name,
+    // and optional read-only file/mode annotation.
     SetTitle(wxString::Format(_("%s%s%s - wxnotepad"), document_.IsModified() ? "*" : "", name, protection));
     const wxString encoding = DocumentEncodingLabel(document_);
     const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
     const wxString eol = eolMode == Scintilla::EndOfLine::CrLf ? "CRLF"
                          : eolMode == Scintilla::EndOfLine::Cr ? "CR"
                                                                : "LF";
+    // TRANSLATORS: Status arguments: encoding name, optional BOM annotation, syntax name,
+    // optional manual syntax override annotation, and line-ending name (CRLF, CR or LF).
     SetStatusText(wxString::Format(_("%s%s | %s%s | EOL: %s"), encoding, document_.HasBom() ? " (BOM)" : "",
                                    LanguageName(document_.EffectiveLanguage()),
                                    document_.LanguageOverride() ? _(" (override)") : wxString{}, eol));
