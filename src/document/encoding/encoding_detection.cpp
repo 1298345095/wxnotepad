@@ -189,9 +189,7 @@ DetectedEncoding Choice(int index, unsigned native, unsigned oem, bool systemDef
     if (page == 54936) return {FileEncoding::Gb18030, false, {}, systemDefault, index == CPI_OEM};
     if (page == 950) return {FileEncoding::Big5, false, {}, systemDefault, index == CPI_OEM};
     if (page == 65001) return {FileEncoding::Utf8, false, {}, systemDefault, index == CPI_OEM};
-    return {
-        std::nullopt, false,
-        wxString::Format("The selected encoding (code page %u) is not migrated. The document was not changed.", page)};
+    return {std::nullopt, false, page};
 }
 
 int LatinUtf16(std::string_view bytes) {
