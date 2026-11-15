@@ -3,6 +3,7 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "diagnostics/trace.h"
+#include <wx/app.h>
 #include <wx/ffile.h>
 #include <wx/textfile.h>
 #include <wx/menu.h>
@@ -63,7 +64,6 @@ void DispatchObservedCommand(EditorFrame& frame, const wxString& operation, cons
         if (item && !item->IsSeparator() && !item->GetSubMenu()) {
             wxCommandEvent event(wxEVT_MENU, id);
             result = frame.GetEventHandler()->ProcessEvent(event) ? "ok" : "failed";
-            frame.UpdateWindowUI(wxUPDATE_UI_RECURSE);
         }
     }
 }
@@ -255,7 +255,7 @@ std::optional<ProcessObserver::Command> ProcessObserver::ConsumeCommand(const wx
 }
 
 void ProcessObserver::Observe() {
-    if (!frame_ || dispatching_) return;
+    if (!frame_ || dispatching_ || wxTheApp->IsScheduledForDestruction(frame_)) return;
     const wxString path = observation_ + "/command";
     if (wxFileExists(path)) {
         const auto command = ConsumeCommand(path);
@@ -268,6 +268,9 @@ void ProcessObserver::Observe() {
         dispatching_ = true;
         DispatchObservedCommand(*frame_, operation, command->source, result_);
         dispatching_ = false;
+        // Restart can defer frame destruction until the next idle event.
+        // Publish refreshes its menus, which must stop once shutdown begins.
+        if (!frame_ || wxTheApp->IsScheduledForDestruction(frame_)) return;
         Publish();
         WXNOTE_TRACE("observer.ack", "\ttarget=%p\trequest=%llu\tok=%d", static_cast<void*>(frame_),
                      DiagnosticRequest(sequence_), result_ == "ok");
