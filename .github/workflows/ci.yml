@@ -259,6 +259,9 @@ jobs:
         uses: ./.github/actions/dependencies
         with:
           profile: gui
+      - name: Measure Linux debug-symbol packaging
+        shell: bash
+        run: .ci/coverage-venv/bin/python -m coverage run tests/ci_bundle.py -v
       - name: Build instrumented application and tests
         id: build
         shell: bash

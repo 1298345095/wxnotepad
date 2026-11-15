@@ -268,10 +268,10 @@ separate task.
 
 Linux packaging strips only the distribution copies of the executable and
 bundled shared libraries. Their matching separate debug files are retained under
-`symbols/` in the evidence artifact, with GNU debug links in the distributed
-binaries. Copy `symbols/.debug/` beside the executable and `symbols/lib/.debug/`
+`.ci/symbols/` in the evidence artifact, with GNU debug links in the distributed
+binaries. Copy `.ci/symbols/.debug/` beside the executable and `.ci/symbols/lib/.debug/`
 inside its `lib/` directory for GDB to find them. The ordinary unstripped
-executable is also retained under `build/cmake/wxnotepad` in the evidence artifact;
+executable is also retained under `.ci/build/cmake/wxnotepad` in the evidence artifact;
 the separately compiled diagnostic executable remains preserved as before.
 The ordinary test binaries keep their debug information, and build.json records
 both the distributed and original executable checksums. These changes do not

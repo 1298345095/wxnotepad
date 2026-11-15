@@ -321,7 +321,7 @@ def bundle():
         'Windows: keep the bundled DLLs beside wxnotepad.exe.\n'
         'Linux: Ubuntu 24.04 x64 desktop libraries are required; run from this directory with\n'
         'LD_LIBRARY_PATH="$PWD/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ./wxnotepad\n'
-        'Linux debug symbols are in symbols/ inside the matching evidence artifact.\n'
+        'Linux debug symbols are in .ci/symbols/ inside the matching evidence artifact.\n'
         'Copy its .debug/ and lib/.debug/ directories here for GDB.\n',
         encoding='utf-8')
 
