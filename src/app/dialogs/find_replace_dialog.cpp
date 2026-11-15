@@ -327,7 +327,8 @@ void FindReplaceDialog::ReplaceAll(bool inSelection) {
     ConfigureSearch();
     const auto result = inSelection ? search_.ReplaceInSelection() : search_.ReplaceAll();
     if (result.status == ReplaceAllStatus::RectangularSelection) {
-        wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",
+        // TRANSLATORS: Original Notepad4 89b8b36 IDS_SELRECT; keep the original English spelling.
+        wxMessageBox(_("This operation can't be perfomed within a rectangular selection."), "wxnotepad",
                      wxOK | wxICON_WARNING, this);
         return;
     }

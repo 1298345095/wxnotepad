@@ -2007,12 +2007,16 @@ msgstr ""
 msgid "This document already has a file name."
 msgstr ""
 
+#. TRANSLATORS: Original Notepad4 89b8b36 IDS_SELRECT; keep the original English spelling.
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "This operation can't be perfomed within a rectangular selection."
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "This operation can't be performed (lines too long)."
 msgstr ""
 
 #: src/app/dialogs/enclose_selection_dialog.cpp
-#: src/app/dialogs/find_replace_dialog.cpp
 #: src/app/dialogs/insert_tag_dialog.cpp
 #: src/app/dialogs/modify_lines_dialog.cpp src/app/editor_frame_commands.cpp
 msgid "This operation can't be performed within a rectangular selection."
