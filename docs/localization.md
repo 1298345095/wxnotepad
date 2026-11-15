@@ -94,7 +94,8 @@ CMake compiles into `catalogs/locale` and deploys the same bytes into the
 executable's `locale` directory, including incremental builds that only change
 PO files. The existing CI bundler copies each required catalog from that deployed
 output; missing resources fail collection. CMake installation places identical
-catalogs in `${CMAKE_INSTALL_DATADIR}/locale`. Startup receives the absolute
+catalogs in `${CMAKE_INSTALL_DATADIR}/locale` by default (override
+`WXNOTEPAD_LOCALE_DIR` at configure time to change both installation and lookup). Startup receives the absolute
 configured `${CMAKE_INSTALL_FULL_DATADIR}/locale` via `WXNOTEPAD_LOCALE_DIR`; set
 the install prefix at configure time for a working system installation. Executable
 relative lookup remains available for relocated portable output. Resource lookup
