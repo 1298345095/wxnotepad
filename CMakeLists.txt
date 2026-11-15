@@ -10,6 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(WXNOTEPAD_ENABLE_DIAGNOSTICS "Include opt-in native diagnostic tracing" OFF)
 option(WXNOTEPAD_ENABLE_COVERAGE "Collect Linux GCC test coverage" OFF)
 option(WXNOTEPAD_FUZZ_ONLY "Build only headless Clang/libFuzzer tests" OFF)
+option(WXNOTEPAD_VERIFY_TRIMMED_SDK "Verify the trimmed CI SDK build profile" OFF)
 if(WXNOTEPAD_ENABLE_COVERAGE AND NOT
    (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
     message(FATAL_ERROR "Coverage requires Linux and GCC")
@@ -221,6 +222,15 @@ if(BUILD_TESTING)
     endif()
     find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
     add_subdirectory(tests/fuzz)
+    add_gui_program(sdk_capabilities tests/sdk_capabilities.cpp wx::core wx::base)
+    target_compile_definitions(sdk_capabilities PRIVATE
+        WXNOTEPAD_VERIFY_TRIMMED_SDK=$<BOOL:${WXNOTEPAD_VERIFY_TRIMMED_SDK}>)
+    add_test(NAME sdk_retained_capabilities COMMAND sdk_capabilities)
+    set_tests_properties(sdk_retained_capabilities PROPERTIES TIMEOUT 30)
+    add_test(NAME native_probe_process_runner COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ci_probe.py" -v)
+    set_tests_properties(native_probe_process_runner PROPERTIES TIMEOUT 60
+        ENVIRONMENT "WXNOTEPAD_GUI_PROBE=$<TARGET_FILE:sdk_capabilities>;WXNOTEPAD_NATIVE_PROBE_EVIDENCE=${CMAKE_BINARY_DIR}/Testing/Temporary/native-probe")
     add_gui_program(default_encoding tests/default_encoding.cpp app_shell)
     add_test(NAME original_default_encoding_dialog COMMAND default_encoding)
     set_tests_properties(original_default_encoding_dialog PROPERTIES TIMEOUT 60)
