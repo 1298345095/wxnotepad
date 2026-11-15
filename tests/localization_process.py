@@ -250,6 +250,12 @@ class Acceptance:
                       if item['label'] == 'File Name and E&xtension\tCtrl+F9')
         inserts = [identity for identity in inserts if self.reference[identity]['path'].rsplit('/', 1)[0] == parent]
         assert len(inserts) == 3
+        copy_parent = next(item['path'].rsplit('/', 1)[0] for item in self.reference.values()
+                           if item['label'] == 'File Name and &Ext.\tShift+F9')
+        copies = [identity for identity, item in self.reference.items()
+                  if item['path'].rsplit('/', 1)[0] == copy_parent and
+                  item['label'] in ('&File Name', 'File Name and &Ext.\tShift+F9', 'Full &Path Name\tAlt+Shift+F9')]
+        assert len(copies) == 3
         for code in ('en', 'zh_CN', 'zh_TW'):
             app = self.start(PREFERENCE[code])
             try:
@@ -260,6 +266,26 @@ class Acceptance:
                     app.send('save', str(destination))
                     assert destination.read_bytes() == TEXT[code]['untitled'].encode('utf-8')
                     app.choose(5002)  # Same real New command as the numeric seam regression.
+                for copying, identities in ((False, inserts), (True, copies)):
+                    for index, identity in enumerate(identities):
+                        if copying:
+                            # Round-trip actual clipboard data through the same
+                            # app's native Paste command, then compare disk bytes.
+                            app.choose(identity)
+                            app.choose(5033)  # wxID_PASTE.
+                            destination = self.directory / f'copied-unnamed-{code}-{index}.txt'
+                            app.send('save', str(destination))
+                            assert destination.read_bytes() == TEXT[code]['untitled'].encode('utf-8')
+                            app.choose(5002)
+                        destination = self.directory / f'real 名字-{code}-{copying}-{index}.测试.txt'
+                        app.send('save', str(destination))
+                        app.choose(identity)
+                        if copying:
+                            app.choose(5033)
+                        app.send('save')
+                        expected = (destination.stem, destination.name, str(destination))[index]
+                        assert destination.read_bytes() == expected.encode('utf-8'), (copying, index, destination)
+                        app.choose(5002)
                 readonly = next(identity for identity, item in self.reference.items()
                                 if item['label'] == '&Read Only Mode\tF10')
                 self.dialogs.key(app, 'F10')
@@ -277,7 +303,7 @@ class Acceptance:
                 app.close()
             finally:
                 app.stop()
-            print(f'PASS: {code} native accessible labels, stock captions, unnamed filename/path bytes, F10 and resized layout', flush=True)
+            print(f'PASS: {code} native accessible labels/stock captions, inserted/copied unnamed and real filename/path bytes, F10 and resized layout', flush=True)
 
     def dirty(self, app):
         length = int(app.state['length'])
@@ -360,10 +386,10 @@ class Acceptance:
             child = None
             try:
                 app.choose(menu_id(app.state, 'UTF-8 BOM' if bom else 'UTF-8'))
-                assert app.state['dirty'] == '1' and app.state['encoding'] == 'UTF-8'
+                assert app.state['title'].startswith('*') and app.state['encoding'] == 'UTF-8', app.state
                 child = self.restarted(app)
                 assert child.state['encoding'] == 'UTF-8' and child.state['bom'] == str(int(bom))
-                assert child.state['dirty'] == '1', 'Original startup converts the detected disk text after loading'
+                assert child.state['title'].startswith('*'), 'Original startup converts detected disk text after loading'
                 child.send('save')
                 assert document.read_bytes() == (b'\xef\xbb\xbf' if bom else b'') + original_text.encode('utf-8')
                 child.close()
