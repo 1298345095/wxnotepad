@@ -12,7 +12,7 @@ import time
 from localization_native import Dialogs
 from localization_package import (ROOT, Process, bundle_application, cache_values, environment, language_id,
                                   menu_id, menus, read_settings, settings, wait_child)
-from resource_process import wait_state
+from resource_process import native_edit, wait_state
 
 # Independently reviewed wording from the pinned original resources and the two
 # translation authors. These literals are not read from the delivered catalogs.
@@ -278,6 +278,173 @@ class Acceptance:
             finally:
                 app.stop()
             print(f'PASS: {code} native accessible labels, stock captions, unnamed filename/path bytes, F10 and resized layout', flush=True)
+
+    def dirty(self, app):
+        length = int(app.state['length'])
+        native_edit(app.process, app.state)
+        app.state = wait_state(app.folder, app.process,
+                               lambda state: state['dirty'] == '1' and int(state['length']) == length + 1)
+
+    def discard(self, app):
+        if app.process.poll() is not None:
+            return
+        app.begin('close')
+        self.dialogs.answer(app.process, 'no', 'Save changes?')
+        app.process.wait(timeout=10)
+
+    def restarted(self, app, save_choice=None):
+        previous = set(path.name for path in self.observation.iterdir())
+        self.change(app, 2052, 'yes')
+        if save_choice is not None:
+            self.dialogs.answer(app.process, save_choice, 'Save changes?')
+        assert app.process.wait(timeout=10) == 0
+        child = wait_child(self.observation, previous)
+        assert child.process.pid != app.process.pid
+        assert child.state['menu_top.0.label'] == TEXT['zh_CN']['file']
+        assert read_settings(self.config)['Settings2']['UILanguage'] == '2052'
+        return child
+
+    def restart(self):
+        self.prepare_reference()
+        document = self.directory / 'restart saved 中文.json'
+        original = b'\xef\xbb\xbf{"a":1}\r\nsecond\tvalue\r\n'
+        document.write_bytes(original)
+        app = self.start(startup=document, arguments=('--read-only', '--startup-caret', '2,10'))
+        child = None
+        try:
+            app.choose(menu_id(app.state, 'JSON'))
+            before = dict(app.state)
+            child = self.restarted(app)
+            assert child.state['document_path'] == str(document)
+            for field in ('encoding', 'bom', 'read_only', 'caret_position', 'frame_width', 'frame_height', 'maximized'):
+                assert child.state[field] == before[field], (field, child.state[field], before[field])
+            assert child.state['read_only'] == '1' and child.state['encoding'] == 'UTF-8' and child.state['bom'] == '1'
+            assert 'JSON' in child.state['document_status']
+            assert '行 2' in child.state['position_status']
+            assert document.read_bytes() == original
+            # A relative Open is an observable consequence of preserving the
+            # original startup cwd across the independent relaunch.
+            relative = self.working / 'relative-restart.txt'
+            relative.write_bytes(b'original startup cwd')
+            child.send('open', relative.name)
+            assert child.state['length'] == '20'
+            child.close()
+        finally:
+            app.stop()
+            if child:
+                child.stop()
+        print('PASS: Yes restarts independent process with file, UTF-8 BOM, scheme, visual caret, read-only, geometry and startup cwd', flush=True)
+
+        for unnamed in (False, True):
+            document.write_bytes(b'disk original\n')
+            app = self.start(startup=None if unnamed else document)
+            child = None
+            try:
+                self.dirty(app)
+                child = self.restarted(app)
+                assert child.state['length'] == ('0' if unnamed else '14'), child.state
+                assert child.state['dirty'] == '0'
+                assert child.state['document_path'] == ('' if unnamed else str(document))
+                assert document.read_bytes() == b'disk original\n'
+                child.close()
+            finally:
+                app.stop()
+                if child:
+                    child.stop()
+            print(f'PASS: default false save-before-tools discards dirty {"unnamed" if unnamed else "named"} buffer on Restart', flush=True)
+
+        for bom in (False, True):
+            original_text = '中文\r\nsecond'
+            document.write_bytes(original_text.encode('utf-8' if bom else 'gbk'))
+            app = self.start(extra='DefaultEncoding=936\nLoadASCIIasUTF8=0\n', startup=document)
+            child = None
+            try:
+                app.choose(menu_id(app.state, 'UTF-8 BOM' if bom else 'UTF-8'))
+                assert app.state['dirty'] == '1' and app.state['encoding'] == 'UTF-8'
+                child = self.restarted(app)
+                assert child.state['encoding'] == 'UTF-8' and child.state['bom'] == str(int(bom))
+                assert child.state['dirty'] == '1', 'Original startup converts the detected disk text after loading'
+                child.send('save')
+                assert document.read_bytes() == (b'\xef\xbb\xbf' if bom else b'') + original_text.encode('utf-8')
+                child.close()
+            finally:
+                app.stop()
+                if child:
+                    child.stop()
+            print(f'PASS: dirty selected UTF-8 BOM={bom} restarts from correctly decoded disk text and saves exact converted bytes', flush=True)
+
+        for choice in ('cancel', 'no', 'yes'):
+            document.write_bytes(b'disk original\n')
+            app = self.start(extra='SaveBeforeRunningTools=1\n', startup=document)
+            child = None
+            try:
+                self.dirty(app)
+                if choice == 'cancel':
+                    previous = set(self.observation.iterdir())
+                    self.change(app, 2052, 'yes')
+                    self.dialogs.answer(app.process, 'cancel', 'Save changes?')
+                    app.finish()
+                    assert app.process.poll() is None and app.state['dirty'] == '1'
+                    assert set(self.observation.iterdir()) == previous
+                    assert document.read_bytes() == b'disk original\n'
+                    self.discard(app)
+                else:
+                    child = self.restarted(app, choice)
+                    assert document.read_bytes() == (b'Xdisk original\n' if choice == 'yes' else b'disk original\n')
+                    assert child.state['length'] == ('15' if choice == 'yes' else '14')
+                    child.close()
+            finally:
+                app.stop()
+                if child:
+                    child.stop()
+            print(f'PASS: enabled save-before-tools uses ordinary dirty-file {choice} outcome', flush=True)
+
+        app = self.start(extra='SaveBeforeRunningTools=1\n')
+        try:
+            self.dirty(app)
+            previous = set(self.observation.iterdir())
+            self.change(app, 2052, 'yes')
+            self.dialogs.answer(app.process, 'yes', 'Save changes?')
+            chooser = self.dialogs.wait(app.process, 'Save file')
+            self.dialogs.cancel(chooser)
+            app.finish()
+            assert app.process.poll() is None and app.state['dirty'] == '1' and app.state['length'] == '1'
+            assert set(self.observation.iterdir()) == previous
+            self.discard(app)
+        finally:
+            app.stop()
+        print('PASS: enabled-policy unnamed Save As cancellation keeps the original dirty process', flush=True)
+
+        document.write_bytes(b'launch failure original\n')
+        app = self.start(startup=document)
+        moved = self.executable.with_suffix('.running')
+        mode = self.executable.stat().st_mode
+        try:
+            self.dirty(app)
+            before = dict(app.state)
+            previous = set(self.observation.iterdir())
+            if sys.platform == 'win32':
+                self.executable.rename(moved)
+            else:
+                self.executable.chmod(0)
+            self.change(app, 2052, 'yes')
+            self.dialogs.answer(app.process, 'ok', 'Restart failed')
+            app.finish()
+            assert app.process.poll() is None and app.state['dirty'] == '1'
+            for field in ('length', 'document_path', 'caret_position', 'encoding'):
+                assert app.state[field] == before[field]
+            assert set(self.observation.iterdir()) == previous
+            assert document.read_bytes() == b'launch failure original\n'
+        finally:
+            if sys.platform == 'win32':
+                moved.rename(self.executable)
+            else:
+                self.executable.chmod(mode)
+            try:
+                self.discard(app)
+            finally:
+                app.stop()
+        print('PASS: actual process launch failure retains original dirty window/document and reports failure', flush=True)
 
 
 def main():
