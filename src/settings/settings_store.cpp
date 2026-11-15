@@ -5,6 +5,7 @@
 #include <wx/ffile.h>
 #include <wx/file.h>
 #include <wx/filename.h>
+#include <wx/log.h>
 #include <wx/stdpaths.h>
 #include <wx/tokenzr.h>
 #include <wx/utils.h>
@@ -551,6 +552,9 @@ bool SettingsStore::Save(bool explicitSave) {
 }
 
 bool SettingsStore::SaveUILanguage(int language) {
+    // The language command reports failure itself. Suppress deferred wxLogGui
+    // errors from file operations so they cannot add a second modal dialog.
+    const wxLogNull noGuiLog;
     if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
     if (!LoadLines()) return false;
     const auto normalized = UILanguage::Normalize(language);
