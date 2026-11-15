@@ -23,6 +23,14 @@ TEXT = {
     'zh_TW': {'file': '檔案(&F)', 'untitled': '未命名', 'goto': '跳到行', 'line': '行', 'column': '欄', 'cancel': '取消'},
 }
 PREFERENCE = {'en': 1033, 'zh_CN': 2052, 'zh_TW': 1028}
+DYNAMIC = {
+    'en': ('Replace', 'Find what', 'Replace with', 'Find All', 'Replace All', 'Close',
+           'Regular expression', 'Invalid regular expression'),
+    'zh_CN': ('替换', '搜索字符串', '替换为', '查找全部(F)', '全部替换(A)', '关闭',
+              '正则表达式搜索(E)', '正则表达式无效'),
+    'zh_TW': ('取代', '搜尋字串', '取代為', '尋找全部(F)', '全部取代(A)', '關閉',
+              '正規表示式(E)', '無效的正規表示式'),
+}
 
 
 class Acceptance:
@@ -43,10 +51,12 @@ class Acceptance:
         settings(self.config, language, extra, save)
         return self.launch(preferred, startup, arguments)
 
-    def launch(self, preferred='en', startup=None, arguments=()):
+    def launch(self, preferred='en', startup=None, arguments=(), overrides=None):
         self.count += 1
+        child_environment = environment(self.executable, self.observation, preferred)
+        child_environment.update(overrides or {})
         return Process(self.executable, self.directory / f'app-{self.count:03}',
-                       environment(self.executable, self.observation, preferred), startup, arguments, self.working)
+                       child_environment, startup, arguments, self.working)
 
     def displayed(self, app, code, configured):
         text = TEXT[code]
@@ -71,8 +81,11 @@ class Acceptance:
         names = self.dialogs.accessible_names(window)
         assert TEXT[code]['line'] in names and TEXT[code]['column'] in names, (code, names)
         buttons = [text.replace('&', '').replace('_', '') for text in self.dialogs.texts(window)]
-        assert TEXT[code]['cancel'] in buttons, (code, buttons)
-        self.dialogs.click(window, TEXT[code]['cancel'])
+        # GTK3 maps default stock-ID buttons to GTK's regional stock labels;
+        # those native labels keep the regional language independently of UI.
+        native_cancel = TEXT[code]['cancel'] if sys.platform == 'win32' else 'Cancel'
+        assert native_cancel in buttons, (code, buttons)
+        self.dialogs.click(window, native_cancel)
         app.finish()
 
     def startup(self):
@@ -146,6 +159,20 @@ class Acceptance:
                 finally:
                     app.stop()
                 print(f'PASS: {code} individual missing message uses source fallback while app and stock remain translated', flush=True)
+                # &File is shared with wxstd. Omitting only the application
+                # entry proves actual matching stock-MO lookup in the shown
+                # menu, independently of GTK3's system-owned stock buttons.
+                one.write_text('msgid "&File"\nmsgstr ""\n', encoding='utf-8')
+                subprocess.run([str(gettext / ('msgattrib.exe' if sys.platform == 'win32' else 'msgattrib')),
+                                '--set-fuzzy', f'--only-file={one}', '-o', partial, ROOT / 'po' / (code + '.po')], check=True)
+                subprocess.run([cache['WXNOTEPAD_MSGFMT'], '--check', '--check-format', '-o', app_mo, partial], check=True)
+                app = self.start(PREFERENCE[code])
+                try:
+                    self.displayed(app, code, PREFERENCE[code])
+                    app.close()
+                finally:
+                    app.stop()
+                print(f'PASS: {code} shown File caption resolves from matching shipped wxstd when app entry is absent', flush=True)
             finally:
                 app_mo.write_bytes(original)
 
@@ -310,6 +337,77 @@ class Acceptance:
         native_edit(app.process, app.state)
         app.state = wait_state(app.folder, app.process,
                                lambda state: state['dirty'] == '1' and int(state['length']) == length + 1)
+
+    def dynamic(self):
+        self.prepare_reference()
+        for code in ('en', 'zh_CN', 'zh_TW'):
+            title, query, replacement, find_all, replace_all, close, regex, invalid = DYNAMIC[code]
+            for count in (1, 3):
+                document = self.directory / f'dynamic-{code}-{count}.txt'
+                document.write_bytes(b'\n'.join([b'cat'] * count))
+                app = self.start(PREFERENCE[code], startup=document)
+                try:
+                    app.choose(5039)  # wxID_REPLACE; same command and modeless native dialog.
+                    window = self.dialogs.wait(app.process, title)
+                    self.dialogs.set_input(window, query, 'cat')
+                    self.dialogs.set_input(window, replacement, 'dog')
+                    self.dialogs.click(window, find_all)
+                    matches = (f'{count} match' + ('es' if count != 1 else '') if code == 'en' else
+                               f'{count} 处匹配' if code == 'zh_CN' else f'{count} 個符合項目')
+                    self.dialogs.wait_text(window, matches)
+                    self.dialogs.click(window, replace_all)
+                    replacements = (f'{count} replacement' + ('s' if count != 1 else '') if code == 'en' else
+                                    f'{count} 处替换' if code == 'zh_CN' else f'取代 {count} 處')
+                    self.dialogs.wait_text(window, replacements)
+                    self.dialogs.set_input(window, query, '[')
+                    self.dialogs.click(window, regex)
+                    self.dialogs.click(window, find_all)
+                    self.dialogs.wait_text(window, invalid)
+                    self.dialogs.click(window, close)
+                    app.send('save')
+                    assert document.read_bytes() == b'\n'.join([b'dog'] * count)
+                    app.close()
+                finally:
+                    app.stop()
+            print(f'PASS: {code} actual find/replace singular/plural counts, invalid-pattern feedback and exact operation bytes', flush=True)
+
+    def regional(self):
+        assert sys.platform != 'win32', 'Private glibc locale acceptance is registered on Linux'
+        self.prepare_reference()
+        locale_root = self.directory / 'regional-locale'
+        locale_root.mkdir()
+        subprocess.run(['localedef', '--no-archive', '-i', 'de_DE', '-f', 'UTF-8',
+                        str(locale_root / 'de_DE.UTF-8')], check=True)
+        regional = dict(os.environ, LOCPATH=str(locale_root), LC_ALL='de_DE.UTF-8')
+        assert subprocess.check_output(['locale', 'decimal_point'], env=regional, text=True).strip() == ','
+        date_command = next(identity for identity, item in self.reference.items()
+                            if item['label'] == 'Time/Date (&Short Form)\tCtrl+F5')
+        save_settings = next(identity for identity, item in self.reference.items()
+                             if item['label'] == 'Save Settings &Now')
+        for code in ('en', 'zh_CN', 'zh_TW'):
+            settings(self.config, PREFERENCE[code], extra='TabWidth=7suffix\nZoomLevel=115suffix\n')
+            text = self.config.read_text(encoding='utf-16').replace('UnrelatedLanguage=preserved',
+                                                                   'DateTimeShort=%x\nUnrelatedLanguage=preserved')
+            self.config.write_text(text, encoding='utf-16')
+            app = self.launch(overrides={'LOCPATH': str(locale_root), 'LC_ALL': 'de_DE.UTF-8'})
+            try:
+                assert app.state['menu_top.0.label'] == TEXT[code]['file']
+                assert app.state['tab_width'] == '7' and app.state['zoom'] == '115', app.state
+                before = subprocess.check_output(['date', '+%x'], env=regional).strip()
+                app.choose(date_command)
+                after = subprocess.check_output(['date', '+%x'], env=regional).strip()
+                destination = self.directory / f'regional-{code}.txt'
+                app.send('save', str(destination))
+                assert destination.read_bytes() in (before, after), destination.read_bytes()
+                app.choose(save_settings)
+                saved = read_settings(self.config)
+                assert saved['Settings']['TabWidth'] == '7' and saved['Settings']['ZoomLevel'] == '115'
+                assert saved['Settings2']['DateTimeShort'] == '%x'
+                assert saved['Settings2']['UILanguage'] == str(PREFERENCE[code])
+                app.close()
+            finally:
+                app.stop()
+            print(f'PASS: {code} UI preserves private German comma-decimal regional date, original integer parsing and ASCII INI serialization', flush=True)
 
     def discard(self, app):
         if app.process.poll() is not None:
@@ -478,7 +576,7 @@ def main():
     parser.add_argument('executable', type=Path)
     parser.add_argument('--cmake-dir', type=Path, required=True)
     parser.add_argument('--evidence', type=Path, required=True)
-    parser.add_argument('--scenario', choices=('startup', 'lifecycle', 'restart', 'native'), default='startup')
+    parser.add_argument('--scenario', choices=('startup', 'lifecycle', 'restart', 'native', 'dynamic', 'regional'), default='startup')
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=args.scenario + '-', dir=args.evidence) as name:
@@ -486,8 +584,8 @@ def main():
         try:
             getattr(fixture, args.scenario)()
         except BaseException:
-            failure = args.evidence / f'{args.scenario}-failure'
-            shutil.copytree(name, failure, dirs_exist_ok=True)
+            failure = args.evidence / f'{args.scenario}-failure-{Path(name).name}'
+            shutil.copytree(name, failure)
             raise
     print(f'PASS: packaged localization {args.scenario}', flush=True)
 
