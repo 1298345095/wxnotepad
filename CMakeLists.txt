@@ -157,10 +157,11 @@ add_library(app_shell STATIC
     src/app/editor_frame_file_watching.cpp
     src/app/editor_frame_commands.cpp
     src/app/new_window.cpp
+    src/app/localization.cpp
+    src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
-include(cmake/Localization.cmake)
 if(WIN32)
     find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
     set(directwrite_generated "${CMAKE_CURRENT_BINARY_DIR}/directwrite")
@@ -209,6 +210,7 @@ function(add_gui_program target source)
 endfunction()
 
 add_gui_program(wxnotepad src/app/main.cpp app_shell)
+include(cmake/Localization.cmake)
 
 include(CTest)
 if(BUILD_TESTING)

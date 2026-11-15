@@ -1,4 +1,6 @@
 #include "app/dialogs/tab_settings_dialog.h"
+#include "app/localization.h"
+#include <wx/translation.h>
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
 #include <wx/statbox.h>
@@ -22,24 +24,28 @@ struct TabControls {
 
 bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, SyntaxLanguage language,
                            IndentationSettings& indentation) {
-    wxDialog dialog(parent, wxID_ANY, "Tab Settings");
+    wxDialog dialog(parent, wxID_ANY, _("Tab Settings"));
     auto* layout = new wxBoxSizer(wxVERTICAL);
     auto* groups = new wxBoxSizer(wxHORIZONTAL);
-    const auto addGroup = [groups, &dialog](const wxString& name, const OriginalTabs& value, wxCheckBox** inherit,
+    const auto addGroup = [groups, &dialog](const char* name, const OriginalTabs& value, wxCheckBox** inherit,
                                             const wxString& inheritLabel) {
-        auto* box = new wxStaticBoxSizer(wxVERTICAL, &dialog, name);
+        const auto label = wxGetTranslation(name);
+        auto* box = new wxStaticBoxSizer(wxVERTICAL, &dialog, label);
         auto* owner = box->GetStaticBox();
         auto* tab = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1,
                                    OriginalSettingLimits::MaxTabWidth);
-        tab->SetName(name + " Tab Width");
+        tab->SetName(wxString(name) + " Tab Width");
+        AppLocalization::SetAccessibleName(*tab, wxString::Format(_("%s tab width"), label));
         auto* indent = new wxSpinCtrl(owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0,
                                       OriginalSettingLimits::MaxTabWidth);
-        indent->SetName(name + " Indentation Width");
-        auto* spaces = new wxCheckBox(owner, wxID_ANY, "Tabs as Spaces");
-        spaces->SetName(name + " Tabs as Spaces");
-        box->Add(new wxStaticText(owner, wxID_ANY, "Tab Width (1–256):"), 0, wxALL, 4);
+        indent->SetName(wxString(name) + " Indentation Width");
+        AppLocalization::SetAccessibleName(*indent, wxString::Format(_("%s indentation width"), label));
+        auto* spaces = new wxCheckBox(owner, wxID_ANY, _("Tabs as Spaces"));
+        spaces->SetName(wxString(name) + " Tabs as Spaces");
+        AppLocalization::SetAccessibleName(*spaces, wxString::Format(_("%s tabs as spaces"), label));
+        box->Add(new wxStaticText(owner, wxID_ANY, _("Tab Width (1–256):")), 0, wxALL, 4);
         box->Add(tab, 0, wxEXPAND | wxALL, 4);
-        box->Add(new wxStaticText(owner, wxID_ANY, "Indentation Width (0–256):"), 0, wxALL, 4);
+        box->Add(new wxStaticText(owner, wxID_ANY, _("Indentation Width (0–256):")), 0, wxALL, 4);
         box->Add(indent, 0, wxEXPAND | wxALL, 4);
         box->Add(spaces, 0, wxALL, 4);
         if (inherit) {
@@ -54,11 +60,11 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
     auto& scheme = preferences.schemeTabs[static_cast<size_t>(SyntaxSettingsLanguage(language))];
     wxCheckBox* useGlobal;
     wxCheckBox* useScheme;
-    const auto global = addGroup("Global", preferences.globalTabs, nullptr, {});
-    const auto schemeControls = addGroup("Scheme", scheme, &useGlobal, "Use Global Tab Settings");
+    const auto global = addGroup(wxTRANSLATE("Global"), preferences.globalTabs, nullptr, {});
+    const auto schemeControls = addGroup(wxTRANSLATE("Scheme"), scheme, &useGlobal, _("Use Global Tab Settings"));
     const auto initialFile = indentation.Effective(language);
     const auto initialScheme = scheme;
-    const auto file = addGroup("File", initialFile, &useScheme, "Use Scheme Tab Settings");
+    const auto file = addGroup(wxTRANSLATE("File"), initialFile, &useScheme, _("Use Scheme Tab Settings"));
     useGlobal->SetValue(scheme.useGlobal);
     useScheme->SetValue(!indentation.HasFileSettings());
     bool synchronizing = false;
@@ -84,13 +90,13 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
     dialog.Bind(wxEVT_TEXT, [changed](wxCommandEvent& event) { changed(event.GetId()); });
     sync(true);
     layout->Add(groups, 0, wxEXPAND);
-    auto* tabIndents = new wxCheckBox(&dialog, wxID_ANY, "Tab Indents");
+    auto* tabIndents = new wxCheckBox(&dialog, wxID_ANY, _("Tab Indents"));
     tabIndents->SetValue(indentation.TabIndents());
-    auto* backspace = new wxCheckBox(&dialog, wxID_ANY, "Backspace Unindents");
+    auto* backspace = new wxCheckBox(&dialog, wxID_ANY, _("Backspace Unindents"));
     backspace->SetValue((preferences.backspaceUnindents & 1) != 0);
-    auto* smart = new wxCheckBox(&dialog, wxID_ANY, "Backspace at Indentation Deletes up to Tab Stop");
+    auto* smart = new wxCheckBox(&dialog, wxID_ANY, _("Backspace at Indentation Deletes up to Tab Stop"));
     smart->SetValue((preferences.backspaceUnindents & 2) != 0);
-    auto* detect = new wxCheckBox(&dialog, wxID_ANY, "Detect Indentation");
+    auto* detect = new wxCheckBox(&dialog, wxID_ANY, _("Detect Indentation"));
     detect->SetValue(preferences.detectIndentation);
     for (auto* control : {tabIndents, backspace, smart, detect})
         layout->Add(control, 0, wxALL, 5);

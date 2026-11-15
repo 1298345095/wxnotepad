@@ -1,4 +1,6 @@
 #include "app/dialogs/insert_tag_dialog.h"
+#include "app/localization.h"
+#include <wx/translation.h>
 #include "editor/editor_control.h"
 #include <wx/dialog.h>
 #include <wx/msgdlg.h>
@@ -35,19 +37,20 @@ wxString ClosingTag(const wxString& text) {
 
 void ShowInsertTagDialog(wxWindow* parent, EditorControl& editor) {
     // Original Notepad4 89b8b36 Edit.cpp::EditInsertTagDlgProc and IDD_INSERTTAG.
-    wxDialog dialog(parent, wxID_ANY, "Insert HTML/XML Tag", wxDefaultPosition, wxDefaultSize,
+    wxDialog dialog(parent, wxID_ANY, _("Insert HTML/XML Tag"), wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    const auto field = [contents, &dialog](const char* label, const char* name, const char* initial) {
+    const auto field = [contents, &dialog](const wxString& label, const char* name, const char* initial) {
         contents->Add(new wxStaticText(&dialog, wxID_ANY, label), 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
         auto* input = new wxTextCtrl(&dialog, wxID_ANY, initial, wxDefaultPosition, dialog.FromDIP(wxSize(400, 65)),
                                      wxTE_MULTILINE | wxTE_PROCESS_ENTER);
         input->SetName(name);
+        AppLocalization::SetAccessibleName(*input, wxControl::GetLabelText(label));
         contents->Add(input, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
         return input;
     };
-    auto* opening = field("&Opening tag (with attributes):", "Opening tag", "<tag>");
-    auto* closing = field("&Closing tag (can be edited):", "Closing tag", "</tag>");
+    auto* opening = field(_("&Opening tag (with attributes):"), "Opening tag", "<tag>");
+    auto* closing = field(_("&Closing tag (can be edited):"), "Closing tag", "</tag>");
     opening->Bind(wxEVT_TEXT, [opening, closing](wxCommandEvent&) {
         // A new opening edit overwrites even an explicitly edited closing tag.
         closing->ChangeValue(ClosingTag(opening->GetValue()));
@@ -61,7 +64,7 @@ void ShowInsertTagDialog(wxWindow* parent, EditorControl& editor) {
         before.Replace("\n", "\r\n");
         after.Replace("\n", "\r\n");
         if (!editor.EncloseSelection(before, after))
-            wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+            wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",
                          wxOK | wxICON_WARNING, &dialog);
         dialog.EndModal(wxID_OK);
     };

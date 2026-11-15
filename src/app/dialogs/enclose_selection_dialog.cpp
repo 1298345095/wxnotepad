@@ -1,4 +1,6 @@
 #include "app/dialogs/enclose_selection_dialog.h"
+#include "app/localization.h"
+#include <wx/translation.h>
 #include "editor/editor_control.h"
 #include <wx/dialog.h>
 #include <wx/msgdlg.h>
@@ -18,7 +20,7 @@ wxString WinEditText(wxTextCtrl* input) {
 
 void ShowEncloseSelectionDialog(wxWindow* parent, EditorControl& editor, wxString& before, wxString& after) {
     // Original Edit.cpp::EditEncloseSelectionDlgProc and IDD_ENCLOSESELECTION.
-    wxDialog dialog(parent, wxID_ANY, "Enclose Selection", wxDefaultPosition, wxDefaultSize,
+    wxDialog dialog(parent, wxID_ANY, _("Enclose Selection"), wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
     const auto addInput = [contents, &dialog](const wxString& label, const wxString& name, const wxString& value) {
@@ -28,11 +30,12 @@ void ShowEncloseSelectionDialog(wxWindow* parent, EditorControl& editor, wxStrin
         auto* input = new wxTextCtrl(&dialog, wxID_ANY, display, wxDefaultPosition, dialog.FromDIP(wxSize(400, 65)),
                                      wxTE_MULTILINE | wxTE_PROCESS_ENTER);
         input->SetName(name);
+        AppLocalization::SetAccessibleName(*input, wxControl::GetLabelText(label));
         contents->Add(input, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
         return input;
     };
-    auto* prefix = addInput("Insert &before selection:", "Insert before selection", before);
-    auto* suffix = addInput("Insert &after selection:", "Insert after selection", after);
+    auto* prefix = addInput(_("Insert &before selection:"), "Insert before selection", before);
+    auto* suffix = addInput(_("Insert &after selection:"), "Insert after selection", after);
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     dialog.SetSizerAndFit(contents);
     dialog.SetMinSize(dialog.GetSize());
@@ -44,7 +47,7 @@ void ShowEncloseSelectionDialog(wxWindow* parent, EditorControl& editor, wxStrin
             before = WinEditText(prefix);
             after = WinEditText(suffix);
             if (!editor.EncloseSelection(before, after))
-                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",
                              wxOK | wxICON_WARNING, &dialog);
             dialog.EndModal(wxID_OK);
         },

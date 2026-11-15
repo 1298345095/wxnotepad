@@ -86,6 +86,10 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   installation selects this overlay; its files participate in the existing cache
   key, and vcpkg's package ABI validates restored binaries. Local dependency builds
   can select the same overlay with `--overlay-ports=<repository>/.github/ports`.
+- Host-only GNU gettext 0.22.5 tools are pinned by the manifest baseline. CI
+  verifies their versions and extraction/format/release coverage before application
+  builds; generated app and locked wxWidgets catalogs accompany every artifact.
+  See [localization.md](localization.md) for maintenance and resource layout.
 - CI-only triplets build Release dependencies, avoiding unused Debug builds.
   Normal development triplets and the existing local installations are unchanged.
 - Windows uses the installed Visual Studio C++ developer shell and Ninja, matching

@@ -159,6 +159,9 @@ wxMenu* EditorFrame::CreateFileMenu() {
                              wxOK | wxICON_ERROR, this);
         },
         newWindow);
+    const int restart = wxWindow::NewControlId();
+    file->Append(restart, _("&Restart"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { Restart(); }, restart);
     file->Append(wxID_OPEN, _("&Open...\tCtrl+O"));
     const int openGbk = wxWindow::NewControlId();
     file->Append(openGbk, _("Open As &GBK..."));
@@ -1769,6 +1772,7 @@ void EditorFrame::AppendSelectionOptions(wxMenu* view) {
 
 wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
+    AppendUILanguageCommands(view);
     AppendIndentationOptions(view);
     const int longLineSettings = wxWindow::NewControlId();
     view->Append(longLineSettings, _("Long Line Settings..."));
