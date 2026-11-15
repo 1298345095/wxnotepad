@@ -120,6 +120,7 @@ void ProcessObserver::Publish() {
     lastActive_ = frame_->IsActive();
     lastCaret_ = frame_->Editor()->Send(Scintilla::Message::GetCurrentPos);
     lastReadOnly_ = frame_->Editor()->Send(Scintilla::Message::GetReadOnly) != 0;
+    lastPositionStatus_ = frame_->GetStatusBar()->GetStatusText(1);
     wxString backend = "Windows";
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
@@ -276,7 +277,7 @@ void ProcessObserver::Observe() {
         if (publishPending_ || (frame_->Editor()->Send(Scintilla::Message::GetModify) != 0) != lastDirty_ ||
             frame_->Editor()->Send(Scintilla::Message::GetCurrentPos) != lastCaret_ ||
             (frame_->Editor()->Send(Scintilla::Message::GetReadOnly) != 0) != lastReadOnly_ ||
-            frame_->IsActive() != lastActive_)
+            frame_->GetStatusBar()->GetStatusText(1) != lastPositionStatus_ || frame_->IsActive() != lastActive_)
             Publish();
     }
 }

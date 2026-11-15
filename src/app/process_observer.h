@@ -28,6 +28,7 @@ private:
     bool lastActive_ = false;
     long long lastCaret_ = 0;
     bool lastReadOnly_ = false;
+    wxString lastPositionStatus_;
     bool publishPending_ = false;
     bool commandPending_ = false;
     bool dispatching_ = false;

@@ -11,6 +11,7 @@ def plain(text):
 
 class Dialogs:
     def __init__(self):
+        self.key_sequence = 0
         if sys.platform == 'win32':
             self.user = ctypes.WinDLL('user32', use_last_error=True)
             self.user.SetProcessDpiAwarenessContext.argtypes = [wintypes.HANDLE]
@@ -67,11 +68,20 @@ class Dialogs:
 
     def children(self, window):
         if sys.platform != 'win32':
+            from gi.repository import GLib
             result = []
-            for index in range(window.get_child_count()):
-                child = window.get_child_at_index(index)
-                result.append(child)
-                result.extend(self.children(child))
+            try:
+                for index in range(window.get_child_count()):
+                    child = window.get_child_at_index(index)
+                    if child is None:
+                        continue
+                    result.append(child)
+                    result.extend(self.children(child))
+            except GLib.GError as error:
+                # GTK replaces file-list objects while a folder loads; removed
+                # descendants are absent from this snapshot.
+                if 'does not exist' not in str(error):
+                    raise
             return result
         result = []
 
@@ -85,9 +95,18 @@ class Dialogs:
         return result
 
     def texts(self, window):
+        if sys.platform != 'win32':
+            from gi.repository import GLib
+            texts = []
+            for child in self.children(window):
+                try:
+                    texts.append(self.title(child))
+                except GLib.GError as error:
+                    if 'does not exist' not in str(error):
+                        raise
+            return texts
         texts = [self.title(child) for child in self.children(window)]
-        if sys.platform == 'win32':
-            texts.extend(self.accessible_names(window, entries_only=False))
+        texts.extend(self.accessible_names(window, entries_only=False))
         return texts
 
     def wait(self, process, title, message=None):
@@ -207,18 +226,44 @@ class Dialogs:
             import os
             import subprocess
             from pathlib import Path
+            if window is not None and app.state['backend'] == 'GdkWaylandDisplay':
+                deadline = time.monotonic() + 10
+                while (not window.get_state_set().contains(self.atspi.StateType.ACTIVE)
+                       and time.monotonic() < deadline):
+                    time.sleep(.03)
+                assert window.get_state_set().contains(self.atspi.StateType.ACTIVE), self.title(window)
             if app.state['backend'] == 'GdkX11Display':
                 search = ['xdotool', 'search', '--all', '--onlyvisible', '--pid', str(app.process.pid)]
-                if window is not None:
-                    import re
-                    search += ['--name', '^' + re.escape(self.title(window)) + '$']
-                windows = subprocess.check_output(search, text=True).splitlines()
-                assert windows
+                deadline = time.monotonic() + 10
+                while time.monotonic() < deadline:
+                    windows = subprocess.run(search, capture_output=True, text=True).stdout.splitlines()
+                    if window is not None:
+                        windows = [identity for identity in windows if
+                                   subprocess.check_output(['xdotool', 'getwindowname', identity], text=True).strip()
+                                   == self.title(window)]
+                    if windows:
+                        break
+                    time.sleep(.03)
+                assert windows, f'Owned native X11 window did not map: {self.title(window) if window else app.process.pid}'
                 subprocess.run(['xdotool', 'windowfocus', '--sync', windows[0]], check=True)
             focus = Path(os.environ['WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS'])
+            self.key_sequence += 1
             pending = focus.with_suffix('.localization-pending')
-            pending.write_text('key:' + key, encoding='utf-8')
+            pending.write_text(f'trace:{self.key_sequence}:key:{key}', encoding='utf-8')
             pending.replace(focus)
+            # Claim acknowledgment precedes delivery. Wait for the existing
+            # driver's completed native press/release before changing the field.
+            diagnostics = Path(str(focus) + '.diagnostics')
+            completed = f'	event=driver.inject-complete	gesture={self.key_sequence}	'
+            deadline = time.monotonic() + 10
+            observed = ''
+            while time.monotonic() < deadline:
+                observed = diagnostics.read_text(encoding='utf-8') if diagnostics.exists() else ''
+                if completed in observed:
+                    break
+                time.sleep(.01)
+            Path(app.log.name).with_name('native-input.log').write_text(observed, encoding='utf-8')
+            assert completed in observed, f'Native key press/release did not complete: {key}'
 
     def navigate_folder(self, app, window, folder):
         """Navigate the owned chooser to fixed disposable files before inspection."""
@@ -247,7 +292,9 @@ class Dialogs:
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
                 entries = [child for child in self.children(window)
-                           if child.get_name().rstrip(':') == 'Location' and child.get_editable_text_iface()]
+                           if child.get_role() in (self.atspi.Role.TEXT, self.atspi.Role.ENTRY)
+                           and child.get_editable_text_iface()
+                           and child.get_state_set().contains(self.atspi.StateType.FOCUSED)]
                 if entries:
                     assert entries[0].get_editable_text_iface().set_text_contents(str(folder) + '/')
                     self.key(app, 'Return', window)
@@ -257,7 +304,7 @@ class Dialogs:
                 if folder.name in self.texts(window):
                     return
                 time.sleep(.03)
-        raise AssertionError(f'Native file chooser did not navigate to owned folder {folder}')
+        raise AssertionError(f'Native file chooser did not navigate to owned folder {folder}: {self.texts(window)}')
 
     def resize(self, app, width, height):
         if sys.platform == 'win32':
@@ -267,7 +314,15 @@ class Dialogs:
         else:
             windows = [window for window in self.windows(app.process) if self.title(window) == app.state['title']]
             assert len(windows) == 1
-            assert windows[0].get_component_iface().set_size(width, height)
+            component = windows[0].get_component_iface()
+            assert component.set_size(width, height)
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                size = component.get_size()
+                if (size.x, size.y) == (width, height):
+                    return
+                time.sleep(.03)
+            raise AssertionError(('Native resize did not complete', width, height, size.x, size.y))
 
     def file_filters(self, window):
         if sys.platform == 'win32':
