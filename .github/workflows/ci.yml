@@ -130,12 +130,34 @@ jobs:
             --build-dir .ci/original-reference \
             --output .ci/reports/original-gdi-viewport.tsv --compiler-cache \
             2>&1 | tee .ci/reports/original-gdi-reference.log
+      - name: Capture Windows visual brace crash dumps
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $crashDumpDirectory = Join-Path $env:GITHUB_WORKSPACE '.ci/reports/windows-dumps'
+          $crashDumpKey = 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\visual_brace.exe'
+          $fullDumpType = 2
+          $dumpFileLimit = 3
+          New-Item -ItemType Directory -Path $crashDumpDirectory -Force | Out-Null
+          New-Item -Path $crashDumpKey -Force | Out-Null
+          New-ItemProperty -Path $crashDumpKey -Name DumpFolder -Value $crashDumpDirectory -PropertyType ExpandString -Force | Out-Null
+          New-ItemProperty -Path $crashDumpKey -Name DumpType -Value $fullDumpType -PropertyType DWord -Force | Out-Null
+          New-ItemProperty -Path $crashDumpKey -Name DumpCount -Value $dumpFileLimit -PropertyType DWord -Force | Out-Null
+          Get-ItemProperty -Path $crashDumpKey | Select-Object DumpFolder, DumpType, DumpCount |
+            ConvertTo-Json | Tee-Object -FilePath .ci/reports/windows-crash-dumps.json
       - name: Test Windows
         if: runner.os == 'Windows'
         shell: bash
         env:
           WXNOTEPAD_ORIGINAL_GDI_REFERENCE: ${{ github.workspace }}/.ci/reports/original-gdi-viewport.tsv
         run: python -X utf8 .github/scripts/ci.py test --backend windows
+      - name: Repeat Windows visual brace regression with crash evidence
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/visual-brace-repeat `
+            --cwd .ci/build/cmake --timeout 90 --runs 20 -- "$env:GITHUB_WORKSPACE/.ci/build/cmake/visual_brace.exe"
       - name: Test private X11
         if: runner.os == 'Linux'
         shell: bash
@@ -148,6 +170,20 @@ jobs:
         run: |
           ulimit -c unlimited
           python -X utf8 .github/scripts/ci.py test --backend wayland
+      - name: Repeat native JSON Wayland regression with timeout evidence
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.build.outcome == 'success' }}
+        shell: bash
+        env:
+          WXNOTEPAD_DISPLAY_LOG_DIR: ${{ github.workspace }}/.ci/reports/json-repeat-display
+        run: |
+          set -euo pipefail
+          ulimit -c unlimited
+          xvfb-run -a -s '-screen 0 1600x1000x24 -nolisten tcp' dbus-run-session -- \
+            python -X utf8 tools/clipboard_isolated.py wayland \
+            ctest --test-dir .ci/build/cmake -C Release -R '^json_highlighting$' \
+            --repeat until-fail:20 --output-on-failure --no-tests=error \
+            --output-junit "$GITHUB_WORKSPACE/.ci/reports/json-repeat.xml" \
+            --output-log "$GITHUB_WORKSPACE/.ci/reports/json-repeat.log"
       - name: Build opt-in diagnostic binaries
         id: diagnostic_build
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
@@ -213,6 +249,8 @@ jobs:
             .ci/build/diagnostic-cmake/close_smoke*
             .ci/build/cmake/CMakeFiles/CMakeConfigureLog.yaml
             .ci/build/cmake/compile_commands.json
+            .ci/build/cmake/visual_brace.exe
+            .ci/build/cmake/visual_brace.pdb
             .ci/build/cmake/clipboard_smoke
             .ci/build/cmake/clipboard_peer
             .ci/build/cmake/stream_drag
@@ -227,10 +265,14 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  coverage:
-    name: Linux coverage / SonarCloud
+  coverage-tests:
+    name: Linux coverage / ${{ matrix.backend }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [x11, wayland]
     env:
       PYTHONUTF8: '1'
       WXNOTEPAD_COVERAGE_ROOT: ${{ github.workspace }}
@@ -246,7 +288,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install fixed coverage test dependency
-        id: coverage_tools
         shell: bash
         run: |
           set -euo pipefail
@@ -254,16 +295,16 @@ jobs:
           python -m venv .ci/coverage-venv
           .ci/coverage-venv/bin/python -m pip install --disable-pip-version-check \
             -r .github/requirements-coverage.txt 2>&1 | tee .ci/reports/coverage/dependency.log
+      - name: Set up dependencies
+        uses: ./.github/actions/dependencies
+        with:
+          profile: gui
       - name: Measure Python helper tests
         shell: bash
         run: |
           set -euo pipefail
           .ci/coverage-venv/bin/python -m coverage run -m unittest discover -s tests -p 'test_*.py' -v \
             2>&1 | tee .ci/reports/coverage/python-tests.log
-      - name: Set up dependencies
-        uses: ./.github/actions/dependencies
-        with:
-          profile: gui
       - name: Measure Linux debug-symbol packaging
         shell: bash
         run: .ci/coverage-venv/bin/python -m coverage run tests/ci_bundle.py -v
@@ -287,19 +328,12 @@ jobs:
           set -euo pipefail
           mkdir -p .ci/reports/cores
           sudo sysctl -w "kernel.core_pattern=$PWD/.ci/reports/cores/core.%p.%E"
-      - name: Measure private X11
+      - name: Measure private ${{ matrix.backend }}
         shell: bash
         run: |
           ulimit -c unlimited
           .ci/coverage-venv/bin/python -m coverage run .github/scripts/ci.py test \
-            --backend x11 --cmake-dir .ci/build/coverage-cmake
-      - name: Measure private Wayland
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        shell: bash
-        run: |
-          ulimit -c unlimited
-          .ci/coverage-venv/bin/python -m coverage run .github/scripts/ci.py test \
-            --backend wayland --cmake-dir .ci/build/coverage-cmake
+            --backend ${{ matrix.backend }} --cmake-dir .ci/build/coverage-cmake
       - name: Collect native crash evidence
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         shell: bash
@@ -308,25 +342,23 @@ jobs:
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         shell: bash
         run: .ci/coverage-venv/bin/python -m coverage run .github/scripts/collect_coverage.py
-      - name: Combine Python coverage
-        if: ${{ !cancelled() && steps.coverage_tools.outcome == 'success' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          .ci/coverage-venv/bin/python -m coverage combine --keep
-          .ci/coverage-venv/bin/python -m coverage xml
-          .ci/coverage-venv/bin/python -m coverage report
-      - name: Analyze SonarCloud with coverage and compilation database
-        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
+      - name: Upload coverage inputs for aggregation
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          # Stable within this run so failed-job reruns can reuse successful backends.
+          name: coverage-input-${{ matrix.backend }}-${{ github.sha }}
+          path: |
+            .ci/reports/coverage/coverage.json
+            .ci/reports/coverage/.coverage.*
+          include-hidden-files: true
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
       - name: Preserve coverage and test evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: evidence-coverage-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          name: evidence-coverage-${{ matrix.backend }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .ci/reports/
             .ci/build/coverage-cmake/Testing/Temporary/
@@ -334,6 +366,118 @@ jobs:
             .ci/build/coverage-cmake/compile_commands.json
             .ci/build/coverage-cmake/**/*.gcno
             .ci/build/coverage-cmake/**/*.gcda
+            .ci/build/original-core/wxnotepad-source.json
+            .ci/build/notepad4-source.tar
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+
+  coverage:
+    name: Linux coverage / SonarCloud
+    needs: coverage-tests
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PYTHONUTF8: '1'
+      WXNOTEPAD_COVERAGE_ROOT: ${{ github.workspace }}
+      SCCACHE_DISABLE: '1'
+    steps:
+      - name: Require both coverage backends
+        env:
+          COVERAGE_RESULT: ${{ needs.coverage-tests.result }}
+        run: |
+          if [[ "$COVERAGE_RESULT" != success ]]; then
+            printf 'Coverage backends finished with %s\n' "$COVERAGE_RESULT" >&2
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install fixed coverage report dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/reports/coverage
+          python -m venv .ci/coverage-venv
+          .ci/coverage-venv/bin/python -m pip install --disable-pip-version-check \
+            -r .github/requirements-coverage.txt 2>&1 | tee .ci/reports/coverage/dependency.log
+      - name: Download X11 coverage inputs
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-input-x11-${{ github.sha }}
+          path: .ci/coverage-inputs/x11
+      - name: Download Wayland coverage inputs
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-input-wayland-${{ github.sha }}
+          path: .ci/coverage-inputs/wayland
+      - name: Set up analysis dependencies
+        uses: ./.github/actions/dependencies
+        with:
+          profile: build
+      - name: Configure the matching coverage compilation database
+        shell: bash
+        run: .ci/coverage-venv/bin/python -m coverage run .github/scripts/ci.py configure --coverage
+      - name: Merge native backend coverage
+        shell: bash
+        run: |
+          .ci/coverage-venv/bin/python -m coverage run .github/scripts/collect_coverage.py \
+            --merge .ci/coverage-inputs/x11/coverage.json .ci/coverage-inputs/wayland/coverage.json
+      - name: Combine Python coverage from both backends
+        shell: bash
+        run: |
+          set -euo pipefail
+          .ci/coverage-venv/bin/python -m coverage combine --keep \
+            .ci/reports/coverage .ci/coverage-inputs/x11 .ci/coverage-inputs/wayland
+          .ci/coverage-venv/bin/python -m coverage xml
+          .ci/coverage-venv/bin/python -m coverage report
+      - name: Restore CFamily analysis cache
+        id: cfamily_cache
+        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .ci/sonar-cfamily-cache
+          key: sonar-cfamily-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || format('branch-{0}', github.ref_name) }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            sonar-cfamily-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || format('branch-{0}', github.ref_name) }}-
+            sonar-cfamily-v1-${{ runner.os }}-${{ runner.arch }}-branch-${{ github.base_ref || github.event.repository.default_branch }}-
+      - name: Prepare CFamily cache directory
+        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        run: mkdir -p .ci/sonar-cfamily-cache
+      - name: Analyze SonarCloud with coverage and compilation database
+        id: sonar
+        if: ${{ success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >
+            -Dsonar.cfamily.analysisCache.mode=fs
+            -Dsonar.cfamily.analysisCache.path=.ci/sonar-cfamily-cache
+      - name: Save completed CFamily analysis cache
+        if: ${{ !cancelled() && steps.sonar.outcome == 'success' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .ci/sonar-cfamily-cache
+          key: ${{ steps.cfamily_cache.outputs.cache-primary-key }}
+      - name: Preserve merged coverage and analysis evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: evidence-coverage-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .ci/reports/
+            .ci/coverage-inputs/
+            .ci/build/coverage-cmake/CMakeFiles/CMakeConfigureLog.yaml
+            .ci/build/coverage-cmake/compile_commands.json
             .ci/build/original-core/wxnotepad-source.json
             .ci/build/notepad4-source.tar
             .scannerwork/report-task.txt

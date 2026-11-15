@@ -233,6 +233,7 @@ void SavedState(EditorFrame* frame, int toggle) {
 class VisualBraceApp final : public wxApp {
 public:
     bool OnInit() override {
+        std::setvbuf(stdout, nullptr, _IONBF, 0);
         auto* frame = new EditorFrame;
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {

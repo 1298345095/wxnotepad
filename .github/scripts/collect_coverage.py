@@ -1,4 +1,4 @@
-"""Collect unmodified GCC reports for maintained C++ sources, including zero-hit code."""
+"""Collect GCC coverage or merge backend reports for maintained C++ sources."""
 import argparse
 import json
 from pathlib import Path
@@ -50,8 +50,24 @@ def write_sonar_report(output, root=ROOT):
                '--filter', re.escape((root / 'src').as_posix() + '/'),
                '--gcov-use-existing-files', '--gcov-keep', '--exclude-throw-branches',
                '--sonarqube', str(output / 'sonar.xml'), '--sonarqube-metric', 'branch',
+               '--json', str(output / 'coverage.json'),
                str(output / 'gcov')]
     with (output / 'gcovr.log').open('w', encoding='utf-8') as log:
+        subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
+
+
+def merge_reports(reports, output, root=ROOT):
+    output, root = output.resolve(), root.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    command = [sys.executable, '-m', 'gcovr', '--root', str(root),
+               '--filter', re.escape((root / 'src').as_posix() + '/'),
+               '--sonarqube', str(output / 'sonar.xml'), '--sonarqube-metric', 'branch',
+               '--json', str(output / 'coverage.json')]
+    # Each backend has already applied the source and throw-branch policy while
+    # reading its own matched GCC notes/counters. Merge by source/branch identity.
+    for report in reports:
+        command += ['--json-add-tracefile', str(report.resolve())]
+    with (output / 'gcovr-merge.log').open('w', encoding='utf-8') as log:
         subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
 
 
@@ -59,9 +75,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-dir', type=Path, default=ROOT / '.ci/build/coverage-cmake')
     parser.add_argument('--output', type=Path, default=ROOT / '.ci/reports/coverage')
+    parser.add_argument('--merge', type=Path, nargs='+', metavar='JSON',
+                        help='Merge full gcovr JSON reports instead of collecting GCC counters')
     arguments = parser.parse_args()
-    collect(arguments.build_dir, arguments.output)
-    write_sonar_report(arguments.output)
+    if arguments.merge:
+        merge_reports(arguments.merge, arguments.output)
+    else:
+        collect(arguments.build_dir, arguments.output)
+        write_sonar_report(arguments.output)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 """Check real GCC counters, unexecuted code, shared headers and collection failures."""
 import importlib.util
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -91,8 +92,7 @@ class GCCReports(unittest.TestCase):
             COLLECTOR.collect(self.build, output, self.root)
         self.assertFalse((output / 'summary.json').exists())
 
-    @unittest.skipUnless(importlib.util.find_spec('gcovr'), 'Install the pinned coverage requirements')
-    def test_sonar_report_merges_headers_and_preserves_source_conditions(self):
+    def build_exception_driver(self):
         exception_source = self.root / 'src/exception_paths.cpp'
         exception_source.write_text(
             'int MayThrow(bool value) {\n'
@@ -107,6 +107,11 @@ class GCCReports(unittest.TestCase):
         driver.write_text('int Handle(bool);\nint main() { return Handle(true) != 1; }\n', encoding='utf-8')
         executable = self.build / 'exception_driver'
         self.compile(exception_source, driver, '-o', executable)
+        return executable
+
+    @unittest.skipUnless(importlib.util.find_spec('gcovr'), 'Install the pinned coverage requirements')
+    def test_sonar_report_merges_headers_and_preserves_source_conditions(self):
+        executable = self.build_exception_driver()
         subprocess.run([executable], check=True)
         output = self.root / 'reports'
         collector = self.root / '.github/scripts/collect_coverage.py'
@@ -135,6 +140,64 @@ class GCCReports(unittest.TestCase):
         self.assertEqual(handler.attrib['covered'], 'false')
         self.assertTrue(all(name.startswith('src/') for name in files))
         self.assertTrue(list((output / 'gcov').glob('*.gcov')))
+
+    @unittest.skipUnless(importlib.util.find_spec('gcovr'), 'Install the pinned coverage requirements')
+    def test_backend_json_merge_unions_branches_and_retains_coverage_policy(self):
+        exception_driver = self.build_exception_driver()
+        collector = self.root / '.github/scripts/collect_coverage.py'
+        collector.parent.mkdir(parents=True)
+        shutil.copy2(ROOT / '.github/scripts/collect_coverage.py', collector)
+        reports = []
+        for backend, executable in (('x11', 'first'), ('wayland', 'second')):
+            # Model independent backend runs with the same instrumented program:
+            # notes remain available, but each backend starts with fresh counters.
+            for counter in self.build.rglob('*.gcda'):
+                counter.unlink()
+            subprocess.run([self.build / executable], check=True)
+            subprocess.run([exception_driver], check=True)
+            output = self.root / backend
+            if backend == 'x11':
+                COLLECTOR.collect(self.build, output, self.root)
+                COLLECTOR.write_sonar_report(output, self.root)
+            else:
+                subprocess.run([sys.executable, str(collector), '--build-dir', str(self.build),
+                                '--output', str(output)], check=True, capture_output=True,
+                               text=True, encoding='utf-8')
+            report = output / 'coverage.json'
+            files = {item['file']: item for item in json.loads(report.read_text(encoding='utf-8'))['files']}
+            choice = next(line for line in files['src/choice.h']['lines'] if line['line_number'] == 3)
+            self.assertEqual(len(choice['branches']), 2)
+            self.assertEqual(sum(branch['count'] > 0 for branch in choice['branches']), 1)
+            reports.append(report)
+
+        merged = self.root / 'combined/reports'
+        COLLECTOR.merge_reports(reports, merged, self.root)
+        files = {item.attrib['path']: item for item in ET.parse(merged / 'sonar.xml').getroot()}
+        choice = files['src/choice.h'].find("lineToCover[@lineNumber='3']")
+        self.assertEqual(choice.attrib['branchesToCover'], '2')
+        self.assertEqual(choice.attrib['coveredBranches'], '2')
+        repeated = files['src/repeated.h'].find("lineToCover[@lineNumber='3']")
+        self.assertEqual(repeated.attrib['branchesToCover'], '2')
+        self.assertEqual(repeated.attrib['coveredBranches'], '1')
+        untouched = files['src/never.cpp'].find("lineToCover[@lineNumber='1']")
+        self.assertEqual(untouched.attrib['covered'], 'false')
+        exceptions = files['src/exception_paths.cpp']
+        condition = exceptions.find("lineToCover[@lineNumber='2']")
+        self.assertEqual(condition.attrib['branchesToCover'], '2')
+        self.assertEqual(condition.attrib['coveredBranches'], '1')
+        call = exceptions.find("lineToCover[@lineNumber='7']")
+        self.assertEqual(call.attrib['branchesToCover'], '1')
+        self.assertEqual(call.attrib['coveredBranches'], '1')
+        handler = exceptions.find("lineToCover[@lineNumber='9']")
+        self.assertEqual(handler.attrib['covered'], 'false')
+        self.assertTrue(all(name.startswith('src/') for name in files))
+        self.assertTrue((merged / 'coverage.json').is_file())
+        self.assertTrue((merged / 'gcovr-merge.log').is_file())
+        cli_output = self.root / 'cli-combined/reports'
+        subprocess.run([sys.executable, str(collector), '--merge', *(str(report) for report in reports),
+                        '--output', str(cli_output)], check=True, capture_output=True,
+                       text=True, encoding='utf-8')
+        self.assertEqual((cli_output / 'sonar.xml').read_bytes(), (merged / 'sonar.xml').read_bytes())
 
 
 if __name__ == '__main__':
