@@ -6,9 +6,13 @@ import os
 from pathlib import Path
 import struct
 import sys
+import time
 import zlib
 
 TEXT_ROUNDING_PIXELS = 2
+CAPTURE_STABLE_SECONDS = .1
+CAPTURE_POLL_SECONDS = .03
+CAPTURE_TIMEOUT_SECONDS = 10
 
 
 def screenshot_windows(user, window, destination):
@@ -76,12 +80,37 @@ def capture_and_check(dialogs, app, window, destination, system_dialog=False):
         # the nested compositor's actual presented view, not another desktop.
         Gdk.set_allowed_backends('x11')
         if not hasattr(capture_and_check, '_display'):
-            capture_and_check._display = Gdk.Display.open(os.environ['DISPLAY'])
+            backend = os.environ.get('GDK_BACKEND')
+            os.environ['GDK_BACKEND'] = 'x11'
+            try:
+                capture_and_check._display = Gdk.Display.open(os.environ['DISPLAY'])
+            finally:
+                if backend is None:
+                    os.environ.pop('GDK_BACKEND', None)
+                else:
+                    os.environ['GDK_BACKEND'] = backend
         display = capture_and_check._display
         assert display
         root = display.get_default_screen().get_root_window()
-        pixbuf = Gdk.pixbuf_get_from_window(root, 0, 0, root.get_width(), root.get_height())
-        assert pixbuf and pixbuf.savev(str(destination), 'png', [], [])
+        # The nested compositor animates closed dialogs after accessibility has
+        # removed them. Preserve the presented view once its pixels settle.
+        deadline = time.monotonic() + CAPTURE_TIMEOUT_SECONDS
+        stable_since = time.monotonic()
+        previous = None
+        while time.monotonic() < deadline:
+            display.sync()
+            pixbuf = Gdk.pixbuf_get_from_window(root, 0, 0, root.get_width(), root.get_height())
+            assert pixbuf
+            pixels = pixbuf.get_pixels()
+            if pixels != previous:
+                previous = pixels
+                stable_since = time.monotonic()
+            elif time.monotonic() - stable_since >= CAPTURE_STABLE_SECONDS:
+                break
+            time.sleep(CAPTURE_POLL_SECONDS)
+        else:
+            raise AssertionError('Native screenshot did not settle')
+        assert pixbuf.savev(str(destination), 'png', [], [])
         extent = window.get_component_iface().get_extents(dialogs.atspi.CoordType.WINDOW)
         context = PangoCairo.FontMap.get_default().create_context()
         PangoCairo.context_set_resolution(context, float(app.state['dpi']))

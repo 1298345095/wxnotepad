@@ -322,7 +322,6 @@ class Acceptance:
         for code in ('en', 'zh_CN', 'zh_TW'):
             app = self.start(PREFERENCE[code])
             try:
-                self.goto(app, code)
                 readonly = next(identity for identity, item in self.reference.items()
                                 if item['label'] == '&Read Only Mode\tF10')
                 # The real shortcut establishes native input (and a Wayland
@@ -332,6 +331,7 @@ class Acceptance:
                 assert menus(app.state)[readonly]['checked'] == '1'
                 self.dialogs.key(app, 'F10')
                 app.state = wait_state(app.folder, app.process, lambda state: state['read_only'] == '0')
+                self.goto(app, code)
                 for index, identity in enumerate(inserts):
                     app.choose(identity)
                     destination = self.directory / f'unnamed-{code}-{index}.txt'
@@ -456,7 +456,9 @@ class Acceptance:
             for scale in ((1, 1.5) if sys.platform != 'win32' else (1,)):
                 settings(self.config, PREFERENCE[code])
                 overrides = {'GDK_DPI_SCALE': str(scale)} if sys.platform != 'win32' else {}
-                app = self.launch(overrides=overrides)
+                # Set the capture height before mapping so Wayland places the
+                # status bar on screen; resize subsequently grows only the width.
+                app = self.launch(arguments=('--window-position', '0,0,900,720,0'), overrides=overrides)
                 try:
                     suffix = f'{code}-{scale}'
                     self.goto(app, code, self.logs / f'goto-{suffix}.png')
@@ -475,7 +477,11 @@ class Acceptance:
                     app.begin('menu', '5000')  # Real Open native file dialog.
                     title = {'en': 'Open file', 'zh_CN': '打开文件', 'zh_TW': '開啟檔案'}[code]
                     window = self.dialogs.wait(app.process, title)
-                    self.dialogs.navigate_folder(app, window, self.directory)
+                    try:
+                        self.dialogs.navigate_folder(app, window, self.directory)
+                    except BaseException:
+                        capture_and_check(self.dialogs, app, window, self.logs / f'navigation-failure-{suffix}.png', system_dialog=True)
+                        raise
                     expected = {'en': 'All files (*.*)', 'zh_CN': '所有文件 (*.*)', 'zh_TW': '所有檔案 (*.*)'}[code]
                     filters = self.dialogs.file_filters(window)
                     assert expected in filters, (expected, filters)
@@ -499,7 +505,9 @@ class Acceptance:
                     self.dialogs.click(window, okay)
                     app.finish()
                     expected_position = {'en': 'Ln 1, Col 351', 'zh_CN': '行 1, 列 351', 'zh_TW': '行 1，欄 351'}[code]
-                    assert app.state['caret_position'] == '350' and app.state['position_status'] == expected_position
+                    app.state = wait_state(app.folder, app.process,
+                                           lambda state: state['position_status'] == expected_position)
+                    assert app.state['caret_position'] == '350' and app.state['position_status'] == expected_position, app.state
                     for width in (900, 1100):
                         self.dialogs.resize(app, width, 720)
                         app.choose(menu_id(app.state, 'Python'))
