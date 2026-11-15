@@ -133,12 +133,19 @@ class Acceptance:
             (None, 'zh_TW', 'zh_TW', 1024), (1024, 'zh_CN', 'zh_CN', 1024),
             (1024, 'en:zh_CN', 'en', 1024), (1024, 'zh_TW:zh_CN', 'zh_TW', 1024),
             (1024, 'fr:en:zh_CN', 'en', 1024), (1024, 'fr:zh_CN:en', 'zh_CN', 1024),
+            (1024, 'zh_HK:en', 'zh_TW', 1024), (1024, 'zh-Hans:en', 'zh_CN', 1024),
+            (1024, 'zh-Hant:en', 'zh_TW', 1024),
             (2057, 'zh_TW', 'en', 1033), (1041, 'zh_CN', 'en', None),
             (3076, 'en', 'zh_TW', 1028), (5124, 'en', 'zh_TW', 1028), (4100, 'en', 'zh_CN', 2052),
+            (4, 'en', 'zh_CN', 2052), (6148, 'en', 'zh_CN', 2052),
             (67588, 'en', 'zh_CN', 2052), (-63484, 'en', 'zh_CN', 2052),
             ('2052suffix', 'en', 'zh_CN', 2052), (0, 'en', 'en', 1024), (9999, 'en', 'en', 1024),
+            (-1, 'zh_TW', 'zh_TW', 1024), (0, 'zh_CN', 'zh_CN', 1024),
             ('invalid', 'en', 'en', 1024),
         ]
+        # The other supported original primaries are valid configured choices
+        # even though this release does not deliver their application catalogs.
+        cases += [(value, 'zh_TW', 'en', None) for value in (1036, 1031, 1040, 1042, 1045, 1046, 1049, 1060)]
         for configured, preferred, code, checked in cases:
             app = self.start(configured, preferred)
             original = self.config.read_bytes()
@@ -316,6 +323,15 @@ class Acceptance:
             app = self.start(PREFERENCE[code])
             try:
                 self.goto(app, code)
+                readonly = next(identity for identity, item in self.reference.items()
+                                if item['label'] == '&Read Only Mode\tF10')
+                # The real shortcut establishes native input (and a Wayland
+                # input serial) before the clipboard operations below.
+                self.dialogs.key(app, 'F10')
+                app.state = wait_state(app.folder, app.process, lambda state: state['read_only'] == '1')
+                assert menus(app.state)[readonly]['checked'] == '1'
+                self.dialogs.key(app, 'F10')
+                app.state = wait_state(app.folder, app.process, lambda state: state['read_only'] == '0')
                 for index, identity in enumerate(inserts):
                     app.choose(identity)
                     destination = self.directory / f'unnamed-{code}-{index}.txt'
@@ -342,13 +358,6 @@ class Acceptance:
                         expected = (destination.stem, destination.name, str(destination))[index]
                         assert destination.read_bytes() == expected.encode('utf-8'), (copying, index, destination)
                         app.choose(5002)
-                readonly = next(identity for identity, item in self.reference.items()
-                                if item['label'] == '&Read Only Mode\tF10')
-                self.dialogs.key(app, 'F10')
-                app.state = wait_state(app.folder, app.process, lambda state: state['read_only'] == '1')
-                assert menus(app.state)[readonly]['checked'] == '1'
-                self.dialogs.key(app, 'F10')
-                app.state = wait_state(app.folder, app.process, lambda state: state['read_only'] == '0')
                 # Exercise the actual shown native layout at the current DPI.
                 self.dialogs.resize(app, 1100, 720)
                 app.choose(readonly)
@@ -476,6 +485,32 @@ class Acceptance:
                     capture_and_check(self.dialogs, app, window, self.logs / f'open-filters-{suffix}.png', system_dialog=True)
                     self.dialogs.cancel(window)
                     app.finish()
+                    status_document = self.directory / f'status-{code}-{scale}.py'
+                    status_document.write_bytes(b'\xff\xfe' + ('a' * 400 + '\r\nnext').encode('utf-16-le'))
+                    app.send('open', str(status_document))
+                    app.choose(menu_id(app.state, 'Python'))
+                    go_to = next(identity for identity, item in self.reference.items()
+                                 if item['label'] == '&Goto Line...\tCtrl+G')
+                    app.begin('menu', str(go_to))
+                    window = self.dialogs.wait(app.process, TEXT[code]['goto'])
+                    self.dialogs.set_input(window, TEXT[code]['line'], '1')
+                    self.dialogs.set_input(window, TEXT[code]['column'], '351')
+                    okay = {'en': 'OK', 'zh_CN': '确定', 'zh_TW': '確認'}[code] if sys.platform == 'win32' else 'OK'
+                    self.dialogs.click(window, okay)
+                    app.finish()
+                    expected_position = {'en': 'Ln 1, Col 351', 'zh_CN': '行 1, 列 351', 'zh_TW': '行 1，欄 351'}[code]
+                    assert app.state['caret_position'] == '350' and app.state['position_status'] == expected_position
+                    for width in (900, 1100):
+                        self.dialogs.resize(app, width, 720)
+                        app.choose(menu_id(app.state, 'Python'))
+                        frames = [frame for frame in self.dialogs.windows(app.process)
+                                  if self.dialogs.title(frame) == app.state['title']]
+                        assert len(frames) == 1
+                        image = self.logs / f'status-{suffix}-{width}.png'
+                        capture_and_check(self.dialogs, app, frames[0], image, system_dialog=True)
+                        observed = {key: app.state[key] for key in ('dpi', 'document_status', 'position_status',
+                                                                   'client_width', 'frame_width')}
+                        image.with_suffix('.state.json').write_text(json.dumps(observed, ensure_ascii=False), encoding='utf-8')
                     app.close()
                 finally:
                     app.stop()
@@ -670,6 +705,7 @@ class Acceptance:
                     self.change(app, 2052, 'yes')
                     self.dialogs.answer(app.process, 'cancel', 'Save changes?')
                     app.finish()
+                    assert read_settings(self.config)['Settings2']['UILanguage'] == '2052'
                     assert app.process.poll() is None and app.state['dirty'] == '1'
                     assert set(self.observation.iterdir()) == previous
                     assert document.read_bytes() == b'disk original\n'
@@ -694,6 +730,7 @@ class Acceptance:
             chooser = self.dialogs.wait(app.process, 'Save file')
             self.dialogs.cancel(chooser)
             app.finish()
+            assert read_settings(self.config)['Settings2']['UILanguage'] == '2052'
             assert app.process.poll() is None and app.state['dirty'] == '1' and app.state['length'] == '1'
             assert set(self.observation.iterdir()) == previous
             self.discard(app)
@@ -716,6 +753,7 @@ class Acceptance:
             self.change(app, 2052, 'yes')
             self.dialogs.answer(app.process, 'ok', 'Restart failed')
             app.finish()
+            assert read_settings(self.config)['Settings2']['UILanguage'] == '2052'
             assert app.process.poll() is None and app.state['dirty'] == '1'
             for field in ('length', 'document_path', 'caret_position', 'encoding'):
                 assert app.state[field] == before[field]

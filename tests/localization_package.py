@@ -106,7 +106,8 @@ class Process(Application):
         log_path.parent.mkdir(parents=True, exist_ok=True)
         self.log = log_path.open('wb')
         self.process = subprocess.Popen(args, env=environment, cwd=cwd, stdout=self.log, stderr=self.log)
-        self.state = wait_state(folder, self.process, lambda state: state['sequence'] == '0')
+        self.state = wait_state(folder, self.process, lambda state: state['sequence'] == '0' and
+                                (state['backend'] != 'GdkWaylandDisplay' or state['active'] == '1'))
         assert self.state['shown'] == '1', self.state
 
     def begin(self, operation, source=''):
