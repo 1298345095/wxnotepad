@@ -1,4 +1,6 @@
 #include "app/dialogs/column_wrap_dialog.h"
+#include "app/localization.h"
+#include <wx/translation.h>
 #include "app/dialogs/column_input.h"
 #include <wx/dialog.h>
 #include <wx/sizer.h>
@@ -7,11 +9,12 @@
 #include <algorithm>
 
 bool ShowColumnWrapDialog(wxWindow* parent, int& column, int boundary) {
-    wxDialog dialog(parent, wxID_ANY, "Column Wrap");
+    wxDialog dialog(parent, wxID_ANY, _("Column Wrap"));
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Boundary:"), 0, wxALL, dialog.FromDIP(10));
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, _("&Boundary:")), 0, wxALL, dialog.FromDIP(10));
     auto* input = new wxTextCtrl(&dialog, wxID_ANY, wxString::Format("%d", column ? column : boundary));
     input->SetName("Boundary");
+    AppLocalization::SetAccessibleName(*input, _("Boundary"));
     input->SetMaxLength(15);
     input->Bind(wxEVT_CHAR, [](wxKeyEvent& event) {
         const wxUniChar ch(event.GetUnicodeKey());

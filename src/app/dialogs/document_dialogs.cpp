@@ -1,4 +1,6 @@
 #include "app/dialogs/document_dialogs.h"
+#include "app/localization.h"
+#include <wx/translation.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
@@ -16,7 +18,7 @@ constexpr int DialogPaddingDip = 10;
 } // namespace
 
 OpenFileDialog::OpenFileDialog(wxWindow* parent)
-    : wxFileDialog(parent, "Open file", {}, {}, "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+    : wxFileDialog(parent, _("Open file"), {}, {}, _("Text files (*.txt)") + "|*.txt|" + _("All files (*.*)") + "|*.*",
                    wxFD_OPEN | wxFD_FILE_MUST_EXIST) {
 }
 
@@ -41,7 +43,8 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
             patterns.Add("*." + extension);
         const auto pattern = wxJoin(patterns, ';');
         const bool markdown = definition.language == SyntaxLanguage::MarkdownGitHub;
-        wildcard += wxString(markdown ? "Markdown" : definition.name) + " (" + pattern + ")|" + pattern + "|";
+        wildcard += wxGetTranslation(markdown ? wxTRANSLATE("Markdown") : definition.name) + " (" + pattern + ")|" +
+                    pattern + "|";
         types.emplace_back(current && markdown ? currentLanguage : definition.language);
     };
     addLanguage(SyntaxFor(currentMarkdown ? SyntaxLanguage::MarkdownGitHub : currentLanguage), true);
@@ -52,7 +55,7 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
             continue;
         if (definition.language != currentLanguage) addLanguage(definition, false);
     }
-    wildcard += "All Files (*)|*";
+    wildcard += _("All Files (*)") + "|*";
     types.emplace_back(SaveType::AllFiles);
     const wxFileName current(path);
     wxFileDialog dialog(parent, title, initial.directory.empty() ? current.GetPath() : initial.directory,
@@ -76,12 +79,13 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
                                       {"Big5 (CP950)", FileEncoding::Big5},
                                       {"Windows-1252", FileEncoding::Windows1252},
                                       {"DOS-437", FileEncoding::Dos437}};
-    wxDialog dialog(parent, wxID_ANY, "Reload With Encoding");
+    wxDialog dialog(parent, wxID_ANY, _("Reload With Encoding"));
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "Select source &encoding to reload file:"), 0, wxALL,
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, _("Select source &encoding to reload file:")), 0, wxALL,
                   dialog.FromDIP(DialogPaddingDip));
     auto* source = new wxListBox(&dialog, wxID_ANY);
     source->SetName("Source encoding");
+    AppLocalization::SetAccessibleName(*source, _("Source encoding"));
     for (const auto& choice : choices) {
         const auto index = source->Append(choice.label);
         if (initial == choice.encoding) source->SetSelection(static_cast<int>(index));
@@ -107,37 +111,39 @@ std::optional<EncodingChoice> ChooseCurrentEncoding(wxWindow* parent, std::optio
                                                     bool defaultSelection) {
     // Notepad4 89b8b36 EditEncoding.cpp sEncodingGroupList and resource labels.
     // Retain delivered catalog entries in a native tree instead of HWND item data.
-    wxDialog dialog(parent, wxID_ANY, "Select Encoding");
+    wxDialog dialog(parent, wxID_ANY, _("Select Encoding"));
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY,
-                                   defaultSelection ? "Select &default encoding:" : "Select current file &encoding:"),
-                  0, wxALL, dialog.FromDIP(DialogPaddingDip));
+    contents->Add(
+        new wxStaticText(&dialog, wxID_ANY,
+                         defaultSelection ? _("Select &default encoding:") : _("Select current file &encoding:")),
+        0, wxALL, dialog.FromDIP(DialogPaddingDip));
     auto* tree = new wxTreeCtrl(&dialog, wxID_ANY, wxDefaultPosition, dialog.FromDIP(wxSize(360, 260)),
                                 wxTR_HIDE_ROOT | wxTR_HAS_BUTTONS | wxTR_SINGLE);
     tree->SetName(defaultSelection ? "Default encoding" : "Current encoding");
-    const auto root = tree->AddRoot("Encodings");
+    AppLocalization::SetAccessibleName(*tree, defaultSelection ? _("Default encoding") : _("Current encoding"));
+    const auto root = tree->AddRoot(_("Encodings"));
     std::vector<std::pair<wxTreeItemId, EncodingChoice>> choices;
-    const auto add = [&](wxTreeItemId group, const char* label, EncodingChoice choice) {
+    const auto add = [&](wxTreeItemId group, const wxString& label, EncodingChoice choice) {
         const auto item = tree->AppendItem(group, label);
         choices.emplace_back(item, choice);
         if (choice == initial) tree->SelectItem(item);
     };
     if (const auto native = NativeEncodingChoice()) add(root, "ANSI", *native);
     if (const auto oem = NativeOemEncodingChoice()) add(root, "OEM", *oem);
-    const auto unicode = tree->AppendItem(root, "Unicode");
-    add(unicode, "UTF-16LE with BOM", EncodingChoice(FileEncoding::Utf16Le, true));
-    add(unicode, "UTF-16BE with BOM", EncodingChoice(FileEncoding::Utf16Be, true));
+    const auto unicode = tree->AppendItem(root, _("Unicode"));
+    add(unicode, _("UTF-16LE with BOM"), EncodingChoice(FileEncoding::Utf16Le, true));
+    add(unicode, _("UTF-16BE with BOM"), EncodingChoice(FileEncoding::Utf16Be, true));
     add(unicode, "UTF-16LE", EncodingChoice(FileEncoding::Utf16Le));
     add(unicode, "UTF-16BE", EncodingChoice(FileEncoding::Utf16Be));
     add(unicode, "UTF-8", EncodingChoice(FileEncoding::Utf8));
-    add(unicode, "UTF-8 with BOM", EncodingChoice(FileEncoding::Utf8, true));
-    const auto chinese = tree->AppendItem(root, "Chinese");
-    add(chinese, "Simplified Chinese (GBK, GB2312)", EncodingChoice(FileEncoding::Gbk));
-    add(chinese, "Simplified Chinese (GB18030)", EncodingChoice(FileEncoding::Gb18030));
-    add(chinese, "Traditional Chinese (Big5, Big5-HKSCS)", EncodingChoice(FileEncoding::Big5));
-    const auto western = tree->AppendItem(root, "Western European");
-    add(western, "Latin-1 (Windows-1252)", EncodingChoice(FileEncoding::Windows1252));
-    add(western, "OEM United States (DOS-437)", EncodingChoice(FileEncoding::Dos437));
+    add(unicode, _("UTF-8 with BOM"), EncodingChoice(FileEncoding::Utf8, true));
+    const auto chinese = tree->AppendItem(root, _("Chinese"));
+    add(chinese, _("Simplified Chinese (GBK, GB2312)"), EncodingChoice(FileEncoding::Gbk));
+    add(chinese, _("Simplified Chinese (GB18030)"), EncodingChoice(FileEncoding::Gb18030));
+    add(chinese, _("Traditional Chinese (Big5, Big5-HKSCS)"), EncodingChoice(FileEncoding::Big5));
+    const auto western = tree->AppendItem(root, _("Western European"));
+    add(western, _("Latin-1 (Windows-1252)"), EncodingChoice(FileEncoding::Windows1252));
+    add(western, _("OEM United States (DOS-437)"), EncodingChoice(FileEncoding::Dos437));
     tree->ExpandAll();
     contents->Add(tree, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(DialogPaddingDip));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
@@ -164,20 +170,20 @@ void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options) {
     // Adapted from Notepad4 89b8b36 SelectDefEncodingDlgProc and IDD_DEFENCODING.
     // The accepted nested choice commits immediately; only the five flags wait
     // for outer OK. See licenses/Notepad4.txt.
-    wxDialog dialog(parent, wxID_ANY, "Default Encoding");
+    wxDialog dialog(parent, wxID_ANY, _("Default Encoding"));
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(&dialog, wxID_ANY, "&Default encoding:"), 0, wxALL,
+    contents->Add(new wxStaticText(&dialog, wxID_ANY, _("&Default encoding:")), 0, wxALL,
                   dialog.FromDIP(DialogPaddingDip));
     const auto label = [&]() {
         const auto choice = DefaultEncodingChoice(options.defaultEncoding);
-        if (!choice) return wxString::Format("Code page %d (unavailable)", options.defaultEncoding);
+        if (!choice) return wxString::Format(_("Code page %d (unavailable)"), options.defaultEncoding);
         const auto name = OriginalEncodingIdentifier(*choice);
         return wxString::FromUTF8(name.data(), name.size());
     };
     auto* current = new wxStaticText(&dialog, wxID_ANY, label());
     current->SetName("Default encoding label");
     contents->Add(current, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogPaddingDip));
-    auto* choose = new wxButton(&dialog, wxID_ANY, "Click here to &select default encoding.");
+    auto* choose = new wxButton(&dialog, wxID_ANY, _("Click here to &select default encoding."));
     choose->SetName("Choose default encoding");
     contents->Add(choose, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogPaddingDip));
     choose->Bind(wxEVT_BUTTON, [&dialog, &options, current, &label](wxCommandEvent&) {
@@ -187,7 +193,7 @@ void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options) {
             dialog.Layout();
         }
     });
-    const auto add = [&](const char* name, const char* text, bool checked) {
+    const auto add = [&](const char* name, const wxString& text, bool checked) {
         auto* control = new wxCheckBox(&dialog, wxID_ANY, text);
         control->SetName(name);
         control->SetValue(checked);
@@ -195,11 +201,11 @@ void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options) {
         return control;
     };
     auto* skip =
-        add("SkipUnicodeDetection", "Skip statistical &Unicode (UTF-16) detection.", options.skipUnicodeDetection);
-    auto* ascii = add("LoadASCIIasUTF8", "Open 7-bit &ASCII files in UTF-8 mode.", options.loadASCIIasUTF8);
-    auto* ansi = add("LoadANSIasUTF8", "Open ANSI (unknown encoding) files in UTF-&8 mode.", options.loadANSIasUTF8);
-    auto* nfo = add("LoadNFOasOEM", "Open ANSI Art (*.&nfo, *.diz) files in DOS-437 mode.", options.loadNFOasOEM);
-    auto* tags = add("NoEncodingTags", "Don't parse encoding &tags.", options.noEncodingTags);
+        add("SkipUnicodeDetection", _("Skip statistical &Unicode (UTF-16) detection."), options.skipUnicodeDetection);
+    auto* ascii = add("LoadASCIIasUTF8", _("Open 7-bit &ASCII files in UTF-8 mode."), options.loadASCIIasUTF8);
+    auto* ansi = add("LoadANSIasUTF8", _("Open ANSI (unknown encoding) files in UTF-&8 mode."), options.loadANSIasUTF8);
+    auto* nfo = add("LoadNFOasOEM", _("Open ANSI Art (*.&nfo, *.diz) files in DOS-437 mode."), options.loadNFOasOEM);
+    auto* tags = add("NoEncodingTags", _("Don't parse encoding &tags."), options.noEncodingTags);
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
                   dialog.FromDIP(DialogPaddingDip));
     dialog.SetSizerAndFit(contents);
@@ -213,16 +219,16 @@ void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options) {
 }
 
 std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, const FileWatchingOptions& initial) {
-    wxDialog dialog(parent, wxID_ANY, "File Change Notification");
+    wxDialog dialog(parent, wxID_ANY, _("File Change Notification"));
     auto* layout = new wxBoxSizer(wxVERTICAL);
-    const wxString choices[] = {"&None.", "&Show message.", "&Auto-reload (unmodified)."};
+    const wxString choices[] = {_("&None."), _("&Show message."), _("&Auto-reload (unmodified).")};
     auto* mode = new wxRadioBox(&dialog, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
                                 static_cast<int>(std::size(choices)), choices, 1, wxRA_SPECIFY_COLS);
     mode->SetSelection(static_cast<int>(initial.mode));
     layout->Add(mode, 1, wxEXPAND | wxALL, dialog.FromDIP(DialogPaddingDip));
-    auto* log = new wxCheckBox(&dialog, wxID_ANY, "&Monitor continuously updated file (e.g. log file).");
-    auto* keepEnd = new wxCheckBox(&dialog, wxID_ANY, "&Keep at document end after reloading.");
-    auto* reset = new wxCheckBox(&dialog, wxID_ANY, "&Reset if a new file is opened.");
+    auto* log = new wxCheckBox(&dialog, wxID_ANY, _("&Monitor continuously updated file (e.g. log file)."));
+    auto* keepEnd = new wxCheckBox(&dialog, wxID_ANY, _("&Keep at document end after reloading."));
+    auto* reset = new wxCheckBox(&dialog, wxID_ANY, _("&Reset if a new file is opened."));
     log->SetValue(initial.flags & FileWatchingOption_LogFile);
     keepEnd->SetValue(initial.flags & FileWatchingOption_KeepAtEnd);
     reset->SetValue(initial.resetOnNewFile);
@@ -242,26 +248,28 @@ std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, c
 }
 
 LineEndingOptionsDialog::LineEndingOptionsDialog(wxWindow* parent, const LineEndingOptions& options)
-    : wxDialog(parent, wxID_ANY, "Line Endings") {
+    : wxDialog(parent, wxID_ANY, _("Line Endings")) {
     // Original Dialogs.cpp::SelectDefLineEndingDlgProc and IDD_DEFEOLMODE.
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(this, wxID_ANY, "&Default line ending mode:"), 0, wxALL, FromDIP(DialogPaddingDip));
+    contents->Add(new wxStaticText(this, wxID_ANY, _("&Default line ending mode:")), 0, wxALL,
+                  FromDIP(DialogPaddingDip));
     mode_ = new wxChoice(this, wxID_ANY);
     mode_->SetName("Default line ending mode");
-    mode_->Append("Windows (CR+LF)");
-    mode_->Append("Unix/macOS (LF)");
-    mode_->Append("Classic Mac OS (CR)");
+    AppLocalization::SetAccessibleName(*mode_, _("Default line ending mode"));
+    mode_->Append(_("Windows (CR+LF)"));
+    mode_->Append(_("Unix/macOS (LF)"));
+    mode_->Append(_("Classic Mac OS (CR)"));
     mode_->SetSelection(options.defaultMode);
     contents->Add(mode_, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(DialogPaddingDip));
-    const auto option = [&](const char* label, bool value) {
+    const auto option = [&](const wxString& label, bool value) {
         auto* check = new wxCheckBox(this, wxID_ANY, label);
         check->SetValue(value);
         contents->Add(check, 0, wxLEFT | wxRIGHT | wxTOP, FromDIP(DialogPaddingDip));
         return check;
     };
-    warn_ = option("Show inconsistent line endings warning on loading.", options.warn);
-    fix_ = option("&Ensure consistent line endings when saving.", options.cleanup.fixLineEndings);
-    strip_ = option("&Strip trailing blanks when saving.", options.cleanup.fixTrailingBlanks);
+    warn_ = option(_("Show inconsistent line endings warning on loading."), options.warn);
+    fix_ = option(_("&Ensure consistent line endings when saving."), options.cleanup.fixLineEndings);
+    strip_ = option(_("&Strip trailing blanks when saving."), options.cleanup.fixTrailingBlanks);
     contents->Add(CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(DialogPaddingDip));
     SetSizerAndFit(contents);
     CentreOnParent();
@@ -274,29 +282,34 @@ std::optional<LineEndingOptions> LineEndingOptionsDialog::Choose() {
 
 LineEndingConversionDialog::LineEndingConversionDialog(wxWindow* parent, const LineEndingCounts& counts,
                                                        Scintilla::EndOfLine current, bool warn, bool defaultNo)
-    : wxDialog(parent, wxID_ANY, "Inconsistent Line Endings") {
+    : wxDialog(parent, wxID_ANY, _("Inconsistent Line Endings")) {
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    contents->Add(new wxStaticText(this, wxID_ANY, "The line endings in this file are not consistent:"), 0, wxALL,
+    contents->Add(new wxStaticText(this, wxID_ANY, _("The line endings in this file are not consistent:")), 0, wxALL,
                   FromDIP(DialogPaddingDip));
     contents->Add(new wxStaticText(this, wxID_ANY,
-                                   wxString::Format("CR+LF: %llu line(s).\nLF: %llu line(s).\nCR: %llu line(s).",
-                                                    static_cast<unsigned long long>(counts.crlf),
-                                                    static_cast<unsigned long long>(counts.lf),
-                                                    static_cast<unsigned long long>(counts.cr))),
+                                   wxString::Format(wxPLURAL("CR+LF: %llu line.", "CR+LF: %llu lines.", counts.crlf),
+                                                    static_cast<unsigned long long>(counts.crlf)) +
+                                       "\n" +
+                                       wxString::Format(wxPLURAL("LF: %llu line.", "LF: %llu lines.", counts.lf),
+                                                        static_cast<unsigned long long>(counts.lf)) +
+                                       "\n" +
+                                       wxString::Format(wxPLURAL("CR: %llu line.", "CR: %llu lines.", counts.cr),
+                                                        static_cast<unsigned long long>(counts.cr))),
                   0, wxLEFT | wxRIGHT, FromDIP(DialogPaddingDip));
-    contents->Add(new wxStaticText(this, wxID_ANY, "&Do you want to normalize the line endings?"), 0, wxALL,
+    contents->Add(new wxStaticText(this, wxID_ANY, _("&Do you want to normalize the line endings?")), 0, wxALL,
                   FromDIP(DialogPaddingDip));
-    const wxString names[] = {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)"};
+    const wxString names[] = {_("Windows (CR+LF)"), _("Unix/macOS (LF)"), _("Classic Mac OS (CR)")};
     mode_ = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(std::size(names)), names);
     mode_->SetName("Line ending conversion");
+    AppLocalization::SetAccessibleName(*mode_, _("Line ending conversion"));
     mode_->SetSelection(current == Scintilla::EndOfLine::CrLf ? 0 : current == Scintilla::EndOfLine::Lf ? 1 : 2);
     contents->Add(mode_, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(DialogPaddingDip));
-    always_ = new wxCheckBox(this, wxID_ANY, "&Always show this dialog.");
+    always_ = new wxCheckBox(this, wxID_ANY, _("&Always show this dialog."));
     always_->SetValue(warn);
     contents->Add(always_, 0, wxALL, FromDIP(DialogPaddingDip));
     auto* buttons = new wxBoxSizer(wxHORIZONTAL);
-    auto* yes = new wxButton(this, wxID_OK, "&Yes");
-    auto* no = new wxButton(this, wxID_CANCEL, "&No");
+    auto* yes = new wxButton(this, wxID_OK, _("&Yes"));
+    auto* no = new wxButton(this, wxID_CANCEL, _("&No"));
     buttons->Add(yes, 0, wxRIGHT, FromDIP(5));
     buttons->Add(no);
     contents->Add(buttons, 0, wxALIGN_RIGHT | wxALL, FromDIP(DialogPaddingDip));
