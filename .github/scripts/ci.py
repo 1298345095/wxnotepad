@@ -47,8 +47,8 @@ def probe(command, report_directory, timeout, runs, working_directory):
         reports.mkdir(parents=True, exist_ok=False)
     except FileExistsError:
         raise SystemExit('Report directory already exists; choose a fresh directory to retain earlier evidence')
-    summary = dict(command=[str(item) for item in command], cwd=str(working_directory.resolve()),
-                   timeout_seconds=timeout, requested_runs=runs, completed_runs=0, success=False, results=[])
+    summary = {'command': [str(item) for item in command], 'cwd': str(working_directory.resolve()),
+               'timeout_seconds': timeout, 'requested_runs': runs, 'completed_runs': 0, 'success': False, 'results': []}
 
     def publish():
         summary['completed_runs'] = sum(item['status'] == 'completed' for item in summary['results'])
@@ -57,7 +57,7 @@ def probe(command, report_directory, timeout, runs, working_directory):
     publish()
     for index in range(1, runs + 1):
         log = reports / f'run-{index:03}.log'
-        record = dict(command=summary['command'], status='running', exit_code=None, log=str(log))
+        record = {'command': summary['command'], 'status': 'running', 'exit_code': None, 'log': str(log)}
         summary['results'].append(record)
         publish()
         started = time.monotonic()

@@ -11,6 +11,8 @@
 #include <wx/zstream.h>
 #include <array>
 #include <cstdio>
+#include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string_view>
 
@@ -29,8 +31,12 @@ static_assert(wxUSE_ACCESSIBILITY);
 #endif
 
 namespace {
+class CapabilityFailure final : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
 void Require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
+    if (!condition) throw CapabilityFailure(message);
 }
 class ProbePrintout final : public wxPrintout {
 public:
@@ -39,14 +45,17 @@ public:
 };
 void CheckCapabilities() {
     wxFrame frame(nullptr, wxID_ANY, "Hidden SDK capability probe");
-    auto* grid = new wxGridSizer(2);
-    const std::array<wxWindow*, 4> controls{new wxListCtrl(&frame), new wxTreeCtrl(&frame),
-                                            new wxNotebook(&frame, wxID_ANY), new wxSpinCtrl(&frame)};
+    auto grid = std::make_unique<wxGridSizer>(2);
+    wxListCtrl list(&frame);
+    wxTreeCtrl tree(&frame);
+    wxNotebook notebook(&frame, wxID_ANY);
+    wxSpinCtrl spin(&frame);
+    const std::array<wxWindow*, 4> controls{&list, &tree, &notebook, &spin};
     for (auto* control : controls) {
         Require(control->GetHandle() != nullptr, "retained controls must create their native windows");
         grid->Add(control);
     }
-    frame.SetSizer(grid);
+    frame.SetSizer(grid.release());
     frame.Layout();
     wxPrintData printData;
     printData.SetPaperId(wxPAPER_A4);
@@ -101,7 +110,7 @@ public:
             CheckCapabilities();
             std::puts("PASS: retained SDK capabilities (native controls, printing, zlib, PNG and SVG)");
         } catch (const std::exception& error) {
-            std::fprintf(stderr, "FAIL: %s\n", error.what());
+            std::cerr << "FAIL: " << error.what() << '\n';
             result = 1;
         }
         wxLog::SetActiveTarget(previousLog);

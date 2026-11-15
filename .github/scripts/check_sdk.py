@@ -13,10 +13,23 @@ def stc_artifact(path):
             (path.suffix.lower() in ('.lib', '.dll', '.pdb', '.a') or '.so' in path.suffixes))
 
 
+def inspect_runtime(artifact_directory, windows, report):
+    binary = artifact_directory / ('wxnotepad.exe' if windows else 'wxnotepad')
+    if not binary.is_file():
+        report['errors'].append('Distribution has no application executable')
+    runtime = sorted(path for path in artifact_directory.rglob('*') if path.is_file() and
+                     (path.suffix.lower() in ('.exe', '.dll') or '.so' in path.suffixes or path == binary))
+    report['runtime_file_count'] = len(runtime)
+    unused_windows = ('libwebp', 'webp', 'libjpeg', 'jpeg', 'turbojpeg',
+                      'libtiff', 'tiff', 'libpcre2', 'pcre2')
+    report['forbidden_runtime_artifacts'] = [str(path) for path in runtime if stc_artifact(path) or
+        (windows and path.name.lower().startswith(unused_windows))]
+
+
 def inspect(cmake_directory, artifact_directory=None):
-    report = dict(success=False, sdk_root=None, triplet=None, sdk_library_count=0, runtime_file_count=0,
-                  runtime_checked=artifact_directory is not None,
-                  forbidden_sdk_artifacts=[], forbidden_runtime_artifacts=[], errors=[])
+    report = {'success': False, 'sdk_root': None, 'triplet': None, 'sdk_library_count': 0, 'runtime_file_count': 0,
+              'runtime_checked': artifact_directory is not None,
+              'forbidden_sdk_artifacts': [], 'forbidden_runtime_artifacts': [], 'errors': []}
     try:
         cache = {}
         for line in (cmake_directory / 'CMakeCache.txt').read_text(encoding='utf-8').splitlines():
@@ -42,17 +55,7 @@ def inspect(cmake_directory, artifact_directory=None):
             report['errors'].append('Selected SDK must contain actual wx core and base libraries')
         report['forbidden_sdk_artifacts'] = [str(path) for path in files if stc_artifact(path)]
         if artifact_directory is not None:
-            windows = 'windows' in triplet
-            binary = artifact_directory / ('wxnotepad.exe' if windows else 'wxnotepad')
-            if not binary.is_file():
-                report['errors'].append('Distribution has no application executable')
-            runtime = sorted(path for path in artifact_directory.rglob('*') if path.is_file() and
-                             (path.suffix.lower() in ('.exe', '.dll') or '.so' in path.suffixes or path == binary))
-            report['runtime_file_count'] = len(runtime)
-            unused_windows = ('libwebp', 'webp', 'libjpeg', 'jpeg', 'turbojpeg',
-                              'libtiff', 'tiff', 'libpcre2', 'pcre2')
-            report['forbidden_runtime_artifacts'] = [str(path) for path in runtime if stc_artifact(path) or
-                (windows and path.name.lower().startswith(unused_windows))]
+            inspect_runtime(artifact_directory, 'windows' in triplet, report)
     except (OSError, KeyError) as error:
         report['errors'].append(f'Cannot inspect configured SDK: {error}')
     report['success'] = not (report['errors'] or report['forbidden_sdk_artifacts'] or
