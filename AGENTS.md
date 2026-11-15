@@ -15,3 +15,7 @@ Use the default canonical triage labels. See `docs/agents/triage-labels.md`.
 ### Domain docs
 
 Use the single-context domain-doc layout. See `docs/agents/domain.md`.
+
+### Native validation
+
+For local native tests, standalone GUI probes, or SDK/package checks, use the entry points in `docs/ci.md`.
