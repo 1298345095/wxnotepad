@@ -25,10 +25,14 @@ def main():
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         app = Application(executable, folder, environment, document)
         try:
+            assert "numeric-menu.txt" in app.state["title"], app.state
+            assert app.state[f"menu.{NEW_COMMAND}.label"] == "&New\tCtrl+N", app.state
             command(folder, f"1\nmenu\n{NEW_COMMAND}\n")
             state = wait_state(folder, app.process, lambda s: s["sequence"] == "1")
             assert state["result"] == "ok", state
             assert state["length"] == "0", state
+            assert state["title"] == "Untitled - wxnotepad", state
+            assert state["caret_position"] == "0" and state["read_only"] == "0", state
             assert document.read_bytes() == b"same real Save command\n"
             command(folder, "2\nmenu\n2147483647\n")
             state = wait_state(folder, app.process, lambda s: s["sequence"] == "2")

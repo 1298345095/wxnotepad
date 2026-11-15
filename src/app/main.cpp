@@ -6,6 +6,7 @@
 #include "settings/settings_store.h"
 #include "diagnostics/trace.h"
 #include <wx/wx.h>
+#include <wx/filename.h>
 #include <memory>
 #include <limits>
 
@@ -71,6 +72,13 @@ public:
             return false;
         frame->Show();
         frame->Editor()->SetFocus();
+        // An external acceptance fixture can observe independently relaunched
+        // processes through the same opt-in shown-application seam.
+        wxString observationRoot;
+        if (observation.empty() && wxGetEnv("WXNOTEPAD_OBSERVE_ROOT", &observationRoot) && !observationRoot.empty()) {
+            observation = wxFileName(observationRoot, wxString::Format("%lu", wxGetProcessId())).GetFullPath();
+            if (!wxFileName::Mkdir(observation, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) return false;
+        }
         if (!observation.empty()) observer_ = std::make_unique<ProcessObserver>(*frame, observation);
         return true;
     }

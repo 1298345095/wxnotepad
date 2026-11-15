@@ -26,6 +26,7 @@ private:
     wxTimer observer_;
     bool lastDirty_ = false;
     bool lastActive_ = false;
+    long long lastCaret_ = 0;
     bool publishPending_ = false;
     bool commandPending_ = false;
     void Publish();
