@@ -8,20 +8,40 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def crash_executable(executable, evidence):
+    if executable.is_file():
+        return executable
+    # Packaged tests retain the exact failed fixture before removing its /tmp
+    # directory. Match that fixture identity and executable-relative path.
+    candidates = set()
+    for failure in evidence.rglob('*-failure-*'):
+        for ancestor in executable.parents:
+            if ancestor.name and failure.name.endswith('-failure-' + ancestor.name):
+                candidate = failure / executable.relative_to(ancestor)
+                if candidate.is_file():
+                    candidates.add(candidate)
+    if len(candidates) != 1:
+        raise FileNotFoundError(f'{executable}: expected one retained failure binary, found {len(candidates)}')
+    return candidates.pop()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--core-dir', type=Path, default=ROOT / '.ci/reports/cores')
-    directory = parser.parse_args().core_dir
+    parser.add_argument('--evidence-dir', type=Path, default=ROOT / '.ci/build')
+    args = parser.parse_args()
+    directory = args.core_dir
     failed = False
     for core in sorted(directory.glob('core.*')):
         # Linux core_pattern is core.%p.%E; %E escapes executable path slashes as !.
         _, pid, encoded = core.name.split('.', 2)
         executable = Path(encoded.replace('!', '/'))
+        source = crash_executable(executable, args.evidence_dir)
         retained = directory / f'executable-{pid}-{executable.name}'
-        shutil.copy2(executable, retained)
+        shutil.copy2(source, retained)
         report = directory / f'backtrace-{pid}.txt'
         with report.open('w', encoding='utf-8') as output:
-            output.write(f'Core: {core}\nExecutable: {executable}\nRetained: {retained}\n\n')
+            output.write(f'Core: {core}\nExecutable: {executable}\nCollected from: {source}\nRetained: {retained}\n\n')
             output.flush()
             result = subprocess.run(
                 ['gdb', '--batch', '--nx', '-ex', 'set pagination off',
