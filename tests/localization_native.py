@@ -1,6 +1,7 @@
 """External native dialog/accessibility driver for owned packaged app processes."""
 import ctypes
 from ctypes import wintypes
+import os
 import sys
 import time
 
@@ -117,7 +118,10 @@ class Dialogs:
             observed = self.windows(process)
             for window in observed:
                 if self.title(window) == title:
-                    return window
+                    # Wayland accessibility can precede compositor activation.
+                    if (sys.platform == 'win32' or os.environ.get('GDK_BACKEND') != 'wayland'
+                            or window.get_state_set().contains(self.atspi.StateType.ACTIVE)):
+                        return window
                 if message is not None and any(message in text for text in self.texts(window)):
                     return window
                 if sys.platform != 'win32' and window.get_role() == self.atspi.Role.ALERT:
@@ -297,7 +301,20 @@ class Dialogs:
                            and child.get_state_set().contains(self.atspi.StateType.FOCUSED)]
                 if entries:
                     assert entries[0].get_editable_text_iface().set_text_contents(str(folder) + '/')
-                    self.key(app, 'Return', window)
+                    # GtkEntry activates the dialog's default button, which may
+                    # still be disabled while the native folder model updates.
+                    # Submit the actual chooser button once it can accept input.
+                    while time.monotonic() < deadline:
+                        buttons = [child for child in self.children(window)
+                                   if child.get_role() == self.atspi.Role.PUSH_BUTTON
+                                   and child.get_name() == 'Open'
+                                   and child.get_state_set().contains(self.atspi.StateType.SENSITIVE)]
+                        if buttons:
+                            assert buttons[0].get_action_iface().do_action(0)
+                            break
+                        time.sleep(.03)
+                    else:
+                        raise AssertionError('Native chooser Open button did not become sensitive')
                     break
                 time.sleep(.03)
             while time.monotonic() < deadline:
