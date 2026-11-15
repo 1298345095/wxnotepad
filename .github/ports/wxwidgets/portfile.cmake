@@ -100,19 +100,29 @@ if(NOT DEFINED WXWIDGETS_USE_STD_CONTAINERS)
     set(WXWIDGETS_USE_STD_CONTAINERS OFF)
 endif()
 
-# The editor uses PNG/SVG art and native bitmaps, not these image codecs.
-# Keep the existing Linux dependency configuration intact.
+# The editor uses its own document model and the original core's regex engine.
+# Retain printing, native lists/trees, standard dialogs and PNG/SVG art.
 if(VCPKG_TARGET_IS_WINDOWS)
     set(image_codecs OFF)
+    set(regex_library OFF)
+    list(APPEND OPTIONS
+        -DwxUSE_GRID=OFF
+        -DwxUSE_DATAVIEWCTRL=OFF
+        -DwxUSE_TREELISTCTRL=OFF
+        -DwxUSE_DOC_VIEW_ARCHITECTURE=OFF
+        -DwxUSE_MDI=OFF
+        -DwxUSE_MDI_ARCHITECTURE=OFF
+    )
 else()
     set(image_codecs sys)
+    set(regex_library sys)
 endif()
 
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
         ${FEATURE_OPTIONS}
-        -DwxUSE_REGEX=sys
+        -DwxUSE_REGEX=${regex_library}
         -DwxUSE_ZLIB=sys
         -DwxUSE_EXPAT=sys
         -DwxUSE_LIBJPEG=${image_codecs}
