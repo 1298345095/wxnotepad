@@ -268,16 +268,28 @@ def diagnostic_build(jobs, *, compiler_cache=False):
                        '--target', 'wxnotepad', 'editing_keys', 'close_smoke']), 'diagnostic-build.log')
 
 
+def split_linux_symbols(binary, symbols):
+    """Keep matching symbols separately and strip only the distribution copy."""
+    debug_directory = symbols / '.debug'
+    debug_directory.mkdir(parents=True, exist_ok=True)
+    debug_file = debug_directory / (binary.name + '.debug')
+    subprocess.run(['objcopy', '--only-keep-debug', binary, debug_file], check=True)
+    subprocess.run(['strip', '--strip-unneeded', binary], check=True)
+    subprocess.run(['objcopy', f'--add-gnu-debuglink={debug_file}', binary], check=True)
+
+
 def bundle():
     directory = BUILD / 'cmake'
     executable = directory / ('wxnotepad.exe' if WINDOWS else 'wxnotepad')
     destination = WORK / 'artifact'
     destination.mkdir(parents=True, exist_ok=True)
     shutil.copy2(executable, destination / executable.name)
+    symbols = WORK / 'symbols'
     if WINDOWS:
         for library in directory.glob('*.dll'):
             shutil.copy2(library, destination / library.name)
     else:
+        split_linux_symbols(destination / executable.name, symbols)
         dependencies = subprocess.check_output(['ldd', str(executable)], text=True)
         (REPORTS / 'runtime-libraries.txt').write_text(dependencies, encoding='utf-8')
         libraries = destination / 'lib'
@@ -288,6 +300,7 @@ def bundle():
             name = Path(line.split('=> ', 1)[1].split(' (', 1)[0].strip())
             if name.is_absolute() and name.is_relative_to(VCPKG / 'installed'):
                 shutil.copy2(name, libraries / name.name)
+                split_linux_symbols(libraries / name.name, symbols / 'lib')
     shutil.copytree(ROOT / 'licenses', destination / 'licenses', dirs_exist_ok=True)
     for notice in (VCPKG / 'installed' / TRIPLET / 'share').glob('*/copyright'):
         target = destination / 'licenses/vcpkg' / notice.parent.name
@@ -296,14 +309,20 @@ def bundle():
     source = json.loads((BUILD / 'original-core/wxnotepad-source.json').read_text(encoding='utf-8'))
     source['application_commit'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     source['triplet'] = TRIPLET
-    source['executable_sha256'] = hashlib.sha256(executable.read_bytes()).hexdigest()
+    source['executable_sha256'] = hashlib.sha256((destination / executable.name).read_bytes()).hexdigest()
+    if not WINDOWS:
+        source['unstripped_executable_sha256'] = hashlib.sha256(executable.read_bytes()).hexdigest()
     (destination / 'build.json').write_text(json.dumps(source, indent=2) + '\n', encoding='utf-8')
+    if not WINDOWS:
+        shutil.copy2(destination / 'build.json', symbols / 'build.json')
     (destination / 'README.txt').write_text(
         'Development build output, not a release/install package.\n'
         'See build.json for the tested source and executable checksum.\n'
         'Windows: keep the bundled DLLs beside wxnotepad.exe.\n'
         'Linux: Ubuntu 24.04 x64 desktop libraries are required; run from this directory with\n'
-        'LD_LIBRARY_PATH="$PWD/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ./wxnotepad\n',
+        'LD_LIBRARY_PATH="$PWD/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ./wxnotepad\n'
+        'Linux debug symbols are in .ci/symbols/ inside the matching evidence artifact.\n'
+        'Copy its .debug/ and lib/.debug/ directories here for GDB.\n',
         encoding='utf-8')
 
 
