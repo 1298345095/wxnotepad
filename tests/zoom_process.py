@@ -1,4 +1,5 @@
 """Verify the original ZoomLevel preference across actual application processes."""
+from english_settings import english_settings
 import os
 from pathlib import Path
 import shutil
@@ -16,7 +17,7 @@ def main():
         shutil.copy2(source, executable)
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         config = folder / "Notepad4.ini"
-        config.write_text("[Settings]\nZoomLevel=175%\nUnrelated=keep\n", encoding="utf-16")
+        config.write_text(english_settings("[Settings]\nZoomLevel=175%\nUnrelated=keep\n"), encoding="utf-16")
         app = Application(executable, folder, environment)
         try:
             assert app.state["zoom"] == "175", app.state
@@ -47,7 +48,7 @@ def main():
         saved = config.read_text(encoding="utf-16")
         assert "ZoomLevel=" not in saved and "Unrelated=keep" in saved, saved
         for value, expected in (("invalid", "100"), ("0", "10"), ("999", "500")):
-            config.write_text(f"[Settings]\nZoomLevel={value}\n", encoding="utf-16")
+            config.write_text(english_settings(f"[Settings]\nZoomLevel={value}\n"), encoding="utf-16")
             app = Application(executable, folder, environment)
             try:
                 assert app.state["zoom"] == expected, app.state
