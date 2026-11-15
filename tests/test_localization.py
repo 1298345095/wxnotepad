@@ -23,6 +23,12 @@ class LocalizationCLIBase:
             self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
+    def run_cmake(self, *arguments):
+        result = subprocess.run(['cmake', *map(str, arguments)], capture_output=True,
+                                text=True, encoding='utf-8')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return result
+
 
 class LocalizationCLI(LocalizationCLIBase, unittest.TestCase):
     def test_release_metadata_generates_runtime_definitions(self):
@@ -105,6 +111,7 @@ class GettextCLI(LocalizationCLIBase, unittest.TestCase):
                 # executable: no replacement translation implementation is used.
                 shutil.copytree(ROOT / 'tools', root / 'tools')
                 shutil.copytree(ROOT / 'cmake', root / 'cmake')
+                shutil.copytree(ROOT / 'licenses', root / 'licenses')
                 (root / 'stub.cpp').write_text('int main() { return 0; }' + chr(10), encoding='utf-8')
                 (root / 'CMakeLists.txt').write_text(chr(10).join((
                     'cmake_minimum_required(VERSION 3.25)',
@@ -113,23 +120,37 @@ class GettextCLI(LocalizationCLIBase, unittest.TestCase):
                     'add_executable(wxnotepad stub.cpp)',
                     'include(cmake/Localization.cmake)', '')), encoding='utf-8')
                 build, install = root / 'build', root / 'install'
-                subprocess.run(['cmake', '-S', root, '-B', build, '-G', 'Ninja',
+                self.run_cmake('-S', root, '-B', build, '-G', 'Ninja',
                                 f'-DCMAKE_INSTALL_PREFIX={install}',
-                                f'-DWXNOTEPAD_GETTEXT_BIN={GETTEXT or Path(shutil.which("msgfmt")).parent}'],
-                               check=True, capture_output=True)
-                subprocess.run(['cmake', '--build', build], check=True, capture_output=True)
+                                f'-DWXNOTEPAD_GETTEXT_BIN={GETTEXT or Path(shutil.which("msgfmt")).parent}')
+                self.run_cmake('--build', build)
                 executable_time = (build / 'wxnotepad').stat().st_mtime_ns
                 catalog = root / 'po/zh_CN.po'
                 catalog.write_text(catalog.read_text(encoding='utf-8').replace('msgstr "Exit"',
                                    'msgstr "Leave"'), encoding='utf-8')
-                subprocess.run(['cmake', '--build', build, '--target', 'wxnotepad'],
-                               check=True, capture_output=True)
+                self.run_cmake('--build', build, '--target', 'wxnotepad')
                 self.assertEqual((build / 'wxnotepad').stat().st_mtime_ns, executable_time)
                 with (build / 'locale/zh_CN/LC_MESSAGES/wxnotepad.mo').open('rb') as stream:
                     self.assertEqual(gettext.GNUTranslations(stream).gettext('Exit'), 'Leave')
-                subprocess.run(['cmake', '--install', build], check=True, capture_output=True)
-                self.assertEqual((install / 'share/locale/zh_CN/LC_MESSAGES/wxnotepad.mo').read_bytes(),
-                                 (build / 'locale/zh_CN/LC_MESSAGES/wxnotepad.mo').read_bytes())
+                self.run_cmake('--install', build)
+                for code in ('zh_CN', 'zh_TW'):
+                    for domain in ('wxnotepad', 'wxstd'):
+                        relative = Path(code) / 'LC_MESSAGES' / (domain + '.mo')
+                        self.assertEqual((install / 'share/locale' / relative).read_bytes(),
+                                         (build / 'locale' / relative).read_bytes())
+                for notice in (ROOT / 'licenses').iterdir():
+                    if notice.is_file():
+                        self.assertEqual((install / 'share/licenses/wxnotepad' / notice.name).read_bytes(),
+                                         notice.read_bytes())
+                custom_locale = root / 'custom locale'
+                self.run_cmake('-S', root, '-B', build, f'-DWXNOTEPAD_LOCALE_DIR={custom_locale}')
+                self.run_cmake('--build', build)
+                self.run_cmake('--install', build)
+                for code in ('zh_CN', 'zh_TW'):
+                    for domain in ('wxnotepad', 'wxstd'):
+                        relative = Path(code) / 'LC_MESSAGES' / (domain + '.mo')
+                        self.assertEqual((custom_locale / relative).read_bytes(),
+                                         (build / 'locale' / relative).read_bytes())
             source.write_text(source.read_text(encoding='utf-8') + '\n_("New command");\n', encoding='utf-8')
             self.run_tool(*common, 'check', success=False)
             self.run_tool(*common, 'update')
