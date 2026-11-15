@@ -157,6 +157,8 @@ add_library(app_shell STATIC
     src/app/editor_frame_file_watching.cpp
     src/app/editor_frame_commands.cpp
     src/app/new_window.cpp
+    src/app/localization.cpp
+    src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
