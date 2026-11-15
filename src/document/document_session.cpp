@@ -11,6 +11,7 @@
 #include <wx/filename.h>
 #include <wx/log.h>
 #include <wx/utils.h>
+#include <wx/translation.h>
 #include <cstdio>
 #include <algorithm>
 #ifdef __WXMSW__
@@ -342,7 +343,7 @@ void RestoreReloadView(EditorControl& editor, const ReloadView& view) {
 } // namespace
 
 wxString DocumentSession::FileNameText(FileNamePart part) const {
-    wxString text = path_.empty()                    ? wxString("Untitled")
+    wxString text = path_.empty()                    ? _("Untitled")
                     : part == FileNamePart::FullPath ? path_
                                                      : wxFileName(path_).GetFullName();
     if (part == FileNamePart::BaseName) {

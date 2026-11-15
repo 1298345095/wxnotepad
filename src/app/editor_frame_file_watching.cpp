@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include <wx/filename.h>
 #include <wx/msgdlg.h>
+#include <wx/translation.h>
 
 void EditorFrame::SetFileWatchingOptions(const FileWatchingOptions& options) {
     fileWatchingOptions_ = options;
@@ -23,8 +24,8 @@ bool EditorFrame::HandleFileChange() {
     if (wxFileName::FileExists(document_.Path())) {
         const bool automatic = fileWatchingOptions_.mode == FileWatchingMode::AutoReload;
         if ((automatic && !document_.IsModified()) ||
-            wxMessageBox("The current file has been modified by an external program. Reload?",
-                         "File Change Notification", wxYES_NO | wxICON_WARNING, this) == wxYES) {
+            wxMessageBox(_("The current file has been modified by an external program. Reload?"),
+                         _("File Change Notification"), wxYES_NO | wxICON_WARNING, this) == wxYES) {
             const bool followEnd = automatic && ((fileWatchingOptions_.flags & FileWatchingOption_KeepAtEnd) ||
                                                  editor_->Send(Scintilla::Message::LineFromPosition,
                                                                editor_->Send(Scintilla::Message::GetCurrentPos)) +
@@ -33,16 +34,16 @@ bool EditorFrame::HandleFileChange() {
             const auto result = ReloadCurrentFile(followEnd);
             reloaded = result.status == OpenStatus::Opened;
             if (result.status == OpenStatus::Failed)
-                wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+                wxMessageBox(result.error, _("Could not open file"), wxOK | wxICON_ERROR, this);
         }
     } else {
-        const int choice = wxMessageBox("The current file has been deleted. Save now?", "File Change Notification",
-                                        wxYES_NO | wxCANCEL | wxICON_WARNING, this);
+        const int choice = wxMessageBox(_("The current file has been deleted. Save now?"),
+                                        _("File Change Notification"), wxYES_NO | wxCANCEL | wxICON_WARNING, this);
         terminate = choice == wxCANCEL;
         if (choice == wxYES) {
             const auto result = Save();
             if (result.status == SaveStatus::Failed)
-                wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
+                wxMessageBox(result.error, _("Could not save file"), wxOK | wxICON_ERROR, this);
         }
     }
     if (!terminate) RefreshFileWatching();
