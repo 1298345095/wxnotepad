@@ -121,7 +121,7 @@ bool EditorFrame::LaunchWindow(bool currentFile) {
         const auto caret = editor_->Send(Scintilla::Message::GetCurrentPos);
         if (caret > 0) {
             const auto line = editor_->Send(Scintilla::Message::LineFromPosition, static_cast<uintptr_t>(caret));
-            const auto column = editor_->Send(Scintilla::Message::GetColumn, static_cast<uintptr_t>(caret));
+            const auto column = editor_->Send(Scintilla::Message::GetColumn, static_cast<uintptr_t>(caret), line);
             arguments.emplace_back("--startup-caret");
             arguments.push_back(
                 wxString::Format("%lld,%lld", static_cast<long long>(line + 1), static_cast<long long>(column + 1)));
