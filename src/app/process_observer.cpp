@@ -59,12 +59,27 @@ void DispatchObservedCommand(EditorFrame& frame, const wxString& operation, cons
                  numericId <= std::numeric_limits<int>::max())
             id = static_cast<int>(numericId);
         const auto* item = id == wxNOT_FOUND ? nullptr : frame.GetMenuBar()->FindItem(id);
-        if (item && !item->IsSeparator() && !item->GetSubMenu() && item->IsEnabled()) {
+        if (item && !item->IsSeparator() && !item->GetSubMenu()) {
             wxCommandEvent event(wxEVT_MENU, id);
             result = frame.GetEventHandler()->ProcessEvent(event) ? "ok" : "failed";
             frame.UpdateWindowUI(wxUPDATE_UI_RECURSE);
         }
     }
+}
+
+wxString ObserveMenu(const wxMenu& menu, const wxString& path) {
+    wxString state;
+    size_t index = 0;
+    for (const auto* item : menu.GetMenuItems()) {
+        const auto itemPath = path + wxString::Format("/%zu", index++);
+        if (item->IsSeparator()) continue;
+        const auto key = wxString::Format("menu.%d.", item->GetId());
+        state += key + "path\t" + itemPath + "\n" + key + "label\t" + item->GetItemLabel() + "\n";
+        state += key + wxString::Format("enabled\t%d\n", item->IsEnabled());
+        state += key + wxString::Format("checked\t%d\n", item->IsCheckable() && item->IsChecked());
+        if (const auto* children = item->GetSubMenu()) state += ObserveMenu(*children, itemPath);
+    }
+    return state;
 }
 } // namespace
 
@@ -97,16 +112,18 @@ void ProcessObserver::OnFrameDestroyed(wxWindowDestroyEvent& event) {
 // editor host or hidden operation path: Open/Save are the frame's commands.
 void ProcessObserver::Publish() {
     if (!frame_) return;
+    frame_->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     frame_->Update();
     frame_->Editor()->Update();
     lastDirty_ = frame_->Editor()->Send(Scintilla::Message::GetModify) != 0;
     lastActive_ = frame_->IsActive();
+    lastCaret_ = frame_->Editor()->Send(Scintilla::Message::GetCurrentPos);
     wxString backend = "Windows";
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
 #endif
     const char* encoding = ObservationEncodingName(frame_->DocumentEncoding());
-    const wxString contents =
+    wxString contents =
         wxString::Format(
             "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"
             "handle\t%llu\nwrap_mode\t%lld\nwrap_rows\t%lld\nclient_width\t%d\nline_numbers\t%d\nwhitespace\t%lld\neol_"
@@ -154,6 +171,23 @@ void ProcessObserver::Publish() {
                          frame_->FileWatching().autoReloadDelay) +
         wxString::Format("file_watching_option\t%d\nreset_file_watching\t%d\n", frame_->FileWatching().flags,
                          frame_->FileWatching().resetOnNewFile);
+    contents += "title\t" + frame_->GetTitle() + "\n" + "document_path\t" + frame_->DocumentPath() + "\n";
+    contents += wxString::Format("caret_position\t%lld\nread_only\t%lld\nclient_height\t%d\nframe_handle\t%llu\n",
+                                 static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCurrentPos)),
+                                 static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetReadOnly)),
+                                 frame_->GetClientSize().y,
+                                 static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->GetHandle())));
+    const auto position = frame_->GetPosition();
+    const auto size = frame_->GetSize();
+    contents +=
+        wxString::Format("frame_x\t%d\nframe_y\t%d\nframe_width\t%d\nframe_height\t%d\nmaximized\t%d\ndpi\t%d\n",
+                         position.x, position.y, size.x, size.y, frame_->IsMaximized(), frame_->GetDPI().x);
+    contents += "position_status\t" + frame_->GetStatusBar()->GetStatusText(1) + "\n";
+    const auto* menuBar = frame_->GetMenuBar();
+    for (size_t index = 0; index < menuBar->GetMenuCount(); ++index) {
+        contents += wxString::Format("menu_top.%zu.label\t", index) + menuBar->GetMenuLabel(index) + "\n";
+        contents += ObserveMenu(*menuBar->GetMenu(index), wxString::Format("%zu", index));
+    }
     // A reader can temporarily deny replacement on Windows. IPC errors must
     // stay out of wxLogGui: its deferred modal dialog can outlive the frame.
     const wxLogNull noGuiLog;
@@ -236,6 +270,7 @@ void ProcessObserver::Observe() {
     } else {
         commandPending_ = false;
         if (publishPending_ || (frame_->Editor()->Send(Scintilla::Message::GetModify) != 0) != lastDirty_ ||
+            frame_->Editor()->Send(Scintilla::Message::GetCurrentPos) != lastCaret_ ||
             frame_->IsActive() != lastActive_)
             Publish();
     }
