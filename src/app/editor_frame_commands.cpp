@@ -1,5 +1,6 @@
 #include "app/dialogs/auto_completion_settings_dialog.h"
 #include "app/editor_frame.h"
+#include "app/localization.h"
 #include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
 #include "app/dialogs/long_line_settings_dialog.h"
@@ -41,6 +42,7 @@ void ShowZoomLevelDialog(wxWindow* parent, EditorControl& editor) {
     auto* input =
         new wxComboBox(&dialog, wxID_ANY, wxString::Format("%d%%", static_cast<int>(editor.Send(Message::GetZoom))));
     input->SetName("Zoom level");
+    AppLocalization::SetAccessibleName(*input, _("Zoom level"));
     input->SetMaxLength(8);
     for (int level : {500, 450, 400, 350, 300, 250, 200, 175, 150, 125, 100, 75, 50, 25})
         input->Append(wxString::Format("%d%%", level));
