@@ -37,13 +37,17 @@ private:
 namespace AppLocalization {
 uint16_t MenuPreference(uint16_t preference) {
     if (preference == UILanguage::System) return preference;
-    const auto primary = preference & 0x3ff;
-    const auto sublanguage = preference >> 10;
+    const auto primary = preference & UILanguage::PrimaryLanguageMask;
+    const auto sublanguage = preference >> UILanguage::SublanguageShift;
     // Original IsChineseTraditionalSubLang: Taiwan, Hong Kong and Macau.
-    const bool traditional = sublanguage == 1 || sublanguage == 3 || sublanguage == 5;
+    const bool traditional = sublanguage == UILanguage::ChineseTaiwanSublanguage ||
+                             sublanguage == UILanguage::ChineseHongKongSublanguage ||
+                             sublanguage == UILanguage::ChineseMacauSublanguage;
     for (const auto& language : LanguageDefinitions) {
-        if ((language.langId & 0x3ff) != primary) continue;
-        if (primary != 0x04 || ((language.langId >> 10) == 1) == traditional) return language.langId;
+        if ((language.langId & UILanguage::PrimaryLanguageMask) != primary) continue;
+        if (primary != UILanguage::ChinesePrimaryLanguage ||
+            ((language.langId >> UILanguage::SublanguageShift) == UILanguage::ChineseTaiwanSublanguage) == traditional)
+            return language.langId;
     }
     return preference;
 }
@@ -72,10 +76,12 @@ void Initialize(uint16_t preference) {
     translations->SetLanguage(effective);
     // AddCatalog() may succeed without loading an MO. Both domains must actually
     // load in the same language before exposing a translated interface.
+    // wxWidgets searches the most recently loaded catalog first. Load stock first
+    // so application wording takes precedence while other toolkit keys fall back.
     const wxLogNull noGuiLog;
     if (effective != sourceLanguage &&
-        (!translations->AddAvailableCatalog(domain, wxLANGUAGE_ENGLISH) || !translations->IsLoaded(domain) ||
-         !translations->AddAvailableCatalog("wxstd", wxLANGUAGE_ENGLISH) || !translations->IsLoaded("wxstd"))) {
+        (!translations->AddAvailableCatalog("wxstd", wxLANGUAGE_ENGLISH) || !translations->IsLoaded("wxstd") ||
+         !translations->AddAvailableCatalog(domain, wxLANGUAGE_ENGLISH) || !translations->IsLoaded(domain))) {
         translations = new wxTranslations;
         translations->SetLanguage(sourceLanguage);
         wxTranslations::Set(translations);
@@ -86,8 +92,11 @@ void SetAccessibleName(wxWindow& window, const wxString& name) {
 #ifdef __WXMSW__
     window.SetAccessible(new NamedWindowAccessible(name));
 #elif defined(__WXGTK__)
-    if (auto* accessible = gtk_widget_get_accessible(GTK_WIDGET(window.GetHandle())))
-        atk_object_set_name(accessible, name.utf8_str());
+    auto* widget = GTK_WIDGET(window.GetHandle());
+    if (auto* accessible = gtk_widget_get_accessible(widget)) atk_object_set_name(accessible, name.utf8_str());
+    // Multiline wxTextCtrl uses a scrolled window handle around the editable text view.
+    if (auto* input = window.GetConnectWidget(); input != widget && GTK_IS_TEXT_VIEW(input))
+        if (auto* accessible = gtk_widget_get_accessible(input)) atk_object_set_name(accessible, name.utf8_str());
 #endif
 }
 } // namespace AppLocalization

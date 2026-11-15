@@ -53,7 +53,7 @@ def main():
             finally:
                 app.stop()
         # UTF-16 variables are parsed after the original Unicode-to-UTF-8 conversion.
-        startup.write_text(english_settings("# tab-width: 8; c-basic-offset: 3; indent-tabs-mode: nil\n"), encoding="utf-16")
+        startup.write_text("# tab-width: 8; c-basic-offset: 3; indent-tabs-mode: nil\n", encoding="utf-16")
         app = Application(executable, folder, environment, startup)
         try:
             tabs(app.state, 8, 3, 0)

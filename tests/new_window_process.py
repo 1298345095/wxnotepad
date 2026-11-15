@@ -35,7 +35,7 @@ def main():
         shutil.copy2(source, executable)
         (config_folder / "Notepad4.ini").write_text(
             english_settings("[Settings]\nSaveSettings=0\nWordWrap=0\nWarnLineEndings=0\n"), encoding="utf-16")
-        (folder / "parent.txt").write_text(english_settings("parent document"), encoding="utf-16")
+        (folder / "parent.txt").write_text("parent document", encoding="utf-16")
         (folder / "startup working 中文").mkdir()
         (folder / "changed working").mkdir()
         result = subprocess.run([str(executable), "--observe", str(folder / "parent-observation"),

@@ -71,11 +71,11 @@ void SelectionExamples(EditorFrame* frame, EditorControl* editor, wxTextCtrl* qu
         query->SetValue(wxString::FromUTF8(pattern));
         replacement->SetValue(wxString::FromUTF8(with));
         NativeSearch::Click(dialog, button->GetId());
-        if (NativeSearch::Text(editor) != expected || result->GetLabel() != wxString::Format("%zu replacements", count))
+        const auto expectedCount = wxString::Format(count == 1 ? "%zu replacement" : "%zu replacements", count);
+        if (NativeSearch::Text(editor) != expected || result->GetLabel() != expectedCount)
             std::fprintf(stderr, "Pattern %s: [%s] / %s; expected [%s] / %zu\n", pattern,
                          NativeSearch::Text(editor).c_str(), result->GetLabel().utf8_str().data(), expected, count);
-        Require(NativeSearch::Text(editor) == expected &&
-                    result->GetLabel() == wxString::Format("%zu replacements", count),
+        Require(NativeSearch::Text(editor) == expected && result->GetLabel() == expectedCount,
                 "selection replacement produces the pinned bytes and count");
         NativeSearch::Selection(editor, selectedStart, selectedEnd, "selection range is repaired");
         Require((editor->Send(Message::GetAnchor) > editor->Send(Message::GetCurrentPos)) == (anchor > caret),
