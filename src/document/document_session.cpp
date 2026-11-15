@@ -128,7 +128,10 @@ wxString WriteSafely(const wxString& destination, const std::string& bytes, Pend
 #else
     const bool replaced = ::rename(temporary.path.utf8_str(), destination.utf8_str()) == 0;
 #endif
-    if (!replaced) return wxString::Format(_("Could not replace the destination: %s"), wxSysErrorMsg());
+    if (!replaced) {
+        const wxString detail(wxSysErrorMsg());
+        return wxString::Format(_("Could not replace the destination: %s"), detail);
+    }
     temporary.path.clear();
     return {};
 }
