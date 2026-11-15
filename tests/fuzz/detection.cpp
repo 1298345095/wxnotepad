@@ -20,8 +20,9 @@ constexpr std::array defaults = {-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 1252, 437, 936, 
 constexpr std::array paths = {"sample.txt", "sample.nfo", "sample.DIZ",  "sample.bat", "sample.cmd",
                               "sample.sh",  "sample.vhd", "sample.VHDL", "sample.xml", "sample.py"};
 bool Same(const DetectedEncoding& first, const DetectedEncoding& second) {
-    return first.encoding == second.encoding && first.bom == second.bom && first.error == second.error &&
-           first.systemDefault == second.systemDefault && first.systemOem == second.systemOem;
+    return first.encoding == second.encoding && first.bom == second.bom &&
+           first.unsupportedCodePage == second.unsupportedCodePage && first.systemDefault == second.systemDefault &&
+           first.systemOem == second.systemOem;
 }
 } // namespace
 

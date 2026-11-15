@@ -27,7 +27,7 @@ struct EncodingOptions {
 struct DetectedEncoding {
     std::optional<FileEncoding> encoding;
     bool bom = false;
-    wxString error;
+    std::optional<unsigned> unsupportedCodePage;
     bool systemDefault = false;
     bool systemOem = false;
 };

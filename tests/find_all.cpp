@@ -103,7 +103,7 @@ public:
                         "zero-width matches count without marks or bookmarks");
                 query->SetValue("^");
                 run();
-                Require(result->GetLabel() == "1 matches" && !marked(0), "original caret anchor line-count rule");
+                Require(result->GetLabel() == "1 match" && !marked(0), "original caret anchor line-count rule");
                 query->SetValue("$");
                 run();
                 Require(result->GetLabel() == "2 matches" && !marked(3), "original dollar anchor line-count rule");
@@ -161,7 +161,7 @@ public:
                 Require(!editor->Send(Message::GetLineVisible, 1), "folded fixture hides matched line");
                 query->SetValue("needle");
                 run();
-                Require(result->GetLabel() == "1 matches" && marked(13) && !editor->Send(Message::GetLineVisible, 1),
+                Require(result->GetLabel() == "1 match" && marked(13) && !editor->Send(Message::GetLineVisible, 1),
                         "Find All marks folded content without opening folds");
                 const auto path = wxFileName::CreateTempFileName("wxnotepad-find-all-");
                 DocumentSession document(*editor);
@@ -182,7 +182,7 @@ public:
                 Toggle(regex, true);
                 query->SetValue("$");
                 run();
-                Require(result->GetLabel() == "1 matches", "original dollar anchor counts an empty document");
+                Require(result->GetLabel() == "1 match", "original dollar anchor counts an empty document");
                 document.New();
                 NativePaint::Complete(editor);
                 Require(result->GetLabel().empty(), "replacing an already empty document invalidates its count");
