@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include "app/localization.h"
 #include "editor/editor_control.h"
 #include "app/process_observer.h"
 #include "app/new_window.h"
@@ -29,6 +30,7 @@ public:
                 return false;
         }
         settings_ = std::make_unique<SettingsStore>();
+        AppLocalization::Initialize(settings_->values.uiLanguage);
         auto* frame = new EditorFrame(settings_.get());
         if (windowPosition && !ApplyInitialWindowPosition(*frame, *windowPosition)) return false;
         if (!startup.empty() && frame->Open(startup).status != OpenStatus::Opened) return false;

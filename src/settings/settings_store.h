@@ -10,6 +10,7 @@ public:
     OriginalSettings values;
     const wxString& Path() const { return path_; }
     bool Save(bool explicitSave);
+    bool SaveUILanguage(int language);
     bool SaveSchemeTabs(SyntaxLanguage language);
     int MessageSuppression(const wxString& key);
     bool SuppressMessage(const wxString& key);
