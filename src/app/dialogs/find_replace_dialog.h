@@ -51,6 +51,7 @@ private:
     void UpdateButtons();
     void ConfigureSearch();
     void FindAll();
+    void UpdateFindAllCount(size_t count);
     void OnEditorState(wxCommandEvent& event);
     void ReplaceOne();
     void ReplaceAll(bool inSelection = false);
