@@ -1,5 +1,6 @@
 """Accept localization through the real packaged shown application and native UI."""
 import argparse
+from contextlib import ExitStack
 import json
 import os
 from pathlib import Path
@@ -10,6 +11,7 @@ import tempfile
 import time
 
 from localization_native import Dialogs
+from localization_layout import capture_and_check
 from localization_package import (ROOT, Process, bundle_application, cache_values, environment, language_id,
                                   menu_id, menus, read_settings, settings, wait_child)
 from resource_process import native_edit, wait_state
@@ -37,7 +39,9 @@ class Acceptance:
     def __init__(self, args, directory):
         self.args = args
         self.directory = directory
-        self.executable = bundle_application(args.executable.resolve(), args.cmake_dir.resolve(), directory / 'bundle')
+        self.logs = args.evidence / 'runs' / directory.name
+        self.executable = bundle_application(args.executable.resolve(), args.cmake_dir.resolve(), directory / 'bundle',
+                                             self.logs / 'bundle')
         self.config = self.executable.parent / 'Notepad4.ini'
         self.observation = directory / 'children'
         self.observation.mkdir()
@@ -56,7 +60,8 @@ class Acceptance:
         child_environment = environment(self.executable, self.observation, preferred)
         child_environment.update(overrides or {})
         return Process(self.executable, self.directory / f'app-{self.count:03}',
-                       child_environment, startup, arguments, self.working)
+                       child_environment, startup, arguments, self.working,
+                       self.logs / f'app-{self.count:03}' / 'stderr.log')
 
     def displayed(self, app, code, configured):
         text = TEXT[code]
@@ -72,8 +77,11 @@ class Acceptance:
                 assert current[identity]['path'] == original['path'], (identity, current[identity], original)
                 assert current[identity]['label'].partition('\t')[2] == original['label'].partition('\t')[2], (
                     'Translated menu retains accelerator', identity, current[identity], original)
+            unindent = next(identity for identity, item in self.reference.items() if item['label'] == '&Unindent')
+            assert current[unindent]['label'] == {'en': '&Unindent', 'zh_CN': '减少缩进(&U)',
+                                                   'zh_TW': '減少縮排(&U)'}[code], current[unindent]
 
-    def goto(self, app, code):
+    def goto(self, app, code, snapshot=None):
         identity = next(identity for identity, item in self.reference.items()
                         if item['label'] == '&Goto Line...\tCtrl+G')
         app.begin('menu', str(identity))
@@ -85,7 +93,26 @@ class Acceptance:
         # those native labels keep the regional language independently of UI.
         native_cancel = TEXT[code]['cancel'] if sys.platform == 'win32' else 'Cancel'
         assert native_cancel in buttons, (code, buttons)
+        if snapshot is not None:
+            capture_and_check(self.dialogs, app, window, snapshot)
         self.dialogs.click(window, native_cancel)
+        app.finish()
+
+    def encoding(self, app, code):
+        identity = next(identity for identity, item in self.reference.items()
+                        if item['label'] == '&More...\tF9')
+        app.begin('menu', str(identity))
+        title = {'en': 'Select Encoding', 'zh_CN': '选择编码', 'zh_TW': '選擇編碼'}[code]
+        window = self.dialogs.wait(app.process, title)
+        if sys.platform == 'win32':
+            assert 'Unicode' in self.dialogs.texts(window), self.dialogs.texts(window)
+        else:
+            # wxGTK3's generic tree exposes its native control name through ATK;
+            # its drawn rows are retained in the real screenshot for review.
+            expected = {'en': 'Current encoding', 'zh_CN': '当前编码', 'zh_TW': '目前編碼'}[code]
+            assert expected in self.dialogs.texts(window), self.dialogs.texts(window)
+            capture_and_check(self.dialogs, app, window, self.logs / f'encoding-{code}.png')
+        self.dialogs.click(window, TEXT[code]['cancel'] if sys.platform == 'win32' else 'Cancel')
         app.finish()
 
     def startup(self):
@@ -96,6 +123,8 @@ class Acceptance:
                 if code == 'en':
                     self.reference = menus(app.state)
                 self.goto(app, code)
+                if code != 'en':
+                    self.encoding(app, code)
                 app.close()
             finally:
                 app.stop()
@@ -359,6 +388,7 @@ class Acceptance:
                     replacements = (f'{count} replacement' + ('s' if count != 1 else '') if code == 'en' else
                                     f'{count} 处替换' if code == 'zh_CN' else f'取代 {count} 處')
                     self.dialogs.wait_text(window, replacements)
+                    capture_and_check(self.dialogs, app, window, self.logs / f'replace-{code}-{count}.png')
                     self.dialogs.set_input(window, query, '[')
                     self.dialogs.click(window, regex)
                     self.dialogs.click(window, find_all)
@@ -409,6 +439,46 @@ class Acceptance:
                 app.stop()
             print(f'PASS: {code} UI preserves private German comma-decimal regional date, original integer parsing and ASCII INI serialization', flush=True)
 
+    def layout(self):
+        self.prepare_reference()
+        completion = next(identity for identity, item in self.reference.items()
+                          if item['label'] == 'Auto &Completion Settings...')
+        for code in ('en', 'zh_CN', 'zh_TW'):
+            for scale in ((1, 1.5) if sys.platform != 'win32' else (1,)):
+                settings(self.config, PREFERENCE[code])
+                overrides = {'GDK_DPI_SCALE': str(scale)} if sys.platform != 'win32' else {}
+                app = self.launch(overrides=overrides)
+                try:
+                    suffix = f'{code}-{scale}'
+                    self.goto(app, code, self.logs / f'goto-{suffix}.png')
+                    app.choose(5039)
+                    window = self.dialogs.wait(app.process, DYNAMIC[code][0])
+                    capture_and_check(self.dialogs, app, window, self.logs / f'replace-{suffix}.png')
+                    self.dialogs.click(window, DYNAMIC[code][5])
+                    app.begin('menu', str(completion))
+                    title = {'en': 'Auto Completion Settings', 'zh_CN': '自动完成设置', 'zh_TW': '自動完成設定'}[code]
+                    window = self.dialogs.wait(app.process, title)
+                    capture_and_check(self.dialogs, app, window, self.logs / f'completion-{suffix}.png')
+                    self.dialogs.click(window, TEXT[code]['cancel'] if sys.platform == 'win32' else 'Cancel')
+                    app.finish()
+                    app.begin('menu', '5000')  # Real Open native file dialog.
+                    title = {'en': 'Open file', 'zh_CN': '打开文件', 'zh_TW': '開啟檔案'}[code]
+                    window = self.dialogs.wait(app.process, title)
+                    self.dialogs.navigate_folder(app, window, self.directory)
+                    expected = {'en': 'All files (*.*)', 'zh_CN': '所有文件 (*.*)', 'zh_TW': '所有檔案 (*.*)'}[code]
+                    filters = self.dialogs.file_filters(window)
+                    assert expected in filters, (expected, filters)
+                    text_filter = {'en': 'Text files (*.txt)', 'zh_CN': '文本文件 (*.txt)', 'zh_TW': '文字檔案 (*.txt)'}[code]
+                    assert text_filter in filters, (text_filter, filters)
+                    (self.logs / f'filters-{suffix}.json').write_text(json.dumps(filters, ensure_ascii=False), encoding='utf-8')
+                    capture_and_check(self.dialogs, app, window, self.logs / f'open-filters-{suffix}.png', system_dialog=True)
+                    self.dialogs.cancel(window)
+                    app.finish()
+                    app.close()
+                finally:
+                    app.stop()
+                print(f'PASS: {code} scale={scale} shown GoTo/Replace/completion/native-filter control bounds, measured text and retained screenshots', flush=True)
+
     def discard(self, app):
         if app.process.poll() is not None:
             return
@@ -421,12 +491,102 @@ class Acceptance:
         self.change(app, 2052, 'yes')
         if save_choice is not None:
             self.dialogs.answer(app.process, save_choice, 'Save changes?')
-        assert app.process.wait(timeout=10) == 0
+        result = app.process.wait(timeout=10)
+        assert result == 0, f'Restart parent exit={result}; process log={self.logs}'
         child = wait_child(self.observation, previous)
         assert child.process.pid != app.process.pid
         assert child.state['menu_top.0.label'] == TEXT['zh_CN']['file']
         assert read_settings(self.config)['Settings2']['UILanguage'] == '2052'
         return child
+
+    def errors(self):
+        for code in ('en', 'zh_CN', 'zh_TW'):
+            document = self.directory / f'error real 名字-{code}.txt'
+            original = b'unchanged disk\n'
+            document.write_bytes(original)
+            app = self.start(PREFERENCE[code], extra='FileWatchingMode=0\n', startup=document)
+            preserved = document.with_suffix('.preserved')
+            lock = ExitStack()
+            try:
+                self.dirty(app)
+                if sys.platform == 'win32':
+                    lock.enter_context(document.open('rb'))  # Deny replacement, permit the ordinary write-open guard.
+                else:
+                    document.rename(preserved)
+                    document.mkdir()
+                app.begin('menu', '5003')
+                title, prefix = {'en': ('Could not save file', 'Could not replace the destination: '),
+                                 'zh_CN': ('无法保存文件', '无法替换目标文件: '),
+                                 'zh_TW': ('無法儲存檔案', '無法取代目的檔案：')}[code]
+                if sys.platform != 'win32':
+                    prefix = {'en': 'Choose a file as the save destination.', 'zh_CN': '选择保存目标文件。',
+                              'zh_TW': '選擇儲存目的檔案。'}[code]
+                window = self.dialogs.wait(app.process, title, message=prefix)
+                messages = [text for text in self.dialogs.texts(window) if text.startswith(prefix)]
+                assert messages, self.dialogs.texts(window)
+                if sys.platform == 'win32':
+                    import ctypes
+                    error_access_denied, error_sharing_violation = 5, 32
+                    native_details = [ctypes.FormatError(error).strip()
+                                      for error in (error_access_denied, error_sharing_violation)]
+                    assert any(detail in text for detail in native_details for text in messages), messages
+                else:
+                    assert prefix in messages, messages
+                (self.logs / f'error-{code}.json').write_text(json.dumps(messages, ensure_ascii=False), encoding='utf-8')
+                capture_and_check(self.dialogs, app, window, self.logs / f'error-{code}.png')
+                self.dialogs.answer(app.process, 'ok', title, window=window)
+                app.finish()
+                lock.close()
+                assert app.state['dirty'] == '1'
+                if sys.platform != 'win32':
+                    assert preserved.read_bytes() == original
+                    document.rmdir()
+                    preserved.rename(document)
+                else:
+                    assert document.read_bytes() == original
+                app.send('save')
+                assert document.read_bytes() == b'X' + original
+                app.close()
+            finally:
+                lock.close()
+                if preserved.exists():
+                    if document.is_dir():
+                        document.rmdir()
+                    preserved.rename(document)
+                app.stop()
+            detail = ' and exact native Windows sharing-violation detail' if sys.platform == 'win32' else ''
+            print(f'PASS: {code} real failed Save reports localized application sentence{detail}; retained buffer/file saves successfully afterward', flush=True)
+
+    def installed(self):
+        assert sys.platform != 'win32'
+        self.prepare_reference()
+        parent = Path('/opt/wxnotepad-file-workflows-test')
+        assert parent.is_dir() and os.access(parent, os.W_OK), 'Owned /opt fixture parent must be prepared by the GUI dependency setup'
+        with tempfile.TemporaryDirectory(prefix='localization-', dir=parent) as name:
+            prefix = Path(name)
+            executable = prefix / 'bin' / self.executable.name
+            shutil.copytree(self.executable.parent, executable.parent)
+            (prefix / 'share').mkdir()
+            (executable.parent / 'locale').rename(prefix / 'share/locale')
+            assert not (executable.parent / 'locale').exists()
+            for code in ('en', 'zh_CN', 'zh_TW'):
+                config_home = self.directory / ('user-config-' + code)
+                config = config_home / 'Notepad4/Notepad4.ini'
+                config.parent.mkdir(parents=True)
+                original = settings(config, PREFERENCE[code])
+                process_environment = environment(executable, self.observation)
+                process_environment['XDG_CONFIG_HOME'] = str(config_home)
+                app = Process(executable, self.directory / ('installed-' + code), process_environment,
+                              cwd=self.working, log_path=self.logs / f'installed-{code}.log')
+                try:
+                    self.displayed(app, code, PREFERENCE[code])
+                    self.goto(app, code)
+                    app.close()
+                finally:
+                    app.stop()
+                assert config.read_bytes() == original
+                assert not (executable.parent / 'Notepad4.ini').exists()
+                print(f'PASS: installed {code} loads actual share/locale package from /opt/bin with separate XDG original-format settings and unrelated cwd', flush=True)
 
     def restart(self):
         self.prepare_reference()
@@ -576,10 +736,13 @@ def main():
     parser.add_argument('executable', type=Path)
     parser.add_argument('--cmake-dir', type=Path, required=True)
     parser.add_argument('--evidence', type=Path, required=True)
-    parser.add_argument('--scenario', choices=('startup', 'lifecycle', 'restart', 'native', 'dynamic', 'regional'), default='startup')
+    parser.add_argument('--scenario', choices=('startup', 'lifecycle', 'restart', 'native', 'dynamic', 'regional', 'layout', 'errors', 'installed'), default='startup')
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix=args.scenario + '-', dir=args.evidence) as name:
+    # Linux's native temporary filesystem exercises POSIX application IPC and
+    # file operations. Logs and retained failure evidence stay in the report tree.
+    temporary_parent = args.evidence if sys.platform == 'win32' else None
+    with tempfile.TemporaryDirectory(prefix=args.scenario + '-', dir=temporary_parent) as name:
         fixture = Acceptance(args, Path(name))
         try:
             getattr(fixture, args.scenario)()

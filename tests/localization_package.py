@@ -24,7 +24,7 @@ def cache_values(directory):
     return result
 
 
-def bundle_application(source, cmake, folder):
+def bundle_application(source, cmake, folder, reports=None):
     """Feed actual build outputs through the distribution's real artifact bundler."""
     spec = importlib.util.spec_from_file_location('localization_ci', ROOT / '.github/scripts/ci.py')
     ci = importlib.util.module_from_spec(spec)
@@ -32,7 +32,7 @@ def bundle_application(source, cmake, folder):
     cache = cache_values(cmake)
     ci.WORK = folder
     ci.BUILD = folder / 'build'
-    ci.REPORTS = folder / 'reports'
+    ci.REPORTS = reports if reports is not None else folder / 'reports'
     ci.REPORTS.mkdir(parents=True)
     ci.VCPKG = Path(cache['VCPKG_INSTALLED_DIR']).parent
     ci.TRIPLET = cache['VCPKG_TARGET_TRIPLET']
@@ -59,7 +59,7 @@ def settings(path, language, extra='', save=False):
     language_line = '' if language is None else f'UILanguage={language}\n'
     text = (f'[Settings]\nSaveSettings={int(save)}\nWarnLineEndings=0\nUnrelatedSetting=keep\n'
             + extra + '\n[Settings2]\n' + language_line + 'UnrelatedLanguage=preserved\n')
-    path.write_text(text, encoding='utf-16')
+    path.write_text(text, encoding='utf-16', newline='\r\n')
     return path.read_bytes()
 
 
@@ -94,7 +94,7 @@ def language_id(state, preference):
 
 
 class Process(Application):
-    def __init__(self, executable, folder, environment, startup=None, arguments=(), cwd=None):
+    def __init__(self, executable, folder, environment, startup=None, arguments=(), cwd=None, log_path=None):
         self.folder = folder
         self.folder.mkdir(parents=True, exist_ok=True)
         self.sequence = 0
@@ -102,7 +102,9 @@ class Process(Application):
         args = [str(executable), '--observe', str(folder), *arguments]
         if startup is not None:
             args += ['--startup-file', str(startup)]
-        self.log = (folder / 'stderr.log').open('wb')
+        log_path = log_path if log_path is not None else folder / 'stderr.log'
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        self.log = log_path.open('wb')
         self.process = subprocess.Popen(args, env=environment, cwd=cwd, stdout=self.log, stderr=self.log)
         self.state = wait_state(folder, self.process, lambda state: state['sequence'] == '0')
         assert self.state['shown'] == '1', self.state

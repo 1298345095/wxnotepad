@@ -301,7 +301,7 @@ if(BUILD_TESTING)
     add_test(NAME observed_numeric_menu COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/observer_menu_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(observed_numeric_menu PROPERTIES TIMEOUT 45)
-    foreach(scenario startup lifecycle restart native dynamic)
+    foreach(scenario startup lifecycle restart native dynamic layout errors)
         add_test(NAME packaged_ui_localization_${scenario} COMMAND "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_process.py" "$<TARGET_FILE:wxnotepad>"
             --cmake-dir "${CMAKE_BINARY_DIR}"
@@ -316,6 +316,12 @@ if(BUILD_TESTING)
             --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/localization"
             --scenario regional)
         set_tests_properties(packaged_ui_localization_regional PROPERTIES TIMEOUT 180)
+        add_test(NAME packaged_ui_localization_installed COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_process.py" "$<TARGET_FILE:wxnotepad>"
+            --cmake-dir "${CMAKE_BINARY_DIR}"
+            --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/localization"
+            --scenario installed)
+        set_tests_properties(packaged_ui_localization_installed PROPERTIES TIMEOUT 180)
     endif()
     add_test(NAME observed_process_shutdown COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/observed_shutdown_process.py" "$<TARGET_FILE:wxnotepad>")

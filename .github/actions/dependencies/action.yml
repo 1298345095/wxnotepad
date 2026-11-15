@@ -168,6 +168,10 @@ runs:
       with:
         path: .ci/vcpkg/vcpkg${{ runner.os == 'Windows' && '.exe' || '' }}
         key: ${{ steps.vcpkg-tool-cache.outputs.cache-primary-key }}
+    - name: Prepare owned native installation fixture
+      if: runner.os == 'Linux' && inputs.profile == 'gui'
+      shell: bash
+      run: sudo install -d -m 0755 -o "$(id -un)" -g "$(id -gn)" /opt/wxnotepad-file-workflows-test
     - name: Install pinned wxWidgets core
       shell: bash
       env:
