@@ -272,7 +272,8 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
 // this read if the discard/save decision rewrites the selected source.
 std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std::optional<FileEncoding> encoding,
                                                     const EncodingOptions& options,
-                                                    std::optional<EncodingChoice> weakEncoding) {
+                                                    std::optional<EncodingChoice> weakEncoding,
+                                                    std::optional<EncodingChoice> sourceEncoding) {
     if (!path.FileExists()) return wxString(_("Choose an existing file to open."));
     wxFile file(path.GetFullPath(), wxFile::read);
     if (!file.IsOpened()) return wxString(_("Could not open the file for reading."));
@@ -283,15 +284,17 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std:
     bytes.assign(static_cast<size_t>(length), '\0');
     if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
         return wxString(_("Could not read the complete file."));
-    const auto detected = DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
+    const auto detected =
+        DetectEncoding(path.GetFullPath(), bytes, sourceEncoding ? std::optional(sourceEncoding->encoding) : encoding,
+                       options, weakEncoding);
     if (!detected.encoding)
         return wxString::Format(
             _("The selected encoding (code page %u) is not migrated. The document was not changed."),
             *detected.unsupportedCodePage);
     loaded.encoding = *detected.encoding;
     loaded.bom = detected.bom;
-    loaded.systemDefault = detected.systemDefault;
-    loaded.systemOem = detected.systemOem;
+    loaded.systemDefault = sourceEncoding ? sourceEncoding->systemDefault : detected.systemDefault;
+    loaded.systemOem = sourceEncoding ? sourceEncoding->systemOem : detected.systemOem;
     const auto error = DecodeLoadedDocument(loaded, options);
     if (!error.empty()) return error;
     return loaded;
@@ -513,7 +516,7 @@ void DocumentSession::ApplySaveCleanup() {
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                                  std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
                                  const std::function<void()>& configureLoadedDocument,
-                                 OpenDecisionTiming decisionTiming) {
+                                 OpenDecisionTiming decisionTiming, std::optional<EncodingChoice> sourceEncoding) {
     if (!source) return {OpenStatus::Cancelled, {}};
     // Notepad4 FileLoad compares the supplied spelling before canonicalizing the
     // load path. Do not turn distinct spellings or file-system aliases into reloads.
@@ -531,7 +534,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     wxLogNull quiet;
     const bool wasModified = IsModified();
     if (decisionTiming == OpenDecisionTiming::BeforeRead && !beforeReplace()) return {OpenStatus::Cancelled, {}};
-    auto candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
+    auto candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding, sourceEncoding);
     if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     if (decisionTiming == OpenDecisionTiming::AfterRead && !beforeReplace()) return {OpenStatus::Cancelled, {}};
     // Save may have rewritten the selected source (including a newly chosen
@@ -539,7 +542,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     if (decisionTiming == OpenDecisionTiming::AfterRead && wasModified && !IsModified()) {
         // Release the old decoded text before allocating another whole-file read.
         candidate.emplace<wxString>();
-        candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
+        candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding, sourceEncoding);
         if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     }
     auto& loaded = std::get<LoadedDocument>(candidate);

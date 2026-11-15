@@ -1,0 +1,2244 @@
+# SOME DESCRIPTIVE TITLE.
+# This file is put in the public domain.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: wxnotepad 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/1298345095/wxnotepad/issues\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: src/app/editor_frame.cpp
+msgid " (Read Only File)"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid " (Read Only Mode)"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid " (override)"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid " | Sel %lld"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "\"%s\" is read only. Save to a different file?"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "%s - wxnotepad"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+#, c-format
+msgid "%s indentation width"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+#, c-format
+msgid "%s tab width"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+#, c-format
+msgid "%s tabs as spaces"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "%s%s | %s%s | EOL: %s"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "%s%s%s - wxnotepad"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+#, c-format
+msgid "%zu match"
+msgid_plural "%zu matches"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+#, c-format
+msgid "%zu replacement"
+msgid_plural "%zu replacements"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Always show this dialog."
+msgstr ""
+
+#: src/app/dialogs/modify_lines_dialog.cpp
+msgid "&Append text to lines:"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Auto-reload (unmodified)."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Automatic"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Bookmark Margin\tCtrl+Shift+M"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Bookmark Matched Line"
+msgstr ""
+
+#: src/app/dialogs/column_wrap_dialog.cpp
+msgid "&Boundary:"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "&Cancel"
+msgstr ""
+
+#: src/app/dialogs/align_lines_dialog.cpp
+msgid "&Center."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Clear All\tAlt+F2"
+msgstr ""
+
+#: src/app/dialogs/insert_tag_dialog.cpp
+msgid "&Closing tag (can be edited):"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Collapse All"
+msgstr ""
+
+#: src/app/dialogs/go_to_line_dialog.cpp
+#, c-format
+msgid "&Column (empty or 1 - %lld):"
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "&Column sort (rectangular selection)."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Copy\tCtrl+C"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Copy Line\tCtrl+Shift+C"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Default encoding:"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Default line ending mode:"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Default..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Direct2D"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "&Discard"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Do you want to normalize the line endings?"
+msgstr ""
+
+#: src/app/dialogs/search_feedback_dialog.cpp
+msgid "&Don't show this message again."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Duplicate\tAlt+D"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Duplicate Line\tCtrl+D"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Edit"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Enclose Selection"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Encoding"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Encoding Identifier\tCtrl+F8"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Ensure consistent line endings when saving."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Expand All"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&File"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&File Name"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "&Find All"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Find...\tCtrl+F"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Goto"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Goto Line...\tCtrl+G"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&HTML/XML Tag...\tAlt+X"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Indent"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Join Lines\tCtrl+J"
+msgstr ""
+
+#: src/app/dialogs/align_lines_dialog.cpp
+msgid "&Justify."
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Keep at document end after reloading."
+msgstr ""
+
+#: src/app/language_commands.cpp
+msgid "&Language"
+msgstr ""
+
+#: src/app/dialogs/align_lines_dialog.cpp
+msgid "&Left."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Legacy GDI"
+msgstr ""
+
+#: src/app/dialogs/long_line_settings_dialog.cpp
+msgid "&Limit for long lines:"
+msgstr ""
+
+#: src/app/dialogs/go_to_line_dialog.cpp
+#, c-format
+msgid "&Line (empty or 1 - %lld):"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Lines"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Long Line Marker\tCtrl+Shift+L"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Lower Case\tCtrl+U"
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "&Merge duplicate lines."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Millisecond (ms)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Modify Lines...\tAlt+M"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Monitor continuously updated file (e.g. log file)."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&More...\tF9"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Nanosecond (ns)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&New\tCtrl+N"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&No"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&No Blink"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&No Highlight"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&None"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&None."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Normal"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Off"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Old Visual Studio"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Open...\tCtrl+O"
+msgstr ""
+
+#: src/app/dialogs/insert_tag_dialog.cpp
+msgid "&Opening tag (with attributes):"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Other Timestamps"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Pad With Spaces\tAlt+P"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Paste\tCtrl+V"
+msgstr ""
+
+#: src/app/dialogs/modify_lines_dialog.cpp
+msgid "&Prefix text to lines:"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Read Only Mode\tF10"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Redo\tCtrl+Y"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Reload"
+msgstr ""
+
+#: src/app/dialogs/recent_files_dialog.cpp
+msgid "&Remember recent files on exit"
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "&Remove duplicate lines."
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "&Replace"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Reset Zoom\tCtrl+\\"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Reset if a new file is opened."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Restart"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Revert\tF5"
+msgstr ""
+
+#: src/app/dialogs/align_lines_dialog.cpp
+msgid "&Right."
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "&Save"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Save\tCtrl+S"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Search"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Select All\tAlt+F6"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Selection"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Sentence Case\tCtrl+Alt+O"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Show message."
+msgstr ""
+
+#: src/app/dialogs/modify_lines_dialog.cpp
+msgid "&Skip empty lines."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Split Lines\tCtrl+I"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Strip trailing blanks when saving."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Tab Settings..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Toggle\tCtrl+F2"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Toggle Folds"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&UTC Date Time"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Undo\tCtrl+Z"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Unescape C Chars\tCtrl+Alt+R"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Unindent"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Unix/macOS (LF)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Upper Case\tCtrl+Shift+U"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&View"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Visual Studio"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "&Wildcard search"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Windows (CR+LF)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&With...\tAlt+Q"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Word Wrap\tCtrl+Shift+W"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "&Wrap around"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "&Yes"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Zoom"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "* matches zero or more characters; ? matches exactly one character."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "A&dvanced Settings"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "AAFS — Activate Arabic &form shaping"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "ALM — &Arabic letter mark"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "ASP JavaScript"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "ASP VBScript"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "ASP.NET C#"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "ASP.NET VB"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "ASS — Activate &symmetric swapping"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Alig&n Lines...\tAlt+J"
+msgstr ""
+
+#: src/app/dialogs/align_lines_dialog.cpp
+msgid "Align Lines"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "All Files (*)"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "All files (*.*)"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Angle brackets <>"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Appea&rance"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Applies to literal searches. Use word boundaries in a regular expression."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "As &UTF-8\tShift+F8"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Auto &Completion Settings..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Auto &Indent"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Auto Completion I&gnore Case"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Auto Completion Settings"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Auto Indent"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Auto close HTML and XML tags"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Auto-Shrink Horizontal Scrollbar"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Automatically insert"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Background &Color\tCtrl+Shift+I"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Backspace Unindents"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Backspace at Indentation Deletes up to Tab Stop"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Backticks"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Bash"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Block (&INS Mode)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Block (&OVR Mode)"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Boo&kmark matched line"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Boo&kmarks"
+msgstr ""
+
+#: src/app/dialogs/column_wrap_dialog.cpp
+msgid "Boundary"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+#, c++-format
+msgid "Braces {}"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "C Shell"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "C&aret Style"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "C&haracter to Hex\tCtrl+Alt+X"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "C/C++"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "CMake"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+#, c-format
+msgid "CR+LF: %llu line."
+msgid_plural "CR+LF: %llu lines."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/app/dialogs/document_dialogs.cpp
+#, c-format
+msgid "CR: %llu line."
+msgid_plural "CR: %llu lines."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "Case &insensitive."
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Certain characters in the current text are not supported by the selected encoding, and may be replaced by default placeholders when saving. It's recommended to choose another file encoding. Continue?"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Change &History Marker"
+msgstr ""
+
+#: src/app/dialogs/long_line_settings_dialog.cpp
+msgid "Change &background color."
+msgstr ""
+
+#: src/app/language_commands.cpp
+msgid "Changing the UI language requires a restart of wxnotepad, restart now?"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Chinese"
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Choose a file as the save destination."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Choose a file name before saving."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Choose an existing file to open."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Classic &Mac OS (CR)"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Classic Mac OS (CR)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Clear Clip&board"
+msgstr ""
+
+#: src/app/dialogs/recent_files_dialog.cpp
+msgid "Clear History"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Click here to &select default encoding."
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Close"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+#, c-format
+msgid "Code page %d (unavailable)"
+msgstr ""
+
+#: src/app/dialogs/go_to_line_dialog.cpp
+msgid "Column"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Column &Wrap..."
+msgstr ""
+
+#: src/app/dialogs/column_wrap_dialog.cpp
+msgid "Column Wrap"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Comments"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Complete &Word\tAlt+/"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Complete words"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Complete words inside"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Compress &Whitespace\tAlt+W"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Con&vert"
+msgstr ""
+
+#: src/app/dialogs/modify_lines_dialog.cpp
+msgid "Continuous number (zero-based)."
+msgstr ""
+
+#: src/app/dialogs/modify_lines_dialog.cpp
+msgid "Continuous number."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Cop&y to Clipboard"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Copy &All\tAlt+A"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Copy A&dd\tCtrl+E"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Copy Paste Buffer As Find Text"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Copy Selection As Find Text"
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Could not close the completed temporary file."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Could not create a temporary file beside the destination. Check the folder and access permissions."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Could not determine the file size."
+msgstr ""
+
+#: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_file_watching.cpp
+msgid "Could not open file"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not open new window"
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Could not open the destination for writing."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Could not open the file for reading."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Could not read the complete file."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not reload file"
+msgstr ""
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "Could not replace the destination: %s"
+msgstr ""
+
+#: src/app/new_window.cpp
+msgid "Could not restart wxnotepad."
+msgstr ""
+
+#: src/app/editor_frame.cpp src/app/editor_frame_commands.cpp
+#: src/app/editor_frame_file_watching.cpp
+msgid "Could not save file"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/language_commands.cpp
+msgid "Could not save settings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Could not start another wxnotepad process."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp src/app/language_commands.cpp
+#, c-format
+msgid "Could not write %s"
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "Could not write the complete file. Check free space and access permissions."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Cu&t\tCtrl+X"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Cu&t Line\tCtrl+Shift+X"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Current &Date"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Current Date &Time"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Current encoding"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "D&elete Line\tCtrl+Shift+D"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "DTD"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Default Encoding"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Default encoding"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Default line ending mode"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Detect Indentation"
+msgstr ""
+
+#: src/app/dialogs/modify_lines_dialog.cpp
+msgid "Document line number."
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "Don't &sort."
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Don't parse encoding &tags."
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Double quotes"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Draw Block Caret in &Selection"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Enable &Multiple Selection"
+msgstr ""
+
+#: src/app/dialogs/enclose_selection_dialog.cpp
+msgid "Enclose Selection"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Encoding Conversion"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Encoding character loss"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Encodings"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "English IME mode only"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Enter"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Esca&pe C Chars\tCtrl+Alt+E"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Escape HT&ML/XML Chars\tAlt+Shift+X"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "FSI — &First strong isolate"
+msgstr ""
+
+#: src/app/dialogs/recent_files_dialog.cpp
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "File"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "File &Change Notification...\tAlt+F5"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "File &Mode"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp src/app/editor_frame_file_watching.cpp
+msgid "File Change Notification"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "File Name and &Ext.\tShift+F9"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "File Name and E&xtension\tCtrl+F9"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Fill-up punctuation"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Find"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Find &Next"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Find &Next\tF3"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Find &Previous"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Find &Previous\tShift+F3"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Find &what:"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Find Matching &Brace\tCtrl+B"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Find what"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Finish completion (Esc cancels)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Full &Path Name\tAlt+Shift+F9"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Full &Path Name\tCtrl+Shift+F9"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "GitHub GFM"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "GitLab GLFM"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Global"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Go"
+msgstr ""
+
+#: src/app/dialogs/go_to_line_dialog.cpp
+msgid "Go To Line"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto &Next\tF2"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto &Next Block\tAlt+."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto &Previous\tShift+F2"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto &Previous Block\tAlt+,"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto &Selection Start\tCtrl+Shift+,"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto Blo&ck Start\tAlt+["
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto Bloc&k End\tAlt+]"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto N&ext Sibling Block\tCtrl+Alt+."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto P&revious Sibling Block\tCtrl+Alt+,"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Goto Selec&tion End\tCtrl+Shift+."
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "Group by file &type."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Hex to Cha&racter\tCtrl+Alt+C"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Highlight &Subline"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Highlight C&urrent Line"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Highlight Current &Block"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "I&nsert"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "IAFS — Inhibit Arabic form s&haping"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "ISS — Inhibit s&ymmetric swapping"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "In &Selection"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "In&vert Case\tCtrl+Alt+U"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Inconsistent Line Endings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Indentation &Guides\tCtrl+Shift+G"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Indentation Width (0–256):"
+msgstr ""
+
+#: src/app/dialogs/enclose_selection_dialog.cpp
+msgid "Insert &after selection:"
+msgstr ""
+
+#: src/app/dialogs/enclose_selection_dialog.cpp
+msgid "Insert &before selection:"
+msgstr ""
+
+#: src/app/dialogs/insert_tag_dialog.cpp
+msgid "Insert HTML/XML Tag"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Insert Tabs as &Spaces"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp src/app/editor_frame.cpp
+msgid "Invalid regular expression"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "JSON"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "JSP"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "JSPX"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "JSX"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "JavaScript"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Join &Paragraphs\tCtrl+Shift+J"
+msgstr ""
+
+#: src/app/dialogs/align_lines_dialog.cpp
+msgid "Justify (&Paragraph mode)."
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+#, c-format
+msgid "LF: %llu line."
+msgid_plural "LF: %llu lines."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/editor/special_insert.h
+msgid "LRE — Start of left-to-right &embedding"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "LRI — Left-to-&right isolate"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "LRM — &Left-to-right mark"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "LRO — Start of left-to-right &override"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "LS — L&ine Separator"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Latin-1 (Windows-1252)"
+msgstr ""
+
+#: src/app/dialogs/long_line_settings_dialog.cpp
+msgid "Limit for long lines"
+msgstr ""
+
+#: src/app/dialogs/go_to_line_dialog.cpp
+msgid "Line"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Line &Numbers\tCtrl+Shift+N"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Line Endin&gs"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Line Endings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Line Selection &Mode"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Line Width &1"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Line Width &2"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Line Width &3"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Line ending conversion"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "Ln %llu, Col %llu"
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "Logical &number comparison."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Long Line Settings..."
+msgstr ""
+
+#: src/app/dialogs/long_line_settings_dialog.cpp
+msgid "Long Lines Settings"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Lua"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Mark &Occurrences"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Markdown"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Match &Case"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Match &Whole Word Only"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Match &case"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Match found"
+msgstr ""
+
+#: src/app/dialogs/recent_files_dialog.cpp
+msgid "Maximum recent &files:"
+msgstr ""
+
+#: src/app/dialogs/recent_files_dialog.cpp
+msgid "Maximum recent files"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Merge Blank Lines\tAlt+B"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Merge Duplicate Lines"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Micro&second (us)"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Minimum number length"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Minimum word length"
+msgstr ""
+
+#: src/app/dialogs/modify_lines_dialog.cpp
+msgid "Modify Lines"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Move &Down\tAlt+Down"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Move &Up\tAlt+Up"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "NADS — N&ational digit shapes substitution"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "NODS — Nominal (European) &digit shapes"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "New &GUID"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "New &Window\tAlt+N"
+msgstr ""
+
+#: src/app/dialogs/recent_files_dialog.cpp
+msgid ""
+"No access to the selected file!\n"
+"Would you like to remove it from the list?"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "No match found"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "OEM United States (DOS-437)"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Only words in document"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Open 7-bit &ASCII files in UTF-8 mode."
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Open ANSI (unknown encoding) files in UTF-&8 mode."
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Open ANSI Art (*.&nfo, *.diz) files in DOS-437 mode."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Open As &GBK..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Open As DOS-437..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Open As UTF-16LE..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Open As Windows-1252..."
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Open file"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Other Sett&ings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Outline &Frame\tCtrl+Shift+F"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "PDF — &Pop directional formatting"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "PDI — Po&p directional isolate"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "PS — Para&graph Separator"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Pandoc"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Parentheses ()"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+#: src/syntax/syntax_catalog.cpp
+msgid "Plain Text"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Property List"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Punctuation"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Python"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "R&eplace...\tCtrl+H"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "RLE — Start of right-to-left e&mbedding"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "RLI — Right-to-&left isolate"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "RLM — &Right-to-left mark"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "RLO — Start of right-to-left o&verride"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "RS — Record Separator (&Block separator)"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Reached the beginning of the document, restarting search at the end."
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Reached the end of the document, restarting search at the beginning."
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Read only file"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Recent (&History)...\tAlt+H"
+msgstr ""
+
+#: src/app/dialogs/recent_files_dialog.cpp
+msgid "Recent Files"
+msgstr ""
+
+#: src/app/dialogs/recent_files_dialog.cpp
+msgid "Recent files"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Recoding requires reloading file from disk, unsaved changes will be lost!"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Regular &expression"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Reload Encoding"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Reload With Encoding"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Remember &Recent Files"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Remember &Search Options"
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "Remove &unique lines."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Remove Blank Lines\tAlt+R"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Remove Duplicate Lines"
+msgstr ""
+
+#: src/app/dialogs/recent_files_dialog.cpp
+msgid "Remove recent file?"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Ren&dering Technology"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Replace"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Replace &All"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Replace &with:"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Replace with"
+msgstr ""
+
+#: src/app/new_window.cpp
+msgid "Restart failed"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Revert"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Revert file to last saved state? Your changes will be lost!"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Rust"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "S&ort Lines...\tAlt+O"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "S&wap\tCtrl+K"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "SHY — Soft &hyphen"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "SVG"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Save &As...\tF6"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Save As"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Save Cop&y...\tCtrl+F6"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Save Copy"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Save Settings &Now"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Save Settings On E&xit"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "Save changes to %s before closing?"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "Save changes to %s before creating a new document?"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "Save changes to %s before opening another file?"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "Save changes to %s before opening recent files?"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+#, c-format
+msgid "Save changes to %s before reloading?"
+msgstr ""
+
+#: src/app/new_window.cpp
+#, c-format
+msgid "Save changes to %s before restarting?"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Save changes?"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Save file"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Save with Original Time"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Scan document words inside"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Scan timeout"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Scan words in document"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Sche&me"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Scheme"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Script She&bang Line"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Search wrapped"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Select &default encoding:"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Select Encoding"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select Lines in &Current Block\tAlt+Shift+]"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select and &Edit Options"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Select current file &encoding:"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Select source &encoding to reload file:"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Matching B&race\tCtrl+Shift+B"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Ne&xt\tCtrl+Alt+F2"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Previou&s\tCtrl+Alt+Shift+F2"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Sett&ings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Settings saved"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show &Whitespace\tCtrl+Shift+8"
+msgstr ""
+
+#: src/app/dialogs/long_line_settings_dialog.cpp
+msgid "Show &edge line."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Code &Folding\tCtrl+Shift+Alt+F"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Line &Endings\tCtrl+Shift+9"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Wrap S&ymbols\tCtrl+Shift+0"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Show inconsistent line endings warning on loading."
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "Shu&ffle lines."
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Simplified Chinese (GB18030)"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Simplified Chinese (GBK, GB2312)"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Single quotes"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Skip statistical &Unicode (UTF-16) detection."
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "Sort &ascending."
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "Sort &descending."
+msgstr ""
+
+#: src/app/dialogs/sort_lines_dialog.cpp
+msgid "Sort Lines"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Source encoding"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Space"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Space after comma"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Space after comment"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Spec&ial"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Square brackets []"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Strings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Strip &First Character\tAlt+Z"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Strip &Last Character\tAlt+L"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Strip &Trailing Blanks\tAlt+T"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Strip Leading Blan&ks"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Switch to Find"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Switch to Replace"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text with default characters, and the undo history will be cleared. Continue?"
+msgstr ""
+
+#: src/app/language_commands.cpp
+msgid "System Language"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "T&oggle Line Comment\tCtrl+/"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "T&ranspose\tAlt+S"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "TOML"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "TSX"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Tab"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Tab Indents"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Tab Settings"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Tab Width (1–256):"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Tabify Indent\tCtrl+Alt+T"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Tabify Selection\tCtrl+Shift+T"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Tabs as Spaces"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Text files (*.txt)"
+msgstr ""
+
+#: src/app/editor_frame_file_watching.cpp
+msgid "The current file has been deleted. Save now?"
+msgstr ""
+
+#: src/app/editor_frame_file_watching.cpp
+msgid "The current file has been modified by an external program. Reload?"
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "The document contains invalid UTF-8."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "The document could not be encoded as UTF-16BE."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "The document could not be encoded as UTF-16LE."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "The file could not be decoded with the selected Chinese encoding."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "The file is not valid GBK (CP936). The document was not changed."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "The file is not valid UTF-16BE."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "The file is not valid UTF-16LE."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "The file is not valid UTF-8. No other encoding was assumed."
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "The line endings in this file are not consistent:"
+msgstr ""
+
+#: src/document/document_session.cpp
+#, c-format
+msgid "The selected encoding (code page %u) is not migrated. The document was not changed."
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "The specified text was not found."
+msgstr ""
+
+#: src/document/document_session.cpp
+msgid "This document already has a file name."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "This operation can't be performed (lines too long)."
+msgstr ""
+
+#: src/app/dialogs/enclose_selection_dialog.cpp
+#: src/app/dialogs/find_replace_dialog.cpp
+#: src/app/dialogs/insert_tag_dialog.cpp
+#: src/app/dialogs/modify_lines_dialog.cpp src/app/editor_frame_commands.cpp
+msgid "This operation can't be performed within a rectangular selection."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Time/Date (&Long Form)\tCtrl+Shift+F5"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Time/Date (&Short Form)\tCtrl+F5"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Title &Case\tCtrl+Alt+I"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "To &Binary\tCtrl+Alt+B"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "To &Decimal\tCtrl+Alt+D"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "To &Hexadecimal\tCtrl+Alt+H"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "To &Octet"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Block &Comment\tCtrl+Q"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Traditional Chinese (Big5, Big5-HKSCS)"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Transform &backslashes"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Triple &Backticks\tCtrl+9"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Triple &Double Quotes\tCtrl+6"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Triple &Single Quotes\tCtrl+3"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "TypeScript"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "URL &Decode\tCtrl+Shift+R"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "URL &Encode\tCtrl+Shift+E"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "URL Component Encode"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "US — Unit Separator (&Segment separator)"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "UTF-16BE with BOM"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "UTF-16LE with BOM"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "UTF-8 with BOM"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Undo Redo &Remember Selection"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Unescape HTML/&XML Chars\tAlt+Shift+H"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Unicode"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Unicode &Control Character"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Unix Timesta&mp"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Unix/macOS (LF)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Untabify Indent\tCtrl+Alt+S"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Untabify Selection\tCtrl+Shift+S"
+msgstr ""
+
+#: src/app/editor_frame.cpp src/document/document_session.cpp
+msgid "Untitled"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Update File Time"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Use Global Tab Settings"
+msgstr ""
+
+#: src/app/dialogs/tab_settings_dialog.cpp
+msgid "Use Scheme Tab Settings"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Visible rows"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Visual &Brace Matching\tCtrl+Shift+V"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "WJ — &Word joiner"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "Web Source Code"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Western European"
+msgstr ""
+
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "Whole &word"
+msgstr ""
+
+#: src/app/dialogs/document_dialogs.cpp
+msgid "Windows (CR+LF)"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "With &Encoding...\tF8"
+msgstr ""
+
+#: src/app/dialogs/auto_completion_settings_dialog.cpp
+msgid "Word completion"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "XML Document"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "XML Schema"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "XSLT"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "YAML"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "You are about to change the encoding of an empty file from ANSI to non-ANSI. Note that this will clear the undo history, as it can't be synchronized with the new encoding. Continue?"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "ZWJ — Zero width &joiner"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "ZWNJ — Zero width &non-joiner"
+msgstr ""
+
+#: src/editor/special_insert.h
+msgid "ZWSP — &Zero width space"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Zoom &In\tCtrl++"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Zoom &Level..."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Zoom &Out\tCtrl+-"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Zoom Level"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Zoom level"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+#, c-format
+msgid "Zoom level (%d%% to %d%%):"
+msgstr ""
+
+#: src/syntax/syntax_catalog.cpp
+msgid "m4"
+msgstr ""

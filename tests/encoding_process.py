@@ -1,4 +1,5 @@
 """Original encoding options reach actual Open and Save across fresh processes."""
+from english_settings import english_settings
 import os
 from pathlib import Path
 import shutil
@@ -37,7 +38,7 @@ def run(executable):
             ("DefaultEncoding=-4294967296\nLoadASCIIasUTF8=0", b"plain", "UTF-8", 0, 5, None),
         ]
         for seed, data, encoding, bom, length, saved_bytes in cases:
-            config.write_text("[Settings]\n" + seed + "\n[Unrelated]\nKeep=1\n", encoding="utf-16")
+            config.write_text(english_settings("[Settings]\n" + seed + "\n[Unrelated]\nKeep=1\n"), encoding="utf-16")
             fixture.write_bytes(data)
             app = Application(application, folder, environment)
             try:

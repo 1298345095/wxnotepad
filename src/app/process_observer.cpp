@@ -9,6 +9,7 @@
 #include <wx/statusbr.h>
 #include <wx/log.h>
 #include <cstdio>
+#include <limits>
 #include <utility>
 #ifdef __WXMSW__
 #include <windows.h>
@@ -50,8 +51,15 @@ void DispatchObservedCommand(EditorFrame& frame, const wxString& operation, cons
     if (operation == "save") result = frame.Save().status == SaveStatus::Saved ? "ok" : "failed";
     if (operation == "close") result = "ok";
     if (operation == "menu") {
-        const int id = frame.GetMenuBar()->FindMenuItem(source.BeforeFirst('\t'), source.AfterFirst('\t'));
-        if (id != wxNOT_FOUND) {
+        long numericId = 0;
+        int id = wxNOT_FOUND;
+        if (source.Contains('\t'))
+            id = frame.GetMenuBar()->FindMenuItem(source.BeforeFirst('\t'), source.AfterFirst('\t'));
+        else if (source.ToLong(&numericId) && numericId >= std::numeric_limits<int>::min() &&
+                 numericId <= std::numeric_limits<int>::max())
+            id = static_cast<int>(numericId);
+        const auto* item = id == wxNOT_FOUND ? nullptr : frame.GetMenuBar()->FindItem(id);
+        if (item && !item->IsSeparator() && !item->GetSubMenu() && item->IsEnabled()) {
             wxCommandEvent event(wxEVT_MENU, id);
             result = frame.GetEventHandler()->ProcessEvent(event) ? "ok" : "failed";
             frame.UpdateWindowUI(wxUPDATE_UI_RECURSE);
