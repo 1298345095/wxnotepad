@@ -1,0 +1,9 @@
+{
+  "domain": "wxnotepad",
+  "source_language": "en",
+  "languages": [
+    {"lang_id": 1033, "code": "en", "name": "English"},
+    {"lang_id": 2052, "code": "zh_CN", "name": "中文(简体)"},
+    {"lang_id": 1028, "code": "zh_TW", "name": "中文(繁體)"}
+  ]
+}
