@@ -47,7 +47,7 @@ class Acceptance:
         self.observation.mkdir()
         self.working = directory / 'unrelated working 中文'
         self.working.mkdir()
-        self.dialogs = Dialogs()
+        self.dialogs = Dialogs(self.logs)
         self.count = 0
         self.reference = None
 
@@ -376,6 +376,15 @@ class Acceptance:
         app.state = wait_state(app.folder, app.process,
                                lambda state: state['dirty'] == '1' and int(state['length']) == length + 1)
 
+    def show_replace(self, app):
+        if sys.platform == 'win32':
+            app.choose(5039)  # wxID_REPLACE.
+        else:
+            if app.state['backend'] == 'GdkWaylandDisplay':
+                app.state = wait_state(app.folder, app.process,
+                                       lambda state: state['active'] == '1' and state['focus'] == '1', timeout=10)
+            self.dialogs.key(app, 'ctrl+h')
+
     def dynamic(self):
         self.prepare_reference()
         for code in ('en', 'zh_CN', 'zh_TW'):
@@ -385,7 +394,7 @@ class Acceptance:
                 document.write_bytes(b'\n'.join([b'cat'] * count))
                 app = self.start(PREFERENCE[code], startup=document)
                 try:
-                    app.choose(5039)  # wxID_REPLACE; same command and modeless native dialog.
+                    self.show_replace(app)  # Same menu command through the native accelerator.
                     window = self.dialogs.wait(app.process, title)
                     self.dialogs.set_input(window, query, 'cat')
                     self.dialogs.set_input(window, replacement, 'dog')
@@ -462,7 +471,7 @@ class Acceptance:
                 try:
                     suffix = f'{code}-{scale}'
                     self.goto(app, code, self.logs / f'goto-{suffix}.png')
-                    app.choose(5039)
+                    self.show_replace(app)
                     window = self.dialogs.wait(app.process, DYNAMIC[code][0])
                     self.dialogs.set_input(window, DYNAMIC[code][1], 'fixed sample 中文')
                     self.dialogs.set_input(window, DYNAMIC[code][2], 'replacement 取代')

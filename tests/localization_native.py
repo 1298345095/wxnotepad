@@ -11,7 +11,9 @@ def plain(text):
 
 
 class Dialogs:
-    def __init__(self):
+    def __init__(self, evidence=None):
+        self.evidence = evidence
+        self.wait_sequence = 0
         self.key_sequence = 0
         if sys.platform == 'win32':
             self.user = ctypes.WinDLL('user32', use_last_error=True)
@@ -113,15 +115,23 @@ class Dialogs:
     def wait(self, process, title, message=None):
         deadline = time.monotonic() + 10
         observed = []
+        mapping_observed = False
+        self.wait_sequence += 1
         while time.monotonic() < deadline:
             assert process.poll() is None, process.returncode
             observed = self.windows(process)
             for window in observed:
                 if self.title(window) == title:
-                    # Wayland accessibility can precede compositor activation.
-                    if (sys.platform == 'win32' or os.environ.get('GDK_BACKEND') != 'wayland'
-                            or window.get_state_set().contains(self.atspi.StateType.ACTIVE)):
+                    if sys.platform == 'win32' or os.environ.get('GDK_BACKEND') != 'wayland':
                         return window
+                    mapped, scene = self.wayland_mapping(process.pid, title, deadline)
+                    window.clear_cache()
+                    if mapped and window.get_state_set().contains(self.atspi.StateType.SHOWING):
+                        self.retain_native_scene(process.pid, 'mapped', scene)
+                        return window
+                    if not mapping_observed:
+                        self.retain_native_scene(process.pid, 'before-map', scene)
+                        mapping_observed = True
                 if message is not None and any(message in text for text in self.texts(window)):
                     return window
                 if sys.platform != 'win32' and window.get_role() == self.atspi.Role.ALERT:
@@ -134,7 +144,59 @@ class Dialogs:
                     if title in fragments and any(fragments[title] in text for text in self.texts(window)):
                         return window
             time.sleep(.03)
-        raise AssertionError(f'Native dialog {title!r} not shown: {[self.title(w) for w in observed]}')
+        self.observe_wait_failure(process, title, observed)
+        raise AssertionError(f'Native dialog {title!r} not ready: {[self.title(w) for w in observed]}')
+
+    def wayland_mapping(self, pid, title, deadline):
+        import re
+        import subprocess
+        remaining = deadline - time.monotonic()
+        assert remaining > 0, 'Native dialog mapping deadline expired'
+        result = subprocess.run(['weston-debug', 'scene-graph'], capture_output=True, text=True,
+                                timeout=min(2, remaining), check=True)
+        layered = False
+        for section in re.split(r'(?=^Layer |^	View )', result.stdout, flags=re.MULTILINE):
+            if section.startswith('Layer '):
+                layered = True
+            if not layered or not re.match(rf'	View \d+ \(role xdg_toplevel, PID {pid}, surface ID \d+, ', section):
+                continue
+            if f"top-level window '{title}' of " not in section.splitlines()[0]:
+                continue
+            if not re.search(r'\[(?:view|surface) is (?:not mapped!|not part of any layer|under parent view layer)\]', section):
+                return True, result.stdout
+        return False, result.stdout
+
+    def retain_native_scene(self, pid, phase, scene):
+        if self.evidence is not None:
+            path = self.evidence / f'native-wait-{pid}-{self.wait_sequence}-{phase}.scene.txt'
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(scene, encoding='utf-8')
+
+    def observe_wait_failure(self, process, title, windows):
+        if self.evidence is None or sys.platform == 'win32':
+            return
+        import json
+        import subprocess
+        from localization_layout import capture_and_check
+        prefix = self.evidence / f'native-wait-{process.pid}-{self.wait_sequence}'
+        prefix.parent.mkdir(parents=True, exist_ok=True)
+        states = []
+        for window in windows:
+            item = {'title': self.title(window),
+                    'cached_states': [str(state) for state in window.get_state_set().get_states()]}
+            window.clear_cache()
+            item['refreshed_states'] = [str(state) for state in window.get_state_set().get_states()]
+            states.append(item)
+        prefix.with_suffix('.json').write_text(json.dumps({'expected': title, 'windows': states}, ensure_ascii=False), encoding='utf-8')
+        if os.environ.get('GDK_BACKEND') == 'wayland':
+            result = subprocess.run(['weston-debug', 'scene-graph'], capture_output=True, text=True, timeout=2)
+            prefix.with_suffix('.scene.txt').write_text(result.stdout + result.stderr, encoding='utf-8')
+        display = getattr(capture_and_check, '_display', None)
+        if display is not None:
+            from gi.repository import Gdk
+            root = display.get_default_screen().get_root_window()
+            pixbuf = Gdk.pixbuf_get_from_window(root, 0, 0, root.get_width(), root.get_height())
+            assert pixbuf and pixbuf.savev(str(prefix.with_suffix('.png')), 'png', [], [])
 
     def click(self, window, caption):
         if sys.platform == 'win32':
@@ -232,8 +294,10 @@ class Dialogs:
             from pathlib import Path
             if window is not None and app.state['backend'] == 'GdkWaylandDisplay':
                 deadline = time.monotonic() + 10
-                while (not window.get_state_set().contains(self.atspi.StateType.ACTIVE)
-                       and time.monotonic() < deadline):
+                while time.monotonic() < deadline:
+                    window.clear_cache()
+                    if window.get_state_set().contains(self.atspi.StateType.ACTIVE):
+                        break
                     time.sleep(.03)
                 assert window.get_state_set().contains(self.atspi.StateType.ACTIVE), self.title(window)
             if app.state['backend'] == 'GdkX11Display':
