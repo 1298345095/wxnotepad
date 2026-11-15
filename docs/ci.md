@@ -65,7 +65,7 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   otherwise leaves it accessible only to `_apt`, which prevents SonarPython's
   package-root discovery from traversing the workspace even outside source scope.
 - The vcpkg checkout uses the manifest's builtin baseline and wxWidgets override
-  **3.3.3#3**. Only core features are requested, matching the prepared development
+  **3.3.3#4**. Only core features are requested, matching the prepared development
   dependencies; unused sound/SDL2 and debug-support features are not requested.
 - The wxWidgets overlay disables JPEG, TIFF and WebP codecs and their package
   dependencies on Windows. PNG/SVG art and native bitmap support remain enabled.
@@ -73,7 +73,9 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   Doc/View and MDI facilities. The application's document model and original
   Notepad4 regular-expression engine do not use those wxWidgets facilities.
   Printing/page setup, native lists/trees and standard dialogs remain enabled.
-  Linux retains the upstream configuration. Local dependency installs need
+  Linux retains those facilities. Both platforms disable wxSTC and omit its
+  Scintilla/Lexilla source downloads; the application uses the separately pinned
+  Notepad4 core and preserves its notices. Local dependency installs need
   the same `--overlay-ports=<repository>/.github/ports` option as CI.
 - Linux explicitly requests GTK3's Wayland feature alongside its X11 backend.
   Installing the system GTK development package does not enable Wayland inside

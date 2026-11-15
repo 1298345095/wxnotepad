@@ -16,24 +16,6 @@ vcpkg_from_github(
         fix-wayland-build.patch # https://github.com/wxWidgets/wxWidgets/commit/c70a840f3a6dc288ff968ecd6f37df7251039483
 )
 
-# Submodule dependencies
-vcpkg_from_github(
-    OUT_SOURCE_PATH lexilla_SOURCE_PATH
-    REPO wxWidgets/lexilla
-    REF "bf6ad20062b98808ffa21419263942a427c150a9"
-    SHA512 08360fcd29e6c021857928375509ea48b9c8a02407bcb3c01865f57734c449fc6ff24afbe011f218b7145116e1805f8c9b4a2e3ec26f4a6298dca9453f610887
-    HEAD_REF wx
-)
-file(COPY "${lexilla_SOURCE_PATH}/" DESTINATION "${SOURCE_PATH}/src/stc/lexilla")
-vcpkg_from_github(
-    OUT_SOURCE_PATH scintilla_SOURCE_PATH
-    REPO wxWidgets/scintilla
-    REF "0b90f31ced23241054e8088abb50babe9a44ae67"
-    SHA512 db1f3007f4bd8860fad0817b6cf87980a4b713777025128cf5caea8d6d17b6fafe23fd22ff6886d7d5a420f241d85b7502b85d7e52b4ddb0774edc4b0a0203e7
-    HEAD_REF wx
-)
-file(COPY "${scintilla_SOURCE_PATH}/" DESTINATION "${SOURCE_PATH}/src/stc/scintilla")
-
 vcpkg_check_features(
     OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     FEATURES
@@ -122,6 +104,7 @@ vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
         ${FEATURE_OPTIONS}
+        -DwxUSE_STC=OFF
         -DwxUSE_REGEX=${regex_library}
         -DwxUSE_ZLIB=sys
         -DwxUSE_EXPAT=sys
@@ -285,6 +268,4 @@ file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/usage" DESTINATION "${CURRENT_PACKAGES_D
 vcpkg_install_copyright(
     FILE_LIST
         "${SOURCE_PATH}/docs/licence.txt"
-        "${lexilla_SOURCE_PATH}/License.txt"
-        "${scintilla_SOURCE_PATH}/License.txt"
 )
