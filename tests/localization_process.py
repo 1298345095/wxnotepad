@@ -453,6 +453,8 @@ class Acceptance:
                     self.goto(app, code, self.logs / f'goto-{suffix}.png')
                     app.choose(5039)
                     window = self.dialogs.wait(app.process, DYNAMIC[code][0])
+                    self.dialogs.set_input(window, DYNAMIC[code][1], 'fixed sample 中文')
+                    self.dialogs.set_input(window, DYNAMIC[code][2], 'replacement 取代')
                     capture_and_check(self.dialogs, app, window, self.logs / f'replace-{suffix}.png')
                     self.dialogs.click(window, DYNAMIC[code][5])
                     app.begin('menu', str(completion))
@@ -565,7 +567,7 @@ class Acceptance:
         with tempfile.TemporaryDirectory(prefix='localization-', dir=parent) as name:
             prefix = Path(name)
             executable = prefix / 'bin' / self.executable.name
-            shutil.copytree(self.executable.parent, executable.parent)
+            shutil.copytree(self.executable.parent, executable.parent, ignore=shutil.ignore_patterns('Notepad4.ini'))
             (prefix / 'share').mkdir()
             (executable.parent / 'locale').rename(prefix / 'share/locale')
             assert not (executable.parent / 'locale').exists()
