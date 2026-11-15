@@ -65,8 +65,12 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   otherwise leaves it accessible only to `_apt`, which prevents SonarPython's
   package-root discovery from traversing the workspace even outside source scope.
 - The vcpkg checkout uses the manifest's builtin baseline and wxWidgets override
-  **3.3.3#1**. Only core features are requested, matching the prepared development
+  **3.3.3#2**. Only core features are requested, matching the prepared development
   dependencies; unused sound/SDL2 and debug-support features are not requested.
+- The wxWidgets overlay disables JPEG, TIFF and WebP codecs and their package
+  dependencies on Windows. PNG/SVG art and native bitmap support remain enabled.
+  Linux retains the upstream codec configuration. Local dependency installs need
+  the same `--overlay-ports=<repository>/.github/ports` option as CI.
 - Linux explicitly requests GTK3's Wayland feature alongside its X11 backend.
   Installing the system GTK development package does not enable Wayland inside
   the separately built vcpkg GTK. Configure records and checks the actual SDK
@@ -261,6 +265,17 @@ or Ubuntu installer. Windows DLLs are included beside the executable. Linux
 output includes non-system vcpkg shared libraries and a README describing its
 Ubuntu 24.04 desktop/runtime requirement. Distribution packaging remains a
 separate task.
+
+Linux packaging strips only the distribution copies of the executable and
+bundled shared libraries. Their matching separate debug files are retained under
+`symbols/` in the evidence artifact, with GNU debug links in the distributed
+binaries. Copy `symbols/.debug/` beside the executable and `symbols/lib/.debug/`
+inside its `lib/` directory for GDB to find them. The ordinary unstripped
+executable is also retained under `build/cmake/wxnotepad` in the evidence artifact;
+the separately compiled diagnostic executable remains preserved as before.
+The ordinary test binaries keep their debug information, and build.json records
+both the distributed and original executable checksums. These changes do not
+alter Linux dependency linkage, test assertions or coverage settings.
 
 Newer runs cancel older runs for the same workflow/ref. Open a draft pull request
 to validate an integration branch before merge. Branch pushes update the PR run;

@@ -68,6 +68,10 @@ jobs:
           set -euo pipefail
           command -v gdb
           python -X utf8 tests/ci_cores_integration.py -v
+      - name: Validate Linux debug-symbol packaging
+        if: runner.os == 'Linux'
+        shell: bash
+        run: python -X utf8 tests/ci_bundle.py -v
       - name: Configure
         shell: bash
         env:
@@ -207,6 +211,8 @@ jobs:
             .ci/build/cmake/clipboard_smoke
             .ci/build/cmake/clipboard_peer
             .ci/build/cmake/stream_drag
+            .ci/build/cmake/wxnotepad
+            .ci/symbols/
             .ci/artifact/lib/
             .ci/build/original-core/wxnotepad-source.json
             .ci/build/notepad4-source.tar
