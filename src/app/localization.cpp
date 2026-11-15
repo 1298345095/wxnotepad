@@ -76,10 +76,12 @@ void Initialize(uint16_t preference) {
     translations->SetLanguage(effective);
     // AddCatalog() may succeed without loading an MO. Both domains must actually
     // load in the same language before exposing a translated interface.
+    // wxWidgets searches the most recently loaded catalog first. Load stock first
+    // so application wording takes precedence while other toolkit keys fall back.
     const wxLogNull noGuiLog;
     if (effective != sourceLanguage &&
-        (!translations->AddAvailableCatalog(domain, wxLANGUAGE_ENGLISH) || !translations->IsLoaded(domain) ||
-         !translations->AddAvailableCatalog("wxstd", wxLANGUAGE_ENGLISH) || !translations->IsLoaded("wxstd"))) {
+        (!translations->AddAvailableCatalog("wxstd", wxLANGUAGE_ENGLISH) || !translations->IsLoaded("wxstd") ||
+         !translations->AddAvailableCatalog(domain, wxLANGUAGE_ENGLISH) || !translations->IsLoaded(domain))) {
         translations = new wxTranslations;
         translations->SetLanguage(sourceLanguage);
         wxTranslations::Set(translations);
