@@ -295,6 +295,11 @@ unbuffered output and process result remain in `.ci/reports/visual-brace-repeat`
 the sequence stops and fails on its first abnormal exit. The complete suite's
 JUnit and logs remain separate.
 
+The JSON native fixture currently emits tagged command/chooser-state diagnostics
+for an intermittent Wayland timeout. On Linux with CMake 3.27 or newer, its
+unchanged 60-second timeout sends SIGQUIT with a five-second dump grace period.
+The existing Linux core collector retains its executable and GDB thread stacks.
+
 Evidence artifacts retain JUnit XML, complete CTest logs, Weston logs, configure
 logs, source provenance and dependency build logs, including on failed jobs.
 clang-tidy exports per-file diagnostics and a JSON summary. Linux evidence also

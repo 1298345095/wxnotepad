@@ -552,6 +552,10 @@ if(BUILD_TESTING)
     add_editor_test(syntax_shell shell_highlighting 60)
     add_editor_test(syntax_shebang original_python_shebang 60)
     add_editor_test(syntax_json json_highlighting 60)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.27")
+        set_tests_properties(json_highlighting PROPERTIES
+            TIMEOUT_SIGNAL_NAME SIGQUIT TIMEOUT_SIGNAL_GRACE_PERIOD 5)
+    endif()
     add_editor_test(syntax_javascript javascript_typescript_schemes 120)
     add_editor_test(syntax_markup original_markup_schemes 90)
     target_compile_definitions(syntax_markup PRIVATE
