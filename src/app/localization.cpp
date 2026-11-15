@@ -20,7 +20,7 @@ wxString Text(std::string_view text) {
 #ifdef __WXMSW__
 class NamedWindowAccessible final : public wxWindowAccessible {
 public:
-    NamedWindowAccessible(wxWindow& window, wxString name) : wxWindowAccessible(&window), name_(std::move(name)) {}
+    explicit NamedWindowAccessible(wxString name) : wxWindowAccessible(nullptr), name_(std::move(name)) {}
     wxAccStatus GetName(int childId, wxString* name) override {
         if (childId != wxACC_SELF) return wxWindowAccessible::GetName(childId, name);
         *name = name_;
@@ -83,7 +83,7 @@ void Initialize(uint16_t preference) {
 
 void SetAccessibleName(wxWindow& window, const wxString& name) {
 #ifdef __WXMSW__
-    window.SetAccessible(new NamedWindowAccessible(window, name));
+    window.SetAccessible(new NamedWindowAccessible(name));
 #elif defined(__WXGTK__)
     if (auto* accessible = gtk_widget_get_accessible(GTK_WIDGET(window.GetHandle())))
         atk_object_set_name(accessible, name.utf8_str());
