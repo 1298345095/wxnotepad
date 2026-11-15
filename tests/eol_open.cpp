@@ -39,7 +39,7 @@ public:
     int initialSelection = 0;
     bool always = true;
     bool defaultNo = false;
-    wxString expectedCounts = "CR+LF: 1 line(s).\nLF: 1 line(s).\nCR: 1 line(s).";
+    wxString expectedCounts = "CR+LF: 1 line.\nLF: 1 line.\nCR: 1 line.";
     std::string error;
     void Notify() override {
         for (auto* window : wxTopLevelWindows) {

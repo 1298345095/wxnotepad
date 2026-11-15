@@ -1,4 +1,6 @@
 #include "app/dialogs/recent_files_dialog.h"
+#include "app/localization.h"
+#include <wx/translation.h>
 #include "settings/recent_files.h"
 #include <wx/button.h>
 #include <wx/checkbox.h>
@@ -18,31 +20,33 @@ constexpr int DialogPaddingDip = 10;
 
 RecentFilesDialog::RecentFilesDialog(wxWindow* parent, OriginalSettings& preferences,
                                      std::function<void()> clearHistory, std::function<void(size_t)> removeHistory)
-    : wxDialog(parent, wxID_ANY, "Recent Files", wxDefaultPosition, wxDefaultSize,
+    : wxDialog(parent, wxID_ANY, _("Recent Files"), wxDefaultPosition, wxDefaultSize,
                wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
       preferences_(preferences), removeHistory_(std::move(removeHistory)) {
     auto* layout = new wxBoxSizer(wxVERTICAL);
     files_ = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(620, 280)),
                             wxLC_REPORT | wxLC_SINGLE_SEL | wxLC_NO_HEADER);
     files_->SetName("Recent files");
-    files_->InsertColumn(0, "File");
+    AppLocalization::SetAccessibleName(*files_, _("Recent files"));
+    files_->InsertColumn(0, _("File"));
     layout->Add(files_, 1, wxEXPAND | wxALL, FromDIP(DialogPaddingDip));
-    remember_ = new wxCheckBox(this, wxID_ANY, "&Remember recent files on exit");
+    remember_ = new wxCheckBox(this, wxID_ANY, _("&Remember recent files on exit"));
     remember_->SetName("Remember recent files");
     remember_->SetValue(preferences_.saveRecentFiles);
     layout->Add(remember_, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
-    auto* clear = new wxButton(this, wxID_CLEAR, "Clear History");
+    auto* clear = new wxButton(this, wxID_CLEAR, _("Clear History"));
     layout->Add(clear, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
     clear->Bind(wxEVT_BUTTON, [this, clearHistory = std::move(clearHistory)](wxCommandEvent&) {
         clearHistory();
         RefreshFiles();
     });
     auto* count = new wxBoxSizer(wxHORIZONTAL);
-    count->Add(new wxStaticText(this, wxID_ANY, "Maximum recent &files:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT,
+    count->Add(new wxStaticText(this, wxID_ANY, _("Maximum recent &files:")), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT,
                FromDIP(8));
     capacity_ = new wxTextCtrl(this, wxID_ANY, wxString::Format("%d", preferences_.maxRecentFiles), wxDefaultPosition,
                                FromDIP(wxSize(90, -1)), 0, wxTextValidator(wxFILTER_DIGITS));
     capacity_->SetName("Recent file capacity");
+    AppLocalization::SetAccessibleName(*capacity_, _("Maximum recent files"));
     count->Add(capacity_);
     layout->Add(count, 0, wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(DialogPaddingDip));
     layout->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, FromDIP(DialogPaddingDip));
@@ -73,8 +77,8 @@ void RecentFilesDialog::Accept() {
         EndModal(wxID_OK);
         return;
     }
-    wxMessageDialog question(this, "No access to the selected file!\nWould you like to remove it from the list?",
-                             "Remove recent file?", wxYES_NO | wxICON_WARNING);
+    wxMessageDialog question(this, _("No access to the selected file!\nWould you like to remove it from the list?"),
+                             _("Remove recent file?"), wxYES_NO | wxICON_WARNING);
     if (question.ShowModal() == wxID_YES) {
         removeHistory_(static_cast<size_t>(selected));
         RefreshFiles();
