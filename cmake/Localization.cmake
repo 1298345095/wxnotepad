@@ -49,7 +49,7 @@ foreach(index RANGE ${language_last})
         list(APPEND catalog_sources "${source}")
         list(APPEND catalog_outputs "${CMAKE_CURRENT_BINARY_DIR}/catalogs/locale/${code}/LC_MESSAGES/${domain}.mo")
         install(FILES "${CMAKE_CURRENT_BINARY_DIR}/catalogs/locale/${code}/LC_MESSAGES/${domain}.mo"
-            DESTINATION "${CMAKE_INSTALL_DATADIR}/locale/${code}/LC_MESSAGES")
+            DESTINATION "${WXNOTEPAD_LOCALE_DIR}/${code}/LC_MESSAGES")
     endforeach()
 endforeach()
 add_custom_command(OUTPUT ${catalog_outputs}
@@ -70,3 +70,6 @@ add_custom_target(check_localization
         --gettext-bin "${gettext_bin}" check
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
 install(TARGETS wxnotepad RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/licenses/"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/wxnotepad")
