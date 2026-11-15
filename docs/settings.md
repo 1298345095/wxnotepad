@@ -5,6 +5,14 @@ creating the frame and applies the stored values to the existing editor. Feature
 modules do not read configuration files. Later settings work adds original fields
 to this same store and applies them through the responsible feature module.
 
+`[Settings2] UILanguage` retains the original LANGID integer, default `1024`
+(System Language). Explicit UI-language changes save this field independently
+of Save Settings On Exit; ordinary saves preserve the latest value on disk.
+The accepted original numeric identities remain configured even when their
+catalog is unavailable. `[Settings] SaveBeforeRunningTools` defaults to `0`
+and controls the original Restart save policy. See [UI localization](localization.md)
+for the language-change outcomes, fallback and restart behavior.
+
 `[Settings2] DateTimeShort` and `DateTimeLong` are original load-only `wcsftime`
 templates for Time/Date (Short Form) and Time/Date (Long Form). Missing or empty
 values use the host-local time without seconds, one space, and the host short or

@@ -12,6 +12,31 @@ the same list drives compilation, installation and artifact collection. English
 has no PO/MO requirement. The original compatibility mapping and System Language
 preference remain runtime/settings responsibilities.
 
+## Selecting a language
+
+Settings → Language offers System Language, English, 中文(简体) and 中文(繁體).
+Selecting the current numeric preference is a no-op. In the language-change
+prompt, Cancel leaves the preference unchanged; No saves it immediately for
+the next process; Yes saves it and invokes Restart. The current window keeps
+its effective language until it restarts. Explicit language persistence also
+works with Save Settings On Exit disabled, and an older window preserves a
+newer choice when it saves ordinary settings.
+
+Restart follows the original `[Settings] SaveBeforeRunningTools` policy,
+whose default is `0`. With that default, a named document reopens its disk
+contents and an unnamed document restarts blank. Enabling the policy uses
+the ordinary save prompt, including cancellation and save failures. A failed
+launch leaves the current window open; the language preference has already
+been saved. Existing document encoding, syntax, regional formatting and saved
+paths retain their meanings. Unnamed filename/path commands use the localized
+original Untitled text.
+
+Missing or corrupt required catalogs fall back to source English while
+preserving the configured integer preference. Native system dialogs and GTK
+stock controls retain their platform/regional-language behavior. The matching
+wxWidgets catalog supplies the stock text that supports application translation;
+application wording takes precedence for shared message keys.
+
 ## Host tools
 
 The manifest requests host-only `gettext[tools]` without default features, under
