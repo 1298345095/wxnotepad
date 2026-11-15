@@ -91,6 +91,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     const OriginalSettings defaults;
     LoadLines();
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
+    values.saveBeforeRunningTools = ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
+    values.uiLanguage = UILanguage::Normalize(ReadInt("UILanguage", defaults.uiLanguage, "Settings2"));
     const int recent = ReadInt("SaveRecentFiles", RecentFiles::MinimumCapacity << 1);
     values.saveRecentFiles = (recent & 1) != 0;
     values.maxRecentFiles = std::max(recent >> 1, RecentFiles::MinimumCapacity);
@@ -448,6 +450,7 @@ bool SettingsStore::Save(bool explicitSave) {
     if (!LoadLines()) return false;
     WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
     if (values.saveSettings || explicitSave) {
+        WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
         WriteInt("SaveRecentFiles",
                  static_cast<int>((static_cast<unsigned>(values.maxRecentFiles) << 1) |
                                   static_cast<unsigned>(values.saveRecentFiles)),
@@ -545,6 +548,16 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteRecentFiles(values.recentFiles);
     }
     return SaveLines();
+}
+
+bool SettingsStore::SaveUILanguage(int language) {
+    if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
+    if (!LoadLines()) return false;
+    const auto normalized = UILanguage::Normalize(language);
+    WriteInt("UILanguage", normalized, -1, "Settings2");
+    if (!SaveLines()) return false;
+    values.uiLanguage = normalized;
+    return true;
 }
 
 int SettingsStore::MessageSuppression(const wxString& key) {

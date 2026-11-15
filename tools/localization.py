@@ -2,8 +2,12 @@
 """Maintain standard gettext catalogs and generated release-language metadata."""
 import argparse
 import json
+import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -51,16 +55,145 @@ def header(data, output):
                   '> LanguageDefinitions{{\n' + '\n'.join(rows) + '\n}};\n}\n')
 
 
+def gettext_tool(name, directory):
+    suffix = '.exe' if os.name == 'nt' else ''
+    executable = str(directory / (name + suffix)) if directory else shutil.which(name)
+    if not executable or not Path(executable).is_file():
+        raise ValueError(f'GNU {name} is required; pass --gettext-bin or set WXNOTEPAD_GETTEXT_BIN')
+    return executable
+
+
+def run_gettext(name, arguments, directory, *, cwd=None):
+    return subprocess.run([gettext_tool(name, directory), *map(str, arguments)], cwd=cwd,
+                          check=True, capture_output=True, text=True, encoding='utf-8')
+
+
+def extract(root, data, directory):
+    # Stable relative ordering and file-only references avoid line-number churn.
+    sources = sorted(path.relative_to(root).as_posix() for path in (root / 'src').rglob('*')
+                     if path.suffix in ('.cpp', '.cxx', '.h', '.hpp'))
+    if not sources:
+        raise ValueError('No C++ source files found under src/')
+    with tempfile.TemporaryDirectory(prefix='wxnotepad-extract-') as folder:
+        output = Path(folder) / 'messages.pot'
+        inputs = Path(folder) / 'inputs.txt'
+        inputs.write_text('\n'.join(sources) + '\n', encoding='utf-8')
+        keywords = ('_', 'wxTRANSLATE', 'wxTRANSLATE_IN_CONTEXT:1c,2', 'wxPLURAL:1,2',
+                    'wxGETTEXT_IN_CONTEXT:1c,2', 'wxGETTEXT_IN_CONTEXT_PLURAL:1c,2,3',
+                    'wxGetTranslation:1', 'wxGetTranslation:1,2,3t')
+        arguments = ['--language=C++', '--from-code=UTF-8', '--keyword', '--sort-output',
+                     '--add-location=file', '--add-comments=TRANSLATORS:', '--no-wrap',
+                     '--package-name=' + data['domain'], '--package-version=0.1.0',
+                     '--msgid-bugs-address=https://github.com/1298345095/wxnotepad/issues',
+                     '--copyright-holder=wxnotepad contributors', '--foreign-user',
+                     '--force-po', '--files-from=' + str(inputs), '--output=' + str(output)]
+        arguments += ['--keyword=' + keyword for keyword in keywords]
+        # Mark printf-style messages used through wxString::Format. Translators can
+        # also request c-format explicitly with the normal xgettext comment.
+        arguments += ['--flag=wxString::Format:1:c-format', '--flag=Format:1:c-format']
+        for keyword in ('_', 'wxTRANSLATE', 'wxPLURAL', 'wxGetTranslation'):
+            arguments += ['--flag=' + keyword + ':1:pass-c-format']
+        arguments += ['--flag=wxPLURAL:2:pass-c-format',
+                      '--flag=wxGETTEXT_IN_CONTEXT:2:pass-c-format',
+                      '--flag=wxTRANSLATE_IN_CONTEXT:2:pass-c-format',
+                      '--flag=wxGETTEXT_IN_CONTEXT_PLURAL:2:pass-c-format',
+                      '--flag=wxGETTEXT_IN_CONTEXT_PLURAL:3:pass-c-format']
+        run_gettext('xgettext', arguments, directory, cwd=root)
+        text = output.read_text(encoding='utf-8')
+        return re.sub(r'^"POT-Creation-Date:.*\n', '', text, flags=re.MULTILINE)
+
+
+def catalogs(root, data):
+    for language in data['languages']:
+        if language['code'] != data['source_language']:
+            code = language['code']
+            yield code, data['domain'], root / 'po' / (code + '.po')
+            yield code, 'wxstd', root / 'po/wxstd' / (code + '.po')
+
+
+def compile_catalog(source, output, directory):
+    output.parent.mkdir(parents=True, exist_ok=True)
+    result = run_gettext('msgfmt', ['--check', '--check-format', '--statistics',
+                                   '--output-file=' + str(output), source], directory)
+    if result.stderr:
+        print(str(source) + ': ' + result.stderr.strip())
+
+
+def compile_catalogs(root, data, output, directory):
+    # Publish only fully validated output: a format error cannot replace one of
+    # the previously usable catalogs with a partially written MO.
+    with tempfile.TemporaryDirectory(prefix='wxnotepad-compile-') as folder:
+        built = []
+        for code, domain, source in catalogs(root, data):
+            relative = Path(code) / 'LC_MESSAGES' / (domain + '.mo')
+            temporary = Path(folder) / relative
+            compile_catalog(source, temporary, directory)
+            built.append((temporary, output / relative))
+        for source, target in built:
+            content = source.read_bytes()
+            if not target.exists() or target.read_bytes() != content:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(content)
+
+
+def check(root, data, directory):
+    expected = extract(root, data, directory)
+    pot = root / 'po' / (data['domain'] + '.pot')
+    if not pot.exists() or pot.read_text(encoding='utf-8') != expected:
+        raise ValueError('Source messages drifted; run tools/localization.py update and review the catalogs')
+    incomplete = []
+    with tempfile.TemporaryDirectory(prefix='wxnotepad-check-') as folder:
+        for code, domain, source in catalogs(root, data):
+            compile_catalog(source, Path(folder) / code / (domain + '.mo'), directory)
+            if domain == 'wxstd':
+                continue
+            run_gettext('msgcmp', ['--use-untranslated', '--use-fuzzy', source, pot], directory)
+            for selection in ('--untranslated', '--only-fuzzy'):
+                result = run_gettext('msgattrib', [selection, '--no-obsolete', source], directory)
+                if result.stdout.strip():
+                    incomplete.append(code + ': ' + selection.removeprefix('--'))
+    if incomplete:
+        raise ValueError('Release catalogs are incomplete: ' + ', '.join(incomplete))
+    print('Extraction, catalog formats and release translation coverage are current.')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=ROOT, help='Source root (for standalone build checks)')
+    parser.add_argument('--gettext-bin', type=Path,
+                        default=os.environ.get('WXNOTEPAD_GETTEXT_BIN'), help='GNU gettext host executable directory')
     commands = parser.add_subparsers(dest='command', required=True)
     generate = commands.add_parser('header')
     generate.add_argument('--output', type=Path, required=True)
+    extraction = commands.add_parser('extract', help='Explicitly regenerate the source POT; never part of a build')
+    extraction.add_argument('--output', type=Path)
+    commands.add_parser('update', help='Extract and merge existing app PO files, retaining translator text')
+    commands.add_parser('check', help='Check extraction drift, formats and complete release translations')
+    compilation = commands.add_parser('compile', help='Validate and compile application and locked stock catalogs')
+    compilation.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    data = metadata(args.root)
-    header(data, args.output)
+    root = args.root.resolve()
+    data = metadata(root)
+    if args.command == 'header':
+        header(data, args.output)
+    elif args.command in ('extract', 'update'):
+        output = getattr(args, 'output', None) or root / 'po' / (data['domain'] + '.pot')
+        write_changed(output, extract(root, data, args.gettext_bin))
+        if args.command == 'update':
+            for _, domain, source in catalogs(root, data):
+                if domain != 'wxstd':
+                    run_gettext('msgmerge', ['--update', '--backup=none', '--no-fuzzy-matching',
+                                            '--sort-output', '--no-wrap', source, output], args.gettext_bin)
+    elif args.command == 'check':
+        check(root, data, args.gettext_bin)
+    else:
+        compile_catalogs(root, data, args.output, args.gettext_bin)
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        if isinstance(error, subprocess.CalledProcessError):
+            raise SystemExit(error.stderr or str(error)) from error
+        raise SystemExit(str(error)) from error

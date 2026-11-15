@@ -1,4 +1,6 @@
 #include "app/dialogs/go_to_line_dialog.h"
+#include "app/localization.h"
+#include <wx/translation.h>
 #include "editor/editor_control.h"
 #include "editor/go_to_location.h"
 #include <wx/dialog.h>
@@ -8,12 +10,12 @@
 
 void ShowGoToLineDialog(wxWindow* parent, EditorControl& editor) {
     using Scintilla::Message;
-    wxDialog dialog(parent, wxID_ANY, "Go To Line");
+    wxDialog dialog(parent, wxID_ANY, _("Go To Line"));
     dialog.SetName("Go to line");
     auto* contents = new wxBoxSizer(wxVERTICAL);
     auto* range = new wxStaticText(
         &dialog, wxID_ANY,
-        wxString::Format("&Line (empty or 1 - %lld):", static_cast<long long>(editor.Send(Message::GetLineCount))));
+        wxString::Format(_("&Line (empty or 1 - %lld):"), static_cast<long long>(editor.Send(Message::GetLineCount))));
     range->SetName("Go to line range");
     contents->Add(range, 0, wxALL, dialog.FromDIP(10));
     auto* input = new wxTextCtrl(
@@ -22,15 +24,17 @@ void ShowGoToLineDialog(wxWindow* parent, EditorControl& editor) {
             "%lld",
             static_cast<long long>(editor.Send(Message::LineFromPosition, editor.Send(Message::GetCurrentPos))) + 1));
     input->SetName("Go to line number");
+    AppLocalization::SetAccessibleName(*input, _("Line"));
     input->SetMaxLength(20);
     contents->Add(input, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
     auto* columnRange = new wxStaticText(
         &dialog, wxID_ANY,
-        wxString::Format("&Column (empty or 1 - %lld):", static_cast<long long>(editor.Send(Message::GetLength))));
+        wxString::Format(_("&Column (empty or 1 - %lld):"), static_cast<long long>(editor.Send(Message::GetLength))));
     columnRange->SetName("Go to column range");
     contents->Add(columnRange, 0, wxALL, dialog.FromDIP(10));
     auto* column = new wxTextCtrl(&dialog, wxID_ANY);
     column->SetName("Go to column number");
+    AppLocalization::SetAccessibleName(*column, _("Column"));
     column->SetMaxLength(20);
     contents->Add(column, 0, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(10));
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));

@@ -1,4 +1,6 @@
 #include "app/dialogs/auto_completion_settings_dialog.h"
+#include "app/localization.h"
+#include <wx/translation.h>
 #include "settings/original_settings.h"
 #include <wx/checkbox.h>
 #include <wx/dialog.h>
@@ -14,14 +16,14 @@
 #include <vector>
 
 bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& preferences) {
-    wxDialog dialog(parent, wxID_ANY, "Auto Completion Settings");
+    wxDialog dialog(parent, wxID_ANY, _("Auto Completion Settings"));
     const int gap = dialog.FromDIP(3);
     auto* layout = new wxBoxSizer(wxVERTICAL);
     auto* columns = new wxBoxSizer(wxHORIZONTAL);
-    auto* words = new wxStaticBoxSizer(wxVERTICAL, &dialog, "Word completion");
-    auto* insertion = new wxStaticBoxSizer(wxVERTICAL, &dialog, "Automatically insert");
+    auto* words = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Word completion"));
+    auto* insertion = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Automatically insert"));
     const auto check = [&](wxSizer* sizer, const char* label, bool value) {
-        auto* control = new wxCheckBox(&dialog, wxID_ANY, label);
+        auto* control = new wxCheckBox(&dialog, wxID_ANY, wxGetTranslation(label));
         control->SetName(label);
         control->SetValue(value);
         sizer->Add(control, 0, wxALL, gap);
@@ -35,19 +37,20 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
         return controls;
     };
     constexpr std::array wordOptions = {
-        std::pair{"Complete words", WordCompletionOption::CompleteWord},
-        std::pair{"Scan words in document", WordCompletionOption::ScanWordsInDocument},
-        std::pair{"Only words in document", WordCompletionOption::OnlyWordsInDocument},
-        std::pair{"English IME mode only", WordCompletionOption::EnglishIMEModeOnly},
+        std::pair{wxTRANSLATE("Complete words"), WordCompletionOption::CompleteWord},
+        std::pair{wxTRANSLATE("Scan words in document"), WordCompletionOption::ScanWordsInDocument},
+        std::pair{wxTRANSLATE("Only words in document"), WordCompletionOption::OnlyWordsInDocument},
+        std::pair{wxTRANSLATE("English IME mode only"), WordCompletionOption::EnglishIMEModeOnly},
     };
     auto& completion = preferences.completion;
     const auto wordControls = addFlags(words, wordOptions, completion.completeOption);
     auto* fields = new wxFlexGridSizer(2, gap, gap);
     fields->AddGrowableCol(1);
     const auto field = [&](const char* label, const wxString& value, bool numeric) {
-        fields->Add(new wxStaticText(&dialog, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
+        fields->Add(new wxStaticText(&dialog, wxID_ANY, wxGetTranslation(label)), 0, wxALIGN_CENTER_VERTICAL);
         auto* control = new wxTextCtrl(&dialog, wxID_ANY, value, wxDefaultPosition, dialog.FromDIP(wxSize(95, -1)));
         control->SetName(label);
+        AppLocalization::SetAccessibleName(*control, wxGetTranslation(label));
         if (numeric) {
             control->SetMaxLength(8); // Original EM_LIMITTEXT.
             control->SetValidator(wxTextValidator(wxFILTER_DIGITS));
@@ -55,34 +58,36 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
         fields->Add(control, 1, wxEXPAND);
         return control;
     };
-    auto* rows = field("Visible rows", wxString::Format("%d", completion.visibleItemCount), true);
-    auto* wordLength = field("Minimum word length", wxString::Format("%d", completion.minWordLength), true);
-    auto* numberLength = field("Minimum number length", wxString::Format("%d", completion.minNumberLength), true);
-    auto* timeout = field("Scan timeout", wxString::Format("%d ms", completion.scanWordsTimeout), false);
+    auto* rows = field(wxTRANSLATE("Visible rows"), wxString::Format("%d", completion.visibleItemCount), true);
+    auto* wordLength =
+        field(wxTRANSLATE("Minimum word length"), wxString::Format("%d", completion.minWordLength), true);
+    auto* numberLength =
+        field(wxTRANSLATE("Minimum number length"), wxString::Format("%d", completion.minNumberLength), true);
+    auto* timeout = field(wxTRANSLATE("Scan timeout"), wxString::Format("%d ms", completion.scanWordsTimeout), false);
     words->Add(fields, 0, wxEXPAND | wxALL, gap);
     constexpr std::array insertOptions = {
-        std::pair{"Parentheses ()", AutoInsertMask_Parenthesis},
-        std::pair{"Braces {}", AutoInsertMask_Brace},
-        std::pair{"Square brackets []", AutoInsertMask_SquareBracket},
-        std::pair{"Angle brackets <>", AutoInsertMask_AngleBracket},
-        std::pair{"Double quotes", AutoInsertMask_DoubleQuote},
-        std::pair{"Single quotes", AutoInsertMask_SingleQuote},
-        std::pair{"Backticks", AutoInsertMask_Backtick},
-        std::pair{"Space after comma", AutoInsertMask_SpaceAfterComma},
-        std::pair{"Space after comment", AutoInsertMask_SpaceAfterComment},
+        std::pair{wxTRANSLATE("Parentheses ()"), AutoInsertMask_Parenthesis},
+        std::pair{wxTRANSLATE("Braces {}"), AutoInsertMask_Brace},
+        std::pair{wxTRANSLATE("Square brackets []"), AutoInsertMask_SquareBracket},
+        std::pair{wxTRANSLATE("Angle brackets <>"), AutoInsertMask_AngleBracket},
+        std::pair{wxTRANSLATE("Double quotes"), AutoInsertMask_DoubleQuote},
+        std::pair{wxTRANSLATE("Single quotes"), AutoInsertMask_SingleQuote},
+        std::pair{wxTRANSLATE("Backticks"), AutoInsertMask_Backtick},
+        std::pair{wxTRANSLATE("Space after comma"), AutoInsertMask_SpaceAfterComma},
+        std::pair{wxTRANSLATE("Space after comment"), AutoInsertMask_SpaceAfterComment},
     };
     auto* insertGrid = new wxGridSizer(2);
     const auto insertControls = addFlags(insertGrid, insertOptions, preferences.autoInsertMask);
     insertion->Add(insertGrid, 0, wxEXPAND);
-    auto* tags = check(insertion, "Auto close HTML and XML tags",
+    auto* tags = check(insertion, wxTRANSLATE("Auto close HTML and XML tags"),
                        (completion.completeOption & WordCompletionOption::CloseTags) != 0);
-    auto* indent = check(insertion, "Auto Indent", preferences.autoIndent);
+    auto* indent = check(insertion, wxTRANSLATE("Auto Indent"), preferences.autoIndent);
     columns->Add(words, 1, wxEXPAND | wxALL, gap);
     columns->Add(insertion, 1, wxEXPAND | wxALL, gap);
     layout->Add(columns, 0, wxEXPAND);
     auto* scopes = new wxBoxSizer(wxHORIZONTAL);
-    auto* completeScope = new wxStaticBoxSizer(wxVERTICAL, &dialog, "Complete words inside");
-    auto* scanScope = new wxStaticBoxSizer(wxVERTICAL, &dialog, "Scan document words inside");
+    auto* completeScope = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Complete words inside"));
+    auto* scanScope = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Scan document words inside"));
     constexpr std::array completeOptions = {std::pair{"Complete inside comments", WordCompletionScope::Comment},
                                             std::pair{"Complete inside strings", WordCompletionScope::String},
                                             std::pair{"Complete inside plain text", WordCompletionScope::PlainText}};
@@ -93,29 +98,31 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     auto* scanRow = new wxBoxSizer(wxHORIZONTAL);
     const auto completeControls = addFlags(completeRow, completeOptions, completion.completeScope);
     const auto scanControls = addFlags(scanRow, scanOptions, completion.scanWordScope);
-    constexpr std::array scopeLabels = {"Comments", "Strings", "Plain Text"};
+    constexpr std::array scopeLabels = {wxTRANSLATE("Comments"), wxTRANSLATE("Strings"), wxTRANSLATE("Plain Text")};
     for (size_t index = 0; index < scopeLabels.size(); ++index) {
-        completeControls[index].first->SetLabel(scopeLabels[index]);
-        scanControls[index].first->SetLabel(scopeLabels[index]);
+        completeControls[index].first->SetLabel(wxGetTranslation(scopeLabels[index]));
+        scanControls[index].first->SetLabel(wxGetTranslation(scopeLabels[index]));
     }
     completeScope->Add(completeRow);
     scanScope->Add(scanRow);
     scopes->Add(completeScope, 1, wxEXPAND | wxALL, gap);
     scopes->Add(scanScope, 1, wxEXPAND | wxALL, gap);
     layout->Add(scopes, 0, wxEXPAND);
-    auto* confirmation = new wxStaticBoxSizer(wxVERTICAL, &dialog, "Finish completion (Esc cancels)");
+    auto* confirmation = new wxStaticBoxSizer(wxVERTICAL, &dialog, _("Finish completion (Esc cancels)"));
     auto* keys = new wxBoxSizer(wxHORIZONTAL);
     constexpr std::array keyOptions = {std::pair{"Complete with Enter", CompletionFillUp::Enter},
                                        std::pair{"Complete with Tab", CompletionFillUp::Tab},
                                        std::pair{"Complete with Space", CompletionFillUp::Space},
                                        std::pair{"Complete with punctuation", CompletionFillUp::Punctuation}};
     const auto keyControls = addFlags(keys, keyOptions, completion.fillUpMask);
-    constexpr std::array keyLabels = {"Enter", "Tab", "Space", "Punctuation"};
+    constexpr std::array keyLabels = {wxTRANSLATE("Enter"), wxTRANSLATE("Tab"), wxTRANSLATE("Space"),
+                                      wxTRANSLATE("Punctuation")};
     for (size_t index = 0; index < keyLabels.size(); ++index)
-        keyControls[index].first->SetLabel(keyLabels[index]);
+        keyControls[index].first->SetLabel(wxGetTranslation(keyLabels[index]));
     confirmation->Add(keys, 0, wxEXPAND);
     auto* punctuation = new wxTextCtrl(&dialog, wxID_ANY, completion.fillUpPunctuation);
     punctuation->SetName("Fill-up punctuation");
+    AppLocalization::SetAccessibleName(*punctuation, _("Fill-up punctuation"));
     punctuation->SetMaxLength(WordCompletionLimits::MaxPunctuationCharacters);
     confirmation->Add(punctuation, 0, wxEXPAND | wxALL, gap);
     layout->Add(confirmation, 0, wxEXPAND | wxALL, gap);

@@ -1,9 +1,13 @@
 #include "app/new_window.h"
 #include "app/editor_frame.h"
+#include "editor/editor_control.h"
+#include "settings/settings_store.h"
 #include <wx/log.h>
 #include <wx/stdpaths.h>
 #include <wx/toplevel.h>
 #include <wx/utils.h>
+#include <wx/msgdlg.h>
+#include <wx/translation.h>
 #include <limits>
 #include <string>
 #include <array>
@@ -36,6 +40,46 @@ bool ApplyInitialWindowPosition(wxTopLevelWindow& window, const wxString& argume
 }
 
 bool EditorFrame::NewWindow() {
+    return LaunchWindow(false);
+}
+
+bool EditorFrame::Restart() {
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+    if (preferences.saveBeforeRunningTools && !ConfirmDiscardChanges(_("Save changes to %s before restarting?")))
+        return false;
+    if (!LaunchWindow(true)) {
+        wxMessageBox(_("Could not restart wxnotepad."), _("Restart failed"), wxOK | wxICON_ERROR, this);
+        return false;
+    }
+    SaveSettings(false);
+    fileChangeMonitor_.Stop();
+    Destroy();
+    return true;
+}
+
+OpenResult EditorFrame::OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
+                                            std::optional<SyntaxLanguage> language, bool readOnly,
+                                            Scintilla::Position line, Scintilla::Position column) {
+    // Explicit Unicode/legacy switches select decoding; original ANSI/OEM
+    // switches remain weak preferences under the existing detection policy.
+    const auto strongEncoding =
+        encoding && !encoding->systemDefault && !encoding->systemOem ? std::optional(encoding->encoding) : std::nullopt;
+    const auto result = LoadFile(path, [] { return true; }, strongEncoding, encoding);
+    if (result.status != OpenStatus::Opened) return result;
+    if (language) ChooseLanguage(*language);
+    if (line > 0 && column > 0) {
+        const auto position =
+            editor_->Send(Scintilla::Message::FindColumn, static_cast<uintptr_t>(line - 1), column - 1);
+        editor_->Send(Scintilla::Message::GotoPos, static_cast<uintptr_t>(position));
+        editor_->Send(Scintilla::Message::ScrollCaret);
+    }
+    if (readOnly) editor_->Send(Scintilla::Message::SetReadOnly, 1);
+    UpdateDocumentState();
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    return result;
+}
+
+bool EditorFrame::LaunchWindow(bool currentFile) {
     wxRect normal(wxPoint(0, 0), normalWindowSize_);
 #ifdef __WXMSW__
     // Original Notepad4::GetRelaunchParameters(NewWindow | EmptyWindow).
@@ -56,21 +100,45 @@ bool EditorFrame::NewWindow() {
     const wxString executable = wxStandardPaths::Get().GetExecutablePath();
     const wxString position = wxString::Format("%d,%d,%d,%d,%d", normal.GetX(), normal.GetY(), normal.GetWidth(),
                                                normal.GetHeight(), IsMaximized());
+    std::vector<wxString> arguments{executable, "--window-position", position};
+    if (currentFile && !document_.Path().empty()) {
+        if (editor_->Send(Scintilla::Message::GetReadOnly)) arguments.emplace_back("--read-only");
+        arguments.emplace_back("--startup-encoding");
+        arguments.push_back(wxString::Format("%d", EncodingSetting(document_.CurrentEncoding())));
+        arguments.emplace_back("--startup-scheme");
+        arguments.push_back(wxString::Format("%d", static_cast<int>(document_.EffectiveLanguage())));
+        const auto caret = editor_->Send(Scintilla::Message::GetCurrentPos);
+        if (caret > 0) {
+            const auto line = editor_->Send(Scintilla::Message::LineFromPosition, static_cast<uintptr_t>(caret));
+            const auto column = editor_->Send(Scintilla::Message::GetColumn, static_cast<uintptr_t>(caret));
+            arguments.emplace_back("--startup-caret");
+            arguments.push_back(
+                wxString::Format("%lld,%lld", static_cast<long long>(line + 1), static_cast<long long>(column + 1)));
+        }
+        arguments.emplace_back("--startup-file");
+        arguments.push_back(document_.Path());
+    }
 #ifdef __WXGTK__
     // wxExecute's Unix async return only confirms fork(), not a successful exec().
     // GLib confirms exec failure before returning and reaps independent children.
-    std::string programPath = executable.ToStdString(wxConvUTF8);
-    std::string geometry = position.ToStdString(wxConvUTF8);
-    char option[] = "--window-position";
-    char* arguments[] = {programPath.data(), option, geometry.data(), nullptr};
-    return g_spawn_async(launchWorkingDirectory_.utf8_str(), arguments, nullptr, G_SPAWN_DEFAULT, nullptr, nullptr,
-                         nullptr, nullptr) != FALSE;
+    std::vector<std::string> utf8;
+    for (const auto& argument : arguments)
+        utf8.push_back(argument.utf8_string());
+    std::vector<char*> nativeArguments;
+    for (auto& argument : utf8)
+        nativeArguments.push_back(argument.data());
+    nativeArguments.push_back(nullptr);
+    return g_spawn_async(launchWorkingDirectory_.utf8_str(), nativeArguments.data(), nullptr, G_SPAWN_DEFAULT, nullptr,
+                         nullptr, nullptr, nullptr) != FALSE;
 #else
-    const wchar_t* arguments[] = {executable.wc_str(), L"--window-position", position.wc_str(), nullptr};
+    std::vector<const wchar_t*> nativeArguments;
+    for (const auto& argument : arguments)
+        nativeArguments.push_back(argument.wc_str());
+    nativeArguments.push_back(nullptr);
     wxExecuteEnv environment;
     environment.cwd = launchWorkingDirectory_;
     // The menu reports launch failures on this frame, without deferred wxLogGui dialogs.
     const wxLogNull noGuiLog;
-    return wxExecute(arguments, wxEXEC_ASYNC, nullptr, &environment) > 0;
+    return wxExecute(nativeArguments.data(), wxEXEC_ASYNC, nullptr, &environment) > 0;
 #endif
 }

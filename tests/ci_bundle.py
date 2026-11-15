@@ -42,6 +42,17 @@ class LinuxBundle(unittest.TestCase):
             notice = vcpkg / 'installed/x64-linux-ci/share/probe/copyright'
             notice.parent.mkdir(parents=True)
             notice.write_text('Library license\n', encoding='utf-8')
+            (root / 'po').mkdir()
+            shutil.copy2(ROOT / 'po/languages.json', root / 'po/languages.json')
+            gettext_bin = os.environ.get('WXNOTEPAD_GETTEXT_BIN')
+            msgfmt = str(Path(gettext_bin) / 'msgfmt') if gettext_bin else shutil.which('msgfmt')
+            self.assertIsNotNone(msgfmt, 'Real host msgfmt is required for the bundle check')
+            for code in ('zh_CN', 'zh_TW'):
+                for domain in ('wxnotepad', 'wxstd'):
+                    catalog = cmake / 'locale' / code / 'LC_MESSAGES' / (domain + '.mo')
+                    catalog.parent.mkdir(parents=True, exist_ok=True)
+                    subprocess.run([msgfmt, '--check', '-o', catalog,
+                                    ROOT / 'po/wxstd' / (code + '.po')], check=True)
             subprocess.run(['git', 'init', '-q', root], check=True)
             subprocess.run(['git', '-C', root, '-c', 'user.name=Bundle Test',
                             '-c', 'user.email=bundle@example.invalid', 'commit', '-q', '--allow-empty',
@@ -85,6 +96,13 @@ class LinuxBundle(unittest.TestCase):
             self.assertEqual(metadata['unstripped_executable_sha256'], hashlib.sha256(original_bytes).hexdigest())
             self.assertEqual((work / 'symbols/build.json').read_bytes(), (artifact / 'build.json').read_bytes())
             self.assertEqual((artifact / 'licenses/vcpkg/probe/copyright').read_text(), 'Library license\n')
+            import gettext
+            for code in ('zh_CN', 'zh_TW'):
+                for domain in ('wxnotepad', 'wxstd'):
+                    relative = Path('locale') / code / 'LC_MESSAGES' / (domain + '.mo')
+                    self.assertEqual((artifact / relative).read_bytes(), (cmake / relative).read_bytes())
+                    with (artifact / relative).open('rb') as stream:
+                        self.assertTrue(gettext.GNUTranslations(stream).info()['language'].startswith('zh'))
 
 
 if __name__ == '__main__':

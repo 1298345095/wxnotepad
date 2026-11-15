@@ -1,4 +1,5 @@
 #include "app/dialogs/sort_lines_dialog.h"
+#include <wx/translation.h>
 #include "editor/sort_lines.h"
 #include <wx/checkbox.h>
 #include <wx/dialog.h>
@@ -7,15 +8,16 @@
 #include <array>
 
 bool ShowSortLinesDialog(wxWindow* parent, unsigned& options, bool rectangular) {
-    wxDialog dialog(parent, wxID_ANY, "Sort Lines");
+    wxDialog dialog(parent, wxID_ANY, _("Sort Lines"));
     auto* contents = new wxBoxSizer(wxVERTICAL);
-    const std::array<const char*, 4> labels{"Don't &sort.", "Sort &ascending.", "Sort &descending.", "Shu&ffle lines."};
+    const std::array<const char*, 4> labels{wxTRANSLATE("Don't &sort."), wxTRANSLATE("Sort &ascending."),
+                                            wxTRANSLATE("Sort &descending."), wxTRANSLATE("Shu&ffle lines.")};
     const std::array<unsigned, 4> modes{SortOption::DontSort, SortOption::Ascending, SortOption::Descending,
                                         SortOption::Shuffle};
     std::array<wxRadioButton*, 4> radios{};
     for (size_t i = 0; i < radios.size(); ++i) {
-        radios[i] =
-            new wxRadioButton(&dialog, wxID_ANY, labels[i], wxDefaultPosition, wxDefaultSize, i == 0 ? wxRB_GROUP : 0);
+        radios[i] = new wxRadioButton(&dialog, wxID_ANY, wxGetTranslation(labels[i]), wxDefaultPosition, wxDefaultSize,
+                                      i == 0 ? wxRB_GROUP : 0);
         radios[i]->SetName(wxControl::GetLabelText(labels[i]));
         contents->Add(radios[i], 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(8));
     }
@@ -23,19 +25,19 @@ bool ShowSortLinesDialog(wxWindow* parent, unsigned& options, bool rectangular) 
                             : options & SortOption::DontSort ? 0
                                                              : 1 + (options & SortOption::Descending);
     radios[selected]->SetValue(true);
-    const std::array<const char*, 7> checks{"&Merge duplicate lines.",
-                                            "&Remove duplicate lines.",
-                                            "Remove &unique lines.",
-                                            "Case &insensitive.",
-                                            "Logical &number comparison.",
-                                            "Group by file &type.",
-                                            "&Column sort (rectangular selection)."};
+    const std::array<const char*, 7> checks{wxTRANSLATE("&Merge duplicate lines."),
+                                            wxTRANSLATE("&Remove duplicate lines."),
+                                            wxTRANSLATE("Remove &unique lines."),
+                                            wxTRANSLATE("Case &insensitive."),
+                                            wxTRANSLATE("Logical &number comparison."),
+                                            wxTRANSLATE("Group by file &type."),
+                                            wxTRANSLATE("&Column sort (rectangular selection).")};
     const std::array<unsigned, 7> flags{
         SortOption::MergeDuplicate, SortOption::RemoveDuplicate, SortOption::RemoveUnique, SortOption::IgnoreCase,
         SortOption::LogicalNumber,  SortOption::FileType,        SortOption::Column};
     std::array<wxCheckBox*, 7> boxes{};
     for (size_t i = 0; i < boxes.size(); ++i) {
-        boxes[i] = new wxCheckBox(&dialog, wxID_ANY, checks[i]);
+        boxes[i] = new wxCheckBox(&dialog, wxID_ANY, wxGetTranslation(checks[i]));
         boxes[i]->SetName(wxControl::GetLabelText(checks[i]));
         boxes[i]->SetValue(i == 6 ? rectangular : (options & flags[i]) != 0);
         contents->Add(boxes[i], 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(i == 0 || i == 3 || i == 6 ? 14 : 8));

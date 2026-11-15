@@ -1,4 +1,5 @@
 #include "app/dialogs/search_feedback_dialog.h"
+#include <wx/translation.h>
 #include <wx/artprov.h>
 #include <wx/checkbox.h>
 #include <wx/sizer.h>
@@ -20,7 +21,7 @@ SearchFeedbackDialog::SearchFeedbackDialog(wxWindow* parent, const wxString& key
     text->SetName(key);
     contents->Add(text, 0, wxALL | wxALIGN_CENTER_VERTICAL, 16);
     layout->Add(contents);
-    suppress_ = new wxCheckBox(this, wxID_ANY, "&Don't show this message again.");
+    suppress_ = new wxCheckBox(this, wxID_ANY, _("&Don't show this message again."));
     suppress_->SetName(title == "wxnotepad" ? "Suppress search message" : "Suppress message");
     suppress_->Enable(allowSuppression);
     layout->Add(suppress_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 16);

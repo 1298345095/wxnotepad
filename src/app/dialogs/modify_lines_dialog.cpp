@@ -1,4 +1,6 @@
 #include "app/dialogs/modify_lines_dialog.h"
+#include "app/localization.h"
+#include <wx/translation.h>
 #include "editor/editor_control.h"
 #include <wx/checkbox.h>
 #include <wx/dialog.h>
@@ -19,7 +21,7 @@ wxString WinEditText(wxTextCtrl* input) {
 void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& before, wxString& after,
                            bool& skipEmpty) {
     // Original Edit.cpp::EditModifyLinesDlgProc and IDD_MODIFYLINES.
-    wxDialog dialog(parent, wxID_ANY, "Modify Lines", wxDefaultPosition, wxDefaultSize,
+    wxDialog dialog(parent, wxID_ANY, _("Modify Lines"), wxDefaultPosition, wxDefaultSize,
                     wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto* contents = new wxBoxSizer(wxVERTICAL);
     const auto addInput = [contents, &dialog](const wxString& label, const wxString& name, const wxString& value) {
@@ -29,6 +31,7 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
         auto* input = new wxTextCtrl(&dialog, wxID_ANY, display, wxDefaultPosition, dialog.FromDIP(wxSize(400, 65)),
                                      wxTE_MULTILINE | wxTE_PROCESS_ENTER);
         input->SetName(name);
+        AppLocalization::SetAccessibleName(*input, wxControl::GetLabelText(label));
         input->Bind(wxEVT_KEY_DOWN, [&dialog](wxKeyEvent& event) {
             // Original Helpers.cpp::MultilineEditProc accepts Return unless Shift is down.
             if ((event.GetKeyCode() == WXK_RETURN || event.GetKeyCode() == WXK_NUMPAD_ENTER) && !event.ShiftDown()) {
@@ -41,8 +44,8 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
         contents->Add(input, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
         return input;
     };
-    auto* prefix = addInput("&Prefix text to lines:", "Prefix text to lines", before);
-    auto* suffix = addInput("&Append text to lines:", "Append text to lines", after);
+    auto* prefix = addInput(_("&Prefix text to lines:"), "Prefix text to lines", before);
+    auto* suffix = addInput(_("&Append text to lines:"), "Append text to lines", after);
     auto* focused = prefix;
     for (auto* input : {prefix, suffix}) {
         input->Bind(wxEVT_SET_FOCUS, [&focused, input](wxFocusEvent& event) {
@@ -55,9 +58,9 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
         const char* zeroToken;
         const char* description;
     };
-    for (const auto& row :
-         {Substitution{"$(L)", "$(0L)", "Document line number."}, Substitution{"$(N)", "$(0N)", "Continuous number."},
-          Substitution{"$(I)", "$(0I)", "Continuous number (zero-based)."}}) {
+    for (const auto& row : {Substitution{"$(L)", "$(0L)", wxTRANSLATE("Document line number.")},
+                            Substitution{"$(N)", "$(0N)", wxTRANSLATE("Continuous number.")},
+                            Substitution{"$(I)", "$(0I)", wxTRANSLATE("Continuous number (zero-based).")}}) {
         auto* controls = new wxBoxSizer(wxHORIZONTAL);
         for (const char* token : {row.token, row.zeroToken}) {
             auto* link = new wxHyperlinkCtrl;
@@ -73,10 +76,10 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
                 dialog.CallAfter([field = focused] { field->SetFocus(); });
             });
         }
-        controls->Add(new wxStaticText(&dialog, wxID_ANY, row.description));
+        controls->Add(new wxStaticText(&dialog, wxID_ANY, wxGetTranslation(row.description)));
         contents->Add(controls, 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
     }
-    auto* skip = new wxCheckBox(&dialog, wxID_ANY, "&Skip empty lines.");
+    auto* skip = new wxCheckBox(&dialog, wxID_ANY, _("&Skip empty lines."));
     skip->SetName("Skip empty lines");
     skip->SetValue(skipEmpty);
     contents->Add(skip, 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
@@ -92,7 +95,7 @@ void ShowModifyLinesDialog(wxWindow* parent, EditorControl& editor, wxString& be
             after = WinEditText(suffix);
             skipEmpty = skip->GetValue();
             if (!editor.ModifyLines(before, after, skipEmpty))
-                wxMessageBox("This operation can't be performed within a rectangular selection.", "wxnotepad",
+                wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",
                              wxOK | wxICON_WARNING, &dialog);
             dialog.EndModal(wxID_OK);
         },
