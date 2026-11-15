@@ -62,11 +62,13 @@ public:
                       SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {});
     bool UpdateFileTime();
+    // sourceEncoding retains a full native OEM identity for explicit relaunch decoding.
     OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                     std::optional<FileEncoding> encoding = std::nullopt,
                     std::optional<EncodingChoice> weakEncoding = std::nullopt,
                     const std::function<void()>& configureLoadedDocument = {},
-                    OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead);
+                    OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead,
+                    std::optional<EncodingChoice> sourceEncoding = std::nullopt);
     void New();
     void SetEncodingOptions(EncodingOptions options) { encodingOptions_ = options; }
     SaveCleanupOptions SaveCleanup() const { return saveCleanup_; }

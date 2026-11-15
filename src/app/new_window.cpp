@@ -11,6 +11,7 @@
 #include <limits>
 #include <string>
 #include <array>
+#include <vector>
 #ifdef __WXMSW__
 #include <windows.h>
 #elif defined(__WXGTK__)
@@ -60,12 +61,17 @@ bool EditorFrame::Restart() {
 OpenResult EditorFrame::OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
                                             std::optional<SyntaxLanguage> language, bool readOnly,
                                             Scintilla::Position line, Scintilla::Position column) {
-    // Explicit Unicode/legacy switches select decoding; original ANSI/OEM
-    // switches remain weak preferences under the existing detection policy.
-    const auto strongEncoding =
-        encoding && !encoding->systemDefault && !encoding->systemOem ? std::optional(encoding->encoding) : std::nullopt;
-    const auto result = LoadFile(path, [] { return true; }, strongEncoding, encoding);
+    // Original Unicode/ANSI switches apply after automatic loading. Legacy -e
+    // selects source decoding, including the native OEM encoding identity.
+    const bool selectAfterLoad =
+        encoding && !encoding->systemOem &&
+        (encoding->systemDefault || encoding->encoding == FileEncoding::Utf8 ||
+         encoding->encoding == FileEncoding::Utf16Le || encoding->encoding == FileEncoding::Utf16Be);
+    const auto result = LoadFile(
+        path, [] { return true; }, std::nullopt, std::nullopt, OpenDecisionTiming::AfterRead, false,
+        selectAfterLoad ? std::nullopt : encoding);
     if (result.status != OpenStatus::Opened) return result;
+    if (selectAfterLoad) document_.SelectEncoding(*encoding);
     if (language) ChooseLanguage(*language);
     if (line > 0 && column > 0) {
         const auto position =
@@ -104,7 +110,12 @@ bool EditorFrame::LaunchWindow(bool currentFile) {
     if (currentFile && !document_.Path().empty()) {
         if (editor_->Send(Scintilla::Message::GetReadOnly)) arguments.emplace_back("--read-only");
         arguments.emplace_back("--startup-encoding");
-        arguments.push_back(wxString::Format("%d", EncodingSetting(document_.CurrentEncoding())));
+        auto encoding = document_.CurrentEncoding();
+        // GetRelaunchParameters uses -utf16le/-utf16be for either UTF-16 form;
+        // these original switches select their BOM formats after loading.
+        if (encoding.encoding == FileEncoding::Utf16Le || encoding.encoding == FileEncoding::Utf16Be)
+            encoding.bom = true;
+        arguments.push_back(wxString::Format("%d", EncodingSetting(encoding)));
         arguments.emplace_back("--startup-scheme");
         arguments.push_back(wxString::Format("%d", static_cast<int>(document_.EffectiveLanguage())));
         const auto caret = editor_->Send(Scintilla::Message::GetCurrentPos);
