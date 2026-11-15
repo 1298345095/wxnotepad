@@ -92,8 +92,11 @@ void SetAccessibleName(wxWindow& window, const wxString& name) {
 #ifdef __WXMSW__
     window.SetAccessible(new NamedWindowAccessible(name));
 #elif defined(__WXGTK__)
-    if (auto* accessible = gtk_widget_get_accessible(GTK_WIDGET(window.GetHandle())))
-        atk_object_set_name(accessible, name.utf8_str());
+    auto* widget = GTK_WIDGET(window.GetHandle());
+    if (auto* accessible = gtk_widget_get_accessible(widget)) atk_object_set_name(accessible, name.utf8_str());
+    // Multiline wxTextCtrl uses a scrolled window handle around the editable text view.
+    if (auto* input = window.GetConnectWidget(); input != widget && GTK_IS_TEXT_VIEW(input))
+        if (auto* accessible = gtk_widget_get_accessible(input)) atk_object_set_name(accessible, name.utf8_str());
 #endif
 }
 } // namespace AppLocalization
