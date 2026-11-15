@@ -282,7 +282,7 @@ void EditorFrame::UpdateDocumentState() {
     const wxString name = document_.Path().empty() ? _("Untitled") : document_.Path();
     const wxString protection = document_.IsReadOnlyFile()                       ? _(" (Read Only File)")
                                 : editor_->Send(Scintilla::Message::GetReadOnly) ? _(" (Read Only Mode)")
-                                                                                 : "";
+                                                                                 : wxString{};
     SetTitle(wxString::Format(_("%s%s%s - wxnotepad"), document_.IsModified() ? "*" : "", name, protection));
     const wxString encoding = DocumentEncodingLabel(document_);
     const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
