@@ -19,11 +19,11 @@ wxString Text(std::string_view text) {
 }
 
 #ifdef __WXMSW__
-class NamedWindowAccessible final : public wxWindowAccessible {
+class NamedWindowAccessible final : public wxAccessible {
 public:
-    explicit NamedWindowAccessible(wxString name) : wxWindowAccessible(nullptr), name_(std::move(name)) {}
+    explicit NamedWindowAccessible(wxString name) : wxAccessible(nullptr), name_(std::move(name)) {}
     wxAccStatus GetName(int childId, wxString* name) override {
-        if (childId != wxACC_SELF) return wxWindowAccessible::GetName(childId, name);
+        if (childId != wxACC_SELF) return wxAccessible::GetName(childId, name);
         *name = name_;
         return wxACC_OK;
     }

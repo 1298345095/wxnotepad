@@ -2194,6 +2194,12 @@ msgstr "未找到指定的文本。"
 msgid "This document already has a file name."
 msgstr "此文档已有文件名。"
 
+# Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT.
+#. TRANSLATORS: Original Notepad4 89b8b36 IDS_SELRECT; keep the original English spelling.
+#: src/app/dialogs/find_replace_dialog.cpp
+msgid "This operation can't be perfomed within a rectangular selection."
+msgstr "此操作不能在矩形选区内执行。"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDS_BUFFERTOOSMALL.
 #: src/app/editor_frame_commands.cpp
 msgid "This operation can't be performed (lines too long)."
@@ -2201,7 +2207,6 @@ msgstr "此操作不能执行(行太长)。"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDS_SELRECT.
 #: src/app/dialogs/enclose_selection_dialog.cpp
-#: src/app/dialogs/find_replace_dialog.cpp
 #: src/app/dialogs/insert_tag_dialog.cpp
 #: src/app/dialogs/modify_lines_dialog.cpp src/app/editor_frame_commands.cpp
 msgid "This operation can't be performed within a rectangular selection."
