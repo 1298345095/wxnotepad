@@ -1,6 +1,7 @@
 #pragma once
 
 #include "settings/original_settings_constants.h"
+#include "settings/ui_language.h"
 #include "editor/display_units.h"
 #include "document/encoding/encoding_detection.h"
 #include "editor/caret_appearance.h"
@@ -22,6 +23,8 @@ struct OriginalTabs {
 // Defaults and INI names follow Notepad4 89b8b36, Notepad4.cpp::LoadSettings.
 struct OriginalSettings {
     bool saveSettings = true;
+    bool saveBeforeRunningTools = false;
+    uint16_t uiLanguage = UILanguage::System;
     bool wordWrap = true;
     bool showLineNumbers = true;
     bool showBookmarkMargin = false;
