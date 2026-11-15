@@ -1,4 +1,5 @@
 """Original integer occurrence preferences across independent app processes."""
+from english_settings import english_settings
 import os
 import argparse
 from pathlib import Path
@@ -19,7 +20,7 @@ def main():
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ['PATH'])
         config = folder / 'Notepad4.ini'
         (folder / 'Notepad4.ini-default').write_text(
-            '; keep\n[Settings]\nSaveSettings=0\nMarkOccurrences=14suffix\nUnrelated=keep\n', encoding='utf-16')
+            english_settings('; keep\n[Settings]\nSaveSettings=0\nMarkOccurrences=14suffix\nUnrelated=keep\n'), encoding='utf-16')
         app = Application(executable, folder, environment)
         try:
             assert app.state['mark_occurrences'] == '14', app.state
@@ -43,7 +44,7 @@ def main():
         assert 'MarkOccurrences=11' in config.read_text(encoding='utf-16')
         for value, expected in [('0', '0'), ('1', '1'), ('2', '2'), ('15', '15'), ('31', '31'),
                                 ('-1', '-1'), ('14suffix', '14'), ('invalid', '1')]:
-            config.write_text(f'[Settings]\nSaveSettings=0\nMarkOccurrences={value}\n', encoding='utf-16')
+            config.write_text(english_settings(f'[Settings]\nSaveSettings=0\nMarkOccurrences={value}\n'), encoding='utf-16')
             app = Application(executable, folder, environment)
             try:
                 assert app.state['mark_occurrences'] == expected, (value, app.state)

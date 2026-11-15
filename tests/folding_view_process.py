@@ -1,4 +1,5 @@
 """Import and persist original folding preferences in independent real applications."""
+from english_settings import english_settings
 import os
 from pathlib import Path
 import shutil
@@ -21,8 +22,8 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-folding-view-") as name:
     environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
     config = folder / "Notepad4.ini"
     seed = folder / "Notepad4.ini-default"
-    seed.write_text("; retained comment\n[Settings]\nSaveSettings=0\nShowCodeFolding=0suffix\n"
-                    "HighlightCurrentBlock=0suffix\nUnrelated=keep\n[Custom]\nValue=preserved\n", encoding="utf-16")
+    seed.write_text(english_settings("; retained comment\n[Settings]\nSaveSettings=0\nShowCodeFolding=0suffix\n"
+                    "HighlightCurrentBlock=0suffix\nUnrelated=keep\n[Custom]\nValue=preserved\n"), encoding="utf-16")
     app = Application(executable, folder, environment)
     try:
         preferences(app, False)
@@ -69,7 +70,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-folding-view-") as name:
     for value, expected in ((None, True), ("0", False), ("1", True), ("2", True), ("-1", True),
                             ("invalid", True), ("0suffix", False), ("1suffix", True)):
         fields = "" if value is None else f"ShowCodeFolding={value}\nHighlightCurrentBlock={value}\n"
-        config.write_text("[Settings]\nSaveSettings=0\n" + fields, encoding="utf-16")
+        config.write_text(english_settings("[Settings]\nSaveSettings=0\n" + fields), encoding="utf-16")
         app = Application(executable, folder, environment)
         try:
             preferences(app, expected)

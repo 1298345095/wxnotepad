@@ -1,4 +1,5 @@
 """Verify original LineSelection loading and saving through application processes."""
+from english_settings import english_settings
 import os
 from pathlib import Path
 import shutil
@@ -16,7 +17,7 @@ def main():
         shutil.copy2(source, executable)
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         config = folder / "Notepad4.ini"
-        config.write_text("[Settings]\nLineSelection=2normal\nUnrelated=keep\n", encoding="utf-16")
+        config.write_text(english_settings("[Settings]\nLineSelection=2normal\nUnrelated=keep\n"), encoding="utf-16")
         app = Application(executable, folder, environment)
         try:
             assert app.state["line_selection"] == "2", app.state
@@ -58,7 +59,7 @@ def main():
         saved = config.read_text(encoding="utf-16")
         assert "LineSelection=" not in saved and "Unrelated=keep" in saved, saved
         for value, expected in (("invalid", "1"), ("0", "0"), ("3suffix", "3"), ("9", "9"), ("-1", "-1")):
-            config.write_text(f"[Settings]\nLineSelection={value}\n", encoding="utf-16")
+            config.write_text(english_settings(f"[Settings]\nLineSelection={value}\n"), encoding="utf-16")
             app = Application(executable, folder, environment)
             try:
                 assert app.state["line_selection"] == expected, app.state
