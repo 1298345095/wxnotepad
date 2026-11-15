@@ -163,7 +163,8 @@ private:
     OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                         std::optional<FileEncoding> encoding = std::nullopt,
                         std::optional<EncodingChoice> weakEncoding = std::nullopt,
-                        OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead, bool reload = false);
+                        OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead, bool reload = false,
+                        std::optional<EncodingChoice> sourceEncoding = std::nullopt);
     bool CanDiscardUntitledWhitespace() const;
     EncodingLossChoice ConfirmEncodingLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);

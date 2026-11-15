@@ -6,6 +6,7 @@
 #include <wx/stdpaths.h>
 #include <wx/translation.h>
 #include <wx/window.h>
+#include <utility>
 #ifdef __WXMSW__
 #include <wx/access.h>
 #elif defined(__WXGTK__)

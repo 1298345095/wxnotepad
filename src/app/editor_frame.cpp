@@ -423,7 +423,8 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
 
 OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                                  std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
-                                 OpenDecisionTiming decisionTiming, bool reload) {
+                                 OpenDecisionTiming decisionTiming, bool reload,
+                                 std::optional<EncodingChoice> sourceEncoding) {
     const auto result = document_.Open(
         source, beforeReplace, encoding, weakEncoding,
         [this] {
@@ -432,7 +433,7 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
             editor_->Send(Scintilla::Message::SetEdgeColumn,
                           document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
         },
-        decisionTiming);
+        decisionTiming, sourceEncoding);
     if (result.status == OpenStatus::Opened) {
         if (!reload && fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
         RefreshFileWatching();
