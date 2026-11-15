@@ -21,6 +21,7 @@ class Dialogs:
             self.user.IsWindowVisible.argtypes = [wintypes.HWND]
             self.user.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             self.user.SendMessageW.restype = wintypes.LPARAM
+            self.user.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             self.callback = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
             self.user.EnumWindows.argtypes = [self.callback, wintypes.LPARAM]
             self.user.EnumChildWindows.argtypes = [wintypes.HWND, self.callback, wintypes.LPARAM]
@@ -89,7 +90,7 @@ class Dialogs:
             texts.extend(self.accessible_names(window, entries_only=False))
         return texts
 
-    def wait(self, process, title):
+    def wait(self, process, title, message=None):
         deadline = time.monotonic() + 10
         observed = []
         while time.monotonic() < deadline:
@@ -97,6 +98,8 @@ class Dialogs:
             observed = self.windows(process)
             for window in observed:
                 if self.title(window) == title:
+                    return window
+                if message is not None and any(message in text for text in self.texts(window)):
                     return window
                 if sys.platform != 'win32' and window.get_role() == self.atspi.Role.ALERT:
                     # GTK3 exposes the alert type (Question/Error) as its AT-SPI
@@ -112,6 +115,7 @@ class Dialogs:
 
     def click(self, window, caption):
         if sys.platform == 'win32':
+            self.activate(window)
             for child in self.children(window):
                 if plain(self.title(child)) == caption:
                     self.user.SendMessageW(child, 0x00F5, 0, 0)  # BM_CLICK
@@ -158,14 +162,41 @@ class Dialogs:
                 if kind.value.lower() == 'edit':
                     entries.append(child)
             names = self.accessible_names(window)
-            self.user.SetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPCWSTR]
             for child, accessible_name in zip(entries, names):
                 if accessible_name == name:
-                    assert self.user.SetWindowTextW(child, text)
+                    # Native character delivery also emits the real edit-change
+                    # notifications used to enable the dialog's action buttons.
+                    self.user.SendMessageW(child, 0x00B1, 0, -1)  # EM_SETSEL.
+                    value = ctypes.create_unicode_buffer(text)
+                    self.user.SendMessageW(child, 0x00C2, 1, ctypes.cast(value, ctypes.c_void_p).value)  # EM_REPLACESEL.
                     return
-        raise AssertionError(f'Accessible input {name!r} absent')
+        observed = ([(child.get_role_name(), child.get_name()) for child in self.children(window)]
+                    if sys.platform != 'win32' else self.accessible_names(window))
+        raise AssertionError(f'Accessible input {name!r} absent: {observed!r}')
 
-    def key(self, app, key):
+    def activate(self, window):
+        if sys.platform != 'win32':
+            return
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        self.user.GetForegroundWindow.restype = wintypes.HWND
+        self.user.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+        self.user.SetForegroundWindow.argtypes = [wintypes.HWND]
+        self.user.BringWindowToTop.argtypes = [wintypes.HWND]
+        current = kernel.GetCurrentThreadId()
+        foreground = self.user.GetWindowThreadProcessId(self.user.GetForegroundWindow(), None)
+        target = self.user.GetWindowThreadProcessId(window, None)
+        attached = []
+        try:
+            for thread in dict.fromkeys((foreground, target)):
+                if thread != current and self.user.AttachThreadInput(current, thread, True):
+                    attached.append(thread)
+            self.user.BringWindowToTop(window)
+            self.user.SetForegroundWindow(window)
+        finally:
+            for thread in attached:
+                self.user.AttachThreadInput(current, thread, False)
+
+    def key(self, app, key, window=None):
         if sys.platform == 'win32':
             self.user.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             assert key == 'F10', key
@@ -177,14 +208,56 @@ class Dialogs:
             import subprocess
             from pathlib import Path
             if app.state['backend'] == 'GdkX11Display':
-                windows = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--pid',
-                                                   str(app.process.pid)], text=True).splitlines()
+                search = ['xdotool', 'search', '--all', '--onlyvisible', '--pid', str(app.process.pid)]
+                if window is not None:
+                    import re
+                    search += ['--name', '^' + re.escape(self.title(window)) + '$']
+                windows = subprocess.check_output(search, text=True).splitlines()
                 assert windows
                 subprocess.run(['xdotool', 'windowfocus', '--sync', windows[0]], check=True)
             focus = Path(os.environ['WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS'])
             pending = focus.with_suffix('.localization-pending')
             pending.write_text('key:' + key, encoding='utf-8')
             pending.replace(focus)
+
+    def navigate_folder(self, app, window, folder):
+        """Navigate the owned chooser to fixed disposable files before inspection."""
+        import os
+        if sys.platform == 'win32':
+            self.activate(window)
+            for child in self.children(window):
+                kind = ctypes.create_unicode_buffer(256)
+                self.user.GetClassNameW(child, kind, len(kind))
+                if kind.value == 'Edit':
+                    value = ctypes.create_unicode_buffer(str(folder) + os.sep)
+                    self.user.SendMessageW(child, 0x00B1, 0, -1)
+                    self.user.SendMessageW(child, 0x00C2, 1, ctypes.cast(value, ctypes.c_void_p).value)
+                    self.user.PostMessageW(window, 0x0111, 1, 0)
+                    break
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                for child in self.children(window):
+                    kind = ctypes.create_unicode_buffer(256)
+                    self.user.GetClassNameW(child, kind, len(kind))
+                    if kind.value == 'ToolbarWindow32' and str(folder) in self.title(child):
+                        return
+                time.sleep(.03)
+        else:
+            self.key(app, 'ctrl+l', window)
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                entries = [child for child in self.children(window)
+                           if child.get_name().rstrip(':') == 'Location' and child.get_editable_text_iface()]
+                if entries:
+                    assert entries[0].get_editable_text_iface().set_text_contents(str(folder) + '/')
+                    self.key(app, 'Return', window)
+                    break
+                time.sleep(.03)
+            while time.monotonic() < deadline:
+                if folder.name in self.texts(window):
+                    return
+                time.sleep(.03)
+        raise AssertionError(f'Native file chooser did not navigate to owned folder {folder}')
 
     def resize(self, app, width, height):
         if sys.platform == 'win32':
@@ -196,14 +269,43 @@ class Dialogs:
             assert len(windows) == 1
             assert windows[0].get_component_iface().set_size(width, height)
 
-    def answer(self, process, choice, title='wxnotepad'):
-        window = self.wait(process, title)
+    def file_filters(self, window):
+        if sys.platform == 'win32':
+            filters = []
+            for child in self.children(window):
+                kind = ctypes.create_unicode_buffer(256)
+                self.user.GetClassNameW(child, kind, len(kind))
+                if kind.value != 'ComboBox':
+                    continue
+                count = self.user.SendMessageW(child, 0x0146, 0, 0)  # CB_GETCOUNT.
+                for index in range(max(0, count)):
+                    length = self.user.SendMessageW(child, 0x0149, index, 0)  # CB_GETLBTEXTLEN.
+                    if length < 0:
+                        continue
+                    text = ctypes.create_unicode_buffer(length + 1)
+                    self.user.SendMessageW(child, 0x0148, index, ctypes.cast(text, ctypes.c_void_p).value)
+                    if '*.' in text.value:
+                        filters.append(text.value)
+            return filters
+        for child in self.children(window):
+            if child.get_role() == self.atspi.Role.COMBO_BOX:
+                action = child.get_action_iface()
+                if action:
+                    action.do_action(0)
+                    filters = [text for text in self.texts(window) if '*.' in text]
+                    action.do_action(0)
+                    if filters:
+                        return filters
+        return [text for text in self.texts(window) if '*.' in text]
+
+    def answer(self, process, choice, title='wxnotepad', window=None):
+        window = window if window is not None else self.wait(process, title)
         if sys.platform == 'win32':
             # Same native task-dialog buttons as FileCommandDriver, scoped to
             # the independently launched app's visible dialog.
             self.user.SendMessageW(window, 0x0400 + 102, {'yes': 6, 'no': 7, 'cancel': 2, 'ok': 1}[choice], 0)
         else:
-            captions = {'yes': ('Yes', '是(Y)', '是'), 'no': ('No', '否(N)', '否'),
+            captions = {'yes': ('Yes', 'Save', '是(Y)', '是'), 'no': ('No', 'Discard', '否(N)', '否'),
                         'cancel': ('Cancel', '取消'), 'ok': ('OK', '确定', '確定')}
             for child in self.children(window):
                 if child.get_role() == self.atspi.Role.PUSH_BUTTON and plain(child.get_name()) in captions[choice]:

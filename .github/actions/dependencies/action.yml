@@ -60,7 +60,7 @@ runs:
         case "$DEPENDENCY_PROFILE" in
           build) ;;
           gui) linux_packages+=(gdb xvfb xauth dbus-x11 xdotool fonts-dejavu-core fonts-noto-cjk
-                                python3-gi gir1.2-atspi-2.0 locales
+                                python3-gi gir1.2-atspi-2.0 at-spi2-core locales
                                 meson libinput-dev libdrm-dev libx11-xcb-dev libxcb-xkb-dev wayland-protocols) ;;
           tidy) linux_packages+=(clang-tidy-18) ;;
           fuzz) linux_packages+=(clang-18 llvm-18 libclang-rt-18-dev) ;;
@@ -168,6 +168,10 @@ runs:
       with:
         path: .ci/vcpkg/vcpkg${{ runner.os == 'Windows' && '.exe' || '' }}
         key: ${{ steps.vcpkg-tool-cache.outputs.cache-primary-key }}
+    - name: Prepare owned native installation fixture
+      if: runner.os == 'Linux' && inputs.profile == 'gui'
+      shell: bash
+      run: sudo install -d -m 0755 -o "$(id -un)" -g "$(id -gn)" /opt/wxnotepad-file-workflows-test
     - name: Install pinned wxWidgets core
       shell: bash
       env:
