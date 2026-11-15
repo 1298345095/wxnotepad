@@ -337,6 +337,8 @@ def argument_parser():
         if name == 'build':
             command.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
         else:
+            command.add_argument('--coverage', action='store_true',
+                                 help='Configure the Linux GCC coverage tree without building')
             command.add_argument('--compiler-cache', action='store_true', help='Use sccache for ordinary compilation')
     tests = commands.add_parser('test')
     tests.add_argument('--backend', choices=('windows', 'x11', 'wayland'), required=True)
@@ -361,7 +363,7 @@ def main():
     if getattr(arguments, 'jobs', 1) < 1:
         parser.error('--jobs must be positive')
     if arguments.command == 'configure':
-        configure(arguments.app_only, compiler_cache=arguments.compiler_cache)
+        configure(arguments.app_only, coverage=arguments.coverage, compiler_cache=arguments.compiler_cache)
     elif arguments.command == 'build':
         build(arguments.app_only, arguments.jobs)
     elif arguments.command == 'test':

@@ -8,7 +8,7 @@ and retain shareable results; they do not replace local verification.
 
 | Workflow | Trigger | Work |
 | --- | --- | --- |
-| CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC 13 builds, all registered CTest tests, development build output, independent Linux coverage and SonarCloud job |
+| CI | Pull requests, pushes to main, manual | Windows 2025/MSVC and Ubuntu 24.04/GCC 13 builds, all registered CTest tests, development build output, parallel Linux coverage backends and one merged SonarCloud analysis |
 | Quality | Same | clang-format 23.1.2, Python syntax, actionlint 1.7.12, native Linux clang-tidy 18 |
 | CodeQL | Same | Traced C++ application build and Actions configuration analysis, with results in GitHub Security |
 
@@ -159,15 +159,30 @@ baseline. CodeQL results are available separately in GitHub Security.
 
 ### SonarCloud
 
-The independent **Linux coverage / SonarCloud** job invokes the pinned official
-SonarQube Scan action after its native tests and report collection. It reuses the
-dependency action and caches, and builds `.ci/build/coverage-cmake` with the
-opt-in `WXNOTEPAD_ENABLE_COVERAGE` CMake option. Ordinary builds and resource
-observations retain their original binaries. `sonar-project.properties` selects
-the coverage tree's real compilation database; scanning happens on that same
-runner while its SDK, prepared original core and generated headers still exist.
-This analyzes the Linux compilation variant. Checkout fetches full history for
-source attribution and PR analysis.
+The **Linux coverage / x11** and **Linux coverage / wayland** jobs run on separate
+Ubuntu runners. Each reuses the dependency action and caches, builds a fresh
+`.ci/build/coverage-cmake` with `WXNOTEPAD_ENABLE_COVERAGE`, and runs its complete
+native backend suite with the existing isolated display shards. Matrix fail-fast
+is disabled so both backends retain their own results and crash evidence.
+Ordinary builds and resource observations retain their original binaries.
+
+The **Linux coverage / SonarCloud** job requires both backends to succeed, merges
+their coverage, and invokes the pinned official SonarQube Scan action once. It
+restores the same SDK with the dependency action's `build` profile, prepares the
+pinned original core, and runs `ci.py configure --coverage` to generate the current
+commit's compilation database without another application build. The SDK, source
+and generated headers referenced by that database exist on the analysis runner.
+This analyzes the same Linux compilation variant and coverage options as both
+test jobs. Checkout fetches full history for source attribution and PR analysis.
+
+CFamily uses filesystem analysis caching at `.ci/sonar-cfamily-cache`. CI restores
+the latest cache for the current PR or branch, falling back to the PR target or
+default branch. Every run/attempt gets a new cache key, and the scanner's successful
+result is saved before evidence upload. This lets successive PR commits reuse
+their own analysis results; the default server cache only supplies the target
+branch's results to PR analysis. The first filesystem-cache run populates a new
+cache. Source, dependency, compiler and rule changes remain subject to CFamily's
+cache validation. Python and other analyzers retain their server-managed caches.
 
 Python analysis targets the workflow's Python 3.12. Python files under `tests/`
 are classified as tests; their inclusion pattern also excludes them from the main
@@ -183,7 +198,7 @@ target-local `--coverage -O0 -g1 -fprofile-abs-path -fprofile-update=atomic` opt
 to project targets and links the coverage runtime into executables, including
 console fixtures. Imported SDK targets keep their normal Release configuration.
 
-The complete X11 and Wayland suites collect into a fresh coverage tree. GCC writes
+The complete X11 and Wayland suites each collect into their own fresh coverage tree. GCC writes
 counters on orderly process exit; a forcibly terminated process is not evidence
 of executed application lines. Local-filesystem profile locking merges counters
 from independent test processes. The existing private-session sharder is reused.
@@ -198,10 +213,14 @@ reports, zero-hit records and per-translation-unit header branches. GCC's filena
 option avoids filesystem name-length limits; source identity comes from each
 report's `Source:` record. Corrupt counters fail collection. Reusing an existing
 report directory is rejected to prevent stale reports from entering a scan.
-The pinned test-only `gcovr==8.8` then combines those reports by branch identity
-and writes `sonar.xml` for `sonar.coverageReportPaths`. This preserves complementary
-outcomes across translation units without counting repeated outcomes twice.
-The original `.gcov` files and the merger log remain in the evidence artifact.
+The pinned test-only `gcovr==8.8` combines each backend's reports by branch identity
+and writes both `sonar.xml` and a full `coverage.json`. The analysis job invokes
+`collect_coverage.py --merge` with both JSON reports and writes the final
+`sonar.xml` for `sonar.coverageReportPaths`. This preserves complementary outcomes
+across translation units and backends without counting repeated outcomes twice.
+Throw-branch exclusions are applied when parsing each backend's GCC reports,
+before JSON export. Each build retains its own paired GCC notes/counters.
+The original `.gcov` files and merger logs remain in the evidence artifacts.
 Direct CFamily gcov import was observed to retain only three of four covered
 outcomes for `DocumentSession::HasUtf8Bom`, despite all four appearing in the
 raw per-translation-unit reports. The merged report includes all four; a second
@@ -221,7 +240,8 @@ installed in `.ci/coverage-venv`. `.coveragerc` records branch coverage for tool
 and CI scripts, including child Python processes. `WXNOTEPAD_COVERAGE_ROOT` gives
 children stable source and counter paths even when their working directories
 differ. Helper tests and the measured build/test/report entry points contribute
-separate data files, combined before Cobertura XML import through
+separate data files. The analysis job combines counters from both backends and
+its own configuration/report steps before Cobertura XML import through
 `sonar.python.coverage.reportPaths`. Unexecuted scripts remain in the report.
 The PowerShell source remains analyzed and in coverage scope; this Linux job
 does not supply PowerShell coverage. The 80% new-code gate is unchanged.
@@ -235,14 +255,22 @@ Configure these project settings before enabling the CI scanner:
 
 Same-repository PRs, pushes to main and manual runs submit analysis after successful
 coverage tests and report generation. A failing test or collector prevents a
-successful scan. Fork PRs retain build/test and coverage checks and skip the
+successful scan; the existing **Linux coverage / SonarCloud** check explicitly
+fails if either backend job fails. Fork PRs retain build/test and coverage checks and skip the
 secret-dependent scan step. Scanner failures fail the coverage job. The
 SonarCloud quality-gate check remains a separate check.
 
+Each backend uploads a compact `coverage-input-<backend>-<sha>` artifact containing
+full native JSON and Python counters. Downloads are scoped to the current workflow
+run. Input names are stable across attempts, and rerunning a backend replaces only
+its own inputs, so a failed-job rerun can reuse the other backend's successful data.
+
 Read scanner diagnostics in the **Analyze SonarCloud with coverage and compilation
-database** step log. The separate coverage evidence artifact retains raw reports,
-Python counters, GCC notes/counters, test and collector logs, compilation database
-and `.scannerwork/report-task.txt`, which identifies the background task.
+database** step log. Backend evidence artifacts retain raw reports, Python counters,
+GCC notes/counters, test and collector logs, and their compilation databases.
+The aggregate `evidence-coverage` artifact retains merged reports, original inputs,
+the analysis compilation database and `.scannerwork/report-task.txt`, which identifies
+the background task.
 Investigate encoding warnings from the exact scanner filename and line; keep
 UTF-8 configured and avoid excluding source files to suppress an unexplained
 warning.
@@ -252,7 +280,8 @@ than literal U+FFFD characters. The runtime UTF-8 bytes are identical; Sonar's
 source reader otherwise reports these intentional characters as decoding errors.
 
 References: [SonarCloud GitHub Actions setup](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/ci-based-analysis/github-actions-for-sonarcloud),
-[CFamily compilation database](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/running-the-analysis).
+[CFamily compilation database](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/running-the-analysis),
+[CFamily analysis cache](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/languages/c-family/customizing-the-analysis#analysis-cache).
 
 ## Evidence and build output
 
