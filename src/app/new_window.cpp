@@ -11,6 +11,7 @@
 #include <limits>
 #include <string>
 #include <array>
+#include <vector>
 #ifdef __WXMSW__
 #include <windows.h>
 #elif defined(__WXGTK__)
