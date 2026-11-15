@@ -182,9 +182,14 @@ jobs:
         shell: bash
         run: python -X utf8 .github/scripts/collect_cores.py
       - name: Collect tested build output
+        id: bundle
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         shell: bash
         run: python -X utf8 .github/scripts/ci.py bundle
+      - name: Verify configured SDK and distributed dependency footprint
+        if: ${{ !cancelled() && steps.bundle.outcome == 'success' }}
+        shell: bash
+        run: python -X utf8 .github/scripts/check_sdk.py --cmake-dir .ci/build/cmake --artifact-dir .ci/artifact --output .ci/reports/sdk-contract.json
       - name: Upload build output
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

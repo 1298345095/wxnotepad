@@ -342,6 +342,62 @@ python3 .github/scripts/ci.py test --backend x11 --cmake-dir /path/to/native/cma
 python3 .github/scripts/ci.py test --backend wayland --cmake-dir /path/to/native/cmake-build
 ```
 
+On Windows, use the same wrapper with `--backend windows`. Add a fresh
+`--report-dir` to preserve each local attempt, and `--tests` to select registered
+cases. Windows uses the Default input desktop and serial execution; the private
+X11/Wayland sessions retain their existing concurrency.
+
+For a standalone owned executable outside CTest, the synchronous probe entry
+point records each numeric process exit code, deadline and raw output:
+
+```text
+python -X utf8 .github/scripts/ci.py probe --report-dir F:/evidence/probe-attempt-1 --timeout 30 --runs 2 -- "F:/native build/sdk_capabilities.exe"
+```
+
+Use `--cwd` when the executable requires another working directory. Arguments
+after `--` are passed literally without an extra shell. Runs are serial; a
+nonzero exit, launch failure or timeout stops the sequence and fails the command.
+The summary is successful only when every requested process completed with exit
+zero. A fresh report directory is mandatory; earlier failures are never replaced
+by later runs. For tests with peer processes, keep using the registered CTest
+entry point and its existing lifecycle/timeout handling.
+
+The `native_probe_process_runner` regression exercises real child exits,
+timeouts, launch failures and repeated runs, including the actual GUI SDK probe.
+Its native logs remain under `Testing/Temporary/native-probe` and are collected
+with the existing evidence artifacts.
+
+SDK validation has two complementary parts. The registered
+`sdk_retained_capabilities` case consumes the actual wx headers/libraries,
+checks the trimmed build profile, creates native controls and printing/page
+setup objects without printing, round-trips zlib/PNG, and rasterizes SVG art.
+The CI bundle check inventories the selected SDK and actual runtime output:
+
+```text
+python -X utf8 .github/scripts/check_sdk.py --cmake-dir F:/native-build/cmake --artifact-dir F:/native-package/artifact --output F:/evidence/sdk-attempt-1.json
+```
+
+The installation and triplet come from that build's CMake cache, and must agree
+with its selected wxWidgets configuration. Missing headers or core/base libraries
+fail rather than producing an empty successful inventory. wxSTC/Scintilla/Lexilla
+SDK artifacts fail on both platforms. Windows runtime output also rejects the
+removed JPEG/TIFF/WebP/PCRE2 libraries; the Linux GTK dependency profile is
+unchanged. Omitting `--artifact-dir` explicitly checks only the SDK and records
+`runtime_checked: false`.
+
+CI enables `WXNOTEPAD_VERIFY_TRIMMED_SDK=ON` for the compile-time trimming
+assertions. Enable the same option when validating a local overlay-built SDK.
+It defaults to OFF for ordinary development installations, whose unused wx
+features may remain enabled; retained-capability runtime checks still run.
+
+For Codex on this Windows host, `shell: sh` selects Git Bash and `shell: bash`
+selects WSL Ubuntu. In WSL commands use Linux paths such as `/mnt/f/...` while
+retaining a Windows `workdir` for the host tool. The Python runner can read its
+`--help` in either environment; choose the interpreter, native build and SDK of
+that same environment. Pass environment changes as quoted values or a structured
+process environment; an inherited PATH can contain spaces and parentheses.
+The Wayland driver needs the intended Weston installation on PATH.
+
 `--tests` optionally selects a CTest regex for local diagnosis. The workflows omit
 it and run the complete registered suite. CI helper provisioning commands use
 the task-local `.ci/` tree; normal development can continue using the existing

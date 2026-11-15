@@ -3,6 +3,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -38,6 +39,50 @@ def run(command, log, env=None, check=True):
     if result and check:
         raise SystemExit(result)
     return result
+
+
+def probe(command, report_directory, timeout, runs, working_directory):
+    reports = report_directory.resolve()
+    try:
+        reports.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        raise SystemExit('Report directory already exists; choose a fresh directory to retain earlier evidence')
+    summary = {'command': [str(item) for item in command], 'cwd': str(working_directory.resolve()),
+               'timeout_seconds': timeout, 'requested_runs': runs, 'completed_runs': 0, 'success': False, 'results': []}
+
+    def publish():
+        summary['completed_runs'] = sum(item['status'] == 'completed' for item in summary['results'])
+        (reports / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
+
+    publish()
+    for index in range(1, runs + 1):
+        log = reports / f'run-{index:03}.log'
+        record = {'command': summary['command'], 'status': 'running', 'exit_code': None, 'log': str(log)}
+        summary['results'].append(record)
+        publish()
+        started = time.monotonic()
+        print(f'Probe {index}/{runs}: {command[0]} (log: {log})', flush=True)
+        try:
+            with log.open('wb') as output:
+                try:
+                    result = subprocess.run(summary['command'], cwd=working_directory,
+                                            stdout=output, stderr=subprocess.STDOUT, timeout=timeout, check=False)
+                    record.update(status='completed', exit_code=result.returncode)
+                except subprocess.TimeoutExpired:
+                    record['status'] = 'timeout'
+                    output.write(f'\nProbe exceeded its {timeout}s deadline.\n'.encode('utf-8'))
+                except OSError as error:
+                    record['status'] = 'launch_failed'
+                    output.write(f'\nCould not start probe: {error}\n'.encode('utf-8'))
+        finally:
+            record['seconds'] = round(time.monotonic() - started, 3)
+            publish()
+        print(f'Probe {index}/{runs}: {record["status"]}, exit={record["exit_code"]}', flush=True)
+        if record['status'] != 'completed' or record['exit_code'] != 0:
+            return 1
+    summary['success'] = True
+    publish()
+    return 0
 
 
 def metadata():
@@ -97,6 +142,7 @@ def configure(app_only, *, coverage=False, compiler_cache=False):
                f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
                '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON', '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
                '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=OFF',
+               '-DWXNOTEPAD_VERIFY_TRIMMED_SDK=ON',
                '-DWXNOTEPAD_ENABLE_COVERAGE=' + ('ON' if coverage else 'OFF'),
                '-DBUILD_TESTING=' + ('OFF' if app_only else 'ON'),
                *compiler_launcher_arguments(compiler_cache and not coverage)])
@@ -263,6 +309,7 @@ def diagnostic_build(jobs, *, compiler_cache=False):
                        f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', '-DVCPKG_MANIFEST_MODE=OFF',
                        f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
                        '-DBUILD_TESTING=ON', '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=ON',
+                       '-DWXNOTEPAD_VERIFY_TRIMMED_SDK=ON',
                        *compiler_launcher_arguments(compiler_cache)]), 'diagnostic-configure.log')
     run(cmake_command(['--build', directory, '--config', 'Release', '--parallel', str(jobs),
                        '--target', 'wxnotepad', 'editing_keys', 'close_smoke']), 'diagnostic-build.log')
@@ -354,6 +401,12 @@ def argument_parser():
     coverage.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
     diagnostic = commands.add_parser('diagnostic-test')
     diagnostic.add_argument('--backend', choices=('windows', 'x11', 'wayland'), required=True)
+    native_probe = commands.add_parser('probe', help='Run standalone owned processes synchronously and retain evidence')
+    native_probe.add_argument('--report-dir', type=Path, required=True)
+    native_probe.add_argument('--timeout', type=float, required=True, help='Deadline in seconds for each process')
+    native_probe.add_argument('--runs', type=int, default=1, help='Serial runs; stop on the first failure')
+    native_probe.add_argument('--cwd', type=Path, default=ROOT)
+    native_probe.add_argument('program', nargs=argparse.REMAINDER, help='Command and literal arguments after --')
     return parser
 
 
@@ -362,7 +415,12 @@ def main():
     arguments = parser.parse_args()
     if getattr(arguments, 'jobs', 1) < 1:
         parser.error('--jobs must be positive')
-    if arguments.command == 'configure':
+    if arguments.command == 'probe':
+        program = arguments.program[1:] if arguments.program[:1] == ['--'] else arguments.program
+        if not program or arguments.runs < 1 or not math.isfinite(arguments.timeout) or arguments.timeout <= 0:
+            parser.error('probe requires a command, positive --runs and a finite positive --timeout')
+        raise SystemExit(probe(program, arguments.report_dir, arguments.timeout, arguments.runs, arguments.cwd))
+    elif arguments.command == 'configure':
         configure(arguments.app_only, coverage=arguments.coverage, compiler_cache=arguments.compiler_cache)
     elif arguments.command == 'build':
         build(arguments.app_only, arguments.jobs)
