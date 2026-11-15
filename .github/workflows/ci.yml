@@ -130,12 +130,34 @@ jobs:
             --build-dir .ci/original-reference \
             --output .ci/reports/original-gdi-viewport.tsv --compiler-cache \
             2>&1 | tee .ci/reports/original-gdi-reference.log
+      - name: Capture Windows visual brace crash dumps
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $crashDumpDirectory = Join-Path $env:GITHUB_WORKSPACE '.ci/reports/windows-dumps'
+          $crashDumpKey = 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\visual_brace.exe'
+          $fullDumpType = 2
+          $dumpFileLimit = 3
+          New-Item -ItemType Directory -Path $crashDumpDirectory -Force | Out-Null
+          New-Item -Path $crashDumpKey -Force | Out-Null
+          New-ItemProperty -Path $crashDumpKey -Name DumpFolder -Value $crashDumpDirectory -PropertyType ExpandString -Force | Out-Null
+          New-ItemProperty -Path $crashDumpKey -Name DumpType -Value $fullDumpType -PropertyType DWord -Force | Out-Null
+          New-ItemProperty -Path $crashDumpKey -Name DumpCount -Value $dumpFileLimit -PropertyType DWord -Force | Out-Null
+          Get-ItemProperty -Path $crashDumpKey | Select-Object DumpFolder, DumpType, DumpCount |
+            ConvertTo-Json | Tee-Object -FilePath .ci/reports/windows-crash-dumps.json
       - name: Test Windows
         if: runner.os == 'Windows'
         shell: bash
         env:
           WXNOTEPAD_ORIGINAL_GDI_REFERENCE: ${{ github.workspace }}/.ci/reports/original-gdi-viewport.tsv
         run: python -X utf8 .github/scripts/ci.py test --backend windows
+      - name: Repeat Windows visual brace regression with crash evidence
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/visual-brace-repeat `
+            --cwd .ci/build/cmake --timeout 90 --runs 20 -- "$env:GITHUB_WORKSPACE/.ci/build/cmake/visual_brace.exe"
       - name: Test private X11
         if: runner.os == 'Linux'
         shell: bash
@@ -213,6 +235,8 @@ jobs:
             .ci/build/diagnostic-cmake/close_smoke*
             .ci/build/cmake/CMakeFiles/CMakeConfigureLog.yaml
             .ci/build/cmake/compile_commands.json
+            .ci/build/cmake/visual_brace.exe
+            .ci/build/cmake/visual_brace.pdb
             .ci/build/cmake/clipboard_smoke
             .ci/build/cmake/clipboard_peer
             .ci/build/cmake/stream_drag
