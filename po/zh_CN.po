@@ -1580,7 +1580,7 @@ msgstr "以 DOS-437 模式打开 ANSI 艺术 (*.nfo, *.diz)文件(&N)。"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Open As &GBK..."
-msgstr "作为 GBK 打开(&G)..."
+msgstr "作为 GBK 打开(&B)..."
 
 #: src/app/editor_frame_commands.cpp
 msgid "Open As DOS-437..."

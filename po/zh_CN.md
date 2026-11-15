@@ -13,7 +13,8 @@ dialog control or string resource where wording was reused or adapted.
 
 The shared menus retain the original command terminology and all source shortcut
 suffixes. Mnemonics were reviewed within the actual wxnotepad sibling groups.
-Restart uses T in File; Settings uses F for File Change Notification and O for
+Restart uses T and Open As GBK uses B in File; Settings uses F for File Change
+Notification and O for
 Other Settings; URL Decode uses R in Convert. The Unicode-control submenu uses
 unique mnemonics, including 1/2 for directional isolates. These choices avoid
 collisions while keeping the command shortcuts intact. Original malformed
