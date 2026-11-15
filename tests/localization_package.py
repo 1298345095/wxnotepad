@@ -185,7 +185,10 @@ def wait_child(root, previous=()):
                 app.folder = path
                 app.sequence = 0
                 app.process = Child(int(path.name))
-                app.state = wait_state(path, app.process, lambda state: state['sequence'] == '0')
+                # Match Process startup: the first Wayland snapshot can precede
+                # the native decoration/layout configuration.
+                app.state = wait_state(path, app.process, lambda state: state['sequence'] == '0' and
+                                       (state['backend'] != 'GdkWaylandDisplay' or state['active'] == '1'))
                 return app
         time.sleep(.01)
     raise AssertionError('Restart/New Window did not produce an observed independent child')
