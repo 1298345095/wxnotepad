@@ -56,8 +56,8 @@
   "counts": {
     "reviewed": 72,
     "false_positive": 33,
-    "addressed_in_code_pending_analysis": 25,
-    "retained_design_recommendations": 14
+    "retained_design_recommendations": 14,
+    "addressed_in_code_verified_fixed": 25
   },
   "false_positive_dispositions": [
     {
@@ -1624,7 +1624,7 @@
           "severity": "MEDIUM"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Keep paint observer state private and expose the unchanged conjunction through Recovered().",
       "comment": null,
       "evidence": [
@@ -1636,7 +1636,12 @@
         }
       ],
       "change": "Keep paint observer state private and expose the unchanged conjunction through Recovered().",
-      "original_proposal_reason": "PaintFailure separates public observed flags from private dispatch state. Rule correctly observes mixed access; encapsulation/style advice, not a reproduced resource-recovery defect."
+      "original_proposal_reason": "PaintFailure separates public observed flags from private dispatch state. Rule correctly observes mixed access; encapsulation/style advice, not a reproduced resource-recovery defect.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WZshnL9Urv53rXM",
@@ -1655,7 +1660,7 @@
           "severity": "MEDIUM"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Use explicit jthread ownership and join all started workers before propagating startup or worker errors.",
       "comment": null,
       "evidence": [
@@ -1667,7 +1672,12 @@
         }
       ],
       "change": "Use explicit jthread ownership and join all started workers before propagating startup or worker errors.",
-      "original_proposal_reason": "S8460 expressly treats explicit std::launch::async as noncompliant. Root plans explicit threads preserving join/error ordering; not marked FP."
+      "original_proposal_reason": "S8460 expressly treats explicit std::launch::async as noncompliant. Root plans explicit threads preserving join/error ordering; not marked FP.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rX_",
@@ -1682,7 +1692,7 @@
           "severity": "LOW"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Mark the always-throwing fixture helper noreturn.",
       "comment": null,
       "evidence": [
@@ -1694,7 +1704,12 @@
         }
       ],
       "change": "Mark the always-throwing fixture helper noreturn.",
-      "original_proposal_reason": "ThrowFailure always throws and could use [[noreturn]] to document that. Valid local readability/analysis improvement, no current behavior error."
+      "original_proposal_reason": "ThrowFailure always throws and could use [[noreturn]] to document that. Valid local readability/analysis improvement, no current behavior error.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rYA",
@@ -1709,7 +1724,7 @@
           "severity": "MEDIUM"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Express the unchanged diagnostic substring requirement with string_view.contains.",
       "comment": null,
       "evidence": [
@@ -1721,7 +1736,12 @@
         }
       ],
       "change": "Express the unchanged diagnostic substring requirement with string_view.contains.",
-      "original_proposal_reason": "The find!=npos predicate is correct; std::string_view::contains is available and simpler. Valid modernization suggestion."
+      "original_proposal_reason": "The find!=npos predicate is correct; std::string_view::contains is available and simpler. Valid modernization suggestion.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rYB",
@@ -1736,7 +1756,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "List the asynchronous fixture captures explicitly.",
       "comment": null,
       "evidence": [
@@ -1748,7 +1768,12 @@
         }
       ],
       "change": "List the asynchronous fixture captures explicitly.",
-      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rYC",
@@ -1763,7 +1788,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "List the asynchronous fixture captures explicitly.",
       "comment": null,
       "evidence": [
@@ -1775,7 +1800,12 @@
         }
       ],
       "change": "List the asynchronous fixture captures explicitly.",
-      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rYE",
@@ -1790,7 +1820,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "List the asynchronous fixture captures explicitly.",
       "comment": null,
       "evidence": [
@@ -1802,7 +1832,12 @@
         }
       ],
       "change": "List the asynchronous fixture captures explicitly.",
-      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rYG",
@@ -1817,7 +1852,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Delete all copy and move operations of the completion guard.",
       "comment": null,
       "evidence": [
@@ -1829,7 +1864,12 @@
         }
       ],
       "change": "Delete all copy and move operations of the completion guard.",
-      "original_proposal_reason": "Completion's destructor increments the finished count; copying would duplicate that effect. Delete copy and move operations on the local guard."
+      "original_proposal_reason": "Completion's destructor increments the finished count; copying would duplicate that effect. Delete copy and move operations on the local guard.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rYF",
@@ -1844,7 +1884,7 @@
           "severity": "LOW"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Separate the guard type definition and its scoped instance.",
       "comment": null,
       "evidence": [
@@ -1856,7 +1896,12 @@
         }
       ],
       "change": "Separate the guard type definition and its scoped instance.",
-      "original_proposal_reason": "Separating the local Completion type declaration from its instance is a valid readability improvement, suitable alongside the planned noncopyable guard change."
+      "original_proposal_reason": "Separating the local Completion type declaration from its instance is a valid readability improvement, suitable alongside the planned noncopyable guard change.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rYH",
@@ -1871,7 +1916,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "List the asynchronous fixture captures explicitly.",
       "comment": null,
       "evidence": [
@@ -1883,7 +1928,12 @@
         }
       ],
       "change": "List the asynchronous fixture captures explicitly.",
-      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rYI",
@@ -1898,7 +1948,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "List the asynchronous fixture captures explicitly.",
       "comment": null,
       "evidence": [
@@ -1910,7 +1960,12 @@
         }
       ],
       "change": "List the asynchronous fixture captures explicitly.",
-      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbphnL9Urv53rYJ",
@@ -1929,7 +1984,7 @@
           "severity": "MEDIUM"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Use explicit jthread ownership and join all started workers before propagating startup or worker errors.",
       "comment": null,
       "evidence": [
@@ -1941,7 +1996,12 @@
         }
       ],
       "change": "Use explicit jthread ownership and join all started workers before propagating startup or worker errors.",
-      "original_proposal_reason": "S8460 expressly treats explicit std::launch::async as noncompliant. Root plans explicit threads preserving join/error ordering; not marked FP."
+      "original_proposal_reason": "S8460 expressly treats explicit std::launch::async as noncompliant. Root plans explicit threads preserving join/error ordering; not marked FP.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXz",
@@ -1956,7 +2016,7 @@
           "severity": "LOW"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Use const references for read-only observations.",
       "comment": null,
       "evidence": [
@@ -1968,7 +2028,12 @@
         }
       ],
       "change": "Use const references for read-only observations.",
-      "original_proposal_reason": "Const-qualifying the observation/reference helper parameter is a valid signature cleanup. The helper reads the host handle and current state; no faulty behavior established."
+      "original_proposal_reason": "Const-qualifying the observation/reference helper parameter is a valid signature cleanup. The helper reads the host handle and current state; no faulty behavior established.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rX0",
@@ -1983,7 +2048,7 @@
           "severity": "LOW"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Use const references for read-only observations.",
       "comment": null,
       "evidence": [
@@ -1995,7 +2060,12 @@
         }
       ],
       "change": "Use const references for read-only observations.",
-      "original_proposal_reason": "Const-qualifying the observation/reference helper parameter is a valid signature cleanup. The helper reads the host handle and current state; no faulty behavior established."
+      "original_proposal_reason": "Const-qualifying the observation/reference helper parameter is a valid signature cleanup. The helper reads the host handle and current state; no faulty behavior established.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXe",
@@ -2010,7 +2080,7 @@
           "severity": "MEDIUM"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
       "comment": null,
       "evidence": [
@@ -2022,7 +2092,12 @@
         }
       ],
       "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
-      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXf",
@@ -2037,7 +2112,7 @@
           "severity": "MEDIUM"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
       "comment": null,
       "evidence": [
@@ -2049,7 +2124,12 @@
         }
       ],
       "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
-      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXg",
@@ -2064,7 +2144,7 @@
           "severity": "MEDIUM"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
       "comment": null,
       "evidence": [
@@ -2076,7 +2156,12 @@
         }
       ],
       "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
-      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rX1",
@@ -2091,7 +2176,7 @@
           "severity": "LOW"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Use const references for read-only observations.",
       "comment": null,
       "evidence": [
@@ -2103,7 +2188,12 @@
         }
       ],
       "change": "Use const references for read-only observations.",
-      "original_proposal_reason": "Const-qualifying the observation/reference helper parameter is a valid signature cleanup. The helper reads the host handle and current state; no faulty behavior established."
+      "original_proposal_reason": "Const-qualifying the observation/reference helper parameter is a valid signature cleanup. The helper reads the host handle and current state; no faulty behavior established.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXj",
@@ -2118,7 +2208,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
       "comment": null,
       "evidence": [
@@ -2130,7 +2220,12 @@
         }
       ],
       "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
-      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXk",
@@ -2145,7 +2240,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
       "comment": null,
       "evidence": [
@@ -2157,7 +2252,12 @@
         }
       ],
       "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
-      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXl",
@@ -2172,7 +2272,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
       "comment": null,
       "evidence": [
@@ -2184,7 +2284,12 @@
         }
       ],
       "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
-      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXm",
@@ -2199,7 +2304,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
       "comment": null,
       "evidence": [
@@ -2211,7 +2316,12 @@
         }
       ],
       "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
-      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXn",
@@ -2226,7 +2336,7 @@
           "severity": "HIGH"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
       "comment": null,
       "evidence": [
@@ -2238,7 +2348,12 @@
         }
       ],
       "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
-      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXt",
@@ -2253,7 +2368,7 @@
           "severity": "MEDIUM"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
       "comment": null,
       "evidence": [
@@ -2265,7 +2380,12 @@
         }
       ],
       "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
-      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     },
     {
       "key": "AaHk8WbnhnL9Urv53rXu",
@@ -2280,7 +2400,7 @@
           "severity": "MEDIUM"
         }
       ],
-      "classification": "code_addressed_pending_analysis",
+      "classification": "code_fixed",
       "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
       "comment": null,
       "evidence": [
@@ -2292,7 +2412,12 @@
         }
       ],
       "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
-      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP.",
+      "verification": {
+        "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "issue_status_query": "FIXED",
+        "returned": true
+      }
     }
   ],
   "retained_recommendations": [
@@ -2647,5 +2772,453 @@
       ]
     }
   ],
-  "final_analysis_location": "The continuation PR description and checks record the final analyzed revision and verification after this batch."
+  "final_analysis_location": "The continuation PR description and checks record the final analyzed revision and verification after this batch.",
+  "followup_analysis": {
+    "analyzed_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+    "ce_task": "AaHlEIeaLosZbpaI6AUv",
+    "reviewed_at": "2026-11-16T15:56:11Z",
+    "quality_gate_before_fixture_cleanup": {
+      "status": "ERROR",
+      "conditions": [
+        {
+          "metricKey": "new_reliability_rating",
+          "status": "ERROR",
+          "errorThreshold": "1",
+          "actualValue": "3"
+        },
+        {
+          "metricKey": "new_security_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_maintainability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_coverage",
+          "status": "OK",
+          "errorThreshold": "80",
+          "actualValue": "83.0"
+        },
+        {
+          "metricKey": "new_duplicated_lines_density",
+          "status": "OK",
+          "errorThreshold": "3",
+          "actualValue": "0.0"
+        },
+        {
+          "metricKey": "new_security_hotspots_reviewed",
+          "status": "OK",
+          "errorThreshold": "100",
+          "actualValue": "100.0"
+        }
+      ]
+    },
+    "initial_query_counts": {
+      "open": 23,
+      "new_keys": 9,
+      "false_positive_proposed": 7,
+      "code_changes_needed": 2,
+      "retained_recommendations": 14,
+      "previous_code_keys_fixed": 25,
+      "previous_fp_still_false_positive": 28,
+      "previous_fp_closed_and_rekeyed": 5
+    },
+    "previous_code_verification": {
+      "issueStatuses": [
+        "FIXED"
+      ],
+      "total": 25,
+      "issue_keys": [
+        "AaHk8WZshnL9Urv53rXM",
+        "AaHk8WbnhnL9Urv53rX0",
+        "AaHk8WbnhnL9Urv53rX1",
+        "AaHk8WbnhnL9Urv53rXe",
+        "AaHk8WbnhnL9Urv53rXf",
+        "AaHk8WbnhnL9Urv53rXg",
+        "AaHk8WbnhnL9Urv53rXi",
+        "AaHk8WbnhnL9Urv53rXj",
+        "AaHk8WbnhnL9Urv53rXk",
+        "AaHk8WbnhnL9Urv53rXl",
+        "AaHk8WbnhnL9Urv53rXm",
+        "AaHk8WbnhnL9Urv53rXn",
+        "AaHk8WbnhnL9Urv53rXt",
+        "AaHk8WbnhnL9Urv53rXu",
+        "AaHk8WbnhnL9Urv53rXz",
+        "AaHk8WbphnL9Urv53rX_",
+        "AaHk8WbphnL9Urv53rYA",
+        "AaHk8WbphnL9Urv53rYB",
+        "AaHk8WbphnL9Urv53rYC",
+        "AaHk8WbphnL9Urv53rYE",
+        "AaHk8WbphnL9Urv53rYF",
+        "AaHk8WbphnL9Urv53rYG",
+        "AaHk8WbphnL9Urv53rYH",
+        "AaHk8WbphnL9Urv53rYI",
+        "AaHk8WbphnL9Urv53rYJ"
+      ]
+    },
+    "previous_false_positive_verification": {
+      "false_positive_total": 28,
+      "false_positive_keys": [
+        "AaHk8WbnhnL9Urv53rXp",
+        "AaHk8WbnhnL9Urv53rXr",
+        "AaHk8WaWhnL9Urv53rXO",
+        "AaHk8WaWhnL9Urv53rXP",
+        "AaHk8Wa9hnL9Urv53rXQ",
+        "AaHk8Wa9hnL9Urv53rXR",
+        "AaHk8Wa9hnL9Urv53rXS",
+        "AaHk8Wa9hnL9Urv53rXT",
+        "AaHk8Wa9hnL9Urv53rXV",
+        "AaHk8Wa9hnL9Urv53rXW",
+        "AaHk8Wa9hnL9Urv53rXX",
+        "AaHk8Wa9hnL9Urv53rXY",
+        "AaHk8Wa9hnL9Urv53rXZ",
+        "AaHk8Wa9hnL9Urv53rXa",
+        "AaHk8Wa9hnL9Urv53rXb",
+        "AaHk8Wa9hnL9Urv53rXc",
+        "AaHk8Wa9hnL9Urv53rXd",
+        "AaHk8WZshnL9Urv53rXL",
+        "AaHk8WZshnL9Urv53rXK",
+        "AaHk8WLjhnL9Urv53rXG",
+        "AaHk8WbphnL9Urv53rYD",
+        "AaHk8WbphnL9Urv53rYL",
+        "AaHk8WbnhnL9Urv53rX2",
+        "AaHk8WbnhnL9Urv53rX4",
+        "AaHk8WbnhnL9Urv53rX9",
+        "AaHk8WbnhnL9Urv53rXq",
+        "AaHk8WbnhnL9Urv53rXw",
+        "AaHk8WbnhnL9Urv53rXy"
+      ],
+      "closed_and_rekeyed": [
+        {
+          "old_key": "AaHk8WbnhnL9Urv53rX3",
+          "replacement_key": "AaHlEI_bI6O6B77zdqDP"
+        },
+        {
+          "old_key": "AaHk8WbnhnL9Urv53rX5",
+          "replacement_key": "AaHlEI_bI6O6B77zdqDQ"
+        },
+        {
+          "old_key": "AaHk8WbnhnL9Urv53rX6",
+          "replacement_key": "AaHlEI_bI6O6B77zdqDR"
+        },
+        {
+          "old_key": "AaHk8WbnhnL9Urv53rX7",
+          "replacement_key": "AaHlEI_bI6O6B77zdqDS"
+        },
+        {
+          "old_key": "AaHk8WbnhnL9Urv53rX8",
+          "replacement_key": "AaHlEI_bI6O6B77zdqDT"
+        }
+      ]
+    },
+    "false_positive_dispositions": [
+      {
+        "key": "AaHlEI_bI6O6B77zdqDP",
+        "rule": "cpp:S5008",
+        "project": "1298345095_wxnotepad",
+        "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+        "severity": "CRITICAL",
+        "status": "OPEN",
+        "message": "Replace this use of \"void *\" with a more meaningful type.",
+        "cleanCodeAttribute": "CLEAR",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "author": "30920958+1298345095@users.noreply.github.com",
+        "creationDate": "2026-11-16T15:36:59+0000",
+        "textRange": {
+          "startLine": 294,
+          "endLine": 294
+        },
+        "classification": "false_positive",
+        "replaces_closed_false_positive_key": "AaHk8WbnhnL9Urv53rX3",
+        "source": "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L294-L296",
+        "evidence": [
+          "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L268-L278",
+          "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L856"
+        ],
+        "reason": "Pinned DocWatcher virtual-interface parameter; callback ignores the opaque userData and cannot change its type while preserving override.",
+        "comment": "False positive. CommittedModificationFailure::NotifyModifyAttempt overrides the pinned Scintilla DocWatcher::NotifyModifyAttempt interface, which requires the void* userData parameter (notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Document.h:856). Replacing that parameter with a typed pointer would no longer override the required virtual function. This observer registers and unregisters with nullptr user data (tests/surface_initialization.cpp:273,278) and does not read or cast the unnamed pointer. The new analysis assigned this key after adding the explanatory body comment; the identical ABI requirement was previously reviewed under AaHk8WbnhnL9Urv53rX3. Source: https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L294-L296 ; https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L856",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHlEI_bI6O6B77zdqDP",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHlEI_bI6O6B77zdqDQ",
+        "rule": "cpp:S5008",
+        "project": "1298345095_wxnotepad",
+        "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+        "severity": "CRITICAL",
+        "status": "OPEN",
+        "message": "Replace this use of \"void *\" with a more meaningful type.",
+        "cleanCodeAttribute": "CLEAR",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "author": "30920958+1298345095@users.noreply.github.com",
+        "creationDate": "2026-11-16T15:36:59+0000",
+        "textRange": {
+          "startLine": 303,
+          "endLine": 303
+        },
+        "classification": "false_positive",
+        "replaces_closed_false_positive_key": "AaHk8WbnhnL9Urv53rX5",
+        "source": "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L303-L305",
+        "evidence": [
+          "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L268-L278",
+          "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L859"
+        ],
+        "reason": "Pinned DocWatcher virtual-interface parameter; callback ignores the opaque userData and cannot change its type while preserving override.",
+        "comment": "False positive. CommittedModificationFailure::NotifyDeleted overrides the pinned Scintilla DocWatcher::NotifyDeleted interface, which requires the void* userData parameter (notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Document.h:859). Replacing that parameter with a typed pointer would no longer override the required virtual function. This observer registers and unregisters with nullptr user data (tests/surface_initialization.cpp:273,278) and does not read or cast the unnamed pointer. The new analysis assigned this key after adding the explanatory body comment; the identical ABI requirement was previously reviewed under AaHk8WbnhnL9Urv53rX5. Source: https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L303-L305 ; https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L859",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHlEI_bI6O6B77zdqDQ",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHlEI_bI6O6B77zdqDR",
+        "rule": "cpp:S5008",
+        "project": "1298345095_wxnotepad",
+        "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+        "severity": "CRITICAL",
+        "status": "OPEN",
+        "message": "Replace this use of \"void *\" with a more meaningful type.",
+        "cleanCodeAttribute": "CLEAR",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "author": "30920958+1298345095@users.noreply.github.com",
+        "creationDate": "2026-11-16T15:36:59+0000",
+        "textRange": {
+          "startLine": 306,
+          "endLine": 306
+        },
+        "classification": "false_positive",
+        "replaces_closed_false_positive_key": "AaHk8WbnhnL9Urv53rX6",
+        "source": "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L306-L308",
+        "evidence": [
+          "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L268-L278",
+          "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L860"
+        ],
+        "reason": "Pinned DocWatcher virtual-interface parameter; callback ignores the opaque userData and cannot change its type while preserving override.",
+        "comment": "False positive. CommittedModificationFailure::NotifyStyleNeeded overrides the pinned Scintilla DocWatcher::NotifyStyleNeeded interface, which requires the void* userData parameter (notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Document.h:860). Replacing that parameter with a typed pointer would no longer override the required virtual function. This observer registers and unregisters with nullptr user data (tests/surface_initialization.cpp:273,278) and does not read or cast the unnamed pointer. The new analysis assigned this key after adding the explanatory body comment; the identical ABI requirement was previously reviewed under AaHk8WbnhnL9Urv53rX6. Source: https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L306-L308 ; https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L860",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHlEI_bI6O6B77zdqDR",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHlEI_bI6O6B77zdqDS",
+        "rule": "cpp:S5008",
+        "project": "1298345095_wxnotepad",
+        "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+        "severity": "CRITICAL",
+        "status": "OPEN",
+        "message": "Replace this use of \"void *\" with a more meaningful type.",
+        "cleanCodeAttribute": "CLEAR",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "author": "30920958+1298345095@users.noreply.github.com",
+        "creationDate": "2026-11-16T15:36:59+0000",
+        "textRange": {
+          "startLine": 309,
+          "endLine": 309
+        },
+        "classification": "false_positive",
+        "replaces_closed_false_positive_key": "AaHk8WbnhnL9Urv53rX7",
+        "source": "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L309-L311",
+        "evidence": [
+          "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L268-L278",
+          "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L861"
+        ],
+        "reason": "Pinned DocWatcher virtual-interface parameter; callback ignores the opaque userData and cannot change its type while preserving override.",
+        "comment": "False positive. CommittedModificationFailure::NotifyErrorOccurred overrides the pinned Scintilla DocWatcher::NotifyErrorOccurred interface, which requires the void* userData parameter (notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Document.h:861). Replacing that parameter with a typed pointer would no longer override the required virtual function. This observer registers and unregisters with nullptr user data (tests/surface_initialization.cpp:273,278) and does not read or cast the unnamed pointer. The new analysis assigned this key after adding the explanatory body comment; the identical ABI requirement was previously reviewed under AaHk8WbnhnL9Urv53rX7. Source: https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L309-L311 ; https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L861",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHlEI_bI6O6B77zdqDS",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHlEI_bI6O6B77zdqDT",
+        "rule": "cpp:S5008",
+        "project": "1298345095_wxnotepad",
+        "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+        "severity": "CRITICAL",
+        "status": "OPEN",
+        "message": "Replace this use of \"void *\" with a more meaningful type.",
+        "cleanCodeAttribute": "CLEAR",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "author": "30920958+1298345095@users.noreply.github.com",
+        "creationDate": "2026-11-16T15:36:59+0000",
+        "textRange": {
+          "startLine": 312,
+          "endLine": 312
+        },
+        "classification": "false_positive",
+        "replaces_closed_false_positive_key": "AaHk8WbnhnL9Urv53rX8",
+        "source": "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L312-L314",
+        "evidence": [
+          "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L268-L278",
+          "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L862"
+        ],
+        "reason": "Pinned DocWatcher virtual-interface parameter; callback ignores the opaque userData and cannot change its type while preserving override.",
+        "comment": "False positive. CommittedModificationFailure::NotifyGroupCompleted overrides the pinned Scintilla DocWatcher::NotifyGroupCompleted interface, which requires the void* userData parameter (notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Document.h:862). Replacing that parameter with a typed pointer would no longer override the required virtual function. This observer registers and unregisters with nullptr user data (tests/surface_initialization.cpp:273,278) and does not read or cast the unnamed pointer. The new analysis assigned this key after adding the explanatory body comment; the identical ABI requirement was previously reviewed under AaHk8WbnhnL9Urv53rX8. Source: https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L312-L314 ; https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L862",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHlEI_bI6O6B77zdqDT",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHlEIyMI6O6B77zdqDN",
+        "rule": "cpp:S1141",
+        "project": "1298345095_wxnotepad",
+        "component": "1298345095_wxnotepad:src/editor/platform/parallel_tasks.h",
+        "severity": "MAJOR",
+        "status": "OPEN",
+        "message": "Extract this nested try block into a separate method.",
+        "cleanCodeAttribute": "CLEAR",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "author": "30920958+1298345095@users.noreply.github.com",
+        "creationDate": "2026-11-16T14:01:45+0000",
+        "textRange": {
+          "startLine": 26,
+          "endLine": 26
+        },
+        "classification": "false_positive",
+        "source": "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/src/editor/platform/parallel_tasks.h#L23-L39",
+        "evidence": [
+          "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/src/editor/platform/parallel_tasks.h#L82-L89",
+          "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/parallel_surface_failure.cpp#L118-L129"
+        ],
+        "reason": "The apparent nested try belongs to a separate lambda call operator executed on a worker thread; the outer try handles startup on the caller thread.",
+        "comment": "False positive. The try at parallel_tasks.h:26 is inside the worker lambda's separate call operator. Every current launcher runs this lambda on a std::jthread (production at parallel_tasks.h:88; injected-launch test at tests/parallel_surface_failure.cpp:126). The outer try at line 23 runs on the caller thread and catches failures while starting those threads; it cannot catch an exception thrown on a worker's stack. The worker handler stores its original exception in a private slot, and the caller joins all started threads at lines 35-36 before rethrowing at lines 37-39. These are separate execution boundaries, rather than nested try/catch blocks handling the same call stack. Source: https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/src/editor/platform/parallel_tasks.h#L23-L39 ; https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/src/editor/platform/parallel_tasks.h#L82-L89 ; https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/parallel_surface_failure.cpp#L118-L129",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHlEIyMI6O6B77zdqDN",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHlEI_dI6O6B77zdqDV",
+        "rule": "cpp:S2738",
+        "project": "1298345095_wxnotepad",
+        "component": "1298345095_wxnotepad:tests/parallel_surface_failure.cpp",
+        "severity": "MINOR",
+        "status": "OPEN",
+        "message": "\"catch\" a specific exception type.",
+        "cleanCodeAttribute": "COMPLETE",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "author": "30920958+1298345095@users.noreply.github.com",
+        "creationDate": "2026-11-16T15:36:59+0000",
+        "textRange": {
+          "startLine": 130,
+          "endLine": 130
+        },
+        "classification": "false_positive",
+        "source": "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/parallel_surface_failure.cpp#L118-L149",
+        "evidence": [
+          "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/src/editor/platform/parallel_tasks.h#L23-L39"
+        ],
+        "reason": "Thread-entry exception transport retains the original exception until join and rethrows it for type/code assertions; it does not suppress arbitrary failures.",
+        "comment": "False positive. This catch(...) is the std::jthread entry boundary in PartialStartFailure, where allowing any exception to escape would terminate the process before the test can report it. It transports the original exception with std::current_exception() at line 131; it does not ignore or convert it. The parent releases the held workers, joins this thread at line 138, requires a captured exception at line 141, and rethrows that same exception at line 143. The typed system_error handler then verifies the startup error and the completed-worker count; other exception types propagate to the test runner and fail the test. Delaying the rethrow until after join is necessary to verify the production all-workers-joined contract without losing the exception. Source: https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/parallel_surface_failure.cpp#L118-L149",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHlEI_dI6O6B77zdqDV",
+          "newStatus": "falsepositive"
+        }
+      }
+    ],
+    "false_positive_verification": {
+      "issue_keys": [
+        "AaHlEI_bI6O6B77zdqDP",
+        "AaHlEI_bI6O6B77zdqDQ",
+        "AaHlEI_bI6O6B77zdqDR",
+        "AaHlEI_bI6O6B77zdqDS",
+        "AaHlEI_bI6O6B77zdqDT",
+        "AaHlEIyMI6O6B77zdqDN",
+        "AaHlEI_dI6O6B77zdqDV"
+      ],
+      "false_positive_total": 7,
+      "open_confirmed_total": 0
+    },
+    "open_after_dispositions": {
+      "total": 16,
+      "issue_keys": [
+        "AaHk8Wa9hnL9Urv53rXU",
+        "AaHk8WZ2hnL9Urv53rXN",
+        "AaHk8WZhhnL9Urv53rXH",
+        "AaHk8WZhhnL9Urv53rXI",
+        "AaHk8WZhhnL9Urv53rXJ",
+        "AaHk8WLjhnL9Urv53rXE",
+        "AaHk8WLjhnL9Urv53rXF",
+        "AaHk8WbphnL9Urv53rX-",
+        "AaHk8WbphnL9Urv53rYK",
+        "AaHlEI_dI6O6B77zdqDU",
+        "AaHlEI_bI6O6B77zdqDO",
+        "AaHk8WbnhnL9Urv53rXh",
+        "AaHk8WbnhnL9Urv53rXo",
+        "AaHk8WbnhnL9Urv53rXs",
+        "AaHk8WbnhnL9Urv53rXv",
+        "AaHk8WbnhnL9Urv53rXx"
+      ]
+    },
+    "code_changes_pending_analysis": [
+      {
+        "key": "AaHlEI_dI6O6B77zdqDU",
+        "rule": "cpp:S1763",
+        "project": "1298345095_wxnotepad",
+        "component": "1298345095_wxnotepad:tests/parallel_surface_failure.cpp",
+        "severity": "MAJOR",
+        "status": "OPEN",
+        "message": "code will never be executed",
+        "cleanCodeAttribute": "LOGICAL",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "author": "30920958+1298345095@users.noreply.github.com",
+        "creationDate": "2026-11-16T14:01:45+0000",
+        "textRange": {
+          "startLine": 151,
+          "endLine": 151
+        },
+        "classification": "confirmed_code_change",
+        "source": "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/parallel_surface_failure.cpp#L139-L151",
+        "reason": "After the non-null check, rethrow_exception never returns. system_error is checked then returns, and every other exception propagates. The final runtime_error throw is unreachable. Remove it and the now-redundant trailing return in the handler. This also removes existing S112 key AaHk8WbphnL9Urv53rYK."
+      },
+      {
+        "key": "AaHlEI_bI6O6B77zdqDO",
+        "rule": "cpp:S995",
+        "project": "1298345095_wxnotepad",
+        "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+        "severity": "MINOR",
+        "status": "OPEN",
+        "message": "Make the type of this parameter a reference-to-const. The current type of \"editor\" is \"class EditorControl &\".",
+        "cleanCodeAttribute": "CONVENTIONAL",
+        "cleanCodeAttributeCategory": "CONSISTENT",
+        "author": "30920958+1298345095@users.noreply.github.com",
+        "creationDate": "2026-11-16T14:01:45+0000",
+        "textRange": {
+          "startLine": 121,
+          "endLine": 121
+        },
+        "classification": "confirmed_code_change",
+        "source": "https://github.com/1298345095/wxnotepad/blob/7e57caea1acce20a425612087ec81ee538b916d6/tests/surface_initialization.cpp#L121-L145",
+        "reason": "CheckDrawingFactory only passes editor to the now-const DrawingSurface observer, so its editor reference can be const without changing behavior."
+      }
+    ],
+    "related_issue_removed_with_unreachable_throw": "AaHk8WbphnL9Urv53rYK",
+    "cumulative_pr_false_positive_transition_count": 40,
+    "current_false_positive_keys_after_dispositions": 35,
+    "closed_former_false_positive_keys": 5,
+    "final_analysis_location": "The continuation PR description and checks record the final analyzed revision, gate and exact-key outcomes after the two fixture changes."
+  }
 }

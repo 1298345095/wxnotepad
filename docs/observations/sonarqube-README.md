@@ -839,3 +839,46 @@ three suggest `using enum`, and one counts wxWidgets' inherited class depth.
 The continuation [PR #221](https://github.com/1298345095/wxnotepad/pull/221)
 records the final hosted revision, resulting issue queries and gate after this
 combined code and report-export batch.
+
+### GCC 13 coverage verification and final fixture cleanup
+
+Revision `7e57caea1acce20a425612087ec81ee538b916d6` passed
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43898310949),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43898310953),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43898311086) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43898310979).
+The native checkout was merge revision
+`215e0e758d7eeccea65bad8cc1705847dc45a3fb`.
+Windows again passed 216 ordinary tests with one existing IME skip; X11 passed
+203 with two existing skips; Wayland passed all 205. All platform diagnostics,
+the nine-stage surface fixtures, worker recovery and the 20-run Wayland JSON
+check passed. Both coverage backends passed all six coverage-report regressions
+using the actual GCC 13 compiler. Each backend and the merged report contained
+11,263 source-line entries across 98 files, with zero duplicate source lines.
+
+The matching Sonar task `AaHlEIeaLosZbpaI6AUv` reported 83.0% new-code coverage:
+132 of 153 new lines and 131 of 164 new conditions were covered. The existing
+80% coverage requirement passed. Its sole failing gate condition was reliability:
+the partial-start fixture retained an unreachable throw after
+`std::rethrow_exception`. The expected `std::system_error` path returned from its
+handler, while other exception types propagated to the test runner.
+
+The fixture now ends after its typed handler; the unreachable throw and its
+redundant return are removed. The captured-exception, original-error-code and
+joined-worker-count assertions remain. The drawing-factory check also receives
+its editor through the existing const observer interface. Both native fixtures
+compile and link, and the unchanged parallel regression passes at `-O2` with
+strict warnings. The removed throw also carried an existing S112 suggestion.
+
+Exact-key queries confirmed all 25 prior code findings FIXED. Of the first 33
+PR false-positive keys, 28 retained their disposition and five DocWatcher keys
+closed and reappeared under new keys after explanatory comments changed the
+method bodies. Those five required-ABI findings, a worker-lambda exception-boundary
+finding and a test-thread exception-transport finding were individually marked
+FALSE_POSITIVE through MCP. All seven new transitions were verified by exact-key
+queries. The PR disposition ledger retains their comments, receipts and mapping
+to the five replaced keys.
+
+The final two fixture changes and these completed validation records are submitted
+together. [PR #221](https://github.com/1298345095/wxnotepad/pull/221) records the
+resulting analyzed revision, final gate and remaining recommendations.

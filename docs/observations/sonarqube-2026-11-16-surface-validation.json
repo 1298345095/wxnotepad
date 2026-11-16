@@ -3172,5 +3172,1279 @@
       "python_compileall_exit_code": 0,
       "diff_check_exit_code": 0
     }
+  },
+  "fourth_hosted_validation": {
+    "source_head_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+    "checkout_merge_sha": "215e0e758d7eeccea65bad8cc1705847dc45a3fb",
+    "workflows": [
+      {
+        "id": 43898310979,
+        "name": "CodeQL",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 227,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310979/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310979/logs",
+        "workflow_id": 403089439
+      },
+      {
+        "id": 43898311086,
+        "name": "Fuzz",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 85,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898311086/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898311086/logs",
+        "workflow_id": 413097809
+      },
+      {
+        "id": 43898310949,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 228,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310949/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310949/logs",
+        "workflow_id": 403089440
+      },
+      {
+        "id": 43898310953,
+        "name": "Quality",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 227,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310953/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310953/logs",
+        "workflow_id": 403089438
+      }
+    ],
+    "windows": {
+      "run_id": 43898310949,
+      "job_id": 133407785142,
+      "job": "Windows MSVC",
+      "status": "completed",
+      "conclusion": "success",
+      "source_head_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+      "tested_merge_sha": "215e0e758d7eeccea65bad8cc1705847dc45a3fb",
+      "ordinary": {
+        "total": 217,
+        "passed": 216,
+        "failed": 0,
+        "skipped": 1
+      },
+      "diagnostic": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "new_fixtures": [
+        "2026-11-16T15:49:48.7849596Z 213/217 Test #213: native_surface_initialization_failures ...........   Passed    0.25 sec",
+        "2026-11-16T15:49:48.9313125Z 214/217 Test #214: native_parallel_surface_failures .................   Passed    0.15 sec"
+      ],
+      "ordinary_skips": [
+        "2026-11-16T15:47:15.9807486Z 125/217 Test #125: windows_inline_ime_input .........................***Skipped   0.02 sec"
+      ],
+      "diagnostic_results": [
+        "2026-11-16T15:50:30.7114953Z 1/2 Test   #6: native_diagnostic_process ........   Passed    0.65 sec",
+        "2026-11-16T15:50:42.1810664Z 2/2 Test #129: native_diagnostic_delivery .......   Passed   11.47 sec"
+      ],
+      "junit_validation": {
+        "artifact_sha256": "87814ad0af0ea1d016b412e9eeff54e41630b89b462f5940737447bd740e0db9",
+        "ordinary": {
+          "suite": {
+            "name": "Win32-ninja",
+            "tests": "217",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "1",
+            "hostname": "runnervmm7ud1",
+            "time": "557",
+            "timestamp": "2026-11-16T15:40:32"
+          },
+          "total": 217,
+          "passed": 216,
+          "failed": [],
+          "skipped": [
+            "windows_inline_ime_input"
+          ],
+          "fixtures": [
+            {
+              "name": "native_surface_initialization_failures",
+              "attributes": {
+                "name": "native_surface_initialization_failures",
+                "classname": "native_surface_initialization_failures",
+                "time": "0.247071",
+                "status": "run"
+              },
+              "stdout": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=5; first uninjected skip=5)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=7; first uninjected skip=7)\n"
+            },
+            {
+              "name": "native_parallel_surface_failures",
+              "attributes": {
+                "name": "native_parallel_surface_failures",
+                "classname": "native_parallel_surface_failures",
+                "time": "0.145644",
+                "status": "run"
+              },
+              "stdout": "PASS: production parallel tasks join before propagating resource failures and permit retry\n"
+            }
+          ]
+        },
+        "diagnostic": {
+          "suite": {
+            "name": "Win32-ninja",
+            "tests": "2",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "0",
+            "hostname": "runnervmm7ud1",
+            "time": "12",
+            "timestamp": "2026-11-16T15:50:30"
+          },
+          "total": 2,
+          "passed": 2,
+          "failed": [],
+          "skipped": [],
+          "fixtures": []
+        }
+      },
+      "parallel_fixture_checks": [
+        "Native Windows worker allocation failure joins every callback before rethrow",
+        "Native Windows resource failure preserves error code/context and permits retry",
+        "RunThreads partial launch failure after 0, 1, and 3 started jthreads waits for blocked workers and preserves startup-error priority",
+        "Native CreateThreadpoolWork failure retains GetLastError without submitting null work",
+        "Successful output retry before and after all failure scenarios"
+      ],
+      "surface_sweeps": {
+        "stream": {
+          "injected": 5,
+          "first_uninjected_skip": 5
+        },
+        "rectangular": {
+          "injected": 7,
+          "first_uninjected_skip": 7
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Test build preparation and CI invocation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Set up dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Set up compiler cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Verify compiler cache hits and header invalidation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Validate Linux native crash evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8
+        },
+        {
+          "name": "Validate Linux debug-symbol packaging",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Configure",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Build application and tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Verify pinned scheme importer CLIs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Record ordinary compilation cache statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Enable Linux native core dumps",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Prepare Windows native test display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Collect independent original GDI viewport reference",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Capture Windows visual brace crash dumps",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Test Windows",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Repeat Windows visual brace regression with crash evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19
+        },
+        {
+          "name": "Test private X11",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Test private Wayland",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Repeat native JSON Wayland regression with timeout evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Build opt-in diagnostic binaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23
+        },
+        {
+          "name": "Record diagnostic compilation cache statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24
+        },
+        {
+          "name": "Test Windows diagnostics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25
+        },
+        {
+          "name": "Test private X11 diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26
+        },
+        {
+          "name": "Test private Wayland diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27
+        },
+        {
+          "name": "Collect Linux native crash evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28
+        },
+        {
+          "name": "Collect tested build output",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 29
+        },
+        {
+          "name": "Verify configured SDK and distributed dependency footprint",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Upload build output",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Preserve logs and test evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32
+        },
+        {
+          "name": "Post Set up compiler cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Set up dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Post Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 64
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 65
+        }
+      ],
+      "evidence_artifact": {
+        "id": 14242155227,
+        "name": "evidence-windows-x64-215e0e758d7eeccea65bad8cc1705847dc45a3fb-attempt-1",
+        "size_in_bytes": 5739061,
+        "url": "https://api.github.com/repos/1298345095/wxnotepad/actions/artifacts/14242155227",
+        "archive_download_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/artifacts/14242155227/zip",
+        "expired": false,
+        "created_at": "2026-11-16T15:50:46Z",
+        "expires_at": "2026-12-16T15:50:44Z",
+        "updated_at": "2026-11-16T15:50:46Z",
+        "digest": "sha256:87814ad0af0ea1d016b412e9eeff54e41630b89b462f5940737447bd740e0db9",
+        "workflow_run": {
+          "id": 43898310949,
+          "repository_id": 1439122383,
+          "head_repository_id": 1439122383,
+          "head_branch": "codex/sonarcloud-followup-2026-11-16",
+          "head_sha": "7e57caea1acce20a425612087ec81ee538b916d6"
+        }
+      },
+      "evidence_artifact_url": "https://github.com/1298345095/wxnotepad/actions/runs/43898310949/artifacts/14242155227",
+      "evidence_sha256_verified": true,
+      "evidence_zip": "/workspace/scratch/44c8652c3121/ci-windows-7e57caea-evidence.zip",
+      "job_log": "/workspace/scratch/44c8652c3121/ci-windows-7e57caea-job.log"
+    },
+    "linux": {
+      "run_id": 43898310949,
+      "run_attempt": 1,
+      "head_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+      "pr_merge_candidate_sha": "215e0e758d7eeccea65bad8cc1705847dc45a3fb",
+      "pr": 221,
+      "base_sha": "a308c6b181674358205df90669293cc4afcab3af",
+      "status": "completed",
+      "ordinary_job": 133407784776,
+      "coverage_x11_job": 133407785471,
+      "coverage_wayland_job": 133407785207,
+      "checkout_merge_sha": "215e0e758d7eeccea65bad8cc1705847dc45a3fb",
+      "ordinary_linux": {
+        "job_id": 133407784776,
+        "conclusion": "success",
+        "results": {
+          "archive": "ci-run-43898310949/ordinary-linux-artifact.zip",
+          "sha256": "8969e28b3305d0686782f32024d718dc8fd73551f7dfe90869a200f44d5a54b9",
+          "backends": {
+            "wayland": {
+              "counts": {
+                "total": 205,
+                "passed": 205,
+                "failed": 0,
+                "skipped": 0
+              },
+              "skipped": [],
+              "failures": [],
+              "fixtures": {
+                "native_surface_initialization_failures": {
+                  "attributes": {
+                    "name": "native_surface_initialization_failures",
+                    "classname": "native_surface_initialization_failures",
+                    "time": "22.8921",
+                    "status": "run"
+                  },
+                  "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+                  "artifact_member": ".ci/reports/wayland/shard-1/tests.xml",
+                  "sweeps": [
+                    {
+                      "injected": 130,
+                      "first_uninjected_skip": 130
+                    },
+                    {
+                      "injected": 182,
+                      "first_uninjected_skip": 182
+                    }
+                  ]
+                },
+                "native_parallel_surface_failures": {
+                  "attributes": {
+                    "name": "native_parallel_surface_failures",
+                    "classname": "native_parallel_surface_failures",
+                    "time": "0.123952",
+                    "status": "run"
+                  },
+                  "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+                  "artifact_member": ".ci/reports/wayland/shard-2/tests.xml"
+                }
+              },
+              "members": [
+                ".ci/reports/wayland/shard-1/tests.xml",
+                ".ci/reports/wayland/shard-2/tests.xml",
+                ".ci/reports/wayland/shard-3/tests.xml",
+                ".ci/reports/wayland/shard-4/tests.xml"
+              ]
+            },
+            "x11": {
+              "counts": {
+                "total": 205,
+                "passed": 203,
+                "skipped": 2,
+                "failed": 0
+              },
+              "skipped": [
+                "original_new_window_maximized",
+                "native_peer_geometry_ready"
+              ],
+              "failures": [],
+              "fixtures": {
+                "native_surface_initialization_failures": {
+                  "attributes": {
+                    "name": "native_surface_initialization_failures",
+                    "classname": "native_surface_initialization_failures",
+                    "time": "1.47531",
+                    "status": "run"
+                  },
+                  "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+                  "artifact_member": ".ci/reports/x11/shard-1/tests.xml",
+                  "sweeps": [
+                    {
+                      "injected": 130,
+                      "first_uninjected_skip": 130
+                    },
+                    {
+                      "injected": 182,
+                      "first_uninjected_skip": 182
+                    }
+                  ]
+                },
+                "native_parallel_surface_failures": {
+                  "attributes": {
+                    "name": "native_parallel_surface_failures",
+                    "classname": "native_parallel_surface_failures",
+                    "time": "0.123273",
+                    "status": "run"
+                  },
+                  "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+                  "artifact_member": ".ci/reports/x11/shard-2/tests.xml"
+                }
+              },
+              "members": [
+                ".ci/reports/x11/shard-1/tests.xml",
+                ".ci/reports/x11/shard-2/tests.xml",
+                ".ci/reports/x11/shard-3/tests.xml",
+                ".ci/reports/x11/shard-4/tests.xml"
+              ]
+            }
+          }
+        },
+        "json_wayland_repeats": {
+          "passed": 20,
+          "failed": 0
+        },
+        "diagnostics": {
+          "x11": {
+            "passed": 2,
+            "failed": 0
+          },
+          "wayland": {
+            "passed": 2,
+            "failed": 0
+          }
+        },
+        "application_build": "success",
+        "bundle": "success",
+        "sdk_contract": "success",
+        "evidence_artifact_id": 14241851199,
+        "build_artifact_id": 14241936063
+      },
+      "coverage_x11": {
+        "job_id": 133407785471,
+        "conclusion": "success",
+        "results": {
+          "archive": "ci-run-43898310949/coverage-x11-artifact.zip",
+          "sha256": "b00179937622de2f78146ef4728c09f6a599a722e74098c1fdef63d40ffc45a4",
+          "backends": {
+            "x11": {
+              "counts": {
+                "total": 205,
+                "passed": 203,
+                "skipped": 2,
+                "failed": 0
+              },
+              "skipped": [
+                "original_new_window_maximized",
+                "native_peer_geometry_ready"
+              ],
+              "failures": [],
+              "fixtures": {
+                "native_surface_initialization_failures": {
+                  "attributes": {
+                    "name": "native_surface_initialization_failures",
+                    "classname": "native_surface_initialization_failures",
+                    "time": "3.22646",
+                    "status": "run"
+                  },
+                  "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+                  "artifact_member": "reports/x11/shard-1/tests.xml",
+                  "sweeps": [
+                    {
+                      "injected": 130,
+                      "first_uninjected_skip": 130
+                    },
+                    {
+                      "injected": 182,
+                      "first_uninjected_skip": 182
+                    }
+                  ]
+                },
+                "native_parallel_surface_failures": {
+                  "attributes": {
+                    "name": "native_parallel_surface_failures",
+                    "classname": "native_parallel_surface_failures",
+                    "time": "0.124154",
+                    "status": "run"
+                  },
+                  "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+                  "artifact_member": "reports/x11/shard-2/tests.xml"
+                }
+              },
+              "members": [
+                "reports/x11/shard-1/tests.xml",
+                "reports/x11/shard-2/tests.xml",
+                "reports/x11/shard-3/tests.xml",
+                "reports/x11/shard-4/tests.xml"
+              ]
+            }
+          }
+        },
+        "evidence_artifact_id": 14241661000,
+        "generic_xml": {
+          "files": 98,
+          "line_elements": 11263,
+          "duplicate_source_lines": 0,
+          "duplicates": []
+        },
+        "python_helpers": {
+          "total": 53,
+          "passed": 49,
+          "skipped": 4,
+          "failed": 0,
+          "coverage_regression_tests": [
+            "test_backend_json_merge_unions_branches_and_retains_coverage_policy (test_coverage_reports.GCCReports.test_backend_json_merge_unions_branches_and_retains_coverage_policy) ... ok",
+            "test_corrupt_counter_is_a_failure_not_an_uncovered_success (test_coverage_reports.GCCReports.test_corrupt_counter_is_a_failure_not_an_uncovered_success) ... ok",
+            "test_reports_keep_independent_header_branches_and_notes_only_zero_hits (test_coverage_reports.GCCReports.test_reports_keep_independent_header_branches_and_notes_only_zero_hits) ... ok",
+            "test_sonar_report_merges_headers_and_preserves_source_conditions (test_coverage_reports.GCCReports.test_sonar_report_merges_headers_and_preserves_source_conditions) ... ok",
+            "test_cli_rejects_executable_override (test_coverage_reports.MissingCoverage.test_cli_rejects_executable_override) ... ok",
+            "test_missing_notes_fail_without_creating_a_successful_report (test_coverage_reports.MissingCoverage.test_missing_notes_fail_without_creating_a_successful_report) ... ok"
+          ]
+        }
+      },
+      "coverage_wayland": {
+        "job_id": 133407785207,
+        "conclusion": "success",
+        "results": {
+          "archive": "ci-run-43898310949/coverage-wayland-artifact.zip",
+          "sha256": "e38d41cf8d0a5c93625a0ed6a49479daba654a063e9a786a58ba363b8a9ff282",
+          "backends": {
+            "wayland": {
+              "counts": {
+                "total": 205,
+                "passed": 205,
+                "failed": 0,
+                "skipped": 0
+              },
+              "skipped": [],
+              "failures": [],
+              "fixtures": {
+                "native_surface_initialization_failures": {
+                  "attributes": {
+                    "name": "native_surface_initialization_failures",
+                    "classname": "native_surface_initialization_failures",
+                    "time": "22.9483",
+                    "status": "run"
+                  },
+                  "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+                  "artifact_member": "reports/wayland/shard-1/tests.xml",
+                  "sweeps": [
+                    {
+                      "injected": 130,
+                      "first_uninjected_skip": 130
+                    },
+                    {
+                      "injected": 182,
+                      "first_uninjected_skip": 182
+                    }
+                  ]
+                },
+                "native_parallel_surface_failures": {
+                  "attributes": {
+                    "name": "native_parallel_surface_failures",
+                    "classname": "native_parallel_surface_failures",
+                    "time": "0.125358",
+                    "status": "run"
+                  },
+                  "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+                  "artifact_member": "reports/wayland/shard-2/tests.xml"
+                }
+              },
+              "members": [
+                "reports/wayland/shard-1/tests.xml",
+                "reports/wayland/shard-2/tests.xml",
+                "reports/wayland/shard-3/tests.xml",
+                "reports/wayland/shard-4/tests.xml"
+              ]
+            }
+          }
+        },
+        "evidence_artifact_id": 14241012953,
+        "generic_xml": {
+          "files": 98,
+          "line_elements": 11263,
+          "duplicate_source_lines": 0,
+          "duplicates": []
+        },
+        "python_helpers": {
+          "total": 53,
+          "passed": 49,
+          "skipped": 4,
+          "failed": 0,
+          "coverage_regression_tests": [
+            "test_backend_json_merge_unions_branches_and_retains_coverage_policy (test_coverage_reports.GCCReports.test_backend_json_merge_unions_branches_and_retains_coverage_policy) ... ok",
+            "test_corrupt_counter_is_a_failure_not_an_uncovered_success (test_coverage_reports.GCCReports.test_corrupt_counter_is_a_failure_not_an_uncovered_success) ... ok",
+            "test_reports_keep_independent_header_branches_and_notes_only_zero_hits (test_coverage_reports.GCCReports.test_reports_keep_independent_header_branches_and_notes_only_zero_hits) ... ok",
+            "test_sonar_report_merges_headers_and_preserves_source_conditions (test_coverage_reports.GCCReports.test_sonar_report_merges_headers_and_preserves_source_conditions) ... ok",
+            "test_cli_rejects_executable_override (test_coverage_reports.MissingCoverage.test_cli_rejects_executable_override) ... ok",
+            "test_missing_notes_fail_without_creating_a_successful_report (test_coverage_reports.MissingCoverage.test_missing_notes_fail_without_creating_a_successful_report) ... ok"
+          ]
+        }
+      },
+      "coverage_aggregate": {
+        "job_id": 133417138370,
+        "status": "completed",
+        "conclusion": "success",
+        "evidence_artifact_id": 14242355105,
+        "artifact_sha256": "24641e1296aefa6c729e6e5e4bfcec8323bccd0df7a994b30e5c9fa1057ce0f7",
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43898310949/coverage-aggregate-job.log",
+        "scm_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "scm_logged_utc": "2026-11-16T15:53:39.6571542Z",
+        "analysis_uploaded_utc": "2026-11-16T15:53:48.3638490Z",
+        "scanner_execution_success_utc": "2026-11-16T15:53:50.6772711Z",
+        "ce_task_id": "AaHlEIeaLosZbpaI6AUv",
+        "ce_task_url": "https://sonarcloud.io/api/ce/task?id=AaHlEIeaLosZbpaI6AUv",
+        "generic_xml": {
+          "files": 98,
+          "line_elements": 11263,
+          "duplicate_source_lines": 0,
+          "duplicates": [],
+          "raw_template_rows": {
+            "28": {
+              "source": "} catch (...) {",
+              "raw_instances": 2,
+              "positive_instances": 0,
+              "raw_hit_sum": 0,
+              "exported": [
+                {
+                  "lineNumber": "28",
+                  "covered": "false"
+                }
+              ],
+              "instances": [
+                {
+                  "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_112LayoutWorker5StartEljN9Scintilla8Internal16LayoutLineOptionEEUlvE_ZNS_3RunIS7_EEvjT_EUlS9_E_EEvjRS9_T0_ENKUlvE_clEv",
+                  "count": 0
+                },
+                {
+                  "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_115WrapBlockWorker5StartElEUlvE_ZNS_3RunIS4_EEvjT_EUlS6_E_EEvjRS6_T0_ENKUlvE_clEv",
+                  "count": 0
+                }
+              ]
+            },
+            "29": {
+              "source": "failures[index] = std::current_exception();",
+              "raw_instances": 2,
+              "positive_instances": 0,
+              "raw_hit_sum": 0,
+              "exported": [
+                {
+                  "lineNumber": "29",
+                  "covered": "false"
+                }
+              ],
+              "instances": [
+                {
+                  "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_112LayoutWorker5StartEljN9Scintilla8Internal16LayoutLineOptionEEUlvE_ZNS_3RunIS7_EEvjT_EUlS9_E_EEvjRS9_T0_ENKUlvE_clEv",
+                  "count": 0
+                },
+                {
+                  "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_115WrapBlockWorker5StartElEUlvE_ZNS_3RunIS4_EEvjT_EUlS6_E_EEvjRS6_T0_ENKUlvE_clEv",
+                  "count": 0
+                }
+              ]
+            },
+            "32": {
+              "source": "} catch (...) {",
+              "raw_instances": 5,
+              "positive_instances": 1,
+              "raw_hit_sum": 6,
+              "exported": [
+                {
+                  "lineNumber": "32",
+                  "covered": "true"
+                }
+              ]
+            },
+            "33": {
+              "source": "startupFailure = std::current_exception();",
+              "raw_instances": 5,
+              "positive_instances": 1,
+              "raw_hit_sum": 6,
+              "exported": [
+                {
+                  "lineNumber": "33",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "37": {
+              "source": "if (startupFailure) std::rethrow_exception(startupFailure);",
+              "raw_instances": 5,
+              "positive_instances": 5,
+              "raw_hit_sum": 392,
+              "exported": [
+                {
+                  "lineNumber": "37",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "39": {
+              "source": "if (failure) std::rethrow_exception(failure);",
+              "raw_instances": 5,
+              "positive_instances": 4,
+              "raw_hit_sum": 1185,
+              "exported": [
+                {
+                  "lineNumber": "39",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            }
+          },
+          "source_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+          "matching_parallel_file_records": 1,
+          "worker_catch_interpretation": "Lines 28 and 29 each have only the retained LayoutWorker and WrapBlockWorker lambda instances, both with zero counts. The fixture outer RunThreads instances are present elsewhere, but their nested worker lambda rows are absent from the raw JSON for lines 27-29. XML faithfully reflects the retained raw records. These counters do not establish that the fault fixture failed to execute worker exception handling; its completed runtime assertions demonstrate propagation and joining."
+        },
+        "worker_catch_raw_records": "/workspace/scratch/44c8652c3121/ci-run-43898310949/parallel-worker-raw-lines.json"
+      },
+      "raw_log_sha256": {
+        "linux-ordinary-job.log": "80130f4d019cdd1bcc71f9b36d28641b19abfd86eea60984569e79c94fb85b2a",
+        "coverage-aggregate-job.log": "95777249f298ce3dc8f782d510e5f6ab8c161900877e074b2e2d8c9a65a7ab78",
+        "coverage-wayland-job.log": "05bd7ec9fffdd70bef8f637df27f7da2f5837512295eac5227e2d2bbe7885d82",
+        "coverage-x11-job.log": "247c7dfaf5a2deb86390722771521d41ee322c5eb7702120ea9dc779b9183cbb"
+      },
+      "artifact_metadata": "/workspace/scratch/44c8652c3121/ci-run-43898310949/github-artifacts.json",
+      "job_metadata": "/workspace/scratch/44c8652c3121/ci-run-43898310949/github-linux-jobs.json",
+      "repository_changes": "none during fourth-round monitoring",
+      "recorded_utc": "2026-11-16T15:58:50.092761+00:00",
+      "conclusion": "success",
+      "sonar_quality_gate": {
+        "status": "ERROR",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "ERROR",
+            "errorThreshold": "1",
+            "actualValue": "3"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "OK",
+            "errorThreshold": "80",
+            "actualValue": "83.0"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      },
+      "sonar_measures": {
+        "component": {
+          "key": "1298345095_wxnotepad",
+          "name": "wxnotepad",
+          "qualifier": "TRK"
+        },
+        "measures": [
+          {
+            "metric": "coverage",
+            "value": "87.0",
+            "bestValue": false
+          },
+          {
+            "metric": "new_line_coverage",
+            "value": "86.27450980392157",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_coverage",
+            "value": "82.96529968454259",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_conditions_to_cover",
+            "value": "164",
+            "period": 1
+          },
+          {
+            "metric": "new_branch_coverage",
+            "value": "79.8780487804878",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_uncovered_lines",
+            "value": "21",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_uncovered_conditions",
+            "value": "33",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_lines_to_cover",
+            "value": "153",
+            "period": 1
+          }
+        ],
+        "metrics": [
+          {
+            "key": "new_line_coverage",
+            "name": "Line Coverage on New Code",
+            "description": "Line coverage of added/changed code",
+            "domain": "Coverage",
+            "type": "PERCENT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_branch_coverage",
+            "name": "Condition Coverage on New Code",
+            "description": "Condition coverage of new/changed code",
+            "domain": "Coverage",
+            "type": "PERCENT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_conditions_to_cover",
+            "name": "Conditions to Cover on New Code",
+            "description": "Conditions to cover on new code",
+            "domain": "Coverage",
+            "type": "INT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "coverage",
+            "name": "Coverage",
+            "description": "Coverage by tests",
+            "domain": "Coverage",
+            "type": "PERCENT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_coverage",
+            "name": "Coverage on New Code",
+            "description": "Coverage of new/changed code",
+            "domain": "Coverage",
+            "type": "PERCENT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_lines_to_cover",
+            "name": "Lines to Cover on New Code",
+            "description": "Lines to cover on new code",
+            "domain": "Coverage",
+            "type": "INT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_uncovered_lines",
+            "name": "Uncovered Lines on New Code",
+            "description": "Uncovered lines on new code",
+            "domain": "Coverage",
+            "type": "INT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_uncovered_conditions",
+            "name": "Uncovered Conditions on New Code",
+            "description": "Uncovered conditions on new code",
+            "domain": "Coverage",
+            "type": "INT",
+            "hidden": false,
+            "custom": false
+          }
+        ]
+      },
+      "sonar_summary": {
+        "new_coverage": 82.96529968454259,
+        "displayed_new_coverage": 83.0,
+        "new_lines": 153,
+        "covered_new_lines": 132,
+        "new_conditions": 164,
+        "covered_new_conditions": 131,
+        "covered_items": 263,
+        "total_items": 317,
+        "coverage_condition": "OK",
+        "gate_status": "ERROR",
+        "failing_condition": "new_reliability_rating",
+        "actual_reliability_rating": 3,
+        "followup_owner": "root and sonar_triage"
+      },
+      "merged_coverage_json": "/workspace/scratch/44c8652c3121/ci-run-43898310949/merged-coverage-extracted/.ci/reports/coverage/coverage.json",
+      "merged_coverage_xml": "/workspace/scratch/44c8652c3121/ci-run-43898310949/merged-coverage-extracted/.ci/reports/coverage/sonar.xml",
+      "associated_commit_workflows": [
+        {
+          "id": 43898310979,
+          "name": "CodeQL",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 227,
+          "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310979/jobs",
+          "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310979/logs",
+          "workflow_id": 403089439
+        },
+        {
+          "id": 43898311086,
+          "name": "Fuzz",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 85,
+          "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898311086/jobs",
+          "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898311086/logs",
+          "workflow_id": 413097809
+        },
+        {
+          "id": 43898310949,
+          "name": "CI",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 228,
+          "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310949/jobs",
+          "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310949/logs",
+          "workflow_id": 403089440
+        },
+        {
+          "id": 43898310953,
+          "name": "Quality",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 227,
+          "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310953/jobs",
+          "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310953/logs",
+          "workflow_id": 403089438
+        }
+      ],
+      "all_four_workflows_success": true
+    },
+    "merged_generic_xml_audit": {
+      "files": 98,
+      "line_elements": 11263,
+      "duplicate_source_lines": 0,
+      "duplicates": [],
+      "raw_template_rows": {
+        "28": {
+          "source": "} catch (...) {",
+          "raw_instances": 2,
+          "positive_instances": 0,
+          "raw_hit_sum": 0,
+          "exported": [
+            {
+              "lineNumber": "28",
+              "covered": "false"
+            }
+          ],
+          "instances": [
+            {
+              "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_112LayoutWorker5StartEljN9Scintilla8Internal16LayoutLineOptionEEUlvE_ZNS_3RunIS7_EEvjT_EUlS9_E_EEvjRS9_T0_ENKUlvE_clEv",
+              "count": 0
+            },
+            {
+              "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_115WrapBlockWorker5StartElEUlvE_ZNS_3RunIS4_EEvjT_EUlS6_E_EEvjRS6_T0_ENKUlvE_clEv",
+              "count": 0
+            }
+          ]
+        },
+        "29": {
+          "source": "failures[index] = std::current_exception();",
+          "raw_instances": 2,
+          "positive_instances": 0,
+          "raw_hit_sum": 0,
+          "exported": [
+            {
+              "lineNumber": "29",
+              "covered": "false"
+            }
+          ],
+          "instances": [
+            {
+              "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_112LayoutWorker5StartEljN9Scintilla8Internal16LayoutLineOptionEEUlvE_ZNS_3RunIS7_EEvjT_EUlS9_E_EEvjRS9_T0_ENKUlvE_clEv",
+              "count": 0
+            },
+            {
+              "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_115WrapBlockWorker5StartElEUlvE_ZNS_3RunIS4_EEvjT_EUlS6_E_EEvjRS6_T0_ENKUlvE_clEv",
+              "count": 0
+            }
+          ]
+        },
+        "32": {
+          "source": "} catch (...) {",
+          "raw_instances": 5,
+          "positive_instances": 1,
+          "raw_hit_sum": 6,
+          "exported": [
+            {
+              "lineNumber": "32",
+              "covered": "true"
+            }
+          ]
+        },
+        "33": {
+          "source": "startupFailure = std::current_exception();",
+          "raw_instances": 5,
+          "positive_instances": 1,
+          "raw_hit_sum": 6,
+          "exported": [
+            {
+              "lineNumber": "33",
+              "covered": "true",
+              "branchesToCover": "1",
+              "coveredBranches": "1"
+            }
+          ]
+        },
+        "37": {
+          "source": "if (startupFailure) std::rethrow_exception(startupFailure);",
+          "raw_instances": 5,
+          "positive_instances": 5,
+          "raw_hit_sum": 392,
+          "exported": [
+            {
+              "lineNumber": "37",
+              "covered": "true",
+              "branchesToCover": "2",
+              "coveredBranches": "2"
+            }
+          ]
+        },
+        "39": {
+          "source": "if (failure) std::rethrow_exception(failure);",
+          "raw_instances": 5,
+          "positive_instances": 4,
+          "raw_hit_sum": 1185,
+          "exported": [
+            {
+              "lineNumber": "39",
+              "covered": "true",
+              "branchesToCover": "2",
+              "coveredBranches": "2"
+            }
+          ]
+        }
+      },
+      "source_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+      "matching_parallel_file_records": 1,
+      "worker_catch_interpretation": "Lines 28 and 29 each have only the retained LayoutWorker and WrapBlockWorker lambda instances, both with zero counts. The fixture outer RunThreads instances are present elsewhere, but their nested worker lambda rows are absent from the raw JSON for lines 27-29. XML faithfully reflects the retained raw records. These counters do not establish that the fault fixture failed to execute worker exception handling; its completed runtime assertions demonstrate propagation and joining."
+    },
+    "sonar": {
+      "scm_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+      "ce_task": "AaHlEIeaLosZbpaI6AUv",
+      "quality_gate": {
+        "status": "ERROR",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "ERROR",
+            "errorThreshold": "1",
+            "actualValue": "3"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "OK",
+            "errorThreshold": "80",
+            "actualValue": "83.0"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      },
+      "new_coverage": "83.0",
+      "new_lines_covered": 132,
+      "new_lines_to_cover": 153,
+      "new_conditions_covered": 131,
+      "new_conditions_to_cover": 164
+    }
+  },
+  "final_fixture_followup": {
+    "baseline": "7e57caea1acce20a425612087ec81ee538b916d6",
+    "fixes": [
+      {
+        "key": "AaHlEI_dI6O6B77zdqDU",
+        "rule": "cpp:S1763",
+        "file": "tests/parallel_surface_failure.cpp",
+        "change": "Removed unreachable throw after rethrow_exception and the now-redundant final return in the system_error handler.",
+        "control_flow": "Require(failure) rejects a missing exception. rethrow_exception never returns. The expected system_error is checked for original code and completion counts, then exits the function; all other exceptions propagate."
+      },
+      {
+        "key": "AaHlEI_bI6O6B77zdqDO",
+        "rule": "cpp:S995",
+        "file": "tests/surface_initialization.cpp",
+        "change": "CheckDrawingFactory receives const EditorControl&; it only passes editor to the existing const DrawingSurface observer."
+      }
+    ],
+    "validation": {
+      "compiler": "g++-14",
+      "flags": "-std=c++23 -O2 -g -pthread -Wall -Wextra -Wpedantic -Werror",
+      "exit_code": 0,
+      "probe_summary": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-flow-O2/summary.json",
+      "probe_log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-flow-O2/run-001.log",
+      "formatting": "Canonical clang-format applied to both fixture files; git diff --check passed.",
+      "native_fixture_build": {
+        "targets": [
+          "surface_initialization",
+          "parallel_surface_failure"
+        ],
+        "exit_code": 0,
+        "log": "native-build/final-fixture-fix-build.log",
+        "sha256": "977f80135d2805fc608d40c6497ce341f097e11b5f6a531f28a4bd38bb5a44b1"
+      }
+    },
+    "source_sha256": {
+      "tests/parallel_surface_failure.cpp": "28cbac7dd7cfa5656b4206a3641bd59a76593829b2345912510a7acab5622819",
+      "tests/surface_initialization.cpp": "b15fcee724bb6b0b30290498c366e924d760b725cb10f305ffcf794bfd504bad"
+    },
+    "sonar_dispositions": {
+      "ledger": "sonarqube-2026-11-16-surface-pr-dispositions.json",
+      "new_false_positive_transitions": 7,
+      "verified_false_positive": 7,
+      "verified_open_confirmed": 0,
+      "previous_code_findings_verified_fixed": 25
+    },
+    "final_hosted_validation": "The continuation PR description and checks record the matching final revision and hosted validation; this record preserves evidence available before that batch."
   }
 }

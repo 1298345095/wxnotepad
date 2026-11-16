@@ -118,7 +118,7 @@ void CheckUnavailableContext(wxWindow& window, wxDC& borrowed, const core::Font&
     std::puts("PASS: missing and unavailable native contexts leave a reusable surface");
 }
 
-void CheckDrawingFactory(EditorControl& editor, wxDC& borrowed, const core::Font& font) {
+void CheckDrawingFactory(const EditorControl& editor, wxDC& borrowed, const core::Font& font) {
     bool injected = false;
     bool caught = false;
     {

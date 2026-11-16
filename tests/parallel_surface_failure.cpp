@@ -146,9 +146,7 @@ void PartialStartFailure(unsigned failAfter) {
                 "the startup failure remains primary when an earlier worker also fails");
         Require(launched == failAfter && completed == failAfter,
                 "every successfully started task joins before partial startup failure propagates");
-        return;
     }
-    throw std::runtime_error("partial startup failure must reach the caller");
 }
 
 #ifdef _WIN32
