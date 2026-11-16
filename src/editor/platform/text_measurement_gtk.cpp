@@ -152,7 +152,7 @@ std::vector<int> PartialExtents(PangoLayout* layout, size_t characterCount) {
     if (pango_layout_get_character_count(layout)) {
         int attributeCount = 0;
         const auto* attributes = pango_layout_get_log_attrs_readonly(layout, &attributeCount);
-        LayoutIterator iterator(pango_layout_get_iter(layout), pango_layout_iter_free);
+        LayoutIterator iterator(pango_layout_get_iter(layout), &pango_layout_iter_free);
         int byteIndex = 0;
         PangoRectangle rectangle;
         for (int character = 1; pango_layout_iter_next_char(iterator.get()); ++character) {
@@ -174,7 +174,7 @@ std::vector<int> PartialExtents(PangoLayout* layout, size_t characterCount) {
 } // namespace
 
 struct MeasurementFont::Data {
-    FontDescription description{nullptr, pango_font_description_free};
+    FontDescription description{nullptr, &pango_font_description_free};
 };
 
 MeasurementFont::MeasurementFont(const wxFont& font) : data_(std::make_unique<Data>()) {
@@ -187,7 +187,7 @@ MeasurementFont::~MeasurementFont() = default;
 
 struct TextMeasurement::Data {
     std::shared_ptr<WorkerPool> pool;
-    FontOptions options{nullptr, cairo_font_options_destroy};
+    FontOptions options{nullptr, &cairo_font_options_destroy};
     std::optional<PangoMatrix> matrix;
     double resolution = 0;
     PangoDirection direction{};
@@ -200,7 +200,7 @@ struct TextMeasurement::Data {
 
     static uint64_t NextSerial() {
         static std::atomic<uint64_t> next{1};
-        return next.fetch_add(1, std::memory_order_relaxed);
+        return next.fetch_add(1);
     }
     WorkerState& Context() const {
         auto& worker = ThreadState(pool);
@@ -220,7 +220,7 @@ struct TextMeasurement::Data {
     }
 
     void SetText(WorkerState& worker, const MeasurementFont::Data& font, const Characters& characters) const {
-        FontDescription scaled(nullptr, pango_font_description_free);
+        FontDescription scaled(nullptr, &pango_font_description_free);
         const auto* description = font.description.get();
         if (fontScale != 1) {
             scaled.reset(pango_font_description_copy(description));
@@ -254,8 +254,8 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
 
     // pango_cairo_context_get_font_options omits the target surface options.
     // Merge both sources exactly as pango_cairo_update_context does internally.
-    FontOptions options(cairo_font_options_create(), cairo_font_options_destroy);
-    FontOptions explicitOptions(cairo_font_options_create(), cairo_font_options_destroy);
+    FontOptions options(cairo_font_options_create(), &cairo_font_options_destroy);
+    FontOptions explicitOptions(cairo_font_options_create(), &cairo_font_options_destroy);
     cairo_surface_get_font_options(cairo_get_target(cairo), options.get());
     cairo_get_font_options(cairo, explicitOptions.get());
     cairo_font_options_merge(options.get(), explicitOptions.get());
