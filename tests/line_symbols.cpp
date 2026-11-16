@@ -118,13 +118,13 @@ void Combined(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-line-symbols");
     std::filesystem::create_directory(directory);
     const std::string utf8 = "中文\r\n\r\nbeta\ngamma\rlast";
-    const std::string utf16("\xff\xfe"
+    const std::string utf16("\x{ff}\x{fe}"
                             "A\0\r\0\n\0B\0\n\0C\0\r\0",
                             16);
-    const std::string gbk = "\xd6\xd0\r\nA\rB\n";
+    const std::string gbk = "\x{d6}\x{d0}\r\nA\rB\n";
     const TestFiles::EncodedFixture fixtures[] = {
         {"utf8", FileEncoding::Utf8, utf8, utf8 + "!"},
-        {"utf8bom", FileEncoding::Utf8, "\xef\xbb\xbf" + utf8, "\xef\xbb\xbf" + utf8 + "!"},
+        {"utf8bom", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}" + utf8, "\x{ef}\x{bb}\x{bf}" + utf8 + "!"},
         {"utf16le", FileEncoding::Utf16Le, utf16, utf16 + std::string("!\0", 2)},
         {"gbk", FileEncoding::Gbk, gbk, gbk + "!"}};
     for (const auto& fixture : fixtures) {

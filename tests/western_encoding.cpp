@@ -96,9 +96,9 @@ void Pickers(EditorFrame* frame, bool native) {
                     TestEditor::Text(frame) == "€" && TestFiles::Bytes(path) == "€" && frame->DocumentIsModified(),
                 "F9 chooses original Windows-1252 destination without reading or writing source");
     }
-    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == "\x80",
+    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == "\x{80}",
             "selected Windows-1252 saves exact Euro byte");
-    TestFiles::WriteBytes(path, "\xda\xc4\xbf");
+    TestFiles::WriteBytes(path, "\x{da}\x{c4}\x{bf}");
     {
         Picker driver("DOS-437", true);
         if (native)
@@ -155,7 +155,7 @@ void LossAndSaveVariants(EditorFrame* frame) {
     const auto renamed = TestFiles::TemporaryDirectory("western-renamed.txt");
     for (const auto& [name, encoding] :
          {std::pair{"cp1252", FileEncoding::Windows1252}, std::pair{"cp437", FileEncoding::Dos437}}) {
-        const std::string sample = "A€∞Ā中😀\ue000\r\n";
+        const std::string sample = "A€∞Ā中😀\u{e000}\r\n";
         TestFiles::WriteBytes(source, "unchanged");
         Require(frame->Open(TestFiles::Filename(source), FileEncoding::Utf8).status == OpenStatus::Opened,
                 "loss source opens");
@@ -197,7 +197,7 @@ void LossAndSaveVariants(EditorFrame* frame) {
         TestEditor::Append(frame, encoding == FileEncoding::Windows1252 ? "€" : "∞");
         const auto first = TestFiles::TemporaryDirectory(std::string(name) + "-first.txt");
         Require(frame->SaveFirst(TestFiles::Filename(first)).status == SaveStatus::Saved &&
-                    TestFiles::Bytes(first) == (encoding == FileEncoding::Windows1252 ? "\x80" : "\xec"),
+                    TestFiles::Bytes(first) == (encoding == FileEncoding::Windows1252 ? "\x{80}" : "\x{ec}"),
                 "first Save writes selected single-byte codec");
     }
     std::puts("PASS: original loss Cancel/accept, safe-save failure, Save Copy and Save variants");
@@ -375,8 +375,8 @@ void ExplicitOpen(EditorFrame* frame) {
         const char* input;
         const char* text;
     };
-    constexpr Fixture fixtures[] = {{"Open As Windows-1252...", FileEncoding::Windows1252, "\x80", "€"},
-                                    {"Open As DOS-437...", FileEncoding::Dos437, "\xec", "∞"}};
+    constexpr Fixture fixtures[] = {{"Open As Windows-1252...", FileEncoding::Windows1252, "\x{80}", "€"},
+                                    {"Open As DOS-437...", FileEncoding::Dos437, "\x{ec}", "∞"}};
     for (const auto& fixture : fixtures) {
         const auto path = TestFiles::TemporaryDirectory("open-as-western.nfo");
         TestFiles::WriteBytes(path, fixture.input);

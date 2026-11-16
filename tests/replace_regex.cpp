@@ -230,7 +230,7 @@ public:
                     TestFiles::TemporaryDirectory() / ("wxnotepad-regex-" + std::to_string(wxGetProcessId()) + ".txt");
                 {
                     std::ofstream file(path, std::ios::binary);
-                    file << "\xef\xbb\xbf"
+                    file << "\x{ef}\x{bb}\x{bf}"
                             "中文12\r\nlast\n";
                 }
                 editor->Send(Message::SetSavePoint);
@@ -251,7 +251,7 @@ public:
                     std::ifstream file(path, std::ios::binary);
                     return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
                 }();
-                Require(bytes == "\xef\xbb\xbf"
+                Require(bytes == "\x{ef}\x{bb}\x{bf}"
                                  "12:中文\r\nlast\n" &&
                             frame->DocumentHasUtf8Bom() && !editor->Send(Message::GetModify),
                         "Save must preserve BOM and untouched mixed EOL with independently checked capture bytes");

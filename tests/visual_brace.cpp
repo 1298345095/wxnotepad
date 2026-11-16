@@ -194,10 +194,11 @@ void SavedState(EditorFrame* frame, int toggle) {
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-visual-brace");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "(x)", "(x)!"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\xFF\xFE(\0x\0)\0", 8), std::string("\xFF\xFE(\0x\0)\0!\0", 10)},
-        {"gbk", FileEncoding::Gbk, "(\xD6\xD0)", "(\xD6\xD0)!"}};
+    const TestFiles::EncodedFixture fixtures[] = {{"utf8", FileEncoding::Utf8, "(x)", "(x)!"},
+                                                  {"utf16", FileEncoding::Utf16Le,
+                                                   std::string("\x{FF}\x{FE}(\0x\0)\0", 8),
+                                                   std::string("\x{FF}\x{FE}(\0x\0)\0!\0", 10)},
+                                                  {"gbk", FileEncoding::Gbk, "(\x{D6}\x{D0})", "(\x{D6}\x{D0})!"}};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         std::ofstream(path, std::ios::binary) << fixture.before;

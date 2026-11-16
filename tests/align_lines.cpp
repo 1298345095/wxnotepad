@@ -301,11 +301,11 @@ void OriginalEdges(EditorControl* editor) {
     editor->Send(Message::SetUseTabs, 0);
 
     TestEditor::ResetStream(editor,
-                            "  a\xc2\xa0"
+                            "  a\x{c2}\x{a0}"
                             "b   c\n    中\nOUTSIDE",
                             1, 19);
     editor->AlignLines(AlignmentMode::Left);
-    Require(TestEditor::Text(editor) == "  a\xc2\xa0"
+    Require(TestEditor::Text(editor) == "  a\x{c2}\x{a0}"
                                         "b c\n  中\nOUTSIDE",
             "only ASCII spaces and Tabs split words; a next-line-start endpoint excludes its line");
     TestEditor::RequireSelection(editor, 0, 15, "excluded next line starts immediately after repaired selection");
@@ -410,10 +410,11 @@ void SavedBytes(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("align-lines");
     std::filesystem::create_directory(directory);
     const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf  中   文\r\n    x\n", "\xef\xbb\xbf  中 文\r\n  x\n"},
-        {"gbk", FileEncoding::Gbk, "  \xd6\xd0   \xce\xc4\r\n    x\n", "  \xd6\xd0 \xce\xc4\r\n  x\n"},
-        {"utf16", FileEncoding::Utf16Le, "\xff\xfe \0 \0\x2d\x4e \0 \0 \0\x87\x65\r\0\n\0 \0 \0 \0 \0x\0\n\0"s,
-         "\xff\xfe \0 \0\x2d\x4e \0\x87\x65\r\0\n\0 \0 \0x\0\n\0"s},
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}  中   文\r\n    x\n", "\x{ef}\x{bb}\x{bf}  中 文\r\n  x\n"},
+        {"gbk", FileEncoding::Gbk, "  \x{d6}\x{d0}   \x{ce}\x{c4}\r\n    x\n", "  \x{d6}\x{d0} \x{ce}\x{c4}\r\n  x\n"},
+        {"utf16", FileEncoding::Utf16Le,
+         "\x{ff}\x{fe} \0 \0\x{2d}\x{4e} \0 \0 \0\x{87}\x{65}\r\0\n\0 \0 \0 \0 \0x\0\n\0"s,
+         "\x{ff}\x{fe} \0 \0\x{2d}\x{4e} \0\x{87}\x{65}\r\0\n\0 \0 \0x\0\n\0"s},
     };
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");

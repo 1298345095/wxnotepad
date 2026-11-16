@@ -73,14 +73,14 @@ void ManualCanonicalMarkup(EditorFrame* frame) {
     editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
     // Pinned Styles.cpp::Style_SelectLexer sniffs the canonical Web choice;
     // its independently specified HtmlOption_HtmlVBScript bytes are 0e20.
-    Require(std::string(property) == "\x0e\x20" &&
+    Require(std::string(property) == "\x{0e}\x{20}" &&
                 frame->GetStatusBar()->GetStatusText().Contains("ASP VBScript (override)") &&
                 TestEditor::Text(editor) == text && !frame->DocumentIsModified() && !editor->Send(Message::CanUndo) &&
                 TestFiles::Bytes(path) == text,
             "canonical Web menu choice sniffs VBScript without changing clean text, history or disk");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "ASP JavaScript"));
     editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
-    Require(std::string(property) == "\x0e\x10" &&
+    Require(std::string(property) == "\x{0e}\x{10}" &&
                 frame->GetStatusBar()->GetStatusText().Contains("ASP JavaScript (override)"),
             "explicit dialect choice overrides the conflicting document directive");
     const auto xml = TestFiles::TemporaryDirectory("manual-schema.txt");
@@ -89,7 +89,7 @@ void ManualCanonicalMarkup(EditorFrame* frame) {
             "manual XML fixture opens as plain text");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "XML Document"));
     editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
-    Require(std::string(property) == "\x01\x10" &&
+    Require(std::string(property) == "\x{01}\x{10}" &&
                 frame->GetStatusBar()->GetStatusText().Contains("XML Schema (override)") &&
                 !frame->DocumentIsModified() && !editor->Send(Message::CanUndo),
             "canonical XML menu choice sniffs schema while retaining original XML options and clean state");
@@ -106,9 +106,9 @@ void ManualMarkupFamilies(EditorFrame* frame) {
     // Original Style_SelectLexer keeps pLex (selected scheme) separate from
     // np2LexLangIndex (sniffed status/dialect), even for conflicting headers.
     for (const auto& fixture :
-         {Fixture{"xml-html.txt", "XML Document", "<!DOCTYPE html><html/>", "Web Source Code", "\x01\x10", 4},
-          {"xml-asp.txt", "XML Document", "<%@ Language=\"VBScript\" %>", "ASP VBScript", "\x01\x10", 4},
-          {"web-schema.txt", "Web Source Code", "<!DOCTYPE schema><schema/>", "XML Schema", "\x0e\x10", 2}}) {
+         {Fixture{"xml-html.txt", "XML Document", "<!DOCTYPE html><html/>", "Web Source Code", "\x{01}\x{10}", 4},
+          {"xml-asp.txt", "XML Document", "<%@ Language=\"VBScript\" %>", "ASP VBScript", "\x{01}\x{10}", 4},
+          {"web-schema.txt", "Web Source Code", "<!DOCTYPE schema><schema/>", "XML Schema", "\x{0e}\x{10}", 2}}) {
         const auto path = TestFiles::TemporaryDirectory(fixture.name);
         TestFiles::WriteBytes(path, fixture.text);
         Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
@@ -165,7 +165,7 @@ void AutomaticMarkupFamilies(EditorFrame* frame) {
                               reinterpret_cast<intptr_t>(property));
         const bool isXml = path == xml;
         const wxString family = isXml ? "XML Document" : "Web Source Code";
-        Require(std::string(property) == (isXml ? "\x01\x10" : "\x0e\x10") &&
+        Require(std::string(property) == (isXml ? "\x{01}\x{10}" : "\x{0e}\x{10}") &&
                     frame->GetStatusBar()->GetStatusText().Contains(isXml ? "ASP VBScript" : "Web Source Code") &&
                     !frame->GetStatusBar()->GetStatusText().Contains("override") &&
                     frame->Editor()->Send(Message::GetTabWidth) == (isXml ? 4 : 2),
@@ -190,13 +190,13 @@ void AutomaticSniffedFamilies(EditorFrame* frame) {
     // Style_GetDocTypeLanguage in np2LexLangIndex. Only WEB promotes XML to HTML.
     for (const auto& fixture :
          {Fixture{"sample.cfg", "<?xml version=\"1.0\"?><root><!-- <%@ Language=\"VBScript\" %> --></root>",
-                  "XML Document", "ASP VBScript", "\x01\x10", 4},
+                  "XML Document", "ASP VBScript", "\x{01}\x{10}", 4},
           {"unknown-markup", "<?xml version=\"1.0\"?><root><!-- <%@ Language=\"VBScript\" %> --></root>",
-           "XML Document", "ASP VBScript", "\x01\x10", 4},
-          {"page.asp", "<!DOCTYPE schema><schema/>", "Web Source Code", "XML Schema", "\x0e\x10", 2},
-          {"page.aspx", "<!DOCTYPE schema><schema/>", "Web Source Code", "XML Schema", "\x0e\x10", 2},
+           "XML Document", "ASP VBScript", "\x{01}\x{10}", 4},
+          {"page.asp", "<!DOCTYPE schema><schema/>", "Web Source Code", "XML Schema", "\x{0e}\x{10}", 2},
+          {"page.aspx", "<!DOCTYPE schema><schema/>", "Web Source Code", "XML Schema", "\x{0e}\x{10}", 2},
           {"web-promotion.cfg", "<?xml version=\"1.0\"?><!DOCTYPE html><html/>", "Web Source Code", "Web Source Code",
-           "\x0e\x10", 2}}) {
+           "\x{0e}\x{10}", 2}}) {
         const auto path = TestFiles::TemporaryDirectory(fixture.name);
         TestFiles::WriteBytes(path, fixture.text);
         Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,

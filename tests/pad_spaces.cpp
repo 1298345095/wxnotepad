@@ -272,10 +272,11 @@ void SavedBytes(EditorFrame* frame) {
     std::filesystem::create_directory(directory);
     using Fixture = TestFiles::EncodedFixture;
     const Fixture fixtures[] = {
-        {"utf8-bom", FileEncoding::Utf8, "\xef\xbb\xbf中文\r\nA\n😀\r", "\xef\xbb\xbf中文\r\nA \n😀 \r  "},
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0\xce\xc4\rA\r\nx\n", "\xd6\xd0\xce\xc4\rA \r\nx \n  "},
-        {"utf16-bom", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\x87\x65\x0d\0\x0a\0\x41\0", 12),
-         std::string("\xff\xfe\x2d\x4e\x87\x65\x0d\0\x0a\0\x41\0\x20\0", 14)},
+        {"utf8-bom", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中文\r\nA\n😀\r", "\x{ef}\x{bb}\x{bf}中文\r\nA \n😀 \r  "},
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\x{ce}\x{c4}\rA\r\nx\n", "\x{d6}\x{d0}\x{ce}\x{c4}\rA \r\nx \n  "},
+        {"utf16-bom", FileEncoding::Utf16Le,
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0\x{41}\0", 12),
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0\x{41}\0\x{20}\0", 14)},
     };
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");

@@ -112,7 +112,7 @@ private:
 void DelayedOpenAs(EditorFrame* frame, const std::filesystem::path& directory) {
     const auto expected = directory / "delayed-utf16.txt";
     const auto previous = directory / "previous-utf8.txt";
-    TestFiles::WriteBytes(expected, "\x2d\x4e");
+    TestFiles::WriteBytes(expected, "\x{2d}\x{4e}");
     TestFiles::WriteBytes(previous, "wrong");
     DelayedFileSelection selection(Filename(expected), Filename(previous));
     FileCommandDriver driver(FileDialogProfile::Open, wxID_NO, Filename(expected), TraceFileCommand);
@@ -126,7 +126,7 @@ void DelayedOpenAs(EditorFrame* frame, const std::filesystem::path& directory) {
     Require(selection.Held() && selection.Restored() && result.status == OpenStatus::Opened &&
                 frame->DocumentPath() == Filename(expected) && Text(frame) == "中" &&
                 frame->DocumentEncoding() == FileEncoding::Utf16Le && !frame->DocumentHasBom() &&
-                Bytes(expected) == "\x2d\x4e" && Bytes(previous) == "wrong",
+                Bytes(expected) == "\x{2d}\x{4e}" && Bytes(previous) == "wrong",
             "Open As must await the requested native filename instead of accepting a previous selection");
     Require(frame->NewDocument(), "delayed native Open As fixture must restore a fresh document");
     std::puts("PASS: delayed native selection opens the requested UTF-16LE file and preserves independent disk bytes");
@@ -232,7 +232,7 @@ void NativePickerAndSamePath(EditorFrame* frame, const std::filesystem::path& di
             "native Open cancellation must retain the clean document");
     const auto pickedPath = directory / "picked.txt";
     {
-        std::ofstream(pickedPath, std::ios::binary) << "\xef\xbb\xbfPicked\r\n";
+        std::ofstream(pickedPath, std::ios::binary) << "\x{ef}\x{bb}\x{bf}Picked\r\n";
     }
     FileCommandDriver pickerAccept(FileDialogProfile::Open, wxID_NO, Filename(pickedPath), TraceFileCommand);
     wxCommandEvent openAccept(wxEVT_MENU, wxID_OPEN);
@@ -249,7 +249,7 @@ void NativePickerAndSamePath(EditorFrame* frame, const std::filesystem::path& di
     Require(menuNew.prompts == 1 && Text(frame).empty() && frame->DocumentPath().empty() &&
                 !frame->DocumentHasUtf8Bom(),
             "native New command must reset the document");
-    Require(Bytes(pickedPath) == "\xef\xbb\xbfPicked\r\n", "Discard New must preserve source bytes");
+    Require(Bytes(pickedPath) == "\x{ef}\x{bb}\x{bf}Picked\r\n", "Discard New must preserve source bytes");
     std::puts("PASS: native Open chooser accept/cancel and New menu commands");
     Require(frame->Open(Filename(pickedPath)).status == OpenStatus::Opened, "same-path reopen setup must load");
     Append(frame, "saved");
@@ -257,20 +257,20 @@ void NativePickerAndSamePath(EditorFrame* frame, const std::filesystem::path& di
     Require(frame->Open(Filename(pickedPath)).status == OpenStatus::Opened, "Save then reopen same path must succeed");
     samePathSave.Stop();
     Require(samePathSave.prompts == 1 && Text(frame) == "Picked\r\nsaved" &&
-                Bytes(pickedPath) == "\xef\xbb\xbfPicked\r\nsaved",
+                Bytes(pickedPath) == "\x{ef}\x{bb}\x{bf}Picked\r\nsaved",
             "same-path Open Save must show the newly saved content");
     std::puts("PASS: reopening the current path after Save uses the saved content");
 }
 void CloseSaveRoundTrips(const std::filesystem::path& directory, SettingsStore* settings) {
     const std::vector<std::string> samples = {"",
-                                              "\xef\xbb\xbf",
+                                              "\x{ef}\x{bb}\x{bf}",
                                               "ASCII",
-                                              "\xef\xbb\xbf"
+                                              "\x{ef}\x{bb}\x{bf}"
                                               "ASCII",
                                               "中文😀\r\nsecond\r\n",
-                                              "\xef\xbb\xbf中文😀\nsecond\n",
+                                              "\x{ef}\x{bb}\x{bf}中文😀\nsecond\n",
                                               "one\r\ntwo\nthree\rlast",
-                                              "\xef\xbb\xbf"
+                                              "\x{ef}\x{bb}\x{bf}"
                                               "one\r\ntwo\nthree\rlast"};
     for (size_t index = 0; index < samples.size(); ++index) {
         const auto roundtripPath = directory / ("roundtrip-" + std::to_string(index) + ".txt");
@@ -303,7 +303,7 @@ void NativeUtf16OpenAs(EditorFrame* frame, const std::filesystem::path& director
     const auto utf16Path = directory / "utf16-no-bom.txt";
     {
         std::ofstream output(utf16Path, std::ios::binary);
-        const std::string bytes("\x41\0\x2d\x4e\x3d\xd8\0\xde\r\0\n\0", 12);
+        const std::string bytes("\x{41}\0\x{2d}\x{4e}\x{3d}\x{d8}\0\x{de}\r\0\n\0", 12);
         output.write(bytes.data(), bytes.size());
     }
     FileCommandDriver utf16Pick(FileDialogProfile::Open, wxID_NO, Filename(utf16Path), TraceFileCommand);
@@ -328,7 +328,7 @@ void NativeUtf16OpenAs(EditorFrame* frame, const std::filesystem::path& director
     const auto invalidUtf16Path = directory / "invalid-utf16.txt";
     {
         std::ofstream output(invalidUtf16Path, std::ios::binary);
-        const std::string bytes("\0\xd8", 2);
+        const std::string bytes("\0\x{d8}", 2);
         output.write(bytes.data(), bytes.size());
     }
     FileCommandDriver utf16Invalid(FileDialogProfile::Open, wxID_CANCEL, Filename(invalidUtf16Path), TraceFileCommand);

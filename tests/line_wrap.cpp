@@ -238,7 +238,7 @@ void ColumnCases(EditorControl* editor) {
         {"中 😀 尾", 0, 12, 3, "中\n😀\n尾", 0, 12},
         {"😀 x", 0, 6, 3, "😀\nx", 0, 6},
         {"中 x", 0, 5, 3, "中 x", 0, 5, false},
-        {"a\u00a0b  c", 0, 7, 4, "a\u00a0b\nc", 0, 6},
+        {"a\u{00a0}b  c", 0, 7, 4, "a\u{00a0}b\nc", 0, 6},
         {"a\vlong  b", 0, 9, 80, "a\vlong b", 0, 8},
         {"a  b", 2, 2, 1, "a  b", 2, 2, false},
     };
@@ -480,18 +480,18 @@ void SavedBytes(EditorFrame* frame) {
         std::string wrap;
     };
     const Fixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbfone two three\n中  文", "\xef\xbb\xbfone two \nthree\n中  文",
-         "\xef\xbb\xbfone\ntwo\nthree\n中 文"},
-        {"gbk", FileEncoding::Gbk, "one two three\n\xd6\xd0  \xce\xc4", "one two \nthree\n\xd6\xd0  \xce\xc4",
-         "one\ntwo\nthree\n\xd6\xd0 \xce\xc4"},
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}one two three\n中  文",
+         "\x{ef}\x{bb}\x{bf}one two \nthree\n中  文", "\x{ef}\x{bb}\x{bf}one\ntwo\nthree\n中 文"},
+        {"gbk", FileEncoding::Gbk, "one two three\n\x{d6}\x{d0}  \x{ce}\x{c4}",
+         "one two \nthree\n\x{d6}\x{d0}  \x{ce}\x{c4}", "one\ntwo\nthree\n\x{d6}\x{d0} \x{ce}\x{c4}"},
         {"utf16", FileEncoding::Utf16Le,
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "o\0n\0e\0 \0t\0w\0o\0 \0t\0h\0r\0e\0e\0",
                      28),
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "o\0n\0e\0 \0t\0w\0o\0 \0\n\0t\0h\0r\0e\0e\0",
                      30),
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "o\0n\0e\0\n\0t\0w\0o\0\n\0t\0h\0r\0e\0e\0",
                      28)},
     };

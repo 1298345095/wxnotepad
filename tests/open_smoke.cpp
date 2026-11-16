@@ -42,7 +42,7 @@ public:
                 std::puts("PASS: UTF-8 Open retains path, text and actual EOLs");
                 const auto bomPath = directory / "bom.txt";
                 {
-                    std::ofstream(bomPath, std::ios::binary) << "\xef\xbb\xbf中文😀\r\nnext\n";
+                    std::ofstream(bomPath, std::ios::binary) << "\x{ef}\x{bb}\x{bf}中文😀\r\nnext\n";
                 }
                 Require(frame->Open(Filename(bomPath)).status == OpenStatus::Opened, "BOM UTF-8 must open");
                 Require(Text(frame) == "中文😀\r\nnext\n" && frame->DocumentHasUtf8Bom(),
@@ -53,13 +53,14 @@ public:
                 {
                     std::ifstream input(bomPath, std::ios::binary);
                     const std::string bytes{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
-                    Require(bytes == "\xef\xbb\xbf\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nnext\n",
+                    Require(bytes == "\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}\x{f0}\x{9f}\x{98}\x{80}"
+                                     "\r\nnext\n",
                             "save must preserve BOM and exact UTF-8 bytes");
                 }
                 for (const bool bom : {false, true}) {
                     const auto emptyPath = directory / (bom ? "empty-bom.txt" : "empty.txt");
                     {
-                        std::ofstream(emptyPath, std::ios::binary) << (bom ? "\xef\xbb\xbf" : "");
+                        std::ofstream(emptyPath, std::ios::binary) << (bom ? "\x{ef}\x{bb}\x{bf}" : "");
                     }
                     Require(frame->Open(Filename(emptyPath)).status == OpenStatus::Opened, "empty UTF-8 must open");
                     Require(Text(frame).empty() && frame->DocumentHasUtf8Bom() == bom,
@@ -83,17 +84,17 @@ public:
                 unchanged();
                 Require(frame->Open(Filename(directory)).status == OpenStatus::Failed, "directory source must fail");
                 unchanged();
-                const std::vector<std::string> invalid = {"\x80",
-                                                          "\xc0\xaf",
-                                                          "\xe0\x80\xaf",
-                                                          "\xed\xa0\x80",
-                                                          "\xf0\x80\x80\xaf",
-                                                          "\xf4\x90\x80\x80",
-                                                          "\xf5\x80\x80\x80",
-                                                          "\xc2",
-                                                          "\xe4\xb8",
-                                                          "\xf0\x9f\x98",
-                                                          "\xff\xfe"};
+                const std::vector<std::string> invalid = {"\x{80}",
+                                                          "\x{c0}\x{af}",
+                                                          "\x{e0}\x{80}\x{af}",
+                                                          "\x{ed}\x{a0}\x{80}",
+                                                          "\x{f0}\x{80}\x{80}\x{af}",
+                                                          "\x{f4}\x{90}\x{80}\x{80}",
+                                                          "\x{f5}\x{80}\x{80}\x{80}",
+                                                          "\x{c2}",
+                                                          "\x{e4}\x{b8}",
+                                                          "\x{f0}\x{9f}\x{98}",
+                                                          "\x{ff}\x{fe}"};
                 for (const auto& suffix : invalid) {
                     const auto invalidPath = directory / "invalid.txt";
                     {

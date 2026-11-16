@@ -21,12 +21,13 @@ void Require(bool value, const char* message) {
 }
 void Declared(EditorFrame* frame) {
     const auto path = TestFiles::TemporaryDirectory("chinese-declared.txt");
-    const std::string bytes = "# coding: GB18030\n\xd6\xd0\x81\x30\x81\x30\x94\x39\xfc\x36\r\n";
+    const std::string bytes = "# coding: GB18030\n\x{d6}\x{d0}\x{81}\x{30}\x{81}\x{30}\x{94}\x{39}\x{fc}"
+                              "\x{36}\r\n";
     TestFiles::WriteBytes(path, bytes);
     const auto opened = frame->Open(TestFiles::Filename(path));
     Require(opened.status == OpenStatus::Opened,
             "automatic Open recognizes original GB18030 declaration and four-byte forms");
-    Require(TestEditor::Text(frame) == "# coding: GB18030\n中\xc2\x80😀\r\n",
+    Require(TestEditor::Text(frame) == "# coding: GB18030\n中\x{c2}\x{80}😀\r\n",
             "GB18030 two/four-byte input matches independently captured original UTF-8");
     Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == bytes,
             "GB18030 Save writes exact original bytes");
@@ -124,25 +125,29 @@ void Fixtures(EditorFrame* frame) {
         std::string input, text, saved;
     };
     const Fixture fixtures[] = {
-        {FileEncoding::Gb18030, std::string("A\xd6\xd0\x81\x30\x81\x30\x94\x39\xfc\x36\0B\r\n", 15),
-         std::string("A中\xc2\x80😀\0B\r\n", 14), std::string("A\xd6\xd0\x81\x30\x81\x30\x94\x39\xfc\x36\0B\r\n", 15)},
-        {FileEncoding::Gb18030, "A\x81\x30\x81\x42\x30\x81\x30\x81", "A?0丅0?0?",
-         "A?0\x81\x42"
+        {FileEncoding::Gb18030, std::string("A\x{d6}\x{d0}\x{81}\x{30}\x{81}\x{30}\x{94}\x{39}\x{fc}\x{36}\0B\r\n", 15),
+         std::string("A中\x{c2}\x{80}😀\0B\r\n", 14),
+         std::string("A\x{d6}\x{d0}\x{81}\x{30}\x{81}\x{30}\x{94}\x{39}\x{fc}\x{36}\0B\r\n", 15)},
+        {FileEncoding::Gb18030, "A\x{81}\x{30}\x{81}\x{42}\x{30}\x{81}\x{30}\x{81}", "A?0丅0?0?",
+         "A?0\x{81}\x{42}"
          "0?0?"},
-        {FileEncoding::Big5, std::string("A\xa4\xa4\xa3\xe1\x80\x40\x81\x40\xfa\x40\0B\r\n", 15),
-         std::string("A中€\xc2\x80@\uEEB8\uE000\0B\r\n", 20),
-         std::string("A\xa4\xa4\xa3\xe1\x80\x40\x81\x40\xfa\x40\0B\r\n", 15)},
-        {FileEncoding::Big5, "A\x81\x42\x81", "A\uEEBA?", "A\x81\x42?"},
+        {FileEncoding::Big5, std::string("A\x{a4}\x{a4}\x{a3}\x{e1}\x{80}\x{40}\x{81}\x{40}\x{fa}\x{40}\0B\r\n", 15),
+         std::string("A中€\x{c2}\x{80}@\u{EEB8}\u{E000}\0B\r\n", 20),
+         std::string("A\x{a4}\x{a4}\x{a3}\x{e1}\x{80}\x{40}\x{81}\x{40}\x{fa}\x{40}\0B\r\n", 15)},
+        {FileEncoding::Big5, "A\x{81}\x{42}\x{81}", "A\u{EEBA}?", "A\x{81}\x{42}?"},
         // Independent MultiByteToWideChar(950, 0) observation: a malformed
         // lead does not consume the following NUL (Spec review #176).
-        {FileEncoding::Big5, std::string("A\x81\0B", 4), std::string("A?\0B", 4), std::string("A?\0B", 4)},
+        {FileEncoding::Big5, std::string("A\x{81}\0B", 4), std::string("A?\0B", 4), std::string("A?\0B", 4)},
         // The original GB18030 conversion retains the same NUL code unit.
-        {FileEncoding::Gb18030, std::string("A\x81\0B", 4), std::string("A?\0B", 4), std::string("A?\0B", 4)},
-        {FileEncoding::Gb18030, "\xa6\xd9\xa8\xbc\xfe\x59\x84\x31\x82\x36\x81\x35\xf4\x37\x82\x35\x90\x37",
-         "\uE78D\uE7C7\uE81E\uFE10\u1E3F\u9FB4",
-         "\xa6\xd9\xa8\xbc\xfe\x59\x84\x31\x82\x36\x81\x35\xf4\x37\x82\x35\x90\x37"},
-        {FileEncoding::Big5, "\x8d\xfe\x8e\x40\xa0\xfe\xfe\xfe", "\uF6B0\uE311\uEEB7\uE310",
-         "\x8d\xfe\x8e\x40\xa0\xfe\xfe\xfe"},
+        {FileEncoding::Gb18030, std::string("A\x{81}\0B", 4), std::string("A?\0B", 4), std::string("A?\0B", 4)},
+        {FileEncoding::Gb18030,
+         "\x{a6}\x{d9}\x{a8}\x{bc}\x{fe}\x{59}\x{84}\x{31}\x{82}\x{36}\x{81}\x{35}\x{f4}"
+         "\x{37}\x{82}\x{35}\x{90}\x{37}",
+         "\u{E78D}\u{E7C7}\u{E81E}\u{FE10}\u{1E3F}\u{9FB4}",
+         "\x{a6}\x{d9}\x{a8}\x{bc}\x{fe}\x{59}\x{84}\x{31}\x{82}\x{36}\x{81}\x{35}\x{f4}"
+         "\x{37}\x{82}\x{35}\x{90}\x{37}"},
+        {FileEncoding::Big5, "\x{8d}\x{fe}\x{8e}\x{40}\x{a0}\x{fe}\x{fe}\x{fe}", "\u{F6B0}\u{E311}\u{EEB7}\u{E310}",
+         "\x{8d}\x{fe}\x{8e}\x{40}\x{a0}\x{fe}\x{fe}\x{fe}"},
     };
     const auto path = TestFiles::TemporaryDirectory("chinese-literal.bin");
     for (const auto& fixture : fixtures) {
@@ -157,7 +162,7 @@ void Fixtures(EditorFrame* frame) {
     }
     for (const auto& codec : codecs) {
         for (const bool empty : {true, false}) {
-            const std::string pair = codec.encoding == FileEncoding::Gb18030 ? "\xd6\xd0" : "\xa4\xa4";
+            const std::string pair = codec.encoding == FileEncoding::Gb18030 ? "\x{d6}\x{d0}" : "\x{a4}\x{a4}";
             const std::string bytes = empty ? "" : pair + "\r\n" + pair + "\n" + pair + std::string("\r\0", 2) + pair;
             TestFiles::WriteBytes(path, bytes);
             Require(frame->Open(TestFiles::Filename(path), codec.encoding).status == OpenStatus::Opened &&
@@ -175,8 +180,8 @@ void Reload(EditorFrame* frame, bool native) {
         TestFiles::WriteBytes(path, "live");
         Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
                 "reload source begins as UTF-8");
-        const std::string bytes =
-            codec.encoding == FileEncoding::Gb18030 ? "\xd6\xd0\x94\x39\xfc\x36" : "\xa4\xa4\xfa\x40";
+        const std::string bytes = codec.encoding == FileEncoding::Gb18030 ? "\x{d6}\x{d0}\x{94}\x{39}\x{fc}\x{36}"
+                                                                          : "\x{a4}\x{a4}\x{fa}\x{40}";
         TestFiles::WriteBytes(path, bytes);
         ReloadPicker driver;
         driver.selected = codec.sourceLabel;
@@ -185,7 +190,7 @@ void Reload(EditorFrame* frame, bool native) {
         else
             Require(frame->ReloadWithEncoding().status == OpenStatus::Opened, "source picker accepts Chinese codec");
         driver.Stop();
-        const std::string expected = codec.encoding == FileEncoding::Gb18030 ? "中😀" : "中\uE000";
+        const std::string expected = codec.encoding == FileEncoding::Gb18030 ? "中😀" : "中\u{E000}";
         Require(driver.shown == 1 && driver.found && driver.initial == "UTF-8" && TestEditor::Text(frame) == expected &&
                     frame->DocumentEncoding() == codec.encoding && !frame->DocumentIsModified() &&
                     TestFiles::Bytes(path) == bytes,
@@ -292,7 +297,7 @@ void Destination(EditorFrame* frame, bool native) {
         Require(TestEditor::Text(frame) == "中\r\n", "identifier insertion retains one-step Undo");
         Require(frame->Save().status == SaveStatus::Saved && !frame->DocumentIsModified() &&
                     TestFiles::Bytes(path) ==
-                        (codec.encoding == FileEncoding::Gb18030 ? "\xd6\xd0\r\n" : "\xa4\xa4\r\n"),
+                        (codec.encoding == FileEncoding::Gb18030 ? "\x{d6}\x{d0}\r\n" : "\x{a4}\x{a4}\r\n"),
                 "Save commits selected Chinese destination and independently specified bytes");
     }
     std::puts("PASS: F9 GB18030/Big5 current choice, cancellation, identifier, status and retained Undo/Redo");
@@ -302,11 +307,12 @@ void Saves(EditorFrame* frame) {
     const auto source = TestFiles::TemporaryDirectory("chinese-loss-source.txt");
     const auto copy = TestFiles::TemporaryDirectory("chinese-loss-copy.txt");
     const auto target = TestFiles::TemporaryDirectory("chinese-loss-as.txt");
-    const std::string sample = "A€∞Ā中😀\uE000\r\n";
+    const std::string sample = "A€∞Ā中😀\u{E000}\r\n";
     for (const auto& codec : codecs) {
         const bool lossy = codec.encoding == FileEncoding::Big5;
-        const std::string expected = lossy ? "A\xa3\xe1\xa1\xdb?\xa4\xa4??\xfa\x40\r\n"
-                                           : "A\xa2\xe3\xa1\xde\x81\x30\x8b\x38\xd6\xd0\x94\x39\xfc\x36\xaa\xa1\r\n";
+        const std::string expected = lossy ? "A\x{a3}\x{e1}\x{a1}\x{db}?\x{a4}\x{a4}??\x{fa}\x{40}\r\n"
+                                           : "A\x{a2}\x{e3}\x{a1}\x{de}\x{81}\x{30}\x{8b}\x{38}\x{d6}\x{d0}\x{94}\x{39}"
+                                             "\x{fc}\x{36}\x{aa}\x{a1}\r\n";
         TestFiles::WriteBytes(source, "unchanged");
         Require(frame->Open(TestFiles::Filename(source), FileEncoding::Utf8).status == OpenStatus::Opened,
                 "save fixture starts with independently observed original disk bytes");
@@ -360,7 +366,8 @@ void Saves(EditorFrame* frame) {
         frame->SelectEncoding(EncodingChoice(codec.encoding));
         TestEditor::Append(frame, "中");
         Require(frame->SaveFirst(TestFiles::Filename(target)).status == SaveStatus::Saved &&
-                    TestFiles::Bytes(target) == (lossy ? "\xa4\xa4" : "\xd6\xd0") && !frame->DocumentIsModified(),
+                    TestFiles::Bytes(target) == (lossy ? "\x{a4}\x{a4}" : "\x{d6}\x{d0}") &&
+                    !frame->DocumentIsModified(),
                 "first Save uses selected Chinese codec without BOM and commits its identity");
     }
     std::puts("PASS: original native loss Cancel/accept, exact save variants, failure and savepoint Undo/Redo");
@@ -373,7 +380,7 @@ void Detection(EditorFrame* frame) {
                 ? std::vector<const char*>{"BIG5", "cn_big5", "csbig5", "xxbig5", "cp950", "ms950"}
                 : std::vector<const char*>{"GB18030", "gb_18030"};
         for (const auto* name : aliases) {
-            const std::string pair = codec.encoding == FileEncoding::Big5 ? "\xa4\xa4" : "\xd6\xd0";
+            const std::string pair = codec.encoding == FileEncoding::Big5 ? "\x{a4}\x{a4}" : "\x{d6}\x{d0}";
             const std::string prefix = std::string("# coding: ") + name + "\n";
             TestFiles::WriteBytes(path, prefix + pair);
             const auto opened = frame->Open(TestFiles::Filename(path));
@@ -395,7 +402,7 @@ void Detection(EditorFrame* frame) {
         settings.values.fileWatching.mode = FileWatchingMode::None;
         settings.values.encoding.defaultEncoding = codec.encoding == FileEncoding::Gb18030 ? 54936 : 950;
         auto* configured = new EditorFrame(&settings);
-        const std::string pair = codec.encoding == FileEncoding::Big5 ? "\xa4\xa4" : "\xd6\xd0";
+        const std::string pair = codec.encoding == FileEncoding::Big5 ? "\x{a4}\x{a4}" : "\x{d6}\x{d0}";
         TestFiles::WriteBytes(path, pair);
         Require(configured->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
                     configured->DocumentEncoding() == codec.encoding && TestEditor::Text(configured) == "中",
@@ -404,12 +411,12 @@ void Detection(EditorFrame* frame) {
     }
     // This input decodes as GB18030 and cannot be UTF-8 or CP936. Without an
     // original declaration/default the port must not introduce a Chinese guess.
-    TestFiles::WriteBytes(path, "\x94\x39\xfc\x36");
+    TestFiles::WriteBytes(path, "\x{94}\x{39}\x{fc}\x{36}");
     const auto result = frame->Open(TestFiles::Filename(path));
     Require(result.status == OpenStatus::Failed ||
                 (frame->DocumentEncoding() != FileEncoding::Gb18030 && frame->DocumentEncoding() != FileEncoding::Big5),
             "undesignated decodability does not guess a Chinese codec");
-    TestFiles::WriteBytes(path, "# coding: gb2312\n\xd6\xd0");
+    TestFiles::WriteBytes(path, "# coding: gb2312\n\x{d6}\x{d0}");
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
                 frame->DocumentEncoding() == FileEncoding::Gbk && TestEditor::Text(frame) == "# coding: gb2312\n中",
             "CP936 declaration compatibility remains distinct and unchanged");
@@ -436,7 +443,8 @@ void Big5BestFit(EditorFrame* frame) {
     Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
             "original duplicate box-character fixture opens");
     frame->SelectEncoding(EncodingChoice(FileEncoding::Big5));
-    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == "\xf9\xf9\xf9\xe9\xf9\xeb\xf9\xea",
+    Require(frame->Save().status == SaveStatus::Saved &&
+                TestFiles::Bytes(path) == "\x{f9}\x{f9}\x{f9}\x{e9}\x{f9}\x{eb}\x{f9}\x{ea}",
             "CP950 duplicates use independently captured original F9 byte choices");
     std::puts("PASS: original CP950 best-fit rejection and four duplicate-character byte choices");
 }

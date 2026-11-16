@@ -227,7 +227,7 @@ void SaveSuggestedCopy(EditorFrame* frame, const std::filesystem::path& director
 void Identity(EditorFrame* frame, const std::filesystem::path& directory) {
     const auto source = directory / "source.txt";
     const auto copy = directory / u8"另存副本.cpp";
-    const std::string original = "\xef\xbb\xbf"
+    const std::string original = "\x{ef}\x{bb}\x{bf}"
                                  "one\r\ntwo\nthree\r";
     TestFiles::WriteBytes(source, original);
     Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "copy source must open");
@@ -240,7 +240,7 @@ void Identity(EditorFrame* frame, const std::filesystem::path& directory) {
     const auto title = frame->GetTitle();
     const auto text = TestEditor::Text(frame);
     Require(frame->SaveCopy(Filename(copy)).status == SaveStatus::Saved, "named dirty Save Copy must succeed");
-    Require(Bytes(copy) == "\xef\xbb\xbf"
+    Require(Bytes(copy) == "\x{ef}\x{bb}\x{bf}"
                            "one\r\ntwo\nthree\r中文!" &&
                 Bytes(source) == original,
             "copy must independently write BOM, Unicode and mixed EOL without saving the source");
@@ -309,7 +309,7 @@ void RememberDirectory(EditorFrame* frame, const std::filesystem::path& director
     frame->SaveCopy();
     same.Stop();
     Require(same.overwrites == 1 && frame->Editor()->Send(Message::GetModify) &&
-                Bytes(directory / "source.txt") == "\xef\xbb\xbf"
+                Bytes(directory / "source.txt") == "\x{ef}\x{bb}\x{bf}"
                                                    "one\r\ntwo\nthree\r中文!pending",
             "native overwrite of current source must preserve original dirty save point");
     Require(frame->Save().status == SaveStatus::Saved, "ordinary Save must clean up this native scenario");
@@ -348,14 +348,15 @@ void Formats(SettingsStore* settings, const std::filesystem::path& directory) {
     const Sample samples[] = {
         {"utf8", FileEncoding::Utf8, "中文\r\nx\nz\r"},
         {"utf8-bom", FileEncoding::Utf8,
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "中文\r\nx\nz\r"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\x2d\x4e\x87\x65\r\0\n\0x\0\n\0z\0\r\0", 16)},
-        {"utf16-bom", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\x87\x65\r\0\n\0x\0\n\0z\0\r\0", 18)},
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0\xce\xc4\r\nx\nz\r"},
+        {"utf16", FileEncoding::Utf16Le, std::string("\x{2d}\x{4e}\x{87}\x{65}\r\0\n\0x\0\n\0z\0\r\0", 16)},
+        {"utf16-bom", FileEncoding::Utf16Le,
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\r\0\n\0x\0\n\0z\0\r\0", 18)},
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\x{ce}\x{c4}\r\nx\nz\r"},
         {"empty", FileEncoding::Utf8, {}},
-        {"bom-only", FileEncoding::Utf8, "\xef\xbb\xbf"},
-        {"utf16-empty", FileEncoding::Utf16Le, std::string("\xff\xfe", 2)},
+        {"bom-only", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}"},
+        {"utf16-empty", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}", 2)},
     };
     for (const auto& sample : samples) {
         const auto source = directory / (std::string(sample.name) + ".txt");
@@ -392,7 +393,7 @@ void UntitledAfterCopy(EditorFrame* frame, const std::filesystem::path& director
 
 void LegacyLoss(SettingsStore* settings, const std::filesystem::path& directory) {
     const auto source = directory / "loss-source.txt";
-    TestFiles::WriteBytes(source, "\xd6\xd0\xce\xc4");
+    TestFiles::WriteBytes(source, "\x{d6}\x{d0}\x{ce}\x{c4}");
     auto* frame = new EditorFrame(settings);
     Require(frame->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
             "legacy copy source must open");
@@ -413,7 +414,7 @@ void LegacyLoss(SettingsStore* settings, const std::filesystem::path& directory)
     const auto replaced = directory / "loss-replaced.txt";
     Require(frame->SaveCopy(Filename(replaced), [] { return EncodingLossChoice::Replace; }).status ==
                     SaveStatus::Saved &&
-                Bytes(replaced) == "\xd6\xd0\xce\xc4??\r\n!" && TestEditor::Text(frame) == pending &&
+                Bytes(replaced) == "\x{d6}\x{d0}\x{ce}\x{c4}??\r\n!" && TestEditor::Text(frame) == pending &&
                 frame->DocumentPath() == Filename(source) && frame->DocumentEncoding() == FileEncoding::Gbk &&
                 frame->Editor()->Send(Message::GetModify),
             "confirmed lossy copy must write original CP936 placeholders while retaining Unicode source state");
@@ -432,8 +433,8 @@ void LegacyLoss(SettingsStore* settings, const std::filesystem::path& directory)
     CopyChooser replaceNative(Filename(native), true, EncodingLossChoice::Replace);
     Require(frame->SaveCopy().status == SaveStatus::Saved, "native GBK copy loss must support OK");
     replaceNative.Stop();
-    Require(replaceNative.overwrites == 1 && replaceNative.losses == 1 && Bytes(native) == "\xd6\xd0\xce\xc4??\r\n!" &&
-                TestEditor::Text(frame) == pending,
+    Require(replaceNative.overwrites == 1 && replaceNative.losses == 1 &&
+                Bytes(native) == "\x{d6}\x{d0}\x{ce}\x{c4}??\r\n!" && TestEditor::Text(frame) == pending,
             "native overwrite and loss confirmations must preserve Unicode source and original CP936 bytes");
     frame->Destroy();
     settings->values.fixTrailingBlanks = true;

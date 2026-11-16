@@ -127,7 +127,8 @@ void RunCommitCase(SettingsStore& settings, bool nested, bool outer) {
     TestEditor::Append(frame, "中\r\n");
     const auto destination = TestFiles::TemporaryDirectory("defaults-new.txt");
     Require(frame->SaveAs(TestFiles::Filename(destination)).status == SaveStatus::Saved &&
-                TestFiles::Bytes(destination) == (nested ? std::string("\xfe\xff\x4e\x2d\0\r\0\n", 8) : "中\r\n"),
+                TestFiles::Bytes(destination) ==
+                    (nested ? std::string("\x{fe}\x{ff}\x{4e}\x{2d}\0\r\0\n", 8) : "中\r\n"),
             "New saves exact independently specified default-format bytes");
     const auto empty = TestFiles::TemporaryDirectory("defaults-empty.txt");
     TestFiles::WriteBytes(empty, "");

@@ -109,7 +109,8 @@ void MixedEolSaveHistory(const std::filesystem::path& directory) {
     editor->Send(Scintilla::Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
     const auto textPath = directory / u8"中文.txt";
     Require(textFrame->SaveFirst(Filename(textPath)).status == SaveStatus::Saved, "UTF-8 text save must succeed");
-    Require(Bytes(textPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast",
+    Require(Bytes(textPath) == "A\x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}\x{f0}\x{9f}\x{98}\x{80}\r\nsecond\nthird"
+                               "\rlast",
             "saved bytes must preserve Unicode and actual mixed EOL with no BOM");
     Require(editor->Send(Scintilla::Message::GetEOLMode) == 0,
             "new documents must explicitly use original CRLF insertion mode");
@@ -121,7 +122,8 @@ void MixedEolSaveHistory(const std::filesystem::path& directory) {
     editor->Send(Scintilla::Message::Redo);
     Require(editor->Send(Scintilla::Message::GetModify), "Redo away from save point must be dirty");
     Require(textFrame->Save().status == SaveStatus::Saved, "saving a named document must reuse its path");
-    Require(Bytes(textPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast!",
+    Require(Bytes(textPath) == "A\x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}\x{f0}\x{9f}\x{98}\x{80}\r\nsecond\nthird"
+                               "\rlast!",
             "named save must replace complete bytes at the existing path");
     Require(!editor->Send(Scintilla::Message::GetModify), "named save must establish a new save point");
     textFrame->Destroy();
@@ -180,7 +182,8 @@ void SaveFailures(const std::filesystem::path& directory) {
                 "failure must clean sibling temporary files");
     Require(pending->SaveFirst(Filename(protectedPath)).status == SaveStatus::Saved,
             "approved overwrite must succeed after failure");
-    Require(Bytes(protectedPath) == "A\xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\nsecond\nthird\rlast",
+    Require(Bytes(protectedPath) == "A\x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}\x{f0}\x{9f}\x{98}\x{80}\r\nsecond\nthird"
+                                    "\rlast",
             "approved overwrite must write complete new bytes");
     pending->Destroy();
     std::puts("PASS: cancellation, creation/replacement failures, preserved sentinel and approved overwrite");

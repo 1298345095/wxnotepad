@@ -116,8 +116,8 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
         {"empty after editing", "", false},
         {"non-whitespace", " \tx\r\n", true},
         {"embedded NUL", std::string(" \0 ", 3), true},
-        {"non-breaking space", "\xc2\xa0", true},
-        {"Unicode em space", "\xe2\x80\x83", true},
+        {"non-breaking space", "\x{c2}\x{a0}", true},
+        {"Unicode em space", "\x{e2}\x{80}\x{83}", true},
         {"named whitespace", " \t\r\n", true, true},
         {"named empty after editing", "", true, true},
     };
@@ -196,7 +196,7 @@ public:
                 Require(CloseFrame(saved), "successful Save must allow closing");
                 saveDriver.Stop();
                 Require(saveDriver.prompts == 1, "named dirty document must show native confirmation");
-                Require(Bytes(path) == "first \xe4\xb8\xad\xe6\x96\x87\r\n",
+                Require(Bytes(path) == "first \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}\r\n",
                         "close Save must write changes to the known path");
                 std::puts("PASS: close Save writes changes to known path");
                 auto* clean = NewFrame();
@@ -239,7 +239,7 @@ public:
                 firstDriver.Stop();
                 Require(firstDriver.prompts == 1 && firstDriver.choosers == 1,
                         "first close Save must use the native confirmation and path chooser");
-                Require(Bytes(firstPath) == "First \xe4\xb8\xad\xe6\x96\x87\xf0\x9f\x98\x80\r\n",
+                Require(Bytes(firstPath) == "First \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}\x{f0}\x{9f}\x{98}\x{80}\r\n",
                         "first close Save must preserve exact UTF-8 bytes without BOM");
                 std::puts("PASS: first close Save uses the native path chooser");
                 auto* failedSave = NewFrame();

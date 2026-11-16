@@ -217,15 +217,16 @@ void SavedBytes(EditorFrame* frame) {
         std::string after;
     };
     const Fixture fixtures[] = {
-        {"utf8-bom", "Untabify Selection", FileEncoding::Utf8, "\xef\xbb\xbf😀\tX\r\n \t中\nlast\t",
-         "\xef\xbb\xbf😀  X\r\n    中\nlast    "},
-        {"gbk", "Untabify Selection", FileEncoding::Gbk, "\xd6\xd0\tX\rY\t\n", "\xd6\xd0   X\rY   \n"},
+        {"utf8-bom", "Untabify Selection", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}😀\tX\r\n \t中\nlast\t",
+         "\x{ef}\x{bb}\x{bf}😀  X\r\n    中\nlast    "},
+        {"gbk", "Untabify Selection", FileEncoding::Gbk, "\x{d6}\x{d0}\tX\rY\t\n", "\x{d6}\x{d0}   X\rY   \n"},
         {"utf16-bom", "Untabify Selection", FileEncoding::Utf16Le,
-         std::string("\xff\xfe\x2d\x4e\x09\0X\0\r\0\n\0\x09\0B\0", 16),
-         std::string("\xff\xfe\x2d\x4e \0 \0 \0X\0\r\0\n\0 \0 \0 \0 \0B\0", 26)},
-        {"tabify-utf8", "Tabify Selection", FileEncoding::Utf8, "\xef\xbb\xbf    中\r\n  A  \n",
-         "\xef\xbb\xbf\t中\r\n  A\t \n"},
-        {"tabify-indent-gbk", "Tabify Indent", FileEncoding::Gbk, "    \xd6\xd0   X\rY   Z", "\t\xd6\xd0   X\rY   Z"},
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{09}\0X\0\r\0\n\0\x{09}\0B\0", 16),
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e} \0 \0 \0X\0\r\0\n\0 \0 \0 \0 \0B\0", 26)},
+        {"tabify-utf8", "Tabify Selection", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}    中\r\n  A  \n",
+         "\x{ef}\x{bb}\x{bf}\t中\r\n  A\t \n"},
+        {"tabify-indent-gbk", "Tabify Indent", FileEncoding::Gbk, "    \x{d6}\x{d0}   X\rY   Z",
+         "\t\x{d6}\x{d0}   X\rY   Z"},
         {"untabify-indent-utf8", "Untabify Indent", FileEncoding::Utf8, " \tA\tB\n\tC", "    A\tB\n    C"},
     };
     for (const auto& fixture : fixtures) {

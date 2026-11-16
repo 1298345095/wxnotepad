@@ -489,15 +489,15 @@ void SavedBytes(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("modify-lines");
     std::filesystem::create_directory(directory);
     const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中\r\n文",
-         "\xef\xbb\xbf"
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\r\n文",
+         "\x{ef}\x{bb}\x{bf}"
          "1:中:0\r\n2:文:1"},
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0\r\n\xce\xc4", "1:\xd6\xd0:0\r\n2:\xce\xc4:1"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\r\0\n\0\x87\x65", 10),
-         std::string("\xff\xfe"
-                     "1\0:\0\x2d\x4e:\0"
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\r\n\x{ce}\x{c4}", "1:\x{d6}\x{d0}:0\r\n2:\x{ce}\x{c4}:1"},
+        {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\r\0\n\0\x{87}\x{65}", 10),
+         std::string("\x{ff}\x{fe}"
+                     "1\0:\0\x{2d}\x{4e}:\0"
                      "0\0\r\0\n\0"
-                     "2\0:\0\x87\x65:\0"
+                     "2\0:\0\x{87}\x{65}:\0"
                      "1\0",
                      26)},
     };

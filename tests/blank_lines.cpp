@@ -45,8 +45,8 @@ void Fixtures(EditorFrame* frame) {
         {"remove final zero-length logical line preserves preceding EOL", "A\n\n", false, 0, 0, "A\n", 0, 0},
         {"merge entire blank document", "\n\n", true, 0, 0, "", 0, 0},
         {"remove entire whitespace document", " \r\n\t", false, 0, 0, "", 0, 0},
-        {"other whitespace bytes are ordinary text", "\v\n\f\n\xc2\xa0\n \t\n\nZ", false, 0, 0, "\v\n\f\n\xc2\xa0\nZ",
-         0, 0},
+        {"other whitespace bytes are ordinary text", "\v\n\f\n\x{c2}\x{a0}\n \t\n\nZ", false, 0, 0,
+         "\v\n\f\n\x{c2}\x{a0}\nZ", 0, 0},
     };
     for (const auto& fixture : fixtures) {
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
@@ -210,12 +210,12 @@ void SavedBytes(EditorFrame* frame) {
         std::string removed;
     };
     const Fixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf \r\n\t\n中文\r\n \t\r\n\nZ\n \t", "\xef\xbb\xbf\t\n中文\r\n\nZ\n \t",
-         "\xef\xbb\xbf中文\r\nZ\n"},
-        {"gbk", FileEncoding::Gbk, " \r\n\t\n\xd6\xd0\xce\xc4\r\n \t\r\n\nZ\n \t", "\t\n\xd6\xd0\xce\xc4\r\n\nZ\n \t",
-         "\xd6\xd0\xce\xc4\r\nZ\n"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe \0\n\0\t\0\r\0\n\0A\0\n\0 \0\t\0", 20),
-         std::string("\xff\xfe\t\0\r\0\n\0A\0\n\0 \0\t\0", 16), std::string("\xff\xfe\x41\0\n\0", 6)},
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf} \r\n\t\n中文\r\n \t\r\n\nZ\n \t",
+         "\x{ef}\x{bb}\x{bf}\t\n中文\r\n\nZ\n \t", "\x{ef}\x{bb}\x{bf}中文\r\nZ\n"},
+        {"gbk", FileEncoding::Gbk, " \r\n\t\n\x{d6}\x{d0}\x{ce}\x{c4}\r\n \t\r\n\nZ\n \t",
+         "\t\n\x{d6}\x{d0}\x{ce}\x{c4}\r\n\nZ\n \t", "\x{d6}\x{d0}\x{ce}\x{c4}\r\nZ\n"},
+        {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe} \0\n\0\t\0\r\0\n\0A\0\n\0 \0\t\0", 20),
+         std::string("\x{ff}\x{fe}\t\0\r\0\n\0A\0\n\0 \0\t\0", 16), std::string("\x{ff}\x{fe}\x{41}\0\n\0", 6)},
     };
     for (const auto& fixture : fixtures) {
         for (const bool merge : {true, false}) {

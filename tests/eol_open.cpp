@@ -234,7 +234,7 @@ void UnknownFileDefaults(const std::filesystem::path& directory, SettingsStore& 
     // Native ANSI codecs outside the delivered CP936 codec remain unsupported.
     // The UTF-8 case still checks that unknown language alone does not imply No.
     if (!nativeAnsi) settings.values.encoding.defaultEncoding = -1;
-    const std::string mixed = nativeAnsi ? "\xd6\xd0one\r\ntwo\nthree\rlast" : "one\r\ntwo\nthree\rlast";
+    const std::string mixed = nativeAnsi ? "\x{d6}\x{d0}one\r\ntwo\nthree\rlast" : "one\r\ntwo\nthree\rlast";
     auto* frame = new EditorFrame(&settings);
     frame->ShowWithoutActivating();
     for (const auto* name : {"known.txt", "known.ini", "unknown.eol-unknown"}) {

@@ -94,7 +94,7 @@ inline void SaveNaming(EditorFrame* frame, const SchemeFixture& fixture, const s
     auto* editor = frame->Editor();
     // A BOM and mixed CRLF/LF must survive ordinary Save and every naming path.
     const std::string bytes =
-        std::string("\xEF\xBB\xBF") + fixture.lineComment + " UTF-8 \xE7\x95\x8C\r\n" + fixture.text;
+        std::string("\x{EF}\x{BB}\x{BF}") + fixture.lineComment + " UTF-8 \x{E7}\x{95}\x{8C}\r\n" + fixture.text;
     TestFiles::WriteBytes(path, bytes);
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "BOM fixture must Open");
     Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == bytes,

@@ -117,9 +117,9 @@ void OpenReferenceEncoding(EditorFrame* frame, const std::filesystem::path& dire
     const auto& encoding = fields[1];
     const auto path = directory / "reference.txt";
     std::string bytes = "A\r\nB\r\nC";
-    if (encoding == "utf8bom") bytes = "\xef\xbb\xbf" + bytes;
+    if (encoding == "utf8bom") bytes = "\x{ef}\x{bb}\x{bf}" + bytes;
     if (encoding.starts_with("utf16")) bytes = std::string("A\0\r\0\n\0B\0\r\0\n\0C\0", 14);
-    if (encoding == "utf16bom") bytes = "\xff\xfe" + bytes;
+    if (encoding == "utf16bom") bytes = "\x{ff}\x{fe}" + bytes;
     TestFiles::WriteBytes(path, bytes);
     auto* editor = frame->Editor();
     editor->Send(Message::SetReadOnly, 0);

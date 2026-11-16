@@ -405,13 +405,13 @@ void SavedBytes(EditorFrame* frame) {
         std::string after;
     };
     const Fixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中\r\nB\nA",
-         "\xef\xbb\xbf"
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\r\nB\nA",
+         "\x{ef}\x{bb}\x{bf}"
          "A\r\nB\r\n中"},
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0\r\nB\nA", "A\r\nB\r\n\xd6\xd0"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\r\0\n\0B\0\n\0A\0", 14),
-         std::string("\xff\xfe"
-                     "A\0\r\0\n\0B\0\r\0\n\0\x2d\x4e",
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\r\nB\nA", "A\r\nB\r\n\x{d6}\x{d0}"},
+        {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\r\0\n\0B\0\n\0A\0", 14),
+         std::string("\x{ff}\x{fe}"
+                     "A\0\r\0\n\0B\0\r\0\n\0\x{2d}\x{4e}",
                      16)},
     };
     for (const auto& fixture : fixtures) {

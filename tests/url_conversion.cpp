@@ -218,16 +218,16 @@ void SavedBytes(EditorFrame* frame) {
     std::filesystem::create_directory(directory);
     const TestFiles::EncodedFixture fixtures[] = {
         {"utf8", FileEncoding::Utf8,
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "A B\r\n",
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "A%20B"},
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0", "%E4%B8%AD"},
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}", "%E4%B8%AD"},
         {"utf16", FileEncoding::Utf16Le,
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "A\0 \0B\0",
                      8),
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "A\0%\0"
                      "2\0"
                      "0\0B\0",

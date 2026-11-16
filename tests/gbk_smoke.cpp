@@ -23,13 +23,13 @@ using TestEditor::Append;
 using TestEditor::Text;
 using TestFiles::Bytes;
 void PrivateUseRepertoire(SettingsStore* settings, const std::filesystem::path& directory) {
-    const std::string pua = "\xa1\x40\xa2\xe3\xaa\xa1\xfe\xa0";
+    const std::string pua = "\x{a1}\x{40}\x{a2}\x{e3}\x{aa}\x{a1}\x{fe}\x{a0}";
     const auto puaPath = directory / "pua.txt";
     Write(puaPath, pua);
     auto* repertoire = new EditorFrame(settings);
     Require(repertoire->Open(Filename(puaPath), FileEncoding::Gbk).status == OpenStatus::Opened,
             "Windows CP936 PUA repertoire must open on each platform");
-    Require(Text(repertoire) == "\xee\x93\x86\xee\x9d\xac\xee\x80\x80\xee\xa1\xa4",
+    Require(Text(repertoire) == "\x{ee}\x{93}\x{86}\x{ee}\x{9d}\x{ac}\x{ee}\x{80}\x{80}\x{ee}\x{a1}\x{a4}",
             "CP936 PUA values must match original Windows mapping");
     Require(repertoire->Save().status == SaveStatus::Saved && Bytes(puaPath) == pua,
             "CP936 PUA must roundtrip without replacement");
@@ -47,8 +47,13 @@ void MalformedAndNulStreams(EditorFrame* frame, SettingsStore* settings, const s
     Append(frame, "pending");
     const auto pending = Text(frame);
     const auto identity = frame->DocumentPath();
-    const std::string malformed[] = {
-        "\x81", "\xff", "\x81\x30", "\x81\x7f", "\x81\xff", std::string("A\0\x81", 3), "\xef\xbb\xbf"};
+    const std::string malformed[] = {"\x{81}",
+                                     "\x{ff}",
+                                     "\x{81}\x{30}",
+                                     "\x{81}\x{7f}",
+                                     "\x{81}\x{ff}",
+                                     std::string("A\0\x{81}", 3),
+                                     "\x{ef}\x{bb}\x{bf}"};
     for (const auto& bytes : malformed) {
         const auto invalid = directory / "invalid.txt";
         Write(invalid, bytes);
@@ -65,7 +70,7 @@ void MalformedAndNulStreams(EditorFrame* frame, SettingsStore* settings, const s
     frame->Editor()->Send(Scintilla::Message::Redo);
     Require(Text(frame) == pending, "malformed open must retain Redo");
     const auto nulPath = directory / "nul.txt";
-    const std::string nulBytes("A\0\xd6\xd0", 4);
+    const std::string nulBytes("A\0\x{d6}\x{d0}", 4);
     Write(nulPath, nulBytes);
     auto* binary = new EditorFrame(settings);
     Require(binary->Open(Filename(nulPath), FileEncoding::Utf8).status == OpenStatus::Failed,
@@ -99,7 +104,7 @@ void LossChoiceFailures(SettingsStore* settings, const std::filesystem::path& di
                     failure->GetStatusBar()->GetStatusText().Contains("Plain Text") &&
                     failure->Editor()->Send(Scintilla::Message::GetModify),
                 "loss cancellation/failure must preserve rich document, identity, format and dirty state");
-        Require(Bytes(source) == original + "\xd6\xd0\xce\xc4" && Bytes(blocked / "sentinel") == "keep",
+        Require(Bytes(source) == original + "\x{d6}\x{d0}\x{ce}\x{c4}" && Bytes(blocked / "sentinel") == "keep",
                 "failed branch must preserve source and target bytes");
         failure->Editor()->Send(Scintilla::Message::Undo);
         Require(!failure->Editor()->Send(Scintilla::Message::GetModify), "failure must retain original savepoint");
@@ -123,8 +128,8 @@ void LossySaveAs(SettingsStore* settings, const std::filesystem::path& directory
     Require(lossyAs->SaveAs(Filename(lossyTarget), [] { return EncodingLossChoice::Replace; }).status ==
                 SaveStatus::Saved,
             "confirmed lossy Save As must succeed");
-    Require(Bytes(lossyTarget) == original + "\xd6\xd0\xce\xc4??????" &&
-                Bytes(source) == original + "\xd6\xd0\xce\xc4" && Text(lossyAs) == richAs &&
+    Require(Bytes(lossyTarget) == original + "\x{d6}\x{d0}\x{ce}\x{c4}??????" &&
+                Bytes(source) == original + "\x{d6}\x{d0}\x{ce}\x{c4}" && Text(lossyAs) == richAs &&
                 lossyAs->DocumentPath() == Filename(lossyTarget) && lossyAs->DocumentEncoding() == FileEncoding::Gbk &&
                 !lossyAs->Editor()->Send(Scintilla::Message::GetModify),
             "lossy Save As must change identity only on success and retain source bytes");
@@ -149,7 +154,7 @@ public:
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";
-                const std::string original = "ASCII\r\n\xd6\xd0\xce\xc4\n\x80\r";
+                const std::string original = "ASCII\r\n\x{d6}\x{d0}\x{ce}\x{c4}\n\x{80}\r";
                 Write(source, original);
                 Require(frame->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
                         "explicit GBK must open");
@@ -157,7 +162,8 @@ public:
                 Require(frame->DocumentEncoding() == FileEncoding::Gbk && !frame->DocumentHasBom(),
                         "GBK must record encoding without BOM");
                 Append(frame, "中文");
-                Require(frame->Save().status == SaveStatus::Saved && Bytes(source) == original + "\xd6\xd0\xce\xc4",
+                Require(frame->Save().status == SaveStatus::Saved &&
+                            Bytes(source) == original + "\x{d6}\x{d0}\x{ce}\x{c4}",
                         "Save must preserve GBK bytes and mixed EOL");
                 const auto copy = directory / "copy.txt";
                 Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved && Bytes(copy) == Bytes(source),

@@ -242,16 +242,16 @@ void SavedFormats(EditorFrame* frame) {
     using namespace std::string_literals;
     const TestFiles::EncodedFixture fixtures[] = {
         {"utf8", FileEncoding::Utf8,
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "a \r\n中\t",
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "a \r\n中\t!"},
         {"utf16", FileEncoding::Utf16Le,
-         "\xff\xfe"
-         "a\0 \0\r\0\n\0\x2d\x4e\t\0"s,
-         "\xff\xfe"
-         "a\0 \0\r\0\n\0\x2d\x4e\t\0!\0"s},
-        {"gbk", FileEncoding::Gbk, "a \r\n\xd6\xd0\t", "a \r\n\xd6\xd0\t!"},
+         "\x{ff}\x{fe}"
+         "a\0 \0\r\0\n\0\x{2d}\x{4e}\t\0"s,
+         "\x{ff}\x{fe}"
+         "a\0 \0\r\0\n\0\x{2d}\x{4e}\t\0!\0"s},
+        {"gbk", FileEncoding::Gbk, "a \r\n\x{d6}\x{d0}\t", "a \r\n\x{d6}\x{d0}\t!"},
     };
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {

@@ -159,18 +159,18 @@ void SavedBytes(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory() / std::filesystem::path(u8"wxnotepad-number-radix-中文");
     std::filesystem::create_directory(directory);
     const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中12\r\n", "\xef\xbb\xbf中0xc\r\n"},
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中12\r\n", "\x{ef}\x{bb}\x{bf}中0xc\r\n"},
         {"gbk", FileEncoding::Gbk,
-         "\xd6\xd0"
+         "\x{d6}\x{d0}"
          "12\r\n",
-         "\xd6\xd0"
+         "\x{d6}\x{d0}"
          "0xc\r\n"},
         {"utf16", FileEncoding::Utf16Le,
-         std::string("\xff\xfe\x2d\x4e"
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}"
                      "1\0"
                      "2\0\r\0\n\0",
                      12),
-         std::string("\xff\xfe\x2d\x4e"
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}"
                      "0\0x\0c\0\r\0\n\0",
                      14)},
     };

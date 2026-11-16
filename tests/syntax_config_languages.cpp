@@ -93,7 +93,7 @@ void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFix
     Require(saved.tabWidth == 5 && saved.indentWidth == 2 && !saved.useGlobal,
             "Tab Settings must persist to the original language section");
     const auto diskSettings = TestFiles::Bytes(TestFiles::Utf8Path(settings.Path().ToStdString(wxConvUTF8)));
-    Require(diskSettings.starts_with("\xFF\xFE"), "original settings file retains UTF-16LE BOM");
+    Require(diskSettings.starts_with("\x{FF}\x{FE}"), "original settings file retains UTF-16LE BOM");
     std::string settingsText;
     for (size_t byte = 2; byte + 1 < diskSettings.size(); byte += 2)
         settingsText += diskSettings[byte];

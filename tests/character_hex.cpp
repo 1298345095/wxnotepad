@@ -193,19 +193,21 @@ void SavedBytes(EditorFrame* frame) {
     for (const bool encode : {true, false}) {
         const std::array<TestFiles::EncodedFixture, 3> fixtures{
             {{"utf8", FileEncoding::Utf8,
-              encode ? "\xef\xbb\xbf"
+              encode ? "\x{ef}\x{bb}\x{bf}"
                        "Aé中\r\n"
-                     : "\xef\xbb\xbf"
+                     : "\x{ef}\x{bb}\x{bf}"
                        "\\x41\\xE9\\u4E2D\\x0D\\x0A",
-              encode ? "\xef\xbb\xbf"
+              encode ? "\x{ef}\x{bb}\x{bf}"
                        "\\x41\\xE9\\u4E2D\\x0D\\x0A"
-                     : "\xef\xbb\xbf"
+                     : "\x{ef}\x{bb}\x{bf}"
                        "Aé中\r\n"},
-             {"gbk", FileEncoding::Gbk, encode ? "\xa8\xa6\xd6\xd0" : "\\xE9\\u4E2D",
-              encode ? "\\xE9\\u4E2D" : "\xa8\xa6\xd6\xd0"},
+             {"gbk", FileEncoding::Gbk, encode ? "\x{a8}\x{a6}\x{d6}\x{d0}" : "\\xE9\\u4E2D",
+              encode ? "\\xE9\\u4E2D" : "\x{a8}\x{a6}\x{d6}\x{d0}"},
              {"utf16", FileEncoding::Utf16Le,
-              encode ? std::string("\xff\xfe\x41\0", 4) : std::string("\xff\xfe\\\0x\x00\x34\0\x31\0", 10),
-              encode ? std::string("\xff\xfe\\\0x\x00\x34\0\x31\0", 10) : std::string("\xff\xfe\x41\0", 4)}}};
+              encode ? std::string("\x{ff}\x{fe}\x{41}\0", 4)
+                     : std::string("\x{ff}\x{fe}\\\0x\x{00}\x{34}\0\x{31}\0", 10),
+              encode ? std::string("\x{ff}\x{fe}\\\0x\x{00}\x{34}\0\x{31}\0", 10)
+                     : std::string("\x{ff}\x{fe}\x{41}\0", 4)}}};
         for (const auto& fixture : fixtures) {
             const auto path = directory / fixture.name;
             TestFiles::WriteBytes(path, fixture.before);

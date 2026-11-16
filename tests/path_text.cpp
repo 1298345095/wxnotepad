@@ -171,11 +171,11 @@ void IdentityCases(EditorFrame* frame, const std::filesystem::path& directory) {
     std::puts("PASS: Untitled, first save, native Save As success/cancel, failure and insertion shortcuts");
 }
 void EncodedCases(EditorFrame* frame, const std::filesystem::path& directory) {
-    const TestFiles::EncodedFixture fixtures[] = {{"utf8", FileEncoding::Utf8, "AoldZ\r\n", "A时刻Z\r\n"},
-                                                  {"utf16", FileEncoding::Utf16Le,
-                                                   std::string("\xff\xfe\x41\0o\0l\0d\0Z\0\r\0\n\0", 16),
-                                                   std::string("\xff\xfe\x41\0\xf6\x65\x3b\x52Z\0\r\0\n\0", 14)},
-                                                  {"gbk", FileEncoding::Gbk, "AoldZ\r\n", "A\xca\xb1\xbf\xccZ\r\n"}};
+    const TestFiles::EncodedFixture fixtures[] = {
+        {"utf8", FileEncoding::Utf8, "AoldZ\r\n", "A时刻Z\r\n"},
+        {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{41}\0o\0l\0d\0Z\0\r\0\n\0", 16),
+         std::string("\x{ff}\x{fe}\x{41}\0\x{f6}\x{65}\x{3b}\x{52}Z\0\r\0\n\0", 14)},
+        {"gbk", FileEncoding::Gbk, "AoldZ\r\n", "A\x{ca}\x{b1}\x{bf}\x{cc}Z\r\n"}};
     for (const auto& fixture : fixtures) {
         const auto folder = directory / fixture.name;
         std::filesystem::create_directory(folder);
@@ -231,7 +231,7 @@ void DefaultEncodingCase(const std::filesystem::path& directory) {
     Require(frame->Save().status == SaveStatus::Saved,
             "default encoding insertion saves without a second loss confirmation");
 #ifdef __WXMSW__
-    Require(TestFiles::Bytes(path) == "A\xa8\xa6\xd6\xd0\xce\xc4??.txtZ",
+    Require(TestFiles::Bytes(path) == "A\x{a8}\x{a6}\x{d6}\x{d0}\x{ce}\x{c4}??.txtZ",
             "default-ANSI insertion writes independently captured native bytes");
 #else
     Require(TestFiles::Bytes(path) == "Aé中文😀.txtZ", "native UTF-8 default preserves Unicode filename bytes");

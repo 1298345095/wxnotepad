@@ -74,7 +74,7 @@ public:
                                            "char letter = 'x';\n"
                                            "auto raw = R\"(中文)\";\n"
                                            "return value;\n";
-                const std::string bytes = "\xef\xbb\xbf" + source;
+                const std::string bytes = "\x{ef}\x{bb}\x{bf}" + source;
                 std::ofstream(path, std::ios::binary) << bytes;
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "syntax fixture must open");
                 Paint(frame);

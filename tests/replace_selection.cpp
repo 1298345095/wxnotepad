@@ -204,7 +204,7 @@ public:
                                   ("wxnotepad-selection-" + std::to_string(wxGetProcessId()) + ".txt");
                 {
                     std::ofstream file(path, std::ios::binary);
-                    file << "\xef\xbb\xbf"
+                    file << "\x{ef}\x{bb}\x{bf}"
                             "中文12\r\n中文34\n中文56\r";
                 }
 #ifdef __WXMSW__
@@ -222,7 +222,7 @@ public:
                 {
                     std::ifstream file(path, std::ios::binary);
                     const std::string bytes{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
-                    Require(bytes == "\xef\xbb\xbf"
+                    Require(bytes == "\x{ef}\x{bb}\x{bf}"
                                      "中文12\r\n34:中文:34\n中文56\r",
                             "Save preserves independent BOM, mixed EOL and outside-selection bytes");
                 }
@@ -237,7 +237,7 @@ public:
                 {
                     std::ifstream file(path, std::ios::binary);
                     const std::string bytes{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
-                    Require(bytes == "\xef\xbb\xbf"
+                    Require(bytes == "\x{ef}\x{bb}\x{bf}"
                                      "中文12\r\nX\n中文56\r",
                             "Save writes exact shrinking replacement bytes inside the original range");
                 }

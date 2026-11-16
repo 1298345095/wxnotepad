@@ -116,16 +116,16 @@ public:
 };
 void ExplicitReload(EditorFrame* frame) {
     const auto path = TestFiles::TemporaryDirectory("reload.txt");
-    TestFiles::WriteBytes(path, "\xef\xbb\xbf\xe4\xb8\xad");
+    TestFiles::WriteBytes(path, "\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}");
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "UTF-8 BOM fixture must open");
-    TestFiles::WriteBytes(path, "\xd6\xd0");
+    TestFiles::WriteBytes(path, "\x{d6}\x{d0}");
     ReloadDialogs driver;
     wxCommandEvent command(wxEVT_MENU, frame->GetMenuBar()->FindMenuItem("File", "With Encoding..."));
     frame->GetEventHandler()->ProcessEvent(command);
     driver.Stop();
     Require(driver.choosers == 1 && driver.initial == 0 && TestEditor::Text(frame) == "中" &&
                 frame->DocumentEncoding() == FileEncoding::Gbk && !frame->DocumentHasBom() &&
-                !frame->Editor()->Send(Scintilla::Message::GetModify) && TestFiles::Bytes(path) == "\xd6\xd0",
+                !frame->Editor()->Send(Scintilla::Message::GetModify) && TestFiles::Bytes(path) == "\x{d6}\x{d0}",
             "F8 must normalize UTF-8 BOM selection and explicitly reload GBK without saving");
     std::puts("PASS: F8 normalizes UTF-8 BOM and reloads GBK from independent disk bytes");
 }
@@ -140,7 +140,7 @@ void ModifiedPicker(EditorFrame* frame) {
         driver.Stop();
         Require(result.status == OpenStatus::Cancelled && driver.warnings == 1 && driver.choosers == 0 &&
                     TestEditor::Text(frame) == before && frame->Editor()->Send(Scintilla::Message::GetModify) &&
-                    TestFiles::Bytes(path) == "\xd6\xd0",
+                    TestFiles::Bytes(path) == "\x{d6}\x{d0}",
                 "F8 warning Cancel must preserve dirty text and bytes before showing the picker");
     }
     {
@@ -150,7 +150,7 @@ void ModifiedPicker(EditorFrame* frame) {
         driver.Stop();
         Require(result.status == OpenStatus::Cancelled && driver.order == std::vector<wxString>{"warning", "picker"} &&
                     TestEditor::Text(frame) == before && frame->Editor()->Send(Scintilla::Message::CanUndo) &&
-                    TestFiles::Bytes(path) == "\xd6\xd0",
+                    TestFiles::Bytes(path) == "\x{d6}\x{d0}",
                 "F8 picker Cancel must follow discard confirmation and preserve dirty history and bytes");
     }
     std::puts("PASS: F8 warning and picker cancellation preserve text, history and disk bytes in original order");
@@ -164,7 +164,7 @@ void QuickReload(EditorFrame* frame) {
                 "quick reload GBK fixture must open");
         TestEditor::Append(frame, " live");
         // Save must occur before explicit UTF-8 decoding of the backing file.
-        if (choice == wxID_YES) TestFiles::WriteBytes(path, "\xd6\xd0");
+        if (choice == wxID_YES) TestFiles::WriteBytes(path, "\x{d6}\x{d0}");
         NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Open, choice);
         wxCommandEvent command(wxEVT_MENU, frame->GetMenuBar()->FindMenuItem("File", "As UTF-8"));
         frame->GetEventHandler()->ProcessEvent(command);
@@ -192,14 +192,14 @@ void DeliveredCodecs(EditorFrame* frame) {
         std::string text;
     };
     const Fixture fixtures[] = {
-        {"\xe4\xb8\xad", FileEncoding::Utf8, 0, "UTF-8", false, "中"},
-        {"\xef\xbb\xbf\xe4\xb8\xad", FileEncoding::Utf8, 0, "UTF-8", true, "中"},
-        {"\x2d\x4e", FileEncoding::Utf16Le, 1, "UTF-16LE", false, "中"},
-        {"\xff\xfe\x2d\x4e", FileEncoding::Utf16Le, 1, "UTF-16LE", true, "中"},
-        {"\xd6\xd0", FileEncoding::Gbk, 2, "GBK (CP936)", false, "中"},
-        {"# coding: utf-8\n\xd6\xd0", FileEncoding::Gbk, 2, "GBK (CP936)", false, "# coding: utf-8\n中"},
+        {"\x{e4}\x{b8}\x{ad}", FileEncoding::Utf8, 0, "UTF-8", false, "中"},
+        {"\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}", FileEncoding::Utf8, 0, "UTF-8", true, "中"},
+        {"\x{2d}\x{4e}", FileEncoding::Utf16Le, 1, "UTF-16LE", false, "中"},
+        {"\x{ff}\x{fe}\x{2d}\x{4e}", FileEncoding::Utf16Le, 1, "UTF-16LE", true, "中"},
+        {"\x{d6}\x{d0}", FileEncoding::Gbk, 2, "GBK (CP936)", false, "中"},
+        {"# coding: utf-8\n\x{d6}\x{d0}", FileEncoding::Gbk, 2, "GBK (CP936)", false, "# coding: utf-8\n中"},
         {"a\r\nb\nc\r", FileEncoding::Utf8, 0, "UTF-8", false, "a\r\nb\nc\r"},
-        {std::string("\xfe\xff\x4e\x2d", 4), FileEncoding::Utf16Be, 3, "UTF-16BE", true, "中"},
+        {std::string("\x{fe}\x{ff}\x{4e}\x{2d}", 4), FileEncoding::Utf16Be, 3, "UTF-16BE", true, "中"},
         {std::string("\0a\0\r\0\n\0b\0\n\0c\0\r", 14), FileEncoding::Utf16Be, 3, "UTF-16BE", false, "a\r\nb\nc\r"}};
     const auto path = TestFiles::TemporaryDirectory("codecs.txt");
     for (const auto& fixture : fixtures) {
@@ -288,16 +288,16 @@ void SameFileState(EditorFrame* frame) {
 }
 void NativeShortcuts(EditorFrame* frame) {
     const auto path = TestFiles::TemporaryDirectory("keys.txt");
-    TestFiles::WriteBytes(path, "\xef\xbb\xbf\xe4\xb8\xad");
+    TestFiles::WriteBytes(path, "\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}");
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "native key fixture must open");
-    TestFiles::WriteBytes(path, "\xd6\xd0");
+    TestFiles::WriteBytes(path, "\x{d6}\x{d0}");
     ReloadDialogs driver;
     NativeKeys::Shortcut(frame, WXK_F8, false);
     driver.Stop();
     Require(driver.choosers == 1 && driver.initial == 0 && TestEditor::Text(frame) == "中" &&
-                frame->DocumentEncoding() == FileEncoding::Gbk && TestFiles::Bytes(path) == "\xd6\xd0",
+                frame->DocumentEncoding() == FileEncoding::Gbk && TestFiles::Bytes(path) == "\x{d6}\x{d0}",
             "native F8 must share the explicit encoding reload menu implementation");
-    TestFiles::WriteBytes(path, std::string("\xfe\xff\x4e\x2d", 4));
+    TestFiles::WriteBytes(path, std::string("\x{fe}\x{ff}\x{4e}\x{2d}", 4));
     ReloadDialogs bigEndian;
     bigEndian.selected = 3;
     NativeKeys::Shortcut(frame, WXK_F8, false);

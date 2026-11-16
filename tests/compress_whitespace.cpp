@@ -57,8 +57,9 @@ void Fixtures(EditorFrame* frame) {
         {"single interior space is unchanged", "A B", 2, 1, "A B", 2, 1, false},
         {"unchanged whole document retains caret", "A B", 1, 1, "A B", 1, 1, false},
         {"empty document", "", 0, 0, "", 0, 0, false},
-        {"Unicode whitespace and control bytes are ordinary text", " \tA\xc2\xa0\t\tB\xe3\x80\x80  C\v\tD\f  E ", 0, 0,
-         "A\xc2\xa0 B\xe3\x80\x80 C\v D\f E", 0, 16},
+        {"Unicode whitespace and control bytes are ordinary text",
+         " \tA\x{c2}\x{a0}\t\tB\x{e3}\x{80}\x{80}  C\v\tD\f  E ", 0, 0, "A\x{c2}\x{a0} B\x{e3}\x{80}\x{80} C\v D\f E",
+         0, 16},
     };
     for (const auto& fixture : fixtures) {
         std::printf("Fixture: %s\n", fixture.name);
@@ -218,13 +219,14 @@ void SavedBytes(EditorFrame* frame) {
     std::filesystem::create_directory(directory);
     using Fixture = TestFiles::EncodedFixture;
     const Fixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf \t中文  B\r\n\tC \rD\t \n ", "\xef\xbb\xbf中文 B\r\nC\rD\n"},
-        {"gbk", FileEncoding::Gbk, "\t\xd6\xd0\xce\xc4  B\rC\tD \n ", "\xd6\xd0\xce\xc4 B\rC D\n"},
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf} \t中文  B\r\n\tC \rD\t \n ",
+         "\x{ef}\x{bb}\x{bf}中文 B\r\nC\rD\n"},
+        {"gbk", FileEncoding::Gbk, "\t\x{d6}\x{d0}\x{ce}\x{c4}  B\rC\tD \n ", "\x{d6}\x{d0}\x{ce}\x{c4} B\rC D\n"},
         {"utf16", FileEncoding::Utf16Le,
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      " \0\t\0A\0 \0 \0B\0\r\0\n\0\t\0C\0 \0",
                      24),
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "A\0 \0B\0\r\0\n\0C\0",
                      14)},
     };

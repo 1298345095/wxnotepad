@@ -219,14 +219,16 @@ void SavedBytes(EditorFrame* frame) {
         std::string removed;
     };
     const Fixture fixtures[] = {
-        {"utf8-bom", FileEncoding::Utf8, "\xef\xbb\xbf中\r\nB\n中\rC", "\xef\xbb\xbf中\r\nB\r\nC",
-         "\xef\xbb\xbf"
+        {"utf8-bom", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\r\nB\n中\rC", "\x{ef}\x{bb}\x{bf}中\r\nB\r\nC",
+         "\x{ef}\x{bb}\x{bf}"
          "B\r\nC"},
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0\r\nB\n\xd6\xd0\rC", "\xd6\xd0\r\nB\r\nC", "B\r\nC"},
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\r\nB\n\x{d6}\x{d0}\rC", "\x{d6}\x{d0}\r\nB\r\nC", "B\r\nC"},
         {"utf16-bom", FileEncoding::Utf16Le,
-         std::string("\xff\xfe\x2d\x4e\x0d\0\x0a\0\x42\0\x0a\0\x2d\x4e\x0d\0\x43\0", 18),
-         std::string("\xff\xfe\x2d\x4e\x0d\0\x0a\0\x42\0\x0d\0\x0a\0\x43\0", 16),
-         std::string("\xff\xfe\x42\0\x0d\0\x0a\0\x43\0", 10)},
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0d}\0\x{0a}\0\x{42}\0\x{0a}\0\x{2d}\x{4e}\x{0d}\0"
+                     "\x{43}\0",
+                     18),
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0d}\0\x{0a}\0\x{42}\0\x{0d}\0\x{0a}\0\x{43}\0", 16),
+         std::string("\x{ff}\x{fe}\x{42}\0\x{0d}\0\x{0a}\0\x{43}\0", 10)},
     };
     for (const auto& fixture : fixtures) {
         for (const bool merge : {true, false}) {

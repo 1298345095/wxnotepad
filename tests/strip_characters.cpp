@@ -88,8 +88,8 @@ void Fixtures(EditorFrame* frame) {
         {"last preserves empty lines and final newline", "\r\nA\n\rB\r\n", 0, 9, false, "\r\n\n\r\r\n", 0, 6},
         {"first removes complete CJK and supplementary scalars", "中A\n😀B\n", 0, 11, true, "A\nB\n", 0, 4},
         {"last removes complete CJK and supplementary scalars", "A中\nB😀", 0, 10, false, "A\nB", 0, 3},
-        {"first retains independent combining mark", "e\u0301x\n", 0, 5, true, "\u0301x\n", 0, 4},
-        {"last removes independent combining mark", "xe\u0301\n", 0, 5, false, "xe\n", 0, 3},
+        {"first retains independent combining mark", "e\u{0301}x\n", 0, 5, true, "\u{0301}x\n", 0, 4},
+        {"last removes independent combining mark", "xe\u{0301}\n", 0, 5, false, "xe\n", 0, 3},
         {"first current line with supplementary caret", "😀x", 4, 4, true, "x", 0, 0},
         {"last current line with supplementary caret", "x😀", 5, 5, false, "x", 1, 1},
     };
@@ -195,23 +195,27 @@ void SavedBytes(EditorFrame* frame) {
         std::string last;
     };
     const Fixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中A\r\n😀B\nxe\u0301",
-         "\xef\xbb\xbf"
-         "A\r\nB\ne\u0301",
-         "\xef\xbb\xbf中\r\n😀\nxe"},
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中A\r\n😀B\nxe\u{0301}",
+         "\x{ef}\x{bb}\x{bf}"
+         "A\r\nB\ne\u{0301}",
+         "\x{ef}\x{bb}\x{bf}中\r\n😀\nxe"},
         {"gbk", FileEncoding::Gbk,
-         "\xd6\xd0\xce\xc4"
+         "\x{d6}\x{d0}\x{ce}\x{c4}"
          "A\rB"
-         "\xd6\xd0\xce\xc4\n",
-         "\xce\xc4"
+         "\x{d6}\x{d0}\x{ce}\x{c4}\n",
+         "\x{ce}\x{c4}"
          "A\r"
-         "\xd6\xd0\xce\xc4\n",
-         "\xd6\xd0\xce\xc4\rB"
-         "\xd6\xd0\n"},
+         "\x{d6}\x{d0}\x{ce}\x{c4}\n",
+         "\x{d6}\x{d0}\x{ce}\x{c4}\rB"
+         "\x{d6}\x{d0}\n"},
         {"utf16", FileEncoding::Utf16Le,
-         std::string("\xff\xfe\x2d\x4e\x41\0\x0d\0\x0a\0\x3d\xd8\0\xde\x42\0\x0a\0\x78\0\x65\0\x01\x03", 24),
-         std::string("\xff\xfe\x41\0\x0d\0\x0a\0\x42\0\x0a\0\x65\0\x01\x03", 16),
-         std::string("\xff\xfe\x2d\x4e\x0d\0\x0a\0\x3d\xd8\0\xde\x0a\0\x78\0\x65\0", 18)},
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{41}\0\x{0d}\0\x{0a}\0\x{3d}\x{d8}\0\x{de}\x{42}\0"
+                     "\x{0a}\0\x{78}\0\x{65}\0\x{01}\x{03}",
+                     24),
+         std::string("\x{ff}\x{fe}\x{41}\0\x{0d}\0\x{0a}\0\x{42}\0\x{0a}\0\x{65}\0\x{01}\x{03}", 16),
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0d}\0\x{0a}\0\x{3d}\x{d8}\0\x{de}\x{0a}\0\x{78}\0"
+                     "\x{65}\0",
+                     18)},
     };
     for (const auto& fixture : fixtures)
         for (const bool first : {true, false}) {

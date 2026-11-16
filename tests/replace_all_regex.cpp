@@ -176,7 +176,7 @@ public:
                 std::puts("PASS: no-match, byte-identical, empty expansion/query and invalid input preserve history");
                 const auto path = TestFiles::TemporaryDirectory() /
                                   ("wxnotepad-regex-all-" + std::to_string(wxGetProcessId()) + ".txt");
-                const std::string beforeBytes = "\xef\xbb\xbf"
+                const std::string beforeBytes = "\x{ef}\x{bb}\x{bf}"
                                                 "中文12\r\n中文34\nend\r";
                 {
                     std::ofstream file(path, std::ios::binary);
@@ -198,7 +198,7 @@ public:
                 Require(Text(editor) == "12:中文:12\r\n34:中文:34\nend\r" && result->GetLabel() == "2 replacements",
                         "growing regex replacement preserves untouched mixed-EOL bytes");
                 Command(frame, wxID_SAVE);
-                Require(disk() == "\xef\xbb\xbf"
+                Require(disk() == "\x{ef}\x{bb}\x{bf}"
                                   "12:中文:12\r\n34:中文:34\nend\r" &&
                             frame->DocumentHasBom() && frame->DocumentEncoding() == FileEncoding::Utf8 &&
                             !editor->Send(Message::GetModify),
@@ -222,7 +222,7 @@ public:
                         "one Undo restores the reopened savepoint before shrinking");
                 Command(frame, wxID_REDO);
                 Command(frame, wxID_SAVE);
-                Require(disk() == "\xef\xbb\xbf"
+                Require(disk() == "\x{ef}\x{bb}\x{bf}"
                                   "X\r\nX\nend\r" &&
                             !editor->Send(Message::GetModify),
                         "Save writes independently expected shrinking bytes");

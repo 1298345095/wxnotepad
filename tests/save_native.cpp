@@ -203,7 +203,7 @@ public:
                 const auto source = directory / "source.txt";
                 const auto copy = directory / "copy.txt";
                 {
-                    std::ofstream(source, std::ios::binary) << "\xef\xbb\xbf"
+                    std::ofstream(source, std::ios::binary) << "\x{ef}\x{bb}\x{bf}"
                                                                "Native 中文\r\nsecond\nthird\r";
                 }
                 Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "source must open");
@@ -250,7 +250,7 @@ public:
                             frame->Editor()->Send(Scintilla::Message::GetModify) && hasOverride("C/C++") &&
                             frame->Editor()->Send(Scintilla::Message::GetCurrentPos) == selection &&
                             TestEditor::Text(frame->Editor()) == "Native 中文\r\nsecond\nthird\rpending" &&
-                            Bytes(source) == "\xef\xbb\xbf"
+                            Bytes(source) == "\x{ef}\x{bb}\x{bf}"
                                              "Native 中文\r\nsecond\nthird\r",
                         "cancelled F6 and rejected modifiers must preserve document, selection and disk bytes");
                 std::puts("PASS: native F6 cancellation and exact modifiers retain document state");
@@ -262,9 +262,9 @@ public:
                         "native new target must update identity");
                 Require(hasOverride("C/C++"),
                         "native Save As default current type must retain C++ despite the returned .txt name");
-                Require(Bytes(copy) == "\xef\xbb\xbf"
+                Require(Bytes(copy) == "\x{ef}\x{bb}\x{bf}"
                                        "Native 中文\r\nsecond\nthird\rpending" &&
-                            Bytes(source) == "\xef\xbb\xbf"
+                            Bytes(source) == "\x{ef}\x{bb}\x{bf}"
                                              "Native 中文\r\nsecond\nthird\r",
                         "native Save As must retain exact bytes and original source");
                 std::puts("PASS: native Save As menu/accelerator, picker Cancel and new target");
@@ -287,7 +287,7 @@ public:
                 Command(frame, wxID_SAVEAS);
                 overwrite.Stop();
                 Require(overwrite.confirmations == 1 && frame->DocumentPath() == Filename(target) &&
-                            Bytes(target) == "\xef\xbb\xbf"
+                            Bytes(target) == "\x{ef}\x{bb}\x{bf}"
                                              "Native 中文\r\nsecond\nthird\rpending overwrite",
                         "confirmed overwrite must save current bytes");
                 Require(!frame->Editor()->Send(Scintilla::Message::GetModify),
@@ -320,7 +320,7 @@ public:
                 Require(frame->DocumentPath() == Filename(target) && frame->DocumentHasUtf8Bom() &&
                             frame->Editor()->Send(Scintilla::Message::GetModify) && hasOverride("JSON"),
                         "failed native Save As must retain identity, BOM and dirty state");
-                Require(Bytes(source) == "\xef\xbb\xbf"
+                Require(Bytes(source) == "\x{ef}\x{bb}\x{bf}"
                                          "Native 中文\r\nsecond\nthird\r",
                         "failed native Save As must retain destination bytes");
                 std::puts("PASS: native Save As write failure preserves original identity and target");
@@ -343,7 +343,7 @@ public:
                 Require(failure.errors == 1 && failure.choosers == 0 && frame->DocumentPath() == Filename(target) &&
                             frame->Editor()->Send(Scintilla::Message::GetModify) && hasOverride("JSON"),
                         "failed native Save must show error and retain identity/dirty state");
-                Require(Bytes(target) == "\xef\xbb\xbf"
+                Require(Bytes(target) == "\x{ef}\x{bb}\x{bf}"
                                          "Native 中文\r\nsecond\nthird\rpending overwrite",
                         "failed Save must preserve target bytes");
                 frame->Editor()->Send(Scintilla::Message::Undo);

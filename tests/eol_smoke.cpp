@@ -51,10 +51,10 @@ public:
                     {"CRLF/LF tie", "a\r\nb\nlast", "a\r\nb\nlast\r\n"},
                     {"three-way tie", "a\r\nb\nc\rlast", "a\r\nb\nc\rlast\r\n"},
                     {"LF/CR tie above CRLF", "a\r\nb\nc\rd\ne\rlast", "a\r\nb\nc\rd\ne\rlast\n"},
-                    {"UTF-8 BOM LF", "\xef\xbb\xbf中文\nlast", "\xef\xbb\xbf中文\nlast\n"},
+                    {"UTF-8 BOM LF", "\x{ef}\x{bb}\x{bf}中文\nlast", "\x{ef}\x{bb}\x{bf}中文\nlast\n"},
                     {"no EOL resets default", "last", "last\r\n"},
-                    {"UTF-16LE BOM LF", "\xff\xfe\x2d\x4e\n\0z\0"s, "\xff\xfe\x2d\x4e\n\0z\0\n\0"s},
-                    {"GBK LF", "\xd6\xd0\nlast", "\xd6\xd0\nlast\n", FileEncoding::Gbk},
+                    {"UTF-16LE BOM LF", "\x{ff}\x{fe}\x{2d}\x{4e}\n\0z\0"s, "\x{ff}\x{fe}\x{2d}\x{4e}\n\0z\0\n\0"s},
+                    {"GBK LF", "\x{d6}\x{d0}\nlast", "\x{d6}\x{d0}\nlast\n", FileEncoding::Gbk},
                 };
                 for (const auto& sample : samples) {
                     const auto path = directory / "sample.txt";

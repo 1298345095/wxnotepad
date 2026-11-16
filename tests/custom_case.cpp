@@ -246,19 +246,20 @@ void SavedBytes(EditorFrame* frame) {
     std::filesystem::create_directory(directory);
     for (const auto& [label, mapping] :
          {std::pair{"Invert Case", 40208}, std::pair{"Title Case", 40210}, std::pair{"Sentence Case", 40209}}) {
-        std::string utf8After = "\xef\xbb\xbfÉ i a\r\n";
-        std::string utf16After("\xff\xfe\x41\0\x62\0 \0\x69\0\r\0\n\0", 14);
+        std::string utf8After = "\x{ef}\x{bb}\x{bf}É i a\r\n";
+        std::string utf16After("\x{ff}\x{fe}\x{41}\0\x{62}\0 \0\x{69}\0\r\0\n\0", 14);
         if (mapping == 40208) {
-            utf8After = "\xef\xbb\xbfÉ İ a\r\n";
-            utf16After = std::string("\xff\xfe\x41\0\x62\0 \0\x30\x01\r\0\n\0", 14);
+            utf8After = "\x{ef}\x{bb}\x{bf}É İ a\r\n";
+            utf16After = std::string("\x{ff}\x{fe}\x{41}\0\x{62}\0 \0\x{30}\x{01}\r\0\n\0", 14);
         } else if (mapping == 40210) {
-            utf8After = "\xef\xbb\xbfÉ I A\r\n";
-            utf16After = std::string("\xff\xfe\x41\0\x62\0 \0\x49\0\r\0\n\0", 14);
+            utf8After = "\x{ef}\x{bb}\x{bf}É I A\r\n";
+            utf16After = std::string("\x{ff}\x{fe}\x{41}\0\x{62}\0 \0\x{49}\0\r\0\n\0", 14);
         }
         const std::array<TestFiles::EncodedFixture, 3> fixtures{{
-            {"utf8", FileEncoding::Utf8, "\xef\xbb\xbfé İ A\r\n", utf8After},
-            {"gbk", FileEncoding::Gbk, "aB \xd6\xd0\r\n", "Ab \xd6\xd0\r\n"},
-            {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x61\0\x42\0 \0\x30\x01\r\0\n\0", 14), utf16After},
+            {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}é İ A\r\n", utf8After},
+            {"gbk", FileEncoding::Gbk, "aB \x{d6}\x{d0}\r\n", "Ab \x{d6}\x{d0}\r\n"},
+            {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{61}\0\x{42}\0 \0\x{30}\x{01}\r\0\n\0", 14),
+             utf16After},
         }};
         for (const auto& fixture : fixtures) {
             const auto path = directory / fixture.name;
@@ -279,7 +280,7 @@ void SavedBytes(EditorFrame* frame) {
                     "custom mapping retains encoding BOM EOL and saved state");
         }
         const auto path = directory / "unrepresentable";
-        TestFiles::WriteBytes(path, "\xa8\xa6"); // GBK é has no uppercase É.
+        TestFiles::WriteBytes(path, "\x{a8}\x{a6}"); // GBK é has no uppercase É.
         Require(frame->Open(TestFiles::Filename(path), FileEncoding::Gbk).status == OpenStatus::Opened,
                 "open GBK custom-case loss fixture");
         editor->Send(Message::SelectAll);
@@ -290,7 +291,7 @@ void SavedBytes(EditorFrame* frame) {
                          asked = true;
                          return EncodingLossChoice::Cancel;
                      }).status == SaveStatus::Cancelled &&
-                    asked && TestFiles::Bytes(path) == "\xa8\xa6" && editor->Send(Message::GetModify),
+                    asked && TestFiles::Bytes(path) == "\x{a8}\x{a6}" && editor->Send(Message::GetModify),
                 "GBK loss cancellation preserves disk bytes and unsaved custom case");
         Require(frame->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                     TestFiles::Bytes(path) == "?" && TestEditor::Text(editor) == "É" &&

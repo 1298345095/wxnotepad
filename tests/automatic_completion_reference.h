@@ -214,7 +214,7 @@ inline const std::vector<AutomaticReference> automaticReference = {
      "alpha alpine a",
      14,
      14},
-    {"Plain Text", "\\i", {{false, 110}, {true, 9}}, 13, false, true, "", "\u2208", 3, false, {}, "\\in", 3, 3},
+    {"Plain Text", "\\i", {{false, 110}, {true, 9}}, 13, false, true, "", "\u{2208}", 3, false, {}, "\\in", 3, 3},
     {"C/C++", "ar", {{true, 13}}, 15, false, false, "array[]", "array[]", 6, false, {}, "ar", 2, 0},
     {"C/C++", "ar[]", {{true, 13}}, 15, false, false, "array[]", "array[]", 6, false, {}, "ar[]", 2, 0},
     {"C/C++", "ve", {{true, 13}}, 15, false, false, "vector<>", "vector<>", 7, false, {}, "ve", 2, 0},
