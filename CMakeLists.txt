@@ -791,6 +791,7 @@ if(BUILD_TESTING)
 
     # Append to preserve the existing private-display shard membership and order.
     add_editor_test(completion_allocation native_completion_allocation_failures 60)
+    target_sources(completion_allocation PRIVATE tests/completion_allocation_fault.cpp)
     target_include_directories(completion_allocation PRIVATE src/editor/platform)
 
 endif()

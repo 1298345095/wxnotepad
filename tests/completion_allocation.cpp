@@ -1,57 +1,8 @@
 // Include the production implementation so this fixture can also exercise its
 // private candidate storage. The executable supplies CompleteWord to app_shell.
 #include "editor/word_completion.cpp"
+#include "completion_allocation_fault.h"
 #include "native_completion_helpers.h"
-
-namespace CompletionAllocationFault {
-thread_local bool armed = false;
-thread_local bool injected = false;
-thread_local size_t targetSize = 0;
-
-class ScopedFailure final {
-public:
-    explicit ScopedFailure(size_t size = 0) {
-        targetSize = size;
-        injected = false;
-        armed = true;
-    }
-    ~ScopedFailure() { armed = false; }
-    bool Injected() const { return injected; }
-};
-
-void* Allocate(size_t size) {
-    if (armed && (targetSize == 0 || size == targetSize)) {
-        armed = false; // Cleanup and diagnostics must be able to allocate.
-        injected = true;
-        throw std::bad_alloc();
-    }
-    for (;;) {
-        if (void* allocation = std::malloc(size ? size : 1)) return allocation;
-        const auto handler = std::get_new_handler();
-        if (!handler) throw std::bad_alloc();
-        handler();
-    }
-}
-} // namespace CompletionAllocationFault
-
-void* operator new(size_t size) {
-    return CompletionAllocationFault::Allocate(size);
-}
-void* operator new[](size_t size) {
-    return CompletionAllocationFault::Allocate(size);
-}
-void operator delete(void* allocation) noexcept {
-    std::free(allocation);
-}
-void operator delete[](void* allocation) noexcept {
-    std::free(allocation);
-}
-void operator delete(void* allocation, size_t) noexcept {
-    std::free(allocation);
-}
-void operator delete[](void* allocation, size_t) noexcept {
-    std::free(allocation);
-}
 
 namespace {
 void Require(bool condition, const char* message) {
