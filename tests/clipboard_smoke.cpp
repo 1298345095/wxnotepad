@@ -1351,6 +1351,8 @@ void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     const auto check = [&](const char* label, const std::string& expected, int shortcut = 0) {
         const int id = copy->FindItem(label);
         Require(id != wxNOT_FOUND, "original filename copy command exists");
+        // Every command must replace owned shaped bytes, even for repeated names.
+        peer.OfferText("owned path-text clipboard baseline\n", "utility-offer-both");
         if (shortcut)
             Require(peer.Request("copy") == "ready", "independent peer seeds distinct owned text before shortcut");
         const auto before = state();
