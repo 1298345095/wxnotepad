@@ -804,5 +804,621 @@
       "output": "nested hooks: handled=1 called=1 injected=0 production=1 recovered=0 completion=1\nsingle hook: handled=1 called=1 injected=1 production=1 recovered=1 completion=0\nPASS: actual wxWidgets nested handler chain expires injection before production; a single head handler covers production\n"
     },
     "gui_validation": "Paint recovery and the subsequent committed-edit, Undo and rectangular-selection cases require the next hosted run."
+  },
+  "second_hosted_validation": {
+    "head_sha": "6ae147749f0093604752d584e900bddcc34bed2f",
+    "checkout_merge_sha": "075efc1289cd1871fc7605d4d44b56ec3ed2f77c",
+    "ci_run": 43886806315,
+    "ci_url": "https://github.com/1298345095/wxnotepad/actions/runs/43886806315",
+    "ci_conclusion": "failure",
+    "windows": {
+      "run_id": 43886806315,
+      "job_id": 133367044845,
+      "job": "Windows MSVC",
+      "status": "completed",
+      "conclusion": "success",
+      "source_head_sha": "6ae147749f0093604752d584e900bddcc34bed2f",
+      "tested_merge_sha": "075efc1289cd1871fc7605d4d44b56ec3ed2f77c",
+      "ordinary": {
+        "total": 217,
+        "passed": 216,
+        "failed": 0,
+        "skipped": 1
+      },
+      "diagnostic": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "ordinary_failures": [],
+      "ordinary_skips": [
+        "2026-11-16T14:43:04.3268446Z 125/217 Test #125: windows_inline_ime_input .........................***Skipped   0.02 sec"
+      ],
+      "new_fixtures": [
+        "2026-11-16T14:45:33.6531078Z 213/217 Test #213: native_surface_initialization_failures ...........   Passed    0.24 sec",
+        "2026-11-16T14:45:33.7294940Z 214/217 Test #214: native_parallel_surface_failures .................   Passed    0.08 sec"
+      ],
+      "diagnostic_results": [
+        "2026-11-16T14:46:15.6018721Z 1/2 Test   #6: native_diagnostic_process ........   Passed    0.72 sec",
+        "2026-11-16T14:46:27.3830850Z 2/2 Test #129: native_diagnostic_delivery .......   Passed   11.78 sec"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Test build preparation and CI invocation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Set up dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Set up compiler cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Verify compiler cache hits and header invalidation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Validate Linux native crash evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8
+        },
+        {
+          "name": "Validate Linux debug-symbol packaging",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Configure",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Build application and tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Verify pinned scheme importer CLIs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Record ordinary compilation cache statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Enable Linux native core dumps",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Prepare Windows native test display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Collect independent original GDI viewport reference",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Capture Windows visual brace crash dumps",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Test Windows",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Repeat Windows visual brace regression with crash evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19
+        },
+        {
+          "name": "Test private X11",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Test private Wayland",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Repeat native JSON Wayland regression with timeout evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Build opt-in diagnostic binaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23
+        },
+        {
+          "name": "Record diagnostic compilation cache statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24
+        },
+        {
+          "name": "Test Windows diagnostics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25
+        },
+        {
+          "name": "Test private X11 diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26
+        },
+        {
+          "name": "Test private Wayland diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27
+        },
+        {
+          "name": "Collect Linux native crash evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28
+        },
+        {
+          "name": "Collect tested build output",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 29
+        },
+        {
+          "name": "Verify configured SDK and distributed dependency footprint",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Upload build output",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Preserve logs and test evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32
+        },
+        {
+          "name": "Post Set up compiler cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Set up dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Post Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 64
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 65
+        }
+      ],
+      "evidence_artifact": {
+        "id": 14236810319,
+        "name": "evidence-windows-x64-075efc1289cd1871fc7605d4d44b56ec3ed2f77c-attempt-1",
+        "size_in_bytes": 5742449,
+        "url": "https://api.github.com/repos/1298345095/wxnotepad/actions/artifacts/14236810319",
+        "archive_download_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/artifacts/14236810319/zip",
+        "expired": false,
+        "created_at": "2026-11-16T14:46:32Z",
+        "expires_at": "2026-12-16T14:46:30Z",
+        "updated_at": "2026-11-16T14:46:32Z",
+        "digest": "sha256:cfd837a9635e530ee0288ac8b95b1011fb3a006200d8510b1014afacd1b32c66",
+        "workflow_run": {
+          "id": 43886806315,
+          "repository_id": 1439122383,
+          "head_repository_id": 1439122383,
+          "head_branch": "codex/sonarcloud-followup-2026-11-16",
+          "head_sha": "6ae147749f0093604752d584e900bddcc34bed2f"
+        }
+      },
+      "evidence_artifact_url": "https://github.com/1298345095/wxnotepad/actions/runs/43886806315/artifacts/14236810319",
+      "job_log": "/workspace/scratch/44c8652c3121/ci-windows-6ae14774-job.log"
+    },
+    "linux": {
+      "run_id": 43886806315,
+      "run_attempt": 1,
+      "head_sha": "6ae147749f0093604752d584e900bddcc34bed2f",
+      "checkout_merge_sha": "075efc1289cd1871fc7605d4d44b56ec3ed2f77c",
+      "ordinary_linux": {
+        "job_id": 133367045783,
+        "conclusion": "failure",
+        "x11": {
+          "total": 205,
+          "passed": 202,
+          "skipped": 2,
+          "failed": 1
+        },
+        "wayland": {
+          "total": 205,
+          "passed": 204,
+          "skipped": 0,
+          "failed": 1
+        },
+        "json_wayland_repeats": 20,
+        "x11_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "wayland_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "application_and_tests_build": "success",
+        "bundle": "success",
+        "sdk_contract": "success",
+        "evidence_artifact_id": 14235868937,
+        "build_artifact_id": 14236471794,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43886806315/linux-ordinary-job.log"
+      },
+      "coverage_x11": {
+        "job_id": 133367045297,
+        "conclusion": "failure",
+        "counts": {
+          "total": 205,
+          "passed": 202,
+          "skipped": 2,
+          "failed": 1
+        },
+        "artifact_id": 14236161525,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43886806315/coverage-x11-job.log"
+      },
+      "coverage_wayland": {
+        "job_id": 133367045259,
+        "conclusion": "failure",
+        "counts": {
+          "total": 205,
+          "passed": 204,
+          "skipped": 0,
+          "failed": 1
+        },
+        "artifact_id": 14234389604,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43886806315/coverage-wayland-job.log"
+      },
+      "coverage_aggregate": {
+        "job_id": 133376631474,
+        "conclusion": "failure",
+        "step": "Require both coverage backends"
+      },
+      "all_four_backend_results": {
+        "failed_test": "native_surface_initialization_failures",
+        "failed_assertion": "Undo fault injection reaches both style refresh and later visual surface creation",
+        "parallel_surface": "passed",
+        "surface_phases_passed": [
+          "owned initialization/retry",
+          "borrowed initialization/retry",
+          "missing/unavailable DC",
+          "borrowed factory recovery",
+          "clip allocation failures",
+          "native measurement and actual paint recovery with history retained",
+          "committed modification recovery and subsequent editing"
+        ],
+        "rectangular_undo": "not reached after stream Undo coverage assertion"
+      },
+      "failure_diagnosis": {
+        "cause": "The fixed 32-iteration allocation-failure sweep ends before the first uninjected pass on GTK. The minimum injection count requirement is satisfied; the completion requirement fails.",
+        "validation": "Matched gcov 13.3 reads the unchanged raw gcno/gcda from both coverage artifacts.",
+        "injectedCount": 32,
+        "completed": false,
+        "loop_body_count": 32,
+        "loop_condition_count": 33,
+        "completed_assignment_count": 0,
+        "all_executed_history_checks": "passed in all 32 injected stream Undo iterations",
+        "tool": "/workspace/scratch/44c8652c3121/native-sdk/gcov13/bin/x86_64-linux-gnu-gcov-13",
+        "raw_json": [
+          "surface-x11-gcov13.json",
+          "surface-wayland-gcov13.json"
+        ],
+        "line_count_proof": {
+          "x11": {
+            "function": {
+              "name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+              "demangled_name": "(anonymous namespace)::CheckUndoRecovery(EditorControl*)",
+              "start_line": 356,
+              "start_column": 6,
+              "end_line": 401,
+              "end_column": 1,
+              "blocks": 85,
+              "blocks_executed": 60,
+              "execution_count": 1
+            },
+            "lines": [
+              {
+                "line_number": 361,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 33,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 362,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 379,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 380,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 393,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 394,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 395,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 398,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 1,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 400,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              }
+            ],
+            "source_path": "/home/runner/work/wxnotepad/wxnotepad/tests/surface_initialization.cpp",
+            "gcov_json_sha256": "4ba860c02ed31db2ad14e0dc20fa9dec40bdc7da68971c4566f5bdadba3f2821",
+            "gcda_sha256": "5e73fdf2946c1eed733ee399fac72c02dac1e4b905f1411434a9a53dd9d80691",
+            "gcno_sha256": "71600d806c5b2879551a261fe12e389e61e90a150a5e265b48eacd2a28043015",
+            "command": "/workspace/scratch/44c8652c3121/native-sdk/gcov13/bin/x86_64-linux-gnu-gcov-13 --json-format --stdout /workspace/scratch/44c8652c3121/ci-run-43886806315/coverage-x11-extracted/build/coverage-cmake/CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.gcda"
+          },
+          "wayland": {
+            "function": {
+              "name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+              "demangled_name": "(anonymous namespace)::CheckUndoRecovery(EditorControl*)",
+              "start_line": 356,
+              "start_column": 6,
+              "end_line": 401,
+              "end_column": 1,
+              "blocks": 85,
+              "blocks_executed": 60,
+              "execution_count": 1
+            },
+            "lines": [
+              {
+                "line_number": 361,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 33,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 362,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 379,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 380,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 393,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 394,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 395,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 398,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 1,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 400,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              }
+            ],
+            "source_path": "/home/runner/work/wxnotepad/wxnotepad/tests/surface_initialization.cpp",
+            "gcov_json_sha256": "564b418ee80e488ec0e8b63a694a729a0d305013cb08e1b56e3f95c546a1b1bf",
+            "gcda_sha256": "97e595d2e6aba0075cdc1a3705bc608a36f28c9ed9f11e06389421c5a856282e",
+            "gcno_sha256": "f77862685d4d6b491db2858e6de77d3353dfacaddbbc6e66588851780e830b84",
+            "command": "/workspace/scratch/44c8652c3121/native-sdk/gcov13/bin/x86_64-linux-gnu-gcov-13 --json-format --stdout /workspace/scratch/44c8652c3121/ci-run-43886806315/coverage-wayland-extracted/build/coverage-cmake/CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.gcda"
+          }
+        },
+        "tested_source_snapshot": "/workspace/scratch/44c8652c3121/ci-run-43886806315/surface-initialization-6ae.cpp",
+        "tested_source_sha256": "da2476aa672493f3c4556b50a0804a327a1f4946c64cb5f82dae606f2d2d3b00"
+      },
+      "artifact_metadata": "/workspace/scratch/44c8652c3121/ci-run-43886806315/github-artifacts.json",
+      "final_linux_job_steps": "/workspace/scratch/44c8652c3121/ci-run-43886806315/github-linux-jobs.json",
+      "repository_changes": "After diagnosis, root authorized a fixture-only correction to the stream and rectangular Undo sweep termination.",
+      "recorded_utc": "2026-11-16T14:53:37.417408+00:00",
+      "raw_log_sha256": {
+        "linux-ordinary-job.log": "85818ed3dca9b98b601ceb93095d5a373cae25be878e5703a19e9e96e030fde9",
+        "coverage-wayland-job.log": "32592f1e023820a2607cd77ae39fe2148d48f1cce63ca213d4fb99103c1ef41b",
+        "coverage-x11-job.log": "96050a260b6acab50d4d562753943cb2312a03a56db4795b6120c53c9e35bd7c"
+      },
+      "fix": {
+        "file": "tests/surface_initialization.cpp",
+        "description": "Both sweeps increment skip until the first uninjected run passes every invariant. The minimum injection counts of 2/3 and existing 60-second CTest timeout remain; each sweep prints injectedCount and the successful skip.",
+        "compile_command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && cmake --build /workspace/scratch/44c8652c3121/native-build/cmake --target surface_initialization -j8",
+        "compile_exit": 0,
+        "compile_log": "/workspace/scratch/44c8652c3121/native-build/surface-complete-sweep-build.log",
+        "format_exit": 0,
+        "diff_check_exit": 0,
+        "patch": "/workspace/scratch/44c8652c3121/ci-run-43886806315/complete-sweep-fix.patch",
+        "commit": "not committed",
+        "gui_execution": "pending hosted CI"
+      }
+    },
+    "quality": {
+      "run_id": 43886805903,
+      "conclusion": "success"
+    },
+    "fuzz": {
+      "run_id": 43886806327,
+      "conclusion": "success"
+    },
+    "codeql": {
+      "run_id": 43886806308,
+      "conclusion": "success"
+    },
+    "sonar_analysis": "Not submitted: the existing gate requires both coverage backend jobs to pass."
+  },
+  "allocation_sweep_correction": {
+    "scope": "Test fixture correction; application implementation is unchanged from 187ee054ad8d6a1e5357b3b68e928e2ee891dc29.",
+    "evidence": {
+      "matching_gcov_version": "13.3.0",
+      "backends": [
+        "x11",
+        "wayland"
+      ],
+      "function_calls": 1,
+      "loop_condition": 33,
+      "loop_body": 32,
+      "injected_count_increment": 32,
+      "completed_assignment": 0,
+      "successful_break": 0,
+      "summary": "# 第二轮 Undo sweep 覆盖证据\n\nRun `43886806315`, attempt 1。Head `6ae147749f0093604752d584e900bddcc34bed2f`，实际 checkout merge `075efc1289cd1871fc7605d4d44b56ec3ed2f77c`。\n\n## 结论\n\nX11 与 Wayland 的 stream Undo sweep 都完成了 32 次已注入运行；每次运行的文本、选区、revision、save point、Undo/Redo 和后续编辑检查均通过。固定 `skip < 32` 截止使循环没有执行首个未注入运行，因此结束时 `injectedCount=32`、`completed=false`。失败发生在覆盖完整性断言。矩形 Undo 尚未开始。\n\n## 原始 coverage 计数\n\n使用匹配 GCC 13.3 的 gcov 直接读取未修改的 gcno/gcda，两个解析命令均退出 0。行号对应同目录 `surface-initialization-6ae.cpp` 原始快照。\n\n| 行 | 源代码 | X11 次数 | Wayland 次数 |\n|---|---|---:|---:|\n| 361 | `for (size_t skip = 0; skip < 32; ++skip) {` | 33 | 33 |\n| 362 | `TestEditor::ResetStream(editor, Original, 5, 5);` | 32 | 32 |\n| 379 | `++injectedCount;` | 32 | 32 |\n| 393 | `if (!injected) {` | 32 | 32 |\n| 394 | `completed = true;` | 0 | 0 |\n| 395 | `break;` | 0 | 0 |\n| 398 | `Require(completed && injectedCount >= 2,` | 1 | 1 |\n\n完整解析结果为 `surface-x11-gcov13.json` 和 `surface-wayland-gcov13.json`；工具绝对路径、执行命令、文件 SHA256、artifact ID 与摘要均保存在 `linux-receipt.json`。\n\n## 修正及本地验证\n\n`complete-sweep-fix.patch` 仅修正两个 Undo sweep 的终止条件：按 skip 顺序继续，直到首个未注入且全部不变量通过的运行。保留最低 2/3 次注入要求；整体用例继续由现有 60 秒 CTest 超时约束；成功输出包含实际注入数与结束 skip。\n\n修改后的 `surface_initialization` 本地编译、链接退出 0；canonical clang-format 23.1.2 与 `git diff --check` 通过。日志为 `/workspace/scratch/44c8652c3121/native-build/surface-complete-sweep-build.log`。后续完整桌面结果由下一轮 hosted CI 验证。\n"
+    },
+    "change": "Advance each Undo sweep until the first uninjected run passes all invariants, retaining minimum 2/3 injections and the existing 60-second process timeout; report observed injection counts.",
+    "source_sha256": {
+      "tests/surface_initialization.cpp": "523d9a4c9e6fc2cc15cae7f910590c2773abc51ea93080df8b3a8ac96a407e64"
+    },
+    "native_fixture_build": {
+      "target": "surface_initialization",
+      "exit_code": 0,
+      "log": "/workspace/scratch/44c8652c3121/native-build/surface-complete-sweep-build.log",
+      "log_sha256": "7c8af626657a731174706b444e459ad34b097aa9ea4e5b1d4c3a047a82c95023",
+      "output": "[0/2] Re-checking globbed directories...\n[1/3] Building CXX object CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.o\n[2/3] Linking CXX executable surface_initialization\n"
+    },
+    "format_exit_code": 0,
+    "whitespace_exit_code": 0,
+    "hosted_validation": "Complete Linux allocation sweeps are validated by the following hosted run; final tested revision and results are recorded in PR #221."
   }
 }

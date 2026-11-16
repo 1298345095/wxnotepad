@@ -714,3 +714,33 @@ failure, its diagnosis and the event-chain probe evidence.
 [Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43881662138) and
 [CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43881662041) all passed
 at `187ee05`. Clang-tidy analyzed all 228 maintained translation units.
+
+### Backend-dependent allocation sweeps
+
+The [second native CI run at `6ae1477`](https://github.com/1298345095/wxnotepad/actions/runs/43886806315)
+passed all Windows regressions: 216 passes and one existing IME skip, plus both
+diagnostic tests. Its complete surface fixture passed, including paint,
+post-commit notification recovery and ordinary/rectangular Undo.
+
+On both ordinary and coverage Linux backends, paint and post-commit recovery
+also passed. Their single remaining failure was the stream Undo sweep's final
+coverage assertion. The saved GCC 13.3 counters establish the cause directly:
+the loop body and `++injectedCount` each executed 32 times, while
+`completed = true` and its `break` executed zero times. All 32 injected runs
+passed their text, selection, revision, save-point, Redo and subsequent-edit
+checks. The fixed `skip < 32` bound ended the sweep before a successful
+uninjected run; the minimum failure-coverage requirement was already met.
+
+Both Undo sweeps now advance through matching allocations until the first
+uninjected run passes every invariant. They retain the minimum two/three
+injection requirements, print the actual injected count and completion index,
+and use the existing 60-second CTest timeout. This also removes the rectangular
+sweep's unverified 48-allocation cutoff. The corrected fixture compiles and
+links locally. The validation record retains the original CI counters and
+matching-gcov commands, and the next hosted run exercises the complete Linux
+sweeps.
+
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43886805903),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43886806327) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43886806308) also
+passed at `6ae1477`.

@@ -357,8 +357,8 @@ void CheckUndoRecovery(EditorControl* editor) {
     constexpr char Original[] = "alpha\nbeta\n";
     constexpr char Inserted[] = "alphax\ny\nbeta\n";
     unsigned injectedCount = 0;
-    bool completed = false;
-    for (size_t skip = 0; skip < 32; ++skip) {
+    size_t skip = 0;
+    for (;; ++skip) {
         TestEditor::ResetStream(editor, Original, 5, 5);
         editor->Send(Message::AddText, 3, reinterpret_cast<intptr_t>("x\ny"));
         NativePaint::Complete(editor);
@@ -390,14 +390,12 @@ void CheckUndoRecovery(EditorControl* editor) {
                 "later insertion is not blocked by the completed Undo notification");
         editor->Send(Message::Undo);
         Require(TestEditor::Text(editor) == Inserted, "the later insertion retains a separate Undo action");
-        if (!injected) {
-            completed = true;
-            break;
-        }
+        if (!injected) break;
     }
-    Require(completed && injectedCount >= 2,
-            "Undo fault injection reaches both style refresh and later visual surface creation");
-    std::puts("PASS: every Undo visual surface allocation preserves text, selection and future editing");
+    Require(injectedCount >= 2, "Undo fault injection reaches both style refresh and later visual surface creation");
+    std::printf("PASS: every Undo visual surface allocation preserves text, selection and future editing "
+                "(injected=%u; first uninjected skip=%zu)\n",
+                injectedCount, skip);
 }
 
 struct RectangleSelectionState {
@@ -429,9 +427,9 @@ struct RectangleSelectionState {
 void CheckRectangularUndoRecovery(EditorControl* editor) {
     constexpr char Original[] = "alpha\nbeta\nomega\n";
     unsigned injectedCount = 0;
-    bool completed = false;
+    size_t skip = 0;
     editor->Send(Message::SetUndoSelectionHistory, 3);
-    for (size_t skip = 0; skip < 48; ++skip) {
+    for (;; ++skip) {
         TestEditor::ResetStream(editor, Original);
         editor->Send(Message::SetRectangularSelectionAnchor, 1);
         editor->Send(Message::SetRectangularSelectionCaret, 14);
@@ -474,14 +472,13 @@ void CheckRectangularUndoRecovery(EditorControl* editor) {
         Require(TestEditor::Text(editor) == Original && !editor->Send(Message::GetModify) &&
                     !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
                 "another Undo still restores the complete original rectangular selection and save point");
-        if (!injected) {
-            completed = true;
-            break;
-        }
+        if (!injected) break;
     }
-    Require(completed && injectedCount >= 3,
+    Require(injectedCount >= 3,
             "rectangular Undo fault injection reaches style refresh, range reconstruction and caret measurement");
-    std::puts("PASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo");
+    std::printf("PASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo "
+                "(injected=%u; first uninjected skip=%zu)\n",
+                injectedCount, skip);
 }
 
 void CheckNativeRecovery(EditorControl* editor) {
