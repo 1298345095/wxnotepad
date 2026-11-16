@@ -2,6 +2,7 @@
 #include "native_fold_helpers.h"
 #include "native_key_helpers.h"
 #include "native_scroll_helpers.h"
+#include "windows_failure_capture.h"
 #include <wx/dialog.h>
 #include <wx/ffile.h>
 #include <wx/filename.h>
@@ -389,6 +390,20 @@ public:
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
+#ifdef __WXMSW__
+                auto* editor = frame->Editor();
+                const auto dpi = editor->GetDPI();
+                const auto client = editor->GetClientSize();
+                std::fprintf(stderr,
+                             "Word-wrap failure state: DPI=%d,%d client=%d,%d horizontal=%d/%d/%d vertical=%d/%d/%d "
+                             "width=%lld\n",
+                             dpi.x, dpi.y, client.x, client.y, editor->GetScrollRange(wxHORIZONTAL),
+                             editor->GetScrollThumb(wxHORIZONTAL), editor->GetScrollPos(wxHORIZONTAL),
+                             editor->GetScrollRange(wxVERTICAL), editor->GetScrollThumb(wxVERTICAL),
+                             editor->GetScrollPos(wxVERTICAL),
+                             static_cast<long long>(editor->Send(Message::GetScrollWidth)));
+                NativeFailure::Capture("word-wrap", {static_cast<long>(wxGetProcessId())});
+#endif
             }
             frame->Destroy();
             ExitMainLoop();
