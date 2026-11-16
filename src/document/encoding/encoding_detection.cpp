@@ -382,17 +382,18 @@ std::optional<DetectedEncoding> DetectSignatureEncoding(std::string_view bytes,
     constexpr size_t maxConvertedSize = (1U << 30) - 16;
     if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == FileEncoding::Utf8)) {
         return DetectedEncoding{explicitEncoding,
-                                *explicitEncoding == FileEncoding::Utf16Le ? bytes.starts_with("\xff\xfe")
+                                *explicitEncoding == FileEncoding::Utf16Le ? bytes.starts_with("\x{ff}\x{fe}")
                                 : *explicitEncoding == FileEncoding::Utf16Be
-                                    ? bytes.starts_with("\xfe\xff")
-                                    : *explicitEncoding == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf"),
+                                    ? bytes.starts_with("\x{fe}\x{ff}")
+                                    : *explicitEncoding == FileEncoding::Utf8 &&
+                                          bytes.starts_with("\x{ef}\x{bb}\x{bf}"),
                                 {}};
     }
     if (bytes.size() < maxConvertedSize && bytes.size() % 2 == 0) {
-        if (bytes.starts_with("\xff\xfe")) return Choice(CPI_UNICODEBOM, legacy, oem);
-        if (bytes.starts_with("\xfe\xff")) return Choice(CPI_UNICODEBEBOM, legacy, oem);
+        if (bytes.starts_with("\x{ff}\x{fe}")) return Choice(CPI_UNICODEBOM, legacy, oem);
+        if (bytes.starts_with("\x{fe}\x{ff}")) return Choice(CPI_UNICODEBEBOM, legacy, oem);
     }
-    if (bytes.starts_with("\xef\xbb\xbf")) return Choice(CPI_UTF8SIGN, legacy, oem);
+    if (bytes.starts_with("\x{ef}\x{bb}\x{bf}")) return Choice(CPI_UTF8SIGN, legacy, oem);
     if (bytes.size() >= maxConvertedSize) return Choice(IsUtf8(bytes) ? CPI_UTF8 : CPI_DEFAULT, legacy, oem);
     return std::nullopt;
 }

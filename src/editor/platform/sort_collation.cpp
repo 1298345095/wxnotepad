@@ -81,7 +81,7 @@ Levels SplitKey(std::string_view key) {
     return levels;
 }
 int Decimal(const Levels& key) {
-    if (key[0].size() != 2 || key[0][0] != '\x0d') return -1;
+    if (key[0].size() != 2 || key[0][0] != '\x{0d}') return -1;
     const unsigned value = static_cast<unsigned char>(key[0][1]);
     if (value == 3) return 0;
     return value >= 0x1a && value <= 0x2a && value % 2 == 0 ? static_cast<int>((value - 0x18) / 2) : -1;
@@ -127,7 +127,7 @@ void AppendNumericLevels(Levels& result, const std::vector<Levels>& characters, 
     size_t significant = start;
     while (significant < i && Decimal(characters[significant]) == 0)
         ++significant;
-    result[0] += "\x0d\x02";
+    result[0] += "\x{0d}\x{02}";
     result[0].push_back(static_cast<char>(i - significant + 2));
     size_t digit = significant;
     if ((i - significant) % 2 != 0) result[0].push_back(static_cast<char>(0x22 + Decimal(characters[digit++])));

@@ -47,7 +47,7 @@ std::optional<std::string> DecodeUtf16Be(std::string_view bytes) {
             little += bytes[offset + 2];
             offset += 2;
         } else if (high >= 0xd8 && high <= 0xdf) {
-            little += "\xfd\xff";
+            little += "\x{fd}\x{ff}";
         } else {
             little += bytes[offset + 1];
             little += bytes[offset];

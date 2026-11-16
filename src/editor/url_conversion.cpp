@@ -82,7 +82,7 @@ std::string ValidUtf8(std::string_view text) {
         if (valid)
             result.append(text.substr(index, consumed));
         else
-            result += "\xef\xbf\xbd";
+            result += "\x{ef}\x{bf}\x{bd}";
         index += consumed;
     }
     return result;

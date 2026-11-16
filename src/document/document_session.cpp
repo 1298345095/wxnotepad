@@ -172,9 +172,9 @@ std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncod
                                                       ? _("The document could not be encoded as UTF-16BE.")
                                                       : _("The document could not be encoded as UTF-16LE.")};
         bytes = std::move(*encoded);
-        if (bom) bytes.insert(0, encoding == FileEncoding::Utf16Be ? "\xfe\xff" : "\xff\xfe");
+        if (bom) bytes.insert(0, encoding == FileEncoding::Utf16Be ? "\x{fe}\x{ff}" : "\x{ff}\x{fe}");
     } else if (bom)
-        bytes.insert(0, "\xef\xbb\xbf");
+        bytes.insert(0, "\x{ef}\x{bb}\x{bf}");
     return bytes;
 }
 

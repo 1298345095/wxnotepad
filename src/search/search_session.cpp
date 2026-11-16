@@ -69,7 +69,7 @@ void AppendUnicodeEscape(std::string_view input, size_t& index, int value, std::
 bool TransformEscape(std::string_view input, size_t& index, std::string& output) {
     const char next = input[index + 1];
     constexpr std::string_view escapes = "\\abefnrtv";
-    constexpr std::string_view values = "\\\a\b\x1b\f\n\r\t\v";
+    constexpr std::string_view values = "\\\a\b\x{1b}\f\n\r\t\v";
     const auto found = escapes.find(next);
     if (found != std::string_view::npos) {
         output.push_back(values[found]);

@@ -100,7 +100,7 @@ void ReadEncodingVariable(std::string_view window, OriginalFileVariables& variab
 } // namespace
 
 OriginalFileVariables ReadOriginalFileVariables(std::string_view bytes, bool noFileVariables, bool noEncodingTags) {
-    const bool utf8Signature = bytes.starts_with("\xef\xbb\xbf");
+    const bool utf8Signature = bytes.starts_with("\x{ef}\x{bb}\x{bf}");
     for (const auto text : {bytes.substr(0, 512), bytes.substr(bytes.size() > 512 ? bytes.size() - 512 : 0)}) {
         const auto window = text.substr(0, text.find('\0'));
         OriginalFileVariables variables;
