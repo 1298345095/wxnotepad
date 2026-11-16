@@ -135,7 +135,7 @@ void CompletedPaintPublishesHorizontalRange(EditorFrame* frame) {
     std::string bottom;
     for (int row = 0; row < shortRows; ++row)
         bottom += "short\r\n";
-    const auto longLine = bottom.size();
+    const auto longLine = static_cast<intptr_t>(bottom.size());
     bottom += wide;
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bottom.c_str()));
     const auto longLineY = editor->Send(Message::PointYFromPosition, 0, longLine);
