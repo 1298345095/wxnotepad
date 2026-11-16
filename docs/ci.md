@@ -27,14 +27,10 @@ build. Standalone resource measurements remain serial. Windows uses one desktop
 and clipboard, and runs its full registered suite serially on the hosted VM: the four tests
 excluded on the development machine's shared desktop are not silently excluded.
 
-A temporary Windows diagnostic repeats the registered path-text clipboard case
-up to 20 times after the ordinary suite, stopping at its first failure. Every run
-uses the existing probe and Windows CTest wrappers, including their Default desktop
-and serial-execution checks. The peer's five-second response deadline and CTest's
-180-second deadline remain unchanged; the outer probe allows 30 seconds for wrapper
-and evidence work. Each run has private probe/CTest reports, and the complete
-ordinary suite's CTest evidence is copied before the repeat begins. This repeat
-collects evidence for the intermittent hosted timeout; it is not a clipboard fix.
+The path-text clipboard fixture seeds distinct owned shaped bytes before each
+Copy command. Every command must replace that offer with the original literal
+filename/path without shape tags. This avoids reading inherited delayed-render
+offers after a publication failure and keeps the original expected-data checks.
 
 Windows native failure captures read desktop pixels only within owned window
 bounds before cleanup. Overlapping windows can cover those regions. Native
@@ -384,6 +380,12 @@ On Windows, use the same wrapper with `--backend windows`. Add a fresh
 `--report-dir` to preserve each local attempt, and `--tests` to select registered
 cases. Windows uses the Default input desktop and serial execution; the private
 X11/Wayland sessions retain their existing concurrency.
+
+The original registered path-text case can be selected against the configured CI build:
+
+```text
+python -X utf8 .github/scripts/ci.py test --backend windows --tests '^original_path_text_clipboard$' --report-dir .ci/reports/local-path-text-01
+```
 
 For a standalone owned executable outside CTest, the synchronous probe entry
 point records each numeric process exit code, deadline and raw output:
