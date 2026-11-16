@@ -20,6 +20,8 @@ def screenshot_windows(user, window, destination, *, presented=False):
     user.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     user.GetWindowDC.argtypes = [wintypes.HWND]
     user.GetWindowDC.restype = wintypes.HDC
+    user.GetDC.argtypes = [wintypes.HWND]
+    user.GetDC.restype = wintypes.HDC
     user.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
     user.PrintWindow.argtypes = [wintypes.HWND, wintypes.HDC, wintypes.UINT]
     gdi.BitBlt.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
@@ -37,7 +39,7 @@ def screenshot_windows(user, window, destination, *, presented=False):
     rect = wintypes.RECT()
     assert user.GetWindowRect(window, ctypes.byref(rect))
     width, height = rect.right - rect.left, rect.bottom - rect.top
-    dc = user.GetWindowDC(window)
+    dc = user.GetDC(None) if presented else user.GetWindowDC(window)
     memory = gdi.CreateCompatibleDC(dc)
     bitmap = gdi.CreateCompatibleBitmap(dc, width, height)
     previous = gdi.SelectObject(memory, bitmap)
@@ -45,7 +47,9 @@ def screenshot_windows(user, window, destination, *, presented=False):
         if presented:
             # Failure capture must not send paint messages to a stalled peer.
             source_copy = 0x00CC0020
-            assert gdi.BitBlt(memory, 0, 0, width, height, dc, 0, 0, source_copy)
+            # Window DCs can omit DWM-composited native menus. Read the shown
+            # desktop region using the same physical full-window bounds.
+            assert gdi.BitBlt(memory, 0, 0, width, height, dc, rect.left, rect.top, source_copy)
         else:
             assert user.PrintWindow(window, memory, 2), 'Capture the real shown native dialog'
         gdi.SelectObject(memory, previous)
@@ -69,7 +73,7 @@ def screenshot_windows(user, window, destination, *, presented=False):
     finally:
         gdi.DeleteObject(bitmap)
         gdi.DeleteDC(memory)
-        user.ReleaseDC(window, dc)
+        user.ReleaseDC(None if presented else window, dc)
 
 
 def capture_and_check(dialogs, app, window, destination, system_dialog=False):
