@@ -1,0 +1,3425 @@
+{
+  "project": "1298345095_wxnotepad",
+  "organization": "1298345095",
+  "review_date": "2026-11-16",
+  "pull_request": 222,
+  "branch": "codex/sonarcloud-small-fixes-2026-11-16",
+  "baseline_commit": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+  "review_method": "Repository text search, complete relevant source files and pinned framework contracts. Source and rule review precede every change and disposition.",
+  "baseline": {
+    "main_revision": "c3d98ca4d270f2367b85ec9a96e0a14e582830ad",
+    "main_open_confirmed": 3759,
+    "main_security_reliability_open_confirmed": 0,
+    "pr_open_confirmed": 0,
+    "pr_quality_gate": "OK",
+    "pr_new_coverage": 98.18181818181819,
+    "completed_workflows": [
+      {
+        "id": 43955000767,
+        "name": "Fuzz",
+        "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000767",
+        "created_at": "2026-11-16T20:56:56Z",
+        "updated_at": "2026-11-16T21:01:08Z"
+      },
+      {
+        "id": 43955000718,
+        "name": "CodeQL",
+        "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000718",
+        "created_at": "2026-11-16T20:56:56Z",
+        "updated_at": "2026-11-16T21:02:24Z"
+      },
+      {
+        "id": 43955000805,
+        "name": "CI",
+        "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000805",
+        "created_at": "2026-11-16T20:56:56Z",
+        "updated_at": "2026-11-16T21:13:33Z"
+      },
+      {
+        "id": 43955000673,
+        "name": "Quality",
+        "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000673",
+        "created_at": "2026-11-16T20:56:56Z",
+        "updated_at": "2026-11-16T21:22:36Z"
+      }
+    ]
+  },
+  "counts": {
+    "implemented_main_issue_keys": 227,
+    "implemented_by_rule": {
+      "cpp:S7040": 205,
+      "cpp:S3646": 13,
+      "cpp:S1121": 6,
+      "cpp:S6228": 1,
+      "cpp:S6045": 1,
+      "cpp:S5271": 1
+    },
+    "verified_false_positives": 4,
+    "main_open_confirmed_after_dispositions": 3755
+  },
+  "code_fix_status": "Implemented on the PR branch. Main issue keys are reconciled by main analysis after merge.",
+  "code_commits": [
+    "b390d3bbc418b18364ef9d1a21c79ae5c47c1733",
+    "ab3828675c37bba8fd6937cf26fe1467c5bf2014"
+  ],
+  "scalar_and_container_fixes": {
+    "source_contracts": {
+      "cpp:S6228": "MaybeBinary updates mask with 1U << ch inside control(ch), which bounds ch below 32; mask is nonzero at every check. !std::has_single_bit(mask) therefore preserves the existing multiple-bit predicate and adjacent short circuit.",
+      "cpp:S1121": "Split scalar chained assignments in their existing right-to-left write order. OriginalSettings fields are plain bool; the indentation override remains an engaged optional<bool> with the same value. No call, callback or event yield is inserted between writes.",
+      "cpp:S6045": "Use std::less<> for the local std::map<std::string, std::string>. Existing emplace and at calls still compare std::string keys with the same lexical ordering and key-equivalence relation; the container type stays inside OriginalStates."
+    },
+    "issues": [
+      {
+        "key": "AaG1B5jrYqINDK50-vXM",
+        "rule": "cpp:S6045",
+        "file": "tests/insert_tag.cpp",
+        "baseline_line": 340
+      },
+      {
+        "key": "AaG1B5ngYqINDK50-vYe",
+        "rule": "cpp:S1121",
+        "file": "tests/save_copy.cpp",
+        "baseline_line": 439
+      },
+      {
+        "key": "AaG1B5ngYqINDK50-vYf",
+        "rule": "cpp:S1121",
+        "file": "tests/save_copy.cpp",
+        "baseline_line": 454
+      },
+      {
+        "key": "AaG1B5ngYqINDK50-vYk",
+        "rule": "cpp:S1121",
+        "file": "tests/save_copy.cpp",
+        "baseline_line": 502
+      },
+      {
+        "key": "AaG1B5ngYqINDK50-vYn",
+        "rule": "cpp:S1121",
+        "file": "tests/save_copy.cpp",
+        "baseline_line": 546
+      },
+      {
+        "key": "AaG1B5ngYqINDK50-vYo",
+        "rule": "cpp:S1121",
+        "file": "tests/save_copy.cpp",
+        "baseline_line": 565
+      },
+      {
+        "key": "AaHEzXV0hpq0YxBZ9SBS",
+        "rule": "cpp:S1121",
+        "file": "src/editor/indentation_settings.h",
+        "baseline_line": 22
+      },
+      {
+        "key": "AaGpuAPmUHShZWS1j0aH",
+        "rule": "cpp:S6228",
+        "file": "src/document/encoding/encoding_detection.cpp",
+        "baseline_line": 222
+      }
+    ]
+  },
+  "declaration_fixes": {
+    "baseline_commit": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+    "rules_read": [
+      "cpp:S5271",
+      "cpp:S3646"
+    ],
+    "method": "Repository search and complete source-file reading; no CodeGraph.",
+    "noreturn": {
+      "rule": "cpp:S5271",
+      "issue_key": "AaGQhgRyusAIaC0DBL39",
+      "compiler": "g++ (Debian 14.2.0-19) 14.2.0",
+      "prepared_source": {
+        "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+        "archive_sha256": "6872820d13812093dc26fab944efc1a6408dd296c786154c03c90ff65f042315",
+        "patch_sha256": "eb66ca5a38e46444c52d1d1cb4c135f6a4214ac9f27bf8198ed72850506d5139",
+        "preparation_sha256": "cd85c9def6a4c4f4473f796286906e5642464aaf66ac4686188182d74d2db4fa"
+      },
+      "function_exact_text": "[[noreturn]] void Assert(const char* c, const char* file, int line) noexcept {\n    std::fprintf(stderr, \"%s:%d: %s\\n\", file, line, c);\n    std::abort();\n}",
+      "source_sha256": "8cafba0fec8f93499e10639d732c1a87aab713a89398848e9644228561db39df",
+      "prepared_header_sha256": "41aeafedcc275d71b282f72e4acd2aada784070826db681050db9b06cb18fdc9",
+      "compilation": {
+        "command": [
+          "g++",
+          "-std=c++23",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-pedantic-errors",
+          "-D__WX__",
+          "-I",
+          "/workspace/scratch/486ae54b7e8f/wxnotepad/.ci/noreturn-build/original-core/scintilla/src",
+          "-c",
+          "/workspace/scratch/486ae54b7e8f/wxnotepad/.ci/noreturn-evidence/prepared_assert.cpp",
+          "-o",
+          "/workspace/scratch/486ae54b7e8f/wxnotepad/.ci/noreturn-evidence/prepared_assert.o"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      "nonwx_compilation": {
+        "command": [
+          "g++",
+          "-std=c++23",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-pedantic-errors",
+          "-I",
+          "/workspace/scratch/486ae54b7e8f/wxnotepad/.ci/noreturn-build/original-core/scintilla/src",
+          "-c",
+          "/workspace/scratch/486ae54b7e8f/wxnotepad/.ci/noreturn-evidence/nonwx_return.cpp",
+          "-o",
+          "/workspace/scratch/486ae54b7e8f/wxnotepad/.ci/noreturn-evidence/nonwx_return.o"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      "scope": "Compile-time declaration/definition and branch contract checks. Native wx translation-unit compilation is not available in this workspace without wxWidgets SDK.",
+      "source_contract": "The wx host Assert always writes its diagnostic and calls std::abort. Both the definition and the first prepared Debugging.h declaration receive [[noreturn]]. The header attribute is guarded by __WX__; CMake propagates __WX__ from notepad4_core to editor_runtime. The independent native_original_reference target has no __WX__, preserving the pinned Win32 Assert which may return on Ignore/Retry and has an empty non-TRACE implementation.",
+      "full_sources_reviewed": [
+        "src/editor/platform/wx_platform.cpp",
+        "src/editor/platform/core_headers.h",
+        ".ci/noreturn-build/original-core/scintilla/src/Debugging.h",
+        "tools/build.py",
+        "patches/original-core.patch",
+        "tests/native_original_reference/CMakeLists.txt"
+      ],
+      "pinned_source_revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+      "related_source_urls": [
+        "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Debugging.h",
+        "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/win32/PlatWin.cxx"
+      ]
+    },
+    "declaration_splits": [
+      {
+        "key": "AaHEzXiYhpq0YxBZ9SDz",
+        "rule": "cpp:S3646",
+        "file": "tests/syntax_javascript.cpp",
+        "baseline_line": 151,
+        "function": "SchemeSettings",
+        "type": "Restore",
+        "variable_declarator": "restore{settings.Path(), original}",
+        "change": {
+          "before": "} restore{settings.Path(), original};",
+          "after": "};\n    Restore restore{settings.Path(), original};"
+        }
+      },
+      {
+        "key": "AaG-lZoqOY3icnFs9aIB",
+        "rule": "cpp:S3646",
+        "file": "tests/file_times.cpp",
+        "baseline_line": 256,
+        "function": "UpdateFailures",
+        "type": "RestoreUmask",
+        "variable_declarator": "restoreUmask",
+        "change": {
+          "before": "} restoreUmask;",
+          "after": "};\n    RestoreUmask restoreUmask;"
+        }
+      },
+      {
+        "key": "AaG-lZpMOY3icnFs9aIc",
+        "rule": "cpp:S3646",
+        "file": "tests/file_change.cpp",
+        "baseline_line": 397,
+        "function": "CheckResetTransitions",
+        "type": "CancelDiscard",
+        "variable_declarator": "cancel",
+        "change": {
+          "before": "} cancel;",
+          "after": "};\n        CancelDiscard cancel;"
+        }
+      },
+      {
+        "key": "AaG-lZpMOY3icnFs9aId",
+        "rule": "cpp:S3646",
+        "file": "tests/file_change.cpp",
+        "baseline_line": 426,
+        "function": "CheckResetTransitions",
+        "type": "AcceptEncoding",
+        "variable_declarator": "accept",
+        "change": {
+          "before": "} accept;",
+          "after": "};\n        AcceptEncoding accept;"
+        }
+      },
+      {
+        "key": "AaG7NUP6kxw1cHak34zS",
+        "rule": "cpp:S3646",
+        "file": "tests/native_paint_helpers.h",
+        "baseline_line": 32,
+        "function": "NativePaint::Complete",
+        "type": "Completion",
+        "variable_declarator": "completion(editor)",
+        "change": {
+          "before": "} completion(editor);",
+          "after": "};\n    Completion completion(editor);"
+        }
+      },
+      {
+        "key": "AaG7NUP6kxw1cHak34zV",
+        "rule": "cpp:S3646",
+        "file": "tests/native_paint_helpers.h",
+        "baseline_line": 90,
+        "function": "NativePaint::Read",
+        "type": "Observation",
+        "variable_declarator": "observation(editor, sample)",
+        "change": {
+          "before": "} observation(editor, sample);",
+          "after": "};\n    Observation observation(editor, sample);"
+        }
+      },
+      {
+        "key": "AaG1r1E2yu4V9oip4YVj",
+        "rule": "cpp:S3646",
+        "file": "tests/blank_lines.cpp",
+        "baseline_line": 177,
+        "function": "NativeAlt",
+        "type": "RemoveObserver",
+        "variable_declarator": "removeObserver{editor}",
+        "change": {
+          "before": "} removeObserver{editor};",
+          "after": "};\n    RemoveObserver removeObserver{editor};"
+        }
+      },
+      {
+        "key": "AaG1r1Ghyu4V9oip4YWl",
+        "rule": "cpp:S3646",
+        "file": "tests/word_wrap.cpp",
+        "baseline_line": 511,
+        "function": "WordWrapApp::Combined",
+        "type": "GoToLineResponder",
+        "variable_declarator": "responder(frame)",
+        "change": {
+          "before": "} responder(frame);",
+          "after": "};\n        GoToLineResponder responder(frame);"
+        }
+      },
+      {
+        "key": "AaG1r07ayu4V9oip4YOb",
+        "rule": "cpp:S3646",
+        "file": "tests/goto_line.cpp",
+        "baseline_line": 92,
+        "function": "Dialog<Action>",
+        "type": "Driver",
+        "variable_declarator": "driver(frame, action)",
+        "change": {
+          "before": "} driver(frame, action);",
+          "after": "};\n    Driver driver(frame, action);"
+        }
+      },
+      {
+        "key": "AaG1B5ibYqINDK50-vWy",
+        "rule": "cpp:S3646",
+        "file": "tests/read_only.cpp",
+        "baseline_line": 118,
+        "function": "FileProtection",
+        "type": "RestorePermissions",
+        "variable_declarator": "restore{source, permissions}",
+        "change": {
+          "before": "} restore{source, permissions};",
+          "after": "};\n    RestorePermissions restore{source, permissions};"
+        }
+      },
+      {
+        "key": "AaG1r08Byu4V9oip4YPA",
+        "rule": "cpp:S3646",
+        "file": "tests/line_wrap.cpp",
+        "baseline_line": 351,
+        "function": "RectangleSelectionAndRecall",
+        "type": "Feedback",
+        "variable_declarator": "feedback",
+        "change": {
+          "before": "} feedback;",
+          "after": "};\n    Feedback feedback;"
+        }
+      },
+      {
+        "key": "AaG1r0mJyu4V9oip4YIU",
+        "rule": "cpp:S3646",
+        "file": "src/editor/platform/gtk_drag_drop.cpp",
+        "baseline_line": 119,
+        "function": "GtkTextDragDrop::Start",
+        "type": "Transfer",
+        "variable_declarator": "transfer{text}",
+        "change": {
+          "before": "} transfer{text};",
+          "after": "};\n    Transfer transfer{text};"
+        }
+      },
+      {
+        "key": "AaG1r1JEyu4V9oip4YYN",
+        "rule": "cpp:S3646",
+        "file": "tests/line_numbers.cpp",
+        "baseline_line": 190,
+        "function": "FileTransitions",
+        "type": "RemoveFiles",
+        "variable_declarator": "removeFiles{originalPath, savedPath}",
+        "change": {
+          "before": "} removeFiles{originalPath, savedPath};",
+          "after": "};\n    RemoveFiles removeFiles{originalPath, savedPath};"
+        }
+      }
+    ],
+    "validation": {
+      "canonical_clang_format": "23.1.2 --dry-run --Werror passed for all 12 changed C/C++ files in this subtask",
+      "git_diff_check": "passed",
+      "structural_equivalence": "Reversing precisely the 13 declaration splits restored every one of the 11 files byte for byte to baseline HEAD. All 13 splits retain exact original variable declarators, initializers and enclosing scopes.",
+      "prepared_source": "tools/build.py --prepare-only validated pinned archive and reapplied all patch hunks successfully.",
+      "compiler_contract_checks": "GCC 14.2, C++23, -O2 -Wall -Wextra -Werror -pedantic-errors: actual prepared header with exact production Assert definition compiled successfully. An int-returning caller ending in Assert compiled without missing-return warning. Non-wx returning Assert definition compiled successfully.",
+      "native_build": "The workspace lacks the wxWidgets SDK; full translation-unit/native validation remains for the existing hosted checks.",
+      "additional_tests_added": false
+    },
+    "modified_files": [
+      "patches/original-core.patch",
+      "src/editor/platform/wx_platform.cpp",
+      "tests/syntax_javascript.cpp",
+      "tests/file_times.cpp",
+      "tests/file_change.cpp",
+      "tests/native_paint_helpers.h",
+      "tests/blank_lines.cpp",
+      "tests/word_wrap.cpp",
+      "tests/goto_line.cpp",
+      "tests/read_only.cpp",
+      "tests/line_wrap.cpp",
+      "src/editor/platform/gtk_drag_drop.cpp",
+      "tests/line_numbers.cpp"
+    ],
+    "implemented_issue_keys": [
+      "AaGQhgRyusAIaC0DBL39",
+      "AaHEzXiYhpq0YxBZ9SDz",
+      "AaG-lZoqOY3icnFs9aIB",
+      "AaG-lZpMOY3icnFs9aIc",
+      "AaG-lZpMOY3icnFs9aId",
+      "AaG7NUP6kxw1cHak34zS",
+      "AaG7NUP6kxw1cHak34zV",
+      "AaG1r1E2yu4V9oip4YVj",
+      "AaG1r1Ghyu4V9oip4YWl",
+      "AaG1r07ayu4V9oip4YOb",
+      "AaG1B5ibYqINDK50-vWy",
+      "AaG1r08Byu4V9oip4YPA",
+      "AaG1r0mJyu4V9oip4YIU",
+      "AaG1r1JEyu4V9oip4YYN"
+    ],
+    "declaration_split_contract": "The named local type remains in the same block. Declare its single object immediately afterward, with identical storage duration and direct/aggregate/default initialization; no intervening statement or new scope. Construction, callback registration, address stability, exception unwinding and destruction order are unchanged."
+  },
+  "literal_fixes": {
+    "project": "1298345095_wxnotepad",
+    "organization": "1298345095",
+    "pull_request": 222,
+    "base_revision": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+    "rule": "cpp:S7040",
+    "implemented_issue_count": 205,
+    "baseline_rule_issue_count": 852,
+    "remaining_unselected_rule_issue_count": 647,
+    "change": "Replace actual numeric escapes in four literal tables with delimited C++23 forms, preserving original digits, literal bytes, labels, explicit lengths, command/state values, array sizes and order.",
+    "files": [
+      {
+        "file": "tests/escape_text_fixtures.h",
+        "base_sha256": "2605c4edc89642372eed15c33bac0692f317146dcb49295dcfef48d1a2ec0c09",
+        "changed_literal_tokens": 136,
+        "all_literal_tokens": 204,
+        "sha256": "a64df9f0f6b1461844aa4a4f4aaaf6fdce113bfa82ea06f51974e0242ff2cfb2",
+        "complete_string_groups_compared": 204,
+        "nonliteral_tokens_unchanged": true,
+        "comments_unchanged": true,
+        "issue_count": 136,
+        "issues": [
+          {
+            "key": "AaG07aUxhCsovMxdASGt",
+            "original_line": 13,
+            "changed_literal_groups": [
+              {
+                "group_index": 1,
+                "new_start_line": 13,
+                "new_end_line": 13
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASGu",
+            "original_line": 14,
+            "changed_literal_groups": [
+              {
+                "group_index": 2,
+                "new_start_line": 14,
+                "new_end_line": 14
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASGv",
+            "original_line": 16,
+            "changed_literal_groups": [
+              {
+                "group_index": 4,
+                "new_start_line": 16,
+                "new_end_line": 16
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASGw",
+            "original_line": 17,
+            "changed_literal_groups": [
+              {
+                "group_index": 5,
+                "new_start_line": 17,
+                "new_end_line": 17
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASGx",
+            "original_line": 19,
+            "changed_literal_groups": [
+              {
+                "group_index": 7,
+                "new_start_line": 19,
+                "new_end_line": 19
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASGy",
+            "original_line": 20,
+            "changed_literal_groups": [
+              {
+                "group_index": 8,
+                "new_start_line": 20,
+                "new_end_line": 20
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASGz",
+            "original_line": 22,
+            "changed_literal_groups": [
+              {
+                "group_index": 10,
+                "new_start_line": 22,
+                "new_end_line": 22
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG0",
+            "original_line": 23,
+            "changed_literal_groups": [
+              {
+                "group_index": 11,
+                "new_start_line": 23,
+                "new_end_line": 23
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG1",
+            "original_line": 25,
+            "changed_literal_groups": [
+              {
+                "group_index": 13,
+                "new_start_line": 25,
+                "new_end_line": 25
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG2",
+            "original_line": 26,
+            "changed_literal_groups": [
+              {
+                "group_index": 14,
+                "new_start_line": 26,
+                "new_end_line": 26
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG3",
+            "original_line": 27,
+            "changed_literal_groups": [
+              {
+                "group_index": 16,
+                "new_start_line": 28,
+                "new_end_line": 28
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG4",
+            "original_line": 28,
+            "changed_literal_groups": [
+              {
+                "group_index": 17,
+                "new_start_line": 29,
+                "new_end_line": 29
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG5",
+            "original_line": 29,
+            "changed_literal_groups": [
+              {
+                "group_index": 19,
+                "new_start_line": 30,
+                "new_end_line": 30
+              },
+              {
+                "group_index": 20,
+                "new_start_line": 31,
+                "new_end_line": 31
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG6",
+            "original_line": 29,
+            "changed_literal_groups": [
+              {
+                "group_index": 19,
+                "new_start_line": 30,
+                "new_end_line": 30
+              },
+              {
+                "group_index": 20,
+                "new_start_line": 31,
+                "new_end_line": 31
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG7",
+            "original_line": 30,
+            "changed_literal_groups": [
+              {
+                "group_index": 22,
+                "new_start_line": 32,
+                "new_end_line": 32
+              },
+              {
+                "group_index": 23,
+                "new_start_line": 33,
+                "new_end_line": 33
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG8",
+            "original_line": 30,
+            "changed_literal_groups": [
+              {
+                "group_index": 22,
+                "new_start_line": 32,
+                "new_end_line": 32
+              },
+              {
+                "group_index": 23,
+                "new_start_line": 33,
+                "new_end_line": 33
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG9",
+            "original_line": 31,
+            "changed_literal_groups": [
+              {
+                "group_index": 25,
+                "new_start_line": 35,
+                "new_end_line": 35
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG-",
+            "original_line": 32,
+            "changed_literal_groups": [
+              {
+                "group_index": 26,
+                "new_start_line": 36,
+                "new_end_line": 36
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASG_",
+            "original_line": 33,
+            "changed_literal_groups": [
+              {
+                "group_index": 28,
+                "new_start_line": 37,
+                "new_end_line": 37
+              },
+              {
+                "group_index": 29,
+                "new_start_line": 37,
+                "new_end_line": 37
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHA",
+            "original_line": 33,
+            "changed_literal_groups": [
+              {
+                "group_index": 28,
+                "new_start_line": 37,
+                "new_end_line": 37
+              },
+              {
+                "group_index": 29,
+                "new_start_line": 37,
+                "new_end_line": 37
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHB",
+            "original_line": 34,
+            "changed_literal_groups": [
+              {
+                "group_index": 31,
+                "new_start_line": 38,
+                "new_end_line": 38
+              },
+              {
+                "group_index": 32,
+                "new_start_line": 39,
+                "new_end_line": 39
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHC",
+            "original_line": 34,
+            "changed_literal_groups": [
+              {
+                "group_index": 31,
+                "new_start_line": 38,
+                "new_end_line": 38
+              },
+              {
+                "group_index": 32,
+                "new_start_line": 39,
+                "new_end_line": 39
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHD",
+            "original_line": 36,
+            "changed_literal_groups": [
+              {
+                "group_index": 34,
+                "new_start_line": 41,
+                "new_end_line": 41
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHE",
+            "original_line": 37,
+            "changed_literal_groups": [
+              {
+                "group_index": 35,
+                "new_start_line": 42,
+                "new_end_line": 42
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHF",
+            "original_line": 39,
+            "changed_literal_groups": [
+              {
+                "group_index": 37,
+                "new_start_line": 44,
+                "new_end_line": 44
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHG",
+            "original_line": 40,
+            "changed_literal_groups": [
+              {
+                "group_index": 38,
+                "new_start_line": 45,
+                "new_end_line": 45
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHH",
+            "original_line": 42,
+            "changed_literal_groups": [
+              {
+                "group_index": 40,
+                "new_start_line": 47,
+                "new_end_line": 47
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHI",
+            "original_line": 43,
+            "changed_literal_groups": [
+              {
+                "group_index": 41,
+                "new_start_line": 47,
+                "new_end_line": 47
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHJ",
+            "original_line": 45,
+            "changed_literal_groups": [
+              {
+                "group_index": 43,
+                "new_start_line": 49,
+                "new_end_line": 49
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHK",
+            "original_line": 46,
+            "changed_literal_groups": [
+              {
+                "group_index": 44,
+                "new_start_line": 50,
+                "new_end_line": 50
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHL",
+            "original_line": 47,
+            "changed_literal_groups": [
+              {
+                "group_index": 46,
+                "new_start_line": 52,
+                "new_end_line": 52
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHM",
+            "original_line": 48,
+            "changed_literal_groups": [
+              {
+                "group_index": 47,
+                "new_start_line": 53,
+                "new_end_line": 53
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHN",
+            "original_line": 49,
+            "changed_literal_groups": [
+              {
+                "group_index": 49,
+                "new_start_line": 54,
+                "new_end_line": 54
+              },
+              {
+                "group_index": 50,
+                "new_start_line": 55,
+                "new_end_line": 55
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHO",
+            "original_line": 49,
+            "changed_literal_groups": [
+              {
+                "group_index": 49,
+                "new_start_line": 54,
+                "new_end_line": 54
+              },
+              {
+                "group_index": 50,
+                "new_start_line": 55,
+                "new_end_line": 55
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHP",
+            "original_line": 50,
+            "changed_literal_groups": [
+              {
+                "group_index": 52,
+                "new_start_line": 56,
+                "new_end_line": 56
+              },
+              {
+                "group_index": 53,
+                "new_start_line": 57,
+                "new_end_line": 57
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHQ",
+            "original_line": 50,
+            "changed_literal_groups": [
+              {
+                "group_index": 52,
+                "new_start_line": 56,
+                "new_end_line": 56
+              },
+              {
+                "group_index": 53,
+                "new_start_line": 57,
+                "new_end_line": 57
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHR",
+            "original_line": 51,
+            "changed_literal_groups": [
+              {
+                "group_index": 55,
+                "new_start_line": 59,
+                "new_end_line": 59
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHS",
+            "original_line": 52,
+            "changed_literal_groups": [
+              {
+                "group_index": 56,
+                "new_start_line": 60,
+                "new_end_line": 60
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHT",
+            "original_line": 53,
+            "changed_literal_groups": [
+              {
+                "group_index": 58,
+                "new_start_line": 61,
+                "new_end_line": 61
+              },
+              {
+                "group_index": 59,
+                "new_start_line": 61,
+                "new_end_line": 61
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHU",
+            "original_line": 53,
+            "changed_literal_groups": [
+              {
+                "group_index": 58,
+                "new_start_line": 61,
+                "new_end_line": 61
+              },
+              {
+                "group_index": 59,
+                "new_start_line": 61,
+                "new_end_line": 61
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHV",
+            "original_line": 54,
+            "changed_literal_groups": [
+              {
+                "group_index": 61,
+                "new_start_line": 62,
+                "new_end_line": 62
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHW",
+            "original_line": 55,
+            "changed_literal_groups": [
+              {
+                "group_index": 62,
+                "new_start_line": 63,
+                "new_end_line": 63
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHX",
+            "original_line": 57,
+            "changed_literal_groups": [
+              {
+                "group_index": 64,
+                "new_start_line": 65,
+                "new_end_line": 65
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHY",
+            "original_line": 58,
+            "changed_literal_groups": [
+              {
+                "group_index": 65,
+                "new_start_line": 66,
+                "new_end_line": 66
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHZ",
+            "original_line": 60,
+            "changed_literal_groups": [
+              {
+                "group_index": 67,
+                "new_start_line": 68,
+                "new_end_line": 68
+              },
+              {
+                "group_index": 68,
+                "new_start_line": 68,
+                "new_end_line": 68
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHa",
+            "original_line": 60,
+            "changed_literal_groups": [
+              {
+                "group_index": 67,
+                "new_start_line": 68,
+                "new_end_line": 68
+              },
+              {
+                "group_index": 68,
+                "new_start_line": 68,
+                "new_end_line": 68
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHb",
+            "original_line": 62,
+            "changed_literal_groups": [
+              {
+                "group_index": 70,
+                "new_start_line": 69,
+                "new_end_line": 69
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHc",
+            "original_line": 63,
+            "changed_literal_groups": [
+              {
+                "group_index": 71,
+                "new_start_line": 69,
+                "new_end_line": 69
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHd",
+            "original_line": 65,
+            "changed_literal_groups": [
+              {
+                "group_index": 73,
+                "new_start_line": 71,
+                "new_end_line": 71
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHe",
+            "original_line": 66,
+            "changed_literal_groups": [
+              {
+                "group_index": 74,
+                "new_start_line": 72,
+                "new_end_line": 72
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHf",
+            "original_line": 67,
+            "changed_literal_groups": [
+              {
+                "group_index": 76,
+                "new_start_line": 74,
+                "new_end_line": 74
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHg",
+            "original_line": 68,
+            "changed_literal_groups": [
+              {
+                "group_index": 77,
+                "new_start_line": 75,
+                "new_end_line": 75
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHh",
+            "original_line": 69,
+            "changed_literal_groups": [
+              {
+                "group_index": 79,
+                "new_start_line": 76,
+                "new_end_line": 76
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHi",
+            "original_line": 70,
+            "changed_literal_groups": [
+              {
+                "group_index": 80,
+                "new_start_line": 77,
+                "new_end_line": 77
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHj",
+            "original_line": 71,
+            "changed_literal_groups": [
+              {
+                "group_index": 82,
+                "new_start_line": 78,
+                "new_end_line": 78
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHk",
+            "original_line": 72,
+            "changed_literal_groups": [
+              {
+                "group_index": 83,
+                "new_start_line": 79,
+                "new_end_line": 79
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHl",
+            "original_line": 73,
+            "changed_literal_groups": [
+              {
+                "group_index": 85,
+                "new_start_line": 81,
+                "new_end_line": 81
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHm",
+            "original_line": 74,
+            "changed_literal_groups": [
+              {
+                "group_index": 86,
+                "new_start_line": 82,
+                "new_end_line": 82
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHn",
+            "original_line": 75,
+            "changed_literal_groups": [
+              {
+                "group_index": 88,
+                "new_start_line": 83,
+                "new_end_line": 83
+              },
+              {
+                "group_index": 89,
+                "new_start_line": 83,
+                "new_end_line": 83
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHo",
+            "original_line": 75,
+            "changed_literal_groups": [
+              {
+                "group_index": 88,
+                "new_start_line": 83,
+                "new_end_line": 83
+              },
+              {
+                "group_index": 89,
+                "new_start_line": 83,
+                "new_end_line": 83
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHp",
+            "original_line": 76,
+            "changed_literal_groups": [
+              {
+                "group_index": 91,
+                "new_start_line": 84,
+                "new_end_line": 84
+              },
+              {
+                "group_index": 92,
+                "new_start_line": 85,
+                "new_end_line": 85
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHq",
+            "original_line": 76,
+            "changed_literal_groups": [
+              {
+                "group_index": 91,
+                "new_start_line": 84,
+                "new_end_line": 84
+              },
+              {
+                "group_index": 92,
+                "new_start_line": 85,
+                "new_end_line": 85
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHr",
+            "original_line": 78,
+            "changed_literal_groups": [
+              {
+                "group_index": 94,
+                "new_start_line": 87,
+                "new_end_line": 87
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHs",
+            "original_line": 79,
+            "changed_literal_groups": [
+              {
+                "group_index": 95,
+                "new_start_line": 88,
+                "new_end_line": 88
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHt",
+            "original_line": 81,
+            "changed_literal_groups": [
+              {
+                "group_index": 97,
+                "new_start_line": 90,
+                "new_end_line": 90
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHu",
+            "original_line": 82,
+            "changed_literal_groups": [
+              {
+                "group_index": 98,
+                "new_start_line": 90,
+                "new_end_line": 90
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHv",
+            "original_line": 84,
+            "changed_literal_groups": [
+              {
+                "group_index": 100,
+                "new_start_line": 92,
+                "new_end_line": 92
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHw",
+            "original_line": 85,
+            "changed_literal_groups": [
+              {
+                "group_index": 101,
+                "new_start_line": 93,
+                "new_end_line": 93
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHx",
+            "original_line": 87,
+            "changed_literal_groups": [
+              {
+                "group_index": 103,
+                "new_start_line": 95,
+                "new_end_line": 95
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHy",
+            "original_line": 88,
+            "changed_literal_groups": [
+              {
+                "group_index": 104,
+                "new_start_line": 96,
+                "new_end_line": 96
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASHz",
+            "original_line": 89,
+            "changed_literal_groups": [
+              {
+                "group_index": 106,
+                "new_start_line": 98,
+                "new_end_line": 98
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASH0",
+            "original_line": 90,
+            "changed_literal_groups": [
+              {
+                "group_index": 107,
+                "new_start_line": 99,
+                "new_end_line": 99
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASH1",
+            "original_line": 91,
+            "changed_literal_groups": [
+              {
+                "group_index": 109,
+                "new_start_line": 100,
+                "new_end_line": 100
+              },
+              {
+                "group_index": 110,
+                "new_start_line": 101,
+                "new_end_line": 101
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASH2",
+            "original_line": 91,
+            "changed_literal_groups": [
+              {
+                "group_index": 109,
+                "new_start_line": 100,
+                "new_end_line": 100
+              },
+              {
+                "group_index": 110,
+                "new_start_line": 101,
+                "new_end_line": 101
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASH3",
+            "original_line": 92,
+            "changed_literal_groups": [
+              {
+                "group_index": 112,
+                "new_start_line": 102,
+                "new_end_line": 102
+              },
+              {
+                "group_index": 113,
+                "new_start_line": 103,
+                "new_end_line": 103
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASH4",
+            "original_line": 92,
+            "changed_literal_groups": [
+              {
+                "group_index": 112,
+                "new_start_line": 102,
+                "new_end_line": 102
+              },
+              {
+                "group_index": 113,
+                "new_start_line": 103,
+                "new_end_line": 103
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASH5",
+            "original_line": 93,
+            "changed_literal_groups": [
+              {
+                "group_index": 115,
+                "new_start_line": 105,
+                "new_end_line": 105
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASH6",
+            "original_line": 94,
+            "changed_literal_groups": [
+              {
+                "group_index": 116,
+                "new_start_line": 106,
+                "new_end_line": 106
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASH7",
+            "original_line": 95,
+            "changed_literal_groups": [
+              {
+                "group_index": 118,
+                "new_start_line": 107,
+                "new_end_line": 107
+              },
+              {
+                "group_index": 119,
+                "new_start_line": 107,
+                "new_end_line": 107
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASH8",
+            "original_line": 95,
+            "changed_literal_groups": [
+              {
+                "group_index": 118,
+                "new_start_line": 107,
+                "new_end_line": 107
+              },
+              {
+                "group_index": 119,
+                "new_start_line": 107,
+                "new_end_line": 107
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIA",
+            "original_line": 115,
+            "changed_literal_groups": [
+              {
+                "group_index": 121,
+                "new_start_line": 127,
+                "new_end_line": 127
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIB",
+            "original_line": 116,
+            "changed_literal_groups": [
+              {
+                "group_index": 122,
+                "new_start_line": 128,
+                "new_end_line": 128
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIC",
+            "original_line": 128,
+            "changed_literal_groups": [
+              {
+                "group_index": 124,
+                "new_start_line": 140,
+                "new_end_line": 140
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASID",
+            "original_line": 129,
+            "changed_literal_groups": [
+              {
+                "group_index": 125,
+                "new_start_line": 141,
+                "new_end_line": 141
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIE",
+            "original_line": 141,
+            "changed_literal_groups": [
+              {
+                "group_index": 127,
+                "new_start_line": 153,
+                "new_end_line": 153
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIF",
+            "original_line": 142,
+            "changed_literal_groups": [
+              {
+                "group_index": 128,
+                "new_start_line": 154,
+                "new_end_line": 154
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIG",
+            "original_line": 154,
+            "changed_literal_groups": [
+              {
+                "group_index": 130,
+                "new_start_line": 166,
+                "new_end_line": 166
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIH",
+            "original_line": 155,
+            "changed_literal_groups": [
+              {
+                "group_index": 131,
+                "new_start_line": 167,
+                "new_end_line": 167
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASII",
+            "original_line": 167,
+            "changed_literal_groups": [
+              {
+                "group_index": 133,
+                "new_start_line": 179,
+                "new_end_line": 179
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIJ",
+            "original_line": 168,
+            "changed_literal_groups": [
+              {
+                "group_index": 134,
+                "new_start_line": 180,
+                "new_end_line": 180
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIK",
+            "original_line": 180,
+            "changed_literal_groups": [
+              {
+                "group_index": 136,
+                "new_start_line": 192,
+                "new_end_line": 192
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIL",
+            "original_line": 181,
+            "changed_literal_groups": [
+              {
+                "group_index": 137,
+                "new_start_line": 193,
+                "new_end_line": 193
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIM",
+            "original_line": 193,
+            "changed_literal_groups": [
+              {
+                "group_index": 139,
+                "new_start_line": 205,
+                "new_end_line": 205
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIN",
+            "original_line": 194,
+            "changed_literal_groups": [
+              {
+                "group_index": 140,
+                "new_start_line": 206,
+                "new_end_line": 206
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIO",
+            "original_line": 206,
+            "changed_literal_groups": [
+              {
+                "group_index": 142,
+                "new_start_line": 218,
+                "new_end_line": 218
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIP",
+            "original_line": 207,
+            "changed_literal_groups": [
+              {
+                "group_index": 143,
+                "new_start_line": 219,
+                "new_end_line": 219
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIQ",
+            "original_line": 219,
+            "changed_literal_groups": [
+              {
+                "group_index": 145,
+                "new_start_line": 231,
+                "new_end_line": 231
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIR",
+            "original_line": 220,
+            "changed_literal_groups": [
+              {
+                "group_index": 146,
+                "new_start_line": 232,
+                "new_end_line": 232
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIS",
+            "original_line": 232,
+            "changed_literal_groups": [
+              {
+                "group_index": 148,
+                "new_start_line": 244,
+                "new_end_line": 244
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIT",
+            "original_line": 233,
+            "changed_literal_groups": [
+              {
+                "group_index": 149,
+                "new_start_line": 245,
+                "new_end_line": 245
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIU",
+            "original_line": 245,
+            "changed_literal_groups": [
+              {
+                "group_index": 151,
+                "new_start_line": 257,
+                "new_end_line": 257
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIV",
+            "original_line": 246,
+            "changed_literal_groups": [
+              {
+                "group_index": 152,
+                "new_start_line": 258,
+                "new_end_line": 258
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIW",
+            "original_line": 258,
+            "changed_literal_groups": [
+              {
+                "group_index": 154,
+                "new_start_line": 270,
+                "new_end_line": 270
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIX",
+            "original_line": 259,
+            "changed_literal_groups": [
+              {
+                "group_index": 155,
+                "new_start_line": 271,
+                "new_end_line": 271
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIY",
+            "original_line": 271,
+            "changed_literal_groups": [
+              {
+                "group_index": 157,
+                "new_start_line": 283,
+                "new_end_line": 283
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIZ",
+            "original_line": 272,
+            "changed_literal_groups": [
+              {
+                "group_index": 158,
+                "new_start_line": 284,
+                "new_end_line": 284
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIa",
+            "original_line": 284,
+            "changed_literal_groups": [
+              {
+                "group_index": 160,
+                "new_start_line": 296,
+                "new_end_line": 296
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIb",
+            "original_line": 285,
+            "changed_literal_groups": [
+              {
+                "group_index": 161,
+                "new_start_line": 297,
+                "new_end_line": 297
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIc",
+            "original_line": 297,
+            "changed_literal_groups": [
+              {
+                "group_index": 163,
+                "new_start_line": 309,
+                "new_end_line": 309
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASId",
+            "original_line": 298,
+            "changed_literal_groups": [
+              {
+                "group_index": 164,
+                "new_start_line": 310,
+                "new_end_line": 310
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIe",
+            "original_line": 310,
+            "changed_literal_groups": [
+              {
+                "group_index": 166,
+                "new_start_line": 322,
+                "new_end_line": 322
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIf",
+            "original_line": 311,
+            "changed_literal_groups": [
+              {
+                "group_index": 167,
+                "new_start_line": 323,
+                "new_end_line": 323
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIg",
+            "original_line": 323,
+            "changed_literal_groups": [
+              {
+                "group_index": 169,
+                "new_start_line": 335,
+                "new_end_line": 335
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIh",
+            "original_line": 324,
+            "changed_literal_groups": [
+              {
+                "group_index": 170,
+                "new_start_line": 336,
+                "new_end_line": 336
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIi",
+            "original_line": 336,
+            "changed_literal_groups": [
+              {
+                "group_index": 172,
+                "new_start_line": 348,
+                "new_end_line": 348
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIj",
+            "original_line": 337,
+            "changed_literal_groups": [
+              {
+                "group_index": 173,
+                "new_start_line": 349,
+                "new_end_line": 349
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIk",
+            "original_line": 349,
+            "changed_literal_groups": [
+              {
+                "group_index": 175,
+                "new_start_line": 361,
+                "new_end_line": 361
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIl",
+            "original_line": 350,
+            "changed_literal_groups": [
+              {
+                "group_index": 176,
+                "new_start_line": 362,
+                "new_end_line": 362
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIm",
+            "original_line": 362,
+            "changed_literal_groups": [
+              {
+                "group_index": 178,
+                "new_start_line": 374,
+                "new_end_line": 374
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIn",
+            "original_line": 363,
+            "changed_literal_groups": [
+              {
+                "group_index": 179,
+                "new_start_line": 375,
+                "new_end_line": 375
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIo",
+            "original_line": 375,
+            "changed_literal_groups": [
+              {
+                "group_index": 181,
+                "new_start_line": 387,
+                "new_end_line": 387
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIp",
+            "original_line": 376,
+            "changed_literal_groups": [
+              {
+                "group_index": 182,
+                "new_start_line": 388,
+                "new_end_line": 388
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIq",
+            "original_line": 388,
+            "changed_literal_groups": [
+              {
+                "group_index": 184,
+                "new_start_line": 400,
+                "new_end_line": 400
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIr",
+            "original_line": 389,
+            "changed_literal_groups": [
+              {
+                "group_index": 185,
+                "new_start_line": 401,
+                "new_end_line": 401
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIs",
+            "original_line": 401,
+            "changed_literal_groups": [
+              {
+                "group_index": 187,
+                "new_start_line": 413,
+                "new_end_line": 413
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIt",
+            "original_line": 402,
+            "changed_literal_groups": [
+              {
+                "group_index": 188,
+                "new_start_line": 414,
+                "new_end_line": 414
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIu",
+            "original_line": 414,
+            "changed_literal_groups": [
+              {
+                "group_index": 190,
+                "new_start_line": 426,
+                "new_end_line": 426
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIv",
+            "original_line": 415,
+            "changed_literal_groups": [
+              {
+                "group_index": 191,
+                "new_start_line": 427,
+                "new_end_line": 427
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIw",
+            "original_line": 427,
+            "changed_literal_groups": [
+              {
+                "group_index": 193,
+                "new_start_line": 439,
+                "new_end_line": 439
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIx",
+            "original_line": 428,
+            "changed_literal_groups": [
+              {
+                "group_index": 194,
+                "new_start_line": 440,
+                "new_end_line": 440
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIy",
+            "original_line": 440,
+            "changed_literal_groups": [
+              {
+                "group_index": 196,
+                "new_start_line": 452,
+                "new_end_line": 452
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASIz",
+            "original_line": 441,
+            "changed_literal_groups": [
+              {
+                "group_index": 197,
+                "new_start_line": 453,
+                "new_end_line": 453
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASI0",
+            "original_line": 453,
+            "changed_literal_groups": [
+              {
+                "group_index": 199,
+                "new_start_line": 465,
+                "new_end_line": 465
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASI1",
+            "original_line": 454,
+            "changed_literal_groups": [
+              {
+                "group_index": 200,
+                "new_start_line": 466,
+                "new_end_line": 466
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASI2",
+            "original_line": 466,
+            "changed_literal_groups": [
+              {
+                "group_index": 202,
+                "new_start_line": 478,
+                "new_end_line": 478
+              }
+            ]
+          },
+          {
+            "key": "AaG07aUxhCsovMxdASI3",
+            "original_line": 467,
+            "changed_literal_groups": [
+              {
+                "group_index": 203,
+                "new_start_line": 479,
+                "new_end_line": 479
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/character_hex_fixtures.h",
+        "base_sha256": "752400af7dc62efe76bcc39d2d2edfb14352ccfe5c247fb9816eb3b92ed900f9",
+        "changed_literal_tokens": 46,
+        "all_literal_tokens": 64,
+        "sha256": "af213045ed9631c9554c328b3c125319c0532ce95fa80e3c13b01915ff0efa49",
+        "complete_string_groups_compared": 54,
+        "nonliteral_tokens_unchanged": true,
+        "comments_unchanged": true,
+        "issue_count": 36,
+        "issues": [
+          {
+            "key": "AaG07aTThCsovMxdASF1",
+            "original_line": 13,
+            "changed_literal_groups": [
+              {
+                "group_index": 1,
+                "new_start_line": 13,
+                "new_end_line": 13
+              },
+              {
+                "group_index": 2,
+                "new_start_line": 13,
+                "new_end_line": 13
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF2",
+            "original_line": 13,
+            "changed_literal_groups": [
+              {
+                "group_index": 1,
+                "new_start_line": 13,
+                "new_end_line": 13
+              },
+              {
+                "group_index": 2,
+                "new_start_line": 13,
+                "new_end_line": 13
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF3",
+            "original_line": 14,
+            "changed_literal_groups": [
+              {
+                "group_index": 4,
+                "new_start_line": 14,
+                "new_end_line": 14
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF4",
+            "original_line": 15,
+            "changed_literal_groups": [
+              {
+                "group_index": 5,
+                "new_start_line": 15,
+                "new_end_line": 16
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF5",
+            "original_line": 16,
+            "changed_literal_groups": [
+              {
+                "group_index": 7,
+                "new_start_line": 18,
+                "new_end_line": 18
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF6",
+            "original_line": 17,
+            "changed_literal_groups": [
+              {
+                "group_index": 8,
+                "new_start_line": 19,
+                "new_end_line": 20
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF7",
+            "original_line": 18,
+            "changed_literal_groups": [
+              {
+                "group_index": 10,
+                "new_start_line": 22,
+                "new_end_line": 22
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF8",
+            "original_line": 19,
+            "changed_literal_groups": [
+              {
+                "group_index": 11,
+                "new_start_line": 24,
+                "new_end_line": 24
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF9",
+            "original_line": 20,
+            "changed_literal_groups": [
+              {
+                "group_index": 13,
+                "new_start_line": 25,
+                "new_end_line": 25
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF-",
+            "original_line": 21,
+            "changed_literal_groups": [
+              {
+                "group_index": 14,
+                "new_start_line": 26,
+                "new_end_line": 26
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASF_",
+            "original_line": 22,
+            "changed_literal_groups": [
+              {
+                "group_index": 16,
+                "new_start_line": 27,
+                "new_end_line": 27
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGA",
+            "original_line": 23,
+            "changed_literal_groups": [
+              {
+                "group_index": 17,
+                "new_start_line": 28,
+                "new_end_line": 30
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGB",
+            "original_line": 26,
+            "changed_literal_groups": [
+              {
+                "group_index": 19,
+                "new_start_line": 32,
+                "new_end_line": 32
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGC",
+            "original_line": 27,
+            "changed_literal_groups": [
+              {
+                "group_index": 20,
+                "new_start_line": 33,
+                "new_end_line": 33
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGD",
+            "original_line": 28,
+            "changed_literal_groups": [
+              {
+                "group_index": 22,
+                "new_start_line": 34,
+                "new_end_line": 34
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGE",
+            "original_line": 29,
+            "changed_literal_groups": [
+              {
+                "group_index": 23,
+                "new_start_line": 35,
+                "new_end_line": 35
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGF",
+            "original_line": 30,
+            "changed_literal_groups": [
+              {
+                "group_index": 25,
+                "new_start_line": 36,
+                "new_end_line": 36
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGG",
+            "original_line": 31,
+            "changed_literal_groups": [
+              {
+                "group_index": 26,
+                "new_start_line": 38,
+                "new_end_line": 38
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGH",
+            "original_line": 32,
+            "changed_literal_groups": [
+              {
+                "group_index": 28,
+                "new_start_line": 40,
+                "new_end_line": 40
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGI",
+            "original_line": 33,
+            "changed_literal_groups": [
+              {
+                "group_index": 29,
+                "new_start_line": 42,
+                "new_end_line": 42
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGJ",
+            "original_line": 34,
+            "changed_literal_groups": [
+              {
+                "group_index": 31,
+                "new_start_line": 44,
+                "new_end_line": 44
+              },
+              {
+                "group_index": 32,
+                "new_start_line": 45,
+                "new_end_line": 45
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGK",
+            "original_line": 34,
+            "changed_literal_groups": [
+              {
+                "group_index": 31,
+                "new_start_line": 44,
+                "new_end_line": 44
+              },
+              {
+                "group_index": 32,
+                "new_start_line": 45,
+                "new_end_line": 45
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGL",
+            "original_line": 36,
+            "changed_literal_groups": [
+              {
+                "group_index": 34,
+                "new_start_line": 47,
+                "new_end_line": 49
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGM",
+            "original_line": 39,
+            "changed_literal_groups": [
+              {
+                "group_index": 35,
+                "new_start_line": 51,
+                "new_end_line": 51
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGN",
+            "original_line": 42,
+            "changed_literal_groups": [
+              {
+                "group_index": 37,
+                "new_start_line": 54,
+                "new_end_line": 59
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGO",
+            "original_line": 47,
+            "changed_literal_groups": [
+              {
+                "group_index": 38,
+                "new_start_line": 61,
+                "new_end_line": 64
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGP",
+            "original_line": 52,
+            "changed_literal_groups": [
+              {
+                "group_index": 40,
+                "new_start_line": 67,
+                "new_end_line": 70
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGQ",
+            "original_line": 55,
+            "changed_literal_groups": [
+              {
+                "group_index": 41,
+                "new_start_line": 73,
+                "new_end_line": 75
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGR",
+            "original_line": 59,
+            "changed_literal_groups": [
+              {
+                "group_index": 43,
+                "new_start_line": 78,
+                "new_end_line": 80
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGS",
+            "original_line": 62,
+            "changed_literal_groups": [
+              {
+                "group_index": 44,
+                "new_start_line": 83,
+                "new_end_line": 83
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGT",
+            "original_line": 65,
+            "changed_literal_groups": [
+              {
+                "group_index": 46,
+                "new_start_line": 85,
+                "new_end_line": 86
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGU",
+            "original_line": 66,
+            "changed_literal_groups": [
+              {
+                "group_index": 47,
+                "new_start_line": 88,
+                "new_end_line": 88
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGV",
+            "original_line": 68,
+            "changed_literal_groups": [
+              {
+                "group_index": 49,
+                "new_start_line": 90,
+                "new_end_line": 93
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGW",
+            "original_line": 71,
+            "changed_literal_groups": [
+              {
+                "group_index": 50,
+                "new_start_line": 95,
+                "new_end_line": 98
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGX",
+            "original_line": 74,
+            "changed_literal_groups": [
+              {
+                "group_index": 52,
+                "new_start_line": 100,
+                "new_end_line": 100
+              },
+              {
+                "group_index": 53,
+                "new_start_line": 101,
+                "new_end_line": 101
+              }
+            ]
+          },
+          {
+            "key": "AaG07aTThCsovMxdASGY",
+            "original_line": 74,
+            "changed_literal_groups": [
+              {
+                "group_index": 52,
+                "new_start_line": 100,
+                "new_end_line": 100
+              },
+              {
+                "group_index": 53,
+                "new_start_line": 101,
+                "new_end_line": 101
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "file": "tests/custom_case_fixtures.h",
+        "base_sha256": "c054721207d11b93d73990593aefbc5d6fa6a9b13c63b73e6eaca1d63a3fe7b3",
+        "changed_literal_tokens": 6,
+        "all_literal_tokens": 108,
+        "sha256": "ad666e92675848f22b5af72a4855d230098f9bb535604f9b236076f60476d2dd",
+        "complete_string_groups_compared": 108,
+        "nonliteral_tokens_unchanged": true,
+        "comments_unchanged": true,
+        "issue_count": 6,
+        "issues": [
+          {
+            "key": "AaGyLIBlLjZQeDKjw6dG",
+            "original_line": 19,
+            "changed_literal_groups": [
+              {
+                "group_index": 27,
+                "new_start_line": 19,
+                "new_end_line": 19
+              }
+            ]
+          },
+          {
+            "key": "AaGyLIBlLjZQeDKjw6dH",
+            "original_line": 20,
+            "changed_literal_groups": [
+              {
+                "group_index": 29,
+                "new_start_line": 20,
+                "new_end_line": 20
+              }
+            ]
+          },
+          {
+            "key": "AaGyLIBlLjZQeDKjw6dI",
+            "original_line": 21,
+            "changed_literal_groups": [
+              {
+                "group_index": 30,
+                "new_start_line": 21,
+                "new_end_line": 21
+              }
+            ]
+          },
+          {
+            "key": "AaGyLIBlLjZQeDKjw6dJ",
+            "original_line": 22,
+            "changed_literal_groups": [
+              {
+                "group_index": 32,
+                "new_start_line": 22,
+                "new_end_line": 22
+              }
+            ]
+          },
+          {
+            "key": "AaGyLIBlLjZQeDKjw6dK",
+            "original_line": 23,
+            "changed_literal_groups": [
+              {
+                "group_index": 33,
+                "new_start_line": 23,
+                "new_end_line": 23
+              }
+            ]
+          },
+          {
+            "key": "AaGyLIBlLjZQeDKjw6dL",
+            "original_line": 24,
+            "changed_literal_groups": [
+              {
+                "group_index": 35,
+                "new_start_line": 24,
+                "new_end_line": 24
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "file": "src/editor/special_insert.h",
+        "base_sha256": "546b593dfedc60f6624633e20393771109bad3dfada1736dd648f265ddc234ed",
+        "changed_literal_tokens": 27,
+        "all_literal_tokens": 54,
+        "sha256": "cb76845b3e91a92b6db186eeee8ef489a59be9589f8cf8399d97bb6c9a28f82e",
+        "complete_string_groups_compared": 54,
+        "nonliteral_tokens_unchanged": true,
+        "comments_unchanged": true,
+        "issue_count": 27,
+        "issues": [
+          {
+            "key": "AaHjdOsu36FRZpqmyqBc",
+            "original_line": 64,
+            "changed_literal_groups": [
+              {
+                "group_index": 41,
+                "new_start_line": 64,
+                "new_end_line": 64
+              }
+            ]
+          },
+          {
+            "key": "AaHjdOsu36FRZpqmyqBd",
+            "original_line": 65,
+            "changed_literal_groups": [
+              {
+                "group_index": 43,
+                "new_start_line": 65,
+                "new_end_line": 65
+              }
+            ]
+          },
+          {
+            "key": "AaHjdOsu36FRZpqmyqBe",
+            "original_line": 66,
+            "changed_literal_groups": [
+              {
+                "group_index": 45,
+                "new_start_line": 66,
+                "new_end_line": 66
+              }
+            ]
+          },
+          {
+            "key": "AaHjdOsu36FRZpqmyqBf",
+            "original_line": 70,
+            "changed_literal_groups": [
+              {
+                "group_index": 53,
+                "new_start_line": 70,
+                "new_end_line": 70
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vV9",
+            "original_line": 44,
+            "changed_literal_groups": [
+              {
+                "group_index": 1,
+                "new_start_line": 44,
+                "new_end_line": 44
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vV-",
+            "original_line": 45,
+            "changed_literal_groups": [
+              {
+                "group_index": 3,
+                "new_start_line": 45,
+                "new_end_line": 45
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vV_",
+            "original_line": 46,
+            "changed_literal_groups": [
+              {
+                "group_index": 5,
+                "new_start_line": 46,
+                "new_end_line": 46
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWA",
+            "original_line": 47,
+            "changed_literal_groups": [
+              {
+                "group_index": 7,
+                "new_start_line": 47,
+                "new_end_line": 47
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWB",
+            "original_line": 48,
+            "changed_literal_groups": [
+              {
+                "group_index": 9,
+                "new_start_line": 48,
+                "new_end_line": 48
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWC",
+            "original_line": 49,
+            "changed_literal_groups": [
+              {
+                "group_index": 11,
+                "new_start_line": 49,
+                "new_end_line": 49
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWD",
+            "original_line": 50,
+            "changed_literal_groups": [
+              {
+                "group_index": 13,
+                "new_start_line": 50,
+                "new_end_line": 50
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWE",
+            "original_line": 51,
+            "changed_literal_groups": [
+              {
+                "group_index": 15,
+                "new_start_line": 51,
+                "new_end_line": 51
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWF",
+            "original_line": 52,
+            "changed_literal_groups": [
+              {
+                "group_index": 17,
+                "new_start_line": 52,
+                "new_end_line": 52
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWG",
+            "original_line": 53,
+            "changed_literal_groups": [
+              {
+                "group_index": 19,
+                "new_start_line": 53,
+                "new_end_line": 53
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWH",
+            "original_line": 54,
+            "changed_literal_groups": [
+              {
+                "group_index": 21,
+                "new_start_line": 54,
+                "new_end_line": 54
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWI",
+            "original_line": 55,
+            "changed_literal_groups": [
+              {
+                "group_index": 23,
+                "new_start_line": 55,
+                "new_end_line": 55
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWJ",
+            "original_line": 56,
+            "changed_literal_groups": [
+              {
+                "group_index": 25,
+                "new_start_line": 56,
+                "new_end_line": 56
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWK",
+            "original_line": 57,
+            "changed_literal_groups": [
+              {
+                "group_index": 27,
+                "new_start_line": 57,
+                "new_end_line": 57
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWL",
+            "original_line": 58,
+            "changed_literal_groups": [
+              {
+                "group_index": 29,
+                "new_start_line": 58,
+                "new_end_line": 58
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWM",
+            "original_line": 59,
+            "changed_literal_groups": [
+              {
+                "group_index": 31,
+                "new_start_line": 59,
+                "new_end_line": 59
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWN",
+            "original_line": 60,
+            "changed_literal_groups": [
+              {
+                "group_index": 33,
+                "new_start_line": 60,
+                "new_end_line": 60
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWO",
+            "original_line": 61,
+            "changed_literal_groups": [
+              {
+                "group_index": 35,
+                "new_start_line": 61,
+                "new_end_line": 61
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWP",
+            "original_line": 62,
+            "changed_literal_groups": [
+              {
+                "group_index": 37,
+                "new_start_line": 62,
+                "new_end_line": 62
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWQ",
+            "original_line": 63,
+            "changed_literal_groups": [
+              {
+                "group_index": 39,
+                "new_start_line": 63,
+                "new_end_line": 63
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWU",
+            "original_line": 67,
+            "changed_literal_groups": [
+              {
+                "group_index": 47,
+                "new_start_line": 67,
+                "new_end_line": 67
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWV",
+            "original_line": 68,
+            "changed_literal_groups": [
+              {
+                "group_index": 49,
+                "new_start_line": 68,
+                "new_end_line": 68
+              }
+            ]
+          },
+          {
+            "key": "AaG1B5gVYqINDK50-vWW",
+            "original_line": 69,
+            "changed_literal_groups": [
+              {
+                "group_index": 51,
+                "new_start_line": 69,
+                "new_end_line": 69
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "consumer_review": {
+      "tests/escape_text_fixtures.h": [
+        "tests/escape_text.cpp: ReferenceFixtures and SelectionStates; complete source read",
+        "40 byte fixtures and 28 selection/history states from original Windows executable, recorded in docs/observations/escape-text.md"
+      ],
+      "tests/character_hex_fixtures.h": [
+        "tests/character_hex.cpp: ReferenceFixtures; complete source read",
+        "18 frozen original CustomCaseMapping captures, recorded in docs/observations/character-hex.md"
+      ],
+      "tests/custom_case_fixtures.h": [
+        "tests/custom_case.cpp: ReferenceFixtures; complete source read",
+        "36 fixed Windows custom-case rows; tools/capture_custom_case.py writes windows_case_data.h rather than this fixture table"
+      ],
+      "src/editor/special_insert.h": [
+        "src/editor/special_insert.cpp: InsertUnicodeControlCharacter; complete source read",
+        "src/app/editor_frame_commands.cpp: AppendDateTimeCommands builds labels and index captures from same 27-entry table; enum/table ordering is unchanged",
+        "tools/localization.py complete source read; extracts marked labels from src/ only"
+      ]
+    },
+    "generators": "Repository search found no generator writing these four maintained tables. Original provenance comments and all comment bytes remain unchanged; no upstream source or capture oracle was regenerated.",
+    "validation": {
+      "compiler_version": "g++ (Debian 14.2.0-19) 14.2.0",
+      "compiler_command": "g++ -std=c++23 -O2 -Wall -Wextra -Werror -pedantic-errors ../literal-evidence/formatted_equivalence.cpp -o ../literal-evidence/formatted_equivalence",
+      "compile_exit_code": 0,
+      "complete_literal_groups": 420,
+      "comparison": "constexpr comparison of complete char arrays, both sizeof and every byte including embedded and terminal NUL; input extracted directly from baseline and final formatted source, with adjacent literals combined",
+      "nonliteral_token_and_comment_check": "All four headers identical after replacing complete string groups with numbered markers and removing whitespace; original comments compare exactly.",
+      "probe_command": "python3 .github/scripts/ci.py probe --report-dir ../literal-evidence/formatted-probe --timeout 30 --runs 1 -- /workspace/scratch/486ae54b7e8f/literal-evidence/formatted_equivalence",
+      "probe": {
+        "command": [
+          "/workspace/scratch/486ae54b7e8f/literal-evidence/formatted_equivalence"
+        ],
+        "cwd": "/workspace/scratch/486ae54b7e8f/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/486ae54b7e8f/literal-evidence/formatted_equivalence"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/486ae54b7e8f/literal-evidence/formatted-probe/run-001.log",
+            "seconds": 0.002
+          }
+        ]
+      },
+      "probe_source_sha256": "1c04103a221324d5ec95097a25531c303769b271e3b3c4fb6759ef553af8200a",
+      "verification_script_sha256": "a096112a3681130b5d56d63aaf480d2a82d9ab79c5b8d3934d820a4c2328e519",
+      "formatter": "clang-format 23.1.2; --dry-run --Werror passed on all four final files",
+      "diff_check": "git diff --check passed",
+      "new_persistent_tests": false
+    },
+    "compiler_support": {
+      "gcc": {
+        "minimum": "GCC 13, P2290R3",
+        "sources": [
+          "https://gcc.gnu.org/projects/cxx-status.html",
+          "https://gcc.gnu.org/gcc-13/changes.html"
+        ]
+      },
+      "msvc": {
+        "minimum": "MSVC Build Tools 14.50, P2290R3",
+        "source": "https://learn.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance?view=msvc-170",
+        "observed_successful_job": "https://github.com/1298345095/wxnotepad/actions/runs/43955000805/job/133607101050",
+        "observed_compiler": "MSVC 19.51.36260.0",
+        "observed_toolset": "14.51.36231",
+        "observed_environment": "Visual Studio 2026 Developer PowerShell v18.11.3"
+      },
+      "clang": {
+        "minimum": "Clang 15, P2290R3; includes the configured clang-tidy 18 frontend",
+        "sources": [
+          "https://clang.llvm.org/cxx_status.html",
+          "https://github.com/llvm/llvm-project/blob/llvmorg-18.1.8/clang/lib/Lex/LiteralSupport.cpp",
+          "https://github.com/llvm/llvm-project/blob/llvmorg-18.1.8/clang/include/clang/Basic/DiagnosticLexKinds.td"
+        ]
+      }
+    },
+    "gettext_review": {
+      "version": "0.22.5",
+      "source": "https://github.com/autotools-mirror/gettext/blob/v0.22.5/gettext-tools/src/x-c.c",
+      "official_tarball": "https://ftp.gnu.org/gnu/gettext/gettext-0.22.5.tar.xz",
+      "finding": "phase7_getc case x sees the opening brace as a nonhex character, pushes back brace and x, and returns a backslash without warning/error; phase5_get keeps consuming within same string literal until closing quote. These 27 data values are outside marked wxTRANSLATE labels. All marked labels and call structure remain unchanged.",
+      "reviewed_source_lines": [
+        "x-c.c:1086-1094",
+        "x-c.c:1721-1764"
+      ],
+      "validation_kind": "Actual GNU gettext 0.22.5 built from official source; repository localization.main extract command executed, xgettext exit 0, byte-identical POT",
+      "local_source_review_copy_sha256": "1a7ac48ee2bd3c09fc4f1e2880afe11f7f5289c584b94a5cb3f1ace6b2af09c4",
+      "source_sha256": "a6f093f66cdd260f3f21cd1ec673d6cb1d97cc110cac16a1c38b2b9ccabc423a",
+      "source_hash_scope": "Official gettext-0.22.5.tar.xz member gettext-tools/src/x-c.c",
+      "actual_extraction": {
+        "tool_version": "xgettext (GNU gettext-tools) 0.22.5",
+        "tool_path": "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-0.22.5/gettext-tools/src/xgettext",
+        "tool_sha256": "0da5529ea206b2879c003693db7a0616218a9459a235a08da402f14e77dd8102",
+        "repository_entrypoint": [
+          "/workspace/scratch/486ae54b7e8f/wxnotepad/tools/localization.py",
+          "--gettext-bin",
+          "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-0.22.5/gettext-tools/src",
+          "extract",
+          "--output",
+          "/workspace/scratch/486ae54b7e8f/literal-evidence/extracted-wxnotepad.pot"
+        ],
+        "extractor_sha256": "59a862099c932139cb5e4a6650788648e91f19a242cf3527f80dd5a89dbd077b",
+        "instrumentation": "Only run_gettext is wrapped to record its unchanged invocation and captured stdout/stderr; localization.main executes the repository CLI implementation.",
+        "gettext_calls": [
+          {
+            "command": [
+              "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-0.22.5/gettext-tools/src/xgettext",
+              "--language=C++",
+              "--from-code=UTF-8",
+              "--keyword",
+              "--sort-output",
+              "--add-location=file",
+              "--add-comments=TRANSLATORS:",
+              "--no-wrap",
+              "--package-name=wxnotepad",
+              "--package-version=0.1.0",
+              "--msgid-bugs-address=https://github.com/1298345095/wxnotepad/issues",
+              "--copyright-holder=wxnotepad contributors",
+              "--foreign-user",
+              "--force-po",
+              "--files-from=/workspace/scratch/486ae54b7e8f/literal-evidence/tmp/wxnotepad-extract-gdz0f6v8/inputs.txt",
+              "--output=/workspace/scratch/486ae54b7e8f/literal-evidence/tmp/wxnotepad-extract-gdz0f6v8/messages.pot",
+              "--keyword=_",
+              "--keyword=wxTRANSLATE",
+              "--keyword=wxTRANSLATE_IN_CONTEXT:1c,2",
+              "--keyword=wxPLURAL:1,2",
+              "--keyword=wxGETTEXT_IN_CONTEXT:1c,2",
+              "--keyword=wxGETTEXT_IN_CONTEXT_PLURAL:1c,2,3",
+              "--keyword=wxGetTranslation:1",
+              "--keyword=wxGetTranslation:1,2,3t",
+              "--flag=wxString::Format:1:c-format",
+              "--flag=Format:1:c-format",
+              "--flag=_:1:pass-c-format",
+              "--flag=wxTRANSLATE:1:pass-c-format",
+              "--flag=wxPLURAL:1:pass-c-format",
+              "--flag=wxGetTranslation:1:pass-c-format",
+              "--flag=wxPLURAL:2:pass-c-format",
+              "--flag=wxGETTEXT_IN_CONTEXT:2:pass-c-format",
+              "--flag=wxTRANSLATE_IN_CONTEXT:2:pass-c-format",
+              "--flag=wxGETTEXT_IN_CONTEXT_PLURAL:2:pass-c-format",
+              "--flag=wxGETTEXT_IN_CONTEXT_PLURAL:3:pass-c-format"
+            ],
+            "cwd": "/workspace/scratch/486ae54b7e8f/wxnotepad",
+            "exit_code": 0,
+            "stdout": "",
+            "stderr": "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-0.22.5/gettext-tools/src/xgettext: The option '--sort-output' is deprecated.\n"
+          }
+        ],
+        "recognized_diagnostic": "The existing --sort-output option produces GNU gettext 0.22.5's deprecation notice.",
+        "unexpected_diagnostics": [],
+        "extracted_path": "/workspace/scratch/486ae54b7e8f/literal-evidence/extracted-wxnotepad.pot",
+        "extracted_bytes": 46187,
+        "extracted_sha256": "61a0ad2ea8158d7ad0698211c3b45bd0c3abb75daf1b9d8eab8e2c0e5e2eb30c",
+        "baseline_path": "/workspace/scratch/486ae54b7e8f/wxnotepad/po/wxnotepad.pot",
+        "baseline_sha256": "61a0ad2ea8158d7ad0698211c3b45bd0c3abb75daf1b9d8eab8e2c0e5e2eb30c",
+        "identical": true,
+        "source_archive_url": "https://ftp.gnu.org/gnu/gettext/gettext-0.22.5.tar.xz",
+        "source_archive_sha256": "fe10c37353213d78a5b83d48af231e005c4da84db5ce88037d88355938259640"
+      },
+      "build_validation": {
+        "configure_exit_code": 0,
+        "build_exit_code": 0,
+        "source_archive": "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-0.22.5.tar.xz",
+        "configure_log": "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-configure-workspace.log",
+        "dependency_build_logs": [
+          "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-textstyle-build.log",
+          "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-gnulib-build.log"
+        ],
+        "header_generation_log": "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-textstyle-headers.log",
+        "xgettext_build_log": "/workspace/scratch/486ae54b7e8f/literal-evidence/gettext-xgettext-build.log",
+        "targets": [
+          "libtextstyle/lib",
+          "gettext-tools/gnulib-lib",
+          "gettext-tools/src textstyle.h",
+          "gettext-tools/src xgettext"
+        ],
+        "verification_command": "TMPDIR=/workspace/scratch/486ae54b7e8f/literal-evidence/tmp python3 ../literal-evidence/verify_gettext_extraction.py",
+        "verification_exit_code": 0,
+        "verification_script_sha256": "93651f9cedf7a836b77f2efaded86230ed031ebe0a5fd92dede4edc1a9ea2bdf"
+      }
+    }
+  },
+  "false_positives": [
+    {
+      "key": "AaHEzXmIhpq0YxBZ9SEl",
+      "rule": "cpp:S5350",
+      "file": "tests/chinese_encoding.cpp",
+      "baseline_line": 43,
+      "resolution": "FALSE_POSITIVE",
+      "comment": "Reviewed against PR #222 head cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b using repository search and complete relevant project source. EncodingPicker::Notify iterates wxTopLevelWindows and converts window to dialog with wxDynamicCast. That macro returns the same object address after removing const qualification and checking its dynamic type. Notify selects the dialog's tree item, then sends a wxEVT_BUTTON OK/Cancel event through dialog->GetEventHandler()->ProcessEvent(response). wxWindow::GetEventHandler() is const but returns the mutable handler for this same window. wxDialogBase's event table dispatches the event to OnButton, which calls AcceptAndClose/EndDialog and EndModal for this modal dialog. The pointee behind window is therefore modified through the cast and handler aliases. The S5350 read-only-object premise is false. Framework source: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/dlgcmn.cpp",
+      "source_evidence": [
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h",
+          "blob_sha": "fd7d4dae958f87b93ffc75aabaf99c172226e0e3"
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h",
+          "blob_sha": "389d2010d49702c053e0d61ff087b746c62ac835"
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/dlgcmn.cpp",
+          "blob_sha": "43be10c552c8f9642527d5c7c0b19610006a7c3b"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHEzXmIhpq0YxBZ9SEl",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHEzXmIhpq0YxBZ9SEm",
+      "rule": "cpp:S5350",
+      "file": "tests/chinese_encoding.cpp",
+      "baseline_line": 44,
+      "resolution": "FALSE_POSITIVE",
+      "comment": "Reviewed against PR #222 head cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b using repository search and complete relevant project source. EncodingPicker::Notify deliberately changes the modal dialog: after selecting a tree item it calls dialog->GetEventHandler()->ProcessEvent(response) with wxEVT_BUTTON and wxID_OK or wxID_CANCEL. wxWindow::GetEventHandler() is const-qualified but returns the mutable event handler for that same window. The pinned wxDialogBase event table routes this event through OnButton to AcceptAndClose/EndDialog, which calls EndModal for this modal dialog. The dialog's own modal state and return code are changed. The getter's const signature hides the mutation; dialog is not a read-only observer. Framework source: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/dlgcmn.cpp",
+      "source_evidence": [
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h",
+          "blob_sha": "fd7d4dae958f87b93ffc75aabaf99c172226e0e3"
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h",
+          "blob_sha": "389d2010d49702c053e0d61ff087b746c62ac835"
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/dlgcmn.cpp",
+          "blob_sha": "43be10c552c8f9642527d5c7c0b19610006a7c3b"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHEzXmIhpq0YxBZ9SEm",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHEzXmIhpq0YxBZ9SEp",
+      "rule": "cpp:S5350",
+      "file": "tests/chinese_encoding.cpp",
+      "baseline_line": 97,
+      "resolution": "FALSE_POSITIVE",
+      "comment": "Reviewed against PR #222 head cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b using repository search and complete relevant project source. ReloadPicker::Notify obtains window from wxTopLevelWindows and wxDynamicCast returns a mutable alias to the same wxDialog, not a separate object. The driver changes the list selection, dispatches its list-change event, and then sends wxEVT_BUTTON OK/Cancel through dialog->GetEventHandler()->ProcessEvent(response). The pinned wxDialogBase OnButton routes the response to AcceptAndClose/EndDialog and EndModal, changing the same modal window. wxDynamicCast's const_cast and the const GetEventHandler accessor conceal this writable alias from S5350. The unmodified-pointee premise is false. Framework source: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/dlgcmn.cpp",
+      "source_evidence": [
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h",
+          "blob_sha": "fd7d4dae958f87b93ffc75aabaf99c172226e0e3"
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h",
+          "blob_sha": "389d2010d49702c053e0d61ff087b746c62ac835"
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/dlgcmn.cpp",
+          "blob_sha": "43be10c552c8f9642527d5c7c0b19610006a7c3b"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHEzXmIhpq0YxBZ9SEp",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHEzXmIhpq0YxBZ9SEq",
+      "rule": "cpp:S5350",
+      "file": "tests/chinese_encoding.cpp",
+      "baseline_line": 98,
+      "resolution": "FALSE_POSITIVE",
+      "comment": "Reviewed against PR #222 head cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b using repository search and complete relevant project source. ReloadPicker::Notify changes the Source encoding list and then calls dialog->GetEventHandler()->ProcessEvent(response) with the selected OK/Cancel response. GetEventHandler is a const-qualified accessor returning the mutable handler for the same dialog. In pinned wxWidgets 3.3.3, wxDialogBase registers OnButton for wxEVT_BUTTON; its OK/Cancel branches call AcceptAndClose/EndDialog and EndModal. The dialog's modal state and return code are mutated. S5350's suggested pointer-to-const would misdescribe this active test driver as an observer. Framework source: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/dlgcmn.cpp",
+      "source_evidence": [
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h",
+          "blob_sha": "fd7d4dae958f87b93ffc75aabaf99c172226e0e3"
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h",
+          "blob_sha": "389d2010d49702c053e0d61ff087b746c62ac835"
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/dlgcmn.cpp",
+          "blob_sha": "43be10c552c8f9642527d5c7c0b19610006a7c3b"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHEzXmIhpq0YxBZ9SEq",
+        "newStatus": "falsepositive"
+      }
+    }
+  ],
+  "disposition_verification": {
+    "context": "main",
+    "false_positive_query": {
+      "issues": [
+        {
+          "key": "AaHEzXmIhpq0YxBZ9SEl",
+          "rule": "cpp:S5350",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/chinese_encoding.cpp",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this variable a pointer-to-const. The current type of \"window\" is \"class wxWindow *\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-10T05:10:01+0000",
+          "textRange": {
+            "startLine": 43,
+            "endLine": 43
+          }
+        },
+        {
+          "key": "AaHEzXmIhpq0YxBZ9SEm",
+          "rule": "cpp:S5350",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/chinese_encoding.cpp",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this variable a pointer-to-const. The current type of \"dialog\" is \"class wxDialog *\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-10T05:10:01+0000",
+          "textRange": {
+            "startLine": 44,
+            "endLine": 44
+          }
+        },
+        {
+          "key": "AaHEzXmIhpq0YxBZ9SEp",
+          "rule": "cpp:S5350",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/chinese_encoding.cpp",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this variable a pointer-to-const. The current type of \"window\" is \"class wxWindow *\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-10T05:10:01+0000",
+          "textRange": {
+            "startLine": 97,
+            "endLine": 97
+          }
+        },
+        {
+          "key": "AaHEzXmIhpq0YxBZ9SEq",
+          "rule": "cpp:S5350",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/chinese_encoding.cpp",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this variable a pointer-to-const. The current type of \"dialog\" is \"class wxDialog *\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-10T05:10:01+0000",
+          "textRange": {
+            "startLine": 98,
+            "endLine": 98
+          }
+        }
+      ],
+      "paging": {
+        "pageIndex": 1,
+        "pageSize": 100,
+        "total": 4
+      }
+    },
+    "open_confirmed_query": {
+      "issues": [],
+      "paging": {
+        "pageIndex": 1,
+        "pageSize": 100,
+        "total": 0
+      }
+    }
+  },
+  "source_hashes": [
+    {
+      "file": "patches/original-core.patch",
+      "baseline_sha256": "6a14fdca5bae09352a42475d06ae7cc316cb02316e77dc65b2fe4801527922f6",
+      "modified_sha256": "eb66ca5a38e46444c52d1d1cb4c135f6a4214ac9f27bf8198ed72850506d5139"
+    },
+    {
+      "file": "src/document/encoding/encoding_detection.cpp",
+      "baseline_sha256": "97311fe46ab26fecb877f44e4b0dff4b6c93bbde8e61be1238fd188cdf2432d0",
+      "modified_sha256": "ebac43565fc3c4c2d60a9c32ead22d0462eeec7921f3646cea7da86ed2b31927"
+    },
+    {
+      "file": "src/editor/indentation_settings.h",
+      "baseline_sha256": "2be67657973fa93f5ac2e375a945cd418097ca8dc6c68f920a7704253b5bd9f2",
+      "modified_sha256": "a56801d5a8c35852bc75ed3e82414d66664434e32e9c0c0c975778eb4005067d"
+    },
+    {
+      "file": "src/editor/platform/gtk_drag_drop.cpp",
+      "baseline_sha256": "4edb1b30644d6ec7f2ed938d38b7e416e47e45122489f359e7c62e7b1e2583fd",
+      "modified_sha256": "cf160015ba14ee563bd2d07761e94fd76c1f811cc90f99ce37d8102e310bdcfc"
+    },
+    {
+      "file": "src/editor/platform/wx_platform.cpp",
+      "baseline_sha256": "64b976b725b557b4052e534d0d732e15ba4da3359bab8f7869d4190510859270",
+      "modified_sha256": "8cafba0fec8f93499e10639d732c1a87aab713a89398848e9644228561db39df"
+    },
+    {
+      "file": "src/editor/special_insert.h",
+      "baseline_sha256": "546b593dfedc60f6624633e20393771109bad3dfada1736dd648f265ddc234ed",
+      "modified_sha256": "cb76845b3e91a92b6db186eeee8ef489a59be9589f8cf8399d97bb6c9a28f82e"
+    },
+    {
+      "file": "tests/blank_lines.cpp",
+      "baseline_sha256": "2492614dcc6bde913f09ef7b4e313d83608db83e6aeca757f49bade326d2ad4d",
+      "modified_sha256": "46f89927ae0b5cd2786d7bf02a1585d127a3d62164bc2997098227219cba4bf5"
+    },
+    {
+      "file": "tests/character_hex_fixtures.h",
+      "baseline_sha256": "752400af7dc62efe76bcc39d2d2edfb14352ccfe5c247fb9816eb3b92ed900f9",
+      "modified_sha256": "af213045ed9631c9554c328b3c125319c0532ce95fa80e3c13b01915ff0efa49"
+    },
+    {
+      "file": "tests/custom_case_fixtures.h",
+      "baseline_sha256": "c054721207d11b93d73990593aefbc5d6fa6a9b13c63b73e6eaca1d63a3fe7b3",
+      "modified_sha256": "ad666e92675848f22b5af72a4855d230098f9bb535604f9b236076f60476d2dd"
+    },
+    {
+      "file": "tests/escape_text_fixtures.h",
+      "baseline_sha256": "2605c4edc89642372eed15c33bac0692f317146dcb49295dcfef48d1a2ec0c09",
+      "modified_sha256": "a64df9f0f6b1461844aa4a4f4aaaf6fdce113bfa82ea06f51974e0242ff2cfb2"
+    },
+    {
+      "file": "tests/file_change.cpp",
+      "baseline_sha256": "d2119f7bc481cfd41b64ad64431fc3c4bacfe92bd18c5a71239c888f523efdc9",
+      "modified_sha256": "83c1c41ebe17ea9d29b577482315b759d6294ce7353abf8a59c513addb83d45c"
+    },
+    {
+      "file": "tests/file_times.cpp",
+      "baseline_sha256": "e90bd3ec7d495300f219c2ecc092924769a7cc354f34b781168a9a6f62d1a520",
+      "modified_sha256": "3e5b998cdfbb03378d8f6cb2b1992336060b85192dd82554a8d36c8d6f242dd8"
+    },
+    {
+      "file": "tests/goto_line.cpp",
+      "baseline_sha256": "a72dabacd2e678f5d5478c39883d937ecf1678ad12ff23debe41318a7b857c9f",
+      "modified_sha256": "0b7cfdc4098bd8b272f5e4430ace5a23cee53b0a8eaabe5bfecfce40e3307a74"
+    },
+    {
+      "file": "tests/insert_tag.cpp",
+      "baseline_sha256": "b6a2bcbf5e8180212312348c550d48d8c10a61825824d512fedb7727ccda1b52",
+      "modified_sha256": "1bb48f67b050859b83bd1bc7c82324782d2eef861db4bb209b4fba329a73c35f"
+    },
+    {
+      "file": "tests/line_numbers.cpp",
+      "baseline_sha256": "418021080fc7107231bed6a8386a416d2b9eb83fcb2fcd7d1b621d940ebf2264",
+      "modified_sha256": "b945b8f51b399201314763625be82d570e4f49706e5c2377a2c1c8b03a03bd68"
+    },
+    {
+      "file": "tests/line_wrap.cpp",
+      "baseline_sha256": "07ec63dc35bdf3e50b13dc79450bd888680bcda11462daab43638572b8e1ffca",
+      "modified_sha256": "1aa6593ff2dd7e8ff5e0c4b8b208bc6a4229ffb5879d14e8a23e4895293b6362"
+    },
+    {
+      "file": "tests/native_paint_helpers.h",
+      "baseline_sha256": "215e29008b87095f12770629976d5ad24c358f098dfdf8bfb7d7e142e254dfd7",
+      "modified_sha256": "f989001efa0bfa0362e0a0b1bf2033e963277875147dd2d837f079ce0af0b86d"
+    },
+    {
+      "file": "tests/read_only.cpp",
+      "baseline_sha256": "2a6efd8324c6a2abbd2209356857669f1e6ab0cfb8750c5a09b4a7ae7f709253",
+      "modified_sha256": "2a0dc093e6a0b4a8cf63373086dfe2193ee24d944401af15509fe048f0074b4b"
+    },
+    {
+      "file": "tests/save_copy.cpp",
+      "baseline_sha256": "0beea556840abfda80f6f51cb9b2970dc4309fd23335c61139f930ba5e3e24b8",
+      "modified_sha256": "5e0919f2d4053670b39e9807bfddaffac87f6740d137173321170b8df3020ab3"
+    },
+    {
+      "file": "tests/syntax_javascript.cpp",
+      "baseline_sha256": "5a15e7ab715e7a451e75004b3ba8d67356701247c7cdee9727c4a51cd7c63176",
+      "modified_sha256": "d80288727bccd383dbbc70a264e410051ca7c0a6ad123c991ff1631e830119d0"
+    },
+    {
+      "file": "tests/word_wrap.cpp",
+      "baseline_sha256": "e9d01445bc45c6268fd02004153b8f5a28ba437dc2c7ce00d53552bbb6663e16",
+      "modified_sha256": "5b0e749e5147a93bd1d3fd7acf7c498c51c9b0d253f79e2d876e4ba520f55649"
+    }
+  ],
+  "validation": {
+    "canonical_format": {
+      "version": "23.1.2",
+      "tracked_files": 374,
+      "result": "passed",
+      "command": "python3 .github/scripts/checks.py format --executable .ci/format-runtime/clang_format/data/bin/clang-format"
+    },
+    "diff_check": "git diff --check passed",
+    "independent_source_review": "Scalar write ordering, nonzero bit-mask domain, map comparator semantics, local object lifetimes, complete literal bytes and their consumer contracts reviewed.",
+    "new_persistent_tests": false,
+    "native_sdk": "The local workspace has no wxWidgets SDK. Existing hosted builds and native checks validate the complete branch.",
+    "hosted_status_at_publication": "Pending the single final PR branch update; exact-head results are recorded on PR #222."
+  },
+  "retained_work": {
+    "cpp:S7040": {
+      "main_baseline": 852,
+      "addressed": 205,
+      "unselected": 647,
+      "next_scope": "Continue literal data in separately reviewed files and preserve runtime bytes."
+    },
+    "source": "sonarqube-2026-11-16-small-fixes-review.json",
+    "still_open": [
+      "Coordinate conversion rounding, clipping and out-of-range policy",
+      "Dynamic squiggle polyline point-count bound",
+      "Occurrence-marking duration conversion",
+      "Recovery/test-result catch boundaries and framework inheritance-depth recommendations"
+    ],
+    "addressed_retained_key": "AaGQhgRyusAIaC0DBL39"
+  }
+}

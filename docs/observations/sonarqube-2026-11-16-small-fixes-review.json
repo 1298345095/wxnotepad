@@ -1572,6 +1572,125 @@
         "finding": "The true outcome cannot reach this final check: the same 0x0A0D code unit was rejected earlier by ExamineUtf16Bytes.",
         "followup_scope": "Exercise reachable cross-unit and terminal paths; preserve the production predicates, analysis scope and 80% coverage threshold."
       }
+    },
+    "corrected_followup_validation": {
+      "source_revision": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+      "checkout_merge_revision": "d37d8f1b6b79739c0c30611b2a265cf82eb3617c",
+      "workflows": [
+        {
+          "id": 43955000767,
+          "name": "Fuzz",
+          "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000767",
+          "created_at": "2026-11-16T20:56:56Z",
+          "updated_at": "2026-11-16T21:01:08Z"
+        },
+        {
+          "id": 43955000718,
+          "name": "CodeQL",
+          "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000718",
+          "created_at": "2026-11-16T20:56:56Z",
+          "updated_at": "2026-11-16T21:02:24Z"
+        },
+        {
+          "id": 43955000805,
+          "name": "CI",
+          "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000805",
+          "created_at": "2026-11-16T20:56:56Z",
+          "updated_at": "2026-11-16T21:13:33Z"
+        },
+        {
+          "id": 43955000673,
+          "name": "Quality",
+          "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000673",
+          "created_at": "2026-11-16T20:56:56Z",
+          "updated_at": "2026-11-16T21:22:36Z"
+        }
+      ],
+      "sonar_quality_gate": {
+        "status": "OK",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "OK",
+            "errorThreshold": "80",
+            "actualValue": "98.2"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      },
+      "sonar_measures": [
+        {
+          "metric": "new_coverage",
+          "value": "98.18181818181819",
+          "period": 1,
+          "bestValue": false
+        },
+        {
+          "metric": "new_conditions_to_cover",
+          "value": "42",
+          "period": 1
+        },
+        {
+          "metric": "new_uncovered_lines",
+          "value": "0",
+          "period": 1,
+          "bestValue": true
+        },
+        {
+          "metric": "new_uncovered_conditions",
+          "value": "1",
+          "period": 1,
+          "bestValue": false
+        },
+        {
+          "metric": "new_lines_to_cover",
+          "value": "13",
+          "period": 1
+        }
+      ],
+      "open_confirmed_pr_issues": 0,
+      "verification": "GitHub workflow-run exact-head query and fresh PR-scoped SonarCloud MCP queries on 2026-11-16."
     }
   },
   "regression_targets": [
@@ -1624,5 +1743,14 @@
       "blob_sha": "fd7d4dae958f87b93ffc75aabaf99c172226e0e3",
       "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h"
     }
-  ]
+  ],
+  "continuation": {
+    "review": "sonarqube-2026-11-16-declarations-literals-review.json",
+    "starting_revision": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+    "retained_items_addressed": [
+      "cpp:S5271 Platform::Assert first declaration and definition",
+      "205 of 852 cpp:S7040 current-main literal recommendations"
+    ],
+    "scope": "The new review ledger records continuation changes and dispositions separately from this earlier batch."
+  }
 }
