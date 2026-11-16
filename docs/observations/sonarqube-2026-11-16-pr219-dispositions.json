@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-16",
+  "project": "1298345095_wxnotepad",
+  "pull_request": "219",
+  "analysis_revision": "bc6ea683a123d637392dd0fe1f8a427a8fa99a3f",
+  "verified_at_utc": "2026-11-16 10:38:02 UTC",
+  "status_filter": "FALSE_POSITIVE",
+  "dispositions": [
+    {
+      "key": "AaHj6aTjARo42euE61qU",
+      "rule": "cpp:S1231",
+      "file": "tests/completion_allocation.cpp",
+      "analysis_line": 29,
+      "reason_group": "replacement_allocator",
+      "comment": "False positive in this test executable's replacement allocation functions. operator new/new[] delegate to this raw-storage allocation routine, and all matching ordinary scalar/array/sized delete replacements call std::free. The new-expression still constructs objects and the delete-expression still destroys them; malloc is used only for the underlying storage layer. Replacing this malloc with new or a container would recursively invoke the same replacement allocator. Zero-size allocation is normalized and allocation failure follows the new_handler/bad_alloc protocol. The C++ allocation specification permits this implementation, and libstdc++ GCC 13 uses the same malloc/free storage pairing in new_op.cc/del_op.cc.\nReferences: https://eel.is/c++draft/new.delete.single ; https://github.com/gcc-mirror/gcc/blob/releases/gcc-13.4.0/libstdc%2B%2B-v3/libsupc%2B%2B/new_op.cc ; https://github.com/gcc-mirror/gcc/blob/releases/gcc-13.4.0/libstdc%2B%2B-v3/libsupc%2B%2B/del_op.cc",
+      "mcp_success": true,
+      "verified_status": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaHj6aTjARo42euE61qh",
+      "rule": "cpp:S5025",
+      "file": "tests/completion_allocation.cpp",
+      "analysis_line": 235,
+      "reason_group": "wxwidgets_window_ownership",
+      "comment": "False positive: CompletionAllocationApp creates an EditorFrame as a wxApp-managed top-level window. The AfterPresentation callback calls frame->Destroy() after success and caught test failure. Pinned wxWidgets 3.3.3 wxTopLevelWindowBase::Destroy queues deletion, wxAppConsoleBase::DeletePendingObjects deletes queued windows, and wxAppBase cleanup deletes remaining top-level windows. The new expression participates in this framework ownership protocol; adding an independent smart pointer would introduce conflicting ownership.\nReferences: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/toplvcmn.cpp ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/appbase.cpp ; https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/appcmn.cpp",
+      "mcp_success": true,
+      "verified_status": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaHj6aTjARo42euE61qV",
+      "rule": "cpp:S1481",
+      "file": "tests/completion_allocation.cpp",
+      "analysis_line": 80,
+      "reason_group": "required_array_capture",
+      "comment": "False positive: this lambda passes root.data() into WordList::Init. root is a local constexpr std::array<char, 4>; taking its data pointer odr-uses the local array storage, so the reference capture is required. The callback executes synchronously while root remains alive. A C++23 compiler check of this expression succeeds with [&root] and fails with [] ('root is not captured'). Removing the capture as recommended makes the source ill-formed. The padded array also preserves the four-byte cached sort-key precondition used by production CharBuffer storage.",
+      "mcp_success": true,
+      "verified_status": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaHj6aTjARo42euE61qW",
+      "rule": "cpp:S1481",
+      "file": "tests/completion_allocation.cpp",
+      "analysis_line": 84,
+      "reason_group": "required_array_capture",
+      "comment": "False positive: this lambda passes root.data() into WordList::Init. root is a local constexpr std::array<char, 4>; taking its data pointer odr-uses the local array storage, so the reference capture is required. The callback executes synchronously while root remains alive. A C++23 compiler check of this expression succeeds with [&root] and fails with [] ('root is not captured'). Removing the capture as recommended makes the source ill-formed. The padded array also preserves the four-byte cached sort-key precondition used by production CharBuffer storage.",
+      "mcp_success": true,
+      "verified_status": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaHj6aTjARo42euE61qd",
+      "rule": "cpp:S6494",
+      "file": "tests/completion_allocation.cpp",
+      "analysis_line": 212,
+      "reason_group": "gcc13_print_portability",
+      "comment": "Portability false positive at tests/completion_allocation.cpp:212 (PR 219 analysis revision bc6ea68). The shared/Linux source is built with the supported GCC 13 baseline selected by .github/actions/dependencies/action.yml (gcc-13/g++-13 and CC/CXX). GCC's official libstdc++ status table records P2093R14/std::print as first available in GCC 14.1, so the recommended <print> API is absent from the supported standard library. Retain the existing printf-family diagnostic.\nReferences: https://github.com/1298345095/wxnotepad/blob/ac6528a5be81b9e3288139efe4a0a9bd087ec317/.github/actions/dependencies/action.yml ; https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+      "mcp_success": true,
+      "verified_status": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaHj6aTjARo42euE61qj",
+      "rule": "cpp:S6494",
+      "file": "tests/completion_allocation.cpp",
+      "analysis_line": 242,
+      "reason_group": "gcc13_print_portability",
+      "comment": "Portability false positive at tests/completion_allocation.cpp:242 (PR 219 analysis revision bc6ea68). The shared/Linux source is built with the supported GCC 13 baseline selected by .github/actions/dependencies/action.yml (gcc-13/g++-13 and CC/CXX). GCC's official libstdc++ status table records P2093R14/std::print as first available in GCC 14.1, so the recommended <print> API is absent from the supported standard library. Retain the existing printf-family diagnostic.\nReferences: https://github.com/1298345095/wxnotepad/blob/ac6528a5be81b9e3288139efe4a0a9bd087ec317/.github/actions/dependencies/action.yml ; https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+      "mcp_success": true,
+      "verified_status": "FALSE_POSITIVE"
+    }
+  ],
+  "summary": {
+    "verified": 6
+  },
+  "followup_analysis": {
+    "revision": "5de95ab252d31073907c226cdc1d0f43467201f2",
+    "analysis_task_id": "AaHkACiCYT84ZD0T3lrE",
+    "uploaded_at_utc": "2026-11-16T10:56:18Z",
+    "open_high_or_blocker": 0,
+    "open_security_or_reliability": 0,
+    "quality_gate": "OK",
+    "new_code_coverage_percent": 86.4,
+    "new_duplicated_lines_percent": 0.0,
+    "workflow_url": "https://github.com/1298345095/wxnotepad/actions/runs/43851081884"
+  }
+}
