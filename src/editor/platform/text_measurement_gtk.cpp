@@ -1,4 +1,5 @@
 #include "editor/platform/text_measurement.h"
+#include "editor/platform/native_drawing_error.h"
 #include <wx/dc.h>
 #include <wx/font.h>
 #include <wx/fontutil.h>
@@ -36,7 +37,7 @@ struct WorkerState {
     uint64_t snapshot = 0;
 
     WorkerState(cairo_font_type_t type, double resolution) : map(pango_cairo_font_map_new_for_font_type(type)) {
-        if (!map) throw std::runtime_error("The native Pango measurement font map is unavailable");
+        if (!map) throw NativeDrawingError("The native Pango measurement font map is unavailable");
         pango_cairo_font_map_set_resolution(PANGO_CAIRO_FONT_MAP(map.get()), resolution);
         context.reset(pango_font_map_create_context(map.get()));
         layout.reset(pango_layout_new(context.get()));
@@ -157,7 +158,7 @@ std::vector<int> PartialExtents(PangoLayout* layout, size_t characterCount) {
         PangoRectangle rectangle;
         for (int character = 1; pango_layout_iter_next_char(iterator.get()); ++character) {
             if (character >= attributeCount)
-                throw std::runtime_error("Pango layout character attributes do not match its text");
+                throw NativeDrawingError("Pango layout character attributes do not match its text");
             byteIndex = pango_layout_iter_get_index(iterator.get());
             if (!attributes[character].is_cursor_position) continue;
             pango_layout_index_to_pos(layout, byteIndex, &rectangle);
@@ -179,7 +180,7 @@ struct MeasurementFont::Data {
 
 MeasurementFont::MeasurementFont(const wxFont& font) : data_(std::make_unique<Data>()) {
     const auto* info = font.GetNativeFontInfo();
-    if (!info || !info->description) throw std::runtime_error("The native measurement font is unavailable");
+    if (!info || !info->description) throw NativeDrawingError("The native measurement font is unavailable");
     data_->description.reset(pango_font_description_copy(info->description));
 }
 
@@ -240,12 +241,12 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
     auto* graphics = dc.GetGraphicsContext();
     auto* cairo = graphics ? static_cast<cairo_t*>(graphics->GetNativeContext()) : nullptr;
     if (!cairo || cairo_status(cairo) != CAIRO_STATUS_SUCCESS)
-        throw std::runtime_error("The native Cairo measurement context is unavailable");
+        throw NativeDrawingError("The native Cairo measurement context is unavailable");
 
     ObjectPtr<PangoContext> source(pango_cairo_create_context(cairo));
-    if (!source) throw std::runtime_error("The native Pango measurement context is unavailable");
+    if (!source) throw NativeDrawingError("The native Pango measurement context is unavailable");
     auto* fontMap = pango_context_get_font_map(source.get());
-    if (!fontMap) throw std::runtime_error("The native Pango measurement font map is unavailable");
+    if (!fontMap) throw NativeDrawingError("The native Pango measurement font map is unavailable");
     data_->pool = MeasurementPool(fontMap);
     data_->resolution = pango_cairo_context_get_resolution(source.get());
     if (const auto* matrix = pango_context_get_matrix(source.get())) data_->matrix = *matrix;
@@ -262,10 +263,10 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
     cairo_surface_get_font_options(cairo_get_target(cairo), options.get());
     cairo_get_font_options(cairo, explicitOptions.get());
     if (cairo_font_options_status(explicitOptions.get()) != CAIRO_STATUS_SUCCESS)
-        throw std::runtime_error("The native Cairo measurement context font options are unavailable");
+        throw NativeDrawingError("The native Cairo measurement context font options are unavailable");
     cairo_font_options_merge(options.get(), explicitOptions.get());
     if (cairo_font_options_status(options.get()) != CAIRO_STATUS_SUCCESS)
-        throw std::runtime_error("The native Cairo measurement font options are unavailable");
+        throw NativeDrawingError("The native Cairo measurement font options are unavailable");
     data_->options = std::move(options);
 
     auto* screen = gdk_screen_get_default();

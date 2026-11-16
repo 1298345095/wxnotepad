@@ -9,6 +9,8 @@
 #include <cstdio>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <array>
 #ifdef __WXMSW__
 #include "editor/platform/directwrite_surface.h"
@@ -130,9 +132,9 @@ void NativeWheel(EditorControl* editor) {
 #endif
     wxYield();
 }
-void CheckZoomedGeometry(EditorControl* editor, const std::string& bytes, uint64_t revision) {
+void CheckZoomedGeometry(EditorControl* editor, std::string_view bytes, uint64_t revision) {
     char font[100]{};
-    editor->Send(Message::StyleGetFont, static_cast<uintptr_t>(Scintilla::StylesCommon::Default),
+    editor->Send(Message::StyleGetFont, static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)),
                  reinterpret_cast<intptr_t>(font));
 #ifdef __WXMSW__
     constexpr std::array technologies{Scintilla::Technology::DirectWrite, Scintilla::Technology::Default};
@@ -180,8 +182,8 @@ void CheckZoomedGeometry(EditorControl* editor, const std::string& bytes, uint64
                 Require(editor->Send(Message::PositionFromPointClose, x + 1, y + height / 2) == position,
                         "hit testing follows zoomed text coordinates and margin offset");
             }
-            Require(editor->Send(Message::StyleGetSize, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) ==
-                            12 &&
+            Require(editor->Send(Message::StyleGetSize,
+                                 static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default))) == 12 &&
                         Text(editor) == bytes && editor->DocumentRevision() == revision &&
                         editor->Send(Message::GetAnchor) == 3 && editor->Send(Message::GetCurrentPos) == 9 &&
                         editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
@@ -189,7 +191,8 @@ void CheckZoomedGeometry(EditorControl* editor, const std::string& bytes, uint64
                     "zoom preserves base point size, bytes, selection, save point and undo/redo state");
             std::printf("PASS: technology=%d zoom=%d native_points=%d dpi=%d height=%lld margin=%lld "
                         "text/hit geometry\n",
-                        static_cast<int>(technology), zoom, points, editor->GetDPI().y, static_cast<long long>(height),
+                        std::to_underlying(technology), zoom, points, editor->GetDPI().y,
+                        static_cast<long long>(height),
                         static_cast<long long>(editor->Send(Message::GetMarginWidthN, 0)));
         }
     }
@@ -250,12 +253,12 @@ void CheckZoom(EditorFrame* frame) {
     Wheel(editor, 120, true, true, wxMOUSE_WHEEL_HORIZONTAL);
     Require(editor->Send(Message::GetZoom) == 110 && editor->Send(Message::GetXOffset) > 300,
             "physical horizontal wheel precedes modifiers and reverses direction");
-    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::Word));
+    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::Wrap::Word)));
     editor->Send(Message::SetXOffset, 0);
     Wheel(editor, 120, true, true);
     Require(editor->Send(Message::GetXOffset) == 0 && editor->Send(Message::GetZoom) == 110,
             "wrapped horizontal wheel neither scrolls nor zooms");
-    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::None));
+    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::Wrap::None)));
     editor->Send(Message::SetFirstVisibleLine, 30);
     Wheel(editor, -120);
     Require(editor->Send(Message::GetFirstVisibleLine) == 33, "plain wheel retains vertical scrolling");

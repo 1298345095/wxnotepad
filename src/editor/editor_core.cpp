@@ -5,6 +5,7 @@
 #include "editor/display_units.h"
 #include "editor/editor_ids.h"
 #include "editor/platform/native_encoding.h"
+#include "editor/platform/native_drawing_error.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/custom_case.h"
 #include "editor/platform/gtk_drag_drop.h"
@@ -398,7 +399,7 @@ void EditorControl::Core::Draw(wxDC& dc) {
             window_.Refresh(false);
             return;
         }
-        throw std::runtime_error("Direct2D paint target initialization failed");
+        throw core::NativeDrawingError("Direct2D paint target initialization failed");
     }
 #endif
     if (!surface->Initialised()) throw std::bad_alloc();

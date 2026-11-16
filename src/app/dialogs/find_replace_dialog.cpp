@@ -14,6 +14,7 @@
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/hyperlink.h>
+#include <array>
 #include <string>
 #include <utility>
 
@@ -134,11 +135,12 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
     parent->Bind(wxEVT_EDITOR_STATE_CHANGED, &FindReplaceDialog::OnEditorState, this);
     const int selectNext = wxWindow::NewControlId();
     const int selectPrevious = wxWindow::NewControlId();
-    const wxAcceleratorEntry searchKeys[] = {{wxACCEL_NORMAL, WXK_F3, wxID_FORWARD},
-                                             {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD},
-                                             {wxACCEL_CTRL | wxACCEL_ALT, WXK_F2, selectNext},
-                                             {wxACCEL_CTRL | wxACCEL_ALT | wxACCEL_SHIFT, WXK_F2, selectPrevious}};
-    SetAcceleratorTable(wxAcceleratorTable(4, searchKeys));
+    const std::array<wxAcceleratorEntry, 4> searchKeys = {
+        {{wxACCEL_NORMAL, WXK_F3, wxID_FORWARD},
+         {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD},
+         {wxACCEL_CTRL | wxACCEL_ALT, WXK_F2, selectNext},
+         {wxACCEL_CTRL | wxACCEL_ALT | wxACCEL_SHIFT, WXK_F2, selectPrevious}}};
+    SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(searchKeys.size()), searchKeys.data()));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward); }, wxID_FORWARD);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward); }, wxID_BACKWARD);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward, true); }, selectNext);
@@ -177,8 +179,7 @@ FindReplaceDialog::~FindReplaceDialog() {
 }
 
 void FindReplaceDialog::OnEditorState(wxCommandEvent& event) {
-    const auto count = search_.MatchCount();
-    if (count.has_value()) {
+    if (const auto count = search_.MatchCount(); count.has_value()) {
         UpdateFindAllCount(*count);
     } else if (!findAllErrorRevision_.has_value() || *findAllErrorRevision_ != editor_.DocumentRevision()) {
         findAllResult_->SetLabel("");

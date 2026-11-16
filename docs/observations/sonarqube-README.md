@@ -8,9 +8,9 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [2026-11-16 surface and parallel failure follow-up](#2026-11-16-surface-and-parallel-failure-follow-up),
-continuing on `codex/sonarcloud-followup-2026-11-16` after
-[PR #220](https://github.com/1298345095/wxnotepad/pull/220) merged.
+Latest review: [2026-11-16 type safety and exception follow-up](#2026-11-16-type-safety-and-exception-follow-up),
+continuing on `codex/sonarcloud-followup-2026-11-16` in
+[PR #221](https://github.com/1298345095/wxnotepad/pull/221).
 
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
@@ -882,3 +882,86 @@ to the five replaced keys.
 The final two fixture changes and these completed validation records are submitted
 together. [PR #221](https://github.com/1298345095/wxnotepad/pull/221) records the
 resulting analyzed revision, final gate and remaining recommendations.
+
+## 2026-11-16 type safety and exception follow-up
+
+This batch continues from `b015dda89776e3dda74f093e9656d36792143a7e` on the
+same branch and PR #221. At that revision CI, Quality, Fuzz and CodeQL passed;
+the PR quality gate was OK with 83.0% new-code coverage. Fresh MCP queries
+returned 3,819 OPEN/CONFIRMED findings on main and 13 in PR #221. Main's
+analysis predates the unmerged surface continuation, so those contexts are
+recorded separately in the [issue-by-issue review](sonarqube-2026-11-16-type-safety-review.json).
+
+### Small code changes
+
+The changes address 50 distinct report keys: 44 from main and six from PR #221.
+The ledger records these as implemented on the follow-up branch; main's issue
+statuses are updated by analysis after the branch is merged.
+
+| Rule | Keys | Change |
+| --- | ---: | --- |
+| S112 | 12 | Give native drawing/measurement failures a dedicated exception type and use dedicated test assertion failures. |
+| S5350 | 8 | Hold completed dialog controls through read-only observer pointers. |
+| S995 | 5 | Qualify read-only frame, text-control and event parameters. |
+| S5945 | 4 | Store fixed encoding, file-watching, line-ending and accelerator tables in `std::array`. |
+| S6004 | 10 | Limit scalar and local result lifetimes to the condition and branch using them. |
+| S6009 | 2 | Read synchronous fixture strings through `std::string_view`. |
+| S7035 | 9 | Extract enum underlying values explicitly while retaining message-width conversions. |
+
+`NativeDrawingError` identifies rendering and measurement failures that have no
+platform error code. Its `std::runtime_error` base preserves the existing surface,
+message, native-event and notification recovery boundaries. The original
+diagnostic strings, `std::system_error` codes, allocation failures and length
+checks are retained. The equivalent Windows GDI/DirectWrite throw sites use the
+same category. The parallel-task regression now transports this exact exception
+type and message through real workers, checks every started worker has finished,
+and then runs a successful batch. The prior allocation and system-error cases
+remain in the same fixture.
+
+The dialog table contents and order are unchanged. Native wx constructors still
+receive their pointer/count arguments through `data()` and `size()`. The const
+observers and event callbacks were checked against the pinned wxWidgets 3.3.3
+headers for both supported platforms. The narrowed completion variables are
+scalar values; their evaluation order and short-circuit behavior are unchanged.
+Both string views remain inside synchronous calls whose caller-owned strings
+outlive the call.
+
+### Nine verified false positives
+
+Each transition was submitted through the SonarCloud MCP with its own source
+explanation. All nine transitions succeeded. An exact-key query with the
+FALSE_POSITIVE filter returned all nine; the matching OPEN/CONFIRMED query
+returned zero. The ledger preserves every comment and successful receipt.
+
+| Rule | Keys | Reviewed evidence |
+| --- | ---: | --- |
+| S995 | 1 | `SetAccessibleName` calls the non-const `wxWindow::SetAccessible` on Windows and writes GTK accessibility state. The Linux compilation omits the Windows mutation. |
+| S995 | 3 | Zoom key, wheel and menu helpers deliver input through native handles/event handlers, modifying the target editor or frame-owned UI. Const-qualified handle accessors hide these indirect mutations. |
+| S6188 | 2 | `CompareNoCase` shares a function-pointer slot with `strncmp`; its count is a maximum comparison bound and comparison also stops at NUL. The callback preserves that pointer/count contract. |
+| S1000 | 1 | The unnamed namespace belongs to the completion implementation; the allocation fixture intentionally includes that implementation to exercise its private storage in the same translation unit. |
+| Python S7494 | 2 | Both geometry parsers use the `dict(split(...) for ...)` pattern explicitly recorded as FP SONARPY-3154 in SonarSource's own rule fixture. |
+
+The Python findings follow the same evidence as the earlier PR #220 review:
+[SonarSource's pinned regression fixture](https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py).
+The existing split-on-first-equals parsing retains its duplicate-key and
+malformed-line behavior.
+
+### Validation and remaining recommendations
+
+Canonical clang-format 23.1.2 and `git diff --check` pass. GCC 14.2 compiles the
+production parallel-task fixture with C++23, `-O2`, `-Wall -Wextra -Werror` and
+pthread support. The documented `ci.py probe` entry point executes the real
+fixture successfully with exit 0. Source hashes and the probe result are in the
+review ledger. The commit-specific checks on
+[PR #221](https://github.com/1298345095/wxnotepad/pull/221) provide the Windows,
+X11 and Wayland application/native regressions and the resulting SonarCloud
+analysis; the local environment has no wxWidgets GUI SDK.
+
+The seven other PR recommendations retain their review status: three concern
+the established recovery/test-result catch boundaries, three suggest `using enum`,
+and one counts wxWidgets' inherited application depth. S1181's documented
+exceptions do not cover these ordinary returning callbacks and methods. Their
+recovery purpose alone is insufficient for a false-positive disposition, and
+removing the runtime-error handlers would lose worker/native-resource recovery.
+The allocation fault helper's S6004 finding was already fixed at the starting
+revision and is excluded from this batch's counts.

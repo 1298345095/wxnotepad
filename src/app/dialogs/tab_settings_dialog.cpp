@@ -85,9 +85,9 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
                  id == schemeControls.spaces->GetId() || id == useScheme->GetId())
             sync(false);
     };
-    dialog.Bind(wxEVT_CHECKBOX, [changed](wxCommandEvent& event) { changed(event.GetId()); });
-    dialog.Bind(wxEVT_SPINCTRL, [changed](wxSpinEvent& event) { changed(event.GetId()); });
-    dialog.Bind(wxEVT_TEXT, [changed](wxCommandEvent& event) { changed(event.GetId()); });
+    dialog.Bind(wxEVT_CHECKBOX, [changed](const wxCommandEvent& event) { changed(event.GetId()); });
+    dialog.Bind(wxEVT_SPINCTRL, [changed](const wxSpinEvent& event) { changed(event.GetId()); });
+    dialog.Bind(wxEVT_TEXT, [changed](const wxCommandEvent& event) { changed(event.GetId()); });
     sync(true);
     layout->Add(groups, 0, wxEXPAND);
     auto* tabIndents = new wxCheckBox(&dialog, wxID_ANY, _("Tab Indents"));

@@ -5,6 +5,8 @@
 #include "native_completion_helpers.h"
 #include <format>
 #include <iterator>
+#include <string_view>
+#include <utility>
 
 namespace {
 void Require(bool condition, const char* message) {
@@ -82,7 +84,7 @@ constexpr size_t RootLength = 33;
 constexpr unsigned CandidateCount = 200;
 constexpr size_t CandidateLength = RootLength + 5;
 
-std::string KeywordFixture(const std::string& root) {
+std::string KeywordFixture(std::string_view root) {
     std::string words;
     for (unsigned index = 0; index < CandidateCount; ++index) {
         words += root;
@@ -98,7 +100,7 @@ struct FailurePoint {
     bool existingPopup = false;
 };
 
-void NativeAllocationFailure(EditorFrame* frame, const FailurePoint& point) {
+void NativeAllocationFailure(const EditorFrame* frame, const FailurePoint& point) {
     auto* editor = frame->Editor();
     const std::string root(RootLength, 'q');
     const auto keywords = KeywordFixture(root);
@@ -114,7 +116,7 @@ void NativeAllocationFailure(EditorFrame* frame, const FailurePoint& point) {
     const auto after = before + 'q';
     editor->SetCompletionSettings(settings);
     TestEditor::ResetStream(editor, before.c_str(), before.size(), before.size());
-    editor->Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
+    editor->Send(Message::SetStatus, static_cast<uintptr_t>(std::to_underlying(Scintilla::Status::Ok)));
     bool called = false;
     bool injected = false;
     editor->SetWordCompletionHandler(
@@ -138,7 +140,8 @@ void NativeAllocationFailure(EditorFrame* frame, const FailurePoint& point) {
     const auto previousItemCount = editor->CompletionState().previousItemCount;
     editor->SetWordCompletionHandler({});
     Require(called && injected, "the typed-character notification reaches the selected completion allocation");
-    Require(status == static_cast<intptr_t>(Scintilla::Status::BadAlloc) && !active && previousItemCount == 0,
+    Require(status == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::BadAlloc)) && !active &&
+                previousItemCount == 0,
             "allocation failure reports BadAlloc and cancels completion before leaving the native notification");
     Require(TestEditor::Text(editor) == after && editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo) &&
                 editor->Send(Message::GetModify),

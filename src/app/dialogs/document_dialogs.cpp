@@ -10,8 +10,8 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/treectrl.h>
+#include <array>
 #include <vector>
-#include <iterator>
 
 namespace {
 constexpr int DialogPaddingDip = 10;
@@ -38,8 +38,8 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
         wxArrayString patterns;
         for (const auto* extension : definition.extensions)
             patterns.Add("*." + wxString(extension));
-        const auto extension = wxFileName(path).GetExt();
-        if (current && !extension.empty() && patterns.Index("*." + extension, false) == wxNOT_FOUND)
+        if (const auto extension = wxFileName(path).GetExt();
+            current && !extension.empty() && patterns.Index("*." + extension, false) == wxNOT_FOUND)
             patterns.Add("*." + extension);
         const auto pattern = wxJoin(patterns, ';');
         const bool markdown = definition.language == SyntaxLanguage::MarkdownGitHub;
@@ -71,14 +71,14 @@ std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional
         const char* label;
         FileEncoding encoding;
     };
-    const SourceEncoding choices[] = {{"UTF-8", FileEncoding::Utf8},
-                                      {"UTF-16LE", FileEncoding::Utf16Le},
-                                      {"GBK (CP936)", FileEncoding::Gbk},
-                                      {"UTF-16BE", FileEncoding::Utf16Be},
-                                      {"GB18030 (CP54936)", FileEncoding::Gb18030},
-                                      {"Big5 (CP950)", FileEncoding::Big5},
-                                      {"Windows-1252", FileEncoding::Windows1252},
-                                      {"DOS-437", FileEncoding::Dos437}};
+    const std::array<SourceEncoding, 8> choices = {{{"UTF-8", FileEncoding::Utf8},
+                                                    {"UTF-16LE", FileEncoding::Utf16Le},
+                                                    {"GBK (CP936)", FileEncoding::Gbk},
+                                                    {"UTF-16BE", FileEncoding::Utf16Be},
+                                                    {"GB18030 (CP54936)", FileEncoding::Gb18030},
+                                                    {"Big5 (CP950)", FileEncoding::Big5},
+                                                    {"Windows-1252", FileEncoding::Windows1252},
+                                                    {"DOS-437", FileEncoding::Dos437}}};
     wxDialog dialog(parent, wxID_ANY, _("Reload With Encoding"));
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(new wxStaticText(&dialog, wxID_ANY, _("Select source &encoding to reload file:")), 0, wxALL,
@@ -200,12 +200,14 @@ void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options) {
         contents->Add(control, 0, wxLEFT | wxRIGHT | wxBOTTOM, dialog.FromDIP(DialogPaddingDip));
         return control;
     };
-    auto* skip =
+    const auto* skip =
         add("SkipUnicodeDetection", _("Skip statistical &Unicode (UTF-16) detection."), options.skipUnicodeDetection);
-    auto* ascii = add("LoadASCIIasUTF8", _("Open 7-bit &ASCII files in UTF-8 mode."), options.loadASCIIasUTF8);
-    auto* ansi = add("LoadANSIasUTF8", _("Open ANSI (unknown encoding) files in UTF-&8 mode."), options.loadANSIasUTF8);
-    auto* nfo = add("LoadNFOasOEM", _("Open ANSI Art (*.&nfo, *.diz) files in DOS-437 mode."), options.loadNFOasOEM);
-    auto* tags = add("NoEncodingTags", _("Don't parse encoding &tags."), options.noEncodingTags);
+    const auto* ascii = add("LoadASCIIasUTF8", _("Open 7-bit &ASCII files in UTF-8 mode."), options.loadASCIIasUTF8);
+    const auto* ansi =
+        add("LoadANSIasUTF8", _("Open ANSI (unknown encoding) files in UTF-&8 mode."), options.loadANSIasUTF8);
+    const auto* nfo =
+        add("LoadNFOasOEM", _("Open ANSI Art (*.&nfo, *.diz) files in DOS-437 mode."), options.loadNFOasOEM);
+    const auto* tags = add("NoEncodingTags", _("Don't parse encoding &tags."), options.noEncodingTags);
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL,
                   dialog.FromDIP(DialogPaddingDip));
     dialog.SetSizerAndFit(contents);
@@ -221,9 +223,9 @@ void ChooseDefaultEncoding(wxWindow* parent, EncodingOptions& options) {
 std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, const FileWatchingOptions& initial) {
     wxDialog dialog(parent, wxID_ANY, _("File Change Notification"));
     auto* layout = new wxBoxSizer(wxVERTICAL);
-    const wxString choices[] = {_("&None."), _("&Show message."), _("&Auto-reload (unmodified).")};
+    const std::array choices = {_("&None."), _("&Show message."), _("&Auto-reload (unmodified).")};
     auto* mode = new wxRadioBox(&dialog, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
-                                static_cast<int>(std::size(choices)), choices, 1, wxRA_SPECIFY_COLS);
+                                static_cast<int>(choices.size()), choices.data(), 1, wxRA_SPECIFY_COLS);
     mode->SetSelection(static_cast<int>(initial.mode));
     layout->Add(mode, 1, wxEXPAND | wxALL, dialog.FromDIP(DialogPaddingDip));
     auto* log = new wxCheckBox(&dialog, wxID_ANY, _("&Monitor continuously updated file (e.g. log file)."));
@@ -298,8 +300,9 @@ LineEndingConversionDialog::LineEndingConversionDialog(wxWindow* parent, const L
                   0, wxLEFT | wxRIGHT, FromDIP(DialogPaddingDip));
     contents->Add(new wxStaticText(this, wxID_ANY, _("&Do you want to normalize the line endings?")), 0, wxALL,
                   FromDIP(DialogPaddingDip));
-    const wxString names[] = {_("Windows (CR+LF)"), _("Unix/macOS (LF)"), _("Classic Mac OS (CR)")};
-    mode_ = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(std::size(names)), names);
+    const std::array names = {_("Windows (CR+LF)"), _("Unix/macOS (LF)"), _("Classic Mac OS (CR)")};
+    mode_ =
+        new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(names.size()), names.data());
     mode_->SetName("Line ending conversion");
     AppLocalization::SetAccessibleName(*mode_, _("Line ending conversion"));
     mode_->SetSelection(current == Scintilla::EndOfLine::CrLf ? 0 : current == Scintilla::EndOfLine::Lf ? 1 : 2);

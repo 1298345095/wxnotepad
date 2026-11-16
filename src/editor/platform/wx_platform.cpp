@@ -3,6 +3,7 @@
 #include "core_headers.h"
 #include "editor/display_units.h"
 #include "text_measurement.h"
+#include "native_drawing_error.h"
 #include "diagnostics/trace.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
@@ -101,10 +102,10 @@ public:
         // keeps the physical dimensions and uses the scale for point fonts.
         if (!p->bitmap_.CreateWithLogicalSize(wxSize(std::max(1, width), std::max(1, height)),
                                               dc_->GetContentScaleFactor()))
-            throw std::runtime_error("The native surface bitmap is unavailable");
+            throw NativeDrawingError("The native surface bitmap is unavailable");
         auto dc = std::make_unique<wxMemoryDC>();
         dc->SelectObject(p->bitmap_);
-        if (!dc->IsOk()) throw std::runtime_error("The native surface drawing context is unavailable");
+        if (!dc->IsOk()) throw NativeDrawingError("The native surface drawing context is unavailable");
         auto measurement = std::make_unique<TextMeasurement>(*dc);
         p->owned_ = std::move(dc);
         p->measurement_ = std::move(measurement);

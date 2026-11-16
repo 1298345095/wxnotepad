@@ -1,4 +1,5 @@
 #include "editor/platform/parallel_tasks.h"
+#include "editor/platform/native_drawing_error.h"
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -15,14 +16,20 @@ constexpr unsigned WorkerCount = 4;
 constexpr std::array Inputs{3, 7, 11, 19};
 constexpr std::array Expected{9, 49, 121, 361};
 
+class TestFailure final : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
 void Require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
+    if (!condition) throw TestFailure(message);
 }
 
-enum class FailureKind { Allocation, NativeResource };
+enum class FailureKind { Allocation, NativeResource, NativeDrawing };
 
 [[noreturn]] void ThrowFailure(FailureKind kind) {
     if (kind == FailureKind::Allocation) throw std::bad_alloc();
+    if (kind == FailureKind::NativeDrawing) throw Scintilla::Internal::NativeDrawingError("native drawing fixture");
     throw std::system_error(std::make_error_code(std::errc::io_error), "native measurement fixture");
 }
 
@@ -32,6 +39,9 @@ void CheckFailure(const std::exception_ptr& failure, FailureKind kind) {
         std::rethrow_exception(failure);
     } catch (const std::bad_alloc&) {
         Require(kind == FailureKind::Allocation, "allocation failure keeps its original exception type");
+    } catch (const Scintilla::Internal::NativeDrawingError& error) {
+        Require(kind == FailureKind::NativeDrawing && std::string_view(error.what()) == "native drawing fixture",
+                "native drawing failure keeps its dedicated exception type and context");
     } catch (const std::system_error& error) {
         Require(kind == FailureKind::NativeResource && error.code() == std::errc::io_error &&
                     std::string_view(error.what()).contains("native measurement fixture"),
@@ -163,7 +173,7 @@ void NativeCreationFailure() {
                 "native work creation failure preserves GetLastError and never submits a null work item");
         return;
     }
-    throw std::runtime_error("native work creation failure must reach the caller");
+    throw TestFailure("native work creation failure must reach the caller");
 }
 #endif
 } // namespace
@@ -172,6 +182,7 @@ int main() try {
     SuccessfulRetry();
     WorkerFailure(FailureKind::Allocation);
     WorkerFailure(FailureKind::NativeResource);
+    WorkerFailure(FailureKind::NativeDrawing);
     for (const unsigned failAfter : {0U, 1U, 3U})
         PartialStartFailure(failAfter);
 #ifdef _WIN32
