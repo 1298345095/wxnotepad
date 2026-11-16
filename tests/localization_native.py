@@ -401,6 +401,12 @@ class Dialogs:
             while time.monotonic() < deadline:
                 size = component.get_size()
                 if (size.x, size.y) == (width, height):
+                    # X11 can report the native frame extents before GTK has
+                    # delivered its configure/allocation event to wxWidgets.
+                    from resource_process import wait_state
+                    app.state = wait_state(app.folder, app.process,
+                                           lambda state: (int(state['frame_width']), int(state['frame_height'])) == (width, height),
+                                           timeout=deadline - time.monotonic())
                     return
                 time.sleep(.03)
             raise AssertionError(('Native resize did not complete', width, height, size.x, size.y))
