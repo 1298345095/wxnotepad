@@ -46,8 +46,13 @@ class Dialogs:
             desktop = self.atspi.get_desktop(0)
             for index in range(desktop.get_child_count()):
                 application = desktop.get_child_at_index(index)
-                if application.get_process_id() == process.pid:
-                    result.extend(application.get_child_at_index(i) for i in range(application.get_child_count()))
+                if application is not None and application.get_process_id() == process.pid:
+                    for child_index in range(application.get_child_count()):
+                        child = application.get_child_at_index(child_index)
+                        # AT-SPI can lose a removed child between the count and
+                        # indexed lookup; required-window checks stay with callers.
+                        if child is not None:
+                            result.append(child)
             return result
         result = []
 
@@ -401,6 +406,12 @@ class Dialogs:
             while time.monotonic() < deadline:
                 size = component.get_size()
                 if (size.x, size.y) == (width, height):
+                    # X11 can report the native frame extents before GTK has
+                    # delivered its configure/allocation event to wxWidgets.
+                    from resource_process import wait_state
+                    app.state = wait_state(app.folder, app.process,
+                                           lambda state: (int(state['frame_width']), int(state['frame_height'])) == (width, height),
+                                           timeout=deadline - time.monotonic())
                     return
                 time.sleep(.03)
             raise AssertionError(('Native resize did not complete', width, height, size.x, size.y))

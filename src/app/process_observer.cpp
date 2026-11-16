@@ -182,6 +182,7 @@ void ProcessObserver::Publish() {
                                  static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->GetHandle())));
     const auto position = frame_->GetPosition();
     const auto size = frame_->GetSize();
+    lastFrameSize_ = size;
     contents +=
         wxString::Format("frame_x\t%d\nframe_y\t%d\nframe_width\t%d\nframe_height\t%d\nmaximized\t%d\ndpi\t%d\n",
                          position.x, position.y, size.x, size.y, frame_->IsMaximized(), frame_->GetDPI().x);
@@ -280,7 +281,8 @@ void ProcessObserver::Observe() {
         if (publishPending_ || (frame_->Editor()->Send(Scintilla::Message::GetModify) != 0) != lastDirty_ ||
             frame_->Editor()->Send(Scintilla::Message::GetCurrentPos) != lastCaret_ ||
             (frame_->Editor()->Send(Scintilla::Message::GetReadOnly) != 0) != lastReadOnly_ ||
-            frame_->GetStatusBar()->GetStatusText(1) != lastPositionStatus_ || frame_->IsActive() != lastActive_)
+            frame_->GetStatusBar()->GetStatusText(1) != lastPositionStatus_ || frame_->IsActive() != lastActive_ ||
+            frame_->GetSize() != lastFrameSize_)
             Publish();
     }
 }

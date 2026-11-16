@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wx/event.h>
+#include <wx/gdicmn.h>
 #include <wx/timer.h>
 #include <optional>
 
@@ -29,6 +30,7 @@ private:
     long long lastCaret_ = 0;
     bool lastReadOnly_ = false;
     wxString lastPositionStatus_;
+    wxSize lastFrameSize_;
     bool publishPending_ = false;
     bool commandPending_ = false;
     bool dispatching_ = false;
