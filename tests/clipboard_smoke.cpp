@@ -6,15 +6,18 @@
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
+#include "windows_failure_capture.h"
 #include <wx/wx.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/ffile.h>
 #include <wx/filename.h>
+#include <wx/process.h>
 #include <wx/stdpaths.h>
 #include "steady_stopwatch.h"
 #include <cstdio>
 #include <chrono>
+#include <exception>
 #include <stdexcept>
 #include <vector>
 #ifdef __WXMSW__
@@ -71,12 +74,14 @@ public:
         Require(wxMkdir(directory_), "create owned peer IPC directory");
         wxFileName executable(wxStandardPaths::Get().GetExecutablePath());
         executable.SetName("clipboard_peer");
-        Require(wxExecute("\"" + executable.GetFullPath() + "\" \"" + directory_ + "\"", wxEXEC_ASYNC) > 0,
-                "launch independent native text clipboard peer");
+        process_ = wxExecute("\"" + executable.GetFullPath() + "\" \"" + directory_ + "\"", wxEXEC_ASYNC);
+        Require(process_ > 0, "launch independent native text clipboard peer");
     }
     Peer(const Peer&) = delete;
     Peer& operator=(const Peer&) = delete;
     ~Peer() {
+        if (std::uncaught_exceptions() > 0)
+            NativeFailure::Capture("clipboard", {static_cast<long>(wxGetProcessId()), process_});
         try {
             Request("quit");
         } catch (...) {
@@ -95,8 +100,20 @@ public:
             wxYield();
             wxMilliSleep(10);
         }
-        if (!wxFileExists(directory_ + "/response"))
+        if (!wxFileExists(directory_ + "/response")) {
+            wxString stage;
+            wxFFile file(directory_ + "/peer-stage", "rb");
+            if (file.IsOpened()) file.ReadAll(&stage, wxConvUTF8);
+            std::fprintf(stderr, "Peer timeout: alive=%d request=%d response.tmp=%d stage=%s\n",
+                         wxProcess::Exists(static_cast<int>(process_)), wxFileExists(directory_ + "/request"),
+                         wxFileExists(directory_ + "/response.tmp"), stage.utf8_string().c_str());
+            const auto bounds = frame_->GetScreenRect();
+            const auto dpi = frame_->GetDPI();
+            std::fprintf(stderr, "Editor at timeout: shown=%d active=%d focus=%d bounds=%d,%d,%d,%d dpi=%d,%d\n",
+                         frame_->IsShown(), frame_->IsActive(), editor_->HasFocus(), bounds.x, bounds.y, bounds.width,
+                         bounds.height, dpi.x, dpi.y);
             throw std::runtime_error("independent peer response timeout: " + command.ToStdString());
+        }
         wxString response;
         wxFFile file(directory_ + "/response", "rb");
         Require(file.ReadAll(&response, wxConvUTF8), "read owned peer response");
@@ -140,6 +157,7 @@ public:
 
 private:
     wxString directory_;
+    long process_ = 0;
     EditorFrame* frame_;
     EditorControl* editor_;
 };

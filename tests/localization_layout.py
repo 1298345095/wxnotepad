@@ -15,13 +15,15 @@ CAPTURE_POLL_SECONDS = .03
 CAPTURE_TIMEOUT_SECONDS = 10
 
 
-def screenshot_windows(user, window, destination):
+def screenshot_windows(user, window, destination, *, presented=False):
     gdi = ctypes.WinDLL('gdi32', use_last_error=True)
     user.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     user.GetWindowDC.argtypes = [wintypes.HWND]
     user.GetWindowDC.restype = wintypes.HDC
     user.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
     user.PrintWindow.argtypes = [wintypes.HWND, wintypes.HDC, wintypes.UINT]
+    gdi.BitBlt.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                           wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.DWORD]
     gdi.CreateCompatibleDC.argtypes = [wintypes.HDC]
     gdi.CreateCompatibleDC.restype = wintypes.HDC
     gdi.CreateCompatibleBitmap.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int]
@@ -40,7 +42,12 @@ def screenshot_windows(user, window, destination):
     bitmap = gdi.CreateCompatibleBitmap(dc, width, height)
     previous = gdi.SelectObject(memory, bitmap)
     try:
-        assert user.PrintWindow(window, memory, 2), 'Capture the real shown native dialog'
+        if presented:
+            # Failure capture must not send paint messages to a stalled peer.
+            source_copy = 0x00CC0020
+            assert gdi.BitBlt(memory, 0, 0, width, height, dc, 0, 0, source_copy)
+        else:
+            assert user.PrintWindow(window, memory, 2), 'Capture the real shown native dialog'
         gdi.SelectObject(memory, previous)
         header = struct.pack('<IiiHHIIiiII', 40, width, -height, 1, 32, 0, width * height * 4, 0, 0, 0, 0)
         pixels = ctypes.create_string_buffer(width * height * 4)
