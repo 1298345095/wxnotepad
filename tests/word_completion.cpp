@@ -137,11 +137,11 @@ void EscapePrefixCompletion(EditorFrame* frame) {
     };
     const std::array fixtures = {
         Fixture{"Web Source Code", SyntaxLanguage::Html,
-                "<script>const name = 'alpha'; const suffix = '\\nal';</script>", SCE_JS_ESCAPECHAR + 40, true},
+                "<script>const name = 'alpha'; const suffix = '\\nal';</script>", js_style(SCE_JS_ESCAPECHAR), true},
         Fixture{"JavaScript", SyntaxLanguage::JavaScript, "const name = 'alpha'; const suffix = '\\nal';",
                 SCE_JS_ESCAPECHAR, true},
         Fixture{"Web Source Code", SyntaxLanguage::Html,
-                "<script>const name = 'alpha'; const suffix = '\\\\nal';</script>", SCE_JS_ESCAPECHAR + 40, false},
+                "<script>const name = 'alpha'; const suffix = '\\\\nal';</script>", js_style(SCE_JS_ESCAPECHAR), false},
     };
     WordCompletionSettings settings;
     settings.completeOption = WordCompletionOption::CompleteWord | WordCompletionOption::ScanWordsInDocument |
