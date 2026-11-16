@@ -83,6 +83,7 @@ public:
                 result_ = 0;
                 frame->Close();
             } catch (const std::exception& error) {
+                result_ = 1;
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 frame->Destroy();
             }

@@ -531,6 +531,11 @@ if(BUILD_TESTING)
     add_editor_test(measurement_threads native_parallel_measurement 90)
     target_include_directories(measurement_threads PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+    find_package(Threads REQUIRED)
+    add_executable(measurement_worker_start tests/measurement_worker_start.cpp)
+    target_link_libraries(measurement_worker_start PRIVATE Threads::Threads)
+    add_test(NAME native_measurement_worker_start COMMAND measurement_worker_start)
+    set_tests_properties(native_measurement_worker_start PROPERTIES TIMEOUT 20)
     add_editor_test(surface_images native_surface_images 20)
     target_include_directories(surface_images PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
