@@ -404,6 +404,11 @@ void EditorControl::Core::Draw(wxDC& dc) {
         HorizontalScrollTo(std::min(xOffset, std::max(0, scrollWidth - page + 1)));
         SetScrollBars();
     }
+    if (window_.AutoShrinkScrollWidth() && !Wrapping() && FineTickerRunning(TickReason::widen)) {
+        // Shrinking can expose another row. Publish its measured width before
+        // returning, so a delayed widen tick cannot change the viewport later.
+        TickFor(TickReason::widen);
+    }
     // Style-only notifications do not queue UpdateUI in the pinned core.
     // Refresh after its real styling/paint pass, then redraw changed overlays.
     if (braceStyleChanged_) {

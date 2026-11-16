@@ -9,7 +9,6 @@
 #include <wx/statusbr.h>
 #include <wx/timer.h>
 #include <wx/wx.h>
-#include <array>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -80,16 +79,9 @@ public:
             auto* widget = GTK_WIDGET(item->data);
             if (!gtk_widget_get_visible(widget)) continue;
             if (!GTK_IS_FILE_CHOOSER(widget)) continue;
-            auto* accept = gtk_dialog_get_widget_for_response(GTK_DIALOG(widget), GTK_RESPONSE_ACCEPT);
-            const std::array<int, 5> state{
-                stage_, gtk_widget_get_mapped(widget), NativeDialogs::FileChooserBusy(widget),
-                NativeDialogs::SelectedFileMatches(widget, destination_), accept && gtk_widget_is_sensitive(accept)};
-            if (state != lastState_) {
-                std::cerr << "[DEBUG-json-timeout] chooser stage=" << state[0] << " mapped=" << state[1]
-                          << " busy=" << state[2] << " selected=" << state[3] << " accept=" << state[4] << '\n';
-                lastState_ = state;
-            }
             if (stage_ == 0) {
+                // GTK's initial folder load can replace a selection requested while it is busy.
+                if (!gtk_widget_get_mapped(widget) || NativeDialogs::FileChooserBusy(widget)) continue;
                 stage_ = 1;
                 ++choosers;
                 NativeDialogs::ChooseFile(widget, destination_);
@@ -105,17 +97,12 @@ public:
 private:
     wxString destination_;
     int stage_ = 0;
-#ifdef __WXGTK__
-    std::array<int, 5> lastState_{-1, -1, -1, -1, -1};
-#endif
 };
 void FileCommand(EditorFrame* frame, int command, const std::filesystem::path& path) {
-    std::cerr << "[DEBUG-json-timeout] file-command=" << command << " begin\n";
     FileDriver driver(Filename(path));
     Command(frame, command);
     driver.Stop();
     Require(driver.choosers == 1, "file command must use its native chooser");
-    std::cerr << "[DEBUG-json-timeout] file-command=" << command << " complete\n";
 }
 void Style(EditorFrame* frame, const std::string& text, const char* token, int style) {
     const auto position = text.find(token);
@@ -132,7 +119,6 @@ public:
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
-        std::cerr << "[DEBUG-json-timeout] main-window-shown\n";
         CallAfter([this, frame] {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-json");
             try {
