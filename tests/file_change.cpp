@@ -343,7 +343,7 @@ void CheckNativeOptionsAndReloadFailures(EditorFrame* frame, const std::filesyst
 }
 
 std::filesystem::path CheckFirstSaveAndLogTail(EditorFrame* frame, const std::filesystem::path& directory,
-                                               ChangeDecision& decision, FileWatchingOptions& options) {
+                                               FileWatchingOptions& options) {
     Require(frame->NewDocument(), "new live document stops failed backing-file watch");
     options.mode = FileWatchingMode::AutoReload;
     frame->SetFileWatchingOptions(options);
@@ -592,7 +592,7 @@ void CheckFileChangeScenarios(EditorFrame*& frame, const std::filesystem::path& 
     auto options = frame->FileWatching();
     const auto savedAs = CheckMessageDecisionsAndFileLifecycle(frame, directory, path, decision, options);
     CheckNativeOptionsAndReloadFailures(frame, savedAs, decision, options);
-    const auto firstSave = CheckFirstSaveAndLogTail(frame, directory, decision, options);
+    const auto firstSave = CheckFirstSaveAndLogTail(frame, directory, options);
     CheckResetTransitions(frame, directory, firstSave, decision, options);
     CheckWriteDuringReload(frame, directory);
     CheckContinuousLogAndShutdown(frame, directory, decision, options);

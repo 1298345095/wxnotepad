@@ -130,198 +130,197 @@ void NativeWheel(EditorControl* editor) {
 #endif
     wxYield();
 }
+void CheckZoomedGeometry(EditorControl* editor, const std::string& bytes, uint64_t revision) {
+    char font[100]{};
+    editor->Send(Message::StyleGetFont, static_cast<uintptr_t>(Scintilla::StylesCommon::Default),
+                 reinterpret_cast<intptr_t>(font));
+#ifdef __WXMSW__
+    constexpr std::array technologies{Scintilla::Technology::DirectWrite, Scintilla::Technology::Default};
+#else
+    constexpr std::array technologies{Scintilla::Technology::Default};
+#endif
+    for (const auto technology : technologies) {
+#ifdef __WXMSW__
+        editor->Send(Message::SetTechnology, static_cast<uintptr_t>(technology));
+        Require(editor->Send(Message::GetTechnology) == static_cast<intptr_t>(technology),
+                "zoom geometry uses the requested native renderer");
+#endif
+        intptr_t normalHeight = 0;
+        for (const auto [zoom, points] : {std::pair{100, 12}, {200, 24}, {50, 6}, {175, 21}, {100, 12}}) {
+            editor->Send(Message::SetZoom, zoom);
+            editor->Refresh();
+            editor->Update();
+            wxYield();
+            wxClientDC native(editor);
+            native.SetFont(wxFont(wxFontInfo(points).FaceName(wxString::FromUTF8(font))));
+#ifdef __WXMSW__
+            if (technology == Scintilla::Technology::DirectWrite) {
+                Require(editor->Send(Message::TextWidth, static_cast<uintptr_t>(Scintilla::StylesCommon::Default),
+                                     reinterpret_cast<intptr_t>("WWWWWW")) ==
+                            OriginalDirectWriteWidth(editor, font, points, "WWWWWW"),
+                        "zoomed DirectWrite text matches the pinned original at the same point size and DPI");
+                Require(editor->Send(Message::GetMarginWidthN, 0) ==
+                            OriginalDirectWriteWidth(editor, font, points, "999") + editor->FromDIP(8),
+                        "DirectWrite line-number margin matches original native glyph metrics and DPI padding");
+            } else
+#endif
+            {
+                Require(editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("WWWWWW")) ==
+                            native.GetTextExtent("WWWWWW").x,
+                        "zoomed text uses native point size at the window DPI");
+                Require(editor->Send(Message::GetMarginWidthN, 0) == native.GetTextExtent("999").x + editor->FromDIP(8),
+                        "line-number margin uses zoomed native glyph metrics and DPI padding");
+            }
+            const auto height = editor->Send(Message::TextHeight, 0);
+            if (zoom == 100) normalHeight = height;
+            if (zoom == 200) Require(height > normalHeight, "zoom grows text line height");
+            for (intptr_t position : {3, 9, 203}) {
+                const auto x = editor->Send(Message::PointXFromPosition, 0, position);
+                const auto y = editor->Send(Message::PointYFromPosition, 0, position);
+                Require(editor->Send(Message::PositionFromPointClose, x + 1, y + height / 2) == position,
+                        "hit testing follows zoomed text coordinates and margin offset");
+            }
+            Require(editor->Send(Message::StyleGetSize, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) ==
+                            12 &&
+                        Text(editor) == bytes && editor->DocumentRevision() == revision &&
+                        editor->Send(Message::GetAnchor) == 3 && editor->Send(Message::GetCurrentPos) == 9 &&
+                        editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
+                        editor->Send(Message::GetModify),
+                    "zoom preserves base point size, bytes, selection, save point and undo/redo state");
+            std::printf("PASS: technology=%d zoom=%d native_points=%d dpi=%d height=%lld margin=%lld "
+                        "text/hit geometry\n",
+                        static_cast<int>(technology), zoom, points, editor->GetDPI().y, static_cast<long long>(height),
+                        static_cast<long long>(editor->Send(Message::GetMarginWidthN, 0)));
+        }
+    }
+}
+void CheckZoom(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+#ifdef __WXMSW__
+    const auto initialTechnology = static_cast<Scintilla::Technology>(editor->Send(Message::GetTechnology));
+    Require(initialTechnology == Scintilla::Technology::DirectWrite,
+            "Windows zoom commands exercise the application default DirectWrite renderer");
+#endif
+    Require(editor->Send(Message::GetZoom) == 100, "original default zoom is 100 percent");
+    Key(editor, '+');
+    Require(editor->Send(Message::GetZoom) == 110, "Ctrl+plus zooms in by original ten percent step");
+    Menu(frame, "Zoom Out");
+    Require(editor->Send(Message::GetZoom) == 100, "Zoom Out shares core command");
+    editor->Send(Message::SetZoom, 200);
+    Key(editor, WXK_NUMPAD_ADD);
+    Require(editor->Send(Message::GetZoom) == 225, "original step above 200 is 25 percent");
+    Key(editor, WXK_NUMPAD_SUBTRACT);
+    Require(editor->Send(Message::GetZoom) == 200, "keypad minus shares zoom out");
+    Key(editor, '\\');
+    Require(editor->Send(Message::GetZoom) == 100, "Ctrl+backslash resets to 100 percent");
+    editor->Send(Message::SetZoom, 499);
+    Menu(frame, "Zoom In");
+    Menu(frame, "Zoom In");
+    Require(editor->Send(Message::GetZoom) == 500, "zoom in clamps at 500 percent");
+    editor->Send(Message::SetZoom, 11);
+    Key(editor, '-');
+    Key(editor, '-');
+    Require(editor->Send(Message::GetZoom) == 10, "zoom out clamps at 10 percent");
+    Menu(frame, "Reset Zoom");
+    Require(editor->Send(Message::GetZoom) == 100, "reset command restores original default");
+    std::printf("PASS: original zoom commands, shortcuts, reset, steps and limits; dpi=%d\n", editor->GetDPI().y);
+    std::string text;
+    for (int line = 0; line < 200; ++line)
+        text += std::string(200, 'W') + "\r\n";
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
+    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(Message::SetSavePoint);
+    editor->Send(Message::SetSel, 3, 9);
+    editor->Send(Message::SetScrollWidth, 4000);
+    Wheel(editor, 60, true);
+    Require(editor->Send(Message::GetZoom) == 100, "fractional wheel accumulates before zoom");
+    Wheel(editor, 60, true);
+    Require(editor->Send(Message::GetZoom) == 110, "Ctrl+wheel zooms instead of scrolling");
+    Wheel(editor, 360, true);
+    Require(editor->Send(Message::GetZoom) == 120, "multiple notches in one event zoom only once");
+    Wheel(editor, -120, true);
+    Require(editor->Send(Message::GetZoom) == 110, "negative Ctrl+wheel zooms out");
+    Wheel(editor, 120, true, false, wxMOUSE_WHEEL_VERTICAL, 0);
+    Require(editor->Send(Message::GetZoom) == 110, "disabled vertical wheel does not zoom");
+    editor->Send(Message::SetXOffset, 300);
+    Wheel(editor, 120, true, true);
+    Require(editor->Send(Message::GetZoom) == 110 && editor->Send(Message::GetXOffset) < 300,
+            "Shift precedes Ctrl and scrolls horizontally");
+    editor->Send(Message::SetXOffset, 300);
+    Wheel(editor, 120, true, true, wxMOUSE_WHEEL_HORIZONTAL);
+    Require(editor->Send(Message::GetZoom) == 110 && editor->Send(Message::GetXOffset) > 300,
+            "physical horizontal wheel precedes modifiers and reverses direction");
+    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::Word));
+    editor->Send(Message::SetXOffset, 0);
+    Wheel(editor, 120, true, true);
+    Require(editor->Send(Message::GetXOffset) == 0 && editor->Send(Message::GetZoom) == 110,
+            "wrapped horizontal wheel neither scrolls nor zooms");
+    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::None));
+    editor->Send(Message::SetFirstVisibleLine, 30);
+    Wheel(editor, -120);
+    Require(editor->Send(Message::GetFirstVisibleLine) == 33, "plain wheel retains vertical scrolling");
+    std::puts("PASS: original wheel precedence, accumulation, disabled wheel and plain scrolling");
+    Wheel(editor, 60, false, true);
+    Wheel(editor, 60, true);
+    Require(editor->Send(Message::GetZoom) == 120, "Shift and Ctrl share the physical vertical accumulator");
+    Require(frame->GetMenuBar()->FindMenuItem("View", "Zoom Level...") != wxNOT_FOUND,
+            "original Zoom Level dialog command exists");
+    Level(frame, "175%", wxID_OK);
+    Require(editor->Send(Message::GetZoom) == 175, "Zoom Level accepts original numeric prefix");
+    Level(frame, "501", wxID_OK);
+    Require(editor->Send(Message::GetZoom) == 175, "out-of-range OK closes without changing zoom");
+    Level(frame, "50", wxID_CANCEL);
+    Require(editor->Send(Message::GetZoom) == 175, "Cancel leaves unapplied value unchanged");
+    Level(frame, "125%", wxID_CANCEL, true);
+    Require(editor->Send(Message::GetZoom) == 125, "Cancel retains already applied zoom");
+    std::puts("PASS: Zoom Level presets, original parsing, invalid OK, Apply and Cancel");
+    for (const char* suffix : {"A", "B"}) {
+        editor->Send(Message::BeginUndoAction);
+        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>(suffix));
+        editor->Send(Message::EndUndoAction);
+    }
+    editor->Send(Message::Undo);
+    const auto bytes = Text(editor);
+    const auto revision = editor->DocumentRevision();
+    editor->Send(Message::SetSel, 3, 9);
+    editor->Send(Message::SetFirstVisibleLine, 0);
+    editor->Send(Message::SetXOffset, 0);
+    CheckZoomedGeometry(editor, bytes, revision);
+#ifdef __WXMSW__
+    editor->Send(Message::SetTechnology, static_cast<uintptr_t>(initialTechnology));
+#endif
+    editor->Send(Message::Undo);
+    Require(Text(editor) == text && !editor->Send(Message::GetModify), "Undo still reaches the save point");
+    editor->Send(Message::Redo);
+    editor->Send(Message::Redo);
+    Require(Text(editor) == text + "AB", "both original edits remain redoable after zoom");
+    std::puts("PASS: bytes, selection, base point size and complete history survive zoom");
+#ifdef __WXMSW__
+    NativeKey(editor, VK_OEM_PLUS);
+    Require(editor->Send(Message::GetZoom) == 110, "native Ctrl+equals reaches Zoom In");
+    NativeKey(editor, VK_SUBTRACT);
+    Require(editor->Send(Message::GetZoom) == 100, "native keypad subtract reaches Zoom Out");
+    NativeKey(editor, VK_OEM_5);
+#elif defined(__WXGTK__)
+    NativeKey(editor, GDK_KEY_equal);
+    Require(editor->Send(Message::GetZoom) == 110, "native Ctrl+equals reaches Zoom In");
+    NativeKey(editor, GDK_KEY_KP_Subtract);
+    Require(editor->Send(Message::GetZoom) == 100, "native keypad subtract reaches Zoom Out");
+    NativeKey(editor, GDK_KEY_backslash);
+#endif
+    Require(editor->Send(Message::GetZoom) == 100, "native Ctrl+backslash resets zoom");
+    NativeWheel(editor);
+    Require(editor->Send(Message::GetZoom) == 110, "native Ctrl+wheel reaches zoom operation");
+    std::puts("PASS: owned native key and wheel events reach original zoom commands");
+}
 class ZoomApp final : public wxApp {
 public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
         frame->Show();
         CallAfter([this, frame] {
-            auto* editor = frame->Editor();
             try {
-#ifdef __WXMSW__
-                const auto initialTechnology = static_cast<Scintilla::Technology>(editor->Send(Message::GetTechnology));
-                Require(initialTechnology == Scintilla::Technology::DirectWrite,
-                        "Windows zoom commands exercise the application default DirectWrite renderer");
-#endif
-                Require(editor->Send(Message::GetZoom) == 100, "original default zoom is 100 percent");
-                Key(editor, '+');
-                Require(editor->Send(Message::GetZoom) == 110, "Ctrl+plus zooms in by original ten percent step");
-                Menu(frame, "Zoom Out");
-                Require(editor->Send(Message::GetZoom) == 100, "Zoom Out shares core command");
-                editor->Send(Message::SetZoom, 200);
-                Key(editor, WXK_NUMPAD_ADD);
-                Require(editor->Send(Message::GetZoom) == 225, "original step above 200 is 25 percent");
-                Key(editor, WXK_NUMPAD_SUBTRACT);
-                Require(editor->Send(Message::GetZoom) == 200, "keypad minus shares zoom out");
-                Key(editor, '\\');
-                Require(editor->Send(Message::GetZoom) == 100, "Ctrl+backslash resets to 100 percent");
-                editor->Send(Message::SetZoom, 499);
-                Menu(frame, "Zoom In");
-                Menu(frame, "Zoom In");
-                Require(editor->Send(Message::GetZoom) == 500, "zoom in clamps at 500 percent");
-                editor->Send(Message::SetZoom, 11);
-                Key(editor, '-');
-                Key(editor, '-');
-                Require(editor->Send(Message::GetZoom) == 10, "zoom out clamps at 10 percent");
-                Menu(frame, "Reset Zoom");
-                Require(editor->Send(Message::GetZoom) == 100, "reset command restores original default");
-                std::printf("PASS: original zoom commands, shortcuts, reset, steps and limits; dpi=%d\n",
-                            editor->GetDPI().y);
-                std::string text;
-                for (int line = 0; line < 200; ++line)
-                    text += std::string(200, 'W') + "\r\n";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::SetSel, 3, 9);
-                editor->Send(Message::SetScrollWidth, 4000);
-                Wheel(editor, 60, true);
-                Require(editor->Send(Message::GetZoom) == 100, "fractional wheel accumulates before zoom");
-                Wheel(editor, 60, true);
-                Require(editor->Send(Message::GetZoom) == 110, "Ctrl+wheel zooms instead of scrolling");
-                Wheel(editor, 360, true);
-                Require(editor->Send(Message::GetZoom) == 120, "multiple notches in one event zoom only once");
-                Wheel(editor, -120, true);
-                Require(editor->Send(Message::GetZoom) == 110, "negative Ctrl+wheel zooms out");
-                Wheel(editor, 120, true, false, wxMOUSE_WHEEL_VERTICAL, 0);
-                Require(editor->Send(Message::GetZoom) == 110, "disabled vertical wheel does not zoom");
-                editor->Send(Message::SetXOffset, 300);
-                Wheel(editor, 120, true, true);
-                Require(editor->Send(Message::GetZoom) == 110 && editor->Send(Message::GetXOffset) < 300,
-                        "Shift precedes Ctrl and scrolls horizontally");
-                editor->Send(Message::SetXOffset, 300);
-                Wheel(editor, 120, true, true, wxMOUSE_WHEEL_HORIZONTAL);
-                Require(editor->Send(Message::GetZoom) == 110 && editor->Send(Message::GetXOffset) > 300,
-                        "physical horizontal wheel precedes modifiers and reverses direction");
-                editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::Word));
-                editor->Send(Message::SetXOffset, 0);
-                Wheel(editor, 120, true, true);
-                Require(editor->Send(Message::GetXOffset) == 0 && editor->Send(Message::GetZoom) == 110,
-                        "wrapped horizontal wheel neither scrolls nor zooms");
-                editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::None));
-                editor->Send(Message::SetFirstVisibleLine, 30);
-                Wheel(editor, -120);
-                Require(editor->Send(Message::GetFirstVisibleLine) == 33, "plain wheel retains vertical scrolling");
-                std::puts("PASS: original wheel precedence, accumulation, disabled wheel and plain scrolling");
-                Wheel(editor, 60, false, true);
-                Wheel(editor, 60, true);
-                Require(editor->Send(Message::GetZoom) == 120,
-                        "Shift and Ctrl share the physical vertical accumulator");
-                Require(frame->GetMenuBar()->FindMenuItem("View", "Zoom Level...") != wxNOT_FOUND,
-                        "original Zoom Level dialog command exists");
-                Level(frame, "175%", wxID_OK);
-                Require(editor->Send(Message::GetZoom) == 175, "Zoom Level accepts original numeric prefix");
-                Level(frame, "501", wxID_OK);
-                Require(editor->Send(Message::GetZoom) == 175, "out-of-range OK closes without changing zoom");
-                Level(frame, "50", wxID_CANCEL);
-                Require(editor->Send(Message::GetZoom) == 175, "Cancel leaves unapplied value unchanged");
-                Level(frame, "125%", wxID_CANCEL, true);
-                Require(editor->Send(Message::GetZoom) == 125, "Cancel retains already applied zoom");
-                std::puts("PASS: Zoom Level presets, original parsing, invalid OK, Apply and Cancel");
-                for (const char* suffix : {"A", "B"}) {
-                    editor->Send(Message::BeginUndoAction);
-                    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>(suffix));
-                    editor->Send(Message::EndUndoAction);
-                }
-                editor->Send(Message::Undo);
-                const auto bytes = Text(editor);
-                const auto revision = editor->DocumentRevision();
-                editor->Send(Message::SetSel, 3, 9);
-                editor->Send(Message::SetFirstVisibleLine, 0);
-                editor->Send(Message::SetXOffset, 0);
-                char font[100]{};
-                editor->Send(Message::StyleGetFont, static_cast<uintptr_t>(Scintilla::StylesCommon::Default),
-                             reinterpret_cast<intptr_t>(font));
-#ifdef __WXMSW__
-                constexpr std::array technologies{Scintilla::Technology::DirectWrite, Scintilla::Technology::Default};
-#else
-                constexpr std::array technologies{Scintilla::Technology::Default};
-#endif
-                for (const auto technology : technologies) {
-#ifdef __WXMSW__
-                    editor->Send(Message::SetTechnology, static_cast<uintptr_t>(technology));
-                    Require(editor->Send(Message::GetTechnology) == static_cast<intptr_t>(technology),
-                            "zoom geometry uses the requested native renderer");
-#endif
-                    intptr_t normalHeight = 0;
-                    for (const auto [zoom, points] : {std::pair{100, 12}, {200, 24}, {50, 6}, {175, 21}, {100, 12}}) {
-                        editor->Send(Message::SetZoom, zoom);
-                        editor->Refresh();
-                        editor->Update();
-                        wxYield();
-                        wxClientDC native(editor);
-                        native.SetFont(wxFont(wxFontInfo(points).FaceName(wxString::FromUTF8(font))));
-#ifdef __WXMSW__
-                        if (technology == Scintilla::Technology::DirectWrite) {
-                            Require(
-                                editor->Send(Message::TextWidth,
-                                             static_cast<uintptr_t>(Scintilla::StylesCommon::Default),
-                                             reinterpret_cast<intptr_t>("WWWWWW")) ==
-                                    OriginalDirectWriteWidth(editor, font, points, "WWWWWW"),
-                                "zoomed DirectWrite text matches the pinned original at the same point size and DPI");
-                            Require(
-                                editor->Send(Message::GetMarginWidthN, 0) ==
-                                    OriginalDirectWriteWidth(editor, font, points, "999") + editor->FromDIP(8),
-                                "DirectWrite line-number margin matches original native glyph metrics and DPI padding");
-                        } else
-#endif
-                        {
-                            Require(editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("WWWWWW")) ==
-                                        native.GetTextExtent("WWWWWW").x,
-                                    "zoomed text uses native point size at the window DPI");
-                            Require(editor->Send(Message::GetMarginWidthN, 0) ==
-                                        native.GetTextExtent("999").x + editor->FromDIP(8),
-                                    "line-number margin uses zoomed native glyph metrics and DPI padding");
-                        }
-                        const auto height = editor->Send(Message::TextHeight, 0);
-                        if (zoom == 100) normalHeight = height;
-                        if (zoom == 200) Require(height > normalHeight, "zoom grows text line height");
-                        for (intptr_t position : {3, 9, 203}) {
-                            const auto x = editor->Send(Message::PointXFromPosition, 0, position);
-                            const auto y = editor->Send(Message::PointYFromPosition, 0, position);
-                            Require(editor->Send(Message::PositionFromPointClose, x + 1, y + height / 2) == position,
-                                    "hit testing follows zoomed text coordinates and margin offset");
-                        }
-                        Require(editor->Send(Message::StyleGetSize,
-                                             static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == 12 &&
-                                    Text(editor) == bytes && editor->DocumentRevision() == revision &&
-                                    editor->Send(Message::GetAnchor) == 3 &&
-                                    editor->Send(Message::GetCurrentPos) == 9 && editor->Send(Message::CanUndo) &&
-                                    editor->Send(Message::CanRedo) && editor->Send(Message::GetModify),
-                                "zoom preserves base point size, bytes, selection, save point and undo/redo state");
-                        std::printf("PASS: technology=%d zoom=%d native_points=%d dpi=%d height=%lld margin=%lld "
-                                    "text/hit geometry\n",
-                                    static_cast<int>(technology), zoom, points, editor->GetDPI().y,
-                                    static_cast<long long>(height),
-                                    static_cast<long long>(editor->Send(Message::GetMarginWidthN, 0)));
-                    }
-                }
-#ifdef __WXMSW__
-                editor->Send(Message::SetTechnology, static_cast<uintptr_t>(initialTechnology));
-#endif
-                editor->Send(Message::Undo);
-                Require(Text(editor) == text && !editor->Send(Message::GetModify), "Undo still reaches the save point");
-                editor->Send(Message::Redo);
-                editor->Send(Message::Redo);
-                Require(Text(editor) == text + "AB", "both original edits remain redoable after zoom");
-                std::puts("PASS: bytes, selection, base point size and complete history survive zoom");
-#ifdef __WXMSW__
-                NativeKey(editor, VK_OEM_PLUS);
-                Require(editor->Send(Message::GetZoom) == 110, "native Ctrl+equals reaches Zoom In");
-                NativeKey(editor, VK_SUBTRACT);
-                Require(editor->Send(Message::GetZoom) == 100, "native keypad subtract reaches Zoom Out");
-                NativeKey(editor, VK_OEM_5);
-#elif defined(__WXGTK__)
-                NativeKey(editor, GDK_KEY_equal);
-                Require(editor->Send(Message::GetZoom) == 110, "native Ctrl+equals reaches Zoom In");
-                NativeKey(editor, GDK_KEY_KP_Subtract);
-                Require(editor->Send(Message::GetZoom) == 100, "native keypad subtract reaches Zoom Out");
-                NativeKey(editor, GDK_KEY_backslash);
-#endif
-                Require(editor->Send(Message::GetZoom) == 100, "native Ctrl+backslash resets zoom");
-                NativeWheel(editor);
-                Require(editor->Send(Message::GetZoom) == 110, "native Ctrl+wheel reaches zoom operation");
-                std::puts("PASS: owned native key and wheel events reach original zoom commands");
+                CheckZoom(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

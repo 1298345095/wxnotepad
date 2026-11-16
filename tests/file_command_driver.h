@@ -80,39 +80,7 @@ private:
     void RespondToWindow(GtkWidget* widget) {
         if (!gtk_widget_get_visible(widget)) return;
         if (GTK_IS_FILE_CHOOSER(widget)) {
-            if (chooserStage_ == 0) {
-                if (waitForInitialDirectory_) {
-                    // Observe initial directory state before ChooseFile changes it.
-                    auto* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
-                    if (!directory) return;
-                    g_free(directory);
-                }
-                chooserStage_ = 1;
-                ++choosers;
-                Observe("chooser selection begin");
-                initialType = CurrentFileType(widget);
-                if (!fileType_.empty()) ChooseFileType(widget, fileType_);
-                ChooseFile(widget, destination_);
-                Observe("chooser selection end");
-            } else if (chooserStage_ == 1 && !destination_.empty() && CanAcceptFile(widget, destination_)) {
-                chooserStage_ = 2;
-                Observe("chooser accept begin");
-                Respond(widget, GTK_RESPONSE_ACCEPT);
-                Observe("chooser accept end");
-                // GTK may veto this response while its folder/selection changes.
-                // Stage 2 prevents reentry during Respond, not a later attempt.
-                chooserStage_ = 1;
-            } else if (chooserStage_ == 1 && !destination_.empty() &&
-                       gtk_file_chooser_get_action(GTK_FILE_CHOOSER(widget)) == GTK_FILE_CHOOSER_ACTION_OPEN &&
-                       !FileChooserBusy(widget) && !SelectedFileMatches(widget, destination_)) {
-                // A folder reload can replace the pending selection. Once it
-                // settles, restore the requested file instead of waiting forever.
-                chooserStage_ = 2;
-                Observe("chooser selection retry begin");
-                ChooseFile(widget, destination_);
-                Observe("chooser selection retry end");
-                chooserStage_ = 1;
-            }
+            RespondToChooser(widget);
             return;
         }
         if (!GTK_IS_MESSAGE_DIALOG(widget)) return;
@@ -128,6 +96,43 @@ private:
         } else if (IsErrorTitle(title)) {
             ++errors;
             Respond(widget, GTK_RESPONSE_OK);
+        }
+    }
+    void RespondToChooser(GtkWidget* widget) {
+        if (chooserStage_ == 0) {
+            if (waitForInitialDirectory_) {
+                // Observe initial directory state before ChooseFile changes it.
+                auto* directory = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(widget));
+                if (!directory) return;
+                g_free(directory);
+            }
+            chooserStage_ = 1;
+            ++choosers;
+            Observe("chooser selection begin");
+            initialType = CurrentFileType(widget);
+            if (!fileType_.empty()) ChooseFileType(widget, fileType_);
+            ChooseFile(widget, destination_);
+            Observe("chooser selection end");
+            return;
+        }
+        if (chooserStage_ != 1 || destination_.empty()) return;
+        if (CanAcceptFile(widget, destination_)) {
+            chooserStage_ = 2;
+            Observe("chooser accept begin");
+            Respond(widget, GTK_RESPONSE_ACCEPT);
+            Observe("chooser accept end");
+            // GTK may veto this response while its folder/selection changes.
+            // Stage 2 prevents reentry during Respond, not a later attempt.
+            chooserStage_ = 1;
+        } else if (gtk_file_chooser_get_action(GTK_FILE_CHOOSER(widget)) == GTK_FILE_CHOOSER_ACTION_OPEN &&
+                   !FileChooserBusy(widget) && !SelectedFileMatches(widget, destination_)) {
+            // A folder reload can replace the pending selection. Once it
+            // settles, restore the requested file instead of waiting forever.
+            chooserStage_ = 2;
+            Observe("chooser selection retry begin");
+            ChooseFile(widget, destination_);
+            Observe("chooser selection retry end");
+            chooserStage_ = 1;
         }
     }
 #endif

@@ -26,7 +26,8 @@ template <typename Condition> void WaitFor(const Condition& condition, const cha
     }
     Require(condition(), message);
 }
-void NativeKey(wxWindow* window, int key, const char* name, bool alt = false, bool* externalRelease = nullptr) {
+void NativeKey(wxWindow* window, int key, const char* name, [[maybe_unused]] bool alt = false,
+               bool* externalRelease = nullptr) {
 #ifdef __WXMSW__
     if (auto* dialog = wxDynamicCast(window, wxDialog)) {
         NativeKeys::DialogNavigation(dialog, key);

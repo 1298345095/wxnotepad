@@ -1693,7 +1693,7 @@ void SwapSelectedRectangles(EditorControl* editor, Peer& peer) {
         peer.PreserveSavedText("clipboard-swap-rectangle-peer.txt");
     }
 }
-void SwapRectanglePlainText(EditorControl* editor, Peer& peer) {
+void SwapRectanglePlainText(EditorControl* editor) {
     using Scintilla::Message;
     // Our earlier rectangle Copy offers exact plain text in addition to its native shape carrier.
     for (const bool emptyLastRow : {false, true}) {
@@ -1738,7 +1738,7 @@ void SwapShapes(EditorControl* editor, Peer& peer) {
                 "selected stream Swap replaces incoming shape metadata with original Cut metadata");
     }
     SwapSelectedRectangles(editor, peer);
-    SwapRectanglePlainText(editor, peer);
+    SwapRectanglePlainText(editor);
     std::puts("PASS: line/rectangle native offers, precedence, selection direction and clipboard metadata");
 }
 

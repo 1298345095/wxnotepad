@@ -322,7 +322,8 @@ private:
         }
         PublishShape(command, text, rectangle, line, vsLine);
     }
-    void PublishShape(const wxString& command, const wxString& text, bool rectangle, bool line, bool vsLine) {
+    void PublishShape([[maybe_unused]] const wxString& command, const wxString& text, bool rectangle, bool line,
+                      bool vsLine) {
 #ifdef __WXMSW__
         if (!::OpenClipboard(static_cast<HWND>(frame_->GetHandle()))) {
             Respond("failed");
