@@ -589,8 +589,9 @@ baseline for the local failure reproductions and issue-by-issue source review.
   scopes from the innermost outward before releasing their context. The latter
   fixes a separately reproduced native clipping-rectangle restoration error.
 - Use the shared production `ParallelTasks::Run` in both layout and wrapping.
-  Linux retrieves every future's result; Windows captures exceptions inside
-  the native thread-pool callback. Both implementations finish all started work
+  Linux owns explicit `std::jthread` workers and retains their exceptions in
+  separate slots; Windows captures exceptions inside the native thread-pool
+  callback. Both implementations finish all started work
   before propagating failure and releasing the worker or its output buffers.
   A failed Windows work-item creation reports its original system error.
 - Recover at the editor's message, native event, paint, IME and drag boundaries.
@@ -744,3 +745,97 @@ sweeps.
 [Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43886806327) and
 [CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43886806308) also
 passed at `6ae1477`.
+
+### Complete native validation and PR #221 analysis
+
+The third code revision, `2d6cdba1fcf5e3fc5804053d6130b3a56742cd09`, passed
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43891433929),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43891433966),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43891434007) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43891433953).
+The actual native checkout was merge revision
+`1956f400a7b0f432c95436bd3cfd53761de639b1`.
+
+| Platform | Ordinary native tests | Diagnostics | Coverage native tests |
+| --- | --- | --- | --- |
+| Windows | 216 passed, one existing IME skip | 2/2 passed | Collected on Linux |
+| X11 | 203 passed, two existing skips | 2/2 passed | 203 passed, two skips |
+| Wayland | 205 passed | 2/2 passed | 205 passed |
+
+Every surface fixture completed all nine stages. Windows recorded five stream
+Undo injections and seven rectangular Undo injections; both ordinary and
+coverage Linux backends recorded 130 and 182 respectively. Each sweep then
+completed its first uninjected run with all original invariants intact.
+Parallel-task recovery, the 20-run Wayland JSON check, runtime packaging and
+SDK checks also passed. Clang-tidy analyzed all 228 maintained translation units.
+
+The scanner uploaded PR #221 at 15:19:45 UTC with SCM revision `2d6cdba1` and
+task `AaHk8V2RSw0uFDSXC1ay`. Its independent SonarCloud gate reported ERROR:
+new-code coverage was 79.0%, below the existing 80% threshold. Ratings were
+A/A/A, duplicated lines were 0.0%, and reviewed hotspots were 100%.
+
+### Template coverage export correction
+
+The retained GCC 13 counters show executed exception paths in
+`parallel_tasks.h` and `editor_core.h`. The generated generic XML nevertheless
+contained multiple `lineToCover` elements for each template source line.
+Later zero-hit instances caused SonarCloud to report already executed source
+lines as uncovered.
+
+Both export commands now use gcovr 8.8's
+[`--merge-lines`](https://www.gcovr.com/en/stable/manpage.html#cmdoption-merge-lines).
+It combines source-line hits and corresponding branch identities while keeping
+the raw instances in the intermediate JSON. Re-exporting the same third-run
+JSON reproduced the original XML byte for byte before the change. The corrected
+export reduced 11,681 elements to 11,259 unique source lines, eliminating all
+74 duplicated source lines. Complementary branches in `parallel_tasks.h`
+became 2/2; the partially covered `editor_core.h` handler remained 1/4, and
+its unexecuted runtime-error handler remained uncovered.
+
+The coverage regressions exercise actual template instantiations with
+complementary branches, repeated same-side branches, and explicit uncalled
+instantiations. They check unique XML source lines and retained raw JSON
+instances alongside the existing shared-header and exception-path checks.
+Using actual GCC 14/gcov 14 in a scratch copy, the old export failed both
+report tests and the corrected export passed all six tests. The repository's
+native fixture remains pinned to GCC 13 and runs in CI. Source scope, ordinary
+uncovered conditions and the existing 80% gate are retained.
+
+### Findings reviewed from the first PR #221 analysis
+
+The [PR disposition ledger](sonarqube-2026-11-16-surface-pr-dispositions.json)
+records all 72 findings from this analysis, including 36 HIGH findings,
+zero BLOCKER/security findings and two reliability findings. Thirty-three
+issue-specific false-positive transitions succeeded through MCP; exact-key
+queries returned all 33 as FALSE_POSITIVE and zero as OPEN/CONFIRMED.
+
+| Rule | PR false positives | Reviewed contract |
+| --- | --- | --- |
+| S5019 / S3608 | 12 | Six inner lambdas execute immediately through the native recovery wrapper, matching the rules' synchronous-use exception. Their outer stored callbacks have explicit captures. |
+| S859 | 3 | The pinned `const noexcept` notification override runs on the privately owned, non-const `Core` object; error recovery modifies that original object. |
+| S5008 | 7 | `DocWatcher` requires opaque user-data parameters. The fixture registers `nullptr` and leaves each parameter unused. |
+| S1238 | 2 | Geometry and document-modification value parameters implement pinned virtual declarations. |
+| S5025 | 1 | The native top-level fixture window follows wxWidgets' deferred destruction and application cleanup ownership. |
+| S6494 | 5 | The supported GCC 13 standard library lacks the recommended `std::print`. |
+| S2738 | 3 | Exception pointers retain failures across worker cleanup and rethrow them on the originating path. |
+
+The same batch addresses 25 findings in code. Linux worker startup now uses
+explicit `std::jthread` ownership instead of `std::async`. Per-worker exception
+slots outlive every thread, all started threads join before error propagation,
+and startup errors retain priority. The partial-start regression holds started
+workers behind a latch until the observing thread releases them, checking the
+0/1/3-worker failure cases and later retry. It passes at `-O2` with strict
+warnings and under AddressSanitizer/UndefinedBehaviorSanitizer.
+
+Fixture cleanup also makes asynchronous captures explicit, prohibits copying
+and moving the completion guard, documents the five intentional empty watcher
+callbacks, keeps paint observations private, and applies the reviewed const,
+enum-conversion and diagnostic-expression improvements. The surface fixture
+and affected core translation units compile and link with these changes.
+
+Fourteen recommendations retain their review status: seven concern generic
+exception types, three concern deliberate recovery/test-result catch boundaries,
+three suggest `using enum`, and one counts wxWidgets' inherited class depth.
+The continuation [PR #221](https://github.com/1298345095/wxnotepad/pull/221)
+records the final hosted revision, resulting issue queries and gate after this
+combined code and report-export batch.

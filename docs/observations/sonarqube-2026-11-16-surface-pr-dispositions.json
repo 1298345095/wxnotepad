@@ -1,0 +1,2651 @@
+{
+  "schema_version": 1,
+  "project": "1298345095_wxnotepad",
+  "pullRequest": "221",
+  "analyzed_revision": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+  "ce_task": "AaHk8V2RSw0uFDSXC1ay",
+  "reviewed_at": "2026-11-16 15:31:29 UTC",
+  "initial_quality_gate": {
+    "status": "ERROR",
+    "conditions": [
+      {
+        "metricKey": "new_reliability_rating",
+        "status": "OK",
+        "errorThreshold": "1",
+        "actualValue": "1"
+      },
+      {
+        "metricKey": "new_security_rating",
+        "status": "OK",
+        "errorThreshold": "1",
+        "actualValue": "1"
+      },
+      {
+        "metricKey": "new_maintainability_rating",
+        "status": "OK",
+        "errorThreshold": "1",
+        "actualValue": "1"
+      },
+      {
+        "metricKey": "new_coverage",
+        "status": "ERROR",
+        "errorThreshold": "80",
+        "actualValue": "79.0"
+      },
+      {
+        "metricKey": "new_duplicated_lines_density",
+        "status": "OK",
+        "errorThreshold": "3",
+        "actualValue": "0.0"
+      },
+      {
+        "metricKey": "new_security_hotspots_reviewed",
+        "status": "OK",
+        "errorThreshold": "100",
+        "actualValue": "100.0"
+      }
+    ]
+  },
+  "initial_query_counts": {
+    "open_confirmed": 72,
+    "high": 36,
+    "blocker": 0,
+    "security": 0,
+    "reliability": 2
+  },
+  "counts": {
+    "reviewed": 72,
+    "false_positive": 33,
+    "addressed_in_code_pending_analysis": 25,
+    "retained_design_recommendations": 14
+  },
+  "false_positive_dispositions": [
+    {
+      "key": "AaHk8WbnhnL9Urv53rXp",
+      "rule": "cpp:S6494",
+      "file": "tests/surface_initialization.cpp",
+      "line": 396,
+      "message": "Use \"std::print\" instead of \"printf\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "The recommended std::print is unavailable in the supported GCC 13 standard library.",
+      "comment": "False positive for the supported compiler baseline at tests/surface_initialization.cpp:396. This printf diagnostic is built on Linux with GCC 13: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CXX=g++-13. The recommendation specifically requires std::print. GCC's libstdc++ implementation table lists P2093R14 formatted output as first available in GCC 14.1, and the GCC 14 release notes list std::print/std::println as additions. Replacing this fixed-format diagnostic with std::print would break the supported GCC 13 build. Sources: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html and https://gcc.gnu.org/gcc-14/changes.html .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 396,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L396",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 54,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L54",
+          "detail": "Installs g++-13."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 83,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L83",
+          "detail": "Exports CXX=g++-13."
+        },
+        {
+          "url": "https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+          "detail": "P2093R14 formatted output first release 14.1; confirmed live table on 2026-11-16."
+        },
+        {
+          "url": "https://gcc.gnu.org/gcc-14/changes.html",
+          "detail": "Runtime Library C++23 additions include std::print and std::println."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rXp",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXr",
+      "rule": "cpp:S6494",
+      "file": "tests/surface_initialization.cpp",
+      "line": 479,
+      "message": "Use \"std::print\" instead of \"printf\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "The recommended std::print is unavailable in the supported GCC 13 standard library.",
+      "comment": "False positive for the supported compiler baseline at tests/surface_initialization.cpp:479. This printf diagnostic is built on Linux with GCC 13: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CXX=g++-13. The recommendation specifically requires std::print. GCC's libstdc++ implementation table lists P2093R14 formatted output as first available in GCC 14.1, and the GCC 14 release notes list std::print/std::println as additions. Replacing this fixed-format diagnostic with std::print would break the supported GCC 13 build. Sources: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html and https://gcc.gnu.org/gcc-14/changes.html .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 479,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L479",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 54,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L54",
+          "detail": "Installs g++-13."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 83,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L83",
+          "detail": "Exports CXX=g++-13."
+        },
+        {
+          "url": "https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+          "detail": "P2093R14 formatted output first release 14.1; confirmed live table on 2026-11-16."
+        },
+        {
+          "url": "https://gcc.gnu.org/gcc-14/changes.html",
+          "detail": "Runtime Library C++23 additions include std::print and std::println."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rXr",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WaWhnL9Urv53rXO",
+      "rule": "cpp:S5019",
+      "file": "src/editor/editor_control.cpp",
+      "line": 50,
+      "message": "Explicitly capture all local variables required in this lambda.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_control.cpp:50 (EditorControl::BindCoreEvent's inner RunNativeEvent lambda). The outer stored wx handler already captures [this, handler] explicitly. Only its inner lambda is reported; RunNativeEvent immediately forwards it to Core::RunNativeOperation, which invokes std::forward<Action>(action)() before returning. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are the current event, the bound handler and this. cpp:S5019 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_control.cpp",
+          "line": 50,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.cpp#L50",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "line": 41,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.cpp#L41",
+          "detail": "RunNativeEvent directly forwards to RunNativeOperation."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WaWhnL9Urv53rXO",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WaWhnL9Urv53rXP",
+      "rule": "cpp:S3608",
+      "file": "src/editor/editor_control.cpp",
+      "line": 50,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_control.cpp:50 (EditorControl::BindCoreEvent's inner RunNativeEvent lambda). The outer stored wx handler already captures [this, handler] explicitly. Only its inner lambda is reported; RunNativeEvent immediately forwards it to Core::RunNativeOperation, which invokes std::forward<Action>(action)() before returning. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are the current event, the bound handler and this. cpp:S3608 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_control.cpp",
+          "line": 50,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.cpp#L50",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "line": 41,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.cpp#L41",
+          "detail": "RunNativeEvent directly forwards to RunNativeOperation."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WaWhnL9Urv53rXP",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXQ",
+      "rule": "cpp:S3608",
+      "file": "src/editor/editor_core.cpp",
+      "line": 162,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:162 (TextDropTarget::OnDragOver's RunNativeOperation lambda). RunNativeOperation immediately calls the lambda and returns its success flag before OnDragOver returns wxDragNone/result. The coordinates and drop target remain live for the whole call. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are x, y and the live TextDropTarget through this. cpp:S3608 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 162,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L162",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXQ",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXR",
+      "rule": "cpp:S5019",
+      "file": "src/editor/editor_core.cpp",
+      "line": 162,
+      "message": "Explicitly capture all local variables required in this lambda.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:162 (TextDropTarget::OnDragOver's RunNativeOperation lambda). RunNativeOperation immediately calls the lambda and returns its success flag before OnDragOver returns wxDragNone/result. The coordinates and drop target remain live for the whole call. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are x, y and the live TextDropTarget through this. cpp:S5019 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 162,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L162",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXR",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXS",
+      "rule": "cpp:S3608",
+      "file": "src/editor/editor_core.cpp",
+      "line": 183,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:183 (TextDropTarget::OnData's RunNativeOperation lambda). The UTF-8 buffer is a local variable kept alive across the synchronous RunNativeOperation invocation. Position calculation and DropAt finish inside that invocation before OnData returns. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are x, y, utf8, action and the live drop target through this. cpp:S3608 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 183,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L183",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXS",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXT",
+      "rule": "cpp:S5019",
+      "file": "src/editor/editor_core.cpp",
+      "line": 183,
+      "message": "Explicitly capture all local variables required in this lambda.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:183 (TextDropTarget::OnData's RunNativeOperation lambda). The UTF-8 buffer is a local variable kept alive across the synchronous RunNativeOperation invocation. Position calculation and DropAt finish inside that invocation before OnData returns. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are x, y, utf8, action and the live drop target through this. cpp:S5019 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 183,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L183",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXT",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXV",
+      "rule": "cpp:S3608",
+      "file": "src/editor/editor_core.cpp",
+      "line": 328,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:328 (GTK show-feedback callback's inner RunNativeOperation lambda). The stored GtkTextDragDrop callback captures [this] explicitly. Its reported inner lambda is created and immediately invoked through RunNativeOperation while x and y are still callback parameters. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are the callback's x/y parameters and this. cpp:S3608 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 328,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L328",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXV",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXW",
+      "rule": "cpp:S5019",
+      "file": "src/editor/editor_core.cpp",
+      "line": 328,
+      "message": "Explicitly capture all local variables required in this lambda.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:328 (GTK show-feedback callback's inner RunNativeOperation lambda). The stored GtkTextDragDrop callback captures [this] explicitly. Its reported inner lambda is created and immediately invoked through RunNativeOperation while x and y are still callback parameters. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are the callback's x/y parameters and this. cpp:S5019 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 328,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L328",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXW",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXX",
+      "rule": "cpp:S3608",
+      "file": "src/editor/editor_core.cpp",
+      "line": 331,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:331 (GTK drop callback's inner RunNativeOperation lambda). The outer stored callback captures [this] explicitly. Its inner lambda synchronously computes the drop position and completes DropAt through RunNativeOperation before the callback returns. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are the callback's x/y/text/move parameters and this. cpp:S3608 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 331,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L331",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXX",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXY",
+      "rule": "cpp:S5019",
+      "file": "src/editor/editor_core.cpp",
+      "line": 331,
+      "message": "Explicitly capture all local variables required in this lambda.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:331 (GTK drop callback's inner RunNativeOperation lambda). The outer stored callback captures [this] explicitly. Its inner lambda synchronously computes the drop position and completes DropAt through RunNativeOperation before the callback returns. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are the callback's x/y/text/move parameters and this. cpp:S5019 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 331,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L331",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXY",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXZ",
+      "rule": "cpp:S3608",
+      "file": "src/editor/editor_core.cpp",
+      "line": 665,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:665 (Core::ClearDropFeedback's RunNativeOperation lambda). RunNativeOperation invokes SetDragPosition(invalid) immediately and returns before ClearDropFeedback checks the success flag or leaves the local invalid object's scope. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are the local invalid SelectionPosition and this. cpp:S3608 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 665,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L665",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXZ",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXa",
+      "rule": "cpp:S5019",
+      "file": "src/editor/editor_core.cpp",
+      "line": 665,
+      "message": "Explicitly capture all local variables required in this lambda.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Rule's immediate-execution exception applies to a synchronous local lambda.",
+      "comment": "False positive at src/editor/editor_core.cpp:665 (Core::ClearDropFeedback's RunNativeOperation lambda). RunNativeOperation invokes SetDragPosition(invalid) immediately and returns before ClearDropFeedback checks the success flag or leaves the local invalid object's scope. Core::RunNativeOperation (src/editor/editor_core.h:19-30) directly executes the supplied action; it does not queue, store or return it. Captures are the local invalid SelectionPosition and this. cpp:S5019 explicitly exempts immediately used lambdas because the captured references cannot outlive their scope.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 665,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L665",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L19",
+          "detail": "RunNativeOperation directly calls std::forward<Action>(action)() and contains no deferred storage."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXa",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXb",
+      "rule": "cpp:S859",
+      "file": "src/editor/editor_core.cpp",
+      "line": 814,
+      "message": "const_cast removing const qualification from the type of a pointer may lead to undefined behavior.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required const virtual callback is invoked on a privately owned, originally non-const Core.",
+      "comment": "False positive at src/editor/editor_core.cpp:814: this std::bad_alloc handler is inside the pinned NotifyParent(NotificationData&) const noexcept override (Scintilla Editor.h:492). EditorControl privately owns Core as std::unique_ptr<Core> (editor_control.h:137-144), and constructs it with std::make_unique<Core>(*this, selectionOptions) (editor_control.cpp:71). The underlying object is therefore non-const; const qualification comes from the required upstream callback signature. The cast restores mutable access to that same object to record the failure and invalidate its view caches before returning through the no-throw notification boundary. It does not modify an originally const object. Changing the callback's const qualification would break the required override.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 814,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L814",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_control.h",
+          "line": 137,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.h#L137",
+          "detail": "Private nested Core and std::unique_ptr<Core> owner."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "line": 71,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.cpp#L71",
+          "detail": "make_unique constructs a non-const Core."
+        },
+        {
+          "file": "scintilla/src/Editor.h",
+          "line": 492,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.h#L492",
+          "detail": "Pinned virtual NotifyParent is const noexcept."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 245,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L245",
+          "detail": "Recovery stores error status and invalidates view caches on the live mutable Core."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXb",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXc",
+      "rule": "cpp:S859",
+      "file": "src/editor/editor_core.cpp",
+      "line": 816,
+      "message": "const_cast removing const qualification from the type of a pointer may lead to undefined behavior.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required const virtual callback is invoked on a privately owned, originally non-const Core.",
+      "comment": "False positive at src/editor/editor_core.cpp:816: this core::Failure handler is inside the pinned NotifyParent(NotificationData&) const noexcept override (Scintilla Editor.h:492). EditorControl privately owns Core as std::unique_ptr<Core> (editor_control.h:137-144), and constructs it with std::make_unique<Core>(*this, selectionOptions) (editor_control.cpp:71). The underlying object is therefore non-const; const qualification comes from the required upstream callback signature. The cast restores mutable access to that same object to record the failure and invalidate its view caches before returning through the no-throw notification boundary. It does not modify an originally const object. Changing the callback's const qualification would break the required override.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 816,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L816",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_control.h",
+          "line": 137,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.h#L137",
+          "detail": "Private nested Core and std::unique_ptr<Core> owner."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "line": 71,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.cpp#L71",
+          "detail": "make_unique constructs a non-const Core."
+        },
+        {
+          "file": "scintilla/src/Editor.h",
+          "line": 492,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.h#L492",
+          "detail": "Pinned virtual NotifyParent is const noexcept."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 245,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L245",
+          "detail": "Recovery stores error status and invalidates view caches on the live mutable Core."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXc",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXd",
+      "rule": "cpp:S859",
+      "file": "src/editor/editor_core.cpp",
+      "line": 818,
+      "message": "const_cast removing const qualification from the type of a pointer may lead to undefined behavior.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required const virtual callback is invoked on a privately owned, originally non-const Core.",
+      "comment": "False positive at src/editor/editor_core.cpp:818: this std::runtime_error handler is inside the pinned NotifyParent(NotificationData&) const noexcept override (Scintilla Editor.h:492). EditorControl privately owns Core as std::unique_ptr<Core> (editor_control.h:137-144), and constructs it with std::make_unique<Core>(*this, selectionOptions) (editor_control.cpp:71). The underlying object is therefore non-const; const qualification comes from the required upstream callback signature. The cast restores mutable access to that same object to record the failure and invalidate its view caches before returning through the no-throw notification boundary. It does not modify an originally const object. Changing the callback's const qualification would break the required override.",
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 818,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L818",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/editor_control.h",
+          "line": 137,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.h#L137",
+          "detail": "Private nested Core and std::unique_ptr<Core> owner."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "line": 71,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_control.cpp#L71",
+          "detail": "make_unique constructs a non-const Core."
+        },
+        {
+          "file": "scintilla/src/Editor.h",
+          "line": 492,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.h#L492",
+          "detail": "Pinned virtual NotifyParent is const noexcept."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 245,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L245",
+          "detail": "Recovery stores error status and invalidates view caches on the live mutable Core."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8Wa9hnL9Urv53rXd",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WZshnL9Urv53rXK",
+      "rule": "cpp:S2738",
+      "file": "src/editor/platform/parallel_tasks.h",
+      "line": 22,
+      "message": "\"catch\" a specific exception type.",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Exception transport across a required join boundary; the retained primary exception is rethrown after cleanup.",
+      "comment": "False positive at src/editor/platform/parallel_tasks.h:22: this partial-startup handler transports the primary batch exception with std::current_exception; it does not treat the failure as a successful result. RunAsync drains every started task through future.get(), then calls std::rethrow_exception(failure) at line 32. Startup failure deliberately remains primary if an already-started worker also fails. An immediate rethrow would skip explicit result collection from the remaining tasks. Deferred propagation completes every started task before the error crosses the batch boundary. The deferred rethrow preserves the exception across mandatory cleanup, matching S2738's stated rethrow rationale. tests/parallel_surface_failure.cpp verifies bad_alloc/system_error propagation, startup precedence, completed callbacks, live outputs and retry.",
+      "evidence": [
+        {
+          "file": "src/editor/platform/parallel_tasks.h",
+          "line": 22,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/parallel_tasks.h#L22",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/platform/parallel_tasks.h",
+          "line": 25,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/parallel_tasks.h#L25",
+          "detail": "Drain all started futures."
+        },
+        {
+          "file": "src/editor/platform/parallel_tasks.h",
+          "line": 32,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/parallel_tasks.h#L32",
+          "detail": "Rethrow primary exception after all tasks finish."
+        },
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 52,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L52",
+          "detail": "Worker failure holds siblings to prove join-before-propagation."
+        },
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 96,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L96",
+          "detail": "Partial-startup failure verifies startup error priority and all started tasks completed."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WZshnL9Urv53rXK",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WZshnL9Urv53rXL",
+      "rule": "cpp:S2738",
+      "file": "src/editor/platform/parallel_tasks.h",
+      "line": 28,
+      "message": "\"catch\" a specific exception type.",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Exception transport across a required join boundary; the retained primary exception is rethrown after cleanup.",
+      "comment": "False positive at src/editor/platform/parallel_tasks.h:28: this future.get handler transports the primary batch exception with std::current_exception; it does not treat the failure as a successful result. RunAsync drains every started task through future.get(), then calls std::rethrow_exception(failure) at line 32. Startup failure deliberately remains primary if an already-started worker also fails. An immediate rethrow would skip explicit result collection from the remaining tasks. Deferred propagation completes every started task before the error crosses the batch boundary. The deferred rethrow preserves the exception across mandatory cleanup, matching S2738's stated rethrow rationale. tests/parallel_surface_failure.cpp verifies bad_alloc/system_error propagation, startup precedence, completed callbacks, live outputs and retry.",
+      "evidence": [
+        {
+          "file": "src/editor/platform/parallel_tasks.h",
+          "line": 28,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/parallel_tasks.h#L28",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "src/editor/platform/parallel_tasks.h",
+          "line": 25,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/parallel_tasks.h#L25",
+          "detail": "Drain all started futures."
+        },
+        {
+          "file": "src/editor/platform/parallel_tasks.h",
+          "line": 32,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/parallel_tasks.h#L32",
+          "detail": "Rethrow primary exception after all tasks finish."
+        },
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 52,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L52",
+          "detail": "Worker failure holds siblings to prove join-before-propagation."
+        },
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 96,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L96",
+          "detail": "Partial-startup failure verifies startup error priority and all started tasks completed."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WZshnL9Urv53rXL",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WLjhnL9Urv53rXG",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 310,
+      "message": "Pass large object \"r\" by reference to const.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "By-value parameter is required by a pinned virtual interface.",
+      "comment": "False positive at src/editor/platform/wx_platform.cpp:310: WxSurface::SetClip(PRectangle) is an override of the pinned Scintilla Surface::SetClip(PRectangle) virtual. The wx patch changes only the exception specification so native clip allocation failures can propagate; it preserves the required by-value PRectangle signature (prepared Platform.h:261-266, patches/original-core.patch). Changing this parameter to const PRectangle& would produce a different method and fail to implement the required pure virtual interface. This is the same pinned-interface constraint already recorded for the other Surface geometry methods.",
+      "evidence": [
+        {
+          "file": "src/editor/platform/wx_platform.cpp",
+          "line": 310,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/wx_platform.cpp#L310",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "scintilla/src/Platform.h",
+          "line": 263,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Platform.h#L261",
+          "detail": "Original and wx-patched Surface::SetClip both take PRectangle by value; local wx patch only removes noexcept."
+        },
+        {
+          "file": "patches/original-core.patch",
+          "line": 1,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/patches/original-core.patch#L1",
+          "detail": "The __WX__ interface adaptation preserves the by-value geometry contract."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WLjhnL9Urv53rXG",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYD",
+      "rule": "cpp:S2738",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 76,
+      "message": "\"catch\" a specific exception type.",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Exception transport across a required join boundary; the retained primary exception is rethrown after cleanup.",
+      "comment": "False positive at tests/parallel_surface_failure.cpp:76: this is the std::jthread caller's exception-transport boundary. It stores the actual exception in std::exception_ptr; the parent test joins caller at line 86 and invokes CheckFailure at line 92. CheckFailure rethrows it with std::rethrow_exception at line 31 and verifies the expected bad_alloc or system_error type/code/context. An unexpected exception propagates to the test result boundary. Letting an exception escape the thread entry instead would terminate the process before the test can verify the production join/error contract. This preserves and rethrows the failure after thread cleanup, consistent with S2738's rethrow rationale.",
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 76,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L76",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 86,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L86",
+          "detail": "Explicit caller.join before inspecting the transported error."
+        },
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 92,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L92",
+          "detail": "Invoke CheckFailure after join."
+        },
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 31,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L31",
+          "detail": "Rethrow the exact exception_ptr for typed verification."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbphnL9Urv53rYD",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYL",
+      "rule": "cpp:S6494",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 152,
+      "message": "Use \"std::print\" instead of \"fprintf\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "The recommended std::print is unavailable in the supported GCC 13 standard library.",
+      "comment": "False positive for the supported compiler baseline at tests/parallel_surface_failure.cpp:152. This fprintf diagnostic is built on Linux with GCC 13: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CXX=g++-13. The recommendation specifically requires std::print. GCC's libstdc++ implementation table lists P2093R14 formatted output as first available in GCC 14.1, and the GCC 14 release notes list std::print/std::println as additions. Replacing this fixed-format diagnostic with std::print would break the supported GCC 13 build. Sources: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html and https://gcc.gnu.org/gcc-14/changes.html .",
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 152,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L152",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 54,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L54",
+          "detail": "Installs g++-13."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 83,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L83",
+          "detail": "Exports CXX=g++-13."
+        },
+        {
+          "url": "https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+          "detail": "P2093R14 formatted output first release 14.1; confirmed live table on 2026-11-16."
+        },
+        {
+          "url": "https://gcc.gnu.org/gcc-14/changes.html",
+          "detail": "Runtime Library C++23 additions include std::print and std::println."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbphnL9Urv53rYL",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX2",
+      "rule": "cpp:S5008",
+      "file": "tests/surface_initialization.cpp",
+      "line": 284,
+      "message": "Replace this use of \"void *\" with a more meaningful type.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required opaque userData parameter in a pinned virtual override.",
+      "comment": "False positive at tests/surface_initialization.cpp:284: CommittedModificationFailure::NotifySavePoint overrides the pinned Scintilla DocWatcher virtual interface. Document.h:857 at Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a requires the void* userData parameter. This fixture registers the watcher with nullptr (line 270), leaves this parameter unnamed, and never casts or dereferences it. Replacing it with a typed pointer/template/any would no longer override the required virtual method. The opaque argument is an external callback contract rather than application-owned untyped storage. Source: https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L857 .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 284,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L284",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "scintilla/src/Document.h",
+          "line": 857,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L857",
+          "detail": "Pinned DocWatcher::NotifySavePoint requires void* userData."
+        },
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 270,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L270",
+          "detail": "AddWatcher(this, nullptr); no data object is passed via void*."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rX2",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX3",
+      "rule": "cpp:S5008",
+      "file": "tests/surface_initialization.cpp",
+      "line": 292,
+      "message": "Replace this use of \"void *\" with a more meaningful type.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required opaque userData parameter in a pinned virtual override.",
+      "comment": "False positive at tests/surface_initialization.cpp:292: CommittedModificationFailure::NotifyModifyAttempt overrides the pinned Scintilla DocWatcher virtual interface. Document.h:856 at Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a requires the void* userData parameter. This fixture registers the watcher with nullptr (line 270), leaves this parameter unnamed, and never casts or dereferences it. Replacing it with a typed pointer/template/any would no longer override the required virtual method. The opaque argument is an external callback contract rather than application-owned untyped storage. Source: https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L856 .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 292,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L292",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "scintilla/src/Document.h",
+          "line": 856,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L856",
+          "detail": "Pinned DocWatcher::NotifyModifyAttempt requires void* userData."
+        },
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 270,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L270",
+          "detail": "AddWatcher(this, nullptr); no data object is passed via void*."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rX3",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX4",
+      "rule": "cpp:S5008",
+      "file": "tests/surface_initialization.cpp",
+      "line": 293,
+      "message": "Replace this use of \"void *\" with a more meaningful type.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required opaque userData parameter in a pinned virtual override.",
+      "comment": "False positive at tests/surface_initialization.cpp:293: CommittedModificationFailure::NotifyModified overrides the pinned Scintilla DocWatcher virtual interface. Document.h:858 at Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a requires the void* userData parameter. This fixture registers the watcher with nullptr (line 270), leaves this parameter unnamed, and never casts or dereferences it. Replacing it with a typed pointer/template/any would no longer override the required virtual method. The opaque argument is an external callback contract rather than application-owned untyped storage. Source: https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L858 .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 293,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L293",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "scintilla/src/Document.h",
+          "line": 858,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L858",
+          "detail": "Pinned DocWatcher::NotifyModified requires void* userData."
+        },
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 270,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L270",
+          "detail": "AddWatcher(this, nullptr); no data object is passed via void*."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rX4",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX9",
+      "rule": "cpp:S1238",
+      "file": "tests/surface_initialization.cpp",
+      "line": 293,
+      "message": "Pass large object \"modification\" by reference to const.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "By-value parameter is required by a pinned virtual interface.",
+      "comment": "False positive at tests/surface_initialization.cpp:293: CommittedModificationFailure::NotifyModified overrides DocWatcher::NotifyModified(Document*, DocModification, void*) from pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, Document.h:858. The DocModification by-value parameter is fixed by that virtual interface. Changing this override to const DocModification& would no longer implement the callback used by Document::NotifyModified. Source: https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L858 .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 293,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L293",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "scintilla/src/Document.h",
+          "line": 858,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L858",
+          "detail": "Pinned virtual explicitly takes DocModification by value."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rX9",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX5",
+      "rule": "cpp:S5008",
+      "file": "tests/surface_initialization.cpp",
+      "line": 299,
+      "message": "Replace this use of \"void *\" with a more meaningful type.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required opaque userData parameter in a pinned virtual override.",
+      "comment": "False positive at tests/surface_initialization.cpp:299: CommittedModificationFailure::NotifyDeleted overrides the pinned Scintilla DocWatcher virtual interface. Document.h:859 at Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a requires the void* userData parameter. This fixture registers the watcher with nullptr (line 270), leaves this parameter unnamed, and never casts or dereferences it. Replacing it with a typed pointer/template/any would no longer override the required virtual method. The opaque argument is an external callback contract rather than application-owned untyped storage. Source: https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L859 .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 299,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L299",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "scintilla/src/Document.h",
+          "line": 859,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L859",
+          "detail": "Pinned DocWatcher::NotifyDeleted requires void* userData."
+        },
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 270,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L270",
+          "detail": "AddWatcher(this, nullptr); no data object is passed via void*."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rX5",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX6",
+      "rule": "cpp:S5008",
+      "file": "tests/surface_initialization.cpp",
+      "line": 300,
+      "message": "Replace this use of \"void *\" with a more meaningful type.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required opaque userData parameter in a pinned virtual override.",
+      "comment": "False positive at tests/surface_initialization.cpp:300: CommittedModificationFailure::NotifyStyleNeeded overrides the pinned Scintilla DocWatcher virtual interface. Document.h:860 at Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a requires the void* userData parameter. This fixture registers the watcher with nullptr (line 270), leaves this parameter unnamed, and never casts or dereferences it. Replacing it with a typed pointer/template/any would no longer override the required virtual method. The opaque argument is an external callback contract rather than application-owned untyped storage. Source: https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L860 .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 300,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L300",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "scintilla/src/Document.h",
+          "line": 860,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L860",
+          "detail": "Pinned DocWatcher::NotifyStyleNeeded requires void* userData."
+        },
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 270,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L270",
+          "detail": "AddWatcher(this, nullptr); no data object is passed via void*."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rX6",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX7",
+      "rule": "cpp:S5008",
+      "file": "tests/surface_initialization.cpp",
+      "line": 301,
+      "message": "Replace this use of \"void *\" with a more meaningful type.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required opaque userData parameter in a pinned virtual override.",
+      "comment": "False positive at tests/surface_initialization.cpp:301: CommittedModificationFailure::NotifyErrorOccurred overrides the pinned Scintilla DocWatcher virtual interface. Document.h:861 at Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a requires the void* userData parameter. This fixture registers the watcher with nullptr (line 270), leaves this parameter unnamed, and never casts or dereferences it. Replacing it with a typed pointer/template/any would no longer override the required virtual method. The opaque argument is an external callback contract rather than application-owned untyped storage. Source: https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L861 .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 301,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L301",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "scintilla/src/Document.h",
+          "line": 861,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L861",
+          "detail": "Pinned DocWatcher::NotifyErrorOccurred requires void* userData."
+        },
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 270,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L270",
+          "detail": "AddWatcher(this, nullptr); no data object is passed via void*."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rX7",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX8",
+      "rule": "cpp:S5008",
+      "file": "tests/surface_initialization.cpp",
+      "line": 302,
+      "message": "Replace this use of \"void *\" with a more meaningful type.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "Required opaque userData parameter in a pinned virtual override.",
+      "comment": "False positive at tests/surface_initialization.cpp:302: CommittedModificationFailure::NotifyGroupCompleted overrides the pinned Scintilla DocWatcher virtual interface. Document.h:862 at Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a requires the void* userData parameter. This fixture registers the watcher with nullptr (line 270), leaves this parameter unnamed, and never casts or dereferences it. Replacing it with a typed pointer/template/any would no longer override the required virtual method. The opaque argument is an external callback contract rather than application-owned untyped storage. Source: https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L862 .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 302,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L302",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "scintilla/src/Document.h",
+          "line": 862,
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h#L862",
+          "detail": "Pinned DocWatcher::NotifyGroupCompleted requires void* userData."
+        },
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 270,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L270",
+          "detail": "AddWatcher(this, nullptr); no data object is passed via void*."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rX8",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXq",
+      "rule": "cpp:S6494",
+      "file": "tests/surface_initialization.cpp",
+      "line": 417,
+      "message": "Use \"std::print\" instead of \"fprintf\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "The recommended std::print is unavailable in the supported GCC 13 standard library.",
+      "comment": "False positive for the supported compiler baseline at tests/surface_initialization.cpp:417. This fprintf diagnostic is built on Linux with GCC 13: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CXX=g++-13. The recommendation specifically requires std::print. GCC's libstdc++ implementation table lists P2093R14 formatted output as first available in GCC 14.1, and the GCC 14 release notes list std::print/std::println as additions. Replacing this fixed-format diagnostic with std::print would break the supported GCC 13 build. Sources: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html and https://gcc.gnu.org/gcc-14/changes.html .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 417,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L417",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 54,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L54",
+          "detail": "Installs g++-13."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 83,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L83",
+          "detail": "Exports CXX=g++-13."
+        },
+        {
+          "url": "https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+          "detail": "P2093R14 formatted output first release 14.1; confirmed live table on 2026-11-16."
+        },
+        {
+          "url": "https://gcc.gnu.org/gcc-14/changes.html",
+          "detail": "Runtime Library C++23 additions include std::print and std::println."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rXq",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXw",
+      "rule": "cpp:S5025",
+      "file": "tests/surface_initialization.cpp",
+      "line": 562,
+      "message": "Replace the use of \"new\" with an operation that automatically manages the memory.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "wxWidgets top-level frame ownership with deferred Destroy, not a manually leaked object.",
+      "comment": "False positive at tests/surface_initialization.cpp:562: the EditorFrame is a wxWidgets top-level window whose lifetime is managed by the native application. The presentation callback calls frame->Destroy() at line 571 after successful checks or a caught test failure, then exits the loop. In the pinned wxWidgets 3.3.3 implementation, wxTopLevelWindowBase::Destroy queues the window for deferred deletion; wxAppConsoleBase::DeletePendingObjects deletes queued objects, and wxAppBase::DeleteAllTLWs cleans remaining top-level windows at shutdown. A local unique_ptr would destroy the frame when OnInit returns while the asynchronous presentation callback still uses it. Sources: wxWidgets v3.3.3 src/common/toplvcmn.cpp:102-117, appbase.cpp:643, appcmn.cpp:129.",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 562,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L562",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 564,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L564",
+          "detail": "Presentation callback retains the frame until fixture work completes."
+        },
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 571,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L571",
+          "detail": "Destroy is called after success or caught failure."
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/toplvcmn.cpp#L102",
+          "detail": "Destroy schedules pending deletion."
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/appbase.cpp#L643",
+          "detail": "DeletePendingObjects deletes pending objects."
+        },
+        {
+          "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/appcmn.cpp#L129",
+          "detail": "DeleteAllTLWs cleans remaining top-level windows."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rXw",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXy",
+      "rule": "cpp:S6494",
+      "file": "tests/surface_initialization.cpp",
+      "line": 569,
+      "message": "Use \"std::print\" instead of \"fprintf\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "false_positive",
+      "reason": "The recommended std::print is unavailable in the supported GCC 13 standard library.",
+      "comment": "False positive for the supported compiler baseline at tests/surface_initialization.cpp:569. This fprintf diagnostic is built on Linux with GCC 13: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CXX=g++-13. The recommendation specifically requires std::print. GCC's libstdc++ implementation table lists P2093R14 formatted output as first available in GCC 14.1, and the GCC 14 release notes list std::print/std::println as additions. Replacing this fixed-format diagnostic with std::print would break the supported GCC 13 build. Sources: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html and https://gcc.gnu.org/gcc-14/changes.html .",
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 569,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L569",
+          "detail": "Reported source location at the analyzed immutable head."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 54,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L54",
+          "detail": "Installs g++-13."
+        },
+        {
+          "file": ".github/actions/dependencies/action.yml",
+          "line": 83,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/.github/actions/dependencies/action.yml#L83",
+          "detail": "Exports CXX=g++-13."
+        },
+        {
+          "url": "https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+          "detail": "P2093R14 formatted output first release 14.1; confirmed live table on 2026-11-16."
+        },
+        {
+          "url": "https://gcc.gnu.org/gcc-14/changes.html",
+          "detail": "Runtime Library C++23 additions include std::print and std::println."
+        }
+      ],
+      "receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHk8WbnhnL9Urv53rXy",
+        "newStatus": "falsepositive"
+      }
+    }
+  ],
+  "false_positive_verification": {
+    "false_positive_keys": [
+      "AaHk8WbnhnL9Urv53rXp",
+      "AaHk8WbnhnL9Urv53rXr",
+      "AaHk8WaWhnL9Urv53rXO",
+      "AaHk8WaWhnL9Urv53rXP",
+      "AaHk8Wa9hnL9Urv53rXQ",
+      "AaHk8Wa9hnL9Urv53rXR",
+      "AaHk8Wa9hnL9Urv53rXS",
+      "AaHk8Wa9hnL9Urv53rXT",
+      "AaHk8Wa9hnL9Urv53rXV",
+      "AaHk8Wa9hnL9Urv53rXW",
+      "AaHk8Wa9hnL9Urv53rXX",
+      "AaHk8Wa9hnL9Urv53rXY",
+      "AaHk8Wa9hnL9Urv53rXZ",
+      "AaHk8Wa9hnL9Urv53rXa",
+      "AaHk8Wa9hnL9Urv53rXb",
+      "AaHk8Wa9hnL9Urv53rXc",
+      "AaHk8Wa9hnL9Urv53rXd",
+      "AaHk8WZshnL9Urv53rXK",
+      "AaHk8WZshnL9Urv53rXL",
+      "AaHk8WLjhnL9Urv53rXG",
+      "AaHk8WbphnL9Urv53rYD",
+      "AaHk8WbphnL9Urv53rYL",
+      "AaHk8WbnhnL9Urv53rX2",
+      "AaHk8WbnhnL9Urv53rX3",
+      "AaHk8WbnhnL9Urv53rX4",
+      "AaHk8WbnhnL9Urv53rX9",
+      "AaHk8WbnhnL9Urv53rX5",
+      "AaHk8WbnhnL9Urv53rX6",
+      "AaHk8WbnhnL9Urv53rX7",
+      "AaHk8WbnhnL9Urv53rX8",
+      "AaHk8WbnhnL9Urv53rXq",
+      "AaHk8WbnhnL9Urv53rXw",
+      "AaHk8WbnhnL9Urv53rXy"
+    ],
+    "false_positive_total": 33,
+    "open_confirmed_total": 0,
+    "query": {
+      "project": "1298345095_wxnotepad",
+      "pullRequest": "221",
+      "issue_keys": [
+        "AaHk8WbnhnL9Urv53rXp",
+        "AaHk8WbnhnL9Urv53rXr",
+        "AaHk8WaWhnL9Urv53rXO",
+        "AaHk8WaWhnL9Urv53rXP",
+        "AaHk8Wa9hnL9Urv53rXQ",
+        "AaHk8Wa9hnL9Urv53rXR",
+        "AaHk8Wa9hnL9Urv53rXS",
+        "AaHk8Wa9hnL9Urv53rXT",
+        "AaHk8Wa9hnL9Urv53rXV",
+        "AaHk8Wa9hnL9Urv53rXW",
+        "AaHk8Wa9hnL9Urv53rXX",
+        "AaHk8Wa9hnL9Urv53rXY",
+        "AaHk8Wa9hnL9Urv53rXZ",
+        "AaHk8Wa9hnL9Urv53rXa",
+        "AaHk8Wa9hnL9Urv53rXb",
+        "AaHk8Wa9hnL9Urv53rXc",
+        "AaHk8Wa9hnL9Urv53rXd",
+        "AaHk8WZshnL9Urv53rXK",
+        "AaHk8WZshnL9Urv53rXL",
+        "AaHk8WLjhnL9Urv53rXG",
+        "AaHk8WbphnL9Urv53rYD",
+        "AaHk8WbphnL9Urv53rYL",
+        "AaHk8WbnhnL9Urv53rX2",
+        "AaHk8WbnhnL9Urv53rX3",
+        "AaHk8WbnhnL9Urv53rX4",
+        "AaHk8WbnhnL9Urv53rX9",
+        "AaHk8WbnhnL9Urv53rX5",
+        "AaHk8WbnhnL9Urv53rX6",
+        "AaHk8WbnhnL9Urv53rX7",
+        "AaHk8WbnhnL9Urv53rX8",
+        "AaHk8WbnhnL9Urv53rXq",
+        "AaHk8WbnhnL9Urv53rXw",
+        "AaHk8WbnhnL9Urv53rXy"
+      ]
+    }
+  },
+  "code_changes": [
+    {
+      "key": "AaHk8WbnhnL9Urv53rXi",
+      "rule": "cpp:S5414",
+      "file": "tests/surface_initialization.cpp",
+      "line": 220,
+      "message": "Don't mix public and private data members.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Keep paint observer state private and expose the unchanged conjunction through Recovered().",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 220,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L220",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Keep paint observer state private and expose the unchanged conjunction through Recovered().",
+      "original_proposal_reason": "PaintFailure separates public observed flags from private dispatch state. Rule correctly observes mixed access; encapsulation/style advice, not a reproduced resource-recovery defect."
+    },
+    {
+      "key": "AaHk8WZshnL9Urv53rXM",
+      "rule": "cpp:S8460",
+      "file": "src/editor/platform/parallel_tasks.h",
+      "line": 81,
+      "message": "Remove this use of \"async\", use explicit threading mechanisms instead.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "HIGH"
+        },
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Use explicit jthread ownership and join all started workers before propagating startup or worker errors.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "src/editor/platform/parallel_tasks.h",
+          "line": 81,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/parallel_tasks.h#L81",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Use explicit jthread ownership and join all started workers before propagating startup or worker errors.",
+      "original_proposal_reason": "S8460 expressly treats explicit std::launch::async as noncompliant. Root plans explicit threads preserving join/error ordering; not marked FP."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rX_",
+      "rule": "cpp:S5271",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 23,
+      "message": "function 'ThrowFailure' could be declared with attribute 'noreturn'",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Mark the always-throwing fixture helper noreturn.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 23,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L23",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Mark the always-throwing fixture helper noreturn.",
+      "original_proposal_reason": "ThrowFailure always throws and could use [[noreturn]] to document that. Valid local readability/analysis improvement, no current behavior error."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYA",
+      "rule": "cpp:S7034",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 36,
+      "message": "Use \"contains\" instead of \"find\".",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Express the unchanged diagnostic substring requirement with string_view.contains.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 36,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L36",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Express the unchanged diagnostic substring requirement with string_view.contains.",
+      "original_proposal_reason": "The find!=npos predicate is correct; std::string_view::contains is available and simpler. Valid modernization suggestion."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYB",
+      "rule": "cpp:S3608",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 44,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "List the asynchronous fixture captures explicitly.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 44,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L44",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "List the asynchronous fixture captures explicitly.",
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYC",
+      "rule": "cpp:S3608",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 61,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "List the asynchronous fixture captures explicitly.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 61,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L61",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "List the asynchronous fixture captures explicitly.",
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYE",
+      "rule": "cpp:S3608",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 63,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "List the asynchronous fixture captures explicitly.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 63,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L63",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "List the asynchronous fixture captures explicitly.",
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYG",
+      "rule": "cpp:S3624",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 65,
+      "message": "Customize this struct's copy constructor to participate in resource management (the copy constructor is implicitly created).",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Delete all copy and move operations of the completion guard.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 65,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L65",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Delete all copy and move operations of the completion guard.",
+      "original_proposal_reason": "Completion's destructor increments the finished count; copying would duplicate that effect. Delete copy and move operations on the local guard."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYF",
+      "rule": "cpp:S3646",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 68,
+      "message": "Declare this variable in a separate statement.",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Separate the guard type definition and its scoped instance.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 68,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L68",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Separate the guard type definition and its scoped instance.",
+      "original_proposal_reason": "Separating the local Completion type declaration from its instance is a valid readability improvement, suitable alongside the planned noncopyable guard change."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYH",
+      "rule": "cpp:S3608",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 99,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "List the asynchronous fixture captures explicitly.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 99,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L99",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "List the asynchronous fixture captures explicitly.",
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYI",
+      "rule": "cpp:S3608",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 105,
+      "message": "Explicitly capture the required scope variables.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "List the asynchronous fixture captures explicitly.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 105,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L105",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "List the asynchronous fixture captures explicitly.",
+      "original_proposal_reason": "Test lambdas use asynchronous workers or are retained before invocation. Root plans explicit captures to make tested lifetimes visible."
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYJ",
+      "rule": "cpp:S8460",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 107,
+      "message": "Remove this use of \"async\", use explicit threading mechanisms instead.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "RELIABILITY",
+          "severity": "HIGH"
+        },
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Use explicit jthread ownership and join all started workers before propagating startup or worker errors.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 107,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L107",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Use explicit jthread ownership and join all started workers before propagating startup or worker errors.",
+      "original_proposal_reason": "S8460 expressly treats explicit std::launch::async as noncompliant. Root plans explicit threads preserving join/error ordering; not marked FP."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXz",
+      "rule": "cpp:S995",
+      "file": "tests/surface_initialization.cpp",
+      "line": 19,
+      "message": "Make the type of this parameter a reference-to-const. The current type of \"editor\" is \"class EditorControl &\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Use const references for read-only observations.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 19,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L19",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Use const references for read-only observations.",
+      "original_proposal_reason": "Const-qualifying the observation/reference helper parameter is a valid signature cleanup. The helper reads the host handle and current state; no faulty behavior established."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX0",
+      "rule": "cpp:S995",
+      "file": "tests/surface_initialization.cpp",
+      "line": 25,
+      "message": "Make the type of this parameter a reference-to-const. The current type of \"editor\" is \"class EditorControl &\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Use const references for read-only observations.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 25,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L25",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Use const references for read-only observations.",
+      "original_proposal_reason": "Const-qualifying the observation/reference helper parameter is a valid signature cleanup. The helper reads the host handle and current state; no faulty behavior established."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXe",
+      "rule": "cpp:S7035",
+      "file": "tests/surface_initialization.cpp",
+      "line": 33,
+      "message": "Use an intermediary \"std::to_underlying\" to cast an enum to an integral type that is not the underlying type.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 33,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L33",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXf",
+      "rule": "cpp:S7035",
+      "file": "tests/surface_initialization.cpp",
+      "line": 34,
+      "message": "Use an intermediary \"std::to_underlying\" to cast an enum to an integral type that is not the underlying type.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 34,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L34",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXg",
+      "rule": "cpp:S7035",
+      "file": "tests/surface_initialization.cpp",
+      "line": 35,
+      "message": "Use an intermediary \"std::to_underlying\" to cast an enum to an integral type that is not the underlying type.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 35,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L35",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rX1",
+      "rule": "cpp:S995",
+      "file": "tests/surface_initialization.cpp",
+      "line": 147,
+      "message": "Make the type of this parameter a reference-to-const. The current type of \"dc\" is \"class wxDC &\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Use const references for read-only observations.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 147,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L147",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Use const references for read-only observations.",
+      "original_proposal_reason": "Const-qualifying the observation/reference helper parameter is a valid signature cleanup. The helper reads the host handle and current state; no faulty behavior established."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXj",
+      "rule": "cpp:S1186",
+      "file": "tests/surface_initialization.cpp",
+      "line": 292,
+      "message": "Add a nested comment explaining why this method is empty, or complete the implementation.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 292,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L292",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXk",
+      "rule": "cpp:S1186",
+      "file": "tests/surface_initialization.cpp",
+      "line": 299,
+      "message": "Add a nested comment explaining why this method is empty, or complete the implementation.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 299,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L299",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXl",
+      "rule": "cpp:S1186",
+      "file": "tests/surface_initialization.cpp",
+      "line": 300,
+      "message": "Add a nested comment explaining why this method is empty, or complete the implementation.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 300,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L300",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXm",
+      "rule": "cpp:S1186",
+      "file": "tests/surface_initialization.cpp",
+      "line": 301,
+      "message": "Add a nested comment explaining why this method is empty, or complete the implementation.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 301,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L301",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXn",
+      "rule": "cpp:S1186",
+      "file": "tests/surface_initialization.cpp",
+      "line": 302,
+      "message": "Add a nested comment explaining why this method is empty, or complete the implementation.",
+      "legacy_severity": "CRITICAL",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "HIGH"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 302,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L302",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Explain each intentionally empty pinned DocWatcher override within its body.",
+      "original_proposal_reason": "The watcher callbacks are intentionally empty, but S1186 explicitly requires a nested explanatory comment for such overrides. Document which notification this fault observer ignores."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXt",
+      "rule": "cpp:S7035",
+      "file": "tests/surface_initialization.cpp",
+      "line": 512,
+      "message": "Use an intermediary \"std::to_underlying\" to cast an enum to an integral type that is not the underlying type.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 512,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L512",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXu",
+      "rule": "cpp:S7035",
+      "file": "tests/surface_initialization.cpp",
+      "line": 524,
+      "message": "Use an intermediary \"std::to_underlying\" to cast an enum to an integral type that is not the underlying type.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "code_addressed_pending_analysis",
+      "reason": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 524,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L524",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ],
+      "change": "Convert through to_underlying while preserving the original pointer-sized integral target.",
+      "original_proposal_reason": "Explicit enum-to-pointer-sized message/status conversion has bounded fixed enumerators. std::to_underlying is supported modernization, not a defect or unsupported-feature FP."
+    }
+  ],
+  "retained_recommendations": [
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXU",
+      "rule": "cpp:S1181",
+      "file": "src/editor/editor_core.cpp",
+      "line": 239,
+      "message": "Catch a more specific exception instead of a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "The runtime_error/status boundary or wxApp test-result boundary is intentional, but the rule's stated noexcept/main/destructor/extern-C exemptions do not apply to these function declarations. Retain as a design suggestion instead of mislabeling it FP.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.cpp",
+          "line": 239,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.cpp#L239",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WZ2hnL9Urv53rXN",
+      "rule": "cpp:S1181",
+      "file": "src/editor/editor_core.h",
+      "line": 27,
+      "message": "Catch a more specific exception instead of a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "The runtime_error/status boundary or wxApp test-result boundary is intentional, but the rule's stated noexcept/main/destructor/extern-C exemptions do not apply to these function declarations. Retain as a design suggestion instead of mislabeling it FP.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "src/editor/editor_core.h",
+          "line": 27,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/editor_core.h#L27",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WZhhnL9Urv53rXH",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "line": 246,
+      "message": "Define and throw a dedicated exception instead of using a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "A dedicated resource/test exception can improve categorization; current callers intentionally map runtime errors to the defined failure status or failed test. No new behavior defect established; retain the exception-design suggestion.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "src/editor/platform/text_measurement_gtk.cpp",
+          "line": 246,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/text_measurement_gtk.cpp#L246",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WZhhnL9Urv53rXI",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "line": 248,
+      "message": "Define and throw a dedicated exception instead of using a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "A dedicated resource/test exception can improve categorization; current callers intentionally map runtime errors to the defined failure status or failed test. No new behavior defect established; retain the exception-design suggestion.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "src/editor/platform/text_measurement_gtk.cpp",
+          "line": 248,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/text_measurement_gtk.cpp#L248",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WZhhnL9Urv53rXJ",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "line": 265,
+      "message": "Define and throw a dedicated exception instead of using a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "A dedicated resource/test exception can improve categorization; current callers intentionally map runtime errors to the defined failure status or failed test. No new behavior defect established; retain the exception-design suggestion.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "src/editor/platform/text_measurement_gtk.cpp",
+          "line": 265,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/text_measurement_gtk.cpp#L265",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WLjhnL9Urv53rXE",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 104,
+      "message": "Define and throw a dedicated exception instead of using a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "A dedicated resource/test exception can improve categorization; current callers intentionally map runtime errors to the defined failure status or failed test. No new behavior defect established; retain the exception-design suggestion.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "src/editor/platform/wx_platform.cpp",
+          "line": 104,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/wx_platform.cpp#L104",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WLjhnL9Urv53rXF",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 107,
+      "message": "Define and throw a dedicated exception instead of using a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "A dedicated resource/test exception can improve categorization; current callers intentionally map runtime errors to the defined failure status or failed test. No new behavior defect established; retain the exception-design suggestion.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "src/editor/platform/wx_platform.cpp",
+          "line": 107,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/src/editor/platform/wx_platform.cpp#L107",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rX-",
+      "rule": "cpp:S112",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 18,
+      "message": "Define and throw a dedicated exception instead of using a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "A dedicated resource/test exception can improve categorization; current callers intentionally map runtime errors to the defined failure status or failed test. No new behavior defect established; retain the exception-design suggestion.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 18,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L18",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rYK",
+      "rule": "cpp:S112",
+      "file": "tests/parallel_surface_failure.cpp",
+      "line": 117,
+      "message": "Define and throw a dedicated exception instead of using a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "A dedicated resource/test exception can improve categorization; current callers intentionally map runtime errors to the defined failure status or failed test. No new behavior defect established; retain the exception-design suggestion.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/parallel_surface_failure.cpp",
+          "line": 117,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/parallel_surface_failure.cpp#L117",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXh",
+      "rule": "cpp:S6177",
+      "file": "tests/surface_initialization.cpp",
+      "line": 212,
+      "message": "Reduce verbosity with \"using enum\" for \"Scintilla::Message\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "using enum would shorten Scintilla message names; current qualified names are behaviorally correct. Retain optional readability advice.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 212,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L212",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXo",
+      "rule": "cpp:S6177",
+      "file": "tests/surface_initialization.cpp",
+      "line": 317,
+      "message": "Reduce verbosity with \"using enum\" for \"Scintilla::Message\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "using enum would shorten Scintilla message names; current qualified names are behaviorally correct. Retain optional readability advice.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 317,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L317",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXs",
+      "rule": "cpp:S6177",
+      "file": "tests/surface_initialization.cpp",
+      "line": 484,
+      "message": "Reduce verbosity with \"using enum\" for \"Scintilla::Message\".",
+      "legacy_severity": "MINOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "LOW"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "using enum would shorten Scintilla message names; current qualified names are behaviorally correct. Retain optional readability advice.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 484,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L484",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXv",
+      "rule": "cpp:S110",
+      "file": "tests/surface_initialization.cpp",
+      "line": 558,
+      "message": "The inheritance hierarchy for this class has a depth of 6, which is greater than 5 authorized.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "The single fixture app subclass inherits wxWidgets' framework hierarchy. The measured depth is real; retained framework/design suggestion rather than silently changing threshold or marking as an analysis error.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 558,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L558",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXx",
+      "rule": "cpp:S1181",
+      "file": "tests/surface_initialization.cpp",
+      "line": 568,
+      "message": "Catch a more specific exception instead of a generic one.",
+      "legacy_severity": "MAJOR",
+      "impacts": [
+        {
+          "softwareQuality": "MAINTAINABILITY",
+          "severity": "MEDIUM"
+        }
+      ],
+      "classification": "retain_design_suggestion",
+      "reason": "The runtime_error/status boundary or wxApp test-result boundary is intentional, but the rule's stated noexcept/main/destructor/extern-C exemptions do not apply to these function declarations. Retain as a design suggestion instead of mislabeling it FP.",
+      "comment": null,
+      "evidence": [
+        {
+          "file": "tests/surface_initialization.cpp",
+          "line": 568,
+          "url": "https://github.com/1298345095/wxnotepad/blob/2d6cdba1fcf5e3fc5804053d6130b3a56742cd09/tests/surface_initialization.cpp#L568",
+          "detail": "Reported source location at the analyzed immutable head."
+        }
+      ]
+    }
+  ],
+  "final_analysis_location": "The continuation PR description and checks record the final analyzed revision and verification after this batch."
+}

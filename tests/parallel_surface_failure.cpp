@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <future>
 #include <latch>
 #include <new>
 #include <stdexcept>
@@ -20,7 +21,7 @@ void Require(bool condition, const char* message) {
 
 enum class FailureKind { Allocation, NativeResource };
 
-void ThrowFailure(FailureKind kind) {
+[[noreturn]] void ThrowFailure(FailureKind kind) {
     if (kind == FailureKind::Allocation) throw std::bad_alloc();
     throw std::system_error(std::make_error_code(std::errc::io_error), "native measurement fixture");
 }
@@ -33,7 +34,7 @@ void CheckFailure(const std::exception_ptr& failure, FailureKind kind) {
         Require(kind == FailureKind::Allocation, "allocation failure keeps its original exception type");
     } catch (const std::system_error& error) {
         Require(kind == FailureKind::NativeResource && error.code() == std::errc::io_error &&
-                    std::string_view(error.what()).find("native measurement fixture") != std::string_view::npos,
+                    std::string_view(error.what()).contains("native measurement fixture"),
                 "native resource failure keeps its original error code and context");
     }
 }
@@ -41,7 +42,7 @@ void CheckFailure(const std::exception_ptr& failure, FailureKind kind) {
 void SuccessfulRetry() {
     std::array<int, WorkerCount> positions{};
     std::atomic<unsigned> next = 0;
-    ParallelTasks::Run(WorkerCount, [&] {
+    ParallelTasks::Run(WorkerCount, [&next, &positions] {
         const unsigned index = next.fetch_add(1);
         positions[index] = Inputs[index] * Inputs[index];
     });
@@ -58,21 +59,28 @@ void WorkerFailure(FailureKind kind) {
     std::atomic<unsigned> started = 0;
     std::atomic<unsigned> finished = 0;
     std::array<int, WorkerCount> positions{};
-    std::jthread caller([&] {
+    auto work = [kind, &started, &finished, &failureStarted, &releaseRemaining, &positions] {
+        const unsigned index = started.fetch_add(1);
+        struct Completion {
+            std::atomic<unsigned>& finished;
+            explicit Completion(std::atomic<unsigned>& count) : finished(count) {}
+            ~Completion() { ++finished; }
+            Completion(const Completion&) = delete;
+            Completion& operator=(const Completion&) = delete;
+            Completion(Completion&&) = delete;
+            Completion& operator=(Completion&&) = delete;
+        };
+        Completion completion{finished};
+        if (index == 0) {
+            failureStarted.count_down();
+            ThrowFailure(kind);
+        }
+        releaseRemaining.wait();
+        positions[index] = Inputs[index] * Inputs[index];
+    };
+    std::jthread caller([&work, &failure, &returned] {
         try {
-            ParallelTasks::Run(WorkerCount, [&] {
-                const unsigned index = started.fetch_add(1);
-                struct Completion {
-                    std::atomic<unsigned>& finished;
-                    ~Completion() { ++finished; }
-                } completion{finished};
-                if (index == 0) {
-                    failureStarted.count_down();
-                    ThrowFailure(kind);
-                }
-                releaseRemaining.wait();
-                positions[index] = Inputs[index] * Inputs[index];
-            });
+            ParallelTasks::Run(WorkerCount, work);
         } catch (...) {
             failure = std::current_exception();
         }
@@ -96,20 +104,46 @@ void WorkerFailure(FailureKind kind) {
 void PartialStartFailure(unsigned failAfter) {
     unsigned launched = 0;
     std::atomic<unsigned> completed = 0;
-    auto work = [&] {
+    std::latch launchFailed(1);
+    std::latch releaseRemaining(1);
+    std::promise<void> returned;
+    auto returnState = returned.get_future();
+    std::exception_ptr failure;
+    auto work = [&releaseRemaining, &completed] {
+        releaseRemaining.wait();
         ++completed;
         throw std::bad_alloc();
     };
     const auto error = std::make_error_code(std::errc::resource_unavailable_try_again);
+    std::jthread caller([failAfter, error, &work, &launched, &launchFailed, &failure, &returned] {
+        try {
+            ParallelTasks::Detail::RunThreads(WorkerCount, work,
+                                              [failAfter, error, &launched, &launchFailed](auto task) {
+                                                  if (launched == failAfter) {
+                                                      launchFailed.count_down();
+                                                      throw std::system_error(error, "launch fixture");
+                                                  }
+                                                  std::jthread worker(std::move(task));
+                                                  ++launched;
+                                                  return worker;
+                                              });
+        } catch (...) {
+            failure = std::current_exception();
+        }
+        returned.set_value();
+    });
+    launchFailed.wait();
+    const bool returnedEarly = returnState.wait_for(std::chrono::milliseconds(30)) == std::future_status::ready;
+    releaseRemaining.count_down();
+    caller.join();
+    Require(failAfter == 0 || !returnedEarly,
+            "partial startup failure waits for already running workers and their output storage");
+    Require(static_cast<bool>(failure), "partial startup failure must reach the caller");
     try {
-        ParallelTasks::Detail::RunAsync(WorkerCount, work, [&](auto task) {
-            if (launched == failAfter) throw std::system_error(error, "launch fixture");
-            auto future = std::async(std::launch::async, task);
-            ++launched;
-            return future;
-        });
-    } catch (const std::system_error& failure) {
-        Require(failure.code() == error, "the startup failure remains primary when an earlier worker also fails");
+        std::rethrow_exception(failure);
+    } catch (const std::system_error& startupFailure) {
+        Require(startupFailure.code() == error,
+                "the startup failure remains primary when an earlier worker also fails");
         Require(launched == failAfter && completed == failAfter,
                 "every successfully started task joins before partial startup failure propagates");
         return;
@@ -120,7 +154,7 @@ void PartialStartFailure(unsigned failAfter) {
 #ifdef _WIN32
 void NativeCreationFailure() {
     unsigned invoked = 0;
-    auto work = [&] { ++invoked; };
+    auto work = [&invoked] { ++invoked; };
     try {
         ParallelTasks::Detail::RunNative(WorkerCount, work, [](PTP_WORK_CALLBACK, void*) -> PTP_WORK {
             SetLastError(ERROR_NOT_ENOUGH_MEMORY);

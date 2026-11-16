@@ -1,8 +1,9 @@
 #pragma once
 #include <exception>
-#include <future>
 #include <memory>
 #include <system_error>
+#include <thread>
+#include <utility>
 #include <vector>
 #ifdef _WIN32
 #include <windows.h>
@@ -12,24 +13,30 @@ namespace ParallelTasks {
 namespace Detail {
 // Keep the work and its output buffers alive until every started task has
 // finished, including when another task or a later launch fails.
-template <class Work, class Launch> void RunAsync(unsigned count, Work& work, Launch launch) {
-    std::vector<std::future<void>> futures;
-    futures.reserve(count);
-    std::exception_ptr failure;
+template <class Work, class Launch> void RunThreads(unsigned count, Work& work, Launch launch) {
+    // Slots outlive the thread owners even if joining exits exceptionally.
+    // Each worker writes only its own slot; the caller reads after joining.
+    std::vector<std::exception_ptr> failures(count);
+    std::vector<std::jthread> threads;
+    threads.reserve(count);
+    std::exception_ptr startupFailure;
     try {
         for (unsigned index = 0; index < count; ++index)
-            futures.push_back(launch([&work] { work(); }));
+            threads.push_back(launch([&work, &failures, index] {
+                try {
+                    work();
+                } catch (...) {
+                    failures[index] = std::current_exception();
+                }
+            }));
     } catch (...) {
-        failure = std::current_exception();
+        startupFailure = std::current_exception();
     }
-    for (auto& future : futures) {
-        try {
-            future.get();
-        } catch (...) {
-            if (!failure) failure = std::current_exception();
-        }
-    }
-    if (failure) std::rethrow_exception(failure);
+    for (auto& thread : threads)
+        thread.join();
+    if (startupFailure) std::rethrow_exception(startupFailure);
+    for (const auto& failure : failures)
+        if (failure) std::rethrow_exception(failure);
 }
 
 #ifdef _WIN32
@@ -78,7 +85,7 @@ template <class Work> void Run(unsigned count, Work work) {
         return CreateThreadpoolWork(callback, context, nullptr);
     });
 #else
-    Detail::RunAsync(count, work, [](auto task) { return std::async(std::launch::async, task); });
+    Detail::RunThreads(count, work, [](auto task) { return std::jthread(std::move(task)); });
 #endif
 }
 } // namespace ParallelTasks

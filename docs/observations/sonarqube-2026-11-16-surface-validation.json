@@ -1420,5 +1420,1757 @@
     "format_exit_code": 0,
     "whitespace_exit_code": 0,
     "hosted_validation": "Complete Linux allocation sweeps are validated by the following hosted run; final tested revision and results are recorded in PR #221."
+  },
+  "third_hosted_validation": {
+    "source_head_sha": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+    "checkout_merge_sha": "1956f400a7b0f432c95436bd3cfd53761de639b1",
+    "workflows": {
+      "CI": {
+        "id": 43891433929,
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43891433929"
+      },
+      "Quality": {
+        "id": 43891433966,
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43891433966"
+      },
+      "Fuzz": {
+        "id": 43891434007,
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43891434007"
+      },
+      "CodeQL": {
+        "id": 43891433953,
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43891433953"
+      }
+    },
+    "windows": {
+      "ordinary": {
+        "total": 217,
+        "passed": 216,
+        "failed": 0,
+        "skipped": 1
+      },
+      "diagnostic": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "junit_validation": {
+        "ordinary": {
+          "suite": {
+            "name": "Win32-ninja",
+            "tests": "217",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "1",
+            "hostname": "runnervmm7ud1",
+            "time": "616",
+            "timestamp": "2026-11-16T15:02:27"
+          },
+          "total": 217,
+          "passed": 216,
+          "failed": [],
+          "skipped": [
+            "windows_inline_ime_input"
+          ],
+          "fixtures": [
+            {
+              "name": "native_surface_initialization_failures",
+              "attributes": {
+                "name": "native_surface_initialization_failures",
+                "classname": "native_surface_initialization_failures",
+                "time": "0.302824",
+                "status": "run"
+              },
+              "stdout": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=5; first uninjected skip=5)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=7; first uninjected skip=7)\n"
+            },
+            {
+              "name": "native_parallel_surface_failures",
+              "attributes": {
+                "name": "native_parallel_surface_failures",
+                "classname": "native_parallel_surface_failures",
+                "time": "0.0846541",
+                "status": "run"
+              },
+              "stdout": "PASS: production parallel tasks join before propagating resource failures and permit retry\n"
+            }
+          ]
+        },
+        "diagnostic": {
+          "suite": {
+            "name": "Win32-ninja",
+            "tests": "2",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "0",
+            "hostname": "runnervmm7ud1",
+            "time": "13",
+            "timestamp": "2026-11-16T15:13:39"
+          },
+          "total": 2,
+          "passed": 2,
+          "failed": [],
+          "skipped": [],
+          "fixtures": []
+        }
+      },
+      "evidence_artifact_url": "https://github.com/1298345095/wxnotepad/actions/runs/43891433929/artifacts/14238451474",
+      "evidence_sha256_verified": true
+    },
+    "linux": {
+      "ordinary_linux": {
+        "job_id": 133383374431,
+        "conclusion": "success",
+        "x11": {
+          "total": 205,
+          "passed": 203,
+          "skipped": 2,
+          "failed": 0
+        },
+        "wayland": {
+          "total": 205,
+          "passed": 205,
+          "skipped": 0,
+          "failed": 0
+        },
+        "json_wayland_repeats": 20,
+        "x11_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "wayland_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "application_and_tests_build": "success",
+        "bundle": "success",
+        "sdk_contract": "success",
+        "evidence_artifact_id": 14238277687,
+        "build_artifact_id": 14238955980,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43891433929/linux-ordinary-job.log"
+      },
+      "coverage_x11": {
+        "job_id": 133383374034,
+        "conclusion": "success",
+        "counts": {
+          "total": 205,
+          "passed": 203,
+          "skipped": 2,
+          "failed": 0
+        },
+        "evidence_artifact_id": 14238995084,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43891433929/coverage-x11-job.log"
+      },
+      "coverage_wayland": {
+        "job_id": 133383374736,
+        "conclusion": "success",
+        "counts": {
+          "total": 205,
+          "passed": 205,
+          "skipped": 0,
+          "failed": 0
+        },
+        "evidence_artifact_id": 14238810314,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43891433929/coverage-wayland-job.log"
+      },
+      "coverage_aggregate": {
+        "job_id": 133391308044,
+        "status": "completed",
+        "conclusion": "success",
+        "sonar_ce_task": "AaHk8V2RSw0uFDSXC1ay",
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43891433929/coverage-aggregate-job.log",
+        "scanner_execution_success_utc": "2026-11-16T15:19:48Z",
+        "evidence_artifact_id": 14239191085
+      },
+      "skipped_x11_tests": [
+        "original_new_window_maximized",
+        "native_peer_geometry_ready"
+      ],
+      "all_four_backend_results": {
+        "surface_initialization": "passed all nine phases including actual paint, committed changes, stream and rectangular Undo, repaint and Redo",
+        "parallel_surface": "passed",
+        "stream_undo": {
+          "injected": 130,
+          "first_uninjected_skip": 130
+        },
+        "rectangular_undo": {
+          "injected": 182,
+          "first_uninjected_skip": 182
+        }
+      },
+      "raw_log_sha256": {
+        "linux-ordinary-job.log": "1bf3928340e799fced3482fe30caa531bd65daca4e284caff5518b7bec1b9ee2",
+        "coverage-wayland-job.log": "3c60544b1f56dea160013113bce7bf84d587256d89c0eea7428090ceb1660a5c",
+        "coverage-x11-job.log": "c22dc1d037cd0693d53b4bd86e9d4331c8c82a68f0ad1e2f76ca1b9878606c37",
+        "coverage-aggregate-job.log": "d5f9b290f46cf50ad75b1235eb483e5e644de0c8f577dc3df1a48597dbb0c6a2"
+      },
+      "fixture_artifact_results": {
+        "coverage_x11": {
+          "native_surface_initialization_failures": {
+            "attributes": {
+              "name": "native_surface_initialization_failures",
+              "classname": "native_surface_initialization_failures",
+              "time": "3.73847",
+              "status": "run"
+            },
+            "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+            "artifact_member": "reports/x11/shard-1/tests.xml"
+          },
+          "native_parallel_surface_failures": {
+            "attributes": {
+              "name": "native_parallel_surface_failures",
+              "classname": "native_parallel_surface_failures",
+              "time": "0.063555",
+              "status": "run"
+            },
+            "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+            "artifact_member": "reports/x11/shard-2/tests.xml"
+          }
+        },
+        "coverage_wayland": {
+          "native_surface_initialization_failures": {
+            "attributes": {
+              "name": "native_surface_initialization_failures",
+              "classname": "native_surface_initialization_failures",
+              "time": "22.9377",
+              "status": "run"
+            },
+            "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+            "artifact_member": "reports/wayland/shard-1/tests.xml"
+          },
+          "native_parallel_surface_failures": {
+            "attributes": {
+              "name": "native_parallel_surface_failures",
+              "classname": "native_parallel_surface_failures",
+              "time": "0.063466",
+              "status": "run"
+            },
+            "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+            "artifact_member": "reports/wayland/shard-2/tests.xml"
+          }
+        },
+        "ordinary_x11": {
+          "native_surface_initialization_failures": {
+            "attributes": {
+              "name": "native_surface_initialization_failures",
+              "classname": "native_surface_initialization_failures",
+              "time": "2.69095",
+              "status": "run"
+            },
+            "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+            "artifact_member": ".ci/reports/x11/shard-1/tests.xml"
+          },
+          "native_parallel_surface_failures": {
+            "attributes": {
+              "name": "native_parallel_surface_failures",
+              "classname": "native_parallel_surface_failures",
+              "time": "0.0637423",
+              "status": "run"
+            },
+            "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+            "artifact_member": ".ci/reports/x11/shard-2/tests.xml"
+          }
+        },
+        "ordinary_wayland": {
+          "native_surface_initialization_failures": {
+            "attributes": {
+              "name": "native_surface_initialization_failures",
+              "classname": "native_surface_initialization_failures",
+              "time": "22.9383",
+              "status": "run"
+            },
+            "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+            "artifact_member": ".ci/reports/wayland/shard-1/tests.xml"
+          },
+          "native_parallel_surface_failures": {
+            "attributes": {
+              "name": "native_parallel_surface_failures",
+              "classname": "native_parallel_surface_failures",
+              "time": "0.0645389",
+              "status": "run"
+            },
+            "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+            "artifact_member": ".ci/reports/wayland/shard-2/tests.xml"
+          }
+        }
+      }
+    },
+    "clang_tidy_translation_units": 228,
+    "sonar": {
+      "scm_revision": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+      "uploaded_at_utc": "2026-11-16T15:19:45Z",
+      "ce_task": "AaHk8V2RSw0uFDSXC1ay",
+      "quality_gate": {
+        "status": "ERROR",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "ERROR",
+            "errorThreshold": "80",
+            "actualValue": "79.0"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      }
+    }
+  },
+  "post_analysis_followup": {
+    "baseline_revision": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+    "review_ledger": "sonarqube-2026-11-16-surface-pr-dispositions.json",
+    "reviewed_findings": 72,
+    "verified_false_positives": 33,
+    "code_addressed_pending_analysis": 25,
+    "retained_recommendations": 14,
+    "coverage_export": {
+      "red_green": {
+        "gcovr_version": "8.8",
+        "input_sha": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+        "raw_json": "/workspace/scratch/44c8652c3121/ci-run-43891433929/merged-coverage-extracted/.ci/reports/coverage/coverage.json",
+        "raw_json_sha256": "2b36b6c8a0b253c9b269179a310270fff5a34eff9391921622c44d009d733454",
+        "original_export_reproduced_byte_for_byte": true,
+        "baseline_export": {
+          "path": "/workspace/scratch/44c8652c3121/ci-run-43891433929/sonar-without-merge-lines.xml",
+          "sha256": "0e8dec55e0b8a4a631be91da1bb787f6206b2ceb8e00421912ecbdd3b7948370",
+          "duplicate_source_lines": 74,
+          "unique_line_invariant": false,
+          "checks": [
+            {
+              "file": "src/editor/platform/parallel_tasks.h",
+              "line": 29,
+              "expected_unique_record": [
+                "true",
+                "2",
+                "2"
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  "2",
+                  "0"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "false",
+                  "2",
+                  "0"
+                ],
+                [
+                  "false",
+                  "2",
+                  "0"
+                ]
+              ],
+              "passed": false
+            },
+            {
+              "file": "src/editor/platform/parallel_tasks.h",
+              "line": 32,
+              "expected_unique_record": [
+                "true",
+                "2",
+                "2"
+              ],
+              "actual_records": [
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ]
+              ],
+              "passed": false
+            },
+            {
+              "file": "src/editor/editor_core.h",
+              "line": 23,
+              "expected_unique_record": [
+                "true",
+                "4",
+                "1"
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "true",
+                  "4",
+                  "1"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ]
+              ],
+              "passed": false
+            },
+            {
+              "file": "src/editor/editor_core.h",
+              "line": 27,
+              "expected_unique_record": [
+                "false",
+                null,
+                null
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ]
+              ],
+              "passed": false
+            },
+            {
+              "file": "src/editor/platform/wx_platform.cpp",
+              "line": 90,
+              "expected_unique_record": [
+                "false",
+                null,
+                null
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ]
+              ],
+              "passed": true
+            }
+          ],
+          "semantic_check_exit_code": 1
+        },
+        "merged_lines_export": {
+          "path": "/workspace/scratch/44c8652c3121/ci-run-43891433929/sonar-merge-lines.xml",
+          "sha256": "14d355cb717ba21512f738ac09ac868a805dee86d457a05064781118a7af26f4",
+          "duplicate_source_lines": 0,
+          "unique_line_invariant": true,
+          "checks": [
+            {
+              "file": "src/editor/platform/parallel_tasks.h",
+              "line": 29,
+              "expected_unique_record": [
+                "true",
+                "2",
+                "2"
+              ],
+              "actual_records": [
+                [
+                  "true",
+                  "2",
+                  "2"
+                ]
+              ],
+              "passed": true
+            },
+            {
+              "file": "src/editor/platform/parallel_tasks.h",
+              "line": 32,
+              "expected_unique_record": [
+                "true",
+                "2",
+                "2"
+              ],
+              "actual_records": [
+                [
+                  "true",
+                  "2",
+                  "2"
+                ]
+              ],
+              "passed": true
+            },
+            {
+              "file": "src/editor/editor_core.h",
+              "line": 23,
+              "expected_unique_record": [
+                "true",
+                "4",
+                "1"
+              ],
+              "actual_records": [
+                [
+                  "true",
+                  "4",
+                  "1"
+                ]
+              ],
+              "passed": true
+            },
+            {
+              "file": "src/editor/editor_core.h",
+              "line": 27,
+              "expected_unique_record": [
+                "false",
+                null,
+                null
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ]
+              ],
+              "passed": true
+            },
+            {
+              "file": "src/editor/platform/wx_platform.cpp",
+              "line": 90,
+              "expected_unique_record": [
+                "false",
+                null,
+                null
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ]
+              ],
+              "passed": true
+            }
+          ],
+          "semantic_check_exit_code": 0
+        },
+        "official_documentation": "https://www.gcovr.com/en/stable/manpage.html#cmdoption-merge-lines",
+        "local_gcc_template_regression": {
+          "compiler": "g++-14 (Debian 14.2.0-19) 14.2.0",
+          "gcov": "gcov (Debian 14.2.0-19) 14.2.0",
+          "scratch_only_substitutions": [
+            "g++-13 -> g++-14",
+            "gcov-13 -> gcov-14",
+            "Linux GCC 13 -> Linux GCC 14 (skip reason)"
+          ],
+          "baseline": {
+            "exit_code": 1,
+            "test_methods": 6,
+            "failed_test_methods": 2,
+            "log": "/workspace/scratch/44c8652c3121/coverage-template-probe/baseline-evidence/run-001.log",
+            "unittest_reported_failures": 11
+          },
+          "fixed": {
+            "exit_code": 0,
+            "passed": 6,
+            "skipped": 0,
+            "log": "/workspace/scratch/44c8652c3121/coverage-template-probe/fixed-evidence/run-001.log"
+          },
+          "canonical_repository_fixture": {
+            "exit_code": 0,
+            "passed": 2,
+            "skipped": 4,
+            "reason": "Linux GCC 13 compiler unavailable locally; canonical tests retained GCC 13 and will run in CI.",
+            "log": "/workspace/scratch/44c8652c3121/coverage-template-probe/canonical-local-evidence/run-001.log"
+          }
+        },
+        "changed_test_file_sha256": "56b647dd8d35b6c46182fdc8ec6f8ff87fc3a2984a8af9b34c5844fd8d3edc2a",
+        "collector_file_sha256": "889d91c234195593071d2c0214cef29331738686d0dd4250e989a2d54ac2ac33",
+        "recorded_utc": "2026-11-16T15:29:18.702501+00:00",
+        "replay_commands": [
+          "PYTHONPATH=/workspace/scratch/44c8652c3121/coverage-python python3 -m gcovr --root /workspace/scratch/44c8652c3121/wxnotepad --filter /workspace/scratch/44c8652c3121/wxnotepad/src/ --json-add-tracefile /workspace/scratch/44c8652c3121/ci-run-43891433929/merged-coverage-extracted/.ci/reports/coverage/coverage.json --sonarqube /workspace/scratch/44c8652c3121/ci-run-43891433929/sonar-without-merge-lines.xml --sonarqube-metric branch",
+          "PYTHONPATH=/workspace/scratch/44c8652c3121/coverage-python python3 -m gcovr --root /workspace/scratch/44c8652c3121/wxnotepad --filter /workspace/scratch/44c8652c3121/wxnotepad/src/ --json-add-tracefile /workspace/scratch/44c8652c3121/ci-run-43891433929/merged-coverage-extracted/.ci/reports/coverage/coverage.json --sonarqube /workspace/scratch/44c8652c3121/ci-run-43891433929/sonar-merge-lines.xml --sonarqube-metric branch --merge-lines"
+        ],
+        "followup_preserve_plain_headers": {
+          "test_file": "/workspace/scratch/44c8652c3121/wxnotepad/tests/test_coverage_reports.py",
+          "test_file_sha256": "f28635c853b52f1ce244585ef6454aa76753d0862f40d136f9c1c30b537d1169",
+          "patch": "/workspace/scratch/44c8652c3121/coverage-template-probe/test-coverage-reports-with-shared-headers.patch",
+          "scratch_source": "/workspace/scratch/44c8652c3121/coverage-template-probe/fixed-shared-headers/tests/test_coverage_reports.py",
+          "log": "/workspace/scratch/44c8652c3121/coverage-template-probe/fixed-shared-headers-evidence/run-001.log",
+          "exit_code": 0,
+          "passed": 6,
+          "skipped": 0,
+          "compiler": "GCC 14.2.0 with matching gcov 14.2.0, scratch copies only",
+          "original_shared_header_checks": "ordinary static-inline Choose/Repeated kept, with complementary 2/2 and repeated 1/2 across translation units",
+          "template_checks": "separate TemplateChoose/TemplateRepeated int and long instances, complementary 2/2, repeated 1/2, uncalled 0/2, unique XML lines, raw JSON instances retained",
+          "collector_runs_added": 0,
+          "repository_compiler_requirement": "Linux GCC 13 unchanged",
+          "recorded_utc": "2026-11-16T15:32:23.331264+00:00"
+        }
+      },
+      "source_line_audit": {
+        "structure": {
+          "original": {
+            "files": 98,
+            "entries": 11681,
+            "unique_source_lines": 11259,
+            "duplicate_source_lines": 74
+          },
+          "merge_lines": {
+            "files": 98,
+            "entries": 11259,
+            "unique_source_lines": 11259,
+            "duplicate_source_lines": 0
+          }
+        },
+        "selected_lines": {
+          "src/editor/platform/parallel_tasks.h": {
+            "20": {
+              "original": [
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "22": {
+              "original": [
+                {
+                  "lineNumber": "22",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "22",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "22",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "22",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "22",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "22",
+                  "covered": "true"
+                }
+              ]
+            },
+            "23": {
+              "original": [
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "23",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "25": {
+              "original": [
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "28": {
+              "original": [
+                {
+                  "lineNumber": "28",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "28",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "28",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "28",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "28",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "28",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "29": {
+              "original": [
+                {
+                  "lineNumber": "29",
+                  "covered": "false",
+                  "branchesToCover": "2",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "29",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "29",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "29",
+                  "covered": "false",
+                  "branchesToCover": "2",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "29",
+                  "covered": "false",
+                  "branchesToCover": "2",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "29",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "32": {
+              "original": [
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "81": {
+              "original": [
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                }
+              ]
+            }
+          },
+          "src/editor/editor_core.h": {
+            "23": {
+              "original": [
+                {
+                  "lineNumber": "23",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "true",
+                  "branchesToCover": "4",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "23",
+                  "covered": "true",
+                  "branchesToCover": "4",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "24": {
+              "original": [
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "24",
+                  "covered": "true"
+                }
+              ]
+            },
+            "27": {
+              "original": [
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                }
+              ]
+            },
+            "30": {
+              "original": [
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "30",
+                  "covered": "true"
+                }
+              ]
+            },
+            "31": {
+              "original": [],
+              "merge_lines": []
+            }
+          },
+          "src/editor/platform/wx_platform.cpp": {
+            "81": {
+              "original": [
+                {
+                  "lineNumber": "81",
+                  "covered": "true",
+                  "branchesToCover": "7",
+                  "coveredBranches": "7"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "81",
+                  "covered": "true",
+                  "branchesToCover": "7",
+                  "coveredBranches": "7"
+                }
+              ]
+            },
+            "87": {
+              "original": [],
+              "merge_lines": []
+            },
+            "90": {
+              "original": [
+                {
+                  "lineNumber": "90",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "90",
+                  "covered": "false"
+                }
+              ]
+            },
+            "104": {
+              "original": [
+                {
+                  "lineNumber": "104",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "104",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ]
+            },
+            "108": {
+              "original": [
+                {
+                  "lineNumber": "108",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "108",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ]
+            }
+          },
+          "src/editor/platform/text_measurement_gtk.cpp": {
+            "243": {
+              "original": [
+                {
+                  "lineNumber": "243",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "243",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ]
+            },
+            "246": {
+              "original": [
+                {
+                  "lineNumber": "246",
+                  "covered": "true",
+                  "branchesToCover": "3",
+                  "coveredBranches": "1"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "246",
+                  "covered": "true",
+                  "branchesToCover": "3",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "248": {
+              "original": [
+                {
+                  "lineNumber": "248",
+                  "covered": "true",
+                  "branchesToCover": "3",
+                  "coveredBranches": "1"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "248",
+                  "covered": "true",
+                  "branchesToCover": "3",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "265": {
+              "original": [
+                {
+                  "lineNumber": "265",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "265",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ]
+            },
+            "268": {
+              "original": [
+                {
+                  "lineNumber": "268",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "268",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "final_metric_source": "The next hosted Sonar analysis and PR description record the resulting gate."
+    },
+    "explicit_threads": {
+      "baseline": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+      "files": [
+        "/workspace/scratch/44c8652c3121/wxnotepad/src/editor/platform/parallel_tasks.h",
+        "/workspace/scratch/44c8652c3121/wxnotepad/tests/parallel_surface_failure.cpp"
+      ],
+      "rules_addressed": [
+        {
+          "key": "AaHk8WZshnL9Urv53rXM",
+          "rule": "cpp:S8460",
+          "original_line": 81
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rX_",
+          "rule": "cpp:S5271",
+          "original_line": 23
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYA",
+          "rule": "cpp:S7034",
+          "original_line": 36
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYB",
+          "rule": "cpp:S3608",
+          "original_line": 44
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYC",
+          "rule": "cpp:S3608",
+          "original_line": 61
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYE",
+          "rule": "cpp:S3608",
+          "original_line": 63
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYG",
+          "rule": "cpp:S3624",
+          "original_line": 65
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYF",
+          "rule": "cpp:S3646",
+          "original_line": 68
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYH",
+          "rule": "cpp:S3608",
+          "original_line": 99
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYI",
+          "rule": "cpp:S3608",
+          "original_line": 105
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYJ",
+          "rule": "cpp:S8460",
+          "original_line": 107
+        }
+      ],
+      "compiler": "14.2.0",
+      "release_flags": "-std=c++23 -O2 -g -pthread -Wall -Wextra -Wpedantic -Werror",
+      "sanitizer_flags": "-std=c++23 -O1 -g -pthread -fsanitize=address,undefined -fno-omit-frame-pointer",
+      "sanitizer_environment": {
+        "ASAN_OPTIONS": "detect_leaks=0:halt_on_error=1",
+        "UBSAN_OPTIONS": "halt_on_error=1"
+      },
+      "checks": [
+        {
+          "variant": "parallel-jthread-O2",
+          "summary": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-O2/summary.json",
+          "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-O2/run-001.log",
+          "exit_code": 0
+        },
+        {
+          "variant": "parallel-jthread-asan-ubsan",
+          "summary": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-asan-ubsan/summary.json",
+          "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-asan-ubsan/run-001.log",
+          "exit_code": 0
+        }
+      ],
+      "native_windows_block_unchanged": true,
+      "lifecycle_review": "Exception slots are allocated before thread owners; each worker writes one distinct slot. All started threads are joined before reading slots, preserving startup-error priority. Thread owner destruction precedes slot destruction if joining unwinds. Work outlives the joined batch. Independently reviewed by sonar_triage.",
+      "partial_start_cases": [
+        0,
+        1,
+        3
+      ],
+      "partial_start_proof": "Started workers block on releaseRemaining while launch failure is raised; the caller must wait until released, then preserve the startup system_error despite worker bad_alloc."
+    },
+    "source_sha256": {
+      ".github/scripts/collect_coverage.py": "889d91c234195593071d2c0214cef29331738686d0dd4250e989a2d54ac2ac33",
+      "src/editor/platform/parallel_tasks.h": "036d5c93a77359af850543c5b224f3f91bd0f1a60fb6449962f73c79a2cc07ac",
+      "tests/parallel_surface_failure.cpp": "79624b314e60764789960e4099b9af99ddb6ee0667f5832903afa5020a7f7eb5",
+      "tests/surface_initialization.cpp": "e0badb0170fc4bc885f29b6a69b979367cfece1f729246411b5be301f625155f",
+      "tests/test_coverage_reports.py": "f28635c853b52f1ce244585ef6454aa76753d0862f40d136f9c1c30b537d1169"
+    },
+    "validation": {
+      "application_and_surface_parallel_targets": {
+        "result": "compiled and linked",
+        "exit_code": 0,
+        "log": "native-build/combined-followup-build.log"
+      },
+      "python_helpers": {
+        "run": 53,
+        "passed": 44,
+        "skipped": 9,
+        "exit_code": 0,
+        "log": "python-followup-final-tests.log"
+      },
+      "canonical_format": {
+        "version": "23.1.2",
+        "tracked_files": 373,
+        "exit_code": 0
+      },
+      "python_compileall_exit_code": 0,
+      "diff_check_exit_code": 0
+    }
   }
 }

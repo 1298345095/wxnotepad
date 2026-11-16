@@ -12,17 +12,18 @@
 #include <cstdlib>
 #include <exception>
 #include <new>
+#include <utility>
 #include <vector>
 
 // Observe the production paint state without adding an application test API.
 struct EditorCoreObservation {
-    static bool PaintIdle(EditorControl& editor) {
+    static bool PaintIdle(const EditorControl& editor) {
         return editor.core_->paintState == decltype(editor.core_->paintState)::notPainting;
     }
     static Scintilla::Internal::Document& Document(EditorControl& editor) { return *editor.core_->pdoc; }
     static const Scintilla::Internal::Selection& Selection(const EditorControl& editor) { return editor.core_->sel; }
     static void InvalidateStyles(EditorControl& editor) { editor.core_->stylesValid = false; }
-    static std::unique_ptr<Scintilla::Internal::Surface> DrawingSurface(EditorControl& editor, wxDC* dc) {
+    static std::unique_ptr<Scintilla::Internal::Surface> DrawingSurface(const EditorControl& editor, wxDC* dc) {
         return editor.core_->CreateDrawingSurface(dc, true);
     }
 };
@@ -30,9 +31,9 @@ struct EditorCoreObservation {
 namespace {
 namespace core = Scintilla::Internal;
 using Scintilla::Message;
-constexpr auto DefaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
-constexpr auto Ok = static_cast<uintptr_t>(Scintilla::Status::Ok);
-constexpr auto BadAlloc = static_cast<intptr_t>(Scintilla::Status::BadAlloc);
+constexpr auto DefaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
+constexpr auto Ok = static_cast<uintptr_t>(std::to_underlying(Scintilla::Status::Ok));
+constexpr auto BadAlloc = static_cast<intptr_t>(std::to_underlying(Scintilla::Status::BadAlloc));
 constexpr std::string_view Sample = "native measurement retry";
 
 void Require(bool condition, const char* message) {
@@ -144,7 +145,7 @@ void CheckDrawingFactory(EditorControl& editor, wxDC& borrowed, const core::Font
     std::puts("PASS: the pinned borrowed-context drawing factory rejects failed initialization and retries");
 }
 
-void RequireClip(wxDC& dc, const wxRect& expected) {
+void RequireClip(const wxDC& dc, const wxRect& expected) {
     wxRect actual;
     Require(dc.GetClippingBox(actual) && actual == expected,
             "failed clip allocation and cleanup preserve the caller's native clipping rectangle");
@@ -252,11 +253,12 @@ public:
         return handled;
     }
 
+    bool Recovered() const { return called && injected && recovered; }
+
+private:
     bool called = false;
     bool injected = false;
     bool recovered = false;
-
-private:
     EditorControl* editor_;
     bool completed_ = false;
 };
@@ -289,17 +291,27 @@ public:
             Arm();
         }
     }
-    void NotifyModifyAttempt(core::Document*, void*) noexcept override {}
+    void NotifyModifyAttempt(core::Document*, void*) noexcept override {
+        // Injection is armed by committed edits or Undo, outside read-only modification attempts.
+    }
     void NotifyModified(core::Document*, core::DocModification modification, void*) override {
         if (point_ == DocumentFailurePoint::Undo &&
             Scintilla::FlagSet(modification.modificationType, Scintilla::ModificationFlags::Undo) &&
             Scintilla::FlagSet(modification.modificationType, Scintilla::ModificationFlags::BeforeDelete))
             Arm();
     }
-    void NotifyDeleted(core::Document*, void*) noexcept override {}
-    void NotifyStyleNeeded(core::Document*, void*, Sci::Position) override {}
-    void NotifyErrorOccurred(core::Document*, void*, Scintilla::Status) noexcept override {}
-    void NotifyGroupCompleted(core::Document*, void*) noexcept override {}
+    void NotifyDeleted(core::Document*, void*) noexcept override {
+        // This scoped observer is removed while the editor's document is still alive.
+    }
+    void NotifyStyleNeeded(core::Document*, void*, Sci::Position) override {
+        // The editor owns styling; this observer arms resource failures at edit notifications.
+    }
+    void NotifyErrorOccurred(core::Document*, void*, Scintilla::Status) noexcept override {
+        // The checks read the editor's error status after the operation completes.
+    }
+    void NotifyGroupCompleted(core::Document*, void*) noexcept override {
+        // The selected save-point or BeforeDelete notification already controls each group's injection.
+    }
 
 private:
     void Arm() noexcept {
@@ -509,19 +521,19 @@ void CheckNativeRecovery(EditorControl* editor) {
     before.RequireUnchanged(editor);
     editor->Send(Message::SetStatus, Ok);
     Require(editor->Send(Message::TextWidth, DefaultStyle, reinterpret_cast<intptr_t>(Sample.data())) > 0 &&
-                editor->Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::Ok),
+                editor->Send(Message::GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::Ok)),
             "the original text-width message can retry after initialization failure");
 
     {
         PaintFailure failure(editor);
         failure.Complete();
-        Require(failure.called && failure.injected && failure.recovered,
+        Require(failure.Recovered(),
                 "actual native paint contains allocation failure and restores its idle paint state");
     }
     before.RequireUnchanged(editor);
     editor->Send(Message::SetStatus, Ok);
     NativePaint::Complete(editor);
-    Require(editor->Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::Ok) &&
+    Require(editor->Send(Message::GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::Ok)) &&
                 EditorCoreObservation::PaintIdle(*editor),
             "actual native painting succeeds again after resource recovery");
     before.RequireUnchanged(editor);
