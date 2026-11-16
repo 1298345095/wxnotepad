@@ -1,21 +1,19 @@
 #include "editor/platform/core_headers.h"
+#include "measurement_workers.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
 #include <array>
-#include <barrier>
 #include <cstdio>
 #include <exception>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 namespace {
 namespace core = Scintilla::Internal;
-constexpr int WorkerCount = 4;
 constexpr int Iterations = 64;
 constexpr int BitmapWidth = 640;
 constexpr int BitmapHeight = 120;
@@ -161,24 +159,7 @@ void CheckWorker(core::Surface& surface, const SurfaceCase& test, int worker) {
 }
 
 void CheckWorkers(core::Surface& surface, const SurfaceCase& test) {
-    std::array<std::exception_ptr, WorkerCount> failures{};
-    std::barrier start(WorkerCount);
-    std::vector<std::thread> workers;
-    workers.reserve(WorkerCount);
-    for (int worker = 0; worker < WorkerCount; ++worker) {
-        workers.emplace_back([&start, &surface, &test, &failures, worker] {
-            start.arrive_and_wait();
-            try {
-                CheckWorker(surface, test, worker);
-            } catch (...) {
-                failures[worker] = std::current_exception();
-            }
-        });
-    }
-    for (auto& worker : workers)
-        worker.join();
-    for (const auto& failure : failures)
-        if (failure) std::rethrow_exception(failure);
+    MeasurementWorkers::Run([&surface, &test](int worker) { CheckWorker(surface, test, worker); });
 }
 
 void CheckSurface(wxFrame& frame, int context, bool utf8, bool serialOnly) {

@@ -3,7 +3,7 @@
 #include "editor/editor_control.h"
 #include <wx/wx.h>
 #include <fstream>
-#include <iomanip>
+#include <format>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
 #endif
@@ -135,8 +135,7 @@ private:
         std::string text(static_cast<size_t>(length) + 1, '\0');
         editor_->Send(Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
         for (intptr_t index = 0; index < length; ++index)
-            output << std::hex << std::setw(2) << std::setfill('0')
-                   << static_cast<unsigned>(static_cast<unsigned char>(text[index]));
+            output << std::format("{:02x}", static_cast<unsigned char>(text[index]));
         output << '\n';
     }
 };

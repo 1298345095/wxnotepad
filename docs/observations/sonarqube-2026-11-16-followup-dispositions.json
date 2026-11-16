@@ -1,0 +1,1245 @@
+{
+  "project": "1298345095_wxnotepad",
+  "branch": "main",
+  "reviewed_revision": "7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1",
+  "followup_branch": "codex/sonarcloud-followup-2026-11-16",
+  "pull_request": 220,
+  "code_revision": "835b6f3a08f24e0723ba27f39c60362742f1c998",
+  "open_before": 3988,
+  "open_after": 3939,
+  "verified_count": 49,
+  "verification": {
+    "tool": "search_sonar_issues_in_projects",
+    "organization": "1298345095",
+    "projectKeys": [
+      "1298345095_wxnotepad"
+    ],
+    "branch": "main",
+    "issueStatuses": [
+      "FALSE_POSITIVE"
+    ],
+    "pageSize": 500,
+    "returned_count": 49,
+    "verified_at_utc": "2026-11-16T12:21:37Z",
+    "note": "Exact issue-key query with FALSE_POSITIVE filter returns all 49 keys. This MCP response uses the legacy status string RESOLVED; the issue-specific mutation receipts report falsepositive."
+  },
+  "entries": [
+    {
+      "key": "AaG-lZn3OY3icnFs9aHu",
+      "rule": "cpp:S6032",
+      "file": "tests/new_window.cpp",
+      "line": 145,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/new_window.cpp:145 deliberately copies DocumentPath() into 'path' before launching real child processes and exercising NewWindow launch failure; the parent document identity must survive both successful launches and an unavailable executable. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG-lZn3OY3icnFs9aHu",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG-lZoqOY3icnFs9aH_",
+      "rule": "cpp:S6032",
+      "file": "tests/file_times.cpp",
+      "line": 147,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/file_times.cpp:147 deliberately copies DocumentPath() into 'identity' before invoking the timestamp-only command on a dirty document; the timestamp-only operation must preserve the document's original identity. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG-lZoqOY3icnFs9aH_",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG-lZoqOY3icnFs9aIA",
+      "rule": "cpp:S6032",
+      "file": "tests/file_times.cpp",
+      "line": 200,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/file_times.cpp:200 deliberately copies DocumentPath() into 'identity' before cancelled and failed original-time SaveAs operations; both SaveAs paths must leave the original document identity unchanged. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG-lZoqOY3icnFs9aIA",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NUOrkxw1cHak34yC",
+      "rule": "cpp:S6032",
+      "file": "tests/header_insert.cpp",
+      "line": 93,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/header_insert.cpp:93 deliberately copies DocumentPath() into 'oldPath' before opening an unsupported native ANSI encoding; rejected decoding must preserve the previously open document's identity. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NUOrkxw1cHak34yC",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r1ILyu4V9oip4YXt",
+      "rule": "cpp:S6032",
+      "file": "tests/save_copy.cpp",
+      "line": 209,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/save_copy.cpp:209 deliberately copies DocumentPath() into 'identity' before the real native SaveCopy chooser and save; SaveCopy must write a separate file without adopting that destination as the document identity. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1ILyu4V9oip4YXt",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r0_6yu4V9oip4YSI",
+      "rule": "cpp:S6032",
+      "file": "tests/clipboard_smoke.cpp",
+      "line": 1429,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/clipboard_smoke.cpp:1429 deliberately copies DocumentPath() into 'previous' before cancelled and failed SaveAs operations, followed by path-copy commands; the original identity must remain available as an independent expected value for both the document and copied path. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0_6yu4V9oip4YSI",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r09Iyu4V9oip4YP9",
+      "rule": "cpp:S6032",
+      "file": "tests/save_cleanup.cpp",
+      "line": 234,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/save_cleanup.cpp:234 deliberately copies DocumentPath() into 'identity' before cancelled, failed and lossy-cancelled SaveAs operations; lossy cancellation must preserve the original document identity even after undoable text cleanup. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r09Iyu4V9oip4YP9",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r1FTyu4V9oip4YV5",
+      "rule": "cpp:S6032",
+      "file": "tests/close_smoke.cpp",
+      "line": 79,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/close_smoke.cpp:79 deliberately copies DocumentPath() into 'path' before native New, Open or Close transitions with a Cancel response; cancelling the prompt must preserve the original path alongside bytes, dirty state and history. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1FTyu4V9oip4YV5",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r1D6yu4V9oip4YUy",
+      "rule": "cpp:S6032",
+      "file": "tests/gbk_smoke.cpp",
+      "line": 49,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/gbk_smoke.cpp:49 deliberately copies DocumentPath() into 'identity' before repeated Open attempts on malformed GBK streams; every rejected stream must preserve the originally open document's identity. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1D6yu4V9oip4YUy",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r1EUyu4V9oip4YU_",
+      "rule": "cpp:S6032",
+      "file": "tests/save_smoke.cpp",
+      "line": 82,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/save_smoke.cpp:82 deliberately copies DocumentPath() into 'identity' before cancelled and failed SaveAs attempts and filesystem replacement failures; the unchanged lambda must compare the resulting document identity with the value before any attempted operation. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1EUyu4V9oip4YU_",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r0-3yu4V9oip4YRG",
+      "rule": "cpp:S6032",
+      "file": "tests/open_native.cpp",
+      "line": 192,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/open_native.cpp:192 deliberately copies DocumentPath() into 'oldPath' before Open with a native Save prompt whose existing-file save fails; failed saving must cancel the document switch and retain the previous identity. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0-3yu4V9oip4YRG",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r06pyu4V9oip4YNx",
+      "rule": "cpp:S6032",
+      "file": "tests/open_smoke.cpp",
+      "line": 70,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. tests/open_smoke.cpp:70 deliberately copies DocumentPath() into 'oldPath' before cancelled Open, missing files, directory sources and malformed UTF-8 inputs; the unchanged lambda must detect any unintended identity change across each rejected Open. EditorFrame::DocumentPath() returns const wxString& from DocumentSession::Path(), which returns the mutable path_ member (src/app/editor_frame.h:20; src/document/document_session.h:52). Keeping a value snapshot makes the later path equality check independent. Changing this variable to const auto& aliases the current path_ and turns the identity assertion into a comparison of the same mutable object, masking the regression this fixture is designed to detect. The copy is required by the test's before/after contract.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r06pyu4V9oip4YNx",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHkPxysgCAub8ZgymkV",
+      "rule": "cpp:S6494",
+      "file": "tests/zoom.cpp",
+      "line": 226,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. The printf call reports the native zoom test's DPI as an integer. This fixture is compiled on the supported Linux/GCC 13 baseline: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CC=gcc-13 and CXX=g++-13. GCC's libstdc++ implementation table lists P2093R14 formatted output (std::print/std::println and <print>) as first supported in GCC 14.1, and the GCC 14 release notes identify these as additions. Replacing this call with the suggested std::print would fail to compile on the project's supported compiler. Retain the existing typed printf arguments and diagnostics. References: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html and https://gcc.gnu.org/gcc-14/changes.html . This disposition applies to this std::print recommendation; std::format recommendations are reviewed separately.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHkPxysgCAub8ZgymkV",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHkPx0LgCAub8ZgymkX",
+      "rule": "cpp:S6494",
+      "file": "tests/measurement_threads.cpp",
+      "line": 119,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. PrintMeasurement writes numeric context, UTF-8 mode, font/sample indexes and width as diagnostic output for the GTK measurement comparison. This fixture is compiled on the supported Linux/GCC 13 baseline: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CC=gcc-13 and CXX=g++-13. GCC's libstdc++ implementation table lists P2093R14 formatted output (std::print/std::println and <print>) as first supported in GCC 14.1, and the GCC 14 release notes identify these as additions. Replacing this call with the suggested std::print would fail to compile on the project's supported compiler. Retain the existing typed printf arguments and diagnostics. References: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html and https://gcc.gnu.org/gcc-14/changes.html . This disposition applies to this std::print recommendation; std::format recommendations are reviewed separately.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHkPx0LgCAub8ZgymkX",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHHH4Z-1qsESOEEk9lR",
+      "rule": "cpp:S3630",
+      "file": "tests/bit_intrinsics.cpp",
+      "line": 14,
+      "comment": "Reviewed at wxnotepad 7ff2e5d. CheckWord deliberately exercises the pinned VectorISA calling convention: uint32_t storage is passed through the MSVC-compatible long* signature. The actual Linux _bittest/_bittestandset/_bittestandreset adapters in src/editor/platform/intrinsics_port.h never dereference that pointer as long; they memcpy exactly sizeof(uint32_t) into/out of a uint32_t object. The fixture checks all 32 bit positions, an adjacent guard word and a single uint32_t allocation, and passed at -O2 with AddressSanitizer and UndefinedBehaviorSanitizer (LeakSanitizer disabled because this executor uses ptrace). The cast is the interoperability behavior under test, not aliasing through a long lvalue.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHHH4Z-1qsESOEEk9lR",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NUKHkxw1cHak34vd",
+      "rule": "cpp:S5276",
+      "file": "src/editor/caret_appearance.cpp",
+      "line": 32,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. Message::GetZoom returns ViewStyle::zoomLevel (int), constrained by SetZoom/ZoomIn/ZoomOut to MinZoomLevel=10 through MaxZoomLevel=500. GetDPI().y is int. Their intptr_t product has magnitude at most INT_MAX*500, below 2^40, so conversion to the supported double type preserves the integer exactly before the intended DPI scaling/rounding. No arbitrary 64-bit document position enters this conversion.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NUKHkxw1cHak34vd",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NULYkxw1cHak34wO",
+      "rule": "cpp:S5276",
+      "file": "src/editor/editor_control.cpp",
+      "line": 181,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. The intptr_t operand is Message::GetZoom, which transports ViewStyle::zoomLevel (int), clamped to the range 10..500 by the pinned core. That complete range is exactly representable as double before multiplying by the DPI and the intended outline-width scaling. It is not an arbitrary 64-bit document position, so the flagged conversion loses no information.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NULYkxw1cHak34wO",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NT_Rkxw1cHak34ux",
+      "rule": "cpp:S3630",
+      "file": "src/app/editor_frame.cpp",
+      "line": 627,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. CanDiscardUntitledWhitespace receives the byte range of a short untitled document; the loop reads the returned character storage before any document mutation. Editor::WndProc(Message::GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. This cast restores that same const char* through the pointer-sized message ABI. No unrelated object is dereferenced and no bytes are type-punned. Replacing the cast with bit_cast or a numeric cast would not improve this API-required pointer round trip.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NT_Rkxw1cHak34ux",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NULBkxw1cHak34wM",
+      "rule": "cpp:S3630",
+      "file": "src/editor/align_lines.cpp",
+      "line": 101,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. AlignLine receives the current line range; it immediately copies the returned bytes into std::string before edits. Editor::WndProc(Message::GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. This cast restores that same const char* through the pointer-sized message ABI. No unrelated object is dereferenced and no bytes are type-punned. Replacing the cast with bit_cast or a numeric cast would not improve this API-required pointer round trip.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NULBkxw1cHak34wM",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NUJPkxw1cHak34vC",
+      "rule": "cpp:S3630",
+      "file": "src/editor/sort_lines.cpp",
+      "line": 57,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. ReadSortLine receives the current line range; it converts the borrowed bytes into owned UTF-16 data before sorting or editing. Editor::WndProc(Message::GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. This cast restores that same const char* through the pointer-sized message ABI. No unrelated object is dereferenced and no bytes are type-punned. Replacing the cast with bit_cast or a numeric cast would not improve this API-required pointer round trip.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NUJPkxw1cHak34vC",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NUT4kxw1cHak3409",
+      "rule": "cpp:S5276",
+      "file": "tests/occurrence_marking.cpp",
+      "line": 33,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. SelectByMouse line 33 populates GDK's double-valued mouse coordinate using PointXFromPosition or PointYFromPosition plus half TextHeight. The pinned message handlers return int coordinates and ViewStyle::lineHeight is int; Send merely widens them to intptr_t for message transport. Even the sum of a signed 32-bit coordinate and half a signed 32-bit height is far below 2^53, so every possible transported coordinate is exactly representable as GDK gdouble. Document byte positions are only inputs to the coordinate lookup, not the values converted to double.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NUT4kxw1cHak3409",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NUT4kxw1cHak340-",
+      "rule": "cpp:S5276",
+      "file": "tests/occurrence_marking.cpp",
+      "line": 34,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. SelectByMouse line 34 populates GDK's double-valued mouse coordinate using PointXFromPosition or PointYFromPosition plus half TextHeight. The pinned message handlers return int coordinates and ViewStyle::lineHeight is int; Send merely widens them to intptr_t for message transport. Even the sum of a signed 32-bit coordinate and half a signed 32-bit height is far below 2^53, so every possible transported coordinate is exactly representable as GDK gdouble. Document byte positions are only inputs to the coordinate lookup, not the values converted to double.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NUT4kxw1cHak340-",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NUT4kxw1cHak340_",
+      "rule": "cpp:S5276",
+      "file": "tests/occurrence_marking.cpp",
+      "line": 38,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. SelectByMouse line 38 populates GDK's double-valued mouse coordinate using PointXFromPosition or PointYFromPosition plus half TextHeight. The pinned message handlers return int coordinates and ViewStyle::lineHeight is int; Send merely widens them to intptr_t for message transport. Even the sum of a signed 32-bit coordinate and half a signed 32-bit height is far below 2^53, so every possible transported coordinate is exactly representable as GDK gdouble. Document byte positions are only inputs to the coordinate lookup, not the values converted to double.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NUT4kxw1cHak340_",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NUT4kxw1cHak341A",
+      "rule": "cpp:S5276",
+      "file": "tests/occurrence_marking.cpp",
+      "line": 38,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. SelectByMouse line 38 populates GDK's double-valued mouse coordinate using PointXFromPosition or PointYFromPosition plus half TextHeight. The pinned message handlers return int coordinates and ViewStyle::lineHeight is int; Send merely widens them to intptr_t for message transport. Even the sum of a signed 32-bit coordinate and half a signed 32-bit height is far below 2^53, so every possible transported coordinate is exactly representable as GDK gdouble. Document byte positions are only inputs to the coordinate lookup, not the values converted to double.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NUT4kxw1cHak341A",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG7NUT4kxw1cHak341B",
+      "rule": "cpp:S5276",
+      "file": "tests/occurrence_marking.cpp",
+      "line": 39,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. SelectByMouse line 39 populates GDK's double-valued mouse coordinate using PointXFromPosition or PointYFromPosition plus half TextHeight. The pinned message handlers return int coordinates and ViewStyle::lineHeight is int; Send merely widens them to intptr_t for message transport. Even the sum of a signed 32-bit coordinate and half a signed 32-bit height is far below 2^53, so every possible transported coordinate is exactly representable as GDK gdouble. Document byte positions are only inputs to the coordinate lookup, not the values converted to double.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NUT4kxw1cHak341B",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r1B2yu4V9oip4YTf",
+      "rule": "cpp:S3630",
+      "file": "tests/native_key_helpers.h",
+      "line": 54,
+      "comment": "Reviewed at wxnotepad 7ff2e5d. AfterPresentation/Preparation obtains a non-null wl_surface* from gdk_wayland_window_get_wl_surface for the owned test window and passes it to wl_proxy_get_id. Wayland protocol objects are wl_proxy objects behind opaque protocol-specific types; its official client API examples likewise cast a wl_surface* to struct wl_proxy*. This is the required Wayland C ABI conversion for reading that surface's object ID, with no client-side dereference or ownership change.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1B2yu4V9oip4YTf",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r1B2yu4V9oip4YTj",
+      "rule": "cpp:S3630",
+      "file": "tests/native_key_helpers.h",
+      "line": 213,
+      "comment": "Reviewed at wxnotepad 7ff2e5d. FocusEditor obtains a non-null wl_surface* from gdk_wayland_window_get_wl_surface for the owned test window and passes it to wl_proxy_get_id. Wayland protocol objects are wl_proxy objects behind opaque protocol-specific types; its official client API examples likewise cast a wl_surface* to struct wl_proxy*. This is the required Wayland C ABI conversion for reading that surface's object ID, with no client-side dereference or ownership change.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1B2yu4V9oip4YTj",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r00Zyu4V9oip4YK8",
+      "rule": "cpp:S3630",
+      "file": "src/editor/line_wrap.cpp",
+      "line": 87,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. WrapToColumn receives the selected byte range; it converts the borrowed bytes into owned UTF-16 data before ReplaceTarget. Editor::WndProc(Message::GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. This cast restores that same const char* through the pointer-sized message ABI. No unrelated object is dereferenced and no bytes are type-punned. Replacing the cast with bit_cast or a numeric cast would not improve this API-required pointer round trip.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r00Zyu4V9oip4YK8",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r0l6yu4V9oip4YIR",
+      "rule": "cpp:S3630",
+      "file": "src/editor/tab_conversion.cpp",
+      "line": 12,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. SelectedUnits receives the selected byte range; it converts the borrowed bytes into an owned std::wstring before modifying the document. Editor::WndProc(Message::GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. This cast restores that same const char* through the pointer-sized message ABI. No unrelated object is dereferenced and no bytes are type-punned. Replacing the cast with bit_cast or a numeric cast would not improve this API-required pointer round trip.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0l6yu4V9oip4YIR",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r01-yu4V9oip4YLI",
+      "rule": "cpp:S3630",
+      "file": "src/editor/join_lines.cpp",
+      "line": 55,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. JoinParagraphs receives the selected byte range; it immediately copies the borrowed bytes into std::string before replacement. Editor::WndProc(Message::GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. This cast restores that same const char* through the pointer-sized message ABI. No unrelated object is dereferenced and no bytes are type-punned. Replacing the cast with bit_cast or a numeric cast would not improve this API-required pointer round trip.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r01-yu4V9oip4YLI",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r01Nyu4V9oip4YLE",
+      "rule": "cpp:S3630",
+      "file": "src/editor/line_comments.cpp",
+      "line": 37,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. ToggleLineComment receives the comment prefix bytes at the line indent; memcmp and the optional space check finish before the first edit, and the pointer is not reused after that edit. Editor::WndProc(Message::GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. This cast restores that same const char* through the pointer-sized message ABI. No unrelated object is dereferenced and no bytes are type-punned. Replacing the cast with bit_cast or a numeric cast would not improve this API-required pointer round trip.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r01Nyu4V9oip4YLE",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r035yu4V9oip4YL4",
+      "rule": "cpp:S5276",
+      "file": "src/document/file_variables.cpp",
+      "line": 21,
+      "comment": "Reviewed at wxnotepad 7ff2e5d. FindVariable declares previous from offset ? static_cast<unsigned char>(text[offset - 1]) : 0. The conditional common type is int, but its complete value set is exactly 0..UCHAR_MAX: one branch explicitly converts the source byte to unsigned char and the other is zero. Passing previous to AlphaNumeric(unsigned char) therefore preserves every possible value. The warning models the nominal int range rather than this bounded value flow.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r035yu4V9oip4YL4",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r02Kyu4V9oip4YLL",
+      "rule": "cpp:S3630",
+      "file": "src/editor/indentation_settings.cpp",
+      "line": 93,
+      "comment": "Reviewed at wxnotepad 7ff2e5d and pinned Notepad4 89b8b36. Load receives the current document byte range; DetectIndentation reads its at-most-1-MiB prefix before Apply changes editor settings. Editor::WndProc(Message::GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. This cast restores that same const char* through the pointer-sized message ABI. No unrelated object is dereferenced and no bytes are type-punned. Replacing the cast with bit_cast or a numeric cast would not improve this API-required pointer round trip.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r02Kyu4V9oip4YLL",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHaPjPBSajQlY95HQfC",
+      "rule": "cpp:S125",
+      "file": "src/syntax/generated/cpp_scheme_data.h",
+      "line": 635,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. The reported comment block comprises the trailing type label // numeric_limits and the following header category // <new>. The keyword string preceding the comments remains active in cppKeywords. These labels document the owning standard-library type and the next keyword group, rather than disabling executable code. tools/scheme_data.py:original_scheme/generate_scheme preserves these annotations from pinned Notepad4 89b8b36 src/EditLexers/stlCPP.cpp. S125 is a false positive for this type/header-name documentation.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjPBSajQlY95HQfC",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHaPjPBSajQlY95HQfD",
+      "rule": "cpp:S125",
+      "file": "src/syntax/generated/cpp_scheme_data.h",
+      "line": 639,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. The reported comment block comprises the trailing type label // type_info and the following header category // <source_location>. The keyword string preceding the comments remains active in cppKeywords. These labels document the owning standard-library type and the next keyword group, rather than disabling executable code. tools/scheme_data.py:original_scheme/generate_scheme preserves these annotations from pinned Notepad4 89b8b36 src/EditLexers/stlCPP.cpp. S125 is a false positive for this type/header-name documentation.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjPBSajQlY95HQfD",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHaPjPBSajQlY95HQfF",
+      "rule": "cpp:S125",
+      "file": "src/syntax/generated/cpp_scheme_data.h",
+      "line": 655,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. The reported comment block comprises the trailing type label // initializer_list and the following header category // <system_error>. The keyword string preceding the comments remains active in cppKeywords. These labels document the owning standard-library type and the next keyword group, rather than disabling executable code. tools/scheme_data.py:original_scheme/generate_scheme preserves these annotations from pinned Notepad4 89b8b36 src/EditLexers/stlCPP.cpp. S125 is a false positive for this type/header-name documentation.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjPBSajQlY95HQfF",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHaPjPBSajQlY95HQfG",
+      "rule": "cpp:S125",
+      "file": "src/syntax/generated/cpp_scheme_data.h",
+      "line": 660,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. The reported comment block comprises the trailing type label // system_error and the following header category // <utility>. The keyword string preceding the comments remains active in cppKeywords. These labels document the owning standard-library type and the next keyword group, rather than disabling executable code. tools/scheme_data.py:original_scheme/generate_scheme preserves these annotations from pinned Notepad4 89b8b36 src/EditLexers/stlCPP.cpp. S125 is a false positive for this type/header-name documentation.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjPBSajQlY95HQfG",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHaPjPBSajQlY95HQfH",
+      "rule": "cpp:S125",
+      "file": "src/syntax/generated/cpp_scheme_data.h",
+      "line": 693,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. The reported comment block comprises the trailing type label // synchronized_pool_resource and the following header category // <scoped_allocator>. The keyword string preceding the comments remains active in cppKeywords. These labels document the owning standard-library type and the next keyword group, rather than disabling executable code. tools/scheme_data.py:original_scheme/generate_scheme preserves these annotations from pinned Notepad4 89b8b36 src/EditLexers/stlCPP.cpp. S125 is a false positive for this type/header-name documentation.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjPBSajQlY95HQfH",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHaPjPBSajQlY95HQfI",
+      "rule": "cpp:S125",
+      "file": "src/syntax/generated/cpp_scheme_data.h",
+      "line": 710,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. The reported comment block comprises the trailing type label // basic_string and the following header category // <string_view>. The keyword string preceding the comments remains active in cppKeywords. These labels document the owning standard-library type and the next keyword group, rather than disabling executable code. tools/scheme_data.py:original_scheme/generate_scheme preserves these annotations from pinned Notepad4 89b8b36 src/EditLexers/stlCPP.cpp. S125 is a false positive for this type/header-name documentation.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjPBSajQlY95HQfI",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHaPjPBSajQlY95HQfJ",
+      "rule": "cpp:S125",
+      "file": "src/syntax/generated/cpp_scheme_data.h",
+      "line": 763,
+      "comment": "Reviewed at main 7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1. The reported comment block comprises the trailing type label // piecewise_constant_distribution and the following header category // <valarray>. The keyword string preceding the comments remains active in cppKeywords. These labels document the owning standard-library type and the next keyword group, rather than disabling executable code. tools/scheme_data.py:original_scheme/generate_scheme preserves these annotations from pinned Notepad4 89b8b36 src/EditLexers/stlCPP.cpp. S125 is a false positive for this type/header-name documentation.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjPBSajQlY95HQfJ",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHaPjopSajQlY95HQnc",
+      "rule": "cpp:S2738",
+      "file": "tests/measurement_threads.cpp",
+      "line": 173,
+      "comment": "Reviewed tests/measurement_threads.cpp:173 at 7ff2e5d1. CheckWorkers catches all worker-body exceptions into the slot indexed by that worker using current_exception. Each thread is joined before the GUI thread iterates failures and calls rethrow_exception. The exception type and identity are preserved, and the GUI test boundary reports failure. This catch is transport across a thread boundary, where allowing an exception to escape would terminate; it does not treat arbitrary errors as recoverable work.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjopSajQlY95HQnc",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaHaPjhUSajQlY95HQlD",
+      "rule": "cpp:S2738",
+      "file": "tests/auto_completion_settings.cpp",
+      "line": 75,
+      "comment": "Reviewed tests/auto_completion_settings.cpp:75 at 7ff2e5d1. DialogDriver::Enter catches at NativeKeys::AfterPresentation, stores current_exception in failure and cancels the Auto Completion Settings modal dialog. Visit calls rethrow_exception(driver.failure) immediately after NativeSearch::Command returns. The original exception type and identity are preserved across the native modal callback; narrowing the transport catch could bypass modal cleanup.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjhUSajQlY95HQlD",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG-lZpMOY3icnFs9aIR",
+      "rule": "cpp:S2738",
+      "file": "tests/file_change.cpp",
+      "line": 69,
+      "comment": "Reviewed tests/file_change.cpp:69 at 7ff2e5d1. FileWatchingDialogDriver::Enter catches the asynchronous ApplyChoice callback, stores current_exception in failure and closes the File Change Notification modal with cancellation. ChooseMode immediately rethrows driver.failure after NativeSearch::Command. This is deferred propagation of the same exception across the native modal event loop, not suppression or type-independent recovery.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG-lZpMOY3icnFs9aIR",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1B5jrYqINDK50-vXH",
+      "rule": "cpp:S2738",
+      "file": "tests/insert_tag.cpp",
+      "line": 88,
+      "comment": "Reviewed tests/insert_tag.cpp:88 at 7ff2e5d1. Dialog catches within the TagDriver callback, stores current_exception in the local failure and cancels the native tag dialog. After the shortcut or NativeSearch::Command completes, Dialog rethrows failure before checking focus or returning warnings. The original exception is transported across the modal event loop while the dialog is released.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1B5jrYqINDK50-vXH",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaGyLIGELjZQeDKjw6eP",
+      "rule": "cpp:S2738",
+      "file": "tests/sort_lines.cpp",
+      "line": 87,
+      "comment": "Reviewed tests/sort_lines.cpp:87 at 7ff2e5d1. SortDialogDriver::Notify catches the timer-driven action, stores current_exception in failure and clicks Cancel on the owned Sort Lines dialog. Dialog immediately calls rethrow_exception(driver.failure) after its native shortcut/command returns. The catch retains arbitrary exception type and identity solely to propagate it after native modal cleanup.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGyLIGELjZQeDKjw6eP",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaG1r1Hwyu4V9oip4YXe",
+      "rule": "cpp:S2738",
+      "file": "tests/tab_settings_helpers.h",
+      "line": 31,
+      "comment": "Reviewed tests/tab_settings_helpers.h:31 at 7ff2e5d1. TabDialog::Show catches within its timer callback, stores current_exception in the local failure, and uses that failure to select wxID_CANCEL when ending the Tab Settings modal. Show calls rethrow_exception(failure) immediately after NativeSearch::Command returns. The catch is a deferred rethrow across a callback boundary and never converts a failed edit into a successful test.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1Hwyu4V9oip4YXe",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaGSDeKZE-Km-bl-Jds6",
+      "rule": "cpp:S2738",
+      "file": "tests/position_status.cpp",
+      "line": 182,
+      "comment": "Reviewed tests/position_status.cpp:182 at 7ff2e5d1. The Go To Line CallAfter callback catches all exceptions into dialogFailure using current_exception and cancels the owned modal if it opened. The enclosing test invokes rethrow_exception(dialogFailure) immediately after NativeSearch::Command and before checking the new position. The original exception is preserved across the nested modal loop and reaches the terminal test-failure reporter.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGSDeKZE-Km-bl-Jds6",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaGSDeKqE-Km-bl-JdtS",
+      "rule": "cpp:S2738",
+      "file": "tests/word_wrap.cpp",
+      "line": 499,
+      "comment": "Reviewed tests/word_wrap.cpp:499 at 7ff2e5d1. GoToLineResponder::Enter catches its asynchronous modal action, stores current_exception in failure and cancels the dialog if it is still modal. The caller checks responder.failure and calls rethrow_exception directly after NativeSearch::Command, before all combined-view assertions. This broad catch preserves the exception while unwinding the native dialog boundary.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGSDeKqE-Km-bl-JdtS",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    },
+    {
+      "key": "AaGSDeKJE-Km-bl-Jdsx",
+      "rule": "cpp:S2738",
+      "file": "tests/goto_line.cpp",
+      "line": 79,
+      "comment": "Reviewed tests/goto_line.cpp:79 at 7ff2e5d1. Dialog::Driver::Enter catches within its CallAfter modal callback, stores current_exception in failure and cancels the Go To Line modal. Dialog calls rethrow_exception(driver.failure) immediately after its shortcut or NativeSearch::Command returns. Exception type and identity are retained; the callback boundary requires deferred propagation so native dialog cleanup completes.",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGSDeKJE-Km-bl-Jdsx",
+        "newStatus": "falsepositive"
+      },
+      "verified_via_status_filter": "FALSE_POSITIVE",
+      "returned_legacy_status": "RESOLVED"
+    }
+  ],
+  "code_changes": {
+    "baseline_findings_addressed": [
+      {
+        "key": "AaHkPxw7gCAub8Zgymj9",
+        "rule": "cpp:S5945",
+        "file": "tests/completion_allocation.cpp",
+        "line": 45,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHkPxw7gCAub8Zgymj8",
+        "rule": "cpp:S6494",
+        "file": "tests/completion_allocation.cpp",
+        "line": 46,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHkPxw7gCAub8Zgymj_",
+        "rule": "cpp:S5945",
+        "file": "tests/completion_allocation.cpp",
+        "line": 71,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHkPxw7gCAub8Zgymj-",
+        "rule": "cpp:S6494",
+        "file": "tests/completion_allocation.cpp",
+        "line": 72,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHkPxw7gCAub8ZgymkB",
+        "rule": "cpp:S5945",
+        "file": "tests/completion_allocation.cpp",
+        "line": 89,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHkPxw7gCAub8ZgymkA",
+        "rule": "cpp:S6494",
+        "file": "tests/completion_allocation.cpp",
+        "line": 90,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHkPx3kgCAub8ZgymkY",
+        "rule": "python:S7500",
+        "file": "tools/clipboard_isolated.py",
+        "line": 178,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHkPx3kgCAub8ZgymkZ",
+        "rule": "python:S7500",
+        "file": "tools/clipboard_isolated.py",
+        "line": 231,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHkPx3_gCAub8Zgymka",
+        "rule": "python:S7500",
+        "file": "tools/resources.py",
+        "line": 34,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHkPx3_gCAub8Zgymkb",
+        "rule": "python:S7500",
+        "file": "tools/resources.py",
+        "line": 65,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHaPjopSajQlY95HQna",
+        "rule": "cpp:S6168",
+        "file": "tests/measurement_threads.cpp",
+        "line": 166,
+        "commit": "67b2e39970cc48d44c048c336a58de97aa60d1f8"
+      },
+      {
+        "key": "AaHaPjopSajQlY95HQnd",
+        "rule": "cpp:S6168",
+        "file": "tests/measurement_threads.cpp",
+        "line": 178,
+        "commit": "67b2e39970cc48d44c048c336a58de97aa60d1f8"
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQed",
+        "rule": "cpp:S125",
+        "file": "src/editor/word_completion.cpp",
+        "line": 451,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQeg",
+        "rule": "cpp:S125",
+        "file": "src/editor/word_completion.cpp",
+        "line": 803,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQeh",
+        "rule": "cpp:S125",
+        "file": "src/editor/word_completion.cpp",
+        "line": 1198,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQei",
+        "rule": "cpp:S125",
+        "file": "src/editor/word_completion.cpp",
+        "line": 1201,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQej",
+        "rule": "cpp:S125",
+        "file": "src/editor/word_completion.cpp",
+        "line": 1204,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHaPjhUSajQlY95HQk5",
+        "rule": "cpp:S5276",
+        "file": "tests/auto_completion_settings.cpp",
+        "line": 251,
+        "commit": "d641fc408137c7d9d0393b603c6068bc3b7c78f7"
+      },
+      {
+        "key": "AaHaPjhUSajQlY95HQk6",
+        "rule": "cpp:S5276",
+        "file": "tests/auto_completion_settings.cpp",
+        "line": 256,
+        "commit": "d641fc408137c7d9d0393b603c6068bc3b7c78f7"
+      },
+      {
+        "key": "AaHaPjhUSajQlY95HQk7",
+        "rule": "cpp:S5276",
+        "file": "tests/auto_completion_settings.cpp",
+        "line": 276,
+        "commit": "d641fc408137c7d9d0393b603c6068bc3b7c78f7"
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQee",
+        "rule": "cpp:S125",
+        "file": "src/editor/word_completion.cpp",
+        "line": 458,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQef",
+        "rule": "cpp:S125",
+        "file": "src/editor/word_completion.cpp",
+        "line": 503,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaG07aLVhCsovMxdASEC",
+        "rule": "cpp:S5945",
+        "file": "src/editor/platform/character_hex.cpp",
+        "line": 115,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaG07aLVhCsovMxdASED",
+        "rule": "cpp:S6494",
+        "file": "src/editor/platform/character_hex.cpp",
+        "line": 122,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaGyjBUh8W9ntfedGAqQ",
+        "rule": "cpp:S5945",
+        "file": "tests/close_smoke.cpp",
+        "line": 26,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaGyjBUh8W9ntfedGAqP",
+        "rule": "cpp:S6494",
+        "file": "tests/close_smoke.cpp",
+        "line": 27,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      },
+      {
+        "key": "AaGQhgSJusAIaC0DBL6C",
+        "rule": "cpp:S2486",
+        "file": "tests/clipboard_smoke.cpp",
+        "line": 87,
+        "commit": "d641fc408137c7d9d0393b603c6068bc3b7c78f7"
+      },
+      {
+        "key": "AaGQhgSJusAIaC0DBL6D",
+        "rule": "cpp:S108",
+        "file": "tests/clipboard_smoke.cpp",
+        "line": 87,
+        "commit": "d641fc408137c7d9d0393b603c6068bc3b7c78f7"
+      },
+      {
+        "key": "AaGQhgSXusAIaC0DBL7y",
+        "rule": "cpp:S6495",
+        "file": "tests/navigation_probe.cpp",
+        "line": 138,
+        "commit": "22c1728ee78edb5922c76ed5946794b8ef9d4838"
+      }
+    ],
+    "note": "These 29 main-baseline findings have corresponding fixes on PR #220. This is a source-to-change record; main findings await analysis of merged code. The adjacent search-settings failure-status correction is recorded separately in the README."
+  },
+  "retained_review": {
+    "rule": "cpp:S1181",
+    "reviewed_count": 137,
+    "still_open_exact_key_query_count": 137,
+    "terminal_test_boundaries": 133,
+    "modal_failure_transports": 4,
+    "decision": "Retain implementation and OPEN status; intentional framework/test boundary design is not a blanket false-positive classification."
+  },
+  "exception_transport_clarification": "The S2738 dispositions concern capture and deferred propagation through std::exception_ptr. std::current_exception may copy the exception object; the cross-platform regression checks the propagated exception type and message. Historical submitted comments and receipts are retained verbatim.",
+  "pull_request_dispositions": {
+    "pullRequest": "220",
+    "reviewed_code_revision": "d641fc408137c7d9d0393b603c6068bc3b7c78f7",
+    "current_code_revision": "835b6f3a08f24e0723ba27f39c60362742f1c998",
+    "verified_count": 10,
+    "verification": {
+      "tool": "search_sonar_issues_in_projects",
+      "organization": "1298345095",
+      "projectKeys": [
+        "1298345095_wxnotepad"
+      ],
+      "pullRequest": "220",
+      "issueStatuses": [
+        "FALSE_POSITIVE"
+      ],
+      "pageSize": 500,
+      "returned_count": 10,
+      "open_confirmed_count_after_review": 0,
+      "verified_at_utc": "2026-11-16T12:42:10.973Z",
+      "note": "Exact-key FALSE_POSITIVE query returned all ten issue keys, using the legacy RESOLVED response string. Every mutation receipt explicitly reports falsepositive."
+    },
+    "first_analysis_gate_after_review": {
+      "status": "OK",
+      "conditions": [
+        {
+          "metricKey": "new_reliability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_security_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_maintainability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_coverage",
+          "status": "OK",
+          "errorThreshold": "80",
+          "actualValue": "88.2"
+        },
+        {
+          "metricKey": "new_duplicated_lines_density",
+          "status": "OK",
+          "errorThreshold": "3",
+          "actualValue": "0.0"
+        },
+        {
+          "metricKey": "new_security_hotspots_reviewed",
+          "status": "OK",
+          "errorThreshold": "100",
+          "actualValue": "100.0"
+        }
+      ]
+    },
+    "entries": [
+      {
+        "key": "AaHkWkSJxwx8-YSv1nbQ",
+        "rule": "cpp:S6494",
+        "file": "tests/clipboard_smoke.cpp",
+        "line": 88,
+        "comment": "This is the clipboard-peer shutdown diagnostic. The fixed \"%s\" format receives std::exception::what(); it must remain available on the supported GCC 13 build. The project selects gcc-13/g++-13 in .github/actions/dependencies/action.yml (lines 54 and 83). GCC's libstdc++ implementation table records P2093R14 formatted output/std::print as first supported in GCC 14.1 (https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html), also listed in the GCC 14 release notes (https://gcc.gnu.org/gcc-14/changes.html). C++23 language mode does not provide the missing GCC 13 library facility. Therefore this specific recommendation to replace fprintf with std::print is a toolchain-compatibility false positive; the supported std::format conversions in this PR are handled separately.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWkSJxwx8-YSv1nbQ",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHkWkTVxwx8-YSv1nbR",
+        "rule": "cpp:S6494",
+        "file": "tests/close_smoke.cpp",
+        "line": 31,
+        "comment": "This is the close-lifecycle diagnostic's native pointer field. Keeping the fixed \"%p\" format with a pointer argument also preserves the platform's existing pointer representation, as checked by the trace comparison. The project selects gcc-13/g++-13 in .github/actions/dependencies/action.yml (lines 54 and 83). GCC's libstdc++ implementation table records P2093R14 formatted output/std::print as first supported in GCC 14.1 (https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html), also listed in the GCC 14 release notes (https://gcc.gnu.org/gcc-14/changes.html). C++23 language mode does not provide the missing GCC 13 library facility. Therefore this specific recommendation to replace fprintf with std::print is a toolchain-compatibility false positive; the supported std::format conversions in this PR are handled separately.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWkTVxwx8-YSv1nbR",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHkWj_Kxwx8-YSv1nbM",
+        "rule": "cpp:S6494",
+        "file": "tests/measurement_worker_start.cpp",
+        "line": 82,
+        "comment": "This is the standalone measurement-worker regression's failure diagnostic. The fixed \"%s\" format receives std::exception::what() and is used on both Linux GCC 13 and MSVC. The project selects gcc-13/g++-13 in .github/actions/dependencies/action.yml (lines 54 and 83). GCC's libstdc++ implementation table records P2093R14 formatted output/std::print as first supported in GCC 14.1 (https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html), also listed in the GCC 14 release notes (https://gcc.gnu.org/gcc-14/changes.html). C++23 language mode does not provide the missing GCC 13 library facility. Therefore this specific recommendation to replace fprintf with std::print is a toolchain-compatibility false positive; the supported std::format conversions in this PR are handled separately.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWj_Kxwx8-YSv1nbM",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHkWkPQxwx8-YSv1nbN",
+        "rule": "cpp:S1141",
+        "file": "tests/measurement_workers.h",
+        "line": 21,
+        "comment": "False positive caused by treating a lambda's separate function body as a nested exception handler in its caller. In tests/measurement_workers.h, the outer try encloses launch/construction of worker threads; every actual launcher constructs a std::jthread (the regression launcher can instead throw before construction). The lambda is the worker-thread entry function and its inner try/catch captures work(worker) failures into that worker's exception_ptr. A worker exception cannot propagate across the thread boundary into the caller's startup catch. After successful startup, workers are joined and captured failures are rethrown after the outer try/catch has ended. Thus these are distinct startup and worker execution exception boundaries, already separated by the callable function boundary; there is no ambiguous nesting of catches for the same exception path.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWkPQxwx8-YSv1nbN",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHkWkPQxwx8-YSv1nbO",
+        "rule": "cpp:S2738",
+        "file": "tests/measurement_workers.h",
+        "line": 28,
+        "comment": "False positive under S2738's documented rethrow exception. This startup catch handles a failure after some std::jthreads have been created. It removes the participants that were never started from the barrier, then executes an explicit `throw;` at the end of the handler. Started jthreads are joined by their destructors during unwinding, while the barrier and failure slots are still alive. The catch does not convert an arbitrary startup failure into success or discard it. S2738 explicitly excludes catch handlers that rethrow the same exception with `throw;`; the cleanup statements before that rethrow do not change this classification.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWkPQxwx8-YSv1nbO",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHkWkPqxwx8-YSv1nbP",
+        "rule": "cpp:S3519",
+        "file": "tests/auto_completion_settings.cpp",
+        "line": 38,
+        "comment": "False positive, verified against every call site at revision d641fc408137c7d9d0393b603c6068bc3b7c78f7. Typing has internal linkage in the anonymous namespace of tests/auto_completion_settings.cpp and is called only at lines 252, 257 and 277. All calls follow Require(requestedBit > 0 && requestedBit <= 256 && std::has_single_bit(static_cast<unsigned long>(requestedBit))) at lines 240-242. Require throws when false; the immutable int bit is created only after this check, preserving the validated value exactly. The tags/words branches return at lines 229/238 and never call Typing, including for their zero placeholder. Inside Typing, bit < 256 therefore admits only {1,2,4,8,16,32,64,128}; countr_zero yields only 0..7, within the eight opening characters (nine array elements including NUL) and the closing-character table. The other valid value, 256, takes the line-comment branch without indexing these arrays. The reported index 32 is the countr_zero result for zero on 32-bit unsigned; zero cannot reach this path. Native Windows, X11 and Wayland runs all passed the fixture, including all nine valid bits and ten invalid mode/flag combinations.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWkPqxwx8-YSv1nbP",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHkWkTuxwx8-YSv1nbS",
+        "rule": "python:S7494",
+        "file": "tools/clipboard_isolated.py",
+        "line": 178,
+        "comment": "Known analyzer false-positive pattern SONARPY-3154. This expression parses the owned Weston window geometry for the move-peer request: each str.split(\"=\", 1) produces the key/value sequence consumed directly by dict(), with one split per line. It is not the redundant dict((k, v) for ...) pattern with separately available key and value expressions. SonarSource's own S7494 fixture explicitly labels dict(x.split(\"=\") for x in update_str.split(\",\")) as \"FP SONARPY-3154\" (https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py#L44-L49). Reintroducing {key: value for key, value in (line.split(...) for ...)} adds the copy-only comprehension correctly reported by S7500; duplicate splitting or extra binding loops would only complicate this parser. The current constructor preserves first-separator splitting, input order, last-duplicate-key behavior, and rejection of malformed pairs.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWkTuxwx8-YSv1nbS",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHkWkTuxwx8-YSv1nbT",
+        "rule": "python:S7494",
+        "file": "tools/clipboard_isolated.py",
+        "line": 231,
+        "comment": "Known analyzer false-positive pattern SONARPY-3154. This expression parses the owned Weston window origin for a drag request: each str.split(\"=\", 1) produces the key/value sequence consumed directly by dict(), with one split per line. It is not the redundant dict((k, v) for ...) pattern with separately available key and value expressions. SonarSource's own S7494 fixture explicitly labels dict(x.split(\"=\") for x in update_str.split(\",\")) as \"FP SONARPY-3154\" (https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py#L44-L49). Reintroducing {key: value for key, value in (line.split(...) for ...)} adds the copy-only comprehension correctly reported by S7500; duplicate splitting or extra binding loops would only complicate this parser. The current constructor preserves first-separator splitting, input order, last-duplicate-key behavior, and rejection of malformed pairs.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWkTuxwx8-YSv1nbT",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHkWkUKxwx8-YSv1nbU",
+        "rule": "python:S7494",
+        "file": "tools/resources.py",
+        "line": 34,
+        "comment": "Known analyzer false-positive pattern SONARPY-3154. This expression parses the process status fields used to read VmRSS: each str.split(\":\", 1) produces the key/value sequence consumed directly by dict(), with one split per line. It is not the redundant dict((k, v) for ...) pattern with separately available key and value expressions. SonarSource's own S7494 fixture explicitly labels dict(x.split(\"=\") for x in update_str.split(\",\")) as \"FP SONARPY-3154\" (https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py#L44-L49). Reintroducing {key: value for key, value in (line.split(...) for ...)} adds the copy-only comprehension correctly reported by S7500; duplicate splitting or extra binding loops would only complicate this parser. The current constructor preserves first-separator splitting, input order, last-duplicate-key behavior, and rejection of malformed pairs.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWkUKxwx8-YSv1nbU",
+          "newStatus": "falsepositive"
+        }
+      },
+      {
+        "key": "AaHkWkUKxwx8-YSv1nbV",
+        "rule": "python:S7494",
+        "file": "tools/resources.py",
+        "line": 65,
+        "comment": "Known analyzer false-positive pattern SONARPY-3154. This expression parses the published observation state fields: each split on the first tab produces the key/value sequence consumed directly by dict(), with one split per line. It is not the redundant dict((k, v) for ...) pattern with separately available key and value expressions. SonarSource's own S7494 fixture explicitly labels dict(x.split(\"=\") for x in update_str.split(\",\")) as \"FP SONARPY-3154\" (https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py#L44-L49). Reintroducing {key: value for key, value in (line.split(...) for ...)} adds the copy-only comprehension correctly reported by S7500; duplicate splitting or extra binding loops would only complicate this parser. The current constructor preserves first-separator splitting, input order, last-duplicate-key behavior, and rejection of malformed pairs.",
+        "receipt": {
+          "success": true,
+          "message": "The issue status was successfully changed.",
+          "issueKey": "AaHkWkUKxwx8-YSv1nbV",
+          "newStatus": "falsepositive"
+        }
+      }
+    ],
+    "reanalysis_verification": {
+      "code_revision": "835b6f3a08f24e0723ba27f39c60362742f1c998",
+      "ce_task": "AaHkbd7ojQBaE46LhdS_",
+      "github_check": {
+        "id": 133312057643,
+        "name": "SonarCloud Code Analysis",
+        "head_sha": "835b6f3a08f24e0723ba27f39c60362742f1c998",
+        "status": "completed",
+        "conclusion": "success",
+        "completed_at": "2026-11-16T12:56:10Z",
+        "details_url": "https://sonarcloud.io/dashboard?id=1298345095_wxnotepad&pullRequest=220"
+      },
+      "observed_at_utc": "2026-11-16T12:58:42.991Z",
+      "open_confirmed_count": 0,
+      "false_positive_exact_key_count": 10,
+      "false_positive_keys": [
+        "AaHkWkSJxwx8-YSv1nbQ",
+        "AaHkWkTVxwx8-YSv1nbR",
+        "AaHkWkTuxwx8-YSv1nbS",
+        "AaHkWkTuxwx8-YSv1nbT",
+        "AaHkWkUKxwx8-YSv1nbU",
+        "AaHkWkUKxwx8-YSv1nbV",
+        "AaHkWj_Kxwx8-YSv1nbM",
+        "AaHkWkPQxwx8-YSv1nbN",
+        "AaHkWkPQxwx8-YSv1nbO",
+        "AaHkWkPqxwx8-YSv1nbP"
+      ],
+      "gate": {
+        "status": "OK",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "OK",
+            "errorThreshold": "80",
+            "actualValue": "88.2"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      }
+    }
+  },
+  "total_main_and_pr_verified_count": 59
+}

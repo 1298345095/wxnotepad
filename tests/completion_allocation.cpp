@@ -3,6 +3,8 @@
 #include "editor/word_completion.cpp"
 #include "completion_allocation_fault.h"
 #include "native_completion_helpers.h"
+#include <format>
+#include <iterator>
 
 namespace {
 void Require(bool condition, const char* message) {
@@ -42,8 +44,7 @@ void CandidateAllocationFailures() {
     words.AddWord("a00000", 6);
     unsigned failedIndex = 0;
     for (unsigned index = 1; index < 256; ++index) {
-        char word[16];
-        std::snprintf(word, sizeof(word), "a%05u", index);
+        const auto word = std::format("a{:05}", index);
         const auto capacity = words.capacity;
         const auto offset = words.offset;
         const auto* buffer = words.buffer;
@@ -51,7 +52,7 @@ void CandidateAllocationFailures() {
         {
             const CompletionAllocationFault::ScopedFailure failure;
             try {
-                words.AddWord(word, 6);
+                words.AddWord(word.c_str(), static_cast<unsigned>(word.size()));
             } catch (const std::bad_alloc&) {
                 caught = true;
             }
@@ -60,7 +61,7 @@ void CandidateAllocationFailures() {
         Require(words.capacity == capacity && words.offset == offset && words.buffer == buffer &&
                     words.nWordCount == index,
                 "failed candidate growth retains the previous buffer bounds and tree");
-        words.AddWord(word, 6);
+        words.AddWord(word.c_str(), static_cast<unsigned>(word.size()));
         failedIndex = index;
         break;
     }
@@ -68,10 +69,8 @@ void CandidateAllocationFailures() {
             "candidate insertion succeeds after a failed buffer expansion");
     std::string expected;
     for (unsigned index = 0; index <= failedIndex; ++index) {
-        char word[16];
-        std::snprintf(word, sizeof(word), "a%05u", index);
         if (index) expected += '\n';
-        expected += word;
+        std::format_to(std::back_inserter(expected), "a{:05}", index);
     }
     Require(expected == words.GetList().get(), "failed growth and retry preserve every sorted candidate");
     RequireAllocationFailure(words.nTotalLen + 1, [&words] { const auto list = words.GetList(); });
@@ -86,10 +85,8 @@ constexpr size_t CandidateLength = RootLength + 5;
 std::string KeywordFixture(const std::string& root) {
     std::string words;
     for (unsigned index = 0; index < CandidateCount; ++index) {
-        char suffix[8];
-        std::snprintf(suffix, sizeof(suffix), "%05u ", index);
         words += root;
-        words += suffix;
+        std::format_to(std::back_inserter(words), "{:05} ", index);
     }
     return words;
 }

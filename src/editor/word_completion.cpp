@@ -426,16 +426,10 @@ static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
         return ch == '^';
     }
     const uint64_t mask = UINT32_MAX | (UINT64_C(1) << ' ') | (UINT64_C(1) << '(') | (UINT64_C(1) << ')') |
-                          (UINT64_C(1) << ',') |
-                          (UINT64_C(1) << '.')
-                          //| (UINT64_C(1) << ':')
-                          | (UINT64_C(1) << ';');
+                          (UINT64_C(1) << ',') | (UINT64_C(1) << '.') | (UINT64_C(1) << ';');
     return (mask >> ch) & true;
 #else
-    return ch <= ' ' || ch == '(' || ch == ')' || ch == ',' ||
-           ch == '.'
-           //|| ch == ':'
-           || ch == ';' || ch == '^';
+    return ch <= ' ' || ch == '(' || ch == ')' || ch == ',' || ch == '.' || ch == ';' || ch == '^';
 #endif
 #else
     if (ch <= ' ') {
@@ -445,18 +439,13 @@ static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
     if (ch > ';' - '(') {
         return ch == '^' - '(';
     }
-    // Bit zero is '(' after rebasing the character above.
-    const uint32_t mask = 1U | (1U << (')' - '(')) | (1U << (',' - '(')) |
-                          (1U << ('.' - '('))
-                          //| (1U << (':' - '('))
-                          | (1U << (';' - '('));
+    // Bit zero is '(' after rebasing the character above. Colons remain part of qualified words.
+    const uint32_t mask = 1U | (1U << (')' - '(')) | (1U << (',' - '(')) | (1U << ('.' - '(')) | (1U << (';' - '('));
     return (mask >> ch) & true;
 #endif
 }
 
 void WordList::AddListEx(const char* pList) {
-    // StopWatch watch;
-    // watch.Start();
     char word[NP2_AUTOC_WORD_BUFFER_SIZE];
     const unsigned iRootLen = iStartLen;
     unsigned len = 0;
@@ -499,10 +488,6 @@ void WordList::AddListEx(const char* pList) {
             word[len++] = '.';
         }
     }
-
-    // watch.Stop();
-    // const double duration = watch.Get();
-    // printf("%s duration=%.6f\n", __func__, duration);
 }
 
 void WordList::AddWordPrefixes(char* word, unsigned end, unsigned rootLength, std::span<const char* const> words,
@@ -800,10 +785,6 @@ class Collector final {
         int wordLength = static_cast<int>(Call(Message::GetTextRangeFull, 0, &tr));
 
         SkipDocumentPrefix(pWord, wordLength, iPosFind, style, prefix);
-        // if (definition_.lexer == SCLEX_PHPSCRIPT && wordLength >= 2 && pWord[0] == '$' && pWord[1] ==
-        // '$') { 	pWord++;
-        //	--wordLength;
-        // }
         while (wordLength > 0 &&
                (pWord[wordLength - 1] == '-' || pWord[wordLength - 1] == ':' || pWord[wordLength - 1] == '.')) {
             --wordLength;
@@ -1195,13 +1176,9 @@ class Collector final {
         const auto pList = pWList.GetList();
         const auto fillUps = FillUps();
         Call(Message::AutoCSetOptions, SC_AUTOCOMPLETE_FIXED_SIZE);
-        // Call(Message::AutoCSetOrder, SC_ORDER_PRESORTED); // pre-sorted is default
         Call(Message::AutoCSetIgnoreCase, bIgnoreCase); // case sensitivity
         Call(Message::AutoCSetCaseInsensitiveBehaviour, bIgnoreCase);
-        // Call(Message::AutoCSetSeparator, '\n');
-        // Call(Message::AutoCSetTypeSeparator, '\t');
         Call(Message::AutoCSetFillUps, 0, fillUps.c_str());
-        // Call(Message::AutoCSetDropRestOfWord, true); // delete orginal text: pRoot
         Call(Message::AutoCSetMaxHeight,
              std::min(pWList.nWordCount, static_cast<unsigned>(settings_.visibleItemCount))); // visible rows
         Call(Message::AutoCSetCancelAtStart, false); // don't cancel the list when deleting character

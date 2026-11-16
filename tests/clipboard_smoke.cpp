@@ -84,7 +84,10 @@ public:
             NativeFailure::Capture("clipboard", {static_cast<long>(wxGetProcessId()), process_});
         try {
             Request("quit");
+        } catch (const std::exception& error) {
+            std::fprintf(stderr, "Clipboard peer shutdown failed: %s\n", error.what());
         } catch (...) {
+            std::fputs("Clipboard peer shutdown failed: unknown exception\n", stderr);
         }
         wxFileName::Rmdir(directory_, wxPATH_RMDIR_RECURSIVE);
     }

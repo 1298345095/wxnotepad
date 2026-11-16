@@ -31,8 +31,8 @@ def digest(path, prefix=b""):
 
 def memory(pid):
     if sys.platform != "win32":
-        status = {key: value for key, value in (line.split(":", 1) for line in
-                  Path(f"/proc/{pid}/status").read_text().splitlines() if ":" in line)}
+        status = dict(line.split(":", 1) for line in
+                      Path(f"/proc/{pid}/status").read_text().splitlines() if ":" in line)
         return {"rss_bytes": int(status["VmRSS"].split()[0]) * 1024}
 
     class Counters(ctypes.Structure):
@@ -62,8 +62,8 @@ def wait_state(folder, process, predicate):
         if process.poll() is not None:
             raise RuntimeError(f"App exited {process.returncode}")
         try:
-            state = {key: value for key, value in (line.split("\t", 1) for line in
-                     (folder / "state").read_text(encoding="utf-8").splitlines())}
+            state = dict(line.split("\t", 1) for line in
+                         (folder / "state").read_text(encoding="utf-8").splitlines())
             if predicate(state):
                 return state
         except (FileNotFoundError, PermissionError):
