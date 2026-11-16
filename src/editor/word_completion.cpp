@@ -656,17 +656,13 @@ class Collector final {
         }
 
         if (style != 0 && definition_.original.escapeCharacterStyle) {
-            if (stylePrev != definition_.original.escapeCharacterStyle) {
-                if (definition_.lexer != SCLEX_PHPSCRIPT || definition_.lexer != SCLEX_HTML ||
-                    !(stylePrev == (SCE_JS_ESCAPECHAR + 40) || stylePrev == (SCE_CSS_ESCAPECHAR + 90))) {
-                    return false;
-                }
-            }
-        } else if (!punctuation) {
-            // legacy lexer without escape character highlighting
-            if (!IsEscapeCharacter(ch)) {
-                return false;
-            }
+            const bool embeddedEscape =
+                (definition_.lexer == SCLEX_PHPSCRIPT || definition_.lexer == SCLEX_HTML) &&
+                (stylePrev == js_style(SCE_JS_ESCAPECHAR) || stylePrev == css_style(SCE_CSS_ESCAPECHAR));
+            if (stylePrev != definition_.original.escapeCharacterStyle && !embeddedEscape) return false;
+        } else if (!punctuation && !IsEscapeCharacter(ch)) {
+            // Legacy lexer without escape character highlighting.
+            return false;
         }
 
         if (!IsRawStringStyle(stylePrev)) {

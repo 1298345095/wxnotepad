@@ -4,6 +4,8 @@
 #include "completion_behavior_reference.h"
 #include "settings/settings_store.h"
 #include "syntax/syntax_catalog.h"
+#include "SciLexer.h"
+#include <array>
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
 #endif
@@ -121,6 +123,61 @@ void FrozenBehaviors(EditorFrame* frame, SettingsStore& store, int command) {
     store.values.completion = WordCompletionSettings{};
     std::puts("PASS: original document candidates, language prefixes, bytes, caret, save point, Undo/Redo and focus");
 }
+void EscapePrefixCompletion(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    struct Fixture {
+        const char* scheme;
+        SyntaxLanguage language;
+        const char* text;
+        int escapeStyle;
+        bool completes;
+    };
+    const std::array fixtures = {
+        Fixture{"Web Source Code", SyntaxLanguage::Html,
+                "<script>const name = 'alpha'; const suffix = '\\nal';</script>", SCE_JS_ESCAPECHAR + 40, true},
+        Fixture{"JavaScript", SyntaxLanguage::JavaScript, "const name = 'alpha'; const suffix = '\\nal';",
+                SCE_JS_ESCAPECHAR, true},
+        Fixture{"Web Source Code", SyntaxLanguage::Html,
+                "<script>const name = 'alpha'; const suffix = '\\\\nal';</script>", SCE_JS_ESCAPECHAR + 40, false},
+    };
+    WordCompletionSettings settings;
+    settings.completeOption = WordCompletionOption::CompleteWord | WordCompletionOption::ScanWordsInDocument |
+                              WordCompletionOption::OnlyWordsInDocument;
+    for (const auto& fixture : fixtures) {
+        editor->Send(Message::AutoCCancel);
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", fixture.scheme));
+        const std::string before = fixture.text;
+        const auto escape = before.find("\\nal");
+        Require(escape != std::string::npos, "escape completion fixture contains its explicit caret marker");
+        const auto caret = escape + 4;
+        TestEditor::ResetStream(editor, before.c_str(), caret, caret);
+        editor->Send(Message::Colourise, 0, -1);
+        Require(editor->Send(Message::GetStyleIndexAt, escape) == fixture.escapeStyle,
+                "native lexer marks the escape prefix in its embedded or standalone style");
+        CompleteWord(*editor, SyntaxFor(fixture.language), settings, false);
+        if (!fixture.completes) {
+            Require(!editor->Send(Message::AutoCActive) && TestEditor::Text(editor) == before &&
+                        !editor->Send(Message::CanUndo),
+                    "an escaped backslash keeps the following n in the completion root");
+            continue;
+        }
+        Require(Candidates(editor) == std::vector<std::string>{"alpha"},
+                "completion searches after the escape character and finds the document word");
+#ifdef __WXMSW__
+        NativeCompletion::Key(editor, VK_RETURN);
+#else
+        NativeCompletion::Key(editor, GDK_KEY_Return);
+#endif
+        auto after = before;
+        after.replace(escape + 2, 2, "alpha");
+        Require(TestEditor::Text(editor) == after, "completion retains the escape prefix and surrounding source");
+        TestEditor::RequireSelection(editor, escape + 7, escape + 7, "escape completion caret");
+        editor->Send(Message::Undo);
+        Require(TestEditor::Text(editor) == before && !editor->Send(Message::CanUndo),
+                "escape completion remains one Undo action");
+    }
+    std::puts("PASS: embedded and standalone JavaScript completion preserves escape prefixes");
+}
 class WordCompletionApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -170,6 +227,7 @@ public:
 #endif
                 FrozenCompletion(frame, id);
                 FrozenBehaviors(frame, settings_, id);
+                EscapePrefixCompletion(frame);
                 editor->Send(Message::AutoCCancel);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 const std::string longestKeyword(124, 'x');
