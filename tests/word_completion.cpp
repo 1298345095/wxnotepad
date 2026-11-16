@@ -4,6 +4,8 @@
 #include "completion_behavior_reference.h"
 #include "settings/settings_store.h"
 #include "syntax/syntax_catalog.h"
+#include "SciLexer.h"
+#include <array>
 #ifdef __WXGTK__
 #include <gdk/gdkkeysyms.h>
 #endif
@@ -12,6 +14,13 @@ using Scintilla::Message;
 void Require(bool value, const char* message) {
     if (!value) throw TestEditor::Failure(message);
 }
+std::string CurrentCandidate(EditorControl* editor) {
+    const auto size = editor->Send(Message::AutoCGetCurrentText);
+    std::string word(size + 1, 0);
+    editor->Send(Message::AutoCGetCurrentText, 0, reinterpret_cast<intptr_t>(word.data()));
+    word.pop_back();
+    return word;
+}
 std::vector<std::string> Candidates(EditorControl* editor) {
     std::vector<std::string> words;
     intptr_t previous = -1;
@@ -19,11 +28,7 @@ std::vector<std::string> Candidates(EditorControl* editor) {
         const auto current = editor->Send(Message::AutoCGetCurrent);
         if (current == previous) break;
         previous = current;
-        const auto size = editor->Send(Message::AutoCGetCurrentText);
-        std::string word(size + 1, 0);
-        editor->Send(Message::AutoCGetCurrentText, 0, reinterpret_cast<intptr_t>(word.data()));
-        word.pop_back();
-        words.push_back(word);
+        words.push_back(CurrentCandidate(editor));
 #ifdef __WXMSW__
         NativeCompletion::Key(editor, VK_DOWN);
 #else
@@ -121,6 +126,93 @@ void FrozenBehaviors(EditorFrame* frame, SettingsStore& store, int command) {
     store.values.completion = WordCompletionSettings{};
     std::puts("PASS: original document candidates, language prefixes, bytes, caret, save point, Undo/Redo and focus");
 }
+void EscapePrefixCompletion(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    struct Fixture {
+        const char* scheme;
+        SyntaxLanguage language;
+        const char* text;
+        int escapeStyle;
+        bool completes;
+    };
+    const std::array fixtures = {
+        Fixture{"Web Source Code", SyntaxLanguage::Html,
+                "<script>const name = 'alpha'; const suffix = '\\nal';</script>", js_style(SCE_JS_ESCAPECHAR), true},
+        Fixture{"JavaScript", SyntaxLanguage::JavaScript, "const name = 'alpha'; const suffix = '\\nal';",
+                SCE_JS_ESCAPECHAR, true},
+        Fixture{"Web Source Code", SyntaxLanguage::Html,
+                "<script>const name = 'alpha'; const suffix = '\\\\nal';</script>", js_style(SCE_JS_ESCAPECHAR), false},
+    };
+    WordCompletionSettings settings;
+    settings.completeOption = WordCompletionOption::CompleteWord | WordCompletionOption::ScanWordsInDocument |
+                              WordCompletionOption::OnlyWordsInDocument;
+    for (const auto& fixture : fixtures) {
+        editor->Send(Message::AutoCCancel);
+        NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", fixture.scheme));
+        const std::string before = fixture.text;
+        const auto escape = before.find("\\nal");
+        Require(escape != std::string::npos, "escape completion fixture contains its explicit caret marker");
+        const auto caret = escape + 4;
+        TestEditor::ResetStream(editor, before.c_str(), caret, caret);
+        editor->Send(Message::Colourise, 0, -1);
+        Require(editor->Send(Message::GetStyleIndexAt, escape) == fixture.escapeStyle,
+                "native lexer marks the escape prefix in its embedded or standalone style");
+        CompleteWord(*editor, SyntaxFor(fixture.language), settings, false);
+        if (!fixture.completes) {
+            Require(!editor->Send(Message::AutoCActive) && TestEditor::Text(editor) == before &&
+                        !editor->Send(Message::CanUndo),
+                    "an escaped backslash keeps the following n in the completion root");
+            continue;
+        }
+        Require(Candidates(editor) == std::vector<std::string>{"alpha"},
+                "completion searches after the escape character and finds the document word");
+#ifdef __WXMSW__
+        NativeCompletion::Key(editor, VK_RETURN);
+#else
+        NativeCompletion::Key(editor, GDK_KEY_Return);
+#endif
+        auto after = before;
+        after.replace(escape + 2, 2, "alpha");
+        Require(TestEditor::Text(editor) == after, "completion retains the escape prefix and surrounding source");
+        TestEditor::RequireSelection(editor, escape + 7, escape + 7, "escape completion caret");
+        editor->Send(Message::Undo);
+        Require(TestEditor::Text(editor) == before && !editor->Send(Message::CanUndo),
+                "escape completion remains one Undo action");
+    }
+    std::puts("PASS: embedded and standalone JavaScript completion preserves escape prefixes");
+}
+void LargeKeywordList(EditorFrame* frame) {
+    constexpr int CandidateCount = 200000;
+    std::string words;
+    words.reserve(CandidateCount * 10);
+    for (int index = 0; index < CandidateCount; ++index) {
+        const auto digits = std::to_string(index);
+        words += 'a';
+        words.append(8 - digits.size(), '0');
+        words += digits;
+        words += ' ';
+    }
+    const std::array keywords = {SyntaxKeywords{words.c_str(), 0}};
+    auto definition = SyntaxFor(SyntaxLanguage::Cpp);
+    definition.keywords = keywords;
+    WordCompletionSettings settings;
+    settings.completeOption = WordCompletionOption::CompleteWord;
+    auto* editor = frame->Editor();
+    editor->Send(Message::AutoCCancel);
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
+    TestEditor::ResetStream(editor, "a", 1, 1);
+    CompleteWord(*editor, definition, settings, false);
+    Require(editor->Send(Message::AutoCActive) && editor->Send(Message::AutoCGetCurrent) == 0 &&
+                CurrentCandidate(editor) == "a00000000",
+            "large sorted keyword lists retain the first completion candidate");
+    editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>("a00199999"));
+    Require(editor->Send(Message::AutoCGetCurrent) == CandidateCount - 1 && CurrentCandidate(editor) == "a00199999",
+            "large keyword insertion and traversal preserve every candidate in sorted order");
+    editor->Send(Message::AutoCCancel);
+    Require(TestEditor::Text(editor) == "a" && !editor->Send(Message::CanUndo),
+            "constructing and canceling a large completion list leaves document history unchanged");
+    std::puts("PASS: 200000 sorted completion candidates exceed the former tree traversal stack bound");
+}
 class WordCompletionApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -170,6 +262,8 @@ public:
 #endif
                 FrozenCompletion(frame, id);
                 FrozenBehaviors(frame, settings_, id);
+                EscapePrefixCompletion(frame);
+                LargeKeywordList(frame);
                 editor->Send(Message::AutoCCancel);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 const std::string longestKeyword(124, 'x');

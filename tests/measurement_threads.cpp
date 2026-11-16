@@ -36,6 +36,18 @@ struct Measurement {
     double width;
 };
 
+struct FontCase {
+    std::shared_ptr<core::Font> font;
+    std::vector<Measurement> expected;
+};
+
+struct SurfaceCase {
+    int context;
+    bool utf8;
+    std::vector<std::string_view> samples;
+    std::vector<FontCase> fonts;
+};
+
 Measurement Measure(core::Surface& surface, const core::Font& font, std::string_view text, bool explicitUtf8) {
     Measurement result{std::vector<double>(text.size(), -1), 0};
     if (explicitUtf8)
@@ -46,7 +58,7 @@ Measurement Measure(core::Surface& surface, const core::Font& font, std::string_
     return result;
 }
 
-void Equal(const Measurement& actual, const Measurement& expected, int context, bool utf8, int worker, size_t font,
+void Equal(const Measurement& actual, const Measurement& expected, const SurfaceCase& test, int worker, size_t font,
            size_t sample, int iteration) {
     if (actual.positions != expected.positions || actual.width != expected.width) {
         size_t byte = 0;
@@ -58,7 +70,7 @@ void Equal(const Measurement& actual, const Measurement& expected, int context, 
                      "context=%d utf8=%d worker=%d font=%zu sample=%zu iteration=%d actual-width=%.17g "
                      "expected-width=%.17g first-byte=%td actual-position=%.17g expected-position=%.17g "
                      "actual-bytes=%zu expected-bytes=%zu\n",
-                     context, utf8, worker, font, sample, iteration, actual.width, expected.width,
+                     test.context, test.utf8, worker, font, sample, iteration, actual.width, expected.width,
                      positionMismatch ? static_cast<std::ptrdiff_t>(byte) : -1,
                      byte < actual.positions.size() ? actual.positions[byte] : -1,
                      byte < expected.positions.size() ? expected.positions[byte] : -1, actual.positions.size(),
@@ -95,76 +107,69 @@ void NativeReference(wxDC& dc, std::string_view text, bool utf8, size_t sample, 
     }
 }
 
-void CheckSurface(wxFrame& frame, int context, bool utf8, bool serialOnly) {
-    const double scale = context;
-    wxBitmap bitmap;
-    std::unique_ptr<wxDC> dc;
+std::unique_ptr<wxDC> DrawingContext(wxFrame& frame, int context, wxBitmap& bitmap) {
     if (context) {
-        bitmap.CreateWithLogicalSize(BitmapWidth, BitmapHeight, scale);
-        dc = std::make_unique<wxMemoryDC>(bitmap);
-    } else {
-        dc = std::make_unique<wxClientDC>(&frame);
+        bitmap.CreateWithLogicalSize(BitmapWidth, BitmapHeight, context);
+        return std::make_unique<wxMemoryDC>(bitmap);
     }
-    auto surface = core::Surface::Allocate(Scintilla::Technology::Default);
-    surface->Init(dc.get(), &frame);
-    surface->SetMode(core::SurfaceMode{utf8 ? Scintilla::CpUtf8 : 0});
-    std::vector<std::shared_ptr<core::Font>> fonts;
-    std::vector<std::vector<Measurement>> expected;
-    const auto samples = utf8 ? std::vector(Utf8Samples.begin(), Utf8Samples.end())
-                              : std::vector(Latin1Samples.begin(), Latin1Samples.end());
-    for (const auto size : PointSizes) {
-        for (int style = 0; style < 3; ++style) {
-            const bool bold = style == 1;
-            const bool italic = style == 2;
-            const auto weight = bold ? Scintilla::FontWeight::Bold : Scintilla::FontWeight::Normal;
-            fonts.push_back(core::Font::Allocate(core::FontParameters(core::Platform::DefaultFont(), size, weight,
-                                                                      Scintilla::FontStretch::Normal, italic)));
-            // Each font's independent reference DC is used only on the GUI thread.
-            wxBitmap referenceBitmap;
-            std::unique_ptr<wxDC> reference;
-            if (context) {
-                referenceBitmap.CreateWithLogicalSize(BitmapWidth, BitmapHeight, scale);
-                reference = std::make_unique<wxMemoryDC>(referenceBitmap);
-            } else {
-                reference = std::make_unique<wxClientDC>(&frame);
-            }
-            reference->SetFont(wxFont(wxFontInfo(size)
-                                          .FaceName(core::Platform::DefaultFont())
-                                          .Weight(bold ? wxFONTWEIGHT_BOLD : wxFONTWEIGHT_NORMAL)
-                                          .Italic(italic)));
-            expected.emplace_back();
-            for (size_t sample = 0; sample < samples.size(); ++sample) {
-                const auto measured = Measure(*surface, *fonts.back(), samples[sample], false);
-                NativeReference(*reference, samples[sample], utf8, sample, measured);
-                if (utf8)
-                    Equal(Measure(*surface, *fonts.back(), samples[sample], true), measured, context, utf8, -1,
-                          fonts.size() - 1, sample, -1);
-                expected.back().push_back(measured);
-                if (serialOnly) {
-                    std::printf("context=%d utf8=%d font=%zu sample=%zu width=%g positions=", context, utf8,
-                                fonts.size() - 1, sample, measured.width);
-                    for (const auto position : measured.positions)
-                        std::printf("%g,", position);
-                    std::putchar('\n');
-                }
-            }
-        }
+    return std::make_unique<wxClientDC>(&frame);
+}
+
+void PrintMeasurement(const SurfaceCase& test, size_t font, size_t sample, const Measurement& measured) {
+    std::printf("context=%d utf8=%d font=%zu sample=%zu width=%g positions=", test.context, test.utf8, font, sample,
+                measured.width);
+    for (const auto position : measured.positions)
+        std::printf("%g,", position);
+    std::putchar('\n');
+}
+
+void BuildFontReference(wxFrame& frame, core::Surface& surface, SurfaceCase& test, int size, int style,
+                        bool serialOnly) {
+    const bool bold = style == 1;
+    const bool italic = style == 2;
+    const auto weight = bold ? Scintilla::FontWeight::Bold : Scintilla::FontWeight::Normal;
+    test.fonts.push_back({core::Font::Allocate(core::FontParameters(core::Platform::DefaultFont(), size, weight,
+                                                                    Scintilla::FontStretch::Normal, italic)),
+                          {}});
+    auto& font = test.fonts.back();
+    // Each font's independent reference DC is used only on the GUI thread.
+    wxBitmap referenceBitmap;
+    auto reference = DrawingContext(frame, test.context, referenceBitmap);
+    reference->SetFont(wxFont(wxFontInfo(size)
+                                  .FaceName(core::Platform::DefaultFont())
+                                  .Weight(bold ? wxFONTWEIGHT_BOLD : wxFONTWEIGHT_NORMAL)
+                                  .Italic(italic)));
+    for (size_t sample = 0; sample < test.samples.size(); ++sample) {
+        const auto measured = Measure(surface, *font.font, test.samples[sample], false);
+        NativeReference(*reference, test.samples[sample], test.utf8, sample, measured);
+        if (test.utf8)
+            Equal(Measure(surface, *font.font, test.samples[sample], true), measured, test, -1, test.fonts.size() - 1,
+                  sample, -1);
+        font.expected.push_back(measured);
+        if (serialOnly) PrintMeasurement(test, test.fonts.size() - 1, sample, measured);
     }
-    if (serialOnly) return;
+}
+
+void CheckWorker(core::Surface& surface, const SurfaceCase& test, int worker) {
+    for (int iteration = 0; iteration < Iterations; ++iteration) {
+        const auto font = (static_cast<size_t>(worker) * 3 + iteration) % test.fonts.size();
+        const auto& reference = test.fonts[font];
+        for (size_t sample = 0; sample < test.samples.size(); ++sample)
+            Equal(Measure(surface, *reference.font, test.samples[sample], test.utf8 && (iteration + worker) % 2),
+                  reference.expected[sample], test, worker, font, sample, iteration);
+    }
+}
+
+void CheckWorkers(core::Surface& surface, const SurfaceCase& test) {
     std::array<std::exception_ptr, WorkerCount> failures{};
     std::barrier start(WorkerCount);
     std::vector<std::thread> workers;
     workers.reserve(WorkerCount);
     for (int worker = 0; worker < WorkerCount; ++worker) {
-        workers.emplace_back([&, worker] {
+        workers.emplace_back([&start, &surface, &test, &failures, worker] {
             start.arrive_and_wait();
             try {
-                for (int iteration = 0; iteration < Iterations; ++iteration) {
-                    const auto font = (static_cast<size_t>(worker) * 3 + iteration) % fonts.size();
-                    for (size_t sample = 0; sample < samples.size(); ++sample)
-                        Equal(Measure(*surface, *fonts[font], samples[sample], utf8 && (iteration + worker) % 2),
-                              expected[font][sample], context, utf8, worker, font, sample, iteration);
-                }
+                CheckWorker(surface, test, worker);
             } catch (...) {
                 failures[worker] = std::current_exception();
             }
@@ -174,6 +179,23 @@ void CheckSurface(wxFrame& frame, int context, bool utf8, bool serialOnly) {
         worker.join();
     for (const auto& failure : failures)
         if (failure) std::rethrow_exception(failure);
+}
+
+void CheckSurface(wxFrame& frame, int context, bool utf8, bool serialOnly) {
+    wxBitmap bitmap;
+    auto dc = DrawingContext(frame, context, bitmap);
+    auto surface = core::Surface::Allocate(Scintilla::Technology::Default);
+    surface->Init(dc.get(), &frame);
+    surface->SetMode(core::SurfaceMode{utf8 ? Scintilla::CpUtf8 : 0});
+    SurfaceCase test{context,
+                     utf8,
+                     utf8 ? std::vector(Utf8Samples.begin(), Utf8Samples.end())
+                          : std::vector(Latin1Samples.begin(), Latin1Samples.end()),
+                     {}};
+    for (const auto size : PointSizes)
+        for (int style = 0; style < 3; ++style)
+            BuildFontReference(frame, *surface, test, size, style, serialOnly);
+    if (!serialOnly) CheckWorkers(*surface, test);
 }
 
 class MeasurementApp final : public wxApp {

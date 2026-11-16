@@ -31,6 +31,21 @@ class LocalizationCLIBase:
 
 
 class LocalizationCLI(LocalizationCLIBase, unittest.TestCase):
+    def test_release_language_codes_use_ascii_identifiers(self):
+        with tempfile.TemporaryDirectory(prefix='wxnotepad language codes ') as folder:
+            root = Path(folder)
+            (root / 'po').mkdir()
+            data = {'domain': 'wxnotepad', 'source_language': 'en', 'languages': []}
+            for code, valid in (('en', True), ('zh_CN', True), ('en_001', True),
+                                ('ené', False), ('en中文', False), ('en１２', False)):
+                with self.subTest(code=code):
+                    data['source_language'] = code
+                    data['languages'] = [{'code': code, 'lang_id': 1033, 'name': 'Fixture'}]
+                    (root / 'po/languages.json').write_text(json.dumps(data), encoding='utf-8')
+                    result = self.run_tool('--root', root, 'header', '--output', root / 'languages.h', success=valid)
+                    if not valid:
+                        self.assertIn('Invalid or duplicate language code', result.stderr)
+
     def test_release_metadata_generates_runtime_definitions(self):
         with tempfile.TemporaryDirectory(prefix='wxnotepad language header ') as folder:
             header = Path(folder) / 'ui_language_data.h'

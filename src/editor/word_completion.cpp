@@ -20,6 +20,7 @@
 #include <cctype>
 #include <type_traits>
 #include <memory>
+#include <new>
 #include <vector>
 using Scintilla::Message;
 namespace {
@@ -77,7 +78,7 @@ template <size_t StackSize = 32> class CharBuffer {
     std::unique_ptr<char[]> heap;
 
 public:
-    explicit CharBuffer(size_t size) noexcept {
+    explicit CharBuffer(size_t size) {
         if (size <= StackSize) {
             ptr = buffer;
         } else {
@@ -113,27 +114,28 @@ struct WordList {
     unsigned capacity;
     std::byte* buffer = nullptr;
     std::vector<std::unique_ptr<std::byte[]>> buffers;
+    std::vector<WordNode*> insertionPath;
 
     WordList() = default;
     WordList(const WordList&) = delete;
     WordList& operator=(const WordList&) = delete;
 
-    void Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) noexcept;
+    void Init(const char* pRoot, unsigned iRootLen, bool ignoreCase);
     std::unique_ptr<char[]> GetList() const;
-    void AddBuffer() noexcept;
-    void AddWord(const char* pWord, unsigned len) noexcept;
+    void AddBuffer(unsigned newCapacity);
+    void AddWord(const char* pWord, unsigned len);
     int CompareNode(const WordNode& node, const char* word, unsigned length, unsigned sortKey) const noexcept;
     void UpdateRoot(const char* pRoot, unsigned iRootLen) noexcept;
     bool StartsWith(const char* pWord) const noexcept;
-    void AddListEx(const char* pList) noexcept;
-    void AddList(const char* pList) noexcept {
+    void AddListEx(const char* pList);
+    void AddList(const char* pList) {
         if (StrNotEmpty(pList)) {
             AddListEx(pList);
         }
     }
-    void AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) noexcept;
+    void AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen);
     void AddWordPrefixes(char* word, unsigned end, unsigned rootLength, std::span<const char* const> words,
-                         std::span<const unsigned> starts) noexcept;
+                         std::span<const unsigned> starts);
 };
 
 // TODO: replace _stricmp() and CompareNoCase() with other functions
@@ -214,7 +216,7 @@ struct WordNode {
     unsigned level;
 };
 
-constexpr unsigned NP2_TREE_HEIGHT_LIMIT = 32;
+constexpr size_t InitialTreePathCapacity = 32;
 // store word right after the node as most word are short.
 #define WordNode_GetWord(node) (reinterpret_cast<char*>(node) + sizeof(WordNode))
 // TODO: since the tree is sorted, nodes greater than some level can be deleted to reduce total words.
@@ -243,8 +245,9 @@ WordNode* SplitTree(WordNode* node) noexcept {
 }
 
 #define WordList_AddNode() (reinterpret_cast<WordNode*>(reinterpret_cast<char*>(buffer) + offset))
-void WordList::AddBuffer() noexcept {
-    buffers.push_back(std::make_unique<std::byte[]>(capacity));
+void WordList::AddBuffer(unsigned newCapacity) {
+    buffers.push_back(std::make_unique<std::byte[]>(newCapacity));
+    capacity = newCapacity;
     offset = 0;
     buffer = buffers.back().get();
 }
@@ -256,7 +259,7 @@ int WordList::CompareNode(const WordNode& node, const char* word, unsigned lengt
     return difference;
 }
 
-void WordList::AddWord(const char* pWord, unsigned len) noexcept {
+void WordList::AddWord(const char* pWord, unsigned len) {
     WordNode* root = pListHead;
 #if NP2_AUTOC_CACHE_SORT_KEY
     const unsigned sortKey = (iStartLen > NP2_AUTOC_SORT_KEY_LENGTH) ? 0 : WL_SortKeyFunc(pWord, len);
@@ -276,13 +279,13 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
         root = node;
     } else {
         WordNode* iter = root;
-        WordNode* path[NP2_TREE_HEIGHT_LIMIT]{};
-        int top = 0;
+        auto& path = insertionPath;
+        path.clear();
         int dir;
 
         // find a spot and save the path
         for (;;) {
-            path[top++] = iter;
+            path.push_back(iter);
 #if NP2_AUTOC_CACHE_SORT_KEY
             dir = CompareNode(*iter, pWord, len, sortKey);
 #else
@@ -299,8 +302,7 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
         }
 
         if (capacity < offset + len + 1 + sizeof(WordNode)) {
-            capacity <<= 1;
-            AddBuffer();
+            AddBuffer(capacity << 1);
         }
 
         WordNode* node = WordList_AddNode();
@@ -317,7 +319,8 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
         iter->link[dir] = node;
 
         // walk back and rebalance
-        while (--top >= 0) {
+        for (auto top = path.size(); top != 0;) {
+            --top;
             // which child?
             if (top != 0) {
                 dir = path[top - 1]->right == path[top];
@@ -340,18 +343,19 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
 
 std::unique_ptr<char[]> WordList::GetList() const {
     WordNode* root = pListHead;
-    WordNode* path[NP2_TREE_HEIGHT_LIMIT]{};
-    int top = 0;
+    std::vector<WordNode*> path;
+    path.reserve(InitialTreePathCapacity);
     auto list = std::make_unique<char[]>(nTotalLen + 1); // additional separator
     char* buf = list.get();
     char* const pList = buf;
 
-    while (root || top > 0) {
+    while (root || !path.empty()) {
         if (root) {
-            path[top++] = root;
+            path.push_back(root);
             root = root->left;
         } else {
-            root = path[--top];
+            root = path.back();
+            path.pop_back();
             memcpy(buf, WordNode_GetWord(root), root->len);
             buf += root->len;
             *buf++ = '\n'; // the separator char
@@ -365,7 +369,7 @@ std::unique_ptr<char[]> WordList::GetList() const {
     return list;
 }
 
-void WordList::Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) noexcept {
+void WordList::Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) {
     pListHead = nullptr;
     nWordCount = 0;
     nTotalLen = 0;
@@ -393,8 +397,8 @@ void WordList::Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) noexc
     bIgnoreCase = ignoreCase;
 #endif
 
-    capacity = NP2_AUTOC_INIT_BUFFER_SIZE;
-    AddBuffer();
+    insertionPath.reserve(InitialTreePathCapacity);
+    AddBuffer(NP2_AUTOC_INIT_BUFFER_SIZE);
 }
 
 void WordList::UpdateRoot(const char* pRoot, unsigned iRootLen) noexcept {
@@ -450,7 +454,7 @@ static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
 #endif
 }
 
-void WordList::AddListEx(const char* pList) noexcept {
+void WordList::AddListEx(const char* pList) {
     // StopWatch watch;
     // watch.Start();
     char word[NP2_AUTOC_WORD_BUFFER_SIZE];
@@ -502,7 +506,7 @@ void WordList::AddListEx(const char* pList) noexcept {
 }
 
 void WordList::AddWordPrefixes(char* word, unsigned end, unsigned rootLength, std::span<const char* const> words,
-                               std::span<const unsigned> starts) noexcept {
+                               std::span<const unsigned> starts) {
     const char separator = word[end];
     word[end] = '\0';
     AddWord(word, end);
@@ -513,7 +517,7 @@ void WordList::AddWordPrefixes(char* word, unsigned end, unsigned rootLength, st
     word[end] = separator;
 }
 
-void WordList::AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) noexcept {
+void WordList::AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) {
     /*
     when pRoot is 'b', split 'bugprone-branch-clone' as following:
     1. first hyphen: 'bugprone-branch-clone' => 'bugprone', 'branch-clone'.
@@ -656,17 +660,13 @@ class Collector final {
         }
 
         if (style != 0 && definition_.original.escapeCharacterStyle) {
-            if (stylePrev != definition_.original.escapeCharacterStyle) {
-                if (definition_.lexer != SCLEX_PHPSCRIPT || definition_.lexer != SCLEX_HTML ||
-                    !(stylePrev == (SCE_JS_ESCAPECHAR + 40) || stylePrev == (SCE_CSS_ESCAPECHAR + 90))) {
-                    return false;
-                }
-            }
-        } else if (!punctuation) {
-            // legacy lexer without escape character highlighting
-            if (!IsEscapeCharacter(ch)) {
-                return false;
-            }
+            const bool embeddedEscape =
+                (definition_.lexer == SCLEX_PHPSCRIPT || definition_.lexer == SCLEX_HTML) &&
+                (stylePrev == js_style(SCE_JS_ESCAPECHAR) || stylePrev == css_style(SCE_CSS_ESCAPECHAR));
+            if (stylePrev != definition_.original.escapeCharacterStyle && !embeddedEscape) return false;
+        } else if (!punctuation && !IsEscapeCharacter(ch)) {
+            // Legacy lexer without escape character highlighting.
+            return false;
         }
 
         if (!IsRawStringStyle(stylePrev)) {
@@ -791,7 +791,7 @@ class Collector final {
     }
 
     void CollectDocumentWord(WordList& pWList, Sci_Position iPosFind, Sci_Position& wordEnd, int style, char prefix,
-                             bool bSubWord) noexcept {
+                             bool bSubWord) {
         const int iRootLen = pWList.iStartLen;
         if (wordEnd - iPosFind < iRootLen) return;
         char wordBuf[NP2_AUTOC_WORD_BUFFER_SIZE];
@@ -824,7 +824,7 @@ class Collector final {
     }
 
     void AutoC_AddDocWord(WordList& pWList, const std::array<uint32_t, 8>& ignoredStyleMask, bool bIgnoreCase,
-                          char prefix) noexcept {
+                          char prefix) {
         const char* const pRoot = pWList.pWordStart;
         const int iRootLen = pWList.iStartLen;
 
@@ -1337,9 +1337,17 @@ void CompleteWord(EditorControl& editor, const SyntaxDefinition& definition, con
         state.previousItemCount <= 2U * static_cast<unsigned>(settings.visibleItemCount))
         return;
     if (condition == WordCompletionCondition::Normal) state.previousItemCount = 0;
-    editor.SetCompletionSettings(settings);
-    if (!Collector(editor, definition, settings).Run(autoInsert, condition, state)) {
-        state.previousItemCount = 0;
-        if (condition != WordCompletionCondition::Normal) editor.Send(Message::AutoCCancel);
+    try {
+        editor.SetCompletionSettings(settings);
+        if (!Collector(editor, definition, settings).Run(autoInsert, condition, state)) {
+            state.previousItemCount = 0;
+            if (condition != WordCompletionCondition::Normal) editor.Send(Message::AutoCCancel);
+        }
+    } catch (const std::bad_alloc&) {
+        // Completion is optional; keep the edit that triggered the native
+        // notification and stop before crossing its noexcept boundary.
+        state = {};
+        editor.Send(Message::AutoCCancel);
+        editor.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::BadAlloc));
     }
 }

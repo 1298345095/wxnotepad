@@ -17,6 +17,7 @@ WORK = ROOT / '.ci'
 REPORTS = WORK / 'reports'
 VCPKG = WORK / 'vcpkg'
 BUILD = WORK / 'build'
+BUILD_RECORD = 'build.json'
 WINDOWS = sys.platform == 'win32'
 TRIPLET = 'x64-windows-ci' if WINDOWS else 'x64-linux-ci'
 
@@ -344,6 +345,21 @@ def split_linux_symbols(binary, symbols):
     subprocess.run(['objcopy', f'--add-gnu-debuglink={debug_file}', binary], check=True)
 
 
+def bundle_linux_runtime(executable, destination, symbols):
+    split_linux_symbols(destination / executable.name, symbols)
+    dependencies = subprocess.check_output(['ldd', str(executable)], text=True)
+    (REPORTS / 'runtime-libraries.txt').write_text(dependencies, encoding='utf-8')
+    libraries = destination / 'lib'
+    libraries.mkdir(exist_ok=True)
+    for line in dependencies.splitlines():
+        if '=> ' not in line:
+            continue
+        name = Path(line.split('=> ', 1)[1].split(' (', 1)[0].strip())
+        if name.is_absolute() and name.is_relative_to(VCPKG / 'installed'):
+            shutil.copy2(name, libraries / name.name)
+            split_linux_symbols(libraries / name.name, symbols / 'lib')
+
+
 def bundle():
     directory = BUILD / 'cmake'
     executable = directory / ('wxnotepad.exe' if WINDOWS else 'wxnotepad')
@@ -355,18 +371,7 @@ def bundle():
         for library in directory.glob('*.dll'):
             shutil.copy2(library, destination / library.name)
     else:
-        split_linux_symbols(destination / executable.name, symbols)
-        dependencies = subprocess.check_output(['ldd', str(executable)], text=True)
-        (REPORTS / 'runtime-libraries.txt').write_text(dependencies, encoding='utf-8')
-        libraries = destination / 'lib'
-        libraries.mkdir(exist_ok=True)
-        for line in dependencies.splitlines():
-            if '=> ' not in line:
-                continue
-            name = Path(line.split('=> ', 1)[1].split(' (', 1)[0].strip())
-            if name.is_absolute() and name.is_relative_to(VCPKG / 'installed'):
-                shutil.copy2(name, libraries / name.name)
-                split_linux_symbols(libraries / name.name, symbols / 'lib')
+        bundle_linux_runtime(executable, destination, symbols)
     languages = json.loads((ROOT / 'po/languages.json').read_text(encoding='utf-8'))
     for language in languages['languages']:
         if language['code'] == languages['source_language']:
@@ -387,9 +392,9 @@ def bundle():
     source['executable_sha256'] = hashlib.sha256((destination / executable.name).read_bytes()).hexdigest()
     if not WINDOWS:
         source['unstripped_executable_sha256'] = hashlib.sha256(executable.read_bytes()).hexdigest()
-    (destination / 'build.json').write_text(json.dumps(source, indent=2) + '\n', encoding='utf-8')
+    (destination / BUILD_RECORD).write_text(json.dumps(source, indent=2) + '\n', encoding='utf-8')
     if not WINDOWS:
-        shutil.copy2(destination / 'build.json', symbols / 'build.json')
+        shutil.copy2(destination / BUILD_RECORD, symbols / BUILD_RECORD)
     (destination / 'README.txt').write_text(
         'Development build output, not a release/install package.\n'
         'See build.json for the tested source and executable checksum.\n'

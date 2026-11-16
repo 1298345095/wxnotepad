@@ -452,8 +452,9 @@ private:
 };
 // The Linux driver injects only into the private Xvfb/Weston output. Windows
 // runs this native-input fixture on CI's desktop, never the shared local desktop.
-void Drag(wxFrame* frame, wxPoint from, wxPoint to, const wxString& modifier = {}, bool cancel = false, int pause = 200,
-          const wxString& switchTo = {}, bool reject = false, long sourceProcess = 0) {
+void Drag([[maybe_unused]] wxFrame* frame, wxPoint from, wxPoint to, const wxString& modifier = {}, bool cancel = false,
+          int pause = 200, const wxString& switchTo = {}, bool reject = false,
+          [[maybe_unused]] long sourceProcess = 0) {
     wxString control;
     if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control)) {
         static unsigned int gesture = 0;
@@ -560,7 +561,7 @@ void Drag(wxFrame* frame, wxPoint from, wxPoint to, const wxString& modifier = {
     }
 #endif
 }
-void Front(wxFrame* frame, const wxString& name) {
+void Front(const wxString& name) {
     wxString control;
     if (wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &control)) {
         wxFFile request(control, "wb");
@@ -833,7 +834,7 @@ void IndependentOutgoingDrags(wxFrame* frame, EditorControl* editor, PeerProcess
     transferred.Replace("\r\n", "\n");
     Require(Text(editor) == " tail" && transferred == wxString::FromUTF8("中😀\nline"),
             "separate native application must receive Unicode stream move before source deletion");
-    if (!wayland) Front(frame, "main");
+    if (!wayland) Front("main");
     editor->Send(Message::Undo);
     Require(Text(editor) == "中😀\r\nline tail" && !editor->Send(Message::GetModify),
             "inter-application move must undo source deletion once");
@@ -846,7 +847,7 @@ void IndependentOutgoingDrags(wxFrame* frame, EditorControl* editor, PeerProcess
     Require(Text(editor) == "中😀\r\nline tail" && transferred == wxString::FromUTF8("中😀\nline") &&
                 !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
             "separate native application's copy must preserve the editor source and history");
-    if (!wayland) Front(frame, "main");
+    if (!wayland) Front("main");
     independent.Seed({});
     editor->Send(Message::SetSel, 0, 13);
     Drag(frame, At(editor, 3) + editorOrigin, peerOrigin + wxPoint(100, 100), {}, true, 300, wayland ? "" : "peer");
@@ -874,7 +875,7 @@ void IndependentIncomingDrag(wxFrame* frame, EditorControl* editor, PeerProcess&
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("left right"));
     editor->Send(Message::GotoPos, 0);
     independent.Seed();
-    if (!wayland) Front(frame, "peer");
+    if (!wayland) Front("peer");
     Drag(frame, peerOrigin + wxPoint(10, 10), At(editor, 5) + editorOrigin, {}, false, 300, wayland ? "" : "main");
     // The injected button release does not establish the other
     // process's native drag completion. Observe its acknowledgement first.
@@ -919,7 +920,7 @@ void IndependentProcessDrags(wxFrame* frame, EditorControl* editor) {
         std::fprintf(stderr, "Native client origins: editor=%d,%d peer=%d,%d\n", editorOrigin.x, editorOrigin.y,
                      peerOrigin.x, peerOrigin.y);
     } else
-        Front(frame, "main");
+        Front("main");
     IndependentOutgoingDrags(frame, editor, independent, editorOrigin, peerOrigin, wayland);
     IndependentIncomingDrag(frame, editor, independent, editorOrigin, peerOrigin, wayland);
 }
@@ -956,7 +957,7 @@ void NativeFileDrop(EditorFrame* frame, PeerDelay delay = PeerDelay::None) {
     }
     const auto drop = [&](const wxArrayString& files) {
         peer.OfferFiles(files);
-        if (!wayland) Front(frame, "peer");
+        if (!wayland) Front("peer");
         Drag(frame, peerOrigin + wxPoint(10, 10), At(editor, 0) + editorOrigin, "ctrl", false, 300,
              wayland ? "" : "main", false, peer.process);
         peer.Value();
@@ -1008,29 +1009,7 @@ public:
         if (argc == 2 && argv[1] == "--input-state-probe") return InitInputStateProbe();
         if (argc == 2 && (argv[1] == "--file-drop" || argv[1] == "--file-drop-delayed-source")) {
             const auto peerDelay = argv[1] == "--file-drop-delayed-source" ? PeerDelay::SourcePress : PeerDelay::None;
-            auto* frame = new EditorFrame;
-            frame->SetTitle("wxnotepad stream drag main");
-            frame->Bind(wxEVT_IDLE, [frame](wxIdleEvent& event) {
-                frame->SetTitle("wxnotepad stream drag main");
-                event.Skip();
-            });
-            wxString backend;
-            if (wxGetEnv("GDK_BACKEND", &backend) && backend == "wayland") {
-                frame->SetClientSize(760, 700);
-                frame->Show();
-            } else
-                frame->ShowFullScreen(true);
-            CallAfter([this, frame, peerDelay] {
-                try {
-                    NativeFileDrop(frame, peerDelay);
-                } catch (const std::exception& error) {
-                    std::fprintf(stderr, "FAIL: %s\n", error.what());
-                    result_ = 1;
-                }
-                frame->Destroy();
-                ExitMainLoop();
-            });
-            return true;
+            return InitFileDrop(peerDelay);
         }
         if (argc == 2 && argv[1] == "--geometry-probe") {
             wxString backend;
@@ -1047,6 +1026,42 @@ public:
         if (argc == 3 && (argv[1] == "--peer" || delayOffset || delayPress)) {
             return InitPeer(argv[2], delayOffset, delayPress);
         }
+        return InitMainDrags();
+    }
+    int OnExit() override { return result_; }
+    int OnRun() override {
+        wxApp::OnRun();
+        return result_;
+    }
+
+private:
+    bool InitFileDrop(PeerDelay peerDelay) {
+        auto* frame = new EditorFrame;
+        frame->SetTitle("wxnotepad stream drag main");
+        frame->Bind(wxEVT_IDLE, [frame](wxIdleEvent& event) {
+            frame->SetTitle("wxnotepad stream drag main");
+            event.Skip();
+        });
+        wxString backend;
+        if (wxGetEnv("GDK_BACKEND", &backend) && backend == "wayland") {
+            frame->SetClientSize(760, 700);
+            frame->Show();
+        } else
+            frame->ShowFullScreen(true);
+        CallAfter([this, frame, peerDelay] {
+            try {
+                NativeFileDrop(frame, peerDelay);
+            } catch (const std::exception& error) {
+                std::fprintf(stderr, "FAIL: %s\n", error.what());
+                result_ = 1;
+            }
+            frame->Destroy();
+            ExitMainLoop();
+        });
+        return true;
+    }
+
+    bool InitMainDrags() {
         auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad stream drag main");
         auto* editor = new EditorControl(frame);
         auto* peer = new NativePeer(frame);
@@ -1070,13 +1085,7 @@ public:
         });
         return true;
     }
-    int OnExit() override { return result_; }
-    int OnRun() override {
-        wxApp::OnRun();
-        return result_;
-    }
 
-private:
     bool InitPeer(const wxString& directory, bool delayOffset, bool delayPress) {
         auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad stream drag peer");
         auto* peer = new NativePeer(frame);

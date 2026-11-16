@@ -82,9 +82,9 @@ def capture(executable: Path, output: Path) -> None:
     def state():
         size = send(editor, 2006, 0, 0)
         text = bytes(send(editor, 2007, pos, 0) & 255 for pos in range(size))
-        return dict(hex=text.hex(), anchor=send(editor, 2009, 0, 0),
-                    caret=send(editor, 2008, 0, 0), modified=send(editor, 2159, 0, 0),
-                    undo=send(editor, 2174, 0, 0), redo=send(editor, 2016, 0, 0))
+        return {"hex": text.hex(), "anchor": send(editor, 2009, 0, 0),
+                "caret": send(editor, 2008, 0, 0), "modified": send(editor, 2159, 0, 0),
+                "undo": send(editor, 2174, 0, 0), "redo": send(editor, 2016, 0, 0)}
 
     inputs = [
         ("unicode", "中文 café 😀 𐐀".encode()),
@@ -142,8 +142,8 @@ def capture(executable: Path, output: Path) -> None:
                 assert undo["hex"] == data.hex(), "one original Undo restores the exact input"
                 send(editor, 2011, 0, 0)
                 redo = state()
-                result["fixtures"].append(dict(name=name, command=command, input=data.hex(), after=after,
-                                               undone=undo, redone=redo))
+                result["fixtures"].append({"name": name, "command": command, "input": data.hex(), "after": after,
+                                           "undone": undo, "redone": redo})
     finally:
         send(editor, 2014, 0, 0)
         send(frame, 0x10, 0, 0)

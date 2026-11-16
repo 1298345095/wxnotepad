@@ -1,0 +1,15 @@
+#pragma once
+#include <cstddef>
+
+namespace CompletionAllocationFault {
+class ScopedFailure final {
+public:
+    explicit ScopedFailure(std::size_t size = 0) noexcept;
+    ~ScopedFailure();
+    ScopedFailure(const ScopedFailure&) = delete;
+    ScopedFailure& operator=(const ScopedFailure&) = delete;
+    ScopedFailure(ScopedFailure&&) = delete;
+    ScopedFailure& operator=(ScopedFailure&&) = delete;
+    bool Injected() const noexcept;
+};
+} // namespace CompletionAllocationFault

@@ -789,6 +789,11 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/rendering_settings_process.py" "$<TARGET_FILE:rendering_settings>")
     set_tests_properties(original_rendering_settings_lifecycle PROPERTIES TIMEOUT 120)
 
+    # Append to preserve the existing private-display shard membership and order.
+    add_editor_test(completion_allocation native_completion_allocation_failures 60)
+    target_sources(completion_allocation PRIVATE tests/completion_allocation_fault.cpp)
+    target_include_directories(completion_allocation PRIVATE src/editor/platform)
+
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

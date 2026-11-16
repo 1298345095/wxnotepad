@@ -175,7 +175,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                 elif request.startswith("move-peer:"):
                     x1, y1, x2, y2 = map(int, request[10:].split(","))
                     geometry = xdo("getwindowgeometry", "--shell", weston_window)
-                    values = dict(line.split("=", 1) for line in geometry.splitlines())
+                    values = {key: value for key, value in (line.split("=", 1) for line in geometry.splitlines())}
                     ox, oy = int(values["X"]), int(values["Y"])
                     xdo("mousemove", str(x1 + ox), str(y1 + oy))
                     xdo("keydown", "Super_L")
@@ -228,7 +228,7 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-issue12-display-") as folder:
                     origin = (0, 0)
                     if backend == "wayland":
                         geometry = xdo("getwindowgeometry", "--shell", weston_window)
-                        values = dict(line.split("=", 1) for line in geometry.splitlines())
+                        values = {key: value for key, value in (line.split("=", 1) for line in geometry.splitlines())}
                         origin = (int(values["X"]), int(values["Y"]))
                     def move(x, y):
                         xdo("mousemove", str(int(x) + origin[0]), str(int(y) + origin[1]))
