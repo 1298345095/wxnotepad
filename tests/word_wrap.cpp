@@ -116,6 +116,49 @@ void AutomaticScrollWidth(EditorFrame* frame) {
     Layout(frame);
     std::puts("PASS: native automatic-scroll-width toggle, deletion, remaining line, offset and Undo/Redo");
 }
+#ifdef __WXMSW__
+void CompletedPaintPublishesHorizontalRange(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    editor->SetAutoShrinkScrollWidth(true);
+    const std::string wide(2000, 'x');
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(wide.c_str()));
+    Layout(frame);
+    HorizontalRange(editor, true, "the pending-widen fixture starts with a visible horizontal scrollbar");
+
+    const auto originalSize = editor->GetSize();
+    const int lineHeight = static_cast<int>(editor->Send(Message::TextHeight, 0));
+    constexpr int hiddenPixelsAtBottom = 2;
+    const int rows = editor->GetClientSize().y / lineHeight + 1;
+    editor->SetClientSize(editor->GetClientSize().x, rows * lineHeight - hiddenPixelsAtBottom);
+    const int clippedHeight = editor->GetClientSize().y;
+    const int shortRows = (clippedHeight + lineHeight - 1) / lineHeight;
+    std::string bottom;
+    for (int row = 0; row < shortRows; ++row)
+        bottom += "short\r\n";
+    const auto longLine = static_cast<intptr_t>(bottom.size());
+    bottom += wide;
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bottom.c_str()));
+    const auto longLineY = editor->Send(Message::PointYFromPosition, 0, longLine);
+    Require(longLineY >= clippedHeight && longLineY < editor->GetClientSize().y,
+            "removing the horizontal scrollbar must expose the fixture's bottom long line");
+
+    editor->Refresh(false);
+    editor->Update();
+    const auto height = editor->GetClientSize().y;
+    const auto range = editor->GetScrollRange(wxHORIZONTAL);
+    Require(range > editor->GetScrollThumb(wxHORIZONTAL),
+            "a completed auto-shrink paint must publish the newly exposed long line's horizontal range");
+    Layout(frame);
+    Require(editor->GetClientSize().y == height && editor->GetScrollRange(wxHORIZONTAL) == range,
+            "later native timer delivery must preserve the completed paint's viewport and horizontal range");
+
+    editor->SetSize(originalSize);
+    editor->SetAutoShrinkScrollWidth(false);
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("short"));
+    Layout(frame);
+    std::puts("PASS: completed native auto-shrink paint publishes a bottom-edge long line before timer delivery");
+}
+#endif
 void Shortcut(EditorFrame* frame) {
 #ifdef __WXMSW__
     Require(NativeSearch::WindowsShortcut(frame, 'W', {{VK_CONTROL, 0x80}, {VK_SHIFT, 0x80}}),
@@ -217,6 +260,9 @@ public:
                             editor->Send(Message::GetXOffset) == 0,
                         "replacing a wide document with short text resets its tracked scroll width");
                 AutomaticScrollWidth(frame);
+#ifdef __WXMSW__
+                CompletedPaintPublishesHorizontalRange(frame);
+#endif
                 const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
                 Require(wrap != wxNOT_FOUND, "View must expose Word Wrap");
                 Require(!frame->GetMenuBar()->IsChecked(wrap) && editor->Send(Message::GetWrapMode) == 0,
