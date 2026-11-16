@@ -8,8 +8,9 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [2026-11-16 follow-up after PR #219](#2026-11-16-follow-up-after-pr-219),
-tracked in [PR #220](https://github.com/1298345095/wxnotepad/pull/220).
+Latest review: [2026-11-16 type safety and exception follow-up](#2026-11-16-type-safety-and-exception-follow-up),
+continuing on `codex/sonarcloud-followup-2026-11-16` in
+[PR #221](https://github.com/1298345095/wxnotepad/pull/221).
 
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
@@ -547,18 +548,13 @@ checks against the code revision.
 
 ### Surface initialization follow-up
 
-Source review also identified an allocation/native-resource failure boundary in
+The PR #220 source review identified an allocation/native-resource failure boundary in
 `WxSurface::Init`: both overloads are `noexcept`, while constructing their
-device context or text-measurement state can throw. This is a source-observed
-risk; the present workspace has no GUI resource-failure reproduction.
-
-Recovery requires coordinated failure handling across surface initialization
-and its consumers. The current factories return a surface without checking
-`Initialised`, and several consumers dereference it unconditionally. A local
-catch followed by returning a partially initialized surface would therefore
-leave another failure path. The focused follow-up leaves this larger change
-open for owned/borrowed context fault injection, retry, native event-boundary
-handling and document-history validation on the supported backends.
+device context or text-measurement state can throw. Its factories also returned
+a surface without checking `Initialised`, and consumers dereferenced the result.
+The [continuation below](#2026-11-16-surface-and-parallel-failure-follow-up)
+implements coordinated initialization, factory, worker and host recovery, with
+owned/borrowed context fault injection and document-history regression fixtures.
 
 Source references: [wx surface adapter](../../src/editor/platform/wx_platform.cpp),
 [GTK measurement](../../src/editor/platform/text_measurement_gtk.cpp),
@@ -566,3 +562,441 @@ Source references: [wx surface adapter](../../src/editor/platform/wx_platform.cp
 [native core entry points](../../src/editor/editor_core.cpp),
 [pinned surface contract](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Platform.h)
 and [pinned surface factories](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.cxx).
+
+## 2026-11-16 surface and parallel failure follow-up
+
+This continuation starts from merged `main` revision
+`a308c6b181674358205df90669293cc4afcab3af` and reuses
+`codex/sonarcloud-followup-2026-11-16`. The earlier branch tip
+`8d4e6be10afc17db6b88690db3407f7a73d5f29c` supplies the unchanged application
+baseline for the local failure reproductions and issue-by-issue source review.
+
+### Resource failure fixes
+
+- Build the owned drawing context and text-measurement state in local owners,
+  then publish the complete `WxSurface`. Failed `Init` leaves a reusable,
+  uninitialized surface under the pinned no-throw contract. A ready surface
+  requires both drawing and measurement resources. GTK checks the Pango context,
+  font map and Cairo font options; Windows checks the native DC and mapping
+  queries before retaining their results. Pixmap creation checks its bitmap and
+  context and publishes measurement state together with them.
+- Check readiness at the wx drawing and default-measurement factories, so a
+  failed initialization cannot reach an unconditional consumer dereference.
+  DirectWrite's measurement-only surface retains its existing targetless
+  initialization behavior.
+- Reserve clip ownership storage before changing native clipping and allow the
+  wx `SetClip` override to propagate allocation failure. Destroy nested clip
+  scopes from the innermost outward before releasing their context. The latter
+  fixes a separately reproduced native clipping-rectangle restoration error.
+- Use the shared production `ParallelTasks::Run` in both layout and wrapping.
+  Linux owns explicit `std::jthread` workers and retains their exceptions in
+  separate slots; Windows captures exceptions inside the native thread-pool
+  callback. Both implementations finish all started work
+  before propagating failure and releasing the worker or its output buffers.
+  A failed Windows work-item creation reports its original system error.
+- Recover at the editor's message, native event, paint, IME and drag boundaries.
+  Recovery records the failure status, resets transient painting/wrapping
+  state, and invalidates partial style, font and pixmap caches for the next
+  normal layout. A failed text drop reports failure to the native drag source.
+  Feedback cleanup also contains its own measurement failure and clears stale
+  drop-caret state.
+- Complete mandatory document notifications after a visual resource failure.
+  The pinned edit/Undo path contains individual visual updates while preserving
+  contraction, selection, revision and history work. The wx notification bridge
+  records mandatory document/selection changes before optional completion and
+  queued UI work. This keeps subsequent edits and Undo/Redo available after an
+  insertion has already committed its bytes.
+- Preserve the original main row when style refresh or a retry reconstructs a
+  rectangular selection. Undo restores that row after its final caret update,
+  and a later paint retry preserves it when rebuilding the ranges.
+
+The maintained core changes are in
+[`patches/original-core.patch`](../../patches/original-core.patch); the source
+archive remains pinned and SHA-256 checked. The same archive passed patch
+validation and native compilation with the complete changes.
+
+### Reviewed false positives
+
+The [surface continuation disposition ledger](sonarqube-2026-11-16-surface-dispositions.json)
+records 93 individually reviewed main-context findings, their exact source
+contracts, submitted MCP comments and transition receipts.
+All 93 transitions succeeded. An exact-key `FALSE_POSITIVE` query returned
+every reviewed key; the corresponding `OPEN`/`CONFIRMED` query returned zero.
+After the completed PR #220 main analysis and these dispositions, the current
+main query contains 3,819 OPEN/CONFIRMED issues, zero HIGH/BLOCKER issues and
+zero security/reliability findings.
+
+| Rule | Count | Source evidence |
+| --- | --- | --- |
+| S1238 | 23 | The methods implement the pinned Scintilla `Surface`, `Window` or calltip signatures. Changing their by-value parameters to references would change the required declaration or override. |
+| S6188 | 2 | `PolyLine` and `Polygon` implement the pinned pointer/count virtual interface; a span parameter would no longer override that interface. |
+| S6022 | 60 | Character literals index the 256-character completion membership set through a word index and bit position. Their values describe language characters used in arithmetic. |
+| S6022 | 8 | `GetRangePointer` transports the original `const char*` document text through the Scintilla message ABI; each reviewed consumer reads UTF-8 strings or individual characters. |
+
+General modernization suggestions retain their existing review status. These
+93 dispositions follow the actual declarations and data consumers for each
+issue key.
+
+### Regression coverage and local results
+
+`native_surface_initialization_failures` uses the real editor and native drawing
+contexts. It covers owned/borrowed initialization failure and retry, missing and
+invalid contexts, drawing-factory rejection, allocation failures in nested
+clipping, actual paint dispatch, and unchanged document bytes, selections,
+Undo/Redo and save points. It also injects failure after insertion commits and
+at successive visual allocations during Undo, checking continued editing and
+history restoration. A three-line rectangular case checks every anchor, caret
+and virtual-space offset, the original main row, and complete restoration after
+paint retry, Redo and another Undo.
+
+`native_parallel_surface_failures` executes the same task helper used by layout
+and wrapping. It checks allocation and native-resource exceptions, pending
+callbacks still writing their output, startup failure after 0/1/3 tasks, competing
+worker/startup errors, native work-item creation failure on Windows, and a
+successful subsequent batch. Existing parallel measurement and raster fixtures
+retain their numerical comparisons.
+
+Actual headless Cairo/Pango probes link the complete baseline or repaired wx
+platform implementation. They use real native image contexts and the production
+allocation-fault helper:
+
+| Probe | Baseline outcome | Repaired outcome |
+| --- | --- | --- |
+| Owned initialization, failure allocating `wxClientDC` | Terminate handler, exit 86 | Uninitialized/reusable surface, exit 0 |
+| Borrowed initialization, measurement object/data allocations | Terminate handler, exit 86 | Actual Cairo/Pango retry succeeds, exit 0 |
+| Nested clip allocation sweep | Terminate handler, exit 86 | Three allocation points recover and retry, exit 0 |
+| Release two nested clips | Wrong native clipping rectangle, exit 1 | Original native rectangle restored, exit 0 |
+| Production parallel task regression with `get()` changed back to `wait()` | Lost worker failure detected, exit 1 | All tasks joined and exception preserved, exit 0 |
+
+The [local validation record](sonarqube-2026-11-16-surface-validation.json)
+retains source hashes, probe outputs, process results and build evidence.
+The Python helper suite passes 44 tests with nine existing platform/tool skips.
+Canonical clang-format 23.1.2, Python syntax and whitespace checks pass.
+The production parallel helper also passes AddressSanitizer and
+UndefinedBehaviorSanitizer; leak detection is disabled for the sandbox's ptrace
+restriction.
+The application and affected native fixtures compile and link against
+wxWidgets 3.3.3 and the local GTK SDK. The local sandbox cannot create the display
+sockets needed to execute GUI fixtures; the continuation pull request runs those
+fixtures through the existing Windows, X11, Wayland and coverage jobs. Its checks
+and description record the final hosted revision and analysis results.
+
+### First hosted run and paint-hook correction
+
+The first [CI run at `187ee05`](https://github.com/1298345095/wxnotepad/actions/runs/43881661997)
+compiled both supported platforms. Each ordinary and coverage Linux backend
+reported one failure in the new surface fixture's paint-injection assertion;
+the preceding initialization, factory and clipping checks passed, as did the
+production parallel-task fixture. X11 recorded 202 passes, two existing skips
+and one failure; Wayland recorded 204 passes and one failure. Coverage analysis
+stopped at its existing requirement that both backend test jobs pass.
+Windows recorded the same single paint-injection failure, 215 passes and one
+existing IME skip; its parallel-task regression and both diagnostics passed.
+Ordinary Linux diagnostics passed on both backends, and its Wayland JSON check
+passed all 20 repeated runs.
+
+The cause was the test's handler arrangement. `NativePaint::Complete` pushed its
+completion observer ahead of `PaintFailure`. wxWidgets' native event-chain
+dispatch then restricted the inner handler to its own event table; its scoped
+allocation failure expired before dispatch reached the editor's paint handler.
+`PaintFailure` now waits for its own native paint completion and remains at the
+head of the chain. The original assertions still require an actual injection,
+`BadAlloc` status and an idle paint state.
+
+A standalone probe linked against actual wxWidgets 3.3.3 reproduces that dispatch
+behavior with a target event handler and the production allocation-fault helper:
+the nested observers invoke the target after injection has expired, while a
+single observer covers the target allocation. The corrected GUI fixture
+compiles and links; its actual paint and subsequent document-history cases are
+executed by the following hosted run. The validation record retains this first
+failure, its diagnosis and the event-chain probe evidence.
+
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43881661891),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43881662138) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43881662041) all passed
+at `187ee05`. Clang-tidy analyzed all 228 maintained translation units.
+
+### Backend-dependent allocation sweeps
+
+The [second native CI run at `6ae1477`](https://github.com/1298345095/wxnotepad/actions/runs/43886806315)
+passed all Windows regressions: 216 passes and one existing IME skip, plus both
+diagnostic tests. Its complete surface fixture passed, including paint,
+post-commit notification recovery and ordinary/rectangular Undo.
+
+On both ordinary and coverage Linux backends, paint and post-commit recovery
+also passed. Their single remaining failure was the stream Undo sweep's final
+coverage assertion. The saved GCC 13.3 counters establish the cause directly:
+the loop body and `++injectedCount` each executed 32 times, while
+`completed = true` and its `break` executed zero times. All 32 injected runs
+passed their text, selection, revision, save-point, Redo and subsequent-edit
+checks. The fixed `skip < 32` bound ended the sweep before a successful
+uninjected run; the minimum failure-coverage requirement was already met.
+
+Both Undo sweeps now advance through matching allocations until the first
+uninjected run passes every invariant. They retain the minimum two/three
+injection requirements, print the actual injected count and completion index,
+and use the existing 60-second CTest timeout. This also removes the rectangular
+sweep's unverified 48-allocation cutoff. The corrected fixture compiles and
+links locally. The validation record retains the original CI counters and
+matching-gcov commands, and the next hosted run exercises the complete Linux
+sweeps.
+
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43886805903),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43886806327) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43886806308) also
+passed at `6ae1477`.
+
+### Complete native validation and PR #221 analysis
+
+The third code revision, `2d6cdba1fcf5e3fc5804053d6130b3a56742cd09`, passed
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43891433929),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43891433966),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43891434007) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43891433953).
+The actual native checkout was merge revision
+`1956f400a7b0f432c95436bd3cfd53761de639b1`.
+
+| Platform | Ordinary native tests | Diagnostics | Coverage native tests |
+| --- | --- | --- | --- |
+| Windows | 216 passed, one existing IME skip | 2/2 passed | Collected on Linux |
+| X11 | 203 passed, two existing skips | 2/2 passed | 203 passed, two skips |
+| Wayland | 205 passed | 2/2 passed | 205 passed |
+
+Every surface fixture completed all nine stages. Windows recorded five stream
+Undo injections and seven rectangular Undo injections; both ordinary and
+coverage Linux backends recorded 130 and 182 respectively. Each sweep then
+completed its first uninjected run with all original invariants intact.
+Parallel-task recovery, the 20-run Wayland JSON check, runtime packaging and
+SDK checks also passed. Clang-tidy analyzed all 228 maintained translation units.
+
+The scanner uploaded PR #221 at 15:19:45 UTC with SCM revision `2d6cdba1` and
+task `AaHk8V2RSw0uFDSXC1ay`. Its independent SonarCloud gate reported ERROR:
+new-code coverage was 79.0%, below the existing 80% threshold. Ratings were
+A/A/A, duplicated lines were 0.0%, and reviewed hotspots were 100%.
+
+### Template coverage export correction
+
+The retained GCC 13 counters show executed exception paths in
+`parallel_tasks.h` and `editor_core.h`. The generated generic XML nevertheless
+contained multiple `lineToCover` elements for each template source line.
+Later zero-hit instances caused SonarCloud to report already executed source
+lines as uncovered.
+
+Both export commands now use gcovr 8.8's
+[`--merge-lines`](https://www.gcovr.com/en/stable/manpage.html#cmdoption-merge-lines).
+It combines source-line hits and corresponding branch identities while keeping
+the raw instances in the intermediate JSON. Re-exporting the same third-run
+JSON reproduced the original XML byte for byte before the change. The corrected
+export reduced 11,681 elements to 11,259 unique source lines, eliminating all
+74 duplicated source lines. Complementary branches in `parallel_tasks.h`
+became 2/2; the partially covered `editor_core.h` handler remained 1/4, and
+its unexecuted runtime-error handler remained uncovered.
+
+The coverage regressions exercise actual template instantiations with
+complementary branches, repeated same-side branches, and explicit uncalled
+instantiations. They check unique XML source lines and retained raw JSON
+instances alongside the existing shared-header and exception-path checks.
+Using actual GCC 14/gcov 14 in a scratch copy, the old export failed both
+report tests and the corrected export passed all six tests. The repository's
+native fixture remains pinned to GCC 13 and runs in CI. Source scope, ordinary
+uncovered conditions and the existing 80% gate are retained.
+
+### Findings reviewed from the first PR #221 analysis
+
+The [PR disposition ledger](sonarqube-2026-11-16-surface-pr-dispositions.json)
+records all 72 findings from this analysis, including 36 HIGH findings,
+zero BLOCKER/security findings and two reliability findings. Thirty-three
+issue-specific false-positive transitions succeeded through MCP; exact-key
+queries returned all 33 as FALSE_POSITIVE and zero as OPEN/CONFIRMED.
+
+| Rule | PR false positives | Reviewed contract |
+| --- | --- | --- |
+| S5019 / S3608 | 12 | Six inner lambdas execute immediately through the native recovery wrapper, matching the rules' synchronous-use exception. Their outer stored callbacks have explicit captures. |
+| S859 | 3 | The pinned `const noexcept` notification override runs on the privately owned, non-const `Core` object; error recovery modifies that original object. |
+| S5008 | 7 | `DocWatcher` requires opaque user-data parameters. The fixture registers `nullptr` and leaves each parameter unused. |
+| S1238 | 2 | Geometry and document-modification value parameters implement pinned virtual declarations. |
+| S5025 | 1 | The native top-level fixture window follows wxWidgets' deferred destruction and application cleanup ownership. |
+| S6494 | 5 | The supported GCC 13 standard library lacks the recommended `std::print`. |
+| S2738 | 3 | Exception pointers retain failures across worker cleanup and rethrow them on the originating path. |
+
+The same batch addresses 25 findings in code. Linux worker startup now uses
+explicit `std::jthread` ownership instead of `std::async`. Per-worker exception
+slots outlive every thread, all started threads join before error propagation,
+and startup errors retain priority. The partial-start regression holds started
+workers behind a latch until the observing thread releases them, checking the
+0/1/3-worker failure cases and later retry. It passes at `-O2` with strict
+warnings and under AddressSanitizer/UndefinedBehaviorSanitizer.
+
+Fixture cleanup also makes asynchronous captures explicit, prohibits copying
+and moving the completion guard, documents the five intentional empty watcher
+callbacks, keeps paint observations private, and applies the reviewed const,
+enum-conversion and diagnostic-expression improvements. The surface fixture
+and affected core translation units compile and link with these changes.
+
+Fourteen recommendations retain their review status: seven concern generic
+exception types, three concern deliberate recovery/test-result catch boundaries,
+three suggest `using enum`, and one counts wxWidgets' inherited class depth.
+The continuation [PR #221](https://github.com/1298345095/wxnotepad/pull/221)
+records the final hosted revision, resulting issue queries and gate after this
+combined code and report-export batch.
+
+### GCC 13 coverage verification and final fixture cleanup
+
+Revision `7e57caea1acce20a425612087ec81ee538b916d6` passed
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43898310949),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43898310953),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43898311086) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43898310979).
+The native checkout was merge revision
+`215e0e758d7eeccea65bad8cc1705847dc45a3fb`.
+Windows again passed 216 ordinary tests with one existing IME skip; X11 passed
+203 with two existing skips; Wayland passed all 205. All platform diagnostics,
+the nine-stage surface fixtures, worker recovery and the 20-run Wayland JSON
+check passed. Both coverage backends passed all six coverage-report regressions
+using the actual GCC 13 compiler. Each backend and the merged report contained
+11,263 source-line entries across 98 files, with zero duplicate source lines.
+
+The matching Sonar task `AaHlEIeaLosZbpaI6AUv` reported 83.0% new-code coverage:
+132 of 153 new lines and 131 of 164 new conditions were covered. The existing
+80% coverage requirement passed. Its sole failing gate condition was reliability:
+the partial-start fixture retained an unreachable throw after
+`std::rethrow_exception`. The expected `std::system_error` path returned from its
+handler, while other exception types propagated to the test runner.
+
+The fixture now ends after its typed handler; the unreachable throw and its
+redundant return are removed. The captured-exception, original-error-code and
+joined-worker-count assertions remain. The drawing-factory check also receives
+its editor through the existing const observer interface. Both native fixtures
+compile and link, and the unchanged parallel regression passes at `-O2` with
+strict warnings. The removed throw also carried an existing S112 suggestion.
+
+Exact-key queries confirmed all 25 prior code findings FIXED. Of the first 33
+PR false-positive keys, 28 retained their disposition and five DocWatcher keys
+closed and reappeared under new keys after explanatory comments changed the
+method bodies. Those five required-ABI findings, a worker-lambda exception-boundary
+finding and a test-thread exception-transport finding were individually marked
+FALSE_POSITIVE through MCP. All seven new transitions were verified by exact-key
+queries. The PR disposition ledger retains their comments, receipts and mapping
+to the five replaced keys.
+
+The final two fixture changes and these completed validation records are submitted
+together. [PR #221](https://github.com/1298345095/wxnotepad/pull/221) records the
+resulting analyzed revision, final gate and remaining recommendations.
+
+## 2026-11-16 type safety and exception follow-up
+
+This batch continues from `b015dda89776e3dda74f093e9656d36792143a7e` on the
+same branch and PR #221. At that revision CI, Quality, Fuzz and CodeQL passed;
+the PR quality gate was OK with 83.0% new-code coverage. Fresh MCP queries
+returned 3,819 OPEN/CONFIRMED findings on main and 13 in PR #221. Main's
+analysis predates the unmerged surface continuation, so those contexts are
+recorded separately in the [issue-by-issue review](sonarqube-2026-11-16-type-safety-review.json).
+
+### Small code changes
+
+The changes address 60 distinct report keys: 46 from main and 14 from PR #221.
+Counts distinguish report keys across analysis contexts, including keys referring
+to the same code. The first hosted analysis verified six PR keys FIXED. The
+ledger records the other changes as implemented on the follow-up branch; main's
+issue statuses are updated by analysis after the branch is merged.
+
+| Rule | Keys | Change |
+| --- | ---: | --- |
+| S112 | 12 | Give native drawing/measurement failures a dedicated exception type and use dedicated test assertion failures. |
+| S5350 | 8 | Hold completed dialog controls through read-only observer pointers. |
+| S995 | 5 | Qualify read-only frame, text-control and event parameters. |
+| S5945 | 4 | Store fixed encoding, file-watching, line-ending and accelerator tables in `std::array`. |
+| S6004 | 10 | Limit scalar and local result lifetimes to the condition and branch using them. |
+| S6009 | 2 | Read synchronous fixture strings through `std::string_view`. |
+| S7035 | 9 | Extract enum underlying values explicitly while retaining message-width conversions. |
+| S5276 | 2 | Recover the actual unsigned-byte character/style result type at the message boundary. |
+| S6177 | 8 | Use function-local enum imports in seven existing test functions. |
+
+`NativeDrawingError` identifies rendering and measurement failures that have no
+platform error code. Its `std::runtime_error` base preserves the existing surface,
+message, native-event and notification recovery boundaries. The original
+diagnostic strings, `std::system_error` codes, allocation failures and length
+checks are retained. The equivalent Windows GDI/DirectWrite throw sites use the
+same category. The parallel-task regression now transports this exact exception
+type and message through real workers, checks every started worker has finished,
+and then runs a successful batch. The prior allocation and system-error cases
+remain in the same fixture.
+
+The dialog table contents and order are unchanged. Native wx constructors still
+receive their pointer/count arguments through `data()` and `size()`. The const
+observers and event callbacks were checked against the pinned wxWidgets 3.3.3
+headers for both supported platforms. The narrowed completion variables are
+scalar values; their evaluation order and short-circuit behavior are unchanged.
+Both string views remain inside synchronous calls whose caller-owned strings
+outlive the call.
+
+The rescan identified two implicit integer conversions in completion. The
+pinned core returns `unsigned char` from both `Document::UCharAt` and
+`Document::StyleIndexAt`, transported by the general `intptr_t` message ABI.
+The new `CharacterAt` and `StyleIndexAt` accessors restore that result type
+before the existing character operations. `Sci_Position` positions retain
+their width, and promotion into the existing integer character parameters
+preserves the entire byte range. The enum imports are confined to individual
+test functions and preserve their operations, assertions and scenarios.
+
+### Ten verified false positives
+
+Each transition was submitted through the SonarCloud MCP with its own source
+explanation. All ten transitions succeeded. Exact-key queries in their
+respective analysis contexts returned nine main keys and one PR key under the
+FALSE_POSITIVE filter; matching OPEN/CONFIRMED queries returned zero. The ledger
+preserves every comment and successful receipt.
+
+| Rule | Keys | Reviewed evidence |
+| --- | ---: | --- |
+| S995 | 1 | `SetAccessibleName` calls the non-const `wxWindow::SetAccessible` on Windows and writes GTK accessibility state. The Linux compilation omits the Windows mutation. |
+| S995 | 3 | Zoom key, wheel and menu helpers deliver input through native handles/event handlers, modifying the target editor or frame-owned UI. Const-qualified handle accessors hide these indirect mutations. |
+| S6188 | 2 | `CompareNoCase` shares a function-pointer slot with `strncmp`; its count is a maximum comparison bound and comparison also stops at NUL. The callback preserves that pointer/count contract. |
+| S1000 | 1 | The unnamed namespace belongs to the completion implementation; the allocation fixture intentionally includes that implementation to exercise its private storage in the same translation unit. |
+| Python S7494 | 2 | Both geometry parsers use the `dict(split(...) for ...)` pattern explicitly recorded as FP SONARPY-3154 in SonarSource's own rule fixture. |
+| S5025 | 1 | The line-ending `wxChoice` is owned by its parent dialog. Both native wx backends register the child and destroy it through the parent's `DestroyChildren` path. |
+
+The Python findings follow the same evidence as the earlier PR #220 review:
+[SonarSource's pinned regression fixture](https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py).
+The existing split-on-first-equals parsing retains its duplicate-key and
+malformed-line behavior.
+
+### Validation and remaining recommendations
+
+The first published revision, `ae986b9d59380bba8bb9e2a0a2443776bf1c9a37`, passed
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43917497292),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43917497150),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43917497348) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43917497156).
+Native jobs used merge revision `7eb5b2d4dd903d5e272f5ff5274ec61db1beeddb`.
+Windows passed 216 tests with one existing IME skip; X11 passed 203 with two
+existing skips; Wayland passed all 205. Each ordinary platform passed both
+diagnostic tests. Both coverage backends passed, including completion allocation,
+zoom and surface/parallel failure fixtures. Clang-tidy analyzed 228 maintained
+translation units. Native SDK checks, packaging, the repeated Windows brace
+case and the 20-run Wayland JSON regression also passed.
+
+Sonar task `AaHleCwYOC3kQQYL28Di` analyzed that exact source revision and reported
+an OK gate, 82.3% new-code coverage, A reliability/security/maintainability,
+0.0% duplication and 100% hotspot review. Exact-key queries returned all six
+original PR S112 findings with the FIXED filter. The rescan also surfaced the
+two byte-result conversions, additional enum-scope suggestions and the
+parent-owned choice allocation. Their completed code changes and verified
+false-positive disposition are recorded above.
+
+The follow-up passes canonical clang-format 23.1.2 over 374 tracked files and
+`git diff --check`. GCC 14.2 compiles the production parallel-task fixture with
+C++23, `-O2`, `-Wall -Wextra -Werror` and pthread support; the documented
+`ci.py probe` executes it successfully with exit 0. Current source hashes and
+the probe result are in the review ledger. The commit-specific checks and latest
+continuation section on [PR #221](https://github.com/1298345095/wxnotepad/pull/221)
+record the hosted validation after this rescan follow-up.
+
+Four PR recommendations remain for a separate design review: three concern
+the established recovery/test-result catch boundaries, and one counts
+wxWidgets' inherited application depth. S1181's documented exceptions do not
+cover these ordinary returning callbacks and methods. Their recovery purpose
+alone is insufficient for a false-positive disposition, and removing the
+runtime-error handlers would lose worker/native-resource recovery. The allocation
+fault helper's S6004 finding was already fixed at the starting revision and is
+excluded from this batch's counts.

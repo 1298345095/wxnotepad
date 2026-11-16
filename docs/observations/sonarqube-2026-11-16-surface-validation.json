@@ -1,0 +1,4450 @@
+{
+  "phase": "local validation before the batched branch push",
+  "base_revision": "a308c6b181674358205df90669293cc4afcab3af",
+  "reproduction_baseline_revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+  "baseline_note": "Application, patch and test trees are identical between these baseline revisions.",
+  "branch": "codex/sonarcloud-followup-2026-11-16",
+  "prepared_core": {
+    "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+    "archive_sha256": "6872820d13812093dc26fab944efc1a6408dd296c786154c03c90ff65f042315",
+    "patch_sha256": "6a14fdca5bae09352a42475d06ae7cc316cb02316e77dc65b2fe4801527922f6",
+    "preparation_sha256": "cd85c9def6a4c4f4473f796286906e5642464aaf66ac4686188182d74d2db4fa"
+  },
+  "source_inputs": {
+    "CMakeLists.txt": "262512c1493bc6b3fd8659d8929d4e177cb6d98960758b164cde2b1d24fe11e7",
+    "patches/original-core.patch": "6a14fdca5bae09352a42475d06ae7cc316cb02316e77dc65b2fe4801527922f6",
+    "src/editor/editor_control.cpp": "60ff0d4e645eb2c311f06456f5d6bb3179d2b7aaa58c8741525cd891a4f38bd2",
+    "src/editor/editor_control.h": "dc33c9502cce647552c4f75c683927b478336e4fb897bb3d45df2f3535951f09",
+    "src/editor/editor_core.cpp": "f3f759f82f0753adf58f4707fd8277047e293302dbab65a3787ba15366915db6",
+    "src/editor/editor_core.h": "9ad0c9f4550a46ce2fa6f334c6eaecb3bd62e699410d06ea3f0995e4d192b38f",
+    "src/editor/platform/gtk_drag_drop.cpp": "4edb1b30644d6ec7f2ed938d38b7e416e47e45122489f359e7c62e7b1e2583fd",
+    "src/editor/platform/gtk_drag_drop.h": "6cfcb721389bce9f3da82cc118d9327f428e765c065695913e3a9ce7a79fa101",
+    "src/editor/platform/parallel_tasks.h": "d8ed2d6f56fa75b9748c35bf8271c4a26709985ac0faaba4a901ef99c74765f9",
+    "src/editor/platform/text_measurement_gtk.cpp": "c3a01b2d550fb40883eae6b23aee335bdbaf5f6c62012eafd806a703f6fd0f8d",
+    "src/editor/platform/text_measurement_msw.cpp": "e81c1de2c56acd07e4fafde9266e371fe4cf440d0cd3ac80f454b28f3d431d32",
+    "src/editor/platform/wx_platform.cpp": "9c05bf938a7d775637655b08361c311a356f8051ae525277e08c3578289a5963",
+    "tests/completion_allocation_fault.cpp": "fbc09ae8e5c484498962fff09a47558af5916952590928d14d38d54b99b85e30",
+    "tests/completion_allocation_fault.h": "df3b16d68fe3f8c9c8becee8275bc697c06e38832d1312d799f07db00253ed3d",
+    "tests/parallel_surface_failure.cpp": "7fd3cce85dd6bd2401dc5a312589b02b04cb389e0899a8437fdd23a080536f25",
+    "tests/surface_initialization.cpp": "a351a2f0067bad7a16246a569fc5863a41e8f869eff4039f297a14a269b6dd30"
+  },
+  "native_evidence": {
+    "baseline_commit": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+    "scope": "Actual wxWidgets/Cairo/Pango surface initialization and clipping; GUI event/history fixture is compiled and pending hosted execution",
+    "probe_results": {
+      "surface-init-red": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-init-red"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": false,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-init-red"
+            ],
+            "status": "completed",
+            "exit_code": 86,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-init-red/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-init-green": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-init-green"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-init-green"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-init-green/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-borrowed-red": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+          "init"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": false,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+              "init"
+            ],
+            "status": "completed",
+            "exit_code": 86,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-borrowed-red/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-borrowed-green": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "init"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "init"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-borrowed-green/run-001.log",
+            "seconds": 0.032
+          }
+        ]
+      },
+      "surface-clip-red": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+          "clip"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": false,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+              "clip"
+            ],
+            "status": "completed",
+            "exit_code": 86,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-clip-red/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-clip-green": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "clip"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "clip"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-clip-green/run-001.log",
+            "seconds": 0.032
+          }
+        ]
+      },
+      "surface-lifo-red": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+          "lifo"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": false,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+              "lifo"
+            ],
+            "status": "completed",
+            "exit_code": 1,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-lifo-red/run-001.log",
+            "seconds": 0.024
+          }
+        ]
+      },
+      "surface-lifo-green": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "lifo"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "lifo"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-lifo-green/run-001.log",
+            "seconds": 0.035
+          }
+        ]
+      },
+      "parallel-surface-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/cmake/parallel_surface_failure"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/cmake/parallel_surface_failure"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-surface-final/run-001.log",
+            "seconds": 0.114
+          }
+        ]
+      },
+      "surface-init-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-init-green"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-init-green"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-init-final/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-borrowed-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "init"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "init"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-borrowed-final/run-001.log",
+            "seconds": 0.032
+          }
+        ]
+      },
+      "surface-clip-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "clip"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "clip"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-clip-final/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-lifo-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "lifo"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "lifo"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-lifo-final/run-001.log",
+            "seconds": 0.032
+          }
+        ]
+      },
+      "parallel-surface-rectangular-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/cmake/parallel_surface_failure"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/cmake/parallel_surface_failure"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-surface-rectangular-final/run-001.log",
+            "seconds": 0.115
+          }
+        ]
+      }
+    },
+    "outputs": {
+      "surface-init-red": "",
+      "surface-init-green": "PASS: exact owned DC allocation fails before native handle access and leaves an uninitialized surface\n",
+      "surface-borrowed-red": "",
+      "surface-borrowed-green": "PASS: actual Cairo/Pango borrowed object/data initialization failure and retry\n",
+      "surface-clip-red": "",
+      "surface-clip-green": "PASS: actual Cairo clipping clip; allocation failures=3\n",
+      "surface-lifo-red": "FAIL: native clipping rectangle is preserved\n",
+      "surface-lifo-green": "PASS: actual Cairo clipping lifo; allocation failures=0\n",
+      "parallel-surface-final": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+      "surface-init-final": "PASS: exact owned DC allocation fails before native handle access and leaves an uninitialized surface\n",
+      "surface-borrowed-final": "PASS: actual Cairo/Pango borrowed object/data initialization failure and retry\n",
+      "surface-clip-final": "PASS: actual Cairo clipping clip; allocation failures=3\n",
+      "surface-lifo-final": "PASS: actual Cairo clipping lifo; allocation failures=0\n",
+      "parallel-surface-rectangular-final": "PASS: production parallel tasks join before propagating resource failures and permit retry\n"
+    },
+    "source_sha256": {
+      "native-build/baseline-wx-platform.cpp": "06e1960cac7063f3607048d8e071331b5b1e7bc6a1ec4394e8e14540d97b334d",
+      "native-build/surface-init-headless-probe.cpp": "846fd0b9f588e6a6d8c991dfde589514fe95a6870f18a0966aa60be37d19b1d9",
+      "native-build/surface-borrowed-headless-probe.cpp": "c18d71d306b2dac8da896496af2a25c3c618546a3e05af5c47918e37959d7797",
+      "wxnotepad/src/editor/platform/wx_platform.cpp": "9c05bf938a7d775637655b08361c311a356f8051ae525277e08c3578289a5963",
+      "wxnotepad/tests/completion_allocation_fault.cpp": "fbc09ae8e5c484498962fff09a47558af5916952590928d14d38d54b99b85e30",
+      "wxnotepad/src/editor/platform/text_measurement_gtk.cpp": "c3a01b2d550fb40883eae6b23aee335bdbaf5f6c62012eafd806a703f6fd0f8d",
+      "wxnotepad/src/editor/platform/text_measurement_msw.cpp": "e81c1de2c56acd07e4fafde9266e371fe4cf440d0cd3ac80f454b28f3d431d32",
+      "wxnotepad/src/editor/platform/parallel_tasks.h": "d8ed2d6f56fa75b9748c35bf8271c4a26709985ac0faaba4a901ef99c74765f9",
+      "wxnotepad/tests/completion_allocation_fault.h": "df3b16d68fe3f8c9c8becee8275bc697c06e38832d1312d799f07db00253ed3d",
+      "wxnotepad/tests/surface_initialization.cpp": "a351a2f0067bad7a16246a569fc5863a41e8f869eff4039f297a14a269b6dd30",
+      "wxnotepad/tests/parallel_surface_failure.cpp": "7fd3cce85dd6bd2401dc5a312589b02b04cb389e0899a8437fdd23a080536f25",
+      "wxnotepad/patches/original-core.patch": "6a14fdca5bae09352a42475d06ae7cc316cb02316e77dc65b2fe4801527922f6",
+      "wxnotepad/CMakeLists.txt": "262512c1493bc6b3fd8659d8929d4e177cb6d98960758b164cde2b1d24fe11e7",
+      "wxnotepad/src/editor/editor_core.cpp": "f3f759f82f0753adf58f4707fd8277047e293302dbab65a3787ba15366915db6",
+      "wxnotepad/src/editor/editor_core.h": "9ad0c9f4550a46ce2fa6f334c6eaecb3bd62e699410d06ea3f0995e4d192b38f",
+      "wxnotepad/src/editor/editor_control.cpp": "60ff0d4e645eb2c311f06456f5d6bb3179d2b7aaa58c8741525cd891a4f38bd2",
+      "wxnotepad/src/editor/editor_control.h": "dc33c9502cce647552c4f75c683927b478336e4fb897bb3d45df2f3535951f09",
+      "wxnotepad/src/editor/platform/gtk_drag_drop.cpp": "4edb1b30644d6ec7f2ed938d38b7e416e47e45122489f359e7c62e7b1e2583fd",
+      "wxnotepad/src/editor/platform/gtk_drag_drop.h": "6cfcb721389bce9f3da82cc118d9327f428e765c065695913e3a9ce7a79fa101"
+    },
+    "validated_utc": "2026-11-16T13:58:02.776405+00:00",
+    "final_native_builds": [
+      {
+        "targets": [
+          "surface_initialization",
+          "parallel_surface_failure",
+          "measurement_threads",
+          "surface_images",
+          "completion_allocation"
+        ],
+        "command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && cmake --build /workspace/scratch/44c8652c3121/native-build/cmake --target surface_initialization parallel_surface_failure measurement_threads surface_images completion_allocation -j8",
+        "exit_code": 0,
+        "log": "/workspace/scratch/44c8652c3121/native-build/final-rectangular-build.log",
+        "log_sha256": "9620057c9fd1b87f235e89c22119e59a8c4eea892ff853b932ff7d42da1ef30d",
+        "log_tail": [
+          "[35/41] Linking CXX executable surface_images",
+          "[36/41] Linking CXX executable measurement_threads",
+          "[37/41] Building CXX object CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.o",
+          "[38/41] Linking CXX executable surface_initialization",
+          "[39/41] Building CXX object CMakeFiles/completion_allocation.dir/tests/completion_allocation.cpp.o",
+          "[40/41] Linking CXX executable completion_allocation"
+        ]
+      },
+      {
+        "command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && python3 /workspace/scratch/44c8652c3121/native-build/build-surface-probes.py",
+        "exit_code": 0,
+        "log": "/workspace/scratch/44c8652c3121/native-build/surface-probe-build-final-rectangular.log",
+        "log_sha256": "0b775b6c2f86f6771ff275173a24baf2a31ec2bbcf9d72fa1546086b914df95f",
+        "log_tail": [
+          "Built exact-baseline and current owned-Init allocation probes"
+        ]
+      },
+      {
+        "targets": [
+          "wxnotepad"
+        ],
+        "command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && cmake --build /workspace/scratch/44c8652c3121/native-build/cmake --target wxnotepad -j8",
+        "exit_code": 0,
+        "log": "/workspace/scratch/44c8652c3121/native-build/final-application-build.log",
+        "log_sha256": "2f2965a6dd2565ba94365f0f5e2ff8444d1d16313e8b4aa8592987d8b442d148",
+        "log_tail": [
+          "/workspace/scratch/44c8652c3121/wxnotepad/po/wxstd/zh_CN.po: 1983 translated messages.",
+          "/workspace/scratch/44c8652c3121/wxnotepad/po/zh_TW.po: 546 translated messages.",
+          "/workspace/scratch/44c8652c3121/wxnotepad/po/wxstd/zh_TW.po: 1922 translated messages, 33 fuzzy translations, 28 untranslated messages.",
+          "[2/5] cd /workspace/scratch/44c8652c3121/native-build/cmake && /workspace/scratch/44c8652c3121/local-python/cmake/data/bin/cmake -E copy_directory /workspace/scratch/44c8652c3121/native-build/cmake/catalogs/locale /workspace/scratch/44c8652c3121/native-build/cmake/locale",
+          "[3/5] Building CXX object CMakeFiles/wxnotepad.dir/src/app/main.cpp.o",
+          "[4/5] Linking CXX executable wxnotepad"
+        ]
+      }
+    ],
+    "local_environment": {
+      "wxwidgets": "3.3.3",
+      "gtk": "3.24.49",
+      "compiler": "GCC 14.2",
+      "configuration": "Release with wxDEBUG_LEVEL=0 matching local SDK",
+      "gui_runtime": "Unavailable: sandbox disallows AF_UNIX sockets; GUI paint/history/rectangular cases compiled and linked, awaiting hosted Windows/X11/Wayland CI."
+    },
+    "final_checks": {
+      "canonical_clang_format_23_1_2": 0,
+      "git_diff_check": 0
+    }
+  },
+  "parallel_exception_regression": {
+    "kind": "observed regression mutation run",
+    "capture": "Recorded from the successful tool execution that compiled and ran this scratch mutant; execution was not repeated for this receipt.",
+    "baseline_probe_directory": "/workspace/scratch/44c8652c3121/parallel-probe-1",
+    "baseline_exit_code": 0,
+    "mutation": "Replace the one future.get(); in ParallelTasks::Detail::RunAsync with future.wait();",
+    "mutant_header": "/workspace/scratch/44c8652c3121/parallel-core-review/mutant/editor/platform/parallel_tasks.h",
+    "mutant_header_sha256": "9c65528b4bfecbdf265d98e75f03a63f882229399ee65dfcfbfe0ecefefd1e27",
+    "compile_argv": [
+      "g++",
+      "-std=c++23",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-pthread",
+      "-I/workspace/scratch/44c8652c3121/parallel-core-review/mutant",
+      "/workspace/scratch/44c8652c3121/wxnotepad/tests/parallel_surface_failure.cpp",
+      "-o",
+      "/workspace/scratch/44c8652c3121/parallel-core-review/mutant-wait"
+    ],
+    "compile_exit_code": 0,
+    "run_argv": [
+      "/workspace/scratch/44c8652c3121/parallel-core-review/mutant-wait"
+    ],
+    "run_timeout_seconds": 20,
+    "run_exit_code": 1,
+    "stdout": "",
+    "stderr": "FAIL: a failed worker must prevent consuming its incomplete output\n",
+    "mutant_executable_sha256": "68a0d489a3774f78c41f9052d451354f83d6b218fc9910929ac5ed3fb5a1900b"
+  },
+  "parallel_sanitizers": {
+    "compile_argv": [
+      "g++",
+      "-std=c++23",
+      "-O1",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-pthread",
+      "-Isrc",
+      "tests/parallel_surface_failure.cpp",
+      "-o",
+      "/workspace/scratch/44c8652c3121/parallel_surface_failure_san"
+    ],
+    "environment": {
+      "ASAN_OPTIONS": "detect_leaks=0",
+      "UBSAN_OPTIONS": "halt_on_error=1"
+    },
+    "scope": "AddressSanitizer and UndefinedBehaviorSanitizer; LeakSanitizer disabled for the sandbox ptrace restriction.",
+    "probe": {
+      "command": [
+        "/workspace/scratch/44c8652c3121/parallel_surface_failure_san"
+      ],
+      "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+      "timeout_seconds": 30.0,
+      "requested_runs": 1,
+      "completed_runs": 1,
+      "success": true,
+      "results": [
+        {
+          "command": [
+            "/workspace/scratch/44c8652c3121/parallel_surface_failure_san"
+          ],
+          "status": "completed",
+          "exit_code": 0,
+          "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-surface-sanitized/run-001.log",
+          "seconds": 0.114
+        }
+      ]
+    },
+    "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n"
+  },
+  "python_helpers": {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_*.py",
+      "-v"
+    ],
+    "environment": "CMake and Ninja from the local tool runtime on PATH",
+    "tests_run": 53,
+    "passed": 44,
+    "skipped": 9,
+    "exit_code": 0,
+    "log_sha256": "825f868f2629c1a28f546be129acb96255abcdcfd51e39de1150ba520eda293f",
+    "log_tail": [
+      "----------------------------------------------------------------------",
+      "Ran 53 tests in 2.076s",
+      "",
+      "OK (skipped=9)"
+    ]
+  },
+  "other_checks": {
+    "canonical_formatter": "clang-format 23.1.2",
+    "changed_and_new_cpp_format_exit_code": 0,
+    "python_syntax_command": [
+      "python3",
+      "-m",
+      "compileall",
+      "-q",
+      ".github/scripts",
+      "tools",
+      "tests"
+    ],
+    "python_syntax_exit_code": 0,
+    "git_diff_check_exit_code": 0,
+    "tracked_cpp_files_formatted": 373,
+    "canonical_format_exit_code": 0
+  },
+  "hosted_validation": {
+    "status": "scheduled by the pull request after this code commit",
+    "required_platforms": [
+      "Windows MSVC",
+      "Linux GCC 13 / X11",
+      "Linux GCC 13 / Wayland"
+    ],
+    "gui_execution": "The new GUI paint, document-history and rectangular-Undo fixture is compiled locally; its desktop execution is recorded by the pull request checks.",
+    "result_location": "The continuation pull request description records final CI, Quality, Fuzz, CodeQL and SonarCloud results for the pushed SHA."
+  },
+  "initial_published_revision": "187ee054ad8d6a1e5357b3b68e928e2ee891dc29",
+  "first_hosted_validation": {
+    "head_sha": "187ee054ad8d6a1e5357b3b68e928e2ee891dc29",
+    "checkout_merge_sha": "48c4b280c983e2119a0d35e9205a8a8cb6b24881",
+    "ci_run": 43881661997,
+    "ci_url": "https://github.com/1298345095/wxnotepad/actions/runs/43881661997",
+    "quality": {
+      "run_id": 43881661891,
+      "conclusion": "success",
+      "maintained_translation_units_analyzed": 228
+    },
+    "fuzz": {
+      "run_id": 43881662138,
+      "conclusion": "success"
+    },
+    "codeql": {
+      "run_id": 43881662041,
+      "conclusion": "success"
+    },
+    "linux": {
+      "run_id": 43881661997,
+      "run_attempt": 1,
+      "head_sha": "187ee054ad8d6a1e5357b3b68e928e2ee891dc29",
+      "checkout_merge_sha": "48c4b280c983e2119a0d35e9205a8a8cb6b24881",
+      "coverage_wayland": {
+        "job_id": 133348823363,
+        "conclusion": "failure",
+        "counts": {
+          "total": 205,
+          "passed": 204,
+          "skipped": 0,
+          "failed": 1,
+          "other": []
+        },
+        "failed_test": "native_surface_initialization_failures",
+        "message": "actual native paint contains allocation failure and restores its idle paint state",
+        "parallel_surface": "passed",
+        "artifact_id": 14233342086,
+        "artifact_sha256": "14984c759b3472a8d3414659cec93ddd724a60ab5b9472c8eb1a2c32d29a2ca6",
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43881661997/coverage-wayland-job.log"
+      },
+      "coverage_x11": {
+        "job_id": 133348823383,
+        "conclusion": "failure",
+        "counts": {
+          "total": 205,
+          "passed": 202,
+          "skipped": 2,
+          "failed": 1,
+          "other": []
+        },
+        "failed_test": "native_surface_initialization_failures",
+        "message": "actual native paint contains allocation failure and restores its idle paint state",
+        "parallel_surface": "passed",
+        "skipped_tests": [
+          "original_new_window_maximized",
+          "native_peer_geometry_ready"
+        ],
+        "artifact_id": 14232923918,
+        "artifact_sha256": "b65d26a129ab2e29f436bab1e89cefb418dbf9da0f94ec822ee82c26a96fb77f",
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43881661997/coverage-x11-job.log"
+      },
+      "ordinary_linux": {
+        "job_id": 133348823087,
+        "status": "completed",
+        "conclusion": "failure",
+        "x11": {
+          "total": 205,
+          "passed": 202,
+          "failed": 1,
+          "skipped": 2,
+          "skipped_tests": [
+            "original_new_window_maximized",
+            "native_peer_geometry_ready"
+          ]
+        },
+        "wayland": {
+          "total": 205,
+          "passed": 204,
+          "failed": 1,
+          "skipped": 0
+        },
+        "failed_test": "native_surface_initialization_failures",
+        "message": "actual native paint contains allocation failure and restores its idle paint state",
+        "parallel_surface": "passed in both backends",
+        "wayland_json_repetitions": {
+          "passed": 20,
+          "failed": 0
+        },
+        "x11_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "wayland_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "application_and_tests_build": "success",
+        "bundle": "success",
+        "sdk_contract": "success",
+        "evidence_artifact_id": 14233568729,
+        "build_artifact_id": 14233637374,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43881661997/linux-ordinary-job.log"
+      },
+      "coverage_aggregate": {
+        "job_id": 133357221283,
+        "conclusion": "failure",
+        "step": "Require both coverage backends"
+      },
+      "failure_diagnosis": {
+        "source": "Actual wxWidgets 3.3.3 src/common/event.cpp DoTryChain/ProcessEvent",
+        "cause": "NativePaint::Complete pushes a second handler ahead of PaintFailure, so wxEventProcessInHandlerOnly restricts PaintFailure's base ProcessEvent to its own event table. The allocation fault scope is destroyed before the outer chain calls the production paint handler.",
+        "verification": "Actual wxWidgets handler-chain probe, using wxThreadEvent without a display and the repository's allocation fault helper",
+        "report": "/workspace/scratch/44c8652c3121/native-build/probes/paint-handler-chain/summary.json",
+        "log": "/workspace/scratch/44c8652c3121/native-build/probes/paint-handler-chain/run-001.log",
+        "result": "exit 0; nested called=1/injected=0/production=1/recovered=0; single called=1/injected=1/production=1/recovered=1",
+        "probe_source": "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe.cpp",
+        "probe_source_sha256": "715e9fc4f7bdf25fea0ec3e61c5e83293f29323b4aa49496d4089d9b2c601525",
+        "probe_environment": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh",
+        "probe_compile_argv": [
+          "g++",
+          "-std=c++23",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-DwxDEBUG_LEVEL=0",
+          "-I/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib/wx/include/gtk3-unicode-static-3.3",
+          "-I/workspace/scratch/44c8652c3121/native-sdk/wx-install/include/wx-3.3",
+          "-D__WXGTK3__",
+          "-D__WXGTK__",
+          "-D_FILE_OFFSET_BITS=64",
+          "-I/workspace/scratch/44c8652c3121/wxnotepad/tests",
+          "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe.cpp",
+          "/workspace/scratch/44c8652c3121/wxnotepad/tests/completion_allocation_fault.cpp",
+          "-o",
+          "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe",
+          "-L/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib",
+          "/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib/libwx_baseu-3.3.a",
+          "/workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libz.so",
+          "/workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libpcre2-32.so",
+          "/workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libc.so",
+          "-ldl"
+        ],
+        "probe_compile_command": "g++ -std=c++23 -O2 -Wall -Wextra -Werror -DwxDEBUG_LEVEL=0 -I/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib/wx/include/gtk3-unicode-static-3.3 -I/workspace/scratch/44c8652c3121/native-sdk/wx-install/include/wx-3.3 -D__WXGTK3__ -D__WXGTK__ -D_FILE_OFFSET_BITS=64 -I/workspace/scratch/44c8652c3121/wxnotepad/tests /workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe.cpp /workspace/scratch/44c8652c3121/wxnotepad/tests/completion_allocation_fault.cpp -o /workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe -L/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib /workspace/scratch/44c8652c3121/native-sdk/wx-install/lib/libwx_baseu-3.3.a /workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libz.so /workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libpcre2-32.so /workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libc.so -ldl",
+        "probe_compiler_resolved": "/usr/bin/g++",
+        "probe_execution_command": "python3 -X utf8 .github/scripts/ci.py probe --report-dir /workspace/scratch/44c8652c3121/native-build/probes/paint-handler-chain --timeout 30 --runs 1 -- /workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe"
+      },
+      "fix": {
+        "file": "tests/surface_initialization.cpp",
+        "description": "The fault hook waits for its own native paint completion and remains the first pushed handler; original assertion preserved.",
+        "compile_exit": 0,
+        "compile_log": "/workspace/scratch/44c8652c3121/native-build/surface-paint-handler-build.log",
+        "native_gui_execution": "pending a new hosted run",
+        "commit": "not committed",
+        "patch": "/workspace/scratch/44c8652c3121/ci-run-43881661997/paint-handler-fix.patch",
+        "source_sha256": "da2476aa672493f3c4556b50a0804a327a1f4946c64cb5f82dae606f2d2d3b00",
+        "compile_command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && cmake --build /workspace/scratch/44c8652c3121/native-build/cmake --target surface_initialization -j8"
+      },
+      "recorded_utc": "2026-11-16T14:24:12.388376+00:00",
+      "artifact_metadata": "/workspace/scratch/44c8652c3121/ci-run-43881661997/github-artifacts.json",
+      "final_linux_job_steps": "/workspace/scratch/44c8652c3121/ci-run-43881661997/github-linux-jobs.json",
+      "raw_log_sha256": {
+        "linux-ordinary-job.log": "9fb54e05d4687ac9f2ef3be72b13caaaf03d255842e23bcb456dd899c7373917",
+        "coverage-wayland-job.log": "51773668a494d00172a32603ecebe0e01c1268b3a024aa78a8781191af20a473",
+        "coverage-x11-job.log": "063de211c52258b5bdd9fd6d5a4542f46520e805bc9e20c2dc75f4ba3fba8bc4"
+      }
+    },
+    "sonar_analysis": "Not submitted: the existing gate requires both coverage backend jobs to pass.",
+    "windows": {
+      "job_id": 133348823555,
+      "conclusion": "failure",
+      "ordinary_tests": {
+        "total": 217,
+        "passed": 215,
+        "failed": 1,
+        "skipped": 1
+      },
+      "failed_test": "native_surface_initialization_failures",
+      "failure": "actual native paint contains allocation failure and restores its idle paint state",
+      "skipped_test": "windows_inline_ime_input",
+      "parallel_surface": "passed",
+      "diagnostic_tests": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "log": "/workspace/scratch/44c8652c3121/ci-windows-187ee054-job.log",
+      "log_sha256": "b5fa570e8ad50765ba39c6951ab3f4a1eede2ff8e7bb44491ed743b5514566ff"
+    },
+    "ci_conclusion": "failure"
+  },
+  "paint_handler_correction": {
+    "scope": "Test fixture correction; the application implementation is unchanged from the initial published revision.",
+    "source_sha256": {
+      "tests/surface_initialization.cpp": "da2476aa672493f3c4556b50a0804a327a1f4946c64cb5f82dae606f2d2d3b00"
+    },
+    "change": "Keep the fault observer at the native event-chain head by waiting for paint completion inside PaintFailure itself. Retain the original called/injected/BadAlloc/idle-state assertions.",
+    "native_fixture_build": {
+      "target": "surface_initialization",
+      "exit_code": 0,
+      "log": "/workspace/scratch/44c8652c3121/native-build/surface-paint-handler-build.log",
+      "log_sha256": "7c8af626657a731174706b444e459ad34b097aa9ea4e5b1d4c3a047a82c95023",
+      "output": "[0/2] Re-checking globbed directories...\n[1/3] Building CXX object CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.o\n[2/3] Linking CXX executable surface_initialization\n"
+    },
+    "event_chain_probe": {
+      "scope": "Actual wxWidgets 3.3.3 handler dispatch using a standalone target wxThreadEvent handler and the production allocation-fault helper; it establishes injection lifetime independently of GUI painting.",
+      "source": "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe.cpp",
+      "source_sha256": "715e9fc4f7bdf25fea0ec3e61c5e83293f29323b4aa49496d4089d9b2c601525",
+      "summary": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/paint-handler-chain/run-001.log",
+            "seconds": 0.004
+          }
+        ]
+      },
+      "output": "nested hooks: handled=1 called=1 injected=0 production=1 recovered=0 completion=1\nsingle hook: handled=1 called=1 injected=1 production=1 recovered=1 completion=0\nPASS: actual wxWidgets nested handler chain expires injection before production; a single head handler covers production\n"
+    },
+    "gui_validation": "Paint recovery and the subsequent committed-edit, Undo and rectangular-selection cases require the next hosted run."
+  },
+  "second_hosted_validation": {
+    "head_sha": "6ae147749f0093604752d584e900bddcc34bed2f",
+    "checkout_merge_sha": "075efc1289cd1871fc7605d4d44b56ec3ed2f77c",
+    "ci_run": 43886806315,
+    "ci_url": "https://github.com/1298345095/wxnotepad/actions/runs/43886806315",
+    "ci_conclusion": "failure",
+    "windows": {
+      "run_id": 43886806315,
+      "job_id": 133367044845,
+      "job": "Windows MSVC",
+      "status": "completed",
+      "conclusion": "success",
+      "source_head_sha": "6ae147749f0093604752d584e900bddcc34bed2f",
+      "tested_merge_sha": "075efc1289cd1871fc7605d4d44b56ec3ed2f77c",
+      "ordinary": {
+        "total": 217,
+        "passed": 216,
+        "failed": 0,
+        "skipped": 1
+      },
+      "diagnostic": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "ordinary_failures": [],
+      "ordinary_skips": [
+        "2026-11-16T14:43:04.3268446Z 125/217 Test #125: windows_inline_ime_input .........................***Skipped   0.02 sec"
+      ],
+      "new_fixtures": [
+        "2026-11-16T14:45:33.6531078Z 213/217 Test #213: native_surface_initialization_failures ...........   Passed    0.24 sec",
+        "2026-11-16T14:45:33.7294940Z 214/217 Test #214: native_parallel_surface_failures .................   Passed    0.08 sec"
+      ],
+      "diagnostic_results": [
+        "2026-11-16T14:46:15.6018721Z 1/2 Test   #6: native_diagnostic_process ........   Passed    0.72 sec",
+        "2026-11-16T14:46:27.3830850Z 2/2 Test #129: native_diagnostic_delivery .......   Passed   11.78 sec"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Test build preparation and CI invocation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Set up dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Set up compiler cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Verify compiler cache hits and header invalidation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Validate Linux native crash evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8
+        },
+        {
+          "name": "Validate Linux debug-symbol packaging",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Configure",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Build application and tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Verify pinned scheme importer CLIs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Record ordinary compilation cache statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Enable Linux native core dumps",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Prepare Windows native test display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Collect independent original GDI viewport reference",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Capture Windows visual brace crash dumps",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Test Windows",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Repeat Windows visual brace regression with crash evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19
+        },
+        {
+          "name": "Test private X11",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Test private Wayland",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Repeat native JSON Wayland regression with timeout evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Build opt-in diagnostic binaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23
+        },
+        {
+          "name": "Record diagnostic compilation cache statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24
+        },
+        {
+          "name": "Test Windows diagnostics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25
+        },
+        {
+          "name": "Test private X11 diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26
+        },
+        {
+          "name": "Test private Wayland diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27
+        },
+        {
+          "name": "Collect Linux native crash evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28
+        },
+        {
+          "name": "Collect tested build output",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 29
+        },
+        {
+          "name": "Verify configured SDK and distributed dependency footprint",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Upload build output",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Preserve logs and test evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32
+        },
+        {
+          "name": "Post Set up compiler cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Set up dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Post Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 64
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 65
+        }
+      ],
+      "evidence_artifact": {
+        "id": 14236810319,
+        "name": "evidence-windows-x64-075efc1289cd1871fc7605d4d44b56ec3ed2f77c-attempt-1",
+        "size_in_bytes": 5742449,
+        "url": "https://api.github.com/repos/1298345095/wxnotepad/actions/artifacts/14236810319",
+        "archive_download_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/artifacts/14236810319/zip",
+        "expired": false,
+        "created_at": "2026-11-16T14:46:32Z",
+        "expires_at": "2026-12-16T14:46:30Z",
+        "updated_at": "2026-11-16T14:46:32Z",
+        "digest": "sha256:cfd837a9635e530ee0288ac8b95b1011fb3a006200d8510b1014afacd1b32c66",
+        "workflow_run": {
+          "id": 43886806315,
+          "repository_id": 1439122383,
+          "head_repository_id": 1439122383,
+          "head_branch": "codex/sonarcloud-followup-2026-11-16",
+          "head_sha": "6ae147749f0093604752d584e900bddcc34bed2f"
+        }
+      },
+      "evidence_artifact_url": "https://github.com/1298345095/wxnotepad/actions/runs/43886806315/artifacts/14236810319",
+      "job_log": "/workspace/scratch/44c8652c3121/ci-windows-6ae14774-job.log"
+    },
+    "linux": {
+      "run_id": 43886806315,
+      "run_attempt": 1,
+      "head_sha": "6ae147749f0093604752d584e900bddcc34bed2f",
+      "checkout_merge_sha": "075efc1289cd1871fc7605d4d44b56ec3ed2f77c",
+      "ordinary_linux": {
+        "job_id": 133367045783,
+        "conclusion": "failure",
+        "x11": {
+          "total": 205,
+          "passed": 202,
+          "skipped": 2,
+          "failed": 1
+        },
+        "wayland": {
+          "total": 205,
+          "passed": 204,
+          "skipped": 0,
+          "failed": 1
+        },
+        "json_wayland_repeats": 20,
+        "x11_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "wayland_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "application_and_tests_build": "success",
+        "bundle": "success",
+        "sdk_contract": "success",
+        "evidence_artifact_id": 14235868937,
+        "build_artifact_id": 14236471794,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43886806315/linux-ordinary-job.log"
+      },
+      "coverage_x11": {
+        "job_id": 133367045297,
+        "conclusion": "failure",
+        "counts": {
+          "total": 205,
+          "passed": 202,
+          "skipped": 2,
+          "failed": 1
+        },
+        "artifact_id": 14236161525,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43886806315/coverage-x11-job.log"
+      },
+      "coverage_wayland": {
+        "job_id": 133367045259,
+        "conclusion": "failure",
+        "counts": {
+          "total": 205,
+          "passed": 204,
+          "skipped": 0,
+          "failed": 1
+        },
+        "artifact_id": 14234389604,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43886806315/coverage-wayland-job.log"
+      },
+      "coverage_aggregate": {
+        "job_id": 133376631474,
+        "conclusion": "failure",
+        "step": "Require both coverage backends"
+      },
+      "all_four_backend_results": {
+        "failed_test": "native_surface_initialization_failures",
+        "failed_assertion": "Undo fault injection reaches both style refresh and later visual surface creation",
+        "parallel_surface": "passed",
+        "surface_phases_passed": [
+          "owned initialization/retry",
+          "borrowed initialization/retry",
+          "missing/unavailable DC",
+          "borrowed factory recovery",
+          "clip allocation failures",
+          "native measurement and actual paint recovery with history retained",
+          "committed modification recovery and subsequent editing"
+        ],
+        "rectangular_undo": "not reached after stream Undo coverage assertion"
+      },
+      "failure_diagnosis": {
+        "cause": "The fixed 32-iteration allocation-failure sweep ends before the first uninjected pass on GTK. The minimum injection count requirement is satisfied; the completion requirement fails.",
+        "validation": "Matched gcov 13.3 reads the unchanged raw gcno/gcda from both coverage artifacts.",
+        "injectedCount": 32,
+        "completed": false,
+        "loop_body_count": 32,
+        "loop_condition_count": 33,
+        "completed_assignment_count": 0,
+        "all_executed_history_checks": "passed in all 32 injected stream Undo iterations",
+        "tool": "/workspace/scratch/44c8652c3121/native-sdk/gcov13/bin/x86_64-linux-gnu-gcov-13",
+        "raw_json": [
+          "surface-x11-gcov13.json",
+          "surface-wayland-gcov13.json"
+        ],
+        "line_count_proof": {
+          "x11": {
+            "function": {
+              "name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+              "demangled_name": "(anonymous namespace)::CheckUndoRecovery(EditorControl*)",
+              "start_line": 356,
+              "start_column": 6,
+              "end_line": 401,
+              "end_column": 1,
+              "blocks": 85,
+              "blocks_executed": 60,
+              "execution_count": 1
+            },
+            "lines": [
+              {
+                "line_number": 361,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 33,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 362,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 379,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 380,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 393,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 394,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 395,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 398,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 1,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 400,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              }
+            ],
+            "source_path": "/home/runner/work/wxnotepad/wxnotepad/tests/surface_initialization.cpp",
+            "gcov_json_sha256": "4ba860c02ed31db2ad14e0dc20fa9dec40bdc7da68971c4566f5bdadba3f2821",
+            "gcda_sha256": "5e73fdf2946c1eed733ee399fac72c02dac1e4b905f1411434a9a53dd9d80691",
+            "gcno_sha256": "71600d806c5b2879551a261fe12e389e61e90a150a5e265b48eacd2a28043015",
+            "command": "/workspace/scratch/44c8652c3121/native-sdk/gcov13/bin/x86_64-linux-gnu-gcov-13 --json-format --stdout /workspace/scratch/44c8652c3121/ci-run-43886806315/coverage-x11-extracted/build/coverage-cmake/CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.gcda"
+          },
+          "wayland": {
+            "function": {
+              "name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+              "demangled_name": "(anonymous namespace)::CheckUndoRecovery(EditorControl*)",
+              "start_line": 356,
+              "start_column": 6,
+              "end_line": 401,
+              "end_column": 1,
+              "blocks": 85,
+              "blocks_executed": 60,
+              "execution_count": 1
+            },
+            "lines": [
+              {
+                "line_number": 361,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 33,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 362,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 379,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 380,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 393,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 32,
+                "unexecuted_block": false,
+                "branches": []
+              },
+              {
+                "line_number": 394,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 395,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 398,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 1,
+                "unexecuted_block": true,
+                "branches": []
+              },
+              {
+                "line_number": 400,
+                "function_name": "_ZN12_GLOBAL__N_117CheckUndoRecoveryEP13EditorControl",
+                "count": 0,
+                "unexecuted_block": true,
+                "branches": []
+              }
+            ],
+            "source_path": "/home/runner/work/wxnotepad/wxnotepad/tests/surface_initialization.cpp",
+            "gcov_json_sha256": "564b418ee80e488ec0e8b63a694a729a0d305013cb08e1b56e3f95c546a1b1bf",
+            "gcda_sha256": "97e595d2e6aba0075cdc1a3705bc608a36f28c9ed9f11e06389421c5a856282e",
+            "gcno_sha256": "f77862685d4d6b491db2858e6de77d3353dfacaddbbc6e66588851780e830b84",
+            "command": "/workspace/scratch/44c8652c3121/native-sdk/gcov13/bin/x86_64-linux-gnu-gcov-13 --json-format --stdout /workspace/scratch/44c8652c3121/ci-run-43886806315/coverage-wayland-extracted/build/coverage-cmake/CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.gcda"
+          }
+        },
+        "tested_source_snapshot": "/workspace/scratch/44c8652c3121/ci-run-43886806315/surface-initialization-6ae.cpp",
+        "tested_source_sha256": "da2476aa672493f3c4556b50a0804a327a1f4946c64cb5f82dae606f2d2d3b00"
+      },
+      "artifact_metadata": "/workspace/scratch/44c8652c3121/ci-run-43886806315/github-artifacts.json",
+      "final_linux_job_steps": "/workspace/scratch/44c8652c3121/ci-run-43886806315/github-linux-jobs.json",
+      "repository_changes": "After diagnosis, root authorized a fixture-only correction to the stream and rectangular Undo sweep termination.",
+      "recorded_utc": "2026-11-16T14:53:37.417408+00:00",
+      "raw_log_sha256": {
+        "linux-ordinary-job.log": "85818ed3dca9b98b601ceb93095d5a373cae25be878e5703a19e9e96e030fde9",
+        "coverage-wayland-job.log": "32592f1e023820a2607cd77ae39fe2148d48f1cce63ca213d4fb99103c1ef41b",
+        "coverage-x11-job.log": "96050a260b6acab50d4d562753943cb2312a03a56db4795b6120c53c9e35bd7c"
+      },
+      "fix": {
+        "file": "tests/surface_initialization.cpp",
+        "description": "Both sweeps increment skip until the first uninjected run passes every invariant. The minimum injection counts of 2/3 and existing 60-second CTest timeout remain; each sweep prints injectedCount and the successful skip.",
+        "compile_command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && cmake --build /workspace/scratch/44c8652c3121/native-build/cmake --target surface_initialization -j8",
+        "compile_exit": 0,
+        "compile_log": "/workspace/scratch/44c8652c3121/native-build/surface-complete-sweep-build.log",
+        "format_exit": 0,
+        "diff_check_exit": 0,
+        "patch": "/workspace/scratch/44c8652c3121/ci-run-43886806315/complete-sweep-fix.patch",
+        "commit": "not committed",
+        "gui_execution": "pending hosted CI"
+      }
+    },
+    "quality": {
+      "run_id": 43886805903,
+      "conclusion": "success"
+    },
+    "fuzz": {
+      "run_id": 43886806327,
+      "conclusion": "success"
+    },
+    "codeql": {
+      "run_id": 43886806308,
+      "conclusion": "success"
+    },
+    "sonar_analysis": "Not submitted: the existing gate requires both coverage backend jobs to pass."
+  },
+  "allocation_sweep_correction": {
+    "scope": "Test fixture correction; application implementation is unchanged from 187ee054ad8d6a1e5357b3b68e928e2ee891dc29.",
+    "evidence": {
+      "matching_gcov_version": "13.3.0",
+      "backends": [
+        "x11",
+        "wayland"
+      ],
+      "function_calls": 1,
+      "loop_condition": 33,
+      "loop_body": 32,
+      "injected_count_increment": 32,
+      "completed_assignment": 0,
+      "successful_break": 0,
+      "summary": "# 第二轮 Undo sweep 覆盖证据\n\nRun `43886806315`, attempt 1。Head `6ae147749f0093604752d584e900bddcc34bed2f`，实际 checkout merge `075efc1289cd1871fc7605d4d44b56ec3ed2f77c`。\n\n## 结论\n\nX11 与 Wayland 的 stream Undo sweep 都完成了 32 次已注入运行；每次运行的文本、选区、revision、save point、Undo/Redo 和后续编辑检查均通过。固定 `skip < 32` 截止使循环没有执行首个未注入运行，因此结束时 `injectedCount=32`、`completed=false`。失败发生在覆盖完整性断言。矩形 Undo 尚未开始。\n\n## 原始 coverage 计数\n\n使用匹配 GCC 13.3 的 gcov 直接读取未修改的 gcno/gcda，两个解析命令均退出 0。行号对应同目录 `surface-initialization-6ae.cpp` 原始快照。\n\n| 行 | 源代码 | X11 次数 | Wayland 次数 |\n|---|---|---:|---:|\n| 361 | `for (size_t skip = 0; skip < 32; ++skip) {` | 33 | 33 |\n| 362 | `TestEditor::ResetStream(editor, Original, 5, 5);` | 32 | 32 |\n| 379 | `++injectedCount;` | 32 | 32 |\n| 393 | `if (!injected) {` | 32 | 32 |\n| 394 | `completed = true;` | 0 | 0 |\n| 395 | `break;` | 0 | 0 |\n| 398 | `Require(completed && injectedCount >= 2,` | 1 | 1 |\n\n完整解析结果为 `surface-x11-gcov13.json` 和 `surface-wayland-gcov13.json`；工具绝对路径、执行命令、文件 SHA256、artifact ID 与摘要均保存在 `linux-receipt.json`。\n\n## 修正及本地验证\n\n`complete-sweep-fix.patch` 仅修正两个 Undo sweep 的终止条件：按 skip 顺序继续，直到首个未注入且全部不变量通过的运行。保留最低 2/3 次注入要求；整体用例继续由现有 60 秒 CTest 超时约束；成功输出包含实际注入数与结束 skip。\n\n修改后的 `surface_initialization` 本地编译、链接退出 0；canonical clang-format 23.1.2 与 `git diff --check` 通过。日志为 `/workspace/scratch/44c8652c3121/native-build/surface-complete-sweep-build.log`。后续完整桌面结果由下一轮 hosted CI 验证。\n"
+    },
+    "change": "Advance each Undo sweep until the first uninjected run passes all invariants, retaining minimum 2/3 injections and the existing 60-second process timeout; report observed injection counts.",
+    "source_sha256": {
+      "tests/surface_initialization.cpp": "523d9a4c9e6fc2cc15cae7f910590c2773abc51ea93080df8b3a8ac96a407e64"
+    },
+    "native_fixture_build": {
+      "target": "surface_initialization",
+      "exit_code": 0,
+      "log": "/workspace/scratch/44c8652c3121/native-build/surface-complete-sweep-build.log",
+      "log_sha256": "7c8af626657a731174706b444e459ad34b097aa9ea4e5b1d4c3a047a82c95023",
+      "output": "[0/2] Re-checking globbed directories...\n[1/3] Building CXX object CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.o\n[2/3] Linking CXX executable surface_initialization\n"
+    },
+    "format_exit_code": 0,
+    "whitespace_exit_code": 0,
+    "hosted_validation": "Complete Linux allocation sweeps are validated by the following hosted run; final tested revision and results are recorded in PR #221."
+  },
+  "third_hosted_validation": {
+    "source_head_sha": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+    "checkout_merge_sha": "1956f400a7b0f432c95436bd3cfd53761de639b1",
+    "workflows": {
+      "CI": {
+        "id": 43891433929,
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43891433929"
+      },
+      "Quality": {
+        "id": 43891433966,
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43891433966"
+      },
+      "Fuzz": {
+        "id": 43891434007,
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43891434007"
+      },
+      "CodeQL": {
+        "id": 43891433953,
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43891433953"
+      }
+    },
+    "windows": {
+      "ordinary": {
+        "total": 217,
+        "passed": 216,
+        "failed": 0,
+        "skipped": 1
+      },
+      "diagnostic": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "junit_validation": {
+        "ordinary": {
+          "suite": {
+            "name": "Win32-ninja",
+            "tests": "217",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "1",
+            "hostname": "runnervmm7ud1",
+            "time": "616",
+            "timestamp": "2026-11-16T15:02:27"
+          },
+          "total": 217,
+          "passed": 216,
+          "failed": [],
+          "skipped": [
+            "windows_inline_ime_input"
+          ],
+          "fixtures": [
+            {
+              "name": "native_surface_initialization_failures",
+              "attributes": {
+                "name": "native_surface_initialization_failures",
+                "classname": "native_surface_initialization_failures",
+                "time": "0.302824",
+                "status": "run"
+              },
+              "stdout": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=5; first uninjected skip=5)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=7; first uninjected skip=7)\n"
+            },
+            {
+              "name": "native_parallel_surface_failures",
+              "attributes": {
+                "name": "native_parallel_surface_failures",
+                "classname": "native_parallel_surface_failures",
+                "time": "0.0846541",
+                "status": "run"
+              },
+              "stdout": "PASS: production parallel tasks join before propagating resource failures and permit retry\n"
+            }
+          ]
+        },
+        "diagnostic": {
+          "suite": {
+            "name": "Win32-ninja",
+            "tests": "2",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "0",
+            "hostname": "runnervmm7ud1",
+            "time": "13",
+            "timestamp": "2026-11-16T15:13:39"
+          },
+          "total": 2,
+          "passed": 2,
+          "failed": [],
+          "skipped": [],
+          "fixtures": []
+        }
+      },
+      "evidence_artifact_url": "https://github.com/1298345095/wxnotepad/actions/runs/43891433929/artifacts/14238451474",
+      "evidence_sha256_verified": true
+    },
+    "linux": {
+      "ordinary_linux": {
+        "job_id": 133383374431,
+        "conclusion": "success",
+        "x11": {
+          "total": 205,
+          "passed": 203,
+          "skipped": 2,
+          "failed": 0
+        },
+        "wayland": {
+          "total": 205,
+          "passed": 205,
+          "skipped": 0,
+          "failed": 0
+        },
+        "json_wayland_repeats": 20,
+        "x11_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "wayland_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "application_and_tests_build": "success",
+        "bundle": "success",
+        "sdk_contract": "success",
+        "evidence_artifact_id": 14238277687,
+        "build_artifact_id": 14238955980,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43891433929/linux-ordinary-job.log"
+      },
+      "coverage_x11": {
+        "job_id": 133383374034,
+        "conclusion": "success",
+        "counts": {
+          "total": 205,
+          "passed": 203,
+          "skipped": 2,
+          "failed": 0
+        },
+        "evidence_artifact_id": 14238995084,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43891433929/coverage-x11-job.log"
+      },
+      "coverage_wayland": {
+        "job_id": 133383374736,
+        "conclusion": "success",
+        "counts": {
+          "total": 205,
+          "passed": 205,
+          "skipped": 0,
+          "failed": 0
+        },
+        "evidence_artifact_id": 14238810314,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43891433929/coverage-wayland-job.log"
+      },
+      "coverage_aggregate": {
+        "job_id": 133391308044,
+        "status": "completed",
+        "conclusion": "success",
+        "sonar_ce_task": "AaHk8V2RSw0uFDSXC1ay",
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43891433929/coverage-aggregate-job.log",
+        "scanner_execution_success_utc": "2026-11-16T15:19:48Z",
+        "evidence_artifact_id": 14239191085
+      },
+      "skipped_x11_tests": [
+        "original_new_window_maximized",
+        "native_peer_geometry_ready"
+      ],
+      "all_four_backend_results": {
+        "surface_initialization": "passed all nine phases including actual paint, committed changes, stream and rectangular Undo, repaint and Redo",
+        "parallel_surface": "passed",
+        "stream_undo": {
+          "injected": 130,
+          "first_uninjected_skip": 130
+        },
+        "rectangular_undo": {
+          "injected": 182,
+          "first_uninjected_skip": 182
+        }
+      },
+      "raw_log_sha256": {
+        "linux-ordinary-job.log": "1bf3928340e799fced3482fe30caa531bd65daca4e284caff5518b7bec1b9ee2",
+        "coverage-wayland-job.log": "3c60544b1f56dea160013113bce7bf84d587256d89c0eea7428090ceb1660a5c",
+        "coverage-x11-job.log": "c22dc1d037cd0693d53b4bd86e9d4331c8c82a68f0ad1e2f76ca1b9878606c37",
+        "coverage-aggregate-job.log": "d5f9b290f46cf50ad75b1235eb483e5e644de0c8f577dc3df1a48597dbb0c6a2"
+      },
+      "fixture_artifact_results": {
+        "coverage_x11": {
+          "native_surface_initialization_failures": {
+            "attributes": {
+              "name": "native_surface_initialization_failures",
+              "classname": "native_surface_initialization_failures",
+              "time": "3.73847",
+              "status": "run"
+            },
+            "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+            "artifact_member": "reports/x11/shard-1/tests.xml"
+          },
+          "native_parallel_surface_failures": {
+            "attributes": {
+              "name": "native_parallel_surface_failures",
+              "classname": "native_parallel_surface_failures",
+              "time": "0.063555",
+              "status": "run"
+            },
+            "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+            "artifact_member": "reports/x11/shard-2/tests.xml"
+          }
+        },
+        "coverage_wayland": {
+          "native_surface_initialization_failures": {
+            "attributes": {
+              "name": "native_surface_initialization_failures",
+              "classname": "native_surface_initialization_failures",
+              "time": "22.9377",
+              "status": "run"
+            },
+            "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+            "artifact_member": "reports/wayland/shard-1/tests.xml"
+          },
+          "native_parallel_surface_failures": {
+            "attributes": {
+              "name": "native_parallel_surface_failures",
+              "classname": "native_parallel_surface_failures",
+              "time": "0.063466",
+              "status": "run"
+            },
+            "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+            "artifact_member": "reports/wayland/shard-2/tests.xml"
+          }
+        },
+        "ordinary_x11": {
+          "native_surface_initialization_failures": {
+            "attributes": {
+              "name": "native_surface_initialization_failures",
+              "classname": "native_surface_initialization_failures",
+              "time": "2.69095",
+              "status": "run"
+            },
+            "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+            "artifact_member": ".ci/reports/x11/shard-1/tests.xml"
+          },
+          "native_parallel_surface_failures": {
+            "attributes": {
+              "name": "native_parallel_surface_failures",
+              "classname": "native_parallel_surface_failures",
+              "time": "0.0637423",
+              "status": "run"
+            },
+            "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+            "artifact_member": ".ci/reports/x11/shard-2/tests.xml"
+          }
+        },
+        "ordinary_wayland": {
+          "native_surface_initialization_failures": {
+            "attributes": {
+              "name": "native_surface_initialization_failures",
+              "classname": "native_surface_initialization_failures",
+              "time": "22.9383",
+              "status": "run"
+            },
+            "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+            "artifact_member": ".ci/reports/wayland/shard-1/tests.xml"
+          },
+          "native_parallel_surface_failures": {
+            "attributes": {
+              "name": "native_parallel_surface_failures",
+              "classname": "native_parallel_surface_failures",
+              "time": "0.0645389",
+              "status": "run"
+            },
+            "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+            "artifact_member": ".ci/reports/wayland/shard-2/tests.xml"
+          }
+        }
+      }
+    },
+    "clang_tidy_translation_units": 228,
+    "sonar": {
+      "scm_revision": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+      "uploaded_at_utc": "2026-11-16T15:19:45Z",
+      "ce_task": "AaHk8V2RSw0uFDSXC1ay",
+      "quality_gate": {
+        "status": "ERROR",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "ERROR",
+            "errorThreshold": "80",
+            "actualValue": "79.0"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      }
+    }
+  },
+  "post_analysis_followup": {
+    "baseline_revision": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+    "review_ledger": "sonarqube-2026-11-16-surface-pr-dispositions.json",
+    "reviewed_findings": 72,
+    "verified_false_positives": 33,
+    "code_addressed_pending_analysis": 25,
+    "retained_recommendations": 14,
+    "coverage_export": {
+      "red_green": {
+        "gcovr_version": "8.8",
+        "input_sha": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+        "raw_json": "/workspace/scratch/44c8652c3121/ci-run-43891433929/merged-coverage-extracted/.ci/reports/coverage/coverage.json",
+        "raw_json_sha256": "2b36b6c8a0b253c9b269179a310270fff5a34eff9391921622c44d009d733454",
+        "original_export_reproduced_byte_for_byte": true,
+        "baseline_export": {
+          "path": "/workspace/scratch/44c8652c3121/ci-run-43891433929/sonar-without-merge-lines.xml",
+          "sha256": "0e8dec55e0b8a4a631be91da1bb787f6206b2ceb8e00421912ecbdd3b7948370",
+          "duplicate_source_lines": 74,
+          "unique_line_invariant": false,
+          "checks": [
+            {
+              "file": "src/editor/platform/parallel_tasks.h",
+              "line": 29,
+              "expected_unique_record": [
+                "true",
+                "2",
+                "2"
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  "2",
+                  "0"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "false",
+                  "2",
+                  "0"
+                ],
+                [
+                  "false",
+                  "2",
+                  "0"
+                ]
+              ],
+              "passed": false
+            },
+            {
+              "file": "src/editor/platform/parallel_tasks.h",
+              "line": 32,
+              "expected_unique_record": [
+                "true",
+                "2",
+                "2"
+              ],
+              "actual_records": [
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ],
+                [
+                  "true",
+                  "2",
+                  "1"
+                ]
+              ],
+              "passed": false
+            },
+            {
+              "file": "src/editor/editor_core.h",
+              "line": 23,
+              "expected_unique_record": [
+                "true",
+                "4",
+                "1"
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "true",
+                  "4",
+                  "1"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ],
+                [
+                  "false",
+                  "4",
+                  "0"
+                ]
+              ],
+              "passed": false
+            },
+            {
+              "file": "src/editor/editor_core.h",
+              "line": 27,
+              "expected_unique_record": [
+                "false",
+                null,
+                null
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ],
+                [
+                  "false",
+                  null,
+                  null
+                ]
+              ],
+              "passed": false
+            },
+            {
+              "file": "src/editor/platform/wx_platform.cpp",
+              "line": 90,
+              "expected_unique_record": [
+                "false",
+                null,
+                null
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ]
+              ],
+              "passed": true
+            }
+          ],
+          "semantic_check_exit_code": 1
+        },
+        "merged_lines_export": {
+          "path": "/workspace/scratch/44c8652c3121/ci-run-43891433929/sonar-merge-lines.xml",
+          "sha256": "14d355cb717ba21512f738ac09ac868a805dee86d457a05064781118a7af26f4",
+          "duplicate_source_lines": 0,
+          "unique_line_invariant": true,
+          "checks": [
+            {
+              "file": "src/editor/platform/parallel_tasks.h",
+              "line": 29,
+              "expected_unique_record": [
+                "true",
+                "2",
+                "2"
+              ],
+              "actual_records": [
+                [
+                  "true",
+                  "2",
+                  "2"
+                ]
+              ],
+              "passed": true
+            },
+            {
+              "file": "src/editor/platform/parallel_tasks.h",
+              "line": 32,
+              "expected_unique_record": [
+                "true",
+                "2",
+                "2"
+              ],
+              "actual_records": [
+                [
+                  "true",
+                  "2",
+                  "2"
+                ]
+              ],
+              "passed": true
+            },
+            {
+              "file": "src/editor/editor_core.h",
+              "line": 23,
+              "expected_unique_record": [
+                "true",
+                "4",
+                "1"
+              ],
+              "actual_records": [
+                [
+                  "true",
+                  "4",
+                  "1"
+                ]
+              ],
+              "passed": true
+            },
+            {
+              "file": "src/editor/editor_core.h",
+              "line": 27,
+              "expected_unique_record": [
+                "false",
+                null,
+                null
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ]
+              ],
+              "passed": true
+            },
+            {
+              "file": "src/editor/platform/wx_platform.cpp",
+              "line": 90,
+              "expected_unique_record": [
+                "false",
+                null,
+                null
+              ],
+              "actual_records": [
+                [
+                  "false",
+                  null,
+                  null
+                ]
+              ],
+              "passed": true
+            }
+          ],
+          "semantic_check_exit_code": 0
+        },
+        "official_documentation": "https://www.gcovr.com/en/stable/manpage.html#cmdoption-merge-lines",
+        "local_gcc_template_regression": {
+          "compiler": "g++-14 (Debian 14.2.0-19) 14.2.0",
+          "gcov": "gcov (Debian 14.2.0-19) 14.2.0",
+          "scratch_only_substitutions": [
+            "g++-13 -> g++-14",
+            "gcov-13 -> gcov-14",
+            "Linux GCC 13 -> Linux GCC 14 (skip reason)"
+          ],
+          "baseline": {
+            "exit_code": 1,
+            "test_methods": 6,
+            "failed_test_methods": 2,
+            "log": "/workspace/scratch/44c8652c3121/coverage-template-probe/baseline-evidence/run-001.log",
+            "unittest_reported_failures": 11
+          },
+          "fixed": {
+            "exit_code": 0,
+            "passed": 6,
+            "skipped": 0,
+            "log": "/workspace/scratch/44c8652c3121/coverage-template-probe/fixed-evidence/run-001.log"
+          },
+          "canonical_repository_fixture": {
+            "exit_code": 0,
+            "passed": 2,
+            "skipped": 4,
+            "reason": "Linux GCC 13 compiler unavailable locally; canonical tests retained GCC 13 and will run in CI.",
+            "log": "/workspace/scratch/44c8652c3121/coverage-template-probe/canonical-local-evidence/run-001.log"
+          }
+        },
+        "changed_test_file_sha256": "56b647dd8d35b6c46182fdc8ec6f8ff87fc3a2984a8af9b34c5844fd8d3edc2a",
+        "collector_file_sha256": "889d91c234195593071d2c0214cef29331738686d0dd4250e989a2d54ac2ac33",
+        "recorded_utc": "2026-11-16T15:29:18.702501+00:00",
+        "replay_commands": [
+          "PYTHONPATH=/workspace/scratch/44c8652c3121/coverage-python python3 -m gcovr --root /workspace/scratch/44c8652c3121/wxnotepad --filter /workspace/scratch/44c8652c3121/wxnotepad/src/ --json-add-tracefile /workspace/scratch/44c8652c3121/ci-run-43891433929/merged-coverage-extracted/.ci/reports/coverage/coverage.json --sonarqube /workspace/scratch/44c8652c3121/ci-run-43891433929/sonar-without-merge-lines.xml --sonarqube-metric branch",
+          "PYTHONPATH=/workspace/scratch/44c8652c3121/coverage-python python3 -m gcovr --root /workspace/scratch/44c8652c3121/wxnotepad --filter /workspace/scratch/44c8652c3121/wxnotepad/src/ --json-add-tracefile /workspace/scratch/44c8652c3121/ci-run-43891433929/merged-coverage-extracted/.ci/reports/coverage/coverage.json --sonarqube /workspace/scratch/44c8652c3121/ci-run-43891433929/sonar-merge-lines.xml --sonarqube-metric branch --merge-lines"
+        ],
+        "followup_preserve_plain_headers": {
+          "test_file": "/workspace/scratch/44c8652c3121/wxnotepad/tests/test_coverage_reports.py",
+          "test_file_sha256": "f28635c853b52f1ce244585ef6454aa76753d0862f40d136f9c1c30b537d1169",
+          "patch": "/workspace/scratch/44c8652c3121/coverage-template-probe/test-coverage-reports-with-shared-headers.patch",
+          "scratch_source": "/workspace/scratch/44c8652c3121/coverage-template-probe/fixed-shared-headers/tests/test_coverage_reports.py",
+          "log": "/workspace/scratch/44c8652c3121/coverage-template-probe/fixed-shared-headers-evidence/run-001.log",
+          "exit_code": 0,
+          "passed": 6,
+          "skipped": 0,
+          "compiler": "GCC 14.2.0 with matching gcov 14.2.0, scratch copies only",
+          "original_shared_header_checks": "ordinary static-inline Choose/Repeated kept, with complementary 2/2 and repeated 1/2 across translation units",
+          "template_checks": "separate TemplateChoose/TemplateRepeated int and long instances, complementary 2/2, repeated 1/2, uncalled 0/2, unique XML lines, raw JSON instances retained",
+          "collector_runs_added": 0,
+          "repository_compiler_requirement": "Linux GCC 13 unchanged",
+          "recorded_utc": "2026-11-16T15:32:23.331264+00:00"
+        }
+      },
+      "source_line_audit": {
+        "structure": {
+          "original": {
+            "files": 98,
+            "entries": 11681,
+            "unique_source_lines": 11259,
+            "duplicate_source_lines": 74
+          },
+          "merge_lines": {
+            "files": 98,
+            "entries": 11259,
+            "unique_source_lines": 11259,
+            "duplicate_source_lines": 0
+          }
+        },
+        "selected_lines": {
+          "src/editor/platform/parallel_tasks.h": {
+            "20": {
+              "original": [
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "20",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "22": {
+              "original": [
+                {
+                  "lineNumber": "22",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "22",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "22",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "22",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "22",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "22",
+                  "covered": "true"
+                }
+              ]
+            },
+            "23": {
+              "original": [
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "23",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "25": {
+              "original": [
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                },
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "25",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "28": {
+              "original": [
+                {
+                  "lineNumber": "28",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "28",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "28",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "28",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "28",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "28",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "29": {
+              "original": [
+                {
+                  "lineNumber": "29",
+                  "covered": "false",
+                  "branchesToCover": "2",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "29",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "29",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "29",
+                  "covered": "false",
+                  "branchesToCover": "2",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "29",
+                  "covered": "false",
+                  "branchesToCover": "2",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "29",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "32": {
+              "original": [
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "1"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "32",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "81": {
+              "original": [
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "81",
+                  "covered": "true"
+                }
+              ]
+            }
+          },
+          "src/editor/editor_core.h": {
+            "23": {
+              "original": [
+                {
+                  "lineNumber": "23",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "true",
+                  "branchesToCover": "4",
+                  "coveredBranches": "1"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                },
+                {
+                  "lineNumber": "23",
+                  "covered": "false",
+                  "branchesToCover": "4",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "23",
+                  "covered": "true",
+                  "branchesToCover": "4",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "24": {
+              "original": [
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "24",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "24",
+                  "covered": "true"
+                }
+              ]
+            },
+            "27": {
+              "original": [
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "27",
+                  "covered": "false"
+                }
+              ]
+            },
+            "30": {
+              "original": [
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "true"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                },
+                {
+                  "lineNumber": "30",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "30",
+                  "covered": "true"
+                }
+              ]
+            },
+            "31": {
+              "original": [],
+              "merge_lines": []
+            }
+          },
+          "src/editor/platform/wx_platform.cpp": {
+            "81": {
+              "original": [
+                {
+                  "lineNumber": "81",
+                  "covered": "true",
+                  "branchesToCover": "7",
+                  "coveredBranches": "7"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "81",
+                  "covered": "true",
+                  "branchesToCover": "7",
+                  "coveredBranches": "7"
+                }
+              ]
+            },
+            "87": {
+              "original": [],
+              "merge_lines": []
+            },
+            "90": {
+              "original": [
+                {
+                  "lineNumber": "90",
+                  "covered": "false"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "90",
+                  "covered": "false"
+                }
+              ]
+            },
+            "104": {
+              "original": [
+                {
+                  "lineNumber": "104",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "104",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ]
+            },
+            "108": {
+              "original": [
+                {
+                  "lineNumber": "108",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "108",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ]
+            }
+          },
+          "src/editor/platform/text_measurement_gtk.cpp": {
+            "243": {
+              "original": [
+                {
+                  "lineNumber": "243",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "243",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ]
+            },
+            "246": {
+              "original": [
+                {
+                  "lineNumber": "246",
+                  "covered": "true",
+                  "branchesToCover": "3",
+                  "coveredBranches": "1"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "246",
+                  "covered": "true",
+                  "branchesToCover": "3",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "248": {
+              "original": [
+                {
+                  "lineNumber": "248",
+                  "covered": "true",
+                  "branchesToCover": "3",
+                  "coveredBranches": "1"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "248",
+                  "covered": "true",
+                  "branchesToCover": "3",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "265": {
+              "original": [
+                {
+                  "lineNumber": "265",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "265",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ]
+            },
+            "268": {
+              "original": [
+                {
+                  "lineNumber": "268",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ],
+              "merge_lines": [
+                {
+                  "lineNumber": "268",
+                  "covered": "false",
+                  "branchesToCover": "1",
+                  "coveredBranches": "0"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "final_metric_source": "The next hosted Sonar analysis and PR description record the resulting gate."
+    },
+    "explicit_threads": {
+      "baseline": "2d6cdba1fcf5e3fc5804053d6130b3a56742cd09",
+      "files": [
+        "/workspace/scratch/44c8652c3121/wxnotepad/src/editor/platform/parallel_tasks.h",
+        "/workspace/scratch/44c8652c3121/wxnotepad/tests/parallel_surface_failure.cpp"
+      ],
+      "rules_addressed": [
+        {
+          "key": "AaHk8WZshnL9Urv53rXM",
+          "rule": "cpp:S8460",
+          "original_line": 81
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rX_",
+          "rule": "cpp:S5271",
+          "original_line": 23
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYA",
+          "rule": "cpp:S7034",
+          "original_line": 36
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYB",
+          "rule": "cpp:S3608",
+          "original_line": 44
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYC",
+          "rule": "cpp:S3608",
+          "original_line": 61
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYE",
+          "rule": "cpp:S3608",
+          "original_line": 63
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYG",
+          "rule": "cpp:S3624",
+          "original_line": 65
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYF",
+          "rule": "cpp:S3646",
+          "original_line": 68
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYH",
+          "rule": "cpp:S3608",
+          "original_line": 99
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYI",
+          "rule": "cpp:S3608",
+          "original_line": 105
+        },
+        {
+          "key": "AaHk8WbphnL9Urv53rYJ",
+          "rule": "cpp:S8460",
+          "original_line": 107
+        }
+      ],
+      "compiler": "14.2.0",
+      "release_flags": "-std=c++23 -O2 -g -pthread -Wall -Wextra -Wpedantic -Werror",
+      "sanitizer_flags": "-std=c++23 -O1 -g -pthread -fsanitize=address,undefined -fno-omit-frame-pointer",
+      "sanitizer_environment": {
+        "ASAN_OPTIONS": "detect_leaks=0:halt_on_error=1",
+        "UBSAN_OPTIONS": "halt_on_error=1"
+      },
+      "checks": [
+        {
+          "variant": "parallel-jthread-O2",
+          "summary": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-O2/summary.json",
+          "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-O2/run-001.log",
+          "exit_code": 0
+        },
+        {
+          "variant": "parallel-jthread-asan-ubsan",
+          "summary": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-asan-ubsan/summary.json",
+          "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-asan-ubsan/run-001.log",
+          "exit_code": 0
+        }
+      ],
+      "native_windows_block_unchanged": true,
+      "lifecycle_review": "Exception slots are allocated before thread owners; each worker writes one distinct slot. All started threads are joined before reading slots, preserving startup-error priority. Thread owner destruction precedes slot destruction if joining unwinds. Work outlives the joined batch. Independently reviewed by sonar_triage.",
+      "partial_start_cases": [
+        0,
+        1,
+        3
+      ],
+      "partial_start_proof": "Started workers block on releaseRemaining while launch failure is raised; the caller must wait until released, then preserve the startup system_error despite worker bad_alloc."
+    },
+    "source_sha256": {
+      ".github/scripts/collect_coverage.py": "889d91c234195593071d2c0214cef29331738686d0dd4250e989a2d54ac2ac33",
+      "src/editor/platform/parallel_tasks.h": "036d5c93a77359af850543c5b224f3f91bd0f1a60fb6449962f73c79a2cc07ac",
+      "tests/parallel_surface_failure.cpp": "79624b314e60764789960e4099b9af99ddb6ee0667f5832903afa5020a7f7eb5",
+      "tests/surface_initialization.cpp": "e0badb0170fc4bc885f29b6a69b979367cfece1f729246411b5be301f625155f",
+      "tests/test_coverage_reports.py": "f28635c853b52f1ce244585ef6454aa76753d0862f40d136f9c1c30b537d1169"
+    },
+    "validation": {
+      "application_and_surface_parallel_targets": {
+        "result": "compiled and linked",
+        "exit_code": 0,
+        "log": "native-build/combined-followup-build.log"
+      },
+      "python_helpers": {
+        "run": 53,
+        "passed": 44,
+        "skipped": 9,
+        "exit_code": 0,
+        "log": "python-followup-final-tests.log"
+      },
+      "canonical_format": {
+        "version": "23.1.2",
+        "tracked_files": 373,
+        "exit_code": 0
+      },
+      "python_compileall_exit_code": 0,
+      "diff_check_exit_code": 0
+    }
+  },
+  "fourth_hosted_validation": {
+    "source_head_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+    "checkout_merge_sha": "215e0e758d7eeccea65bad8cc1705847dc45a3fb",
+    "workflows": [
+      {
+        "id": 43898310979,
+        "name": "CodeQL",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 227,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310979/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310979/logs",
+        "workflow_id": 403089439
+      },
+      {
+        "id": 43898311086,
+        "name": "Fuzz",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 85,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898311086/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898311086/logs",
+        "workflow_id": 413097809
+      },
+      {
+        "id": 43898310949,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 228,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310949/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310949/logs",
+        "workflow_id": 403089440
+      },
+      {
+        "id": 43898310953,
+        "name": "Quality",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 227,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310953/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310953/logs",
+        "workflow_id": 403089438
+      }
+    ],
+    "windows": {
+      "run_id": 43898310949,
+      "job_id": 133407785142,
+      "job": "Windows MSVC",
+      "status": "completed",
+      "conclusion": "success",
+      "source_head_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+      "tested_merge_sha": "215e0e758d7eeccea65bad8cc1705847dc45a3fb",
+      "ordinary": {
+        "total": 217,
+        "passed": 216,
+        "failed": 0,
+        "skipped": 1
+      },
+      "diagnostic": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "new_fixtures": [
+        "2026-11-16T15:49:48.7849596Z 213/217 Test #213: native_surface_initialization_failures ...........   Passed    0.25 sec",
+        "2026-11-16T15:49:48.9313125Z 214/217 Test #214: native_parallel_surface_failures .................   Passed    0.15 sec"
+      ],
+      "ordinary_skips": [
+        "2026-11-16T15:47:15.9807486Z 125/217 Test #125: windows_inline_ime_input .........................***Skipped   0.02 sec"
+      ],
+      "diagnostic_results": [
+        "2026-11-16T15:50:30.7114953Z 1/2 Test   #6: native_diagnostic_process ........   Passed    0.65 sec",
+        "2026-11-16T15:50:42.1810664Z 2/2 Test #129: native_diagnostic_delivery .......   Passed   11.47 sec"
+      ],
+      "junit_validation": {
+        "artifact_sha256": "87814ad0af0ea1d016b412e9eeff54e41630b89b462f5940737447bd740e0db9",
+        "ordinary": {
+          "suite": {
+            "name": "Win32-ninja",
+            "tests": "217",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "1",
+            "hostname": "runnervmm7ud1",
+            "time": "557",
+            "timestamp": "2026-11-16T15:40:32"
+          },
+          "total": 217,
+          "passed": 216,
+          "failed": [],
+          "skipped": [
+            "windows_inline_ime_input"
+          ],
+          "fixtures": [
+            {
+              "name": "native_surface_initialization_failures",
+              "attributes": {
+                "name": "native_surface_initialization_failures",
+                "classname": "native_surface_initialization_failures",
+                "time": "0.247071",
+                "status": "run"
+              },
+              "stdout": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=5; first uninjected skip=5)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=7; first uninjected skip=7)\n"
+            },
+            {
+              "name": "native_parallel_surface_failures",
+              "attributes": {
+                "name": "native_parallel_surface_failures",
+                "classname": "native_parallel_surface_failures",
+                "time": "0.145644",
+                "status": "run"
+              },
+              "stdout": "PASS: production parallel tasks join before propagating resource failures and permit retry\n"
+            }
+          ]
+        },
+        "diagnostic": {
+          "suite": {
+            "name": "Win32-ninja",
+            "tests": "2",
+            "failures": "0",
+            "disabled": "0",
+            "skipped": "0",
+            "hostname": "runnervmm7ud1",
+            "time": "12",
+            "timestamp": "2026-11-16T15:50:30"
+          },
+          "total": 2,
+          "passed": 2,
+          "failed": [],
+          "skipped": [],
+          "fixtures": []
+        }
+      },
+      "parallel_fixture_checks": [
+        "Native Windows worker allocation failure joins every callback before rethrow",
+        "Native Windows resource failure preserves error code/context and permits retry",
+        "RunThreads partial launch failure after 0, 1, and 3 started jthreads waits for blocked workers and preserves startup-error priority",
+        "Native CreateThreadpoolWork failure retains GetLastError without submitting null work",
+        "Successful output retry before and after all failure scenarios"
+      ],
+      "surface_sweeps": {
+        "stream": {
+          "injected": 5,
+          "first_uninjected_skip": 5
+        },
+        "rectangular": {
+          "injected": 7,
+          "first_uninjected_skip": 7
+        }
+      },
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Test build preparation and CI invocation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Set up dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Set up compiler cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Verify compiler cache hits and header invalidation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Validate Linux native crash evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8
+        },
+        {
+          "name": "Validate Linux debug-symbol packaging",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Configure",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Build application and tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Verify pinned scheme importer CLIs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Record ordinary compilation cache statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Enable Linux native core dumps",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Prepare Windows native test display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Collect independent original GDI viewport reference",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Capture Windows visual brace crash dumps",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Test Windows",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Repeat Windows visual brace regression with crash evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19
+        },
+        {
+          "name": "Test private X11",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Test private Wayland",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Repeat native JSON Wayland regression with timeout evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Build opt-in diagnostic binaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23
+        },
+        {
+          "name": "Record diagnostic compilation cache statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24
+        },
+        {
+          "name": "Test Windows diagnostics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25
+        },
+        {
+          "name": "Test private X11 diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26
+        },
+        {
+          "name": "Test private Wayland diagnostics",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27
+        },
+        {
+          "name": "Collect Linux native crash evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28
+        },
+        {
+          "name": "Collect tested build output",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 29
+        },
+        {
+          "name": "Verify configured SDK and distributed dependency footprint",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Upload build output",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Preserve logs and test evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 32
+        },
+        {
+          "name": "Post Set up compiler cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Set up dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Post Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 64
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 65
+        }
+      ],
+      "evidence_artifact": {
+        "id": 14242155227,
+        "name": "evidence-windows-x64-215e0e758d7eeccea65bad8cc1705847dc45a3fb-attempt-1",
+        "size_in_bytes": 5739061,
+        "url": "https://api.github.com/repos/1298345095/wxnotepad/actions/artifacts/14242155227",
+        "archive_download_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/artifacts/14242155227/zip",
+        "expired": false,
+        "created_at": "2026-11-16T15:50:46Z",
+        "expires_at": "2026-12-16T15:50:44Z",
+        "updated_at": "2026-11-16T15:50:46Z",
+        "digest": "sha256:87814ad0af0ea1d016b412e9eeff54e41630b89b462f5940737447bd740e0db9",
+        "workflow_run": {
+          "id": 43898310949,
+          "repository_id": 1439122383,
+          "head_repository_id": 1439122383,
+          "head_branch": "codex/sonarcloud-followup-2026-11-16",
+          "head_sha": "7e57caea1acce20a425612087ec81ee538b916d6"
+        }
+      },
+      "evidence_artifact_url": "https://github.com/1298345095/wxnotepad/actions/runs/43898310949/artifacts/14242155227",
+      "evidence_sha256_verified": true,
+      "evidence_zip": "/workspace/scratch/44c8652c3121/ci-windows-7e57caea-evidence.zip",
+      "job_log": "/workspace/scratch/44c8652c3121/ci-windows-7e57caea-job.log"
+    },
+    "linux": {
+      "run_id": 43898310949,
+      "run_attempt": 1,
+      "head_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+      "pr_merge_candidate_sha": "215e0e758d7eeccea65bad8cc1705847dc45a3fb",
+      "pr": 221,
+      "base_sha": "a308c6b181674358205df90669293cc4afcab3af",
+      "status": "completed",
+      "ordinary_job": 133407784776,
+      "coverage_x11_job": 133407785471,
+      "coverage_wayland_job": 133407785207,
+      "checkout_merge_sha": "215e0e758d7eeccea65bad8cc1705847dc45a3fb",
+      "ordinary_linux": {
+        "job_id": 133407784776,
+        "conclusion": "success",
+        "results": {
+          "archive": "ci-run-43898310949/ordinary-linux-artifact.zip",
+          "sha256": "8969e28b3305d0686782f32024d718dc8fd73551f7dfe90869a200f44d5a54b9",
+          "backends": {
+            "wayland": {
+              "counts": {
+                "total": 205,
+                "passed": 205,
+                "failed": 0,
+                "skipped": 0
+              },
+              "skipped": [],
+              "failures": [],
+              "fixtures": {
+                "native_surface_initialization_failures": {
+                  "attributes": {
+                    "name": "native_surface_initialization_failures",
+                    "classname": "native_surface_initialization_failures",
+                    "time": "22.8921",
+                    "status": "run"
+                  },
+                  "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+                  "artifact_member": ".ci/reports/wayland/shard-1/tests.xml",
+                  "sweeps": [
+                    {
+                      "injected": 130,
+                      "first_uninjected_skip": 130
+                    },
+                    {
+                      "injected": 182,
+                      "first_uninjected_skip": 182
+                    }
+                  ]
+                },
+                "native_parallel_surface_failures": {
+                  "attributes": {
+                    "name": "native_parallel_surface_failures",
+                    "classname": "native_parallel_surface_failures",
+                    "time": "0.123952",
+                    "status": "run"
+                  },
+                  "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+                  "artifact_member": ".ci/reports/wayland/shard-2/tests.xml"
+                }
+              },
+              "members": [
+                ".ci/reports/wayland/shard-1/tests.xml",
+                ".ci/reports/wayland/shard-2/tests.xml",
+                ".ci/reports/wayland/shard-3/tests.xml",
+                ".ci/reports/wayland/shard-4/tests.xml"
+              ]
+            },
+            "x11": {
+              "counts": {
+                "total": 205,
+                "passed": 203,
+                "skipped": 2,
+                "failed": 0
+              },
+              "skipped": [
+                "original_new_window_maximized",
+                "native_peer_geometry_ready"
+              ],
+              "failures": [],
+              "fixtures": {
+                "native_surface_initialization_failures": {
+                  "attributes": {
+                    "name": "native_surface_initialization_failures",
+                    "classname": "native_surface_initialization_failures",
+                    "time": "1.47531",
+                    "status": "run"
+                  },
+                  "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+                  "artifact_member": ".ci/reports/x11/shard-1/tests.xml",
+                  "sweeps": [
+                    {
+                      "injected": 130,
+                      "first_uninjected_skip": 130
+                    },
+                    {
+                      "injected": 182,
+                      "first_uninjected_skip": 182
+                    }
+                  ]
+                },
+                "native_parallel_surface_failures": {
+                  "attributes": {
+                    "name": "native_parallel_surface_failures",
+                    "classname": "native_parallel_surface_failures",
+                    "time": "0.123273",
+                    "status": "run"
+                  },
+                  "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+                  "artifact_member": ".ci/reports/x11/shard-2/tests.xml"
+                }
+              },
+              "members": [
+                ".ci/reports/x11/shard-1/tests.xml",
+                ".ci/reports/x11/shard-2/tests.xml",
+                ".ci/reports/x11/shard-3/tests.xml",
+                ".ci/reports/x11/shard-4/tests.xml"
+              ]
+            }
+          }
+        },
+        "json_wayland_repeats": {
+          "passed": 20,
+          "failed": 0
+        },
+        "diagnostics": {
+          "x11": {
+            "passed": 2,
+            "failed": 0
+          },
+          "wayland": {
+            "passed": 2,
+            "failed": 0
+          }
+        },
+        "application_build": "success",
+        "bundle": "success",
+        "sdk_contract": "success",
+        "evidence_artifact_id": 14241851199,
+        "build_artifact_id": 14241936063
+      },
+      "coverage_x11": {
+        "job_id": 133407785471,
+        "conclusion": "success",
+        "results": {
+          "archive": "ci-run-43898310949/coverage-x11-artifact.zip",
+          "sha256": "b00179937622de2f78146ef4728c09f6a599a722e74098c1fdef63d40ffc45a4",
+          "backends": {
+            "x11": {
+              "counts": {
+                "total": 205,
+                "passed": 203,
+                "skipped": 2,
+                "failed": 0
+              },
+              "skipped": [
+                "original_new_window_maximized",
+                "native_peer_geometry_ready"
+              ],
+              "failures": [],
+              "fixtures": {
+                "native_surface_initialization_failures": {
+                  "attributes": {
+                    "name": "native_surface_initialization_failures",
+                    "classname": "native_surface_initialization_failures",
+                    "time": "3.22646",
+                    "status": "run"
+                  },
+                  "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+                  "artifact_member": "reports/x11/shard-1/tests.xml",
+                  "sweeps": [
+                    {
+                      "injected": 130,
+                      "first_uninjected_skip": 130
+                    },
+                    {
+                      "injected": 182,
+                      "first_uninjected_skip": 182
+                    }
+                  ]
+                },
+                "native_parallel_surface_failures": {
+                  "attributes": {
+                    "name": "native_parallel_surface_failures",
+                    "classname": "native_parallel_surface_failures",
+                    "time": "0.124154",
+                    "status": "run"
+                  },
+                  "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+                  "artifact_member": "reports/x11/shard-2/tests.xml"
+                }
+              },
+              "members": [
+                "reports/x11/shard-1/tests.xml",
+                "reports/x11/shard-2/tests.xml",
+                "reports/x11/shard-3/tests.xml",
+                "reports/x11/shard-4/tests.xml"
+              ]
+            }
+          }
+        },
+        "evidence_artifact_id": 14241661000,
+        "generic_xml": {
+          "files": 98,
+          "line_elements": 11263,
+          "duplicate_source_lines": 0,
+          "duplicates": []
+        },
+        "python_helpers": {
+          "total": 53,
+          "passed": 49,
+          "skipped": 4,
+          "failed": 0,
+          "coverage_regression_tests": [
+            "test_backend_json_merge_unions_branches_and_retains_coverage_policy (test_coverage_reports.GCCReports.test_backend_json_merge_unions_branches_and_retains_coverage_policy) ... ok",
+            "test_corrupt_counter_is_a_failure_not_an_uncovered_success (test_coverage_reports.GCCReports.test_corrupt_counter_is_a_failure_not_an_uncovered_success) ... ok",
+            "test_reports_keep_independent_header_branches_and_notes_only_zero_hits (test_coverage_reports.GCCReports.test_reports_keep_independent_header_branches_and_notes_only_zero_hits) ... ok",
+            "test_sonar_report_merges_headers_and_preserves_source_conditions (test_coverage_reports.GCCReports.test_sonar_report_merges_headers_and_preserves_source_conditions) ... ok",
+            "test_cli_rejects_executable_override (test_coverage_reports.MissingCoverage.test_cli_rejects_executable_override) ... ok",
+            "test_missing_notes_fail_without_creating_a_successful_report (test_coverage_reports.MissingCoverage.test_missing_notes_fail_without_creating_a_successful_report) ... ok"
+          ]
+        }
+      },
+      "coverage_wayland": {
+        "job_id": 133407785207,
+        "conclusion": "success",
+        "results": {
+          "archive": "ci-run-43898310949/coverage-wayland-artifact.zip",
+          "sha256": "e38d41cf8d0a5c93625a0ed6a49479daba654a063e9a786a58ba363b8a9ff282",
+          "backends": {
+            "wayland": {
+              "counts": {
+                "total": 205,
+                "passed": 205,
+                "failed": 0,
+                "skipped": 0
+              },
+              "skipped": [],
+              "failures": [],
+              "fixtures": {
+                "native_surface_initialization_failures": {
+                  "attributes": {
+                    "name": "native_surface_initialization_failures",
+                    "classname": "native_surface_initialization_failures",
+                    "time": "22.9483",
+                    "status": "run"
+                  },
+                  "output": "PASS: owned surface allocation failure, release and retry\nPASS: borrowed surface object/data allocation failure, release and retry\nPASS: missing and unavailable native contexts leave a reusable surface\nPASS: the pinned borrowed-context drawing factory rejects failed initialization and retries\nPASS: clip allocation failures unwind, retain native clipping and permit retry\nPASS: native measurement/paint failures recover without changing document history\nPASS: post-commit surface failure completes notifications and preserves subsequent editing\nPASS: every Undo visual surface allocation preserves text, selection and future editing (injected=130; first uninjected skip=130)\nPASS: rectangular Undo resource failures preserve every range and main row across repaint and Redo (injected=182; first uninjected skip=182)\n",
+                  "artifact_member": "reports/wayland/shard-1/tests.xml",
+                  "sweeps": [
+                    {
+                      "injected": 130,
+                      "first_uninjected_skip": 130
+                    },
+                    {
+                      "injected": 182,
+                      "first_uninjected_skip": 182
+                    }
+                  ]
+                },
+                "native_parallel_surface_failures": {
+                  "attributes": {
+                    "name": "native_parallel_surface_failures",
+                    "classname": "native_parallel_surface_failures",
+                    "time": "0.125358",
+                    "status": "run"
+                  },
+                  "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+                  "artifact_member": "reports/wayland/shard-2/tests.xml"
+                }
+              },
+              "members": [
+                "reports/wayland/shard-1/tests.xml",
+                "reports/wayland/shard-2/tests.xml",
+                "reports/wayland/shard-3/tests.xml",
+                "reports/wayland/shard-4/tests.xml"
+              ]
+            }
+          }
+        },
+        "evidence_artifact_id": 14241012953,
+        "generic_xml": {
+          "files": 98,
+          "line_elements": 11263,
+          "duplicate_source_lines": 0,
+          "duplicates": []
+        },
+        "python_helpers": {
+          "total": 53,
+          "passed": 49,
+          "skipped": 4,
+          "failed": 0,
+          "coverage_regression_tests": [
+            "test_backend_json_merge_unions_branches_and_retains_coverage_policy (test_coverage_reports.GCCReports.test_backend_json_merge_unions_branches_and_retains_coverage_policy) ... ok",
+            "test_corrupt_counter_is_a_failure_not_an_uncovered_success (test_coverage_reports.GCCReports.test_corrupt_counter_is_a_failure_not_an_uncovered_success) ... ok",
+            "test_reports_keep_independent_header_branches_and_notes_only_zero_hits (test_coverage_reports.GCCReports.test_reports_keep_independent_header_branches_and_notes_only_zero_hits) ... ok",
+            "test_sonar_report_merges_headers_and_preserves_source_conditions (test_coverage_reports.GCCReports.test_sonar_report_merges_headers_and_preserves_source_conditions) ... ok",
+            "test_cli_rejects_executable_override (test_coverage_reports.MissingCoverage.test_cli_rejects_executable_override) ... ok",
+            "test_missing_notes_fail_without_creating_a_successful_report (test_coverage_reports.MissingCoverage.test_missing_notes_fail_without_creating_a_successful_report) ... ok"
+          ]
+        }
+      },
+      "coverage_aggregate": {
+        "job_id": 133417138370,
+        "status": "completed",
+        "conclusion": "success",
+        "evidence_artifact_id": 14242355105,
+        "artifact_sha256": "24641e1296aefa6c729e6e5e4bfcec8323bccd0df7a994b30e5c9fa1057ce0f7",
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43898310949/coverage-aggregate-job.log",
+        "scm_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+        "scm_logged_utc": "2026-11-16T15:53:39.6571542Z",
+        "analysis_uploaded_utc": "2026-11-16T15:53:48.3638490Z",
+        "scanner_execution_success_utc": "2026-11-16T15:53:50.6772711Z",
+        "ce_task_id": "AaHlEIeaLosZbpaI6AUv",
+        "ce_task_url": "https://sonarcloud.io/api/ce/task?id=AaHlEIeaLosZbpaI6AUv",
+        "generic_xml": {
+          "files": 98,
+          "line_elements": 11263,
+          "duplicate_source_lines": 0,
+          "duplicates": [],
+          "raw_template_rows": {
+            "28": {
+              "source": "} catch (...) {",
+              "raw_instances": 2,
+              "positive_instances": 0,
+              "raw_hit_sum": 0,
+              "exported": [
+                {
+                  "lineNumber": "28",
+                  "covered": "false"
+                }
+              ],
+              "instances": [
+                {
+                  "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_112LayoutWorker5StartEljN9Scintilla8Internal16LayoutLineOptionEEUlvE_ZNS_3RunIS7_EEvjT_EUlS9_E_EEvjRS9_T0_ENKUlvE_clEv",
+                  "count": 0
+                },
+                {
+                  "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_115WrapBlockWorker5StartElEUlvE_ZNS_3RunIS4_EEvjT_EUlS6_E_EEvjRS6_T0_ENKUlvE_clEv",
+                  "count": 0
+                }
+              ]
+            },
+            "29": {
+              "source": "failures[index] = std::current_exception();",
+              "raw_instances": 2,
+              "positive_instances": 0,
+              "raw_hit_sum": 0,
+              "exported": [
+                {
+                  "lineNumber": "29",
+                  "covered": "false"
+                }
+              ],
+              "instances": [
+                {
+                  "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_112LayoutWorker5StartEljN9Scintilla8Internal16LayoutLineOptionEEUlvE_ZNS_3RunIS7_EEvjT_EUlS9_E_EEvjRS9_T0_ENKUlvE_clEv",
+                  "count": 0
+                },
+                {
+                  "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_115WrapBlockWorker5StartElEUlvE_ZNS_3RunIS4_EEvjT_EUlS6_E_EEvjRS6_T0_ENKUlvE_clEv",
+                  "count": 0
+                }
+              ]
+            },
+            "32": {
+              "source": "} catch (...) {",
+              "raw_instances": 5,
+              "positive_instances": 1,
+              "raw_hit_sum": 6,
+              "exported": [
+                {
+                  "lineNumber": "32",
+                  "covered": "true"
+                }
+              ]
+            },
+            "33": {
+              "source": "startupFailure = std::current_exception();",
+              "raw_instances": 5,
+              "positive_instances": 1,
+              "raw_hit_sum": 6,
+              "exported": [
+                {
+                  "lineNumber": "33",
+                  "covered": "true",
+                  "branchesToCover": "1",
+                  "coveredBranches": "1"
+                }
+              ]
+            },
+            "37": {
+              "source": "if (startupFailure) std::rethrow_exception(startupFailure);",
+              "raw_instances": 5,
+              "positive_instances": 5,
+              "raw_hit_sum": 392,
+              "exported": [
+                {
+                  "lineNumber": "37",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            },
+            "39": {
+              "source": "if (failure) std::rethrow_exception(failure);",
+              "raw_instances": 5,
+              "positive_instances": 4,
+              "raw_hit_sum": 1185,
+              "exported": [
+                {
+                  "lineNumber": "39",
+                  "covered": "true",
+                  "branchesToCover": "2",
+                  "coveredBranches": "2"
+                }
+              ]
+            }
+          },
+          "source_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+          "matching_parallel_file_records": 1,
+          "worker_catch_interpretation": "Lines 28 and 29 each have only the retained LayoutWorker and WrapBlockWorker lambda instances, both with zero counts. The fixture outer RunThreads instances are present elsewhere, but their nested worker lambda rows are absent from the raw JSON for lines 27-29. XML faithfully reflects the retained raw records. These counters do not establish that the fault fixture failed to execute worker exception handling; its completed runtime assertions demonstrate propagation and joining."
+        },
+        "worker_catch_raw_records": "/workspace/scratch/44c8652c3121/ci-run-43898310949/parallel-worker-raw-lines.json"
+      },
+      "raw_log_sha256": {
+        "linux-ordinary-job.log": "80130f4d019cdd1bcc71f9b36d28641b19abfd86eea60984569e79c94fb85b2a",
+        "coverage-aggregate-job.log": "95777249f298ce3dc8f782d510e5f6ab8c161900877e074b2e2d8c9a65a7ab78",
+        "coverage-wayland-job.log": "05bd7ec9fffdd70bef8f637df27f7da2f5837512295eac5227e2d2bbe7885d82",
+        "coverage-x11-job.log": "247c7dfaf5a2deb86390722771521d41ee322c5eb7702120ea9dc779b9183cbb"
+      },
+      "artifact_metadata": "/workspace/scratch/44c8652c3121/ci-run-43898310949/github-artifacts.json",
+      "job_metadata": "/workspace/scratch/44c8652c3121/ci-run-43898310949/github-linux-jobs.json",
+      "repository_changes": "none during fourth-round monitoring",
+      "recorded_utc": "2026-11-16T15:58:50.092761+00:00",
+      "conclusion": "success",
+      "sonar_quality_gate": {
+        "status": "ERROR",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "ERROR",
+            "errorThreshold": "1",
+            "actualValue": "3"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "OK",
+            "errorThreshold": "80",
+            "actualValue": "83.0"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      },
+      "sonar_measures": {
+        "component": {
+          "key": "1298345095_wxnotepad",
+          "name": "wxnotepad",
+          "qualifier": "TRK"
+        },
+        "measures": [
+          {
+            "metric": "coverage",
+            "value": "87.0",
+            "bestValue": false
+          },
+          {
+            "metric": "new_line_coverage",
+            "value": "86.27450980392157",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_coverage",
+            "value": "82.96529968454259",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_conditions_to_cover",
+            "value": "164",
+            "period": 1
+          },
+          {
+            "metric": "new_branch_coverage",
+            "value": "79.8780487804878",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_uncovered_lines",
+            "value": "21",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_uncovered_conditions",
+            "value": "33",
+            "period": 1,
+            "bestValue": false
+          },
+          {
+            "metric": "new_lines_to_cover",
+            "value": "153",
+            "period": 1
+          }
+        ],
+        "metrics": [
+          {
+            "key": "new_line_coverage",
+            "name": "Line Coverage on New Code",
+            "description": "Line coverage of added/changed code",
+            "domain": "Coverage",
+            "type": "PERCENT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_branch_coverage",
+            "name": "Condition Coverage on New Code",
+            "description": "Condition coverage of new/changed code",
+            "domain": "Coverage",
+            "type": "PERCENT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_conditions_to_cover",
+            "name": "Conditions to Cover on New Code",
+            "description": "Conditions to cover on new code",
+            "domain": "Coverage",
+            "type": "INT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "coverage",
+            "name": "Coverage",
+            "description": "Coverage by tests",
+            "domain": "Coverage",
+            "type": "PERCENT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_coverage",
+            "name": "Coverage on New Code",
+            "description": "Coverage of new/changed code",
+            "domain": "Coverage",
+            "type": "PERCENT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_lines_to_cover",
+            "name": "Lines to Cover on New Code",
+            "description": "Lines to cover on new code",
+            "domain": "Coverage",
+            "type": "INT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_uncovered_lines",
+            "name": "Uncovered Lines on New Code",
+            "description": "Uncovered lines on new code",
+            "domain": "Coverage",
+            "type": "INT",
+            "hidden": false,
+            "custom": false
+          },
+          {
+            "key": "new_uncovered_conditions",
+            "name": "Uncovered Conditions on New Code",
+            "description": "Uncovered conditions on new code",
+            "domain": "Coverage",
+            "type": "INT",
+            "hidden": false,
+            "custom": false
+          }
+        ]
+      },
+      "sonar_summary": {
+        "new_coverage": 82.96529968454259,
+        "displayed_new_coverage": 83.0,
+        "new_lines": 153,
+        "covered_new_lines": 132,
+        "new_conditions": 164,
+        "covered_new_conditions": 131,
+        "covered_items": 263,
+        "total_items": 317,
+        "coverage_condition": "OK",
+        "gate_status": "ERROR",
+        "failing_condition": "new_reliability_rating",
+        "actual_reliability_rating": 3,
+        "followup_owner": "root and sonar_triage"
+      },
+      "merged_coverage_json": "/workspace/scratch/44c8652c3121/ci-run-43898310949/merged-coverage-extracted/.ci/reports/coverage/coverage.json",
+      "merged_coverage_xml": "/workspace/scratch/44c8652c3121/ci-run-43898310949/merged-coverage-extracted/.ci/reports/coverage/sonar.xml",
+      "associated_commit_workflows": [
+        {
+          "id": 43898310979,
+          "name": "CodeQL",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 227,
+          "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310979/jobs",
+          "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310979/logs",
+          "workflow_id": 403089439
+        },
+        {
+          "id": 43898311086,
+          "name": "Fuzz",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 85,
+          "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898311086/jobs",
+          "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898311086/logs",
+          "workflow_id": 413097809
+        },
+        {
+          "id": 43898310949,
+          "name": "CI",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 228,
+          "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310949/jobs",
+          "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310949/logs",
+          "workflow_id": 403089440
+        },
+        {
+          "id": 43898310953,
+          "name": "Quality",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 227,
+          "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310953/jobs",
+          "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43898310953/logs",
+          "workflow_id": 403089438
+        }
+      ],
+      "all_four_workflows_success": true
+    },
+    "merged_generic_xml_audit": {
+      "files": 98,
+      "line_elements": 11263,
+      "duplicate_source_lines": 0,
+      "duplicates": [],
+      "raw_template_rows": {
+        "28": {
+          "source": "} catch (...) {",
+          "raw_instances": 2,
+          "positive_instances": 0,
+          "raw_hit_sum": 0,
+          "exported": [
+            {
+              "lineNumber": "28",
+              "covered": "false"
+            }
+          ],
+          "instances": [
+            {
+              "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_112LayoutWorker5StartEljN9Scintilla8Internal16LayoutLineOptionEEUlvE_ZNS_3RunIS7_EEvjT_EUlS9_E_EEvjRS9_T0_ENKUlvE_clEv",
+              "count": 0
+            },
+            {
+              "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_115WrapBlockWorker5StartElEUlvE_ZNS_3RunIS4_EEvjT_EUlS6_E_EEvjRS6_T0_ENKUlvE_clEv",
+              "count": 0
+            }
+          ]
+        },
+        "29": {
+          "source": "failures[index] = std::current_exception();",
+          "raw_instances": 2,
+          "positive_instances": 0,
+          "raw_hit_sum": 0,
+          "exported": [
+            {
+              "lineNumber": "29",
+              "covered": "false"
+            }
+          ],
+          "instances": [
+            {
+              "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_112LayoutWorker5StartEljN9Scintilla8Internal16LayoutLineOptionEEUlvE_ZNS_3RunIS7_EEvjT_EUlS9_E_EEvjRS9_T0_ENKUlvE_clEv",
+              "count": 0
+            },
+            {
+              "function_name": "_ZZN13ParallelTasks6Detail10RunThreadsIZN12_GLOBAL__N_115WrapBlockWorker5StartElEUlvE_ZNS_3RunIS4_EEvjT_EUlS6_E_EEvjRS6_T0_ENKUlvE_clEv",
+              "count": 0
+            }
+          ]
+        },
+        "32": {
+          "source": "} catch (...) {",
+          "raw_instances": 5,
+          "positive_instances": 1,
+          "raw_hit_sum": 6,
+          "exported": [
+            {
+              "lineNumber": "32",
+              "covered": "true"
+            }
+          ]
+        },
+        "33": {
+          "source": "startupFailure = std::current_exception();",
+          "raw_instances": 5,
+          "positive_instances": 1,
+          "raw_hit_sum": 6,
+          "exported": [
+            {
+              "lineNumber": "33",
+              "covered": "true",
+              "branchesToCover": "1",
+              "coveredBranches": "1"
+            }
+          ]
+        },
+        "37": {
+          "source": "if (startupFailure) std::rethrow_exception(startupFailure);",
+          "raw_instances": 5,
+          "positive_instances": 5,
+          "raw_hit_sum": 392,
+          "exported": [
+            {
+              "lineNumber": "37",
+              "covered": "true",
+              "branchesToCover": "2",
+              "coveredBranches": "2"
+            }
+          ]
+        },
+        "39": {
+          "source": "if (failure) std::rethrow_exception(failure);",
+          "raw_instances": 5,
+          "positive_instances": 4,
+          "raw_hit_sum": 1185,
+          "exported": [
+            {
+              "lineNumber": "39",
+              "covered": "true",
+              "branchesToCover": "2",
+              "coveredBranches": "2"
+            }
+          ]
+        }
+      },
+      "source_sha": "7e57caea1acce20a425612087ec81ee538b916d6",
+      "matching_parallel_file_records": 1,
+      "worker_catch_interpretation": "Lines 28 and 29 each have only the retained LayoutWorker and WrapBlockWorker lambda instances, both with zero counts. The fixture outer RunThreads instances are present elsewhere, but their nested worker lambda rows are absent from the raw JSON for lines 27-29. XML faithfully reflects the retained raw records. These counters do not establish that the fault fixture failed to execute worker exception handling; its completed runtime assertions demonstrate propagation and joining."
+    },
+    "sonar": {
+      "scm_revision": "7e57caea1acce20a425612087ec81ee538b916d6",
+      "ce_task": "AaHlEIeaLosZbpaI6AUv",
+      "quality_gate": {
+        "status": "ERROR",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "ERROR",
+            "errorThreshold": "1",
+            "actualValue": "3"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "OK",
+            "errorThreshold": "80",
+            "actualValue": "83.0"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      },
+      "new_coverage": "83.0",
+      "new_lines_covered": 132,
+      "new_lines_to_cover": 153,
+      "new_conditions_covered": 131,
+      "new_conditions_to_cover": 164
+    }
+  },
+  "final_fixture_followup": {
+    "baseline": "7e57caea1acce20a425612087ec81ee538b916d6",
+    "fixes": [
+      {
+        "key": "AaHlEI_dI6O6B77zdqDU",
+        "rule": "cpp:S1763",
+        "file": "tests/parallel_surface_failure.cpp",
+        "change": "Removed unreachable throw after rethrow_exception and the now-redundant final return in the system_error handler.",
+        "control_flow": "Require(failure) rejects a missing exception. rethrow_exception never returns. The expected system_error is checked for original code and completion counts, then exits the function; all other exceptions propagate."
+      },
+      {
+        "key": "AaHlEI_bI6O6B77zdqDO",
+        "rule": "cpp:S995",
+        "file": "tests/surface_initialization.cpp",
+        "change": "CheckDrawingFactory receives const EditorControl&; it only passes editor to the existing const DrawingSurface observer."
+      }
+    ],
+    "validation": {
+      "compiler": "g++-14",
+      "flags": "-std=c++23 -O2 -g -pthread -Wall -Wextra -Wpedantic -Werror",
+      "exit_code": 0,
+      "probe_summary": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-flow-O2/summary.json",
+      "probe_log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-jthread-flow-O2/run-001.log",
+      "formatting": "Canonical clang-format applied to both fixture files; git diff --check passed.",
+      "native_fixture_build": {
+        "targets": [
+          "surface_initialization",
+          "parallel_surface_failure"
+        ],
+        "exit_code": 0,
+        "log": "native-build/final-fixture-fix-build.log",
+        "sha256": "977f80135d2805fc608d40c6497ce341f097e11b5f6a531f28a4bd38bb5a44b1"
+      }
+    },
+    "source_sha256": {
+      "tests/parallel_surface_failure.cpp": "28cbac7dd7cfa5656b4206a3641bd59a76593829b2345912510a7acab5622819",
+      "tests/surface_initialization.cpp": "b15fcee724bb6b0b30290498c366e924d760b725cb10f305ffcf794bfd504bad"
+    },
+    "sonar_dispositions": {
+      "ledger": "sonarqube-2026-11-16-surface-pr-dispositions.json",
+      "new_false_positive_transitions": 7,
+      "verified_false_positive": 7,
+      "verified_open_confirmed": 0,
+      "previous_code_findings_verified_fixed": 25
+    },
+    "final_hosted_validation": "The continuation PR description and checks record the matching final revision and hosted validation; this record preserves evidence available before that batch."
+  }
+}

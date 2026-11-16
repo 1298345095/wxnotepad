@@ -7,6 +7,7 @@ struct State {
     bool armed = false;
     bool injected = false;
     std::size_t targetSize = 0;
+    std::size_t skipMatches = 0;
 };
 
 State& CurrentState() noexcept {
@@ -16,9 +17,10 @@ State& CurrentState() noexcept {
 } // namespace
 
 namespace CompletionAllocationFault {
-ScopedFailure::ScopedFailure(std::size_t size) noexcept {
+ScopedFailure::ScopedFailure(std::size_t size, std::size_t skipMatches) noexcept {
     auto& state = CurrentState();
     state.targetSize = size;
+    state.skipMatches = skipMatches;
     state.injected = false;
     state.armed = true;
 }
@@ -33,11 +35,14 @@ bool ScopedFailure::Injected() const noexcept {
 } // namespace CompletionAllocationFault
 
 void* operator new(std::size_t size) {
-    auto& state = CurrentState();
-    if (state.armed && (state.targetSize == 0 || size == state.targetSize)) {
-        state.armed = false; // Cleanup and diagnostics must be able to allocate.
-        state.injected = true;
-        throw std::bad_alloc();
+    if (auto& state = CurrentState(); state.armed && (state.targetSize == 0 || size == state.targetSize)) {
+        if (state.skipMatches) {
+            --state.skipMatches;
+        } else {
+            state.armed = false; // Cleanup and diagnostics must be able to allocate.
+            state.injected = true;
+            throw std::bad_alloc();
+        }
     }
     for (;;) {
         if (void* allocation = std::malloc(size ? size : 1)) return allocation;

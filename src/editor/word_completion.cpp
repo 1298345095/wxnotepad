@@ -21,6 +21,7 @@
 #include <type_traits>
 #include <memory>
 #include <new>
+#include <utility>
 #include <vector>
 using Scintilla::Message;
 namespace {
@@ -583,6 +584,14 @@ class Collector final {
     template <class A = int, class B = int> intptr_t Call(Message message, A first = 0, B second = 0) {
         return editor_.Send(message, static_cast<uintptr_t>(Parameter(first)), Parameter(second));
     }
+    unsigned char CharacterAt(Sci_Position position) {
+        // The pinned core's UCharAt returns an unsigned char through the message ABI.
+        return static_cast<unsigned char>(Call(Message::GetCharAt, position));
+    }
+    unsigned char StyleIndexAt(Sci_Position position) {
+        // The pinned core's StyleIndexAt has the same unsigned-char result contract.
+        return static_cast<unsigned char>(Call(Message::GetStyleIndexAt, position));
+    }
     bool IsDocWordChar(unsigned ch) const { return CompletionStyleContains(styles_.wordCharacters, ch); }
     static bool IsDefaultWordChar(unsigned ch) {
         static constexpr uint32_t mask[8] = {0,           0x03ff0000U, 0x87fffffeU, 0x07fffffeU,
@@ -593,7 +602,7 @@ class Collector final {
     bool IsCommentStyle(unsigned style) const { return CompletionStyleContains(styles_.comments, style); }
     bool IsAutoCompletionWordCharacter(unsigned ch) {
         return ch < 0x80 ? IsDocWordChar(ch)
-                         : Call(Message::GetCharacterClass, ch) == static_cast<int>(CharacterClass::word);
+                         : Call(Message::GetCharacterClass, ch) == std::to_underlying(CharacterClass::word);
     }
     void AddList(WordList& words, const SyntaxDefinition& syntax, size_t index) {
         if (index < syntax.keywords.size()) words.AddList(syntax.keywords[index].text);
@@ -656,8 +665,7 @@ class Collector final {
 
         if (!IsRawStringStyle(stylePrev)) {
             int chPrev2 = 0;
-            const Sci_Position before2 = Call(Message::PositionBefore, before);
-            if (before2 + 1 == before) {
+            if (const Sci_Position before2 = Call(Message::PositionBefore, before); before2 + 1 == before) {
                 chPrev2 = Call(Message::GetCharAt, before2);
             }
             // simply treat chPrev == chPrev2 as escape escapeCharacterStart self
@@ -706,8 +714,7 @@ class Collector final {
         // find all word after '::', '->', '.' and '-'
         bool bSubWord = false;
         while (wordEnd < iDocLen) {
-            const int ch = Call(Message::GetCharAt, wordEnd);
-            if (!(ch == ':' || ch == '.' || ch == '-')) {
+            if (const int ch = Call(Message::GetCharAt, wordEnd); !(ch == ':' || ch == '.' || ch == '-')) {
                 if (ch == '!' && definition_.lexer == SCLEX_RUST && style == SCE_RUST_MACRO) {
                     // macro: println!()
                     ++wordEnd;
@@ -729,8 +736,7 @@ class Collector final {
     }
 
     void SkipDocumentPrefix(char*& pWord, int& wordLength, Sci_Position iPosFind, int style, char prefix) noexcept {
-        const Sci_Position before = Call(Message::PositionBefore, iPosFind);
-        if (before + 1 == iPosFind) {
+        if (const Sci_Position before = Call(Message::PositionBefore, iPosFind); before + 1 == iPosFind) {
             const int chPrev = Call(Message::GetCharAt, before);
             // word after escape character or format specifier
             if (chPrev == '%' || chPrev == definition_.original.escapeCharacterStart) {
@@ -919,8 +925,8 @@ class Collector final {
     }
 
     AddWordResult AddJavaScriptCommentWord(WordList& words, int currentStyle, int ch) {
-        const auto scheme = SyntaxSettingsLanguage(definition_.language);
-        if ((ch == '@' || (ch == '<' && scheme == SyntaxLanguage::TypeScript)) && currentStyle >= SCE_JS_COMMENTLINE &&
+        if (const auto scheme = SyntaxSettingsLanguage(definition_.language);
+            (ch == '@' || (ch == '<' && scheme == SyntaxLanguage::TypeScript)) && currentStyle >= SCE_JS_COMMENTLINE &&
             currentStyle <= SCE_JS_TASKMARKER) {
             AddList(words, definition_, 10);
             if (scheme != SyntaxLanguage::JavaScript) AddList(words, SyntaxFor(SyntaxLanguage::JavaScript), 10);
@@ -973,8 +979,8 @@ class Collector final {
         if (definition_.lexer == SCLEX_HTML && currentStyle >= js_style(SCE_JS_DEFAULT) &&
             currentStyle < css_style(SCE_CSS_DEFAULT))
             return AddJavaScriptSpecialWord(words, currentStyle, ch);
-        const auto result = AddSchemeSpecialWord(words, currentStyle, ch, previous);
-        if (result != AddWordResult_None) return result;
+        if (const auto result = AddSchemeSpecialWord(words, currentStyle, ch, previous); result != AddWordResult_None)
+            return result;
         if ((ch == '$' || ch == '@' || ch == '#') && IsDocWordChar(ch)) return AddWordResult_IgnoreLexer;
         return AddWordResult_None;
     }
@@ -993,8 +999,7 @@ class Collector final {
                     break;
                 }
 
-                const int ch = Call(Message::GetCharAt, before);
-                if (!IsDocWordChar(ch) || IsSpecialStartChar(ch, '\0')) {
+                if (const auto ch = CharacterAt(before); !IsDocWordChar(ch) || IsSpecialStartChar(ch, '\0')) {
                     break;
                 }
 
@@ -1016,16 +1021,17 @@ class Collector final {
         if (ch >= 0x80 || iStartWordPos <= iLineStartPos) return;
         const Sci_Position before = Call(Message::PositionBefore, iStartWordPos);
         if (before + 1 != iStartWordPos) return;
-        chPrev = Call(Message::GetCharAt, before);
-        const Sci_Position before2 = Call(Message::PositionBefore, before);
-        if (before2 >= iLineStartPos && before2 + 1 == before) chPrev2 = Call(Message::GetCharAt, before2);
+        chPrev = CharacterAt(before);
+        if (const Sci_Position before2 = Call(Message::PositionBefore, before);
+            before2 >= iLineStartPos && before2 + 1 == before)
+            chPrev2 = CharacterAt(before2);
         // Word after an escape character or format specifier.
         if (chPrev == '%' || (chPrev == definition_.original.escapeCharacterStart &&
                               (definition_.original.lexerAttributes & LexerAttr_EscapePunctuation) == 0)) {
-            const int style = Call(Message::GetStyleIndexAt, iStartWordPos);
+            const auto style = StyleIndexAt(iStartWordPos);
             if (IsEscapeCharOrFormatSpecifier(before, ch, chPrev, style, false)) {
                 ++iStartWordPos;
-                ch = Call(Message::GetCharAt, iStartWordPos);
+                ch = CharacterAt(iStartWordPos);
                 chPrev = 0;
             }
         }
@@ -1293,12 +1299,12 @@ public:
         const bool bShow = pWList.nWordCount > 0 &&
                            !(pWList.nWordCount == 1 && pWList.nTotalLen == static_cast<unsigned>(iRootLen + 1));
 
-        const bool updated =
-            state.previousItemCount == 0 ||
-            (condition == WordCompletionCondition::CharacterAdded &&
-             state.previousItemCount - pWList.nWordCount > static_cast<unsigned>(settings_.visibleItemCount)) ||
-            (condition == WordCompletionCondition::CharacterDeleted && state.previousItemCount < pWList.nWordCount);
-        if (bShow && updated) {
+        if (const bool updated =
+                state.previousItemCount == 0 ||
+                (condition == WordCompletionCondition::CharacterAdded &&
+                 state.previousItemCount - pWList.nWordCount > static_cast<unsigned>(settings_.visibleItemCount)) ||
+                (condition == WordCompletionCondition::CharacterDeleted && state.previousItemCount < pWList.nWordCount);
+            bShow && updated) {
             state.previousItemCount = pWList.nWordCount;
             ShowCandidates(pWList, bIgnoreCase, autoInsert);
         }
@@ -1325,6 +1331,6 @@ void CompleteWord(EditorControl& editor, const SyntaxDefinition& definition, con
         // notification and stop before crossing its noexcept boundary.
         state = {};
         editor.Send(Message::AutoCCancel);
-        editor.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::BadAlloc));
+        editor.Send(Message::SetStatus, static_cast<uintptr_t>(std::to_underlying(Scintilla::Status::BadAlloc)));
     }
 }

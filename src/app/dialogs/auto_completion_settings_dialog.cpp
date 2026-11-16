@@ -58,12 +58,13 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
         fields->Add(control, 1, wxEXPAND);
         return control;
     };
-    auto* rows = field(wxTRANSLATE("Visible rows"), wxString::Format("%d", completion.visibleItemCount), true);
-    auto* wordLength =
+    const auto* rows = field(wxTRANSLATE("Visible rows"), wxString::Format("%d", completion.visibleItemCount), true);
+    const auto* wordLength =
         field(wxTRANSLATE("Minimum word length"), wxString::Format("%d", completion.minWordLength), true);
-    auto* numberLength =
+    const auto* numberLength =
         field(wxTRANSLATE("Minimum number length"), wxString::Format("%d", completion.minNumberLength), true);
-    auto* timeout = field(wxTRANSLATE("Scan timeout"), wxString::Format("%d ms", completion.scanWordsTimeout), false);
+    const auto* timeout =
+        field(wxTRANSLATE("Scan timeout"), wxString::Format("%d ms", completion.scanWordsTimeout), false);
     words->Add(fields, 0, wxEXPAND | wxALL, gap);
     constexpr std::array insertOptions = {
         std::pair{wxTRANSLATE("Parentheses ()"), AutoInsertMask_Parenthesis},
@@ -79,9 +80,9 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     auto* insertGrid = new wxGridSizer(2);
     const auto insertControls = addFlags(insertGrid, insertOptions, preferences.autoInsertMask);
     insertion->Add(insertGrid, 0, wxEXPAND);
-    auto* tags = check(insertion, wxTRANSLATE("Auto close HTML and XML tags"),
-                       (completion.completeOption & WordCompletionOption::CloseTags) != 0);
-    auto* indent = check(insertion, wxTRANSLATE("Auto Indent"), preferences.autoIndent);
+    const auto* tags = check(insertion, wxTRANSLATE("Auto close HTML and XML tags"),
+                             (completion.completeOption & WordCompletionOption::CloseTags) != 0);
+    const auto* indent = check(insertion, wxTRANSLATE("Auto Indent"), preferences.autoIndent);
     columns->Add(words, 1, wxEXPAND | wxALL, gap);
     columns->Add(insertion, 1, wxEXPAND | wxALL, gap);
     layout->Add(columns, 0, wxEXPAND);
@@ -143,7 +144,7 @@ bool ShowAutoCompletionSettingsDialog(wxWindow* parent, OriginalSettings& prefer
     completion.completeOption = tags->GetValue() ? completion.completeOption | WordCompletionOption::CloseTags
                                                  : completion.completeOption & ~WordCompletionOption::CloseTags;
     preferences.autoIndent = indent->GetValue();
-    const auto unsignedValue = [](wxTextCtrl* control, int minimum) {
+    const auto unsignedValue = [](const wxTextCtrl* control, int minimum) {
         // Original GetDlgItemInt(FALSE) accepts a decimal prefix; invalid input
         // yields zero. Values are subsequently assigned to an int and clamped.
         const auto text = control->GetValue().ToStdString(wxConvUTF8);

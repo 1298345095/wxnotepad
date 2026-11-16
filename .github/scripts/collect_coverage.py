@@ -49,7 +49,7 @@ def write_sonar_report(output, root=ROOT):
     command = [sys.executable, '-m', 'gcovr', '--root', str(root),
                '--filter', re.escape((root / 'src').as_posix() + '/'),
                '--gcov-use-existing-files', '--gcov-keep', '--exclude-throw-branches',
-               '--sonarqube', str(output / 'sonar.xml'), '--sonarqube-metric', 'branch',
+               '--merge-lines', '--sonarqube', str(output / 'sonar.xml'), '--sonarqube-metric', 'branch',
                '--json', str(output / 'coverage.json'),
                str(output / 'gcov')]
     with (output / 'gcovr.log').open('w', encoding='utf-8') as log:
@@ -61,10 +61,12 @@ def merge_reports(reports, output, root=ROOT):
     output.mkdir(parents=True, exist_ok=True)
     command = [sys.executable, '-m', 'gcovr', '--root', str(root),
                '--filter', re.escape((root / 'src').as_posix() + '/'),
-               '--sonarqube', str(output / 'sonar.xml'), '--sonarqube-metric', 'branch',
+               '--merge-lines', '--sonarqube', str(output / 'sonar.xml'), '--sonarqube-metric', 'branch',
                '--json', str(output / 'coverage.json')]
     # Each backend has already applied the source and throw-branch policy while
     # reading its own matched GCC notes/counters. Merge by source/branch identity.
+    # Generic XML needs one entry per source line, including template instances.
+    # --merge-lines combines their counters; JSON retains the raw instances.
     for report in reports:
         command += ['--json-add-tracefile', str(report.resolve())]
     with (output / 'gcovr-merge.log').open('w', encoding='utf-8') as log:

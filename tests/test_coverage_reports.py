@@ -48,10 +48,24 @@ class GCCReports(unittest.TestCase):
         (self.root / 'src/repeated.h').write_text(
             '#pragma once\nstatic inline int Repeated(bool value) {\n'
             '    if (value) return 1;\n    return 2;\n}\n', encoding='utf-8')
-        for name, value, expected in (('first', 'true', 1), ('second', 'false', 2)):
+        (self.root / 'src/template_choice.h').write_text(
+            '#pragma once\ntemplate<class T> static inline int TemplateChoose(bool value) {\n'
+            '    if (value) return 1;\n    return 2;\n}\n', encoding='utf-8')
+        (self.root / 'src/template_repeated.h').write_text(
+            '#pragma once\ntemplate<class T> static inline int TemplateRepeated(bool value) {\n'
+            '    if (value) return 1;\n    return 2;\n}\n', encoding='utf-8')
+        (self.root / 'src/uncalled.h').write_text(
+            '#pragma once\ntemplate<class T> int Uncalled(bool value) {\n'
+            '    if (value) return 3;\n    return 4;\n}\n', encoding='utf-8')
+        for name, kind, value, expected in (('first', 'int', 'true', 1), ('second', 'long', 'false', 2)):
             source = self.root / 'tests' / f'{name}.cpp'
             source.write_text('#include "../src/choice.h"\n#include "../src/repeated.h"\n'
-                              f'int main() {{ return Choose({value}) != {expected} || Repeated(true) != 1; }}\n',
+                              '#include "../src/template_choice.h"\n#include "../src/template_repeated.h"\n'
+                              '#include "../src/uncalled.h"\n'
+                              f'template int Uncalled<{kind}>(bool);\n'
+                              f'int main() {{ return Choose({value}) != {expected} || Repeated(true) != 1'
+                              f' || TemplateChoose<{kind}>({value}) != {expected}'
+                              f' || TemplateRepeated<{kind}>(true) != 1; }}\n',
                               encoding='utf-8')
             self.compile(source, '-o', self.build / name)
         for name in ('first', 'second', 'first'):
@@ -63,6 +77,39 @@ class GCCReports(unittest.TestCase):
     def compile(self, source, *arguments):
         subprocess.run(['g++-13', '--coverage', '-O0', '-fprofile-abs-path', source, *arguments],
                        check=True, capture_output=True, text=True, encoding='utf-8')
+
+    def assert_unique_source_lines(self, files):
+        for path, file in files.items():
+            with self.subTest(source=path):
+                numbers = [line.attrib['lineNumber'] for line in file]
+                self.assertEqual(len(numbers), len(set(numbers)))
+        untouched = files['src/uncalled.h'].find("lineToCover[@lineNumber='3']")
+        self.assertEqual(untouched.attrib['covered'], 'false')
+        self.assertEqual(untouched.attrib['branchesToCover'], '2')
+        self.assertEqual(untouched.attrib['coveredBranches'], '0')
+
+    def assert_header_branches(self, files, choice_covered):
+        for name, covered in (('choice.h', choice_covered), ('template_choice.h', choice_covered),
+                              ('repeated.h', 1), ('template_repeated.h', 1)):
+            with self.subTest(source=name):
+                condition = files[f'src/{name}'].find("lineToCover[@lineNumber='3']")
+                self.assertEqual(condition.attrib['covered'], 'true')
+                self.assertEqual(condition.attrib['branchesToCover'], '2')
+                self.assertEqual(condition.attrib['coveredBranches'], str(covered))
+
+    def assert_raw_template_instances(self, report, covered_instances):
+        files = {item['file']: item for item in json.loads(report.read_text(encoding='utf-8'))['files']}
+        for path, covered in (('src/template_choice.h', covered_instances),
+                              ('src/template_repeated.h', covered_instances), ('src/uncalled.h', 0)):
+            with self.subTest(source=path):
+                instances = [line for line in files[path]['lines'] if line['line_number'] == 3]
+                self.assertEqual(len(instances), 2)
+                self.assertEqual(len({line['function_name'] for line in instances}), 2)
+                self.assertEqual(sum(line['count'] > 0 for line in instances), covered)
+                for line in instances:
+                    self.assertEqual(len(line['branches']), 2)
+                    self.assertEqual(sum(branch['count'] > 0 for branch in line['branches']),
+                                     int(line['count'] > 0))
 
     def test_reports_keep_independent_header_branches_and_notes_only_zero_hits(self):
         output = self.root / 'reports'
@@ -121,12 +168,9 @@ class GCCReports(unittest.TestCase):
                         '--output', str(output)], check=True, capture_output=True,
                        text=True, encoding='utf-8')
         files = {item.attrib['path']: item for item in ET.parse(output / 'sonar.xml').getroot()}
-        choice = files['src/choice.h'].find("lineToCover[@lineNumber='3']")
-        self.assertEqual(choice.attrib['branchesToCover'], '2')
-        self.assertEqual(choice.attrib['coveredBranches'], '2')
-        repeated = files['src/repeated.h'].find("lineToCover[@lineNumber='3']")
-        self.assertEqual(repeated.attrib['branchesToCover'], '2')
-        self.assertEqual(repeated.attrib['coveredBranches'], '1')
+        self.assert_unique_source_lines(files)
+        self.assert_raw_template_instances(output / 'coverage.json', 2)
+        self.assert_header_branches(files, 2)
         untouched = files['src/never.cpp'].find("lineToCover[@lineNumber='1']")
         self.assertEqual(untouched.attrib['covered'], 'false')
         exceptions = files['src/exception_paths.cpp']
@@ -168,17 +212,18 @@ class GCCReports(unittest.TestCase):
             choice = next(line for line in files['src/choice.h']['lines'] if line['line_number'] == 3)
             self.assertEqual(len(choice['branches']), 2)
             self.assertEqual(sum(branch['count'] > 0 for branch in choice['branches']), 1)
+            self.assert_raw_template_instances(report, 1)
+            files = {item.attrib['path']: item for item in ET.parse(output / 'sonar.xml').getroot()}
+            self.assert_unique_source_lines(files)
+            self.assert_header_branches(files, 1)
             reports.append(report)
 
         merged = self.root / 'combined/reports'
         COLLECTOR.merge_reports(reports, merged, self.root)
         files = {item.attrib['path']: item for item in ET.parse(merged / 'sonar.xml').getroot()}
-        choice = files['src/choice.h'].find("lineToCover[@lineNumber='3']")
-        self.assertEqual(choice.attrib['branchesToCover'], '2')
-        self.assertEqual(choice.attrib['coveredBranches'], '2')
-        repeated = files['src/repeated.h'].find("lineToCover[@lineNumber='3']")
-        self.assertEqual(repeated.attrib['branchesToCover'], '2')
-        self.assertEqual(repeated.attrib['coveredBranches'], '1')
+        self.assert_unique_source_lines(files)
+        self.assert_raw_template_instances(merged / 'coverage.json', 2)
+        self.assert_header_branches(files, 2)
         untouched = files['src/never.cpp'].find("lineToCover[@lineNumber='1']")
         self.assertEqual(untouched.attrib['covered'], 'false')
         exceptions = files['src/exception_paths.cpp']

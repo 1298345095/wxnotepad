@@ -62,7 +62,7 @@ inline void RequireSelection(EditorControl* editor, intptr_t anchor, intptr_t ca
                      static_cast<long long>(editor->Send(Message::GetAnchor)),
                      static_cast<long long>(editor->Send(Message::GetCurrentPos)), static_cast<long long>(anchor),
                      static_cast<long long>(caret));
-        throw std::runtime_error(message);
+        throw Failure(message);
     }
 }
 } // namespace TestEditor

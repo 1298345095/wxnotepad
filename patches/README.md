@@ -20,6 +20,19 @@ The patch has these narrowly scoped purposes:
 - `ParallelSupport.h`: keep the native implementation on Windows; select the
   Linux heap, shared mutex, asynchronous-task and deadline equivalents from
   `src/editor/platform/parallel_port.h` elsewhere.
+- `Editor.cxx` and `EditView.cxx`: route wx wrapping/layout batches through
+  `src/editor/platform/parallel_tasks.h`. Finish every started task before
+  propagating its exception, including partial startup failure; capture native
+  Windows callback exceptions until work has been joined and closed.
+- `Editor.cxx`: reject incomplete wx drawing/default-measurement surfaces,
+  preserving the targetless DirectWrite measurement contract. Contain failures
+  in individual visual operations during document notifications and selection
+  restoration so committed edits and Undo/Redo finish their model/history work.
+  Preserve a restored rectangular selection's main row across style rebuilds
+  and subsequent visual retries.
+- `Platform.h`: permit the wx clip operation to propagate allocation failure to
+  the host recovery boundary. Other platform signatures retain their original
+  exception contract.
 - `Document.cxx`: use wx conversion in place of the Windows conversion function
   on Linux, and pass native 32-bit `wchar_t` characters to the vendored regex
   matcher. The adapter currently exposes UTF-8 only. Regex matching otherwise

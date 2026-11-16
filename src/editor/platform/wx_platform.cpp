@@ -3,6 +3,7 @@
 #include "core_headers.h"
 #include "editor/display_units.h"
 #include "text_measurement.h"
+#include "native_drawing_error.h"
 #include "diagnostics/trace.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
@@ -20,6 +21,8 @@
 #include <chrono>
 #include <cstdarg>
 #include <cstdio>
+#include <new>
+#include <stdexcept>
 
 #ifdef _WIN32
 HANDLE g_hDefaultHeap = GetProcessHeap();
@@ -70,27 +73,43 @@ class WxSurface final : public Surface {
     void StrokeSet(Stroke s) {
         dc_->SetPen(wxPen(Color(s.colour), std::max(1, static_cast<int>(std::lround(s.width)))));
     }
+    void Initialize(wxWindow* window, wxDC* borrowed) noexcept {
+        Release();
+        try {
+            std::unique_ptr<wxDC> owned;
+            if (window) owned = std::make_unique<wxClientDC>(window);
+            auto* dc = owned ? owned.get() : borrowed;
+            if (!dc || !dc->IsOk()) return;
+            auto measurement = std::make_unique<TextMeasurement>(*dc);
+            owned_ = std::move(owned);
+            measurement_ = std::move(measurement);
+            dc_ = dc;
+        } catch (const std::bad_alloc&) {
+            // The no-throw Surface contract reports resource failure through Initialised().
+            Release();
+        } catch (const std::runtime_error&) {
+            Release();
+        }
+    }
 
 public:
-    void Init(WindowID id) noexcept override {
-        owned_ = std::make_unique<wxClientDC>(Host(id));
-        dc_ = owned_.get();
-        measurement_ = std::make_unique<TextMeasurement>(*dc_);
-    }
-    void Init(SurfaceID dc, WindowID, bool) noexcept override {
-        dc_ = static_cast<wxDC*>(dc);
-        measurement_ = std::make_unique<TextMeasurement>(*dc_);
-    }
+    ~WxSurface() noexcept override { Release(); }
+    void Init(WindowID id) noexcept override { Initialize(Host(id), nullptr); }
+    void Init(SurfaceID dc, WindowID, bool) noexcept override { Initialize(nullptr, static_cast<wxDC*>(dc)); }
     std::unique_ptr<Surface> AllocatePixMap(int width, int height) override {
         auto p = std::make_unique<WxSurface>();
         // GTK logical coordinates need a full-resolution backing bitmap; MSW
         // keeps the physical dimensions and uses the scale for point fonts.
-        p->bitmap_.CreateWithLogicalSize(wxSize(std::max(1, width), std::max(1, height)), dc_->GetContentScaleFactor());
+        if (!p->bitmap_.CreateWithLogicalSize(wxSize(std::max(1, width), std::max(1, height)),
+                                              dc_->GetContentScaleFactor()))
+            throw NativeDrawingError("The native surface bitmap is unavailable");
         auto dc = std::make_unique<wxMemoryDC>();
         dc->SelectObject(p->bitmap_);
-        p->dc_ = dc.get();
+        if (!dc->IsOk()) throw NativeDrawingError("The native surface drawing context is unavailable");
+        auto measurement = std::make_unique<TextMeasurement>(*dc);
         p->owned_ = std::move(dc);
-        p->measurement_ = std::make_unique<TextMeasurement>(*p->dc_);
+        p->measurement_ = std::move(measurement);
+        p->dc_ = p->owned_.get();
         return p;
     }
     void SetMode(SurfaceMode m) noexcept override { utf8_ = m.codePage == Scintilla::CpUtf8; }
@@ -98,13 +117,15 @@ public:
         // wxDC owns native rendering parameters; DirectWrite overrides do not apply.
     }
     void Release() noexcept override {
-        clips_.clear();
+        while (!clips_.empty())
+            clips_.pop_back();
         measurement_.reset();
         owned_.reset();
+        bitmap_ = wxNullBitmap;
         dc_ = nullptr;
     }
     bool SupportsFeature(Scintilla::Supports) const noexcept override { return false; }
-    bool Initialised() const noexcept override { return dc_ != nullptr; }
+    bool Initialised() const noexcept override { return dc_ && measurement_; }
     int LogPixelsY() const noexcept override { return dc_ ? dc_->GetPPI().y : DisplayUnits::DefaultDpi; }
     int PixelDivisions() const noexcept override { return 1; }
     int DeviceHeightFont(int points) const noexcept override { return points; }
@@ -287,7 +308,9 @@ public:
     XYPOSITION WidthTextUTF8(const Font* f, std::string_view t) override {
         return measurement_->WidthText(static_cast<const WxFont*>(f)->measurement, t, true);
     }
-    void SCICALL SetClip(PRectangle r) noexcept override {
+    void SCICALL SetClip(PRectangle r) override {
+        // Reserve before constructing the clipper, which changes the native DC.
+        clips_.reserve(clips_.size() + 1);
         clips_.push_back(std::make_unique<wxDCClipper>(*dc_, Rect(r)));
     }
     void PopClip() noexcept override { clips_.pop_back(); }

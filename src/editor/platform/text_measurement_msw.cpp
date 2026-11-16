@@ -1,6 +1,7 @@
 // Native measurement follows Notepad4 89b8b36 SurfaceGDI.cxx. Font scaling and
 // italic bounds retain wxWidgets 3.3.3's MSW DC/text-measurement conventions.
 #include "text_measurement.h"
+#include "native_drawing_error.h"
 #include <wx/dc.h>
 #include <wx/font.h>
 #include <wx/fontutil.h>
@@ -105,7 +106,7 @@ struct MeasurementFont::Data {
 
 MeasurementFont::MeasurementFont(const wxFont& font) : data_(std::make_unique<Data>()) {
     const auto* native = font.GetNativeFontInfo();
-    if (!native) throw std::runtime_error("Native text measurement needs a valid font");
+    if (!native) throw NativeDrawingError("Native text measurement needs a valid font");
     data_->description = native->lf;
     data_->points = font.GetFractionalPointSize();
 }
@@ -133,8 +134,11 @@ struct TextMeasurement::Data {
     int fontDpi;
     int mapMode;
     SIZE window{}, viewport{};
-    explicit Data(wxDC& source) : fontDpi(source.GetPPI().y) {
+    explicit Data(wxDC& source) {
+        if (!source.IsOk()) throw NativeDrawingError("The native measurement drawing context is unavailable");
         const auto sourceDC = static_cast<HDC>(source.GetHDC());
+        if (!sourceDC) throw NativeDrawingError("The native measurement device context is unavailable");
+        fontDpi = source.GetPPI().y;
         // Capture the compatible target's format on the GUI thread. Workers
         // create native objects from this value, without touching the source DC.
         const OwnedBitmap bitmap(CreateCompatibleBitmap(sourceDC, 1, 1));
@@ -142,8 +146,9 @@ struct TextMeasurement::Data {
         if (!GetObjectW(bitmap.get(), sizeof(target), &target)) ThrowLastError("GetObject measurement bitmap");
         target.bmBits = nullptr;
         mapMode = GetMapMode(sourceDC);
-        GetWindowExtEx(sourceDC, &window);
-        GetViewportExtEx(sourceDC, &viewport);
+        if (!mapMode) ThrowLastError("GetMapMode measurement context");
+        if (!GetWindowExtEx(sourceDC, &window)) ThrowLastError("GetWindowExtEx measurement context");
+        if (!GetViewportExtEx(sourceDC, &viewport)) ThrowLastError("GetViewportExtEx measurement context");
     }
     HDC ThreadContext() const {
         static thread_local std::unique_ptr<WorkerContext> worker;

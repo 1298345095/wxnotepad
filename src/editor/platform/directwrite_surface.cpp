@@ -1,6 +1,7 @@
 // Reuse pinned Notepad4 drawing and measurement; adapt wx host and paint lifetime.
 #include "original_directwrite.inc"
 #include "directwrite_surface.h"
+#include "native_drawing_error.h"
 #include <wx/wx.h>
 #include <wx/dcclient.h>
 #include <wx/fontutil.h>
@@ -162,7 +163,7 @@ public:
 
 void EnsureDirectWrite() {
     // Factory/font/surface setup runs on the GUI thread before worker use.
-    if (!LoadD2D()) throw std::runtime_error("Original Direct2D/DirectWrite initialization failed");
+    if (!LoadD2D()) throw NativeDrawingError("Original Direct2D/DirectWrite initialization failed");
 }
 } // namespace
 
@@ -189,7 +190,7 @@ std::shared_ptr<Font> AllocateDirectWriteFont(const FontParameters& parameters) 
     auto native = parameters;
     native.technology = Technology::DirectWrite;
     auto font = std::make_shared<FontWin>(native);
-    if (!font->pTextFormat) throw std::runtime_error("Original DirectWrite font creation failed");
+    if (!font->pTextFormat) throw NativeDrawingError("Original DirectWrite font creation failed");
     return font;
 }
 std::unique_ptr<Surface> AllocateDirectWriteSurface() {

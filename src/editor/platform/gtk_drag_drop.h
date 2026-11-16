@@ -13,9 +13,9 @@ class GtkTextDragDrop final {
 public:
     struct Callbacks {
         std::function<bool()> readOnly;
-        std::function<void(int, int)> showFeedback;
+        std::function<bool(int, int)> showFeedback;
         std::function<void()> clearFeedback;
-        std::function<void(int, int, std::string_view, bool)> dropText;
+        std::function<bool(int, int, std::string_view, bool)> dropText;
         std::function<void(const wxString&)> dropFile;
     };
 

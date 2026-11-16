@@ -1,0 +1,1576 @@
+{
+  "project": "1298345095_wxnotepad",
+  "organization": "1298345095",
+  "review_date": "2026-11-16",
+  "branch": "codex/sonarcloud-followup-2026-11-16",
+  "pull_request": 221,
+  "baseline_commit": "b015dda89776e3dda74f093e9656d36792143a7e",
+  "baseline": {
+    "main_open_confirmed": 3819,
+    "pr_open_confirmed": 13,
+    "pr_quality_gate": "OK",
+    "pr_new_code_coverage_percent": 83.0
+  },
+  "counts": {
+    "code_findings": 60,
+    "code_findings_by_context": {
+      "PR221": 14,
+      "main": 46
+    },
+    "code_findings_by_rule": {
+      "cpp:S112": 12,
+      "cpp:S5276": 2,
+      "cpp:S5350": 8,
+      "cpp:S5945": 4,
+      "cpp:S6004": 10,
+      "cpp:S6009": 2,
+      "cpp:S6177": 8,
+      "cpp:S7035": 9,
+      "cpp:S995": 5
+    },
+    "false_positives": 10
+  },
+  "code_fixes": [
+    {
+      "key": "AaHkPxb7gCAub8Zgymjt",
+      "context": "main",
+      "rule": "cpp:S7035",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 1328,
+        "endLine": 1328
+      },
+      "change": "Extract enum underlying value explicitly, retaining the separate pointer-sized message-ABI conversion where needed.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHkPxw7gCAub8ZgymkK",
+      "context": "main",
+      "rule": "cpp:S6009",
+      "file": "tests/completion_allocation.cpp",
+      "analyzed_range": {
+        "startLine": 85,
+        "endLine": 85
+      },
+      "change": "Accept std::string_view for a synchronous read-only string argument; no retained view, substr ownership or NUL-termination dependency.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHkPxw7gCAub8ZgymkJ",
+      "context": "main",
+      "rule": "cpp:S995",
+      "file": "tests/completion_allocation.cpp",
+      "analyzed_range": {
+        "startLine": 101,
+        "endLine": 101
+      },
+      "change": "Accept const EditorFrame* because the fixture uses the frame only through its const Editor() observer and retains mutable access to the child editor.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHkPxw7gCAub8ZgymkD",
+      "context": "main",
+      "rule": "cpp:S7035",
+      "file": "tests/completion_allocation.cpp",
+      "analyzed_range": {
+        "startLine": 117,
+        "endLine": 117
+      },
+      "change": "Extract enum underlying value explicitly, retaining the separate pointer-sized message-ABI conversion where needed.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHkPxw7gCAub8ZgymkE",
+      "context": "main",
+      "rule": "cpp:S7035",
+      "file": "tests/completion_allocation.cpp",
+      "analyzed_range": {
+        "startLine": 141,
+        "endLine": 141
+      },
+      "change": "Extract enum underlying value explicitly, retaining the separate pointer-sized message-ABI conversion where needed.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHkPxysgCAub8ZgymkW",
+      "context": "main",
+      "rule": "cpp:S6009",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 133,
+        "endLine": 133
+      },
+      "change": "Accept std::string_view for a synchronous read-only string argument; no retained view, substr ownership or NUL-termination dependency.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHkPxysgCAub8ZgymkS",
+      "context": "main",
+      "rule": "cpp:S7035",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 183,
+        "endLine": 183
+      },
+      "change": "Extract enum underlying value explicitly, retaining the separate pointer-sized message-ABI conversion where needed.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHkPxysgCAub8ZgymkT",
+      "context": "main",
+      "rule": "cpp:S7035",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 192,
+        "endLine": 192
+      },
+      "change": "Extract enum underlying value explicitly, retaining the separate pointer-sized message-ABI conversion where needed.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeK",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 710,
+        "endLine": 710
+      },
+      "change": "Move a local scalar into its only conditional use; preserve evaluation order, condition and branch actions.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeS",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 923,
+        "endLine": 924
+      },
+      "change": "Move a local scalar into its only conditional use; preserve evaluation order, condition and branch actions.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeU",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 977,
+        "endLine": 977
+      },
+      "change": "Move a local scalar into its only conditional use; preserve evaluation order, condition and branch actions.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeX",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 1021,
+        "endLine": 1021
+      },
+      "change": "Move a local scalar into its only conditional use; preserve evaluation order, condition and branch actions.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeb",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 1301,
+        "endLine": 1301
+      },
+      "change": "Move a local scalar into its only conditional use; preserve evaluation order, condition and branch actions.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeD",
+      "context": "main",
+      "rule": "cpp:S7035",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 596,
+        "endLine": 596
+      },
+      "change": "Extract enum underlying value explicitly, retaining the separate pointer-sized message-ABI conversion where needed.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeF",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 660,
+        "endLine": 660
+      },
+      "change": "Move a local scalar into its only conditional use; preserve evaluation order, condition and branch actions.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeM",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 733,
+        "endLine": 733
+      },
+      "change": "Move a local scalar into its only conditional use; preserve evaluation order, condition and branch actions.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeV",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 997,
+        "endLine": 997
+      },
+      "change": "Move a local scalar into its only conditional use; preserve evaluation order, condition and branch actions.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NUW_kxw1cHak3429",
+      "context": "main",
+      "rule": "cpp:S7035",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 135,
+        "endLine": 135
+      },
+      "change": "Extract enum underlying value explicitly, retaining the separate pointer-sized message-ABI conversion where needed.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r1NAyu4V9oip4Yaw",
+      "context": "main",
+      "rule": "cpp:S7035",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 253,
+        "endLine": 253
+      },
+      "change": "Extract enum underlying value explicitly, retaining the separate pointer-sized message-ABI conversion where needed.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r1NAyu4V9oip4Yax",
+      "context": "main",
+      "rule": "cpp:S7035",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 258,
+        "endLine": 258
+      },
+      "change": "Extract enum underlying value explicitly, retaining the separate pointer-sized message-ABI conversion where needed.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdOeT36FRZpqmyqA5",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/app/dialogs/find_replace_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 181,
+        "endLine": 181
+      },
+      "change": "Keep extension/match-count variables in the exact condition and body where their values are used.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdOdQ36FRZpqmyqAd",
+      "context": "main",
+      "rule": "cpp:S5350",
+      "file": "src/app/dialogs/auto_completion_settings_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 66,
+        "endLine": 66
+      },
+      "change": "Keep completed widget construction mutable, then hold read-only observer pointers for reading accepted dialog values.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdOdQ36FRZpqmyqAe",
+      "context": "main",
+      "rule": "cpp:S5350",
+      "file": "src/app/dialogs/auto_completion_settings_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 82,
+        "endLine": 83
+      },
+      "change": "Keep completed widget construction mutable, then hold read-only observer pointers for reading accepted dialog values.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdOdQ36FRZpqmyqAf",
+      "context": "main",
+      "rule": "cpp:S5350",
+      "file": "src/app/dialogs/auto_completion_settings_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 84,
+        "endLine": 84
+      },
+      "change": "Keep completed widget construction mutable, then hold read-only observer pointers for reading accepted dialog values.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdObJ36FRZpqmyp_9",
+      "context": "main",
+      "rule": "cpp:S5350",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 205,
+        "endLine": 205
+      },
+      "change": "Keep completed widget construction mutable, then hold read-only observer pointers for reading accepted dialog values.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdObJ36FRZpqmyp_-",
+      "context": "main",
+      "rule": "cpp:S5350",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 206,
+        "endLine": 206
+      },
+      "change": "Keep completed widget construction mutable, then hold read-only observer pointers for reading accepted dialog values.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdObJ36FRZpqmyp__",
+      "context": "main",
+      "rule": "cpp:S5350",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 207,
+        "endLine": 207
+      },
+      "change": "Keep completed widget construction mutable, then hold read-only observer pointers for reading accepted dialog values.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdObJ36FRZpqmyqAA",
+      "context": "main",
+      "rule": "cpp:S5350",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 208,
+        "endLine": 208
+      },
+      "change": "Keep completed widget construction mutable, then hold read-only observer pointers for reading accepted dialog values.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdObJ36FRZpqmyqAC",
+      "context": "main",
+      "rule": "cpp:S5945",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 224,
+        "endLine": 224
+      },
+      "change": "Store fixed tables in std::array and preserve original ordering; pointer/count native APIs receive data() and size().",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHjdObJ36FRZpqmyqAG",
+      "context": "main",
+      "rule": "cpp:S5945",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 301,
+        "endLine": 301
+      },
+      "change": "Store fixed tables in std::array and preserve original ordering; pointer/count native APIs receive data() and size().",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPinBSajQlY95HQbR",
+      "context": "main",
+      "rule": "cpp:S995",
+      "file": "src/app/dialogs/auto_completion_settings_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 146,
+        "endLine": 146
+      },
+      "change": "The helper/event callbacks only call const GetValue/GetId observers; const qualification catches unintended mutation.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHEzXBthpq0YxBZ9SAx",
+      "context": "main",
+      "rule": "cpp:S5945",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 74,
+        "endLine": 74
+      },
+      "change": "Store fixed tables in std::array and preserve original ordering; pointer/count native APIs receive data() and size().",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHEzXBthpq0YxBZ9SA3",
+      "context": "main",
+      "rule": "cpp:S5350",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 203,
+        "endLine": 204
+      },
+      "change": "Keep completed widget construction mutable, then hold read-only observer pointers for reading accepted dialog values.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NT77kxw1cHak34ud",
+      "context": "main",
+      "rule": "cpp:S995",
+      "file": "src/app/dialogs/tab_settings_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 88,
+        "endLine": 88
+      },
+      "change": "The helper/event callbacks only call const GetValue/GetId observers; const qualification catches unintended mutation.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NT77kxw1cHak34ue",
+      "context": "main",
+      "rule": "cpp:S995",
+      "file": "src/app/dialogs/tab_settings_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 89,
+        "endLine": 89
+      },
+      "change": "The helper/event callbacks only call const GetValue/GetId observers; const qualification catches unintended mutation.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NT77kxw1cHak34uf",
+      "context": "main",
+      "rule": "cpp:S995",
+      "file": "src/app/dialogs/tab_settings_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 90,
+        "endLine": 90
+      },
+      "change": "The helper/event callbacks only call const GetValue/GetId observers; const qualification catches unintended mutation.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r0jAyu4V9oip4YGC",
+      "context": "main",
+      "rule": "cpp:S6004",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 42,
+        "endLine": 42
+      },
+      "change": "Keep extension/match-count variables in the exact condition and body where their values are used.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaGRP44_XbG6mhdFE6k5",
+      "context": "main",
+      "rule": "cpp:S5945",
+      "file": "src/app/dialogs/find_replace_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 137,
+        "endLine": 137
+      },
+      "change": "Store fixed tables in std::array and preserve original ordering; pointer/count native APIs receive data() and size().",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHb6ijQTfmq54B5ATsu",
+      "context": "main",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "analyzed_range": {
+        "startLine": 39,
+        "endLine": 39
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjDeSajQlY95HQb2",
+      "context": "main",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "analyzed_range": {
+        "startLine": 160,
+        "endLine": 160
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjDeSajQlY95HQb3",
+      "context": "main",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "analyzed_range": {
+        "startLine": 182,
+        "endLine": 182
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjDeSajQlY95HQb5",
+      "context": "main",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "analyzed_range": {
+        "startLine": 243,
+        "endLine": 243
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjDeSajQlY95HQb8",
+      "context": "main",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "analyzed_range": {
+        "startLine": 263,
+        "endLine": 263
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaGwmVW4EeGJK6USKRrw",
+      "context": "main",
+      "rule": "cpp:S112",
+      "file": "tests/editor_test_helpers.h",
+      "analyzed_range": {
+        "startLine": 65,
+        "endLine": 65
+      },
+      "change": "Throw the existing TestEditor::Failure assertion type.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHk8WZhhnL9Urv53rXH",
+      "context": "PR221",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "analyzed_range": {
+        "startLine": 246,
+        "endLine": 246
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "verified_fixed_in_pr_analysis",
+      "verified_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37",
+      "verified_status_filter": "FIXED"
+    },
+    {
+      "key": "AaHk8WZhhnL9Urv53rXI",
+      "context": "PR221",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "analyzed_range": {
+        "startLine": 248,
+        "endLine": 248
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "verified_fixed_in_pr_analysis",
+      "verified_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37",
+      "verified_status_filter": "FIXED"
+    },
+    {
+      "key": "AaHk8WZhhnL9Urv53rXJ",
+      "context": "PR221",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/text_measurement_gtk.cpp",
+      "analyzed_range": {
+        "startLine": 265,
+        "endLine": 265
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "verified_fixed_in_pr_analysis",
+      "verified_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37",
+      "verified_status_filter": "FIXED"
+    },
+    {
+      "key": "AaHk8WLjhnL9Urv53rXE",
+      "context": "PR221",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "analyzed_range": {
+        "startLine": 104,
+        "endLine": 104
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "verified_fixed_in_pr_analysis",
+      "verified_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37",
+      "verified_status_filter": "FIXED"
+    },
+    {
+      "key": "AaHk8WLjhnL9Urv53rXF",
+      "context": "PR221",
+      "rule": "cpp:S112",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "analyzed_range": {
+        "startLine": 107,
+        "endLine": 107
+      },
+      "change": "Throw NativeDrawingError for drawing/measurement failures without a native error code; preserve runtime_error recovery compatibility and the original diagnostic.",
+      "status": "verified_fixed_in_pr_analysis",
+      "verified_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37",
+      "verified_status_filter": "FIXED"
+    },
+    {
+      "key": "AaHk8WbphnL9Urv53rX-",
+      "context": "PR221",
+      "rule": "cpp:S112",
+      "file": "tests/parallel_surface_failure.cpp",
+      "analyzed_range": {
+        "startLine": 19,
+        "endLine": 19
+      },
+      "change": "Use a dedicated assertion failure type while preserving the original diagnostic and process failure.",
+      "status": "verified_fixed_in_pr_analysis",
+      "verified_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37",
+      "verified_status_filter": "FIXED"
+    },
+    {
+      "key": "AaHleDVTNFPSSL7UcMpy",
+      "context": "PR221",
+      "rule": "cpp:S5276",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 994,
+        "endLine": 994
+      },
+      "change": "Restore the pinned core unsigned-char return contract at CharacterAt/StyleIndexAt message boundaries. Related reads in FindWordStart/ReadWordPrefix use those typed accessors; later int/unsigned promotions are lossless, while Sci_Position positions and intptr_t message transport remain unchanged.",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    },
+    {
+      "key": "AaHleDVTNFPSSL7UcMpz",
+      "context": "PR221",
+      "rule": "cpp:S5276",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 1020,
+        "endLine": 1020
+      },
+      "change": "Restore the pinned core unsigned-char return contract at CharacterAt/StyleIndexAt message boundaries. Related reads in FindWordStart/ReadWordPrefix use those typed accessors; later int/unsigned promotions are lossless, while Sci_Position positions and intptr_t message transport remain unchanged.",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    },
+    {
+      "key": "AaHleDW9NFPSSL7UcMp0",
+      "context": "PR221",
+      "rule": "cpp:S6177",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 135,
+        "endLine": 135
+      },
+      "change": "Add using enum Scintilla::Message inside CheckZoomedGeometry only and replace its qualified enumerator references; retain every operation, assertion, comparison value and test scenario.",
+      "function": "CheckZoomedGeometry",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    },
+    {
+      "key": "AaHleDXDNFPSSL7UcMp1",
+      "context": "PR221",
+      "rule": "cpp:S6177",
+      "file": "tests/parallel_surface_failure.cpp",
+      "analyzed_range": {
+        "startLine": 36,
+        "endLine": 36
+      },
+      "change": "Add using enum FailureKind inside CheckFailure only and replace its qualified enumerator references; retain every operation, assertion, comparison value and test scenario.",
+      "function": "CheckFailure",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    },
+    {
+      "key": "AaHleDXDNFPSSL7UcMp2",
+      "context": "PR221",
+      "rule": "cpp:S6177",
+      "file": "tests/parallel_surface_failure.cpp",
+      "analyzed_range": {
+        "startLine": 181,
+        "endLine": 181
+      },
+      "change": "Add using enum FailureKind inside main only and replace its qualified enumerator references; retain every operation, assertion, comparison value and test scenario.",
+      "function": "main",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXh",
+      "context": "PR221",
+      "rule": "cpp:S6177",
+      "file": "tests/surface_initialization.cpp",
+      "analyzed_range": {
+        "startLine": 213,
+        "endLine": 213
+      },
+      "change": "Add using enum Scintilla::Message inside DocumentState::RequireUnchanged only and replace its qualified enumerator references; retain every operation, assertion, comparison value and test scenario.",
+      "function": "DocumentState::RequireUnchanged",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXo",
+      "context": "PR221",
+      "rule": "cpp:S6177",
+      "file": "tests/surface_initialization.cpp",
+      "analyzed_range": {
+        "startLine": 329,
+        "endLine": 329
+      },
+      "change": "Add using enum Scintilla::Message inside CheckCommittedModificationRecovery only and replace its qualified enumerator references; retain every operation, assertion, comparison value and test scenario.",
+      "function": "CheckCommittedModificationRecovery",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXs",
+      "context": "PR221",
+      "rule": "cpp:S6177",
+      "file": "tests/surface_initialization.cpp",
+      "analyzed_range": {
+        "startLine": 496,
+        "endLine": 496
+      },
+      "change": "Add using enum Scintilla::Message inside CheckNativeRecovery only and replace its qualified enumerator references; retain every operation, assertion, comparison value and test scenario.",
+      "function": "CheckNativeRecovery",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    },
+    {
+      "key": "AaHkPxysgCAub8ZgymkR",
+      "context": "main",
+      "rule": "cpp:S6177",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 133,
+        "endLine": 133
+      },
+      "change": "Add using enum Scintilla::Message inside CheckZoomedGeometry only and replace its qualified enumerator references; retain every operation, assertion, comparison value and test scenario.",
+      "function": "CheckZoomedGeometry",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    },
+    {
+      "key": "AaHkPxysgCAub8ZgymkU",
+      "context": "main",
+      "rule": "cpp:S6177",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 197,
+        "endLine": 197
+      },
+      "change": "Add using enum Scintilla::Message inside CheckZoom only and replace its qualified enumerator references; retain every operation, assertion, comparison value and test scenario.",
+      "function": "CheckZoom",
+      "status": "implemented_on_followup_branch",
+      "reviewed_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    }
+  ],
+  "false_positives": [
+    {
+      "key": "AaHaPjLPSajQlY95HQek",
+      "context": "main",
+      "rule": "cpp:S6188",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 36,
+        "endLine": 36
+      },
+      "comment": "Reviewed against wxnotepad revision b015dda89776e3dda74f093e9656d36792143a7e. CompareNoCase in src/editor/word_completion.cpp is the ASCII-insensitive alternative in WordList::WL_strncmp, declared int (*)(const char*, const char*, size_t). WordList::Init assigns CompareNoCase when ignoreCase is enabled and standard strncmp otherwise; StartsWith invokes the same callback. The pointer/count signature provides direct compatibility with strncmp. The count is a maximum string comparison bound and the implementation also stops at NUL, rather than describing a required span extent. Replacing this signature with std::span would break the comparator callback contract. The reported parameter is therefore intentional.",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjLPSajQlY95HQek",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaHkPxb7gCAub8Zgymjv",
+      "context": "main",
+      "rule": "cpp:S6188",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 36,
+        "endLine": 36
+      },
+      "comment": "Reviewed against wxnotepad revision b015dda89776e3dda74f093e9656d36792143a7e. CompareNoCase in src/editor/word_completion.cpp is the ASCII-insensitive alternative in WordList::WL_strncmp, declared int (*)(const char*, const char*, size_t). WordList::Init assigns CompareNoCase when ignoreCase is enabled and standard strncmp otherwise; StartsWith invokes the same callback. The pointer/count signature provides direct compatibility with strncmp. The count is a maximum string comparison bound and the implementation also stops at NUL, rather than describing a required span extent. Replacing this signature with std::span would break the comparator callback contract. The reported parameter is therefore intentional.",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHkPxb7gCAub8Zgymjv",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaHkPxb7gCAub8Zgymju",
+      "context": "main",
+      "rule": "cpp:S1000",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 26,
+        "endLine": 26
+      },
+      "comment": "Reviewed against wxnotepad revision b015dda89776e3dda74f093e9656d36792143a7e. S1000 concerns unnamed namespaces in shared headers. Here the namespace is in the production word_completion.cpp implementation and intentionally isolates CharBuffer, WordList, Collector and comparison helpers. tests/completion_allocation.cpp explicitly includes this implementation to exercise the actual private candidate storage in its own translation unit. CMake builds editor_features as a static library and a separate completion_allocation executable; the included implementation supplies CompleteWord for the test. The public word_completion.h has the named option namespaces and external declarations. No cross-translation-unit identity or shared state is expected from these private entities. Naming this implementation namespace would alter its intentional translation-unit isolation; this finding results from intentional test-only source inclusion.",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHkPxb7gCAub8Zgymju",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaHjdOfP36FRZpqmyqBM",
+      "context": "main",
+      "rule": "cpp:S995",
+      "file": "src/app/localization.cpp",
+      "analyzed_range": {
+        "startLine": 96,
+        "endLine": 96
+      },
+      "comment": "Reviewed against wxnotepad revision b015dda89776e3dda74f093e9656d36792143a7e. AppLocalization::SetAccessibleName(wxWindow&, ...) mutates native accessibility state. The supported __WXMSW__ branch calls window.SetAccessible(new NamedWindowAccessible(name)); in pinned wxWidgets 3.3.3 this is a non-const method, deleting the old m_accessible, assigning the replacement and attaching the window. Declaration: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h (SetAccessible); implementation: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/wincmn.cpp (wxWindowBase::SetAccessible). The GTK path also writes the native accessible name through atk_object_set_name. Linux compilation analysis does not see the Windows non-const call. Changing wxWindow& to const wxWindow& would break the supported Windows implementation, so the mutable parameter is required.",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHjdOfP36FRZpqmyqBM",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaG1r1NAyu4V9oip4Yas",
+      "context": "main",
+      "rule": "cpp:S995",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 90,
+        "endLine": 90
+      },
+      "comment": "Reviewed against wxnotepad revision b015dda89776e3dda74f093e9656d36792143a7e. tests/zoom.cpp NativeKey intentionally sends keyboard input to the supplied EditorControl. On Windows SendMessageW targets editor->GetHandle(); on GTK gtk_widget_event targets editor->GetConnectWidget() and its drawing window. editor_control.cpp binds wxEVT_KEY_DOWN to OnKeyDown, which routes editing/navigation and HandleApplicationKey to actual zoom commands. CheckZoom asserts the target editor's zoom changed after these calls. Const-qualified native handle accessors hide the indirect mutation from parameter analysis. The input helper requires a mutable editor because the dispatched operation changes that same editor.",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1NAyu4V9oip4Yas",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaG1r1NAyu4V9oip4Yat",
+      "context": "main",
+      "rule": "cpp:S995",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 113,
+        "endLine": 113
+      },
+      "comment": "Reviewed against wxnotepad revision b015dda89776e3dda74f093e9656d36792143a7e. tests/zoom.cpp NativeWheel intentionally delivers Ctrl+wheel input to the supplied EditorControl via SendMessageW(WM_MOUSEWHEEL) or gtk_widget_event(GDK_SCROLL). editor_control.cpp binds the native wheel event to OnMouse; Core::Wheel updates the editor's physical-wheel accumulator and invokes window_.Send(ZoomIn/ZoomOut). The following CheckZoom assertion verifies the editor changed to 110 percent. Native handles are obtained through const-qualified accessors but the dispatched operation mutates the target editor, so making this input helper's editor parameter const would misrepresent its mutation contract.",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1NAyu4V9oip4Yat",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaG1r1NAyu4V9oip4Yao",
+      "context": "main",
+      "rule": "cpp:S995",
+      "file": "tests/zoom.cpp",
+      "analyzed_range": {
+        "startLine": 43,
+        "endLine": 43
+      },
+      "comment": "Reviewed against wxnotepad revision b015dda89776e3dda74f093e9656d36792143a7e. tests/zoom.cpp Menu constructs a wxEVT_MENU and dispatches it through frame->GetEventHandler()->ProcessEvent. The bound frame menu handlers execute zoom changes on its editor or create the owned Zoom Level dialog. This is an input/command operation on the frame's event-processing state and owned UI, with subsequent assertions checking changed zoom. GetEventHandler() exposes a mutable event handler through a const accessor; that indirect dispatch explains the analyzer's missed mutation. Retain the mutable frame parameter for the command helper.",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1NAyu4V9oip4Yao",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaGpuARUUHShZWS1j0bn",
+      "context": "main",
+      "rule": "python:S7494",
+      "file": "tools/clipboard_isolated.py",
+      "analyzed_range": {
+        "startLine": 178,
+        "endLine": 178
+      },
+      "comment": "Reviewed against wxnotepad revision b015dda89776e3dda74f093e9656d36792143a7e. This dict consumes two-element key/value sequences returned by line.split(\"=\", 1) while parsing xdotool --shell geometry. SonarSource's own pinned rule fixture explicitly labels the equivalent dict(x.split(\"=\") for x in update_str.split(\",\")) pattern as FP SONARPY-3154: https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py (lines 48-49). Adding an outer {key: value for key, value in (...)} would only copy the pairs and introduce the redundant-comprehension pattern described by S7500. Keep the existing split-on-first-equals parsing, including duplicate-key and malformed-line behavior. This key is the move-peer geometry parser.",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGpuARUUHShZWS1j0bn",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaGpuARUUHShZWS1j0bo",
+      "context": "main",
+      "rule": "python:S7494",
+      "file": "tools/clipboard_isolated.py",
+      "analyzed_range": {
+        "startLine": 231,
+        "endLine": 231
+      },
+      "comment": "Reviewed against wxnotepad revision b015dda89776e3dda74f093e9656d36792143a7e. This dict consumes two-element key/value sequences returned by line.split(\"=\", 1) while parsing xdotool --shell geometry. SonarSource's own pinned rule fixture explicitly labels the equivalent dict(x.split(\"=\") for x in update_str.split(\",\")) pattern as FP SONARPY-3154: https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py (lines 48-49). Adding an outer {key: value for key, value in (...)} would only copy the pairs and introduce the redundant-comprehension pattern described by S7500. Keep the existing split-on-first-equals parsing, including duplicate-key and malformed-line behavior. This key is the Wayland drag-origin geometry parser.",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGpuARUUHShZWS1j0bo",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE"
+    },
+    {
+      "key": "AaHleDG0NFPSSL7UcMpx",
+      "context": "PR221",
+      "rule": "cpp:S5025",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "analyzed_range": {
+        "startLine": 305,
+        "endLine": 305
+      },
+      "comment": "Reviewed against wxnotepad commit ae986b9d59380bba8bb9e2a0a2443776bf1c9a37 and pinned wxWidgets 3.3.3. The reported allocation is mode_ = new wxChoice(this, ...), where this is its owning LineEndingConversionDialog. EditorFrame::ConfirmLineEndingConversion creates that dialog as a stack object, calls Choose(), and destroys it on scope exit. The mode_ member only observes the parent-owned child.\n\nThe native ownership path is explicit in wxWidgets 3.3.3: GTK wxChoice::Create calls m_parent->DoAddChild(this) (src/gtk/choice.cpp:121), which adds it to the parent's child list; Windows wxChoice::CreateAndInit calls wxControlBase::CreateControl, which calls parent->AddChild(this) (src/common/ctrlcmn.cpp:83). wxWindowBase::AddChild appends the child to GetChildren() (src/common/wincmn.cpp:1311). Both GTK and MSW window destructors call DestroyChildren (src/gtk/window.cpp:3110, src/msw/window.cpp:421). DestroyChildren calls child->wxWindowBase::Destroy(), whose implementation deletes the child (src/common/wincmn.cpp:602 and 570).\n\nThis allocation therefore already follows framework-managed parent-child ownership. A separately owning smart pointer would introduce another owner for the same control. This PR changes only the fixed choices table to std::array and supplies its data()/size(); the parent and ownership contract are unchanged. The corresponding main issue AaG-lZNGOY3icnFs9aGa at the previous line 302 is also verified under the FALSE_POSITIVE filter. Source: https://github.com/wxWidgets/wxWidgets/tree/v3.3.3",
+      "transition": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHleDG0NFPSSL7UcMpx",
+        "newStatus": "falsepositive"
+      },
+      "verified_status_filter": "FALSE_POSITIVE",
+      "verification_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+    }
+  ],
+  "verification": {
+    "exact_key_false_positive_total": 10,
+    "exact_key_open_confirmed_total": 0,
+    "by_context": {
+      "main": {
+        "false_positive": 9,
+        "open_confirmed": 0
+      },
+      "PR221": {
+        "false_positive": 1,
+        "open_confirmed": 0
+      }
+    },
+    "pr_fixed_keys_in_first_hosted_analysis": [
+      "AaHk8WZhhnL9Urv53rXH",
+      "AaHk8WZhhnL9Urv53rXI",
+      "AaHk8WZhhnL9Urv53rXJ",
+      "AaHk8WLjhnL9Urv53rXE",
+      "AaHk8WLjhnL9Urv53rXF",
+      "AaHk8WbphnL9Urv53rX-"
+    ],
+    "first_hosted_analysis_revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37"
+  },
+  "already_fixed_in_baseline": [
+    {
+      "key": "AaHkPxxmgCAub8ZgymkQ",
+      "rule": "cpp:S6004",
+      "file": "tests/completion_allocation_fault.cpp",
+      "reason": "The branch already declares CurrentState() reference within if initializer."
+    }
+  ],
+  "preserved_pr_recommendations": [
+    {
+      "key": "AaHk8Wa9hnL9Urv53rXU",
+      "rule": "cpp:S1181",
+      "file": "src/editor/editor_core.cpp",
+      "analyzed_range": {
+        "startLine": 240,
+        "endLine": 240
+      }
+    },
+    {
+      "key": "AaHk8WZ2hnL9Urv53rXN",
+      "rule": "cpp:S1181",
+      "file": "src/editor/editor_core.h",
+      "analyzed_range": {
+        "startLine": 27,
+        "endLine": 27
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXv",
+      "rule": "cpp:S110",
+      "file": "tests/surface_initialization.cpp",
+      "analyzed_range": {
+        "startLine": 570,
+        "endLine": 570
+      }
+    },
+    {
+      "key": "AaHk8WbnhnL9Urv53rXx",
+      "rule": "cpp:S1181",
+      "file": "tests/surface_initialization.cpp",
+      "analyzed_range": {
+        "startLine": 580,
+        "endLine": 580
+      }
+    }
+  ],
+  "validation": {
+    "canonical_format": {
+      "version": "23.1.2",
+      "tracked_files": 374,
+      "result": "passed",
+      "new_header": "formatted with the same canonical executable"
+    },
+    "whitespace_check": "passed",
+    "local_compiler": "g++ (Debian 14.2.0-19) 14.2.0",
+    "compile_flags": [
+      "-std=c++23",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-pthread",
+      "-Isrc"
+    ],
+    "compiled_fixture": "tests/parallel_surface_failure.cpp",
+    "probe": {
+      "command": [
+        "/workspace/scratch/4fb0551b45b9/parallel_surface_failure_rescan"
+      ],
+      "cwd": "/workspace/scratch/4fb0551b45b9/wxnotepad",
+      "timeout_seconds": 30.0,
+      "requested_runs": 1,
+      "completed_runs": 1,
+      "success": true,
+      "results": [
+        {
+          "command": [
+            "/workspace/scratch/4fb0551b45b9/parallel_surface_failure_rescan"
+          ],
+          "status": "completed",
+          "exit_code": 0,
+          "log": "/workspace/scratch/4fb0551b45b9/parallel-rescan-probe/run-001.log",
+          "seconds": 0.165
+        }
+      ]
+    },
+    "probe_output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+    "cross_review": "All changed C++ groups independently reviewed for const API compatibility, table ordering, scalar evaluation order, enum representation, view lifetime and exception propagation.",
+    "native_gui_validation": "Existing Windows, X11 and Wayland jobs on PR #221 validate the application, completion allocation, zoom, dialog and surface regressions; follow the commit-specific hosted checks.",
+    "source_sha256": {
+      "src/app/dialogs/auto_completion_settings_dialog.cpp": "2179c5a7ddfe794d12121c95dd047e05dde6a6be78e9716f65387204d57346f5",
+      "src/app/dialogs/document_dialogs.cpp": "65a04e392ac23d90fc9bc85f1fa369cd82c15089c9440bbb57d58b56f779d56a",
+      "src/app/dialogs/find_replace_dialog.cpp": "0a7edce9fd9bc80170927a80f4bdaead1b47b58f49bf46b7efc234f5eb8d880c",
+      "src/app/dialogs/tab_settings_dialog.cpp": "c108b190bba462e646d2c0a58e3fa9a35b74fd4d6ec2d23a98b266a4dd8d1311",
+      "src/editor/editor_core.cpp": "b16b0d3e621b2c6fa395c684d1e1cedc7873197fe0b2b3cc2228ded340754fb9",
+      "src/editor/platform/directwrite_surface.cpp": "f01ce488a588112c1605259bc5e5b88da05d8b3e35ae3690904e6330219c622b",
+      "src/editor/platform/text_measurement_gtk.cpp": "5ab92664f9c66e446fa71870b17df3cdf74b32d05927a059ac3fde1218e90bec",
+      "src/editor/platform/text_measurement_msw.cpp": "619f6ace42f78d5d96ae87bab2e2d407de098930548c5028a2728d21af57179c",
+      "src/editor/platform/wx_platform.cpp": "b911908264cbabf64025f162652164834fc0ec00e6af07003cfba566926b6a11",
+      "src/editor/word_completion.cpp": "ae9b8e082f831a8139291207e60b0dd2bd751397934d3b6f50c46101daa0c904",
+      "tests/completion_allocation.cpp": "07a9353de659eeb0d512c9925d8f422c509c1b8515bdd9814f4a85c833325be5",
+      "tests/editor_test_helpers.h": "13e55b5e313b296487c3e9101c7e6a83877e78223b4e5fd41bc8a593e7cb1890",
+      "tests/parallel_surface_failure.cpp": "e521f6d3575e44fef505cbd9cf5b4a2be8cb937b2b87d9950c797069b01d2f8c",
+      "tests/zoom.cpp": "4c67664e6c458fece1d90cc0804d0013d6696cc3db56790f5a53611779830e65",
+      "src/editor/platform/native_drawing_error.h": "35554bf2872a6b41d97e9095e3d09e82d3183a61b35e890bbd62625ad23bb8bb",
+      "tests/surface_initialization.cpp": "7c29d9842cbb00ec8ae3ef14ec09f36d532b607b6f8dc5a12bc0ccc3f535e72e"
+    }
+  },
+  "source_references": [
+    "https://github.com/wxWidgets/wxWidgets/tree/v3.3.3",
+    "https://github.com/zufuliu/notepad4/tree/89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+    "https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py",
+    "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h",
+    "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.cxx",
+    "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/wincmn.cpp"
+  ],
+  "hosted_validation_ae986b9": {
+    "revision": "ae986b9d59380bba8bb9e2a0a2443776bf1c9a37",
+    "native_checkout_revision": "7eb5b2d4dd903d5e272f5ff5274ec61db1beeddb",
+    "scanner_task": "AaHleCwYOC3kQQYL28Di",
+    "workflow_runs": [
+      {
+        "id": 43917497156,
+        "name": "CodeQL",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43917497156"
+      },
+      {
+        "id": 43917497150,
+        "name": "Quality",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43917497150"
+      },
+      {
+        "id": 43917497348,
+        "name": "Fuzz",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43917497348"
+      },
+      {
+        "id": 43917497292,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43917497292"
+      }
+    ],
+    "quality_gate": {
+      "status": "OK",
+      "conditions": [
+        {
+          "metricKey": "new_reliability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_security_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_maintainability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_coverage",
+          "status": "OK",
+          "errorThreshold": "80",
+          "actualValue": "82.3"
+        },
+        {
+          "metricKey": "new_duplicated_lines_density",
+          "status": "OK",
+          "errorThreshold": "3",
+          "actualValue": "0.0"
+        },
+        {
+          "metricKey": "new_security_hotspots_reviewed",
+          "status": "OK",
+          "errorThreshold": "100",
+          "actualValue": "100.0"
+        }
+      ]
+    },
+    "fixed_keys": [
+      "AaHk8WZhhnL9Urv53rXH",
+      "AaHk8WZhhnL9Urv53rXI",
+      "AaHk8WZhhnL9Urv53rXJ",
+      "AaHk8WLjhnL9Urv53rXE",
+      "AaHk8WLjhnL9Urv53rXF",
+      "AaHk8WbphnL9Urv53rX-"
+    ],
+    "open_confirmed_before_choice_disposition": {
+      "issues": [
+        {
+          "key": "AaHleDG0NFPSSL7UcMpx",
+          "rule": "cpp:S5025",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:src/app/dialogs/document_dialogs.cpp",
+          "severity": "CRITICAL",
+          "status": "OPEN",
+          "message": "Replace the use of \"new\" with an operation that automatically manages the memory.",
+          "cleanCodeAttribute": "FOCUSED",
+          "cleanCodeAttributeCategory": "ADAPTABLE",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T17:21:06+0000",
+          "textRange": {
+            "startLine": 305,
+            "endLine": 305
+          }
+        },
+        {
+          "key": "AaHleDVTNFPSSL7UcMpy",
+          "rule": "cpp:S5276",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:src/editor/word_completion.cpp",
+          "severity": "MAJOR",
+          "status": "OPEN",
+          "message": "implicit conversion loses integer precision: 'intptr_t' (aka 'long') to 'const int'",
+          "cleanCodeAttribute": "LOGICAL",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T17:21:06+0000",
+          "textRange": {
+            "startLine": 994,
+            "endLine": 994
+          }
+        },
+        {
+          "key": "AaHleDVTNFPSSL7UcMpz",
+          "rule": "cpp:S5276",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:src/editor/word_completion.cpp",
+          "severity": "MAJOR",
+          "status": "OPEN",
+          "message": "implicit conversion loses integer precision: 'intptr_t' (aka 'long') to 'int'",
+          "cleanCodeAttribute": "LOGICAL",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T17:21:06+0000",
+          "textRange": {
+            "startLine": 1020,
+            "endLine": 1020
+          }
+        },
+        {
+          "key": "AaHleDW9NFPSSL7UcMp0",
+          "rule": "cpp:S6177",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/zoom.cpp",
+          "severity": "MINOR",
+          "status": "OPEN",
+          "message": "Reduce verbosity with \"using enum\" for \"Scintilla::Message\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T17:21:06+0000",
+          "textRange": {
+            "startLine": 135,
+            "endLine": 135
+          }
+        },
+        {
+          "key": "AaHk8Wa9hnL9Urv53rXU",
+          "rule": "cpp:S1181",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:src/editor/editor_core.cpp",
+          "severity": "MAJOR",
+          "status": "OPEN",
+          "message": "Catch a more specific exception instead of a generic one.",
+          "cleanCodeAttribute": "CONVENTIONAL",
+          "cleanCodeAttributeCategory": "CONSISTENT",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T14:01:45+0000",
+          "textRange": {
+            "startLine": 240,
+            "endLine": 240
+          }
+        },
+        {
+          "key": "AaHk8WZ2hnL9Urv53rXN",
+          "rule": "cpp:S1181",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:src/editor/editor_core.h",
+          "severity": "MAJOR",
+          "status": "OPEN",
+          "message": "Catch a more specific exception instead of a generic one.",
+          "cleanCodeAttribute": "CONVENTIONAL",
+          "cleanCodeAttributeCategory": "CONSISTENT",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T14:01:45+0000",
+          "textRange": {
+            "startLine": 27,
+            "endLine": 27
+          }
+        },
+        {
+          "key": "AaHleDXDNFPSSL7UcMp1",
+          "rule": "cpp:S6177",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/parallel_surface_failure.cpp",
+          "severity": "MINOR",
+          "status": "OPEN",
+          "message": "Reduce verbosity with \"using enum\" for \"FailureKind\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T14:01:45+0000",
+          "textRange": {
+            "startLine": 36,
+            "endLine": 36
+          }
+        },
+        {
+          "key": "AaHleDXDNFPSSL7UcMp2",
+          "rule": "cpp:S6177",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/parallel_surface_failure.cpp",
+          "severity": "MINOR",
+          "status": "OPEN",
+          "message": "Reduce verbosity with \"using enum\" for \"FailureKind\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T14:01:45+0000",
+          "textRange": {
+            "startLine": 181,
+            "endLine": 181
+          }
+        },
+        {
+          "key": "AaHk8WbnhnL9Urv53rXh",
+          "rule": "cpp:S6177",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+          "severity": "MINOR",
+          "status": "OPEN",
+          "message": "Reduce verbosity with \"using enum\" for \"Scintilla::Message\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T14:01:45+0000",
+          "textRange": {
+            "startLine": 213,
+            "endLine": 213
+          }
+        },
+        {
+          "key": "AaHk8WbnhnL9Urv53rXo",
+          "rule": "cpp:S6177",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+          "severity": "MINOR",
+          "status": "OPEN",
+          "message": "Reduce verbosity with \"using enum\" for \"Scintilla::Message\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T14:01:45+0000",
+          "textRange": {
+            "startLine": 329,
+            "endLine": 329
+          }
+        },
+        {
+          "key": "AaHk8WbnhnL9Urv53rXs",
+          "rule": "cpp:S6177",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+          "severity": "MINOR",
+          "status": "OPEN",
+          "message": "Reduce verbosity with \"using enum\" for \"Scintilla::Message\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T14:01:45+0000",
+          "textRange": {
+            "startLine": 496,
+            "endLine": 496
+          }
+        },
+        {
+          "key": "AaHk8WbnhnL9Urv53rXv",
+          "rule": "cpp:S110",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+          "severity": "MAJOR",
+          "status": "OPEN",
+          "message": "The inheritance hierarchy for this class has a depth of 6, which is greater than 5 authorized.",
+          "cleanCodeAttribute": "FOCUSED",
+          "cleanCodeAttributeCategory": "ADAPTABLE",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T14:01:45+0000",
+          "textRange": {
+            "startLine": 570,
+            "endLine": 570
+          }
+        },
+        {
+          "key": "AaHk8WbnhnL9Urv53rXx",
+          "rule": "cpp:S1181",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/surface_initialization.cpp",
+          "severity": "MAJOR",
+          "status": "OPEN",
+          "message": "Catch a more specific exception instead of a generic one.",
+          "cleanCodeAttribute": "CONVENTIONAL",
+          "cleanCodeAttributeCategory": "CONSISTENT",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T14:01:45+0000",
+          "textRange": {
+            "startLine": 580,
+            "endLine": 580
+          }
+        }
+      ],
+      "paging": {
+        "pageIndex": 1,
+        "pageSize": 100,
+        "total": 13
+      }
+    },
+    "hotspots_to_review": 0,
+    "native_results": {
+      "windows": {
+        "passed": 216,
+        "skipped": 1,
+        "diagnostic_passed": 2
+      },
+      "x11": {
+        "passed": 203,
+        "skipped": 2,
+        "diagnostic_passed": 2
+      },
+      "wayland": {
+        "passed": 205,
+        "skipped": 0,
+        "diagnostic_passed": 2
+      },
+      "coverage_x11": {
+        "passed": 203,
+        "skipped": 2
+      },
+      "coverage_wayland": {
+        "passed": 205,
+        "skipped": 0
+      }
+    },
+    "clang_tidy_translation_units": 228
+  },
+  "rescan_followup": {
+    "code_keys_added": 10,
+    "code_keys_by_context": {
+      "main": 2,
+      "PR221": 8
+    },
+    "false_positive_keys_added": 1,
+    "enum_functions_changed": 7,
+    "cross_review": {
+      "result": "No semantic issue found in CharacterAt/StyleIndexAt boundary changes.",
+      "evidence": [
+        {
+          "path": "scintilla/src/Editor.cxx",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            6997,
+            6998,
+            7071,
+            7072
+          ],
+          "detail": "GetCharAt returns Document::UCharAt; GetStyleIndexAt returns Document::StyleIndexAt."
+        },
+        {
+          "path": "scintilla/src/Document.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            618,
+            627
+          ],
+          "detail": "Both functions declare unsigned char return values."
+        }
+      ],
+      "preserved_contracts": [
+        "Sci_Position input and intptr_t Call/message transport stay unchanged.",
+        "unsigned char results promote losslessly to existing int parameters and references.",
+        "FindWordStart and ReadWordPrefix keep position arithmetic, control flow and high-byte values intact."
+      ]
+    },
+    "existing_main_narrowing_dispositions": [
+      {
+        "key": "AaHaPjLPSajQlY95HQdc",
+        "context": {
+          "branch": "main"
+        },
+        "rule": "cpp:S5276",
+        "file": "src/editor/word_completion.cpp",
+        "analyzed_range": {
+          "startLine": 996,
+          "endLine": 996
+        },
+        "change": "Same source operation as PR AaHleDVTNFPSSL7UcMpy: FindWordStart character read now has an unsigned-char result contract.",
+        "status": "already_false_positive_source_contract_now_explicit",
+        "observed_mcp_status": "RESOLVED",
+        "verified_issue_status_filter": "FALSE_POSITIVE",
+        "count_as_new_fix": false
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQdd",
+        "context": {
+          "branch": "main"
+        },
+        "rule": "cpp:S5276",
+        "file": "src/editor/word_completion.cpp",
+        "analyzed_range": {
+          "startLine": 1019,
+          "endLine": 1019
+        },
+        "change": "Adjacent ReadWordPrefix chPrev assignment now obtains an unsigned char through CharacterAt and widens losslessly to int.",
+        "status": "already_false_positive_source_contract_now_explicit",
+        "observed_mcp_status": "RESOLVED",
+        "verified_issue_status_filter": "FALSE_POSITIVE",
+        "count_as_new_fix": false
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQde",
+        "context": {
+          "branch": "main"
+        },
+        "rule": "cpp:S5276",
+        "file": "src/editor/word_completion.cpp",
+        "analyzed_range": {
+          "startLine": 1021,
+          "endLine": 1021
+        },
+        "change": "Same source operation as PR AaHleDVTNFPSSL7UcMpz: ReadWordPrefix chPrev2 assignment now obtains an unsigned char through CharacterAt.",
+        "status": "already_false_positive_source_contract_now_explicit",
+        "observed_mcp_status": "RESOLVED",
+        "verified_issue_status_filter": "FALSE_POSITIVE",
+        "count_as_new_fix": false
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQdf",
+        "context": {
+          "branch": "main"
+        },
+        "rule": "cpp:S5276",
+        "file": "src/editor/word_completion.cpp",
+        "analyzed_range": {
+          "startLine": 1025,
+          "endLine": 1025
+        },
+        "change": "Adjacent ReadWordPrefix style read now uses StyleIndexAt and auto to preserve the core's unsigned-char style result.",
+        "status": "already_false_positive_source_contract_now_explicit",
+        "observed_mcp_status": "RESOLVED",
+        "verified_issue_status_filter": "FALSE_POSITIVE",
+        "count_as_new_fix": false
+      },
+      {
+        "key": "AaHaPjLPSajQlY95HQdg",
+        "context": {
+          "branch": "main"
+        },
+        "rule": "cpp:S5276",
+        "file": "src/editor/word_completion.cpp",
+        "analyzed_range": {
+          "startLine": 1028,
+          "endLine": 1028
+        },
+        "change": "Adjacent ReadWordPrefix ch assignment after advancing iStartWordPos now obtains an unsigned char through CharacterAt and widens losslessly to int.",
+        "status": "already_false_positive_source_contract_now_explicit",
+        "observed_mcp_status": "RESOLVED",
+        "verified_issue_status_filter": "FALSE_POSITIVE",
+        "count_as_new_fix": false
+      }
+    ],
+    "enum_cross_review": "Token-equivalence review after normalizing only the new function-local enum imports and qualified enumerators found identical operations, arguments, assertions, conditions and strings in all three tests. Imported names were checked against the pinned Message enum without function-scope conflicts.",
+    "final_hosted_validation": "The commit-specific checks and latest continuation section on PR #221 record the analysis after this rescan follow-up."
+  }
+}
