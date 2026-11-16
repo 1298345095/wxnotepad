@@ -601,7 +601,7 @@ void DebugPrintf(const char* fmt, ...) noexcept {
 bool ShowAssertionPopUps(bool value) noexcept {
     return value;
 }
-void Assert(const char* c, const char* file, int line) noexcept {
+[[noreturn]] void Assert(const char* c, const char* file, int line) noexcept {
     std::fprintf(stderr, "%s:%d: %s\n", file, line, c);
     std::abort();
 }

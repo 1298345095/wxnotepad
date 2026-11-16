@@ -174,7 +174,8 @@ void NativeAlt(EditorFrame* frame, bool merge, bool control = false, bool shift 
         RemoveObserver& operator=(const RemoveObserver&) = delete;
         EditorControl* editor;
         ~RemoveObserver() { editor->PopEventHandler(false); }
-    } removeObserver{editor};
+    };
+    RemoveObserver removeObserver{editor};
     NativeKeys::Shortcut(frame, merge ? 'B' : 'R', control, true, shift);
     Require(received, "actual private-display blank-line shortcut release reaches editor");
 #endif

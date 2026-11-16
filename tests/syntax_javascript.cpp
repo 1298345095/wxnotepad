@@ -148,7 +148,8 @@ void SchemeSettings(SettingsStore& settings) {
             wxFFile file(path, "wb");
             if (file.IsOpened()) file.Write(bytes.data(), bytes.size());
         }
-    } restore{settings.Path(), original};
+    };
+    Restore restore{settings.Path(), original};
     {
         wxFFile file(settings.Path(), "wb");
         Require(

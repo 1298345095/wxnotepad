@@ -337,7 +337,7 @@ void OriginalStates(EditorFrame* frame, int id) {
     using Scintilla::Message;
     std::ifstream input{std::filesystem::path(TAG_STATE_REFERENCE_FIXTURES)};
     Require(input.good(), "independent original selection/history observations are available");
-    std::map<std::string, std::string> references;
+    std::map<std::string, std::string, std::less<>> references;
     for (std::string line; std::getline(input, line);) {
         if (line.empty() || line.front() == '#') continue;
         const auto separator = line.find('\t', line.find('\t') + 1);

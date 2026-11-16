@@ -253,7 +253,8 @@ void UpdateFailures(EditorFrame* frame, int update) {
         RestoreUmask& operator=(RestoreUmask&&) = delete;
         mode_t previous = ::umask(0);
         ~RestoreUmask() { ::umask(previous); }
-    } restoreUmask;
+    };
+    RestoreUmask restoreUmask;
     Require(::chmod(path.c_str(), S_IRUSR | S_IWUSR | S_IRGRP) == 0, "fixture must have a known existing mode");
     Command(frame, update);
     struct stat existing{};

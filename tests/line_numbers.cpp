@@ -187,7 +187,8 @@ void FileTransitions(EditorFrame* frame, SettingsStore* settings) {
             wxRemoveFile(original);
             if (wxFileExists(saved)) wxRemoveFile(saved);
         }
-    } removeFiles{originalPath, savedPath};
+    };
+    RemoveFiles removeFiles{originalPath, savedPath};
     const std::string openedBytes = "\xef\xbb\xbf" + Lines(100) + "\tUnicode: \xe4\xb8\xad\xe6\x96\x87 \r\n";
     {
         wxFile file(originalPath, wxFile::write);

@@ -508,7 +508,8 @@ private:
 
         private:
             EditorFrame* frame_;
-        } responder(frame);
+        };
+        GoToLineResponder responder(frame);
         NativeSearch::Command(frame, goTo);
         if (responder.failure) std::rethrow_exception(responder.failure);
         Require(responder.observed, "native Go To Line opens in the combined view");

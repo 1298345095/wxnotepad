@@ -391,6 +391,18 @@
  };
  
  }
+--- a/scintilla/src/Debugging.h
++++ b/scintilla/src/Debugging.h
+@@ -64,6 +64,9 @@
+ void DebugPrintf(const char *format, ...) noexcept;
+ #endif
+ bool ShowAssertionPopUps(bool assertionPopUps_) noexcept;
++#ifdef __WX__
++[[noreturn]]
++#endif
+ void Assert(const char *c, const char *file, int line) noexcept CLANG_ANALYZER_NORETURN;
+ 
+ }
 --- a/scintilla/src/Document.cxx
 +++ b/scintilla/src/Document.cxx
 @@ -28,7 +28,11 @@

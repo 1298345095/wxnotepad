@@ -394,7 +394,8 @@ void CheckResetTransitions(EditorFrame* frame, const std::filesystem::path& dire
             int Enter(wxDialog* dialog) override {
                 return dialog->GetTitle() == "Save changes?" ? wxID_CANCEL : wxID_NONE;
             }
-        } cancel;
+        };
+        CancelDiscard cancel;
         Require(!frame->NewDocument() && frame->Open(TestFiles::Filename(firstSave)).status == OpenStatus::Cancelled &&
                     frame->FileWatching().mode == FileWatchingMode::AutoReload &&
                     TestEditor::Text(frame->Editor()) == "xunsaved log edits",
@@ -423,7 +424,8 @@ void CheckResetTransitions(EditorFrame* frame, const std::filesystem::path& dire
                     if (auto* choices = wxDynamicCast(child, wxListBox)) choices->SetSelection(0);
                 return wxID_OK;
             }
-        } accept;
+        };
+        AcceptEncoding accept;
         std::ofstream(firstSave, std::ios::binary) << "x";
         Require(frame->ReloadWithEncoding().status == OpenStatus::Opened &&
                     frame->FileWatching().mode == FileWatchingMode::AutoReload,

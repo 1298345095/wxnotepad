@@ -115,7 +115,8 @@ void FileProtection(EditorFrame* frame) {
                 std::fprintf(stderr, "FAIL: restore native read-only fixture permissions (%s: %d)\n",
                              error.category().name(), error.value());
         }
-    } restore{source, permissions};
+    };
+    RestorePermissions restore{source, permissions};
     std::filesystem::permissions(source, std::filesystem::perms::owner_read);
     Require(frame->Open(TestFiles::Filename(source)).status == OpenStatus::Opened &&
                 editor->Send(Message::GetReadOnly) && frame->GetTitle().EndsWith(" (Read Only File) - wxnotepad"),

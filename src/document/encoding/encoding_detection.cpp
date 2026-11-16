@@ -9,6 +9,7 @@
 #include <wx/intl.h>
 #include <wx/strconv.h>
 #include <algorithm>
+#include <bit>
 #include <cctype>
 #include <climits>
 #include <cstdint>
@@ -219,7 +220,7 @@ bool MaybeBinary(std::string_view bytes, bool& binary) {
             mask |= 1U << static_cast<unsigned char>(bytes[offset]);
             adjacent |= ++count >= 8 || (offset + 1 < std::min<size_t>(bytes.size(), 1024) &&
                                          control(static_cast<unsigned char>(bytes[offset + 1])));
-            binary = adjacent && (mask & (mask - 1)) != 0;
+            binary = adjacent && !std::has_single_bit(mask);
             if (binary) break;
         }
     }

@@ -348,7 +348,8 @@ void RectangleSelectionAndRecall(EditorFrame* frame) {
         }
         int warnings = 0;
         bool wrapVisible = false;
-    } feedback;
+    };
+    Feedback feedback;
     for (bool reverse : {false, true}) {
         TestEditor::ResetStream(editor, "a  b\nc  d");
         editor->Send(Message::SetRectangularSelectionAnchor, reverse ? 9 : 1);

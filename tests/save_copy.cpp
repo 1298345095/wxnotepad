@@ -436,7 +436,8 @@ void LegacyLoss(SettingsStore* settings, const std::filesystem::path& directory)
                 TestEditor::Text(frame) == pending,
             "native overwrite and loss confirmations must preserve Unicode source and original CP936 bytes");
     frame->Destroy();
-    settings->values.fixLineEndings = settings->values.fixTrailingBlanks = true;
+    settings->values.fixTrailingBlanks = true;
+    settings->values.fixLineEndings = true;
     auto* cleanup = new EditorFrame(settings);
     Require(cleanup->Open(Filename(source), FileEncoding::Gbk).status == OpenStatus::Opened,
             "loss cleanup source must open");
@@ -451,7 +452,8 @@ void LegacyLoss(SettingsStore* settings, const std::filesystem::path& directory)
     TestEditor::RequireSelection(cleanup->Editor(), 14, 3,
                                  "loss-cancel cleanup must retain original split-Unicode position repair");
     cleanup->Destroy();
-    settings->values.fixLineEndings = settings->values.fixTrailingBlanks = false;
+    settings->values.fixTrailingBlanks = false;
+    settings->values.fixLineEndings = false;
     std::puts("PASS: independent original GBK copy Cancel/new-file and replacement effects");
 }
 
@@ -499,7 +501,8 @@ void Cleanup(SettingsStore* settings, const std::filesystem::path& directory) {
                 "Redo of copy cleanup must retain original dirty state without a copy save point");
         frame->Destroy();
     }
-    settings->values.fixLineEndings = settings->values.fixTrailingBlanks = false;
+    settings->values.fixTrailingBlanks = false;
+    settings->values.fixLineEndings = false;
     std::puts("PASS: four copy cleanup policies, live selection and original Undo/Redo save point");
 }
 
@@ -543,7 +546,8 @@ void DirtyCleanup(SettingsStore* settings, const std::filesystem::path& director
                 "dirty copy Redo must retain original pending modification");
         frame->Destroy();
     }
-    settings->values.fixLineEndings = settings->values.fixTrailingBlanks = true;
+    settings->values.fixTrailingBlanks = true;
+    settings->values.fixLineEndings = true;
     auto* frame = new EditorFrame(settings);
     Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "read-only cleanup source must open");
     auto* editor = frame->Editor();
@@ -562,7 +566,8 @@ void DirtyCleanup(SettingsStore* settings, const std::filesystem::path& director
                 !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
             "no-op copy cleanup must preserve original pending Redo history");
     frame->Destroy();
-    settings->values.fixLineEndings = settings->values.fixTrailingBlanks = false;
+    settings->values.fixTrailingBlanks = false;
+    settings->values.fixLineEndings = false;
     std::puts("PASS: dirty cleanup policies, read-only cleanup gate and pending Redo retention");
 }
 class SaveCopyApp final : public wxApp {

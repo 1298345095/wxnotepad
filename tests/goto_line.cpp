@@ -89,7 +89,8 @@ template <typename Action> void Dialog(EditorFrame* frame, int id, const Action&
     private:
         EditorFrame* frame_;
         const Action& action_;
-    } driver(frame, action);
+    };
+    Driver driver(frame, action);
     if (shortcut)
         Key(frame->Editor(), 'G', true);
     else
