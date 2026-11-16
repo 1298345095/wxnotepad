@@ -8,6 +8,9 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
+Latest review: [2026-11-16 follow-up after PR #219](#2026-11-16-follow-up-after-pr-219),
+tracked in [PR #220](https://github.com/1298345095/wxnotepad/pull/220).
+
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
 Of these, 48 affected security or reliability. The quality gate reported new-code
@@ -286,10 +289,12 @@ All 337 issue-specific portability dispositions returned successful MCP
 responses and were verified as FALSE_POSITIVE by exact issue key in `main`.
 They are included in the completed main ledger and the 367-transition total.
 
-Two S6494 findings instead recommend `std::format` or `std::format_to_n` for
+Two S6494 findings instead recommended `std::format` or `std::format_to_n` for
 `snprintf`, in `character_hex.cpp` and `close_smoke.cpp`. GCC implements this
-formatting facility from 13.1. Both call sites were reviewed and remain OPEN as
-modernization suggestions; the review found no current behavior defect.
+formatting facility from 13.1. Both call sites remained OPEN after this review
+as modernization suggestions; the review found no current behavior defect.
+The [PR #220 follow-up](#2026-11-16-follow-up-after-pr-219) subsequently addresses
+both call sites.
 The character-conversion call formats a scalar derived from a validated
 surrogate pair: its ` U+%06X` output occupies nine characters plus the terminator
 within a 16-byte buffer. The adjacent UTF-16-unit formatting also fits that
@@ -392,3 +397,172 @@ findings. The gate remained OK, with A/A/A ratings, 86.4% new-code coverage,
 0.0% duplicated lines and 100% reviewed hotspots. These results refer to the
 code revision; the concluding documentation commit records this completed
 validation and the 373 verified dispositions.
+
+## 2026-11-16 follow-up after PR #219
+
+The continuation starts from `main` revision
+`7ff2e5d1ced33065f40cfd0d1151635c18a9e0b1`, after PR #219 merged.
+The current-project MCP baseline contains 3,988 OPEN issues, zero OPEN
+HIGH/BLOCKER issues, zero OPEN security/reliability findings and zero security
+hotspots awaiting review. Its quality gate is OK, with 87.9% new-code coverage
+and 1.0% new-code duplicated lines. These measurements describe the starting
+`main` analysis.
+
+The follow-up branch is `codex/sonarcloud-followup-2026-11-16`, reviewed in
+[PR #220](https://github.com/1298345095/wxnotepad/pull/220).
+
+### Published changes
+
+| Commit | Change and preserved behavior |
+| --- | --- |
+| [`67b2e399`](https://github.com/1298345095/wxnotepad/commit/67b2e39970cc48d44c048c336a58de97aa60d1f8) | Correct partial startup of the measurement test's worker group. `std::jthread` owns started workers, and missing participants leave the barrier before stack unwinding joins them. The normal four-worker, 64-iteration measurement checks and worker-exception type/message transport are retained. Also set the search-settings fixture's failure result explicitly when an exception follows its earlier success marker. |
+| [`22c1728e`](https://github.com/1298345095/wxnotepad/commit/22c1728ee78edb5922c76ed5946794b8ef9d4838) | Address 22 reviewed baseline findings through typed formatting supported by GCC 13, removal of obsolete commented completion code, and direct Python dictionary construction. Character/Hex output, completion candidate strings and navigation byte dumps retain their bytes. Close-lifecycle tracing writes its pointer directly with the native `%p` format and retains its sequence/timing fields. |
+| [`d641fc40`](https://github.com/1298345095/wxnotepad/commit/d641fc408137c7d9d0393b603c6068bc3b7c78f7) | Address five reviewed baseline findings around insertion-test flags and clipboard-peer cleanup. Validate a positive, single-bit flag in the range 1–256 before narrowing or indexing. Preserve the tag/word modes' separate argument contract. Report standard and unknown peer-shutdown exceptions while continuing the existing destructor cleanup. |
+| [`835b6f3a`](https://github.com/1298345095/wxnotepad/commit/835b6f3a08f24e0723ba27f39c60362742f1c998) | Make the worker-failure regression portable after the first Windows run exposed its exception-pointer identity assertion. Check the concrete exception type and message while retaining all completion and thread-join checks. |
+
+The formatting batch resolves the earlier continuation's two reviewed
+`snprintf` follow-ups in `character_hex.cpp` and `close_smoke.cpp`.
+Completion-allocation formatting remains outside each active fault-injection
+guard, preserving which allocation the fixture tests.
+
+### Issue-specific false-positive review
+
+All 49 issue-specific false-positive transitions succeeded through SonarCloud
+MCP. An exact-key query with the FALSE_POSITIVE filter returned every key;
+the corresponding OPEN/CONFIRMED query returned zero. The current main OPEN
+count changed from 3,988 to 3,939. The MCP search uses the legacy status string
+RESOLVED in these filtered results; each mutation receipt explicitly records
+falsepositive. The [follow-up disposition ledger](sonarqube-2026-11-16-followup-dispositions.json)
+retains all keys, source explanations, receipts and the exact verification context.
+
+| Rule | Count | Reviewed evidence |
+| --- | --- | --- |
+| S6032 | 12 | The copied document paths are before/after snapshots. Referencing the mutable document-path member would make later identity checks compare the member to itself and weaken the tests. |
+| S6494 | 2 | The remaining reviewed `printf` recommendations require `std::print`, which the supported GCC 13 libstdc++ does not provide. These are distinct from the supported `std::format` changes above. |
+| S3630 | 11 | Reviewed conversions preserve Scintilla's pointer-sized message ABI or Wayland's opaque-object C ABI. The intrinsic fixture's `long*` signature is exercised through adapters that copy exactly four bytes with `memcpy`, avoiding a `long` lvalue access on LP64. |
+| S5276 | 8 | The actual values are bounded zoom levels, native integer coordinates or unsigned bytes. Their reviewed ranges remain exactly representable in the receiving type despite wider message-transport types. |
+| S2738 | 9 | Worker and modal callbacks store `std::current_exception`, finish their required join/dialog cleanup and call `std::rethrow_exception` on the originating test path. The original exception is transported across a callback boundary. |
+| S125 | 7 | Generated C++ scheme comments label standard-library types and header groups. They accompany active keyword data and preserve annotations from the pinned upstream scheme. |
+
+The 137 S1181 findings were reviewed and remain OPEN: 133 are terminal wxApp
+test-result boundaries and four preserve modal/timer failure information for
+the calling test. Their catches serve a deliberate purpose. The rule's stated
+exceptions do not explicitly list these framework callbacks, so this review
+retains the implementation and records the design assessment without a bulk
+false-positive or accepted-status transition. The search-settings result bug
+fixed in `67b2e399` is separate from its broad-catch recommendation.
+
+The 190 S112 generic-exception recommendations have no bulk false-positive
+disposition. The 852 S7040 bounded-escape recommendations remain supported
+syntax modernization suggestions; compiler portability does not justify
+classifying them as false positives.
+
+### PR analysis follow-up
+
+The first PR #220 analysis reported ten OPEN findings. Each was reviewed
+against the actual call sites and rule definition, marked FALSE_POSITIVE with
+an individual explanation through MCP, and verified by exact issue key. The
+PR query then returned zero OPEN/CONFIRMED findings and an OK gate, with A/A/A
+ratings, 88.2% new-code coverage, 0.0% duplicated lines and 100% reviewed
+hotspots. These are ten PR-context keys in addition to the 49 main-context
+dispositions above. Both contexts and all 59 mutation receipts are retained in
+the same disposition ledger.
+
+| Rule | PR count | Reviewed evidence |
+| --- | --- | --- |
+| S6494 | 3 | The new failure/trace diagnostics use fixed `fprintf` formats on the supported GCC 13 build, whose standard library lacks `std::print`. |
+| S7494 | 4 | Each `split(..., 1)` call produces the complete pair consumed directly by `dict`. SonarSource's own [rule fixture](https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py#L44-L49) records this exact `dict(x.split(...) for x in ...)` pattern as `FP SONARPY-3154`. Reintroducing the copy-only comprehension would restore the original S7500 issue. |
+| S1141 | 1 | The worker lambda's `try` executes on a separate thread. The outer `try` protects startup on the calling thread; deferred worker rethrows occur after that startup handler has ended. |
+| S2738 | 1 | The startup handler removes unstarted barrier participants and executes `throw;`, matching the rule's explicit rethrow exception. |
+| S3519 | 1 | All three internal `Typing` calls follow the positive, bounded, single-bit validation. In the character branch, the only inputs are 1–128 powers of two and the only indices are 0–7. The reported zero-input index 32 is unreachable; 256 takes the separate line-comment branch. |
+
+The exception-transport review and regression check type and message.
+[`current_exception` may copy an exception](https://eel.is/c++draft/propagation),
+and [MSVC documents this behavior](https://learn.microsoft.com/en-us/cpp/cpp/transporting-exceptions-between-threads?view=msvc-170).
+The ledger preserves the originally submitted S2738 comments and adds this
+clarification to their use of the word "identity".
+
+### Local validation
+
+The [follow-up validation record](sonarqube-2026-11-16-followup-validation.json)
+retains the baseline reproduction outcomes, completed probe exits, output and
+source hashes, together with the matching hosted revision.
+
+- Python helper suite: 53 tests run, 44 passed and nine existing
+  platform/tool-dependent skips.
+- Canonical clang-format 23.1.2 passed for all 370 tracked C++ files.
+  `git diff --check` and Python syntax checks passed.
+- The baseline worker-start reproduction reached the installed terminate
+  handler after one or three workers had started (exit 86). Failure before the
+  first worker propagated normally. The new shared-helper regression passed
+  at `-O2 -Wall -Wextra -Werror` and with AddressSanitizer plus
+  UndefinedBehaviorSanitizer. It covers startup failures after 0/1/3 workers,
+  four workers completing 64 iterations, worker-exception type/message
+  transport and a successful subsequent batch. LeakSanitizer's ptrace-environment error
+  is retained in the first log; address/undefined checks passed with leak
+  detection disabled.
+- Formatting equivalence passed for all 18 frozen Character/Hex fixtures,
+  1,112,064 Unicode scalars, 65,536 two-byte inputs, 256 allocation candidates,
+  200 keyword suffixes and all 256 navigation byte values.
+- Insertion-flag probes reproduced an oversized shift for `0`, `3`, `-1`
+  and `2147483647`; `512` produced the out-of-range label index 9. The validated
+  form rejects all five and maps every accepted flag 1–256 to indices 0–8.
+  The native process fixture now requires ordinary failure exits and unchanged
+  settings bytes for ten invalid-mode/flag combinations, while retaining all
+  nine valid insertion settings and tag/word save/reopen checks.
+- The original 32-bit intrinsic regression passed with AddressSanitizer and
+  UndefinedBehaviorSanitizer, checking every bit position, adjacent guard
+  storage and an individually allocated word.
+
+### Hosted validation
+
+The first [CI run at `d641fc40`](https://github.com/1298345095/wxnotepad/actions/runs/43865285948)
+passed both Linux backends and both coverage jobs. Windows recorded 213 passes,
+one existing IME skip and one failure: the new worker regression compared
+exception-pointer identity, which MSVC's exception-copy behavior does not
+preserve. Quality, Fuzz and CodeQL completed successfully at that revision.
+Commit `835b6f3a` corrects the assertion as described above; its hosted rerun
+completed successfully.
+
+All four workflows passed for final code revision
+`835b6f3a08f24e0723ba27f39c60362742f1c998`:
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43868800359),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43868800369),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43868800500) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43868800464).
+Windows recorded 214 native passes and one existing IME skip, and its
+diagnostics passed. Ordinary and coverage Linux runs each recorded 201 passes and two existing skips on X11, and 203 passes on
+Wayland. The new worker regression passed on every backend. Clang-tidy
+successfully analyzed all 226 maintained translation units.
+
+The scanner recorded that same SCM revision at 12:56:02 UTC and uploaded
+task `AaHkbd7ojQBaE46LhdS_`. GitHub's SonarCloud Code Analysis check
+`133312057643` completed successfully for that SHA at 12:56:10 UTC. The matching
+MCP review returned zero OPEN/CONFIRMED findings, zero security hotspots
+awaiting review and all ten PR false-positive dispositions still present.
+The [PR gate](https://sonarcloud.io/dashboard?id=1298345095_wxnotepad&pullRequest=220)
+is OK: A/A/A ratings, 88.2% new-code coverage, 0.0% duplicated lines and 100%
+reviewed hotspots. The concluding documentation commit records these completed
+checks against the code revision.
+
+### Surface initialization follow-up
+
+Source review also identified an allocation/native-resource failure boundary in
+`WxSurface::Init`: both overloads are `noexcept`, while constructing their
+device context or text-measurement state can throw. This is a source-observed
+risk; the present workspace has no GUI resource-failure reproduction.
+
+Recovery requires coordinated failure handling across surface initialization
+and its consumers. The current factories return a surface without checking
+`Initialised`, and several consumers dereference it unconditionally. A local
+catch followed by returning a partially initialized surface would therefore
+leave another failure path. The focused follow-up leaves this larger change
+open for owned/borrowed context fault injection, retry, native event-boundary
+handling and document-history validation on the supported backends.
+
+Source references: [wx surface adapter](../../src/editor/platform/wx_platform.cpp),
+[GTK measurement](../../src/editor/platform/text_measurement_gtk.cpp),
+[Windows measurement](../../src/editor/platform/text_measurement_msw.cpp),
+[native core entry points](../../src/editor/editor_core.cpp),
+[pinned surface contract](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Platform.h)
+and [pinned surface factories](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.cxx).
