@@ -27,6 +27,22 @@ build. Standalone resource measurements remain serial. Windows uses one desktop
 and clipboard, and runs its full registered suite serially on the hosted VM: the four tests
 excluded on the development machine's shared desktop are not silently excluded.
 
+A temporary Windows diagnostic repeats the registered path-text clipboard case
+up to 20 times after the ordinary suite, stopping at its first failure. Every run
+uses the existing probe and Windows CTest wrappers, including their Default desktop
+and serial-execution checks. The peer's five-second response deadline and CTest's
+180-second deadline remain unchanged; the outer probe allows 30 seconds for wrapper
+and evidence work. Each run has private probe/CTest reports, and the complete
+ordinary suite's CTest evidence is copied before the repeat begins. This repeat
+collects evidence for the intermittent hosted timeout; it is not a clipboard fix.
+
+Windows native failure captures read desktop pixels only within owned window
+bounds before cleanup. Overlapping windows can cover those regions. Native
+foreground/active/focus handles recorded before launching the capture helper are
+the failure snapshot; the separately labelled window metadata is collected after
+helper startup. The helper does not disable or activate the test windows, repaint
+them, or pump their events.
+
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use
 UTF-8 rather than the runner's local code page. The private display helper claims
