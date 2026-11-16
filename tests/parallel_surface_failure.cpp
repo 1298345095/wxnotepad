@@ -34,16 +34,17 @@ enum class FailureKind { Allocation, NativeResource, NativeDrawing };
 }
 
 void CheckFailure(const std::exception_ptr& failure, FailureKind kind) {
+    using enum FailureKind;
     Require(static_cast<bool>(failure), "a failed worker must prevent consuming its incomplete output");
     try {
         std::rethrow_exception(failure);
     } catch (const std::bad_alloc&) {
-        Require(kind == FailureKind::Allocation, "allocation failure keeps its original exception type");
+        Require(kind == Allocation, "allocation failure keeps its original exception type");
     } catch (const Scintilla::Internal::NativeDrawingError& error) {
-        Require(kind == FailureKind::NativeDrawing && std::string_view(error.what()) == "native drawing fixture",
+        Require(kind == NativeDrawing && std::string_view(error.what()) == "native drawing fixture",
                 "native drawing failure keeps its dedicated exception type and context");
     } catch (const std::system_error& error) {
-        Require(kind == FailureKind::NativeResource && error.code() == std::errc::io_error &&
+        Require(kind == NativeResource && error.code() == std::errc::io_error &&
                     std::string_view(error.what()).contains("native measurement fixture"),
                 "native resource failure keeps its original error code and context");
     }
@@ -179,10 +180,11 @@ void NativeCreationFailure() {
 } // namespace
 
 int main() try {
+    using enum FailureKind;
     SuccessfulRetry();
-    WorkerFailure(FailureKind::Allocation);
-    WorkerFailure(FailureKind::NativeResource);
-    WorkerFailure(FailureKind::NativeDrawing);
+    WorkerFailure(Allocation);
+    WorkerFailure(NativeResource);
+    WorkerFailure(NativeDrawing);
     for (const unsigned failAfter : {0U, 1U, 3U})
         PartialStartFailure(failAfter);
 #ifdef _WIN32

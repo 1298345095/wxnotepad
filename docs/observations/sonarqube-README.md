@@ -894,9 +894,11 @@ recorded separately in the [issue-by-issue review](sonarqube-2026-11-16-type-saf
 
 ### Small code changes
 
-The changes address 50 distinct report keys: 44 from main and six from PR #221.
-The ledger records these as implemented on the follow-up branch; main's issue
-statuses are updated by analysis after the branch is merged.
+The changes address 60 distinct report keys: 46 from main and 14 from PR #221.
+Counts distinguish report keys across analysis contexts, including keys referring
+to the same code. The first hosted analysis verified six PR keys FIXED. The
+ledger records the other changes as implemented on the follow-up branch; main's
+issue statuses are updated by analysis after the branch is merged.
 
 | Rule | Keys | Change |
 | --- | ---: | --- |
@@ -907,6 +909,8 @@ statuses are updated by analysis after the branch is merged.
 | S6004 | 10 | Limit scalar and local result lifetimes to the condition and branch using them. |
 | S6009 | 2 | Read synchronous fixture strings through `std::string_view`. |
 | S7035 | 9 | Extract enum underlying values explicitly while retaining message-width conversions. |
+| S5276 | 2 | Recover the actual unsigned-byte character/style result type at the message boundary. |
+| S6177 | 8 | Use function-local enum imports in seven existing test functions. |
 
 `NativeDrawingError` identifies rendering and measurement failures that have no
 platform error code. Its `std::runtime_error` base preserves the existing surface,
@@ -926,12 +930,22 @@ scalar values; their evaluation order and short-circuit behavior are unchanged.
 Both string views remain inside synchronous calls whose caller-owned strings
 outlive the call.
 
-### Nine verified false positives
+The rescan identified two implicit integer conversions in completion. The
+pinned core returns `unsigned char` from both `Document::UCharAt` and
+`Document::StyleIndexAt`, transported by the general `intptr_t` message ABI.
+The new `CharacterAt` and `StyleIndexAt` accessors restore that result type
+before the existing character operations. `Sci_Position` positions retain
+their width, and promotion into the existing integer character parameters
+preserves the entire byte range. The enum imports are confined to individual
+test functions and preserve their operations, assertions and scenarios.
+
+### Ten verified false positives
 
 Each transition was submitted through the SonarCloud MCP with its own source
-explanation. All nine transitions succeeded. An exact-key query with the
-FALSE_POSITIVE filter returned all nine; the matching OPEN/CONFIRMED query
-returned zero. The ledger preserves every comment and successful receipt.
+explanation. All ten transitions succeeded. Exact-key queries in their
+respective analysis contexts returned nine main keys and one PR key under the
+FALSE_POSITIVE filter; matching OPEN/CONFIRMED queries returned zero. The ledger
+preserves every comment and successful receipt.
 
 | Rule | Keys | Reviewed evidence |
 | --- | ---: | --- |
@@ -940,6 +954,7 @@ returned zero. The ledger preserves every comment and successful receipt.
 | S6188 | 2 | `CompareNoCase` shares a function-pointer slot with `strncmp`; its count is a maximum comparison bound and comparison also stops at NUL. The callback preserves that pointer/count contract. |
 | S1000 | 1 | The unnamed namespace belongs to the completion implementation; the allocation fixture intentionally includes that implementation to exercise its private storage in the same translation unit. |
 | Python S7494 | 2 | Both geometry parsers use the `dict(split(...) for ...)` pattern explicitly recorded as FP SONARPY-3154 in SonarSource's own rule fixture. |
+| S5025 | 1 | The line-ending `wxChoice` is owned by its parent dialog. Both native wx backends register the child and destroy it through the parent's `DestroyChildren` path. |
 
 The Python findings follow the same evidence as the earlier PR #220 review:
 [SonarSource's pinned regression fixture](https://github.com/SonarSource/sonar-python/blob/9ae0129e3f7b41be37b3b128e4b6447b467c278a/python-checks/src/test/resources/checks/rewriteCollectionConstructorAsComprehension.py).
@@ -948,20 +963,40 @@ malformed-line behavior.
 
 ### Validation and remaining recommendations
 
-Canonical clang-format 23.1.2 and `git diff --check` pass. GCC 14.2 compiles the
-production parallel-task fixture with C++23, `-O2`, `-Wall -Wextra -Werror` and
-pthread support. The documented `ci.py probe` entry point executes the real
-fixture successfully with exit 0. Source hashes and the probe result are in the
-review ledger. The commit-specific checks on
-[PR #221](https://github.com/1298345095/wxnotepad/pull/221) provide the Windows,
-X11 and Wayland application/native regressions and the resulting SonarCloud
-analysis; the local environment has no wxWidgets GUI SDK.
+The first published revision, `ae986b9d59380bba8bb9e2a0a2443776bf1c9a37`, passed
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43917497292),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43917497150),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43917497348) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43917497156).
+Native jobs used merge revision `7eb5b2d4dd903d5e272f5ff5274ec61db1beeddb`.
+Windows passed 216 tests with one existing IME skip; X11 passed 203 with two
+existing skips; Wayland passed all 205. Each ordinary platform passed both
+diagnostic tests. Both coverage backends passed, including completion allocation,
+zoom and surface/parallel failure fixtures. Clang-tidy analyzed 228 maintained
+translation units. Native SDK checks, packaging, the repeated Windows brace
+case and the 20-run Wayland JSON regression also passed.
 
-The seven other PR recommendations retain their review status: three concern
-the established recovery/test-result catch boundaries, three suggest `using enum`,
-and one counts wxWidgets' inherited application depth. S1181's documented
-exceptions do not cover these ordinary returning callbacks and methods. Their
-recovery purpose alone is insufficient for a false-positive disposition, and
-removing the runtime-error handlers would lose worker/native-resource recovery.
-The allocation fault helper's S6004 finding was already fixed at the starting
-revision and is excluded from this batch's counts.
+Sonar task `AaHleCwYOC3kQQYL28Di` analyzed that exact source revision and reported
+an OK gate, 82.3% new-code coverage, A reliability/security/maintainability,
+0.0% duplication and 100% hotspot review. Exact-key queries returned all six
+original PR S112 findings with the FIXED filter. The rescan also surfaced the
+two byte-result conversions, additional enum-scope suggestions and the
+parent-owned choice allocation. Their completed code changes and verified
+false-positive disposition are recorded above.
+
+The follow-up passes canonical clang-format 23.1.2 over 374 tracked files and
+`git diff --check`. GCC 14.2 compiles the production parallel-task fixture with
+C++23, `-O2`, `-Wall -Wextra -Werror` and pthread support; the documented
+`ci.py probe` executes it successfully with exit 0. Current source hashes and
+the probe result are in the review ledger. The commit-specific checks and latest
+continuation section on [PR #221](https://github.com/1298345095/wxnotepad/pull/221)
+record the hosted validation after this rescan follow-up.
+
+Four PR recommendations remain for a separate design review: three concern
+the established recovery/test-result catch boundaries, and one counts
+wxWidgets' inherited application depth. S1181's documented exceptions do not
+cover these ordinary returning callbacks and methods. Their recovery purpose
+alone is insufficient for a false-positive disposition, and removing the
+runtime-error handlers would lose worker/native-resource recovery. The allocation
+fault helper's S6004 finding was already fixed at the starting revision and is
+excluded from this batch's counts.

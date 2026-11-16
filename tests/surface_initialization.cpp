@@ -211,9 +211,10 @@ struct DocumentState {
           canRedo(editor->Send(Message::CanRedo)), modified(editor->Send(Message::GetModify)) {}
 
     void RequireUnchanged(EditorControl* editor) const {
-        Require(TestEditor::Text(editor) == text && editor->Send(Message::GetAnchor) == anchor &&
-                    editor->Send(Message::GetCurrentPos) == caret && editor->Send(Message::CanUndo) == canUndo &&
-                    editor->Send(Message::CanRedo) == canRedo && editor->Send(Message::GetModify) == modified,
+        using enum Scintilla::Message;
+        Require(TestEditor::Text(editor) == text && editor->Send(GetAnchor) == anchor &&
+                    editor->Send(GetCurrentPos) == caret && editor->Send(CanUndo) == canUndo &&
+                    editor->Send(CanRedo) == canRedo && editor->Send(GetModify) == modified,
                 "surface failure and repaint preserve text, selection, Undo/Redo and modified state");
     }
 };
@@ -327,39 +328,39 @@ private:
 };
 
 void CheckCommittedModificationRecovery(EditorControl* editor) {
+    using enum Scintilla::Message;
     TestEditor::ResetStream(editor, "alpha\nbeta\n", 5, 5);
     NativePaint::Complete(editor);
     const auto revision = editor->DocumentRevision();
-    editor->Send(Message::SetStatus, Ok);
-    editor->Send(Message::BeginUndoAction);
+    editor->Send(SetStatus, Ok);
+    editor->Send(BeginUndoAction);
     bool injected = false;
     {
         CommittedModificationFailure failure(*editor);
-        editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("x"));
+        editor->Send(AddText, 1, reinterpret_cast<intptr_t>("x"));
         injected = failure.Injected();
     }
-    editor->Send(Message::EndUndoAction);
-    Require(injected && editor->Send(Message::GetStatus) == BadAlloc,
+    editor->Send(EndUndoAction);
+    Require(injected && editor->Send(GetStatus) == BadAlloc,
             "a committed insertion reaches the failing visual surface refresh");
     Require(TestEditor::Text(editor) == "alphax\nbeta\n" && editor->DocumentRevision() > revision &&
-                editor->Send(Message::GetCurrentPos) == 6 && editor->Send(Message::GetModify),
+                editor->Send(GetCurrentPos) == 6 && editor->Send(GetModify),
             "a failed post-commit visual update completes document and selection notifications");
-    editor->Send(Message::SetStatus, Ok);
-    editor->Send(Message::BeginUndoAction);
-    editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("y"));
-    editor->Send(Message::EndUndoAction);
+    editor->Send(SetStatus, Ok);
+    editor->Send(BeginUndoAction);
+    editor->Send(AddText, 1, reinterpret_cast<intptr_t>("y"));
+    editor->Send(EndUndoAction);
     Require(TestEditor::Text(editor) == "alphaxy\nbeta\n",
             "the document mutation guard permits another insertion after visual recovery");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     Require(TestEditor::Text(editor) == "alphax\nbeta\n", "Undo removes the subsequent insertion");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "alpha\nbeta\n" && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "alpha\nbeta\n" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                editor->Send(CanRedo),
             "Undo of the failed-refresh insertion restores the original save point");
-    editor->Send(Message::Redo);
-    editor->Send(Message::Redo);
-    Require(TestEditor::Text(editor) == "alphaxy\nbeta\n" && editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanRedo),
+    editor->Send(Redo);
+    editor->Send(Redo);
+    Require(TestEditor::Text(editor) == "alphaxy\nbeta\n" && editor->Send(GetModify) && !editor->Send(CanRedo),
             "both original insertions remain available for Redo after visual recovery");
     NativePaint::Complete(editor);
     std::puts("PASS: post-commit surface failure completes notifications and preserves subsequent editing");
@@ -494,34 +495,35 @@ void CheckRectangularUndoRecovery(EditorControl* editor) {
 }
 
 void CheckNativeRecovery(EditorControl* editor) {
+    using enum Scintilla::Message;
     TestRenderer::Select(editor);
     TestEditor::ResetStream(editor, "alpha\nbeta\n", 5, 5);
     for (const char* insertion : {"x", "y"}) {
-        editor->Send(Message::BeginUndoAction);
-        editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>(insertion));
-        editor->Send(Message::EndUndoAction);
+        editor->Send(BeginUndoAction);
+        editor->Send(AddText, 1, reinterpret_cast<intptr_t>(insertion));
+        editor->Send(EndUndoAction);
     }
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "alphax\nbeta\n" && editor->Send(Message::CanUndo) &&
-                editor->Send(Message::CanRedo) && editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "alphax\nbeta\n" && editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                editor->Send(GetModify),
             "the native failure fixture retains independent Undo and Redo actions");
     NativePaint::Complete(editor);
     const DocumentState before(editor);
 
-    editor->Send(Message::SetStatus, Ok);
+    editor->Send(SetStatus, Ok);
     bool injected = false;
     intptr_t width = -1;
     {
         const CompletionAllocationFault::ScopedFailure failure(sizeof(wxClientDC));
-        width = editor->Send(Message::TextWidth, DefaultStyle, reinterpret_cast<intptr_t>(Sample.data()));
+        width = editor->Send(TextWidth, DefaultStyle, reinterpret_cast<intptr_t>(Sample.data()));
         injected = failure.Injected();
     }
-    Require(injected && width == 0 && editor->Send(Message::GetStatus) == BadAlloc,
+    Require(injected && width == 0 && editor->Send(GetStatus) == BadAlloc,
             "measurement initialization failure returns through the original message status boundary");
     before.RequireUnchanged(editor);
-    editor->Send(Message::SetStatus, Ok);
-    Require(editor->Send(Message::TextWidth, DefaultStyle, reinterpret_cast<intptr_t>(Sample.data())) > 0 &&
-                editor->Send(Message::GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::Ok)),
+    editor->Send(SetStatus, Ok);
+    Require(editor->Send(TextWidth, DefaultStyle, reinterpret_cast<intptr_t>(Sample.data())) > 0 &&
+                editor->Send(GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::Ok)),
             "the original text-width message can retry after initialization failure");
 
     {
@@ -531,21 +533,21 @@ void CheckNativeRecovery(EditorControl* editor) {
                 "actual native paint contains allocation failure and restores its idle paint state");
     }
     before.RequireUnchanged(editor);
-    editor->Send(Message::SetStatus, Ok);
+    editor->Send(SetStatus, Ok);
     NativePaint::Complete(editor);
-    Require(editor->Send(Message::GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::Ok)) &&
+    Require(editor->Send(GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::Ok)) &&
                 EditorCoreObservation::PaintIdle(*editor),
             "actual native painting succeeds again after resource recovery");
     before.RequireUnchanged(editor);
 
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "alpha\nbeta\n" && !editor->Send(Message::CanUndo) &&
-                editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "alpha\nbeta\n" && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                !editor->Send(GetModify),
             "Undo still returns to the original document and save point after rendering failures");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "alphax\nbeta\n", "the first Redo action survives rendering failures");
-    editor->Send(Message::Redo);
-    Require(TestEditor::Text(editor) == "alphaxy\nbeta\n" && !editor->Send(Message::CanRedo),
+    editor->Send(Redo);
+    Require(TestEditor::Text(editor) == "alphaxy\nbeta\n" && !editor->Send(CanRedo),
             "the original pending Redo action survives rendering failures");
     std::puts("PASS: native measurement/paint failures recover without changing document history");
 }

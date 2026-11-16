@@ -584,6 +584,14 @@ class Collector final {
     template <class A = int, class B = int> intptr_t Call(Message message, A first = 0, B second = 0) {
         return editor_.Send(message, static_cast<uintptr_t>(Parameter(first)), Parameter(second));
     }
+    unsigned char CharacterAt(Sci_Position position) {
+        // The pinned core's UCharAt returns an unsigned char through the message ABI.
+        return static_cast<unsigned char>(Call(Message::GetCharAt, position));
+    }
+    unsigned char StyleIndexAt(Sci_Position position) {
+        // The pinned core's StyleIndexAt has the same unsigned-char result contract.
+        return static_cast<unsigned char>(Call(Message::GetStyleIndexAt, position));
+    }
     bool IsDocWordChar(unsigned ch) const { return CompletionStyleContains(styles_.wordCharacters, ch); }
     static bool IsDefaultWordChar(unsigned ch) {
         static constexpr uint32_t mask[8] = {0,           0x03ff0000U, 0x87fffffeU, 0x07fffffeU,
@@ -991,8 +999,7 @@ class Collector final {
                     break;
                 }
 
-                if (const int ch = Call(Message::GetCharAt, before);
-                    !IsDocWordChar(ch) || IsSpecialStartChar(ch, '\0')) {
+                if (const auto ch = CharacterAt(before); !IsDocWordChar(ch) || IsSpecialStartChar(ch, '\0')) {
                     break;
                 }
 
@@ -1014,17 +1021,17 @@ class Collector final {
         if (ch >= 0x80 || iStartWordPos <= iLineStartPos) return;
         const Sci_Position before = Call(Message::PositionBefore, iStartWordPos);
         if (before + 1 != iStartWordPos) return;
-        chPrev = Call(Message::GetCharAt, before);
+        chPrev = CharacterAt(before);
         if (const Sci_Position before2 = Call(Message::PositionBefore, before);
             before2 >= iLineStartPos && before2 + 1 == before)
-            chPrev2 = Call(Message::GetCharAt, before2);
+            chPrev2 = CharacterAt(before2);
         // Word after an escape character or format specifier.
         if (chPrev == '%' || (chPrev == definition_.original.escapeCharacterStart &&
                               (definition_.original.lexerAttributes & LexerAttr_EscapePunctuation) == 0)) {
-            const int style = Call(Message::GetStyleIndexAt, iStartWordPos);
+            const auto style = StyleIndexAt(iStartWordPos);
             if (IsEscapeCharOrFormatSpecifier(before, ch, chPrev, style, false)) {
                 ++iStartWordPos;
-                ch = Call(Message::GetCharAt, iStartWordPos);
+                ch = CharacterAt(iStartWordPos);
                 chPrev = 0;
             }
         }
