@@ -8,9 +8,10 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [2026-11-16 type safety and exception follow-up](#2026-11-16-type-safety-and-exception-follow-up),
-continuing on `codex/sonarcloud-followup-2026-11-16` in
-[PR #221](https://github.com/1298345095/wxnotepad/pull/221).
+Latest review: [2026-11-16 small-fix continuation](#2026-11-16-small-fix-continuation),
+on [`codex/sonarcloud-small-fixes-2026-11-16`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-small-fixes-2026-11-16).
+[PR #221](https://github.com/1298345095/wxnotepad/pull/221) was merged into main
+at `c3d98ca4d270f2367b85ec9a96e0a14e582830ad` before this review.
 
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
@@ -1000,3 +1001,89 @@ alone is insufficient for a false-positive disposition, and removing the
 runtime-error handlers would lose worker/native-resource recovery. The allocation
 fault helper's S6004 finding was already fixed at the starting revision and is
 excluded from this batch's counts.
+
+## 2026-11-16 small-fix continuation
+
+This batch starts from merged main revision
+`c3d98ca4d270f2367b85ec9a96e0a14e582830ad` on
+`codex/sonarcloud-small-fixes-2026-11-16`. The current main analysis at
+19:01:05 UTC had an OK quality gate and 3,767 OPEN/CONFIRMED findings.
+An explicit security/reliability filter returned zero OPEN/CONFIRMED findings;
+the selected work addresses maintainability findings. Exact-key queries also
+confirmed that all 46 main-context code-fix keys from the preceding type-safety
+batch are now FIXED after PR #221 merged.
+
+The [issue-by-issue review](sonarqube-2026-11-16-small-fixes-review.json) records
+23 code-fix keys, eight verified false-positive dispositions, source evidence,
+transition receipts and retained recommendations. Code-fix entries describe the
+follow-up branch; main receives those fixes through a later merge and analysis.
+
+### Small code changes
+
+| Rule | Main keys | Change |
+| --- | ---: | --- |
+| S872 | 12 | Express boolean counting, bit tests, buffer offsets and persisted caret flags with logical operations, conditional increments or explicit integer alternatives. |
+| S1238 | 7 | Read alignment spacing, rectangle values, expected ranges, colours and constructor inputs through const references. |
+| S5276 | 2 | Recover the completion character's unsigned-byte type and make the bounded polygon point-count conversion explicit. |
+| S5416 | 1 | Express the existing constant keyword pointer-array alias with `using`. |
+| S2209 | 1 | Call `FindWindowByName` through its class while retaining the explicit dialog search root. |
+
+This addresses every S872 and S1238 key in the current baseline. The caret
+encoding retains its original decimal positions and INI values. Mixed-line-ending
+classification still tests for at least two nonzero counters. Unicode statistics,
+LaTeX byte lengths, search anchor counts and fixture selection endpoints keep
+their original values and evaluation order. The two native test drivers still
+copy paths into their own `wxString` members before starting their timers.
+
+`ExtendDocumentWord` now calls the existing `CharacterAt` accessor. The pinned
+core's `Editor::WndProc(GetCharAt)` returns `Document::UCharAt`, an unsigned byte,
+through the general pointer-sized message result. The accessor restores that
+known byte domain before the existing character comparisons.
+
+The polygon count was checked against every caller in the pinned core revision
+`89b8b36e0ee2c23f73be922315f17261ccfbbe1a`. Call tips and indicators use three
+points; marker polygons use 3, 4, 5, 8 or 12 points. The explicit `int` conversion
+therefore preserves the entire reachable count domain. Dynamic polyline point
+counts have a different source and retain their separate finding.
+
+### Eight verified false positives
+
+Each disposition was applied through the SonarCloud MCP with an individual
+source-to-effect explanation. All eight transitions succeeded. Exact-key
+queries returned eight findings with the FALSE_POSITIVE filter and zero with
+OPEN/CONFIRMED. The API's legacy status field says RESOLVED; the disposition
+filter and transition receipts establish the specific false-positive resolution.
+
+| Rule | Keys | Reviewed contract |
+| --- | ---: | --- |
+| S5495 | 2 | Sort and tab settings copy the reported closures into retained native event callbacks. wxWidgets `Bind` stores a copy of the functor for later dispatch. |
+| S995 | 5 | Completion key/wheel/double-click, selection mouse input and automatic typing mutate their target widgets through native handles and events. Const-qualified handle getters obscure these writable aliases. |
+| S5350 | 1 | The tab-settings helper casts a top-level window to the same dialog object, edits its controls and calls `EndModal`. The framework cast preserves the writable alias. |
+
+These contracts were checked against the pinned wxWidgets 3.3.3 event storage,
+native handle accessors and `wxDynamicCast` implementation. The ledger links
+those exact framework sources and the application/test paths that consume them.
+
+### Validation and retained work
+
+Canonical clang-format 23.1.2 passed for all 374 tracked C/C++ files, and
+`git diff --check` passed. Independent complete-source review checked parameter
+lifetimes, single evaluations, persisted values and the character result type.
+The documented core preparation verified the pinned archive and patch set.
+This workspace has no wxWidgets SDK; the continuation pull request records the
+commit-specific Windows, X11, Wayland, native analyzer and SonarCloud results.
+
+The four recommendations retained by PR #221 remain mapped to their current
+main keys in the ledger: two production recovery boundaries, the surface test's
+result boundary and its wxWidgets inheritance depth. Their earlier design-review
+rationale remains applicable. Broader S1181, S110 and S112 recommendations keep
+their existing status.
+
+The platform's remaining coordinate conversions require explicit rounding,
+clipping and out-of-range behaviour. Dynamic squiggle polylines also require a
+separate point-count bound. `Platform::Assert` can receive `[[noreturn]]` only
+when the first declaration in the prepared core's `Debugging.h` is changed
+consistently; a definition-only edit was verified to fail compilation. These
+findings retain their current review status. The bounded-escape recommendations
+under S7040 also remain applicable and are reserved for a separate literal-data
+pass with byte-preservation checks.

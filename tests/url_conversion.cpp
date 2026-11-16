@@ -158,7 +158,7 @@ void State(EditorFrame* frame) {
             TestEditor::ResetStream(editor, text, 0, 0);
             editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
             editor->Send(Message::Undo);
-            editor->Send(Message::SetSel, 0, 2 + (text[0] == 'a'));
+            editor->Send(Message::SetSel, 0, text[0] == 'a' ? 3 : 2);
             Menu(frame, label);
             const bool unchanged = !decode && text[0] == ' ';
             Require(TestEditor::Text(editor) == text && bool(editor->Send(Message::CanRedo)) == unchanged &&

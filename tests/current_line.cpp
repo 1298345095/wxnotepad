@@ -150,10 +150,10 @@ private:
     EditorControl* editor_;
 #endif
 };
-bool Yellow(wxColour colour) {
+bool Yellow(const wxColour& colour) {
     return colour.Red() == 255 && colour.Green() == 255 && colour.Blue() >= 164 && colour.Blue() <= 166;
 }
-bool Gray(wxColour colour) {
+bool Gray(const wxColour& colour) {
     return colour.Red() >= 232 && colour.Red() <= 234 && colour.Green() >= 232 && colour.Green() <= 234 &&
            colour.Blue() >= 233 && colour.Blue() <= 235;
 }

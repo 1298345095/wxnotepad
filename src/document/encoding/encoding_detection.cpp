@@ -252,13 +252,13 @@ std::optional<Utf16Statistics> ExamineUtf16Bytes(std::string_view bytes) {
         statistics.reverseControls |= unit == 0x900 || unit == 0xa00 || unit == 0xd00 || unit == 0x2000;
         const int low = static_cast<int>(unit & 0xff);
         const int high = static_cast<int>(unit >> 8);
-        crossLineEndings += (previousHigh == 10 && low == 13) || (previousHigh == 13 && low == 10);
+        if ((previousHigh == 10 && low == 13) || (previousHigh == 13 && low == 10)) ++crossLineEndings;
         statistics.lowVariation += std::abs(low - previousLow);
         statistics.highVariation += std::abs(high - previousHigh);
         previousLow = low;
         previousHigh = high;
     }
-    crossLineEndings += (previousHigh == 10 && previousLow == 13) || (previousHigh == 13 && previousLow == 10);
+    if ((previousHigh == 10 && previousLow == 13) || (previousHigh == 13 && previousLow == 10)) ++crossLineEndings;
     if (crossLineEndings && crossLineEndings >= std::min<size_t>(bytes.size(), 512) / 40) return std::nullopt;
     return statistics;
 }

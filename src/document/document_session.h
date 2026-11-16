@@ -35,7 +35,7 @@ struct LineEndingCounts {
     size_t crlf = 0;
     size_t cr = 0;
     size_t lf = 0;
-    bool Mixed() const { return (crlf != 0) + (cr != 0) + (lf != 0) > 1; }
+    bool Mixed() const { return (crlf != 0 && (cr != 0 || lf != 0)) || (cr != 0 && lf != 0); }
 };
 struct OpenResult {
     OpenStatus status;

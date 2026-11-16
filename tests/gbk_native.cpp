@@ -28,7 +28,7 @@ using NativeDialogs::Respond;
 // Only activate native modal widgets owned by this test process. No global input.
 class NativeDriver final : public wxTimer {
 public:
-    explicit NativeDriver(int choice, wxString path = {}) : choice_(choice), path_(path) { Start(150); }
+    explicit NativeDriver(int choice, const wxString& path = {}) : choice_(choice), path_(path) { Start(150); }
     int losses = 0, choosers = 0, errors = 0;
     wxString selectedType;
     void Notify() override {

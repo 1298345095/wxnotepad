@@ -44,7 +44,7 @@ bool Click(GtkWidget* widget, const char* label) {
 // Activate only actual native widgets owned by this test process. No global input.
 class NativeDriver final : public wxTimer {
 public:
-    explicit NativeDriver(wxString destination = {}, bool replace = true, bool blockWrites = false)
+    explicit NativeDriver(const wxString& destination = {}, bool replace = true, bool blockWrites = false)
         : destination_(destination), replace_(replace), blockWrites_(blockWrites) {
         Start(150);
     }

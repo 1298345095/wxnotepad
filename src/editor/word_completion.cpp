@@ -428,7 +428,7 @@ static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
     }
     const uint64_t mask = UINT32_MAX | (UINT64_C(1) << ' ') | (UINT64_C(1) << '(') | (UINT64_C(1) << ')') |
                           (UINT64_C(1) << ',') | (UINT64_C(1) << '.') | (UINT64_C(1) << ';');
-    return (mask >> ch) & true;
+    return ((mask >> ch) & 1U) != 0;
 #else
     return ch <= ' ' || ch == '(' || ch == ')' || ch == ',' || ch == '.' || ch == ';' || ch == '^';
 #endif
@@ -442,7 +442,7 @@ static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
     }
     // Bit zero is '(' after rebasing the character above. Colons remain part of qualified words.
     const uint32_t mask = 1U | (1U << (')' - '(')) | (1U << (',' - '(')) | (1U << ('.' - '(')) | (1U << (';' - '('));
-    return (mask >> ch) & true;
+    return ((mask >> ch) & 1U) != 0;
 #endif
 }
 
@@ -714,7 +714,7 @@ class Collector final {
         // find all word after '::', '->', '.' and '-'
         bool bSubWord = false;
         while (wordEnd < iDocLen) {
-            if (const int ch = Call(Message::GetCharAt, wordEnd); !(ch == ':' || ch == '.' || ch == '-')) {
+            if (const auto ch = CharacterAt(wordEnd); !(ch == ':' || ch == '.' || ch == '-')) {
                 if (ch == '!' && definition_.lexer == SCLEX_RUST && style == SCE_RUST_MACRO) {
                     // macro: println!()
                     ++wordEnd;
@@ -817,7 +817,7 @@ class Collector final {
 
         CharBuffer<> pFind(iRootLen + 2);
         pFind[0] = prefix;
-        memcpy(pFind.data() + (prefix != '\0'), pRoot, iRootLen);
+        memcpy(pFind.data() + (prefix ? 1 : 0), pRoot, iRootLen);
         unsigned findFlag = (bIgnoreCase ? SCFIND_NONE : SCFIND_MATCHCASE) | SCFIND_MATCH_TO_WORD_END;
         if (IsDefaultWordChar(static_cast<uint8_t>(pRoot[0]))) {
             findFlag |= SCFIND_WORDSTART;

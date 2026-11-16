@@ -93,10 +93,12 @@ int ColouredPixels(EditorControl* editor, intptr_t position, bool bad) {
             // Original alpha50 / outline200 over white. Narrow channels exclude
             // coloured ClearType glyph fringes from the decoration observation.
             const auto within = [](int value, int expected) { return std::abs(value - expected) <= 2; };
-            count += bad ? colour.Red() == 255 && ((within(colour.Green(), 205) && within(colour.Blue(), 205)) ||
-                                                   (within(colour.Green(), 55) && within(colour.Blue(), 55)))
-                         : (within(colour.Red(), 205) && within(colour.Green(), 251) && within(colour.Blue(), 207)) ||
-                               (within(colour.Red(), 57) && within(colour.Green(), 239) && within(colour.Blue(), 63));
+            const bool coloured =
+                bad ? colour.Red() == 255 && ((within(colour.Green(), 205) && within(colour.Blue(), 205)) ||
+                                              (within(colour.Green(), 55) && within(colour.Blue(), 55)))
+                    : (within(colour.Red(), 205) && within(colour.Green(), 251) && within(colour.Blue(), 207)) ||
+                          (within(colour.Red(), 57) && within(colour.Green(), 239) && within(colour.Blue(), 63));
+            if (coloured) ++count;
         }
     }
     std::printf("native brace pixels position=%lld bad=%d count=%d dpi=%d\n", static_cast<long long>(position), bad,

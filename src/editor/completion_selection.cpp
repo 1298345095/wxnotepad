@@ -28,7 +28,7 @@ bool CompleteLatex(EditorControl& editor) {
     const uint32_t character = GetLaTeXInputUnicodeCharacter(ptr, length);
     if (!character) return false;
     const char16_t utf16[] = {static_cast<char16_t>(character & 0xffff), static_cast<char16_t>(character >> 16), 0};
-    const auto text = wxString(reinterpret_cast<const char*>(utf16), wxMBConvUTF16LE(), 2 * (1 + (utf16[1] != 0)))
+    const auto text = wxString(reinterpret_cast<const char*>(utf16), wxMBConvUTF16LE(), utf16[1] != 0 ? 4 : 2)
                           .ToStdString(wxConvUTF8);
     editor.Send(Message::SetTargetStart, position);
     editor.Send(Message::SetTargetEnd, caret);

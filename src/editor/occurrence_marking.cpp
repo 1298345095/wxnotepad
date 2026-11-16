@@ -190,7 +190,7 @@ void OccurrenceMarking::Start(bool changed, unsigned flags, std::string text) {
     Reset(flags, std::move(text));
     if ((flags & static_cast<unsigned>(Scintilla::FindOption::RegExp)) && text_.size() == 1 &&
         (text_[0] == '^' || text_[0] == '$')) {
-        matchCount_ = static_cast<size_t>(editor_.Send(Message::GetLineCount) - (text_[0] == '^'));
+        matchCount_ = static_cast<size_t>(editor_.Send(Message::GetLineCount) - (text_[0] == '^' ? 1 : 0));
         return;
     }
     if ((flags & static_cast<unsigned>(Scintilla::FindOption::RegExp)) && text_.size() > 1 && text_.back() == '$' &&
