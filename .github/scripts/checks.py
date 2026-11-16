@@ -51,7 +51,7 @@ def tidy_sources(executable, build, jobs):
         with log.open('w', encoding='utf-8') as output:
             result = subprocess.run(command, cwd=ROOT, stdout=output, stderr=subprocess.STDOUT)
         print(f'{relative}: exit {result.returncode}', flush=True)
-        return dict(file=relative, exit_code=result.returncode, log=log.relative_to(ROOT).as_posix())
+        return {'file': relative, 'exit_code': result.returncode, 'log': log.relative_to(ROOT).as_posix()}
 
     with ThreadPoolExecutor(max_workers=jobs) as workers:
         results = list(workers.map(analyze, files))
