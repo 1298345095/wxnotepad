@@ -22,7 +22,7 @@ void Require(bool condition, const char* message) {
 }
 void Untitled(EditorFrame* frame) {
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-    auto* menus = frame->GetMenuBar();
+    const auto* menus = frame->GetMenuBar();
     const auto withEncoding = menus->FindMenuItem("File", "With Encoding...");
     const auto asUtf8 = menus->FindMenuItem("File", "As UTF-8");
     Require(withEncoding != wxNOT_FOUND && asUtf8 != wxNOT_FOUND,

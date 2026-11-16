@@ -8,7 +8,7 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [2026-11-16 declaration and literal continuation](#2026-11-16-declaration-and-literal-continuation),
+Latest review: [2026-11-16 byte-literal continuation](#2026-11-16-byte-literal-continuation),
 on [`codex/sonarcloud-small-fixes-2026-11-16`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-small-fixes-2026-11-16).
 [PR #221](https://github.com/1298345095/wxnotepad/pull/221) was merged into main
 at `c3d98ca4d270f2367b85ec9a96e0a14e582830ad` before this review.
@@ -1288,7 +1288,129 @@ exit zero. This batch adds no persistent tests. Existing hosted checks validate
 the combined branch; their exact-head results are recorded on
 [PR #222](https://github.com/1298345095/wxnotepad/pull/222).
 
-The remaining 647 S7040 keys require the same file-specific data review.
+At that checkpoint, 647 S7040 keys remained for file-specific data review.
 Coordinate rounding/clipping, dynamic polyline bounds, the occurrence-marking
 duration conversion and the previously documented exception/inheritance
 recommendations retain their separate review status and current keys.
+
+### Completed hosted validation for the declaration/literal batch
+
+Revision `ac7fab65c98ee200a9ff307c838abe066351e7c1` passed all 12 GitHub
+checks, including the Windows and Linux native suites, both coverage backends,
+clang-tidy, formatting, fuzzing, CodeQL and SonarCloud. The completed workflows
+are [CI](https://github.com/1298345095/wxnotepad/actions/runs/43963778445),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43963778643),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43963778358) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43963778369).
+Fresh PR-scoped MCP queries before the following continuation confirm an OK
+SonarCloud gate, zero OPEN/CONFIRMED findings and 96.96969696969697% new-code
+coverage: 19 of 20 lines and 45 of 46 conditions. New duplication is 0.0%.
+
+The earlier ledger now includes these completed checks alongside its historical
+publication-time pending status. This records the result for `ac7fab65` before
+the next batch changes the branch head.
+
+## 2026-11-16 byte-literal continuation
+
+This batch continues PR #222 from
+`ac7fab65c98ee200a9ff307c838abe066351e7c1`. Main contained 3,755
+OPEN/CONFIRMED findings; its explicit security/reliability query returned zero.
+The [issue-by-issue record](sonarqube-2026-11-16-byte-literals-review.json)
+adds **647 code-fix keys and 10 verified false-positive dispositions**.
+Including the earlier #222 batches, the branch addresses **897 distinct main
+code-fix keys and 22 reviewed false positives**. Main receives the code fixes
+through merge and its subsequent analysis.
+
+### Literal and declaration changes
+
+| Rule | Main keys | Change |
+| --- | ---: | --- |
+| S7040 | 18 | Bound actual numerical escapes in eight application files: BOMs, legacy encoding bytes, replacement characters, search ESC and collation weights. |
+| S7040 | 628 | Bound actual numerical escapes in 82 existing fixture and reference-data files. |
+| S5350 | 1 | Make `Untitled::menus` in `tests/reload_encoding.cpp` a pointer to const; its consumers only find menu items and read their enabled state. |
+
+The literal changes replace 2,225 numerical escapes in 90 files. Source review
+follows the actual decoding, encoding, save, search and collation consumers.
+The independent fixture records retain their original captured values and
+provenance. Raw strings, text describing backslash syntax, conventional
+one-digit octal controls, explicit byte lengths and `s` literal suffixes retain
+their original form. The application predicates, parser grammar, commands,
+selection endpoints, history expectations and native event paths are unchanged.
+
+The menu declaration was checked against wxWidgets 3.3.3's common and GTK
+`FindMenuItem`, `FindItem` and `IsEnabled` implementations and the Windows
+inherited interface. Those calls already use const methods and perform queries.
+
+### Compiled data equivalence and formatting
+
+GCC 14.2, C++23, `-O2 -Wall -Wextra -Werror -pedantic-errors` compares all
+**14,816 complete literal groups**, including the **651 changed groups**,
+extracted from the starting and final formatted sources. Compile-time assertions
+check their types, complete array sizes and every element, including embedded
+and terminating NULs. The comparison also passes with `-fshort-wchar`, checking
+the same data with 16-bit wide characters. Both executables run successfully
+through the documented `ci.py probe` entry point with exit zero.
+
+Whole-file lexical comparison preserves every nonliteral code token and comment
+through the literal commits. It also verifies raw strings and literal suffixes.
+A separate lexer independently checks the first 41-file fixture group, and the
+second 41-file group receives complete source and diff review. Large frozen
+tables receive full data/token comparison and review of their complete consumers
+and changed records; the ledger distinguishes these checks from manual source
+reading.
+
+The initial formatting pass exposed clang-format 23.1.2 splitting a long
+delimited escape in `chinese_encoding.cpp`. The local check rejected that output.
+Splitting long strings between complete escape units before canonical formatting
+preserves valid syntax and yields matching complete literal arrays. The final
+374-file canonical formatting check and `git diff --check` both pass.
+
+This continuation adds no persistent tests. It uses two literal commits
+(`8a593c7` for application code and `6d157ed` for fixtures), followed by the
+menu declaration and records, published together in one branch update.
+The existing hosted workflows validate that combined head; their resulting
+checks are recorded on [PR #222](https://github.com/1298345095/wxnotepad/pull/222).
+
+### Ten verified writable-alias false positives
+
+The reviewed S5350 suggestions cross `wxDynamicCast`, native handles or
+`GetEventHandler()`. Complete application paths and wxWidgets 3.3.3 definitions
+establish mutation of the same reported object:
+
+| File / driver | Keys | Same-object modification |
+| --- | ---: | --- |
+| `western_encoding.cpp`: `Picker`, `WarningDriver` | 3 | OK/Cancel/No dispatch changes the dialog's return code and modal state. |
+| `current_encoding.cpp`: `EncodingPicker`, `ConversionPrompt` | 2 | Direct cancellation or dispatched button handlers call `EndModal` on that dialog. |
+| `gbk_native.cpp`: `NativeDriver` | 1 | Native loss-confirmation input completes the reported dialog. |
+| `save_copy.cpp`: `CopyChooser` | 1 | Native OK/Cancel input completes the Save Copy loss dialog. |
+| `reload_encoding.cpp`: `ReloadDialogs` | 3 | Two window/dialog aliases reach modal completion; the child alias becomes the same list box and changes its selection. |
+
+The `reload_encoding.cpp` if-initializer finding is specifically the
+**Inconsistent Line Endings** dialog's Cancel path. Its issue is kept distinct
+from the later Reload With Encoding dialog variable.
+
+Each MCP transition has its own explanation, source path and framework trace.
+Exact-key queries return all 10 as FALSE_POSITIVE and none as OPEN/CONFIRMED.
+Main's remaining OPEN/CONFIRMED count is **3,745**, including this PR's unmerged
+code fixes. Submitted comments, transition receipts, verification counts and
+framework blob/source hashes are retained in the issue record.
+
+### Remaining work
+
+One of the previously remaining 647 S7040 recommendations is retained:
+`AaG1r0uxyu4V9oip4YId` in `src/editor/platform/generated/sort_nls_data.h`.
+It covers the frozen **497,834-byte** compressed NLS stream emitted by
+`tools/capture_sort_nls.py`. Applying bounded syntax to every byte would add
+995,668 source bytes and change 15,558 data lines for this one style finding.
+The coordinated generator/payload representation review remains separate;
+the issue stays open.
+
+The original capture exporters also retain their existing JSON-style UCN output.
+A later reference recapture can reproduce that spelling. Current builds consume
+the checked-in, value-identical reference tables; their captured observations
+and provenance are preserved.
+
+Coordinate rounding/clipping, dynamic polyline bounds, occurrence-marking time
+precision and the documented exception/inheritance recommendations keep their
+existing individual review status. Their exact keys and source-contract evidence
+remain in the preceding review records.

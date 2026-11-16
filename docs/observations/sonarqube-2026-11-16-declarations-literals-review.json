@@ -3404,7 +3404,188 @@
     "independent_source_review": "Scalar write ordering, nonzero bit-mask domain, map comparator semantics, local object lifetimes, complete literal bytes and their consumer contracts reviewed.",
     "new_persistent_tests": false,
     "native_sdk": "The local workspace has no wxWidgets SDK. Existing hosted builds and native checks validate the complete branch.",
-    "hosted_status_at_publication": "Pending the single final PR branch update; exact-head results are recorded on PR #222."
+    "hosted_status_at_publication": "Pending the single final PR branch update; exact-head results are recorded on PR #222.",
+    "completed_hosted_validation": {
+      "source_revision": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+      "checkout_merge_revision": "6212f6da82dac953cbe20594f4f35a29dc190270",
+      "checks": [
+        {
+          "id": 133649430665,
+          "name": "SonarCloud Code Analysis",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/runs/133649430665"
+        },
+        {
+          "id": 133645364227,
+          "name": "Linux coverage / SonarCloud",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778445/job/133645364227"
+        },
+        {
+          "id": 133638080242,
+          "name": "CodeQL",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/runs/133638080242"
+        },
+        {
+          "id": 133637889646,
+          "name": "Native clang-tidy",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778643/job/133637889646"
+        },
+        {
+          "id": 133637734349,
+          "name": "Format and workflow syntax",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778643/job/133637734349"
+        },
+        {
+          "id": 133637733864,
+          "name": "Linux coverage / x11",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778445/job/133637733864"
+        },
+        {
+          "id": 133637733839,
+          "name": "Windows MSVC",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778445/job/133637733839"
+        },
+        {
+          "id": 133637733828,
+          "name": "Linux GCC 13 / X11 + Wayland",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778445/job/133637733828"
+        },
+        {
+          "id": 133637733434,
+          "name": "Linux coverage / wayland",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778445/job/133637733434"
+        },
+        {
+          "id": 133637733262,
+          "name": "CodeQL / actions",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778369/job/133637733262"
+        },
+        {
+          "id": 133637732743,
+          "name": "Linux Clang 18 / libFuzzer + ASan + UBSan",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778358/job/133637732743"
+        },
+        {
+          "id": 133637732670,
+          "name": "CodeQL / cpp",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7fab65c98ee200a9ff307c838abe066351e7c1",
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43963778369/job/133637732670"
+        }
+      ],
+      "sonar_quality_gate": {
+        "status": "OK",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "OK",
+            "errorThreshold": "80",
+            "actualValue": "97.0"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      },
+      "sonar_measures": [
+        {
+          "metric": "new_coverage",
+          "value": "96.96969696969697",
+          "period": 1,
+          "bestValue": false
+        },
+        {
+          "metric": "new_conditions_to_cover",
+          "value": "46",
+          "period": 1
+        },
+        {
+          "metric": "new_uncovered_lines",
+          "value": "1",
+          "period": 1,
+          "bestValue": false
+        },
+        {
+          "metric": "new_uncovered_conditions",
+          "value": "1",
+          "period": 1,
+          "bestValue": false
+        },
+        {
+          "metric": "new_lines_to_cover",
+          "value": "20",
+          "period": 1
+        },
+        {
+          "metric": "new_duplicated_lines_density",
+          "value": "0.0",
+          "period": 1,
+          "bestValue": true
+        }
+      ],
+      "open_confirmed_pr_issues": 0,
+      "verification": "GitHub checks queried for the exact source head and fresh PR-scoped SonarCloud MCP reads before publishing the next continuation."
+    }
   },
   "retained_work": {
     "cpp:S7040": {
