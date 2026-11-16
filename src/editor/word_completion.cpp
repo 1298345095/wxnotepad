@@ -113,6 +113,7 @@ struct WordList {
     unsigned capacity;
     std::byte* buffer = nullptr;
     std::vector<std::unique_ptr<std::byte[]>> buffers;
+    std::vector<WordNode*> insertionPath;
 
     WordList() = default;
     WordList(const WordList&) = delete;
@@ -214,7 +215,7 @@ struct WordNode {
     unsigned level;
 };
 
-constexpr unsigned NP2_TREE_HEIGHT_LIMIT = 32;
+constexpr size_t InitialTreePathCapacity = 32;
 // store word right after the node as most word are short.
 #define WordNode_GetWord(node) (reinterpret_cast<char*>(node) + sizeof(WordNode))
 // TODO: since the tree is sorted, nodes greater than some level can be deleted to reduce total words.
@@ -276,13 +277,13 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
         root = node;
     } else {
         WordNode* iter = root;
-        WordNode* path[NP2_TREE_HEIGHT_LIMIT]{};
-        int top = 0;
+        auto& path = insertionPath;
+        path.clear();
         int dir;
 
         // find a spot and save the path
         for (;;) {
-            path[top++] = iter;
+            path.push_back(iter);
 #if NP2_AUTOC_CACHE_SORT_KEY
             dir = CompareNode(*iter, pWord, len, sortKey);
 #else
@@ -317,7 +318,8 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
         iter->link[dir] = node;
 
         // walk back and rebalance
-        while (--top >= 0) {
+        for (auto top = path.size(); top != 0;) {
+            --top;
             // which child?
             if (top != 0) {
                 dir = path[top - 1]->right == path[top];
@@ -340,18 +342,19 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
 
 std::unique_ptr<char[]> WordList::GetList() const {
     WordNode* root = pListHead;
-    WordNode* path[NP2_TREE_HEIGHT_LIMIT]{};
-    int top = 0;
+    std::vector<WordNode*> path;
+    path.reserve(InitialTreePathCapacity);
     auto list = std::make_unique<char[]>(nTotalLen + 1); // additional separator
     char* buf = list.get();
     char* const pList = buf;
 
-    while (root || top > 0) {
+    while (root || !path.empty()) {
         if (root) {
-            path[top++] = root;
+            path.push_back(root);
             root = root->left;
         } else {
-            root = path[--top];
+            root = path.back();
+            path.pop_back();
             memcpy(buf, WordNode_GetWord(root), root->len);
             buf += root->len;
             *buf++ = '\n'; // the separator char
@@ -394,6 +397,7 @@ void WordList::Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) noexc
 #endif
 
     capacity = NP2_AUTOC_INIT_BUFFER_SIZE;
+    insertionPath.reserve(InitialTreePathCapacity);
     AddBuffer();
 }
 

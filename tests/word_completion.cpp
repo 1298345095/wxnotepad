@@ -14,6 +14,13 @@ using Scintilla::Message;
 void Require(bool value, const char* message) {
     if (!value) throw TestEditor::Failure(message);
 }
+std::string CurrentCandidate(EditorControl* editor) {
+    const auto size = editor->Send(Message::AutoCGetCurrentText);
+    std::string word(size + 1, 0);
+    editor->Send(Message::AutoCGetCurrentText, 0, reinterpret_cast<intptr_t>(word.data()));
+    word.pop_back();
+    return word;
+}
 std::vector<std::string> Candidates(EditorControl* editor) {
     std::vector<std::string> words;
     intptr_t previous = -1;
@@ -21,11 +28,7 @@ std::vector<std::string> Candidates(EditorControl* editor) {
         const auto current = editor->Send(Message::AutoCGetCurrent);
         if (current == previous) break;
         previous = current;
-        const auto size = editor->Send(Message::AutoCGetCurrentText);
-        std::string word(size + 1, 0);
-        editor->Send(Message::AutoCGetCurrentText, 0, reinterpret_cast<intptr_t>(word.data()));
-        word.pop_back();
-        words.push_back(word);
+        words.push_back(CurrentCandidate(editor));
 #ifdef __WXMSW__
         NativeCompletion::Key(editor, VK_DOWN);
 #else
@@ -178,6 +181,38 @@ void EscapePrefixCompletion(EditorFrame* frame) {
     }
     std::puts("PASS: embedded and standalone JavaScript completion preserves escape prefixes");
 }
+void LargeKeywordList(EditorFrame* frame) {
+    constexpr int CandidateCount = 200000;
+    std::string words;
+    words.reserve(CandidateCount * 10);
+    for (int index = 0; index < CandidateCount; ++index) {
+        const auto digits = std::to_string(index);
+        words += 'a';
+        words.append(8 - digits.size(), '0');
+        words += digits;
+        words += ' ';
+    }
+    const std::array keywords = {SyntaxKeywords{words.c_str(), 0}};
+    auto definition = SyntaxFor(SyntaxLanguage::Cpp);
+    definition.keywords = keywords;
+    WordCompletionSettings settings;
+    settings.completeOption = WordCompletionOption::CompleteWord;
+    auto* editor = frame->Editor();
+    editor->Send(Message::AutoCCancel);
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
+    TestEditor::ResetStream(editor, "a", 1, 1);
+    CompleteWord(*editor, definition, settings, false);
+    Require(editor->Send(Message::AutoCActive) && editor->Send(Message::AutoCGetCurrent) == 0 &&
+                CurrentCandidate(editor) == "a00000000",
+            "large sorted keyword lists retain the first completion candidate");
+    editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>("a00199999"));
+    Require(editor->Send(Message::AutoCGetCurrent) == CandidateCount - 1 && CurrentCandidate(editor) == "a00199999",
+            "large keyword insertion and traversal preserve every candidate in sorted order");
+    editor->Send(Message::AutoCCancel);
+    Require(TestEditor::Text(editor) == "a" && !editor->Send(Message::CanUndo),
+            "constructing and canceling a large completion list leaves document history unchanged");
+    std::puts("PASS: 200000 sorted completion candidates exceed the former tree traversal stack bound");
+}
 class WordCompletionApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -228,6 +263,7 @@ public:
                 FrozenCompletion(frame, id);
                 FrozenBehaviors(frame, settings_, id);
                 EscapePrefixCompletion(frame);
+                LargeKeywordList(frame);
                 editor->Send(Message::AutoCCancel);
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 const std::string longestKeyword(124, 'x');
