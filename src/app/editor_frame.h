@@ -45,6 +45,10 @@ public:
     void SetFileWatchingOptions(const FileWatchingOptions& options);
     const FileWatchingOptions& FileWatching() const { return fileWatchingOptions_; }
     bool NewWindow();
+    bool Restart();
+    OpenResult OpenRestartDocument(const wxString& path, std::optional<EncodingChoice> encoding,
+                                   std::optional<SyntaxLanguage> language, bool readOnly, Scintilla::Position line,
+                                   Scintilla::Position column);
 
 private:
     EditorControl* editor_;
@@ -119,6 +123,9 @@ private:
     void AppendCaretCommands(wxMenu* view);
     void AppendFoldCommands(wxMenu* view);
     void AppendSettingsCommands(wxMenu* view);
+    void AppendUILanguageCommands(wxMenu* settings);
+    void ChooseUILanguage(uint16_t language);
+    bool LaunchWindow(bool currentFile);
     bool HandleCommandKey(const wxKeyEvent& event);
     bool HandleInsertionKey(const wxKeyEvent& event);
     bool HandleCaseConversionKey(const wxKeyEvent& event);
@@ -156,7 +163,8 @@ private:
     OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                         std::optional<FileEncoding> encoding = std::nullopt,
                         std::optional<EncodingChoice> weakEncoding = std::nullopt,
-                        OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead, bool reload = false);
+                        OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead, bool reload = false,
+                        std::optional<EncodingChoice> sourceEncoding = std::nullopt);
     bool CanDiscardUntitledWhitespace() const;
     EncodingLossChoice ConfirmEncodingLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);

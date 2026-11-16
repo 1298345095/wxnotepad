@@ -1,4 +1,5 @@
 """Compare actual application Save/reload with independently captured original bytes."""
+from english_settings import english_settings
 import csv
 import locale
 import os
@@ -45,7 +46,7 @@ def run(source, reference):
             settings += {"utf8": "DefaultEncoding=3", "utf8bom": "DefaultEncoding=4",
                          "utf16": "DefaultEncoding=6", "utf16bom": "DefaultEncoding=1",
                          "ansi": "DefaultEncoding=0", "gbk": "DefaultEncoding=936"}[encoding]
-            config.write_text("[Settings]\n" + settings + "\n", encoding="utf-16")
+            config.write_text(english_settings("[Settings]\n" + settings + "\n"), encoding="utf-16")
             suffix = {"PlainText": "txt", "Cpp": "cpp", "Python": "py", "Json": "json"}[row["language"]]
             document = folder / f"header-中文😀.{suffix}"
             before = b"A\r\nB\r\nC"

@@ -7,10 +7,12 @@
 #include "document/encoding/single_byte_codec.h"
 #include "editor/platform/native_encoding.h"
 #include "ScintillaTypes.h"
+#include <wx/translation.h>
 #include <wx/file.h>
 #include <wx/filename.h>
 #include <wx/log.h>
 #include <wx/utils.h>
+#include <wx/translation.h>
 #include <cstdio>
 #include <algorithm>
 #ifdef __WXMSW__
@@ -100,14 +102,14 @@ struct PendingSave {
 wxString PrepareSave(const wxString& destination, PendingSave& temporary) {
     // Errors are returned to the application instead of opening wx log dialogs.
     wxLogNull quiet;
-    if (wxDirExists(destination)) return "Choose a file as the save destination.";
+    if (wxDirExists(destination)) return _("Choose a file as the save destination.");
     if (wxFileExists(destination)) {
         wxFile existing(destination, wxFile::read_write);
-        if (!existing.IsOpened()) return "Could not open the destination for writing.";
+        if (!existing.IsOpened()) return _("Could not open the destination for writing.");
     }
     temporary.path = wxFileName::CreateTempFileName(destination + ".wxnotepad-", &temporary.file);
     if (temporary.path.empty())
-        return "Could not create a temporary file beside the destination. Check the folder and access permissions.";
+        return _("Could not create a temporary file beside the destination. Check the folder and access permissions.");
     return {};
 }
 
@@ -118,15 +120,18 @@ wxString WriteSafely(const wxString& destination, const std::string& bytes, Pend
         if (!error.empty()) return error;
     }
     if (temporary.file.Write(bytes.data(), bytes.size()) != bytes.size() || !temporary.file.Flush())
-        return "Could not write the complete file. Check free space and access permissions.";
-    if (!temporary.file.Close()) return "Could not close the completed temporary file.";
+        return _("Could not write the complete file. Check free space and access permissions.");
+    if (!temporary.file.Close()) return _("Could not close the completed temporary file.");
 #ifdef __WXMSW__
     const bool replaced = MoveFileExW(temporary.path.wc_str(), destination.wc_str(),
                                       MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
 #else
     const bool replaced = ::rename(temporary.path.utf8_str(), destination.utf8_str()) == 0;
 #endif
-    if (!replaced) return "Could not replace the destination: " + wxString(wxSysErrorMsg());
+    if (!replaced) {
+        const wxString detail(wxSysErrorMsg());
+        return wxString::Format(_("Could not replace the destination: %s"), detail);
+    }
     temporary.path.clear();
     return {};
 }
@@ -137,10 +142,10 @@ wxString PrepareSaveCopy(const wxString& destination) {
     // existing file retains its bytes.
     wxLogNull quiet;
     wxFile file;
-    if (wxDirExists(destination)) return "Choose a file as the save destination.";
+    if (wxDirExists(destination)) return _("Choose a file as the save destination.");
     const bool opened =
         wxFileExists(destination) ? file.Open(destination, wxFile::read_write) : file.Create(destination, false);
-    if (!opened || !file.Close()) return "Could not open the destination for writing.";
+    if (!opened || !file.Close()) return _("Could not open the destination for writing.");
     return {};
 }
 
@@ -155,7 +160,7 @@ std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncod
                                                     const EncodingLossDecision& decideLoss) {
     if (encoding == FileEncoding::Gbk || encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437 ||
         encoding == FileEncoding::Gb18030 || encoding == FileEncoding::Big5) {
-        if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, "The document contains invalid UTF-8."};
+        if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, _("The document contains invalid UTF-8.")};
         const auto encoded = EncodeLegacy(bytes, encoding);
         if (encoded.loss && (!decideLoss || decideLoss() != EncodingLossChoice::Replace))
             return SaveResult{SaveStatus::Cancelled, {}};
@@ -164,8 +169,8 @@ std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncod
         auto encoded = encoding == FileEncoding::Utf16Be ? EncodeUtf16Be(bytes) : EncodeUtf16Le(bytes);
         if (!encoded)
             return SaveResult{SaveStatus::Failed, encoding == FileEncoding::Utf16Be
-                                                      ? "The document could not be encoded as UTF-16BE."
-                                                      : "The document could not be encoded as UTF-16LE."};
+                                                      ? _("The document could not be encoded as UTF-16BE.")
+                                                      : _("The document could not be encoded as UTF-16LE.")};
         bytes = std::move(*encoded);
         if (bom) bytes.insert(0, encoding == FileEncoding::Utf16Be ? "\xfe\xff" : "\xff\xfe");
     } else if (bom)
@@ -243,23 +248,23 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     if (loaded.bom) bytes.erase(0, utf16 ? 2 : 3);
     if (loaded.encoding == FileEncoding::Gbk) {
         const auto decoded = DecodeGbk(bytes);
-        if (!decoded) return wxString("The file is not valid GBK (CP936). The document was not changed.");
+        if (!decoded) return wxString(_("The file is not valid GBK (CP936). The document was not changed."));
         bytes = *decoded;
     } else if (loaded.encoding == FileEncoding::Windows1252 || loaded.encoding == FileEncoding::Dos437) {
         bytes = DecodeSingleByte(bytes, loaded.encoding);
     } else if (loaded.encoding == FileEncoding::Gb18030 || loaded.encoding == FileEncoding::Big5) {
         const auto decoded = DecodeChinese(bytes, loaded.encoding);
-        if (!decoded) return wxString("The file could not be decoded with the selected Chinese encoding.");
+        if (!decoded) return wxString(_("The file could not be decoded with the selected Chinese encoding."));
         bytes = *decoded;
     } else if (utf16) {
         auto decoded = loaded.encoding == FileEncoding::Utf16Be ? DecodeUtf16Be(bytes) : DecodeUtf16Le(bytes);
         if (!decoded)
-            return wxString(loaded.encoding == FileEncoding::Utf16Be ? "The file is not valid UTF-16BE."
-                                                                     : "The file is not valid UTF-16LE.");
+            return wxString(loaded.encoding == FileEncoding::Utf16Be ? _("The file is not valid UTF-16BE.")
+                                                                     : _("The file is not valid UTF-16LE."));
         bytes = std::move(*decoded);
         loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     } else if (!IsUtf8(bytes))
-        return wxString("The file is not valid UTF-8. No other encoding was assumed.");
+        return wxString(_("The file is not valid UTF-8. No other encoding was assumed."));
     return {};
 }
 
@@ -267,23 +272,29 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
 // this read if the discard/save decision rewrites the selected source.
 std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path, std::optional<FileEncoding> encoding,
                                                     const EncodingOptions& options,
-                                                    std::optional<EncodingChoice> weakEncoding) {
-    if (!path.FileExists()) return wxString("Choose an existing file to open.");
+                                                    std::optional<EncodingChoice> weakEncoding,
+                                                    std::optional<EncodingChoice> sourceEncoding) {
+    if (!path.FileExists()) return wxString(_("Choose an existing file to open."));
     wxFile file(path.GetFullPath(), wxFile::read);
-    if (!file.IsOpened()) return wxString("Could not open the file for reading.");
+    if (!file.IsOpened()) return wxString(_("Could not open the file for reading."));
     const auto length = file.Length();
-    if (length < 0) return wxString("Could not determine the file size.");
+    if (length < 0) return wxString(_("Could not determine the file size."));
     LoadedDocument loaded;
     auto& bytes = loaded.text;
     bytes.assign(static_cast<size_t>(length), '\0');
     if (file.Read(bytes.data(), bytes.size()) != length || !file.Close())
-        return wxString("Could not read the complete file.");
-    const auto detected = DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
-    if (!detected.encoding) return detected.error;
+        return wxString(_("Could not read the complete file."));
+    const auto detected =
+        DetectEncoding(path.GetFullPath(), bytes, sourceEncoding ? std::optional(sourceEncoding->encoding) : encoding,
+                       options, weakEncoding);
+    if (!detected.encoding)
+        return wxString::Format(
+            _("The selected encoding (code page %u) is not migrated. The document was not changed."),
+            *detected.unsupportedCodePage);
     loaded.encoding = *detected.encoding;
     loaded.bom = detected.bom;
-    loaded.systemDefault = detected.systemDefault;
-    loaded.systemOem = detected.systemOem;
+    loaded.systemDefault = sourceEncoding ? sourceEncoding->systemDefault : detected.systemDefault;
+    loaded.systemOem = sourceEncoding ? sourceEncoding->systemOem : detected.systemOem;
     const auto error = DecodeLoadedDocument(loaded, options);
     if (!error.empty()) return error;
     return loaded;
@@ -342,7 +353,7 @@ void RestoreReloadView(EditorControl& editor, const ReloadView& view) {
 } // namespace
 
 wxString DocumentSession::FileNameText(FileNamePart part) const {
-    wxString text = path_.empty()                    ? wxString("Untitled")
+    wxString text = path_.empty()                    ? _("Untitled")
                     : part == FileNamePart::FullPath ? path_
                                                      : wxFileName(path_).GetFullName();
     if (part == FileNamePart::BaseName) {
@@ -371,27 +382,27 @@ SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination
                                       const EncodingLossDecision& decideLoss, SaveFileType fileType,
                                       SaveTimeMode timeMode) {
     if (!destination) return {SaveStatus::Cancelled, {}};
-    if (!path_.empty()) return {SaveStatus::Failed, "This document already has a file name."};
-    if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
+    if (!path_.empty()) return {SaveStatus::Failed, _("This document already has a file name.")};
+    if (destination->empty()) return {SaveStatus::Failed, _("Choose a file name before saving.")};
     return SaveTo(*destination, decideLoss, fileType, false, timeMode);
 }
 
 SaveResult DocumentSession::Save(const EncodingLossDecision& decideLoss, SaveTimeMode timeMode) {
-    if (path_.empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
+    if (path_.empty()) return {SaveStatus::Failed, _("Choose a file name before saving.")};
     return SaveTo(path_, decideLoss, std::nullopt, false, timeMode);
 }
 
 SaveResult DocumentSession::SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss,
                                    SaveFileType fileType, SaveTimeMode timeMode) {
     if (!destination) return {SaveStatus::Cancelled, {}};
-    if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
+    if (destination->empty()) return {SaveStatus::Failed, _("Choose a file name before saving.")};
     return SaveTo(*destination, decideLoss, fileType, false, timeMode);
 }
 
 SaveResult DocumentSession::SaveCopy(const std::optional<wxString>& destination,
                                      const EncodingLossDecision& decideLoss) {
     if (!destination) return {SaveStatus::Cancelled, {}};
-    if (destination->empty()) return {SaveStatus::Failed, "Choose a file name before saving."};
+    if (destination->empty()) return {SaveStatus::Failed, _("Choose a file name before saving.")};
     return SaveTo(*destination, decideLoss, std::nullopt, true);
 }
 
@@ -505,7 +516,7 @@ void DocumentSession::ApplySaveCleanup() {
 OpenResult DocumentSession::Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                                  std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
                                  const std::function<void()>& configureLoadedDocument,
-                                 OpenDecisionTiming decisionTiming) {
+                                 OpenDecisionTiming decisionTiming, std::optional<EncodingChoice> sourceEncoding) {
     if (!source) return {OpenStatus::Cancelled, {}};
     // Notepad4 FileLoad compares the supplied spelling before canonicalizing the
     // load path. Do not turn distinct spellings or file-system aliases into reloads.
@@ -523,7 +534,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     wxLogNull quiet;
     const bool wasModified = IsModified();
     if (decisionTiming == OpenDecisionTiming::BeforeRead && !beforeReplace()) return {OpenStatus::Cancelled, {}};
-    auto candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
+    auto candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding, sourceEncoding);
     if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     if (decisionTiming == OpenDecisionTiming::AfterRead && !beforeReplace()) return {OpenStatus::Cancelled, {}};
     // Save may have rewritten the selected source (including a newly chosen
@@ -531,7 +542,7 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
     if (decisionTiming == OpenDecisionTiming::AfterRead && wasModified && !IsModified()) {
         // Release the old decoded text before allocating another whole-file read.
         candidate.emplace<wxString>();
-        candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding);
+        candidate = ReadDocument(loadPath, encoding, encodingOptions_, weakEncoding, sourceEncoding);
         if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     }
     auto& loaded = std::get<LoadedDocument>(candidate);

@@ -21,6 +21,7 @@ public:
         wxLog::SetActiveTarget(new wxLogStderr);
         if (argc != 2) return false;
         directory_ = argv[1];
+        RecordStage("starting");
         frame_ = new wxFrame(nullptr, wxID_ANY, "wxnotepad clipboard test peer");
         text_ = new wxTextCtrl(frame_, wxID_ANY, {}, wxDefaultPosition, wxSize(400, 180), wxTE_MULTILINE);
         text_->Bind(wxEVT_KEY_UP, [this](wxKeyEvent& event) {
@@ -65,12 +66,20 @@ private:
 #ifdef __WXGTK__
     std::chrono::steady_clock::time_point renderReadyAt_;
 #endif
+    void RecordStage(const char* stage) const {
+        // wxMSW's asynchronous child does not inherit the caller's stderr.
+        // Keep only protocol stages so a timeout can report where it stopped.
+        wxFFile file(directory_ + "/peer-stage", "wb");
+        if (file.IsOpened()) file.Write(wxString::FromUTF8(stage), wxConvUTF8);
+    }
     void Respond(const wxString& value) {
+        RecordStage("writing-response");
         {
             wxFFile file(directory_ + "/response.tmp", "wb");
             file.Write(value, wxConvUTF8);
         }
-        wxRenameFile(directory_ + "/response.tmp", directory_ + "/response", true);
+        const bool published = wxRenameFile(directory_ + "/response.tmp", directory_ + "/response", true);
+        RecordStage(published ? "response-published" : "response-rename-failed");
     }
     void ContinuePendingCommand() {
         wxString focusFile;
@@ -146,12 +155,14 @@ private:
         }
         const auto request = directory_ + "/request";
         if (!wxFileExists(request)) return;
+        RecordStage("reading-request");
         wxString command;
         {
             wxFFile file(request, "rb");
             file.ReadAll(&command, wxConvUTF8);
         }
         wxRemoveFile(request);
+        RecordStage("request-claimed");
         if (command == "copy" || command == "wxcopy" || command == "nontext" || command == "paste" ||
             command.StartsWith("shape") || command.StartsWith("utility-")) {
             frame_->SetTitle(wxString::Format("wxnotepad clipboard focus: peer [%lu]", wxGetProcessId()));
@@ -162,12 +173,14 @@ private:
                 file.Write(wxGetEnv("WXNOTEPAD_CLIPBOARD_DEFER_PEER_FOCUS_CLAIM", &deferClaim) ? "peer-deferred"
                                                                                                : "peer");
             }
+            RecordStage("raising-peer");
             frame_->Raise();
             text_->SetFocus();
             activationStarted_ = std::chrono::steady_clock::now();
             gestureRequested_ = false;
             gestureReceived_ = false;
             pendingCommand_ = command;
+            RecordStage("waiting-for-focus");
             return;
         }
         Perform(command);
@@ -211,6 +224,7 @@ private:
         Respond(cleared ? "ready" : "failed");
     }
     void ReadShape(const wxString& command) {
+        RecordStage("reading-clipboard-shape");
         wxString shape = "stream";
         wxString text;
 #ifdef __WXMSW__
@@ -219,7 +233,9 @@ private:
             return;
         }
         // Observe the native payload before wxTextDataObject normalizes EOLs.
+        RecordStage("reading-native-text");
         const auto memory = ::GetClipboardData(CF_UNICODETEXT);
+        RecordStage("native-text-received");
         const auto* bytes = static_cast<const wchar_t*>(::GlobalLock(memory));
         if (!bytes) {
             ::CloseClipboard();

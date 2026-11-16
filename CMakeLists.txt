@@ -157,6 +157,8 @@ add_library(app_shell STATIC
     src/app/editor_frame_file_watching.cpp
     src/app/editor_frame_commands.cpp
     src/app/new_window.cpp
+    src/app/localization.cpp
+    src/app/language_commands.cpp
     src/app/dialogs/find_replace_dialog.cpp
     src/app/process_observer.cpp)
 target_link_libraries(app_shell PUBLIC editor_features)
@@ -208,6 +210,7 @@ function(add_gui_program target source)
 endfunction()
 
 add_gui_program(wxnotepad src/app/main.cpp app_shell)
+include(cmake/Localization.cmake)
 
 include(CTest)
 if(BUILD_TESTING)
@@ -295,6 +298,31 @@ if(BUILD_TESTING)
     add_test(NAME original_line_selection_preference COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_selection_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(original_line_selection_preference PROPERTIES TIMEOUT 60)
+    add_test(NAME observed_numeric_menu COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/observer_menu_process.py" "$<TARGET_FILE:wxnotepad>")
+    set_tests_properties(observed_numeric_menu PROPERTIES TIMEOUT 45)
+    foreach(scenario startup lifecycle restart native dynamic layout errors)
+        add_test(NAME packaged_ui_localization_${scenario} COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_process.py" "$<TARGET_FILE:wxnotepad>"
+            --cmake-dir "${CMAKE_BINARY_DIR}"
+            --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/localization"
+            --scenario "${scenario}")
+        set_tests_properties(packaged_ui_localization_${scenario} PROPERTIES TIMEOUT 180)
+    endforeach()
+    if(NOT WIN32)
+        add_test(NAME packaged_ui_localization_regional COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_process.py" "$<TARGET_FILE:wxnotepad>"
+            --cmake-dir "${CMAKE_BINARY_DIR}"
+            --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/localization"
+            --scenario regional)
+        set_tests_properties(packaged_ui_localization_regional PROPERTIES TIMEOUT 180)
+        add_test(NAME packaged_ui_localization_installed COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_process.py" "$<TARGET_FILE:wxnotepad>"
+            --cmake-dir "${CMAKE_BINARY_DIR}"
+            --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/localization"
+            --scenario installed)
+        set_tests_properties(packaged_ui_localization_installed PROPERTIES TIMEOUT 180)
+    endif()
     add_test(NAME observed_process_shutdown COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/observed_shutdown_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(observed_process_shutdown PROPERTIES TIMEOUT 45)
@@ -507,6 +535,13 @@ if(BUILD_TESTING)
     target_include_directories(surface_images PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
     add_editor_test(word_wrap word_wrap_view 60)
+    if(WIN32)
+        foreach(target IN ITEMS clipboard_smoke word_wrap)
+            target_compile_definitions(${target} PRIVATE
+                "NATIVE_FAILURE_PYTHON=\"${Python3_EXECUTABLE}\""
+                "NATIVE_FAILURE_SCRIPT=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_failure_capture.py\"")
+        endforeach()
+    endif()
     add_editor_test(wrap_resize native_wrapped_resize 120)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.27)
         set_tests_properties(word_wrap_view PROPERTIES TIMEOUT_SIGNAL_NAME SIGQUIT)

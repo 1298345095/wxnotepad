@@ -95,9 +95,9 @@ public:
                     Require(Text(editor) == expected && editor->Send(Message::GetModify),
                             "one Redo restores each complete replacement");
                 };
-                example("a", "a*", "_", "_", "1 replacements");
+                example("a", "a*", "_", "_", "1 replacement");
                 std::puts("PASS: original replacement stops when consuming match reaches EOF");
-                example("a", "a|$", "_", "_", "1 replacements");
+                example("a", "a|$", "_", "_", "1 replacement");
                 example("ab", "a|(?=b)", "_", "__b", "2 replacements");
                 example("中文ab", "a*", "_", "_中_文__b_", "5 replacements");
                 example("中文中文", "(?=中)", "_", "_中文_中文", "2 replacements");
@@ -107,12 +107,12 @@ public:
                 example("中文\r\n测试\r\n", "$", "<", "中文<\r\n测试<\r\n<", "3 replacements");
                 example("a\n\nb\n", "^$", "X", "a\nX\nb\nX", "2 replacements");
                 example("a\r\nb\nc\r", "^", ">", ">a\r\n>b\n>c\r>", "4 replacements");
-                example("", "^", "X", "X", "1 replacements");
-                example("", "$", "X", "X", "1 replacements");
-                example("", "\\A|\\z", "X", "X", "1 replacements");
+                example("", "^", "X", "X", "1 replacement");
+                example("", "$", "X", "X", "1 replacement");
+                example("", "\\A|\\z", "X", "X", "1 replacement");
                 example("中\n", "\\A|\\z", "X", "X中X\nX", "3 replacements");
                 example("a\r\n", "^", "\\n>", "\n>a\r\n\n>", "2 replacements");
-                example("中", "(?=中)", "中", "中中", "1 replacements");
+                example("中", "(?=中)", "中", "中中", "1 replacement");
                 std::puts("PASS: empty/consuming alternatives, anchors, empty/final-newline documents, CRLF and UTF-8 "
                           "progress");
                 example("aaaa", "(aa)", "<$1>", "<aa><aa>", "2 replacements");
@@ -120,19 +120,19 @@ public:
                 example("aa", "a", "aa", "aaaa", "2 replacements");
                 example("中文12 中文34", "(中文)([0-9]+)", "\\2-\\1", "12-中文 34-中文", "2 replacements");
                 example("中文12", "(中文)([0-9]+)", "$2:$1:$$:$&:$0:\\0", "12:中文:$:中文12:中文12:中文12",
-                        "1 replacements");
+                        "1 replacement");
                 example("b b", "(a)?(b)", "$1|\\1|$2|\\2", "||b|b ||b|b", "2 replacements");
                 example("a a", "(a)", "\\1\\n\\t", "a\n\t a\n\t", "2 replacements");
                 example("a a", "(a)", "$$|\\\\|$10|${name}|\\u|$|\\",
                         "$|\\|a0|${name}|\\u|$|\\ $|\\|a0|${name}|\\u|$|\\", "2 replacements");
                 example("中文后 中文后", "(?<=中)文(?=后)", "X", "中X后 中X后", "2 replacements");
-                example("aab", "aa|(?<=aa)b", "$&!", "aa!b", "1 replacements");
+                example("aab", "aa|(?<=aa)b", "$&!", "aa!b", "1 replacement");
                 example("中\n文 中\n文", "(中)\\n(文)", "$2:$1", "文:中 文:中", "2 replacements");
                 auto* matchCase = wxDynamicCast(wxWindow::FindWindowByName("Match case", frame), wxCheckBox);
                 auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
                 Toggle(wrap, false);
                 Toggle(matchCase, true);
-                example("one ONE One", "(one)", "<$1>", "<one> ONE One", "1 replacements");
+                example("one ONE One", "(one)", "<$1>", "<one> ONE One", "1 replacement");
                 Toggle(matchCase, false);
                 example("one ONE One", "(one)", "<$1>", "<one> <ONE> <One>", "3 replacements");
                 std::puts(
@@ -157,10 +157,10 @@ public:
                 };
                 unchanged("missing", "X", "0 replacements");
                 unchanged("(.)", "$&", "4 replacements");
-                unchanged("(?=中)", "", "1 replacements");
+                unchanged("(?=中)", "", "1 replacement");
                 unchanged("[", "X", "Invalid regular expression");
                 unchanged("", "X", "Invalid regular expression");
-                unchanged("a", "$0", "1 replacements");
+                unchanged("a", "$0", "1 replacement");
                 Require(frame->NewDocument(), "New must use the live document after no-op replacements");
                 query->SetValue("[");
                 Click(dialog, wxID_REPLACE_ALL);
@@ -171,7 +171,7 @@ public:
                 replacement->SetValue("");
                 Click(dialog, wxID_REPLACE_ALL);
                 Require(Text(editor).empty() && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                            result->GetLabel() == "1 replacements",
+                            result->GetLabel() == "1 replacement",
                         "empty no-op EOF match must terminate and count once");
                 std::puts("PASS: no-match, byte-identical, empty expansion/query and invalid input preserve history");
                 const auto path = TestFiles::TemporaryDirectory() /

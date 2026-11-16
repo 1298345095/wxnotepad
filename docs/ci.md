@@ -27,6 +27,18 @@ build. Standalone resource measurements remain serial. Windows uses one desktop
 and clipboard, and runs its full registered suite serially on the hosted VM: the four tests
 excluded on the development machine's shared desktop are not silently excluded.
 
+The path-text clipboard fixture seeds distinct owned shaped bytes before each
+Copy command. Every command must replace that offer with the original literal
+filename/path without shape tags. This avoids reading inherited delayed-render
+offers after a publication failure and keeps the original expected-data checks.
+
+Windows native failure captures read desktop pixels only within owned window
+bounds before cleanup. Overlapping windows can cover those regions. Native
+foreground/active/focus handles recorded before launching the capture helper are
+the failure snapshot; the separately labelled window metadata is collected after
+helper startup. The helper does not disable or activate the test windows, repaint
+them, or pump their events.
+
 Native-dialog fixtures canonicalize temporary-directory roots: Windows dialogs
 expand 8.3 aliases such as `RUNNER~1` to their long names. Filename checks use
 UTF-8 rather than the runner's local code page. The private display helper claims
@@ -86,6 +98,10 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   installation selects this overlay; its files participate in the existing cache
   key, and vcpkg's package ABI validates restored binaries. Local dependency builds
   can select the same overlay with `--overlay-ports=<repository>/.github/ports`.
+- Host-only GNU gettext 0.22.5 tools are pinned by the manifest baseline. CI
+  verifies their versions and extraction/format/release coverage before application
+  builds; generated app and locked wxWidgets catalogs accompany every artifact.
+  See [localization.md](localization.md) for maintenance and resource layout.
 - CI-only triplets build Release dependencies, avoiding unused Debug builds.
   Normal development triplets and the existing local installations are unchanged.
 - Windows uses the installed Visual Studio C++ developer shell and Ninja, matching
@@ -295,9 +311,10 @@ unbuffered output and process result remain in `.ci/reports/visual-brace-repeat`
 the sequence stops and fails on its first abnormal exit. The complete suite's
 JUnit and logs remain separate.
 
-The JSON native fixture currently emits tagged command/chooser-state diagnostics
-for an intermittent Wayland timeout. On Linux with CMake 3.27 or newer, its
-unchanged 60-second timeout sends SIGQUIT with a five-second dump grace period.
+The JSON native fixture waits for GTK's initial folder load before selecting a
+file, so that load cannot replace the requested selection. On Linux with CMake
+3.27 or newer, its unchanged 60-second timeout sends SIGQUIT with a five-second
+dump grace period.
 The existing Linux core collector retains its executable and GDB thread stacks.
 After the complete Linux suites, a separate private Wayland session repeats this
 case up to 20 times, stopping at the first failure; its logs remain separate.
@@ -363,6 +380,12 @@ On Windows, use the same wrapper with `--backend windows`. Add a fresh
 `--report-dir` to preserve each local attempt, and `--tests` to select registered
 cases. Windows uses the Default input desktop and serial execution; the private
 X11/Wayland sessions retain their existing concurrency.
+
+The original registered path-text case can be selected against the configured CI build:
+
+```text
+python -X utf8 .github/scripts/ci.py test --backend windows --tests '^original_path_text_clipboard$' --report-dir .ci/reports/local-path-text-01
+```
 
 For a standalone owned executable outside CTest, the synchronous probe entry
 point records each numeric process exit code, deadline and raw output:

@@ -1,4 +1,5 @@
 """Verify original MatchBraces import/save through independent app processes."""
+from english_settings import english_settings
 import argparse
 import os
 from pathlib import Path
@@ -20,8 +21,8 @@ def main():
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ["PATH"])
         config = folder / "Notepad4.ini"
         seed = folder / "Notepad4.ini-default"
-        seed.write_text("; keep comment\n[Settings]\nSaveSettings=0\nMatchBraces=0suffix\n"
-                        "Unrelated=keep\n[Styles]\nUnrelatedStyle=保留\n", encoding="utf-16")
+        seed.write_text(english_settings("; keep comment\n[Settings]\nSaveSettings=0\nMatchBraces=0suffix\n"
+                        "Unrelated=keep\n[Styles]\nUnrelatedStyle=保留\n"), encoding="utf-16")
         app = Application(executable, folder, environment)
         try:
             assert app.state["match_braces"] == "0", app.state
@@ -58,7 +59,7 @@ def main():
         for value, expected in (("0", "0"), ("0suffix", "0"), (" 0suffix ", "0"),
                                 ("1", "1"), ("1suffix", "1"), ("2", "1"),
                                 ("-1", "1"), ("", "1"), ("invalid", "1")):
-            config.write_text(f"[Settings]\nSaveSettings=0\nMatchBraces={value}\n", encoding="utf-16")
+            config.write_text(english_settings(f"[Settings]\nSaveSettings=0\nMatchBraces={value}\n"), encoding="utf-16")
             app = Application(executable, folder, environment)
             try:
                 assert app.state["match_braces"] == expected, (value, app.state)

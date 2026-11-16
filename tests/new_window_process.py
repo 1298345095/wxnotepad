@@ -1,4 +1,5 @@
 """Exercise New Window through real processes on an isolated desktop."""
+from english_settings import english_settings
 import argparse
 import os
 from pathlib import Path
@@ -33,7 +34,7 @@ def main():
         executable = executable_folder / source.name
         shutil.copy2(source, executable)
         (config_folder / "Notepad4.ini").write_text(
-            "[Settings]\nSaveSettings=0\nWordWrap=0\nWarnLineEndings=0\n", encoding="utf-16")
+            english_settings("[Settings]\nSaveSettings=0\nWordWrap=0\nWarnLineEndings=0\n"), encoding="utf-16")
         (folder / "parent.txt").write_text("parent document", encoding="utf-16")
         (folder / "startup working 中文").mkdir()
         (folder / "changed working").mkdir()

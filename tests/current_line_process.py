@@ -1,4 +1,5 @@
 """Verify original current-line import/persistence across independent applications."""
+from english_settings import english_settings
 import os
 import argparse
 from pathlib import Path
@@ -28,8 +29,8 @@ def main():
             config_folder = folder / "config" / "Notepad4"
         config = config_folder / "Notepad4.ini"
         seed = binary_folder / "Notepad4.ini-default"
-        seed.write_text("; keep comment\n[Settings]\nSaveSettings=0\nHighlightCurrentLine=11suffix\n"
-                        "Unrelated=keep\n[Styles]\nUnrelatedStyle=保留\n", encoding="utf-16")
+        seed.write_text(english_settings("; keep comment\n[Settings]\nSaveSettings=0\nHighlightCurrentLine=11suffix\n"
+                        "Unrelated=keep\n[Styles]\nUnrelatedStyle=保留\n"), encoding="utf-16")
         app = Application(executable, folder, environment)
         try:
             assert app.state["current_line_mode"] == "1" and app.state["current_line_subline"] == "1", app.state
@@ -70,7 +71,7 @@ def main():
                                      ("20", "0", "1"), ("21", "1", "1"), ("99", "2", "1"),
                                      ("-1", "0", "0"), ("-12", "0", "0"),
                                      ("11suffix", "1", "1"), ("invalid", "2", "1")):
-            config.write_text(f"[Settings]\nSaveSettings=0\nHighlightCurrentLine={value}\n", encoding="utf-16")
+            config.write_text(english_settings(f"[Settings]\nSaveSettings=0\nHighlightCurrentLine={value}\n"), encoding="utf-16")
             app = Application(executable, folder, environment)
             try:
                 assert (app.state["current_line_mode"], app.state["current_line_subline"]) == (mode, subline), (

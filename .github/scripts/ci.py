@@ -103,10 +103,25 @@ def dependencies():
     environment['VCPKG_DOWNLOADS'] = str(WORK / 'cache/downloads')
     environment['VCPKG_BINARY_SOURCES'] = f'clear;files,{WORK / "cache/binaries"},readwrite'
     executable = VCPKG / ('vcpkg.exe' if WINDOWS else 'vcpkg')
-    run([executable, 'install', '--triplet', TRIPLET, f'--overlay-triplets={ROOT / ".github/triplets"}',
+    run([executable, 'install', '--triplet', TRIPLET, '--host-triplet', TRIPLET, f'--overlay-triplets={ROOT / ".github/triplets"}',
          f'--overlay-ports={ROOT / ".github/ports"}',
          f'--x-install-root={VCPKG / "installed"}', '--clean-after-build'],
         'dependencies.log', environment)
+    gettext = VCPKG / 'installed' / TRIPLET / 'tools/gettext/bin'
+    for name in ('xgettext', 'msgmerge', 'msgfmt', 'msgcmp', 'msgattrib'):
+        tool = gettext / (name + ('.exe' if WINDOWS else ''))
+        version = subprocess.check_output([tool, '--version'], text=True, encoding='utf-8').splitlines()[0]
+        if not version.endswith(' 0.22.5'):
+            raise SystemExit('Expected pinned GNU gettext 0.22.5: ' + version)
+        print(version, flush=True)
+    if 'GITHUB_ENV' in os.environ:
+        with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as stream:
+            stream.write(f'WXNOTEPAD_GETTEXT_BIN={gettext}\n')
+    run([sys.executable, '-X', 'utf8', ROOT / 'tools/localization.py',
+         '--gettext-bin', gettext, 'check'], 'localization-check.log')
+    run([sys.executable, '-X', 'utf8', '-m', 'unittest', 'discover', '-s', 'tests',
+         '-p', 'test_localization.py', '-v'], 'localization-cli-tests.log',
+        dict(environment, WXNOTEPAD_GETTEXT_BIN=str(gettext)))
 
 
 def compiler_launcher_arguments(enabled):
@@ -138,7 +153,9 @@ def configure(app_only, *, coverage=False, compiler_cache=False):
                f'-DNOTEPAD4_SOURCE={BUILD / "original-core"}',
                f'-DCMAKE_TOOLCHAIN_FILE={VCPKG / "scripts/buildsystems/vcpkg.cmake"}',
                f'-DVCPKG_INSTALLED_DIR={VCPKG / "installed"}',
-               f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', '-DVCPKG_MANIFEST_MODE=OFF',
+               f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', f'-DVCPKG_HOST_TRIPLET={TRIPLET}',
+               f'-DWXNOTEPAD_GETTEXT_BIN={VCPKG / "installed" / TRIPLET / "tools/gettext/bin"}',
+               '-DVCPKG_MANIFEST_MODE=OFF',
                f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
                '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON', '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
                '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=OFF',
@@ -306,7 +323,9 @@ def diagnostic_build(jobs, *, compiler_cache=False):
                        f'-DNOTEPAD4_SOURCE={BUILD / "original-core"}',
                        f'-DCMAKE_TOOLCHAIN_FILE={VCPKG / "scripts/buildsystems/vcpkg.cmake"}',
                        f'-DVCPKG_INSTALLED_DIR={VCPKG / "installed"}',
-                       f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', '-DVCPKG_MANIFEST_MODE=OFF',
+                       f'-DVCPKG_TARGET_TRIPLET={TRIPLET}', f'-DVCPKG_HOST_TRIPLET={TRIPLET}',
+                       f'-DWXNOTEPAD_GETTEXT_BIN={VCPKG / "installed" / TRIPLET / "tools/gettext/bin"}',
+                       '-DVCPKG_MANIFEST_MODE=OFF',
                        f'-DVCPKG_OVERLAY_TRIPLETS={ROOT / ".github/triplets"}',
                        '-DBUILD_TESTING=ON', '-DWXNOTEPAD_ENABLE_DIAGNOSTICS=ON',
                        '-DWXNOTEPAD_VERIFY_TRIMMED_SDK=ON',
@@ -348,6 +367,15 @@ def bundle():
             if name.is_absolute() and name.is_relative_to(VCPKG / 'installed'):
                 shutil.copy2(name, libraries / name.name)
                 split_linux_symbols(libraries / name.name, symbols / 'lib')
+    languages = json.loads((ROOT / 'po/languages.json').read_text(encoding='utf-8'))
+    for language in languages['languages']:
+        if language['code'] == languages['source_language']:
+            continue
+        for domain in (languages['domain'], 'wxstd'):
+            relative = Path(language['code']) / 'LC_MESSAGES' / (domain + '.mo')
+            target = destination / 'locale' / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(directory / 'locale' / relative, target)
     shutil.copytree(ROOT / 'licenses', destination / 'licenses', dirs_exist_ok=True)
     for notice in (VCPKG / 'installed' / TRIPLET / 'share').glob('*/copyright'):
         target = destination / 'licenses/vcpkg' / notice.parent.name

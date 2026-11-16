@@ -263,6 +263,28 @@ void AnsiTransition(EditorFrame* frame) {
                                      : native->encoding == FileEncoding::Utf8 ? "a中😀\r\n"
                                                                               : "a???\r\n";
         const bool converted = native->encoding != FileEncoding::Utf8;
+        const auto actualText = TestEditor::Text(frame);
+        if (driver.shown != 1 || actualText != expected || bool(editor->Send(Message::GetReadOnly)) != !converted ||
+            bool(editor->Send(Message::GetUndoActions)) != !converted ||
+            bool(editor->Send(Message::MarkerGet, 0)) != !converted || !frame->GetTitle().StartsWith("*")) {
+            const auto hex = [](const std::string& text) {
+                constexpr char digits[] = "0123456789abcdef";
+                std::string result;
+                for (const unsigned char byte : text) {
+                    result += digits[byte >> 4];
+                    result += digits[byte & 0xf];
+                }
+                return result;
+            };
+            std::fprintf(stderr,
+                         "ANSI conversion diagnostic: shown=%d native_encoding=%d converted=%d read_only=%lld "
+                         "undo_actions=%lld markers=%lld title=%s expected_utf8_hex=%s actual_utf8_hex=%s\n",
+                         driver.shown, static_cast<int>(native->encoding), converted,
+                         static_cast<long long>(editor->Send(Message::GetReadOnly)),
+                         static_cast<long long>(editor->Send(Message::GetUndoActions)),
+                         static_cast<long long>(editor->Send(Message::MarkerGet, 0)),
+                         frame->GetTitle().utf8_str().data(), hex(expected).c_str(), hex(actualText).c_str());
+        }
         Require(driver.shown == 1 && TestEditor::Text(frame) == expected &&
                     bool(editor->Send(Message::GetReadOnly)) == !converted &&
                     bool(editor->Send(Message::GetUndoActions)) == !converted &&

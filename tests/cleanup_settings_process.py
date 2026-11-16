@@ -1,4 +1,5 @@
 """Verify original pre-save cleanup settings through actual application processes."""
+from english_settings import english_settings
 import os
 from pathlib import Path
 import shutil
@@ -33,7 +34,7 @@ def main():
         config = folder / "Notepad4.ini"
         document = folder / "input.txt"
         for fields, fix, strip in cases:
-            config.write_text("[Settings]\nWarnLineEndings=0\nUnrelated=keep\n" + fields, encoding="utf-16")
+            config.write_text(english_settings("[Settings]\nWarnLineEndings=0\nUnrelated=keep\n" + fields), encoding="utf-16")
             document.write_bytes(original)
             app = Application(executable, folder, environment, document)
             try:

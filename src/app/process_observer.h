@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wx/event.h>
+#include <wx/gdicmn.h>
 #include <wx/timer.h>
 #include <optional>
 
@@ -26,8 +27,13 @@ private:
     wxTimer observer_;
     bool lastDirty_ = false;
     bool lastActive_ = false;
+    long long lastCaret_ = 0;
+    bool lastReadOnly_ = false;
+    wxString lastPositionStatus_;
+    wxSize lastFrameSize_;
     bool publishPending_ = false;
     bool commandPending_ = false;
+    bool dispatching_ = false;
     void Publish();
     void CommandFailure(const char* stage, unsigned long error);
     std::optional<Command> ConsumeCommand(const wxString& path);

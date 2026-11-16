@@ -308,6 +308,9 @@ jobs:
       - name: Measure Linux debug-symbol packaging
         shell: bash
         run: .ci/coverage-venv/bin/python -m coverage run tests/ci_bundle.py -v
+      - name: Measure Linux native crash evidence
+        shell: bash
+        run: .ci/coverage-venv/bin/python -m coverage run tests/ci_cores_integration.py -v
       - name: Build instrumented application and tests
         id: build
         shell: bash

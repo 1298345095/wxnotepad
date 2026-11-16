@@ -3,12 +3,14 @@
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "diagnostics/trace.h"
+#include <wx/app.h>
 #include <wx/ffile.h>
 #include <wx/textfile.h>
 #include <wx/menu.h>
 #include <wx/statusbr.h>
 #include <wx/log.h>
 #include <cstdio>
+#include <limits>
 #include <utility>
 #ifdef __WXMSW__
 #include <windows.h>
@@ -47,16 +49,38 @@ void DispatchObservedCommand(EditorFrame& frame, const wxString& operation, cons
     result = "failed";
     if (operation == "open" && !source.empty())
         result = frame.Open(source).status == OpenStatus::Opened ? "ok" : "failed";
-    if (operation == "save") result = frame.Save().status == SaveStatus::Saved ? "ok" : "failed";
+    if (operation == "save")
+        result = (source.empty() ? frame.Save() : frame.SaveAs(source)).status == SaveStatus::Saved ? "ok" : "failed";
     if (operation == "close") result = "ok";
     if (operation == "menu") {
-        const int id = frame.GetMenuBar()->FindMenuItem(source.BeforeFirst('\t'), source.AfterFirst('\t'));
-        if (id != wxNOT_FOUND) {
+        long numericId = 0;
+        int id = wxNOT_FOUND;
+        if (source.Contains('\t'))
+            id = frame.GetMenuBar()->FindMenuItem(source.BeforeFirst('\t'), source.AfterFirst('\t'));
+        else if (source.ToLong(&numericId) && numericId >= std::numeric_limits<int>::min() &&
+                 numericId <= std::numeric_limits<int>::max())
+            id = static_cast<int>(numericId);
+        const auto* item = id == wxNOT_FOUND ? nullptr : frame.GetMenuBar()->FindItem(id);
+        if (item && !item->IsSeparator() && !item->GetSubMenu()) {
             wxCommandEvent event(wxEVT_MENU, id);
             result = frame.GetEventHandler()->ProcessEvent(event) ? "ok" : "failed";
-            frame.UpdateWindowUI(wxUPDATE_UI_RECURSE);
         }
     }
+}
+
+wxString ObserveMenu(const wxMenu& menu, const wxString& path) {
+    wxString state;
+    size_t index = 0;
+    for (const auto* item : menu.GetMenuItems()) {
+        const auto itemPath = path + wxString::Format("/%zu", index++);
+        if (item->IsSeparator()) continue;
+        const auto key = wxString::Format("menu.%d.", item->GetId());
+        state += key + "path\t" + itemPath + "\n" + key + "label\t" + item->GetItemLabel() + "\n";
+        state += key + wxString::Format("enabled\t%d\n", item->IsEnabled());
+        state += key + wxString::Format("checked\t%d\n", item->IsCheckable() && item->IsChecked());
+        if (const auto* children = item->GetSubMenu()) state += ObserveMenu(*children, itemPath);
+    }
+    return state;
 }
 } // namespace
 
@@ -89,16 +113,20 @@ void ProcessObserver::OnFrameDestroyed(wxWindowDestroyEvent& event) {
 // editor host or hidden operation path: Open/Save are the frame's commands.
 void ProcessObserver::Publish() {
     if (!frame_) return;
+    frame_->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     frame_->Update();
     frame_->Editor()->Update();
     lastDirty_ = frame_->Editor()->Send(Scintilla::Message::GetModify) != 0;
     lastActive_ = frame_->IsActive();
+    lastCaret_ = frame_->Editor()->Send(Scintilla::Message::GetCurrentPos);
+    lastReadOnly_ = frame_->Editor()->Send(Scintilla::Message::GetReadOnly) != 0;
+    lastPositionStatus_ = frame_->GetStatusBar()->GetStatusText(1);
     wxString backend = "Windows";
 #ifdef __WXGTK__
     backend = G_OBJECT_TYPE_NAME(gdk_display_get_default());
 #endif
     const char* encoding = ObservationEncodingName(frame_->DocumentEncoding());
-    const wxString contents =
+    wxString contents =
         wxString::Format(
             "sequence\t%s\nresult\t%s\nlength\t%lld\ndirty\t%d\nshown\t%d\nfocus\t%d\nactive\t%d\nbackend\t%s\neditor_"
             "handle\t%llu\nwrap_mode\t%lld\nwrap_rows\t%lld\nclient_width\t%d\nline_numbers\t%d\nwhitespace\t%lld\neol_"
@@ -146,6 +174,24 @@ void ProcessObserver::Publish() {
                          frame_->FileWatching().autoReloadDelay) +
         wxString::Format("file_watching_option\t%d\nreset_file_watching\t%d\n", frame_->FileWatching().flags,
                          frame_->FileWatching().resetOnNewFile);
+    contents += "title\t" + frame_->GetTitle() + "\n" + "document_path\t" + frame_->DocumentPath() + "\n";
+    contents += wxString::Format("caret_position\t%lld\nread_only\t%lld\nclient_height\t%d\nframe_handle\t%llu\n",
+                                 static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCurrentPos)),
+                                 static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetReadOnly)),
+                                 frame_->GetClientSize().y,
+                                 static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->GetHandle())));
+    const auto position = frame_->GetPosition();
+    const auto size = frame_->GetSize();
+    lastFrameSize_ = size;
+    contents +=
+        wxString::Format("frame_x\t%d\nframe_y\t%d\nframe_width\t%d\nframe_height\t%d\nmaximized\t%d\ndpi\t%d\n",
+                         position.x, position.y, size.x, size.y, frame_->IsMaximized(), frame_->GetDPI().x);
+    contents += "position_status\t" + frame_->GetStatusBar()->GetStatusText(1) + "\n";
+    const auto* menuBar = frame_->GetMenuBar();
+    for (size_t index = 0; index < menuBar->GetMenuCount(); ++index) {
+        contents += wxString::Format("menu_top.%zu.label\t", index) + menuBar->GetMenuLabel(index) + "\n";
+        contents += ObserveMenu(*menuBar->GetMenu(index), wxString::Format("%zu", index));
+    }
     // A reader can temporarily deny replacement on Windows. IPC errors must
     // stay out of wxLogGui: its deferred modal dialog can outlive the frame.
     const wxLogNull noGuiLog;
@@ -210,7 +256,7 @@ std::optional<ProcessObserver::Command> ProcessObserver::ConsumeCommand(const wx
 }
 
 void ProcessObserver::Observe() {
-    if (!frame_) return;
+    if (!frame_ || dispatching_ || wxTheApp->IsScheduledForDestruction(frame_)) return;
     const wxString path = observation_ + "/command";
     if (wxFileExists(path)) {
         const auto command = ConsumeCommand(path);
@@ -220,7 +266,12 @@ void ProcessObserver::Observe() {
         WXNOTE_TRACE("observer.request", "\ttarget=%p\trequest=%llu", static_cast<void*>(frame_),
                      DiagnosticRequest(sequence_));
         const auto& operation = command->operation;
+        dispatching_ = true;
         DispatchObservedCommand(*frame_, operation, command->source, result_);
+        dispatching_ = false;
+        // Restart can defer frame destruction until the next idle event.
+        // Publish refreshes its menus, which must stop once shutdown begins.
+        if (!frame_ || wxTheApp->IsScheduledForDestruction(frame_)) return;
         Publish();
         WXNOTE_TRACE("observer.ack", "\ttarget=%p\trequest=%llu\tok=%d", static_cast<void*>(frame_),
                      DiagnosticRequest(sequence_), result_ == "ok");
@@ -228,7 +279,10 @@ void ProcessObserver::Observe() {
     } else {
         commandPending_ = false;
         if (publishPending_ || (frame_->Editor()->Send(Scintilla::Message::GetModify) != 0) != lastDirty_ ||
-            frame_->IsActive() != lastActive_)
+            frame_->Editor()->Send(Scintilla::Message::GetCurrentPos) != lastCaret_ ||
+            (frame_->Editor()->Send(Scintilla::Message::GetReadOnly) != 0) != lastReadOnly_ ||
+            frame_->GetStatusBar()->GetStatusText(1) != lastPositionStatus_ || frame_->IsActive() != lastActive_ ||
+            frame_->GetSize() != lastFrameSize_)
             Publish();
     }
 }

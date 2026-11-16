@@ -13,6 +13,7 @@
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
 #include <wx/filename.h>
+#include <wx/translation.h>
 
 namespace {
 wxString EncodingName(FileEncoding encoding) {
@@ -57,7 +58,8 @@ wxString DocumentEncodingLabel(const DocumentSession& document) {
 } // namespace
 
 EditorFrame::EditorFrame(SettingsStore* settings)
-    : wxFrame(nullptr, wxID_ANY, "Untitled - wxnotepad", wxDefaultPosition, wxSize(900, 600)),
+    : wxFrame(nullptr, wxID_ANY, wxString::Format(_("%s - wxnotepad"), _("Untitled")), wxDefaultPosition,
+              wxSize(900, 600)),
       editor_(new EditorControl(this, settings ? settings->values.selectOption : OriginalSettings{}.selectOption)),
       settings_(settings), launchWorkingDirectory_(wxGetCwd()), normalWindowSize_(GetSize()),
       indentation_(settings ? settings->values : defaults_),
@@ -136,7 +138,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
         WXNOTE_TRACE("close.request", "\ttarget=%p\tcan_veto=%d\tdirty=%d", static_cast<void*>(this), event.CanVeto(),
                      document_.IsModified());
-        if (event.CanVeto() && !ConfirmDiscardChanges("closing")) {
+        if (event.CanVeto() && !ConfirmDiscardChanges(_("Save changes to %s before closing?"))) {
             event.Veto();
             WXNOTE_TRACE("close.veto", "\ttarget=%p", static_cast<void*>(this));
             return;
@@ -232,17 +234,17 @@ void EditorFrame::Search(bool forward, bool extendSelection) {
 void EditorFrame::ReportFind(const FindResult& result) {
     switch (result.status) {
     case FindStatus::Found:
-        SetStatusText(result.wrapped ? "Search wrapped" : "Match found", 2);
+        SetStatusText(result.wrapped ? _("Search wrapped") : _("Match found"), 2);
         break;
     case FindStatus::NotFound:
-        SetStatusText("No match found", 2);
-        ShowSearchMessage("MsgNotFound", "The specified text was not found.", false);
+        SetStatusText(_("No match found"), 2);
+        ShowSearchMessage("MsgNotFound", _("The specified text was not found."), false);
         break;
     case FindStatus::InvalidPattern:
-        SetStatusText("Invalid regular expression", 2);
+        SetStatusText(_("Invalid regular expression"), 2);
         break;
     case FindStatus::EmptyQuery:
-        ShowSearchMessage("MsgNotFound", "The specified text was not found.", false);
+        ShowSearchMessage("MsgNotFound", _("The specified text was not found."), false);
         break;
     case FindStatus::Cancelled:
         break;
@@ -252,9 +254,9 @@ void EditorFrame::ReportFind(const FindResult& result) {
 bool EditorFrame::SearchMessage(SearchDirection direction) {
     return direction == SearchDirection::Forward
                ? ShowSearchMessage("MsgFindWrap1",
-                                   "Reached the end of the document, restarting search at the beginning.", true)
+                                   _("Reached the end of the document, restarting search at the beginning."), true)
                : ShowSearchMessage("MsgFindWrap2",
-                                   "Reached the beginning of the document, restarting search at the end.", true);
+                                   _("Reached the beginning of the document, restarting search at the end."), true);
 }
 
 bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message, bool confirm) {
@@ -277,19 +279,23 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
 }
 
 void EditorFrame::UpdateDocumentState() {
-    const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
-    const wxString protection = document_.IsReadOnlyFile()                       ? " (Read Only File)"
-                                : editor_->Send(Scintilla::Message::GetReadOnly) ? " (Read Only Mode)"
-                                                                                 : "";
-    SetTitle((document_.IsModified() ? "*" : "") + name + protection + " - wxnotepad");
+    const wxString name = document_.Path().empty() ? _("Untitled") : document_.Path();
+    const wxString protection = document_.IsReadOnlyFile()                       ? _(" (Read Only File)")
+                                : editor_->Send(Scintilla::Message::GetReadOnly) ? _(" (Read Only Mode)")
+                                                                                 : wxString{};
+    // TRANSLATORS: Window title arguments: modified marker ("*" or empty), document path or untitled name,
+    // and optional read-only file/mode annotation.
+    SetTitle(wxString::Format(_("%s%s%s - wxnotepad"), document_.IsModified() ? "*" : "", name, protection));
     const wxString encoding = DocumentEncodingLabel(document_);
     const auto eolMode = static_cast<Scintilla::EndOfLine>(editor_->Send(Scintilla::Message::GetEOLMode));
     const wxString eol = eolMode == Scintilla::EndOfLine::CrLf ? "CRLF"
                          : eolMode == Scintilla::EndOfLine::Cr ? "CR"
                                                                : "LF";
-    SetStatusText(encoding + (document_.HasBom() ? " (BOM)" : "") + " | " +
-                  LanguageName(document_.EffectiveLanguage()) + (document_.LanguageOverride() ? " (override)" : "") +
-                  " | EOL: " + eol);
+    // TRANSLATORS: Status arguments: encoding name, optional BOM annotation, syntax name,
+    // optional manual syntax override annotation, and line-ending name (CRLF, CR or LF).
+    SetStatusText(wxString::Format(_("%s%s | %s%s | EOL: %s"), encoding, document_.HasBom() ? " (BOM)" : "",
+                                   LanguageName(document_.EffectiveLanguage()),
+                                   document_.LanguageOverride() ? _(" (override)") : wxString{}, eol));
     UpdatePositionStatus();
 }
 
@@ -297,10 +303,10 @@ void EditorFrame::UpdatePositionStatus() {
     const auto caret = editor_->Send(Scintilla::Message::GetCurrentPos);
     const auto line = editor_->Send(Scintilla::Message::LineFromPosition, caret);
     const auto column = editor_->Send(Scintilla::Message::GetColumn, caret, line);
-    wxString position = wxString::Format("Ln %llu, Col %llu", static_cast<unsigned long long>(line) + 1,
+    wxString position = wxString::Format(_("Ln %llu, Col %llu"), static_cast<unsigned long long>(line) + 1,
                                          static_cast<unsigned long long>(column) + 1);
     const auto selected = editor_->SelectionCharacterCount();
-    if (selected) position += wxString::Format(" | Sel %lld", static_cast<long long>(selected));
+    if (selected) position += wxString::Format(_(" | Sel %lld"), static_cast<long long>(selected));
     SetStatusText(position, 1);
     auto* status = GetStatusBar();
     const int metadataWidth = status->GetTextExtent(status->GetStatusText()).x + FromDIP(20);
@@ -334,10 +340,10 @@ SaveResult EditorFrame::Save(const EncodingLossDecision& decideLoss, SaveTimeMod
     if (!document_.Path().empty()) {
         if (document_.RefreshReadOnlyFile()) {
             UpdateDocumentState();
-            if (wxMessageBox("\"" + document_.Path() + "\" is read only. Save to a different file?", "Read only file",
-                             wxYES_NO | wxICON_WARNING, this) != wxYES)
+            if (wxMessageBox(wxString::Format(_("\"%s\" is read only. Save to a different file?"), document_.Path()),
+                             _("Read only file"), wxYES_NO | wxICON_WARNING, this) != wxYES)
                 return {SaveStatus::Cancelled, {}};
-            const auto chosen = ChooseSaveFile(this, "Save As", document_.Language(), document_.Path());
+            const auto chosen = ChooseSaveFile(this, _("Save As"), document_.Language(), document_.Path());
             if (!chosen) return SaveAs(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
             return SaveAs(chosen->path, decideLoss, chosen->type, timeMode);
         }
@@ -350,7 +356,7 @@ SaveResult EditorFrame::Save(const EncodingLossDecision& decideLoss, SaveTimeMod
         UpdateDocumentState();
         return result;
     }
-    const auto chosen = ChooseSaveFile(this, "Save file", document_.Language(), document_.Path());
+    const auto chosen = ChooseSaveFile(this, _("Save file"), document_.Language(), document_.Path());
     if (!chosen) return SaveFirst(std::nullopt, decideLoss, SaveType::CurrentScheme, timeMode);
     return SaveFirst(chosen->path, decideLoss, chosen->type, timeMode);
 }
@@ -377,7 +383,7 @@ bool EditorFrame::UpdateFileTime() {
 }
 
 SaveResult EditorFrame::SaveAs() {
-    const auto chosen = ChooseSaveFile(this, "Save As", document_.Language(), document_.Path());
+    const auto chosen = ChooseSaveFile(this, _("Save As"), document_.Language(), document_.Path());
     if (!chosen) return SaveAs(std::nullopt);
     return SaveAs(chosen->path, {}, chosen->type);
 }
@@ -409,17 +415,20 @@ SaveResult EditorFrame::SaveCopy() {
         filename = initial.GetFullName();
     }
     const auto chosen =
-        ChooseSaveFile(this, "Save Copy", document_.Language(), document_.Path(), {directory, filename});
+        ChooseSaveFile(this, _("Save Copy"), document_.Language(), document_.Path(), {directory, filename});
     return SaveCopy(chosen ? std::optional<wxString>(chosen->path) : std::nullopt);
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
-    return LoadFile(source, [this] { return ConfirmDiscardChanges("opening another file"); }, encoding);
+    return LoadFile(
+        source, [this] { return ConfirmDiscardChanges(_("Save changes to %s before opening another file?")); },
+        encoding);
 }
 
 OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
                                  std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
-                                 OpenDecisionTiming decisionTiming, bool reload) {
+                                 OpenDecisionTiming decisionTiming, bool reload,
+                                 std::optional<EncodingChoice> sourceEncoding) {
     const auto result = document_.Open(
         source, beforeReplace, encoding, weakEncoding,
         [this] {
@@ -428,7 +437,7 @@ OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const st
             editor_->Send(Scintilla::Message::SetEdgeColumn,
                           document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
         },
-        decisionTiming);
+        decisionTiming, sourceEncoding);
     if (result.status == OpenStatus::Opened) {
         if (!reload && fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
         RefreshFileWatching();
@@ -451,7 +460,8 @@ void EditorFrame::RecordRecentFile() {
 
 void EditorFrame::ShowRecentFiles() {
     auto& preferences = settings_ ? settings_->values : defaults_;
-    if (preferences.recentFiles.empty() || !ConfirmDiscardChanges("opening recent files")) return;
+    if (preferences.recentFiles.empty() || !ConfirmDiscardChanges(_("Save changes to %s before opening recent files?")))
+        return;
     RecentFilesDialog dialog(
         this, preferences,
         [this] {
@@ -472,7 +482,7 @@ void EditorFrame::ShowRecentFiles() {
     if (selected) {
         const auto result = LoadFile(selected, [] { return true; });
         if (result.status == OpenStatus::Failed)
-            wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+            wxMessageBox(result.error, _("Could not open file"), wxOK | wxICON_ERROR, this);
     }
     UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
@@ -488,8 +498,8 @@ OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
 
 OpenResult EditorFrame::Revert() {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
-    if (document_.IsModified() && wxMessageBox("Revert file to last saved state? Your changes will be lost!", "Revert",
-                                               wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
+    if (document_.IsModified() && wxMessageBox(_("Revert file to last saved state? Your changes will be lost!"),
+                                               _("Revert"), wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
         return {OpenStatus::Cancelled, {}};
     return ReloadCurrentFile();
 }
@@ -498,8 +508,8 @@ OpenResult EditorFrame::ReloadWithEncoding() {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
     // F8's original DontSave path confirms loss before showing the picker.
     if (document_.IsModified() &&
-        wxMessageBox("Recoding requires reloading file from disk, unsaved changes will be lost!", "Reload Encoding",
-                     wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
+        wxMessageBox(_("Recoding requires reloading file from disk, unsaved changes will be lost!"),
+                     _("Reload Encoding"), wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
         return {OpenStatus::Cancelled, {}};
     // Original IDM_RECODE_SELECT maps the BOM variants to their source codec.
     // Native ANSI maps to CPI_NONE: the user must select an explicit source.
@@ -515,8 +525,8 @@ OpenResult EditorFrame::ReloadAsUtf8() {
     // Original CMD_RELOADUTF8 uses FileLoad(Reload), including FileSave(Ask)
     // before file I/O, with the view captured before Save cleanup can move it.
     return LoadFile(
-        document_.Path(), [this] { return ConfirmDiscardChanges("reloading"); }, FileEncoding::Utf8, std::nullopt,
-        OpenDecisionTiming::BeforeRead, true);
+        document_.Path(), [this] { return ConfirmDiscardChanges(_("Save changes to %s before reloading?")); },
+        FileEncoding::Utf8, std::nullopt, OpenDecisionTiming::BeforeRead, true);
 }
 
 OpenResult EditorFrame::Open() {
@@ -541,7 +551,7 @@ void EditorFrame::OnDropFiles(wxDropFilesEvent& event) {
     }
     const auto result = Open(source);
     if (result.status == OpenStatus::Failed)
-        wxMessageBox(result.error, "Could not open file", wxOK | wxICON_ERROR, this);
+        wxMessageBox(result.error, _("Could not open file"), wxOK | wxICON_ERROR, this);
 }
 
 OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
@@ -550,7 +560,7 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 }
 
 bool EditorFrame::NewDocument() {
-    if (!ConfirmDiscardChanges("creating a new document")) return false;
+    if (!ConfirmDiscardChanges(_("Save changes to %s before creating a new document?"))) return false;
     document_.New();
     if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
     RefreshFileWatching();
@@ -563,13 +573,13 @@ bool EditorFrame::NewDocument() {
     return true;
 }
 
-bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
+bool EditorFrame::ConfirmDiscardChanges(const wxString& prompt) {
     if (!document_.IsModified()) return true;
     if (CanDiscardUntitledWhitespace()) return true;
-    const wxString name = document_.Path().empty() ? wxString("Untitled") : document_.Path();
-    wxMessageDialog dialog(this, "Save changes to " + name + " before " + action + "?", "Save changes?",
+    const wxString name = document_.Path().empty() ? _("Untitled") : document_.Path();
+    wxMessageDialog dialog(this, wxString::Format(prompt, name), _("Save changes?"),
                            wxYES_NO | wxCANCEL | wxICON_QUESTION);
-    dialog.SetYesNoCancelLabels("&Save", "&Discard", "&Cancel");
+    dialog.SetYesNoCancelLabels(_("&Save"), _("&Discard"), _("&Cancel"));
     WXNOTE_TRACE("close.confirm", "\ttarget=%p\tstage=show-request\tdirty=1\tlength=%lld", static_cast<void*>(this),
                  static_cast<long long>(editor_->Send(Scintilla::Message::GetLength)));
     const int choice = dialog.ShowModal();
@@ -583,7 +593,7 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& action) {
     WXNOTE_TRACE("close.save-result", "\ttarget=%p\tsaved=%d", static_cast<void*>(this),
                  result.status == SaveStatus::Saved);
     if (result.status == SaveStatus::Failed)
-        wxMessageBox(result.error, "Could not save file", wxOK | wxICON_ERROR, this);
+        wxMessageBox(result.error, _("Could not save file"), wxOK | wxICON_ERROR, this);
     return result.status == SaveStatus::Saved;
 }
 
@@ -594,10 +604,11 @@ bool EditorFrame::SelectEncoding(EncodingChoice choice) {
         (editor_->Send(Scintilla::Message::GetLength) || editor_->Send(Scintilla::Message::GetUndoActions))) {
         const bool empty = editor_->Send(Scintilla::Message::GetLength) == 0;
         const wxString message =
-            empty ? "You are about to change the encoding of an empty file from ANSI to non-ANSI. Note that this will "
-                    "clear the undo history, as it can't be synchronized with the new encoding. Continue?"
-                  : "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text "
-                    "with default characters, and the undo history will be cleared. Continue?";
+            empty
+                ? _("You are about to change the encoding of an empty file from ANSI to non-ANSI. Note that this will "
+                    "clear the undo history, as it can't be synchronized with the new encoding. Continue?")
+                : _("Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text "
+                    "with default characters, and the undo history will be cleared. Continue?");
         if (!ShowEncodingWarning(empty ? EncodingWarning::EmptyAnsi : EncodingWarning::Ansi, message, true))
             return false;
     }
@@ -624,8 +635,9 @@ bool EditorFrame::CanDiscardUntitledWhitespace() const {
 EncodingLossChoice EditorFrame::ConfirmEncodingLoss() {
     return ShowEncodingWarning(
                EncodingWarning::DestinationLoss,
-               "Certain characters in the current text are not supported by the selected encoding, and may be replaced "
-               "by default placeholders when saving. It's recommended to choose another file encoding. Continue?",
+               _("Certain characters in the current text are not supported by the selected encoding, and may be "
+                 "replaced "
+                 "by default placeholders when saving. It's recommended to choose another file encoding. Continue?"),
                false)
                ? EncodingLossChoice::Replace
                : EncodingLossChoice::Cancel;
@@ -640,7 +652,7 @@ bool EditorFrame::ShowEncodingWarning(EncodingWarning warning, const wxString& m
     if (settings_) mode = settings_->MessageSuppression(key);
     if (mode == 1) return true;
     SearchFeedbackDialog dialog(this, key, message, true, mode != 2,
-                                yesNo ? "Encoding Conversion" : "Encoding character loss", yesNo);
+                                yesNo ? _("Encoding Conversion") : _("Encoding character loss"), yesNo);
     const auto choice = dialog.Choose();
     if (choice.suppress) {
         mode = 1;
