@@ -159,7 +159,7 @@ public:
         // The original host uses Ctrl for copy, including Ctrl+Shift.
         if (wxGetKeyState(WXK_CONTROL)) result = wxDragCopy;
 #endif
-        editor_.ShowDropFeedback(x, y);
+        if (!editor_.RunNativeOperation([&] { editor_.ShowDropFeedback(x, y); })) return wxDragNone;
         return result;
     }
     void OnLeave() override { editor_.ClearDropFeedback(); }
@@ -180,9 +180,12 @@ public:
         const auto& value = static_cast<wxTextDataObject*>(data->GetObject(data->GetReceivedFormat()))->GetText();
         const auto utf8 = value.ToUTF8();
         if (utf8.length() == 0) return wxDragNone;
-        const auto position =
-            editor_.SPositionFromLocation(core::Point(x, y), false, false, editor_.UserVirtualSpace());
-        editor_.DropAt(position, std::string_view(utf8.data(), utf8.length()), action == wxDragMove, false);
+        if (!editor_.RunNativeOperation([&] {
+                const auto position =
+                    editor_.SPositionFromLocation(core::Point(x, y), false, false, editor_.UserVirtualSpace());
+                editor_.DropAt(position, std::string_view(utf8.data(), utf8.length()), action == wxDragMove, false);
+            }))
+            return wxDragNone;
         return action;
     }
 
@@ -230,11 +233,28 @@ intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_
             ScintillaBase::WndProc(Message::SetScrollWidth, 1, 0);
         return result;
     } catch (const std::bad_alloc&) {
-        errorStatus = Scintilla::Status::BadAlloc;
+        RecoverFromResourceFailure(Scintilla::Status::BadAlloc);
     } catch (const core::Failure& failure) {
         errorStatus = failure.status;
+    } catch (const std::runtime_error&) {
+        RecoverFromResourceFailure(Scintilla::Status::Failure);
     }
     return 0;
+}
+
+void EditorControl::Core::RecoverFromResourceFailure(Scintilla::Status status) noexcept {
+    errorStatus = status;
+    paintState = PaintState::notPainting;
+    paintingAllText = false;
+    insideWrapScroll = false;
+    // Style and font refresh mark their caches valid before allocating. A
+    // failed pass must rebuild them, including any partially created pixmaps.
+    vs.fontsValid = false;
+    InvalidateStyleData();
+    scrollWidthDirty_ = true;
+    window_.lineNumberWidthDirty_ = true;
+    window_.bookmarkMarginWidthDirty_ = true;
+    window_.foldMarginWidthDirty_ = true;
 }
 
 EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_(window) {
@@ -305,11 +325,14 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
     gtkDragDrop_ = std::make_unique<GtkTextDragDrop>(
         window_,
         GtkTextDragDrop::Callbacks{[this] { return pdoc->IsReadOnly(); },
-                                   [this](int x, int y) { ShowDropFeedback(x, y); }, [this] { ClearDropFeedback(); },
+                                   [this](int x, int y) { return RunNativeOperation([&] { ShowDropFeedback(x, y); }); },
+                                   [this] { ClearDropFeedback(); },
                                    [this](int x, int y, std::string_view text, bool move) {
-                                       const auto position =
-                                           SPositionFromLocation(core::Point(x, y), false, false, UserVirtualSpace());
-                                       DropAt(position, text, move, false);
+                                       return RunNativeOperation([&] {
+                                           const auto position = SPositionFromLocation(core::Point(x, y), false, false,
+                                                                                       UserVirtualSpace());
+                                           DropAt(position, text, move, false);
+                                       });
                                    },
                                    [this](const wxString& path) {
                                        auto* event = new wxDropFilesEvent(wxEVT_DROP_FILES, 1, new wxString[1]{path});
@@ -378,6 +401,7 @@ void EditorControl::Core::Draw(wxDC& dc) {
         throw std::runtime_error("Direct2D paint target initialization failed");
     }
 #endif
+    if (!surface->Initialised()) throw std::bad_alloc();
     surface->SetMode({Scintilla::CpUtf8});
     const auto size = window_.GetClientSize();
     rcPaint = core::PRectangle(0, 0, size.x, size.y);
@@ -637,7 +661,14 @@ void EditorControl::Core::ShowDropFeedback(int x, int y) {
 }
 
 void EditorControl::Core::ClearDropFeedback() {
-    SetDragPosition(core::SelectionPosition(Sci::invalidPosition));
+    const core::SelectionPosition invalid(Sci::invalidPosition);
+    if (!RunNativeOperation([&] { SetDragPosition(invalid); })) {
+        // Clearing feedback can measure the caret before SetDragPosition clears
+        // its state. Native drag callbacks must still discard that stale caret.
+        posDrag = invalid;
+        posDrop = invalid;
+        Redraw();
+    }
 }
 
 bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
@@ -769,13 +800,23 @@ void EditorControl::Core::NotifyChange() const noexcept {
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {
-    if (notification.nmhdr.code == Scintilla::Notification::AutoCSelection) {
-        AcceptWordCompletion(window_, window_.completionSettings_, notification);
-        return;
-    }
     RecordNotificationChanges(notification);
-    HandleCompletionNotification(notification);
-    UpdateNotificationState(notification);
+    try {
+        if (notification.nmhdr.code == Scintilla::Notification::AutoCSelection) {
+            AcceptWordCompletion(window_, window_.completionSettings_, notification);
+            return;
+        }
+        HandleCompletionNotification(notification);
+        UpdateNotificationState(notification);
+    } catch (const std::bad_alloc&) {
+        // Notifications run inside the document's edit/undo transaction. Keep
+        // its mandatory revision bookkeeping even if optional UI work fails.
+        const_cast<Core*>(this)->RecoverFromResourceFailure(Scintilla::Status::BadAlloc);
+    } catch (const core::Failure& failure) {
+        const_cast<Core*>(this)->RecoverFromResourceFailure(failure.status);
+    } catch (const std::runtime_error&) {
+        const_cast<Core*>(this)->RecoverFromResourceFailure(Scintilla::Status::Failure);
+    }
 }
 
 void EditorControl::Core::RecordNotificationChanges(const Scintilla::NotificationData& notification) const noexcept {
@@ -783,22 +824,27 @@ void EditorControl::Core::RecordNotificationChanges(const Scintilla::Notificatio
         (static_cast<unsigned>(notification.modificationType) &
          static_cast<unsigned>(Scintilla::ModificationFlags::DeleteText)))
         scrollWidthDirty_ = true;
-    if (notification.nmhdr.code == Scintilla::Notification::UpdateUI && window_.occurrences_)
-        window_.occurrences_->Update(notification.updated);
-    // Original bookmark-margin clicks use the clicked line and keep the caret.
-    if (notification.nmhdr.code == Scintilla::Notification::MarginClick && notification.margin == 1 &&
-        window_.BookmarkMarginVisible()) {
-        const auto line = window_.Send(Message::LineFromPosition, notification.position);
-        window_.Send((window_.Send(Message::MarkerGet, line) & 1) ? Message::MarkerDelete : Message::MarkerAdd, line,
-                     0);
-    }
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&
         (static_cast<unsigned>(notification.modificationType) &
          static_cast<unsigned>(Scintilla::ModificationFlags::ChangeStyle | Scintilla::ModificationFlags::LexerState)))
         braceStyleChanged_ = true;
+    SelectionRevision();
+    if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
+        window_.lineNumberWidthDirty_ = true;
+        window_.bookmarkMarginWidthDirty_ = true;
+        window_.foldMarginWidthDirty_ = true;
+    }
+    if (notification.nmhdr.code == Scintilla::Notification::Modified &&
+        (static_cast<int>(notification.modificationType) &
+         static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {
+        ++window_.documentRevision_;
+        // An edit before or inside the cached range invalidates its count.
+        if (notification.position <= countedEnd_) selectionCountDirty_ = true;
+        if (notification.linesAdded != 0) window_.lineNumberWidthDirty_ = true;
+    }
 }
 
-void EditorControl::Core::HandleCompletionNotification(const Scintilla::NotificationData& notification) const noexcept {
+void EditorControl::Core::HandleCompletionNotification(const Scintilla::NotificationData& notification) const {
     if (notification.nmhdr.code == Scintilla::Notification::AutoCCharDeleted && window_.wordCompletionHandler_)
         window_.wordCompletionHandler_(WordCompletionCondition::CharacterDeleted);
     if (notification.nmhdr.code == Scintilla::Notification::AutoCCompleted ||
@@ -810,7 +856,7 @@ void EditorControl::Core::HandleCompletionNotification(const Scintilla::Notifica
 
 // Original Notepad4.cpp SCN_CHARADDED: listType excludes tentative input
 // and multiple-selection typing. Bracket and tag paths return before words.
-void EditorControl::Core::HandleCharacterAdded(const Scintilla::NotificationData& notification) const noexcept {
+void EditorControl::Core::HandleCharacterAdded(const Scintilla::NotificationData& notification) const {
     const int ch = notification.ch;
     if (ch == '\r' || ch == '\n') {
         if (window_.autoIndent_ && (pdoc->eolMode != Scintilla::EndOfLine::CrLf || ch != '\n')) window_.AutoIndent();
@@ -851,8 +897,16 @@ bool EditorControl::Core::ShouldCompleteTypedWord(const Scintilla::NotificationD
            window_.wordCompletionHandler_;
 }
 
-void EditorControl::Core::UpdateNotificationState(const Scintilla::NotificationData& notification) const noexcept {
-    SelectionRevision();
+void EditorControl::Core::UpdateNotificationState(const Scintilla::NotificationData& notification) const {
+    if (notification.nmhdr.code == Scintilla::Notification::UpdateUI && window_.occurrences_)
+        window_.occurrences_->Update(notification.updated);
+    // Original bookmark-margin clicks use the clicked line and keep the caret.
+    if (notification.nmhdr.code == Scintilla::Notification::MarginClick && notification.margin == 1 &&
+        window_.BookmarkMarginVisible()) {
+        const auto line = window_.Send(Message::LineFromPosition, notification.position);
+        window_.Send((window_.Send(Message::MarkerGet, line) & 1) ? Message::MarkerDelete : Message::MarkerAdd, line,
+                     0);
+    }
     if (notification.nmhdr.code == Scintilla::Notification::UpdateUI &&
         (static_cast<unsigned>(notification.updated) &
          ~static_cast<unsigned>(Scintilla::Update::VScroll | Scintilla::Update::HScroll))) {
@@ -861,20 +915,7 @@ void EditorControl::Core::UpdateNotificationState(const Scintilla::NotificationD
         const_cast<Core*>(this)->UpdateVisualBraceMatching();
     }
     if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
-        window_.lineNumberWidthDirty_ = true;
-        window_.bookmarkMarginWidthDirty_ = true;
-        window_.foldMarginWidthDirty_ = true;
         window_.SetCurrentLineHighlightMode(window_.GetCurrentLineHighlightMode());
-    }
-    if (notification.nmhdr.code == Scintilla::Notification::Modified &&
-        (static_cast<int>(notification.modificationType) &
-         static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {
-        ++window_.documentRevision_;
-        // An edit within the cached range changes its contents; an edit
-        // before it can move its endpoints, even across a batch of edits
-        // that returns them to their old positions before the next query.
-        if (notification.position <= countedEnd_) selectionCountDirty_ = true;
-        if (notification.linesAdded != 0) window_.lineNumberWidthDirty_ = true;
     }
     if (notification.nmhdr.code == Scintilla::Notification::UpdateUI ||
         notification.nmhdr.code == Scintilla::Notification::SavePointReached ||

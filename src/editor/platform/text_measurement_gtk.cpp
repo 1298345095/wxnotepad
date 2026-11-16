@@ -243,7 +243,10 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
         throw std::runtime_error("The native Cairo measurement context is unavailable");
 
     ObjectPtr<PangoContext> source(pango_cairo_create_context(cairo));
-    data_->pool = MeasurementPool(pango_context_get_font_map(source.get()));
+    if (!source) throw std::runtime_error("The native Pango measurement context is unavailable");
+    auto* fontMap = pango_context_get_font_map(source.get());
+    if (!fontMap) throw std::runtime_error("The native Pango measurement font map is unavailable");
+    data_->pool = MeasurementPool(fontMap);
     data_->resolution = pango_cairo_context_get_resolution(source.get());
     if (const auto* matrix = pango_context_get_matrix(source.get())) data_->matrix = *matrix;
     data_->direction = pango_context_get_base_dir(source.get());
@@ -258,6 +261,8 @@ TextMeasurement::TextMeasurement(wxDC& dc) : data_(std::make_unique<Data>()) {
     FontOptions explicitOptions(cairo_font_options_create(), &cairo_font_options_destroy);
     cairo_surface_get_font_options(cairo_get_target(cairo), options.get());
     cairo_get_font_options(cairo, explicitOptions.get());
+    if (cairo_font_options_status(explicitOptions.get()) != CAIRO_STATUS_SUCCESS)
+        throw std::runtime_error("The native Cairo measurement context font options are unavailable");
     cairo_font_options_merge(options.get(), explicitOptions.get());
     if (cairo_font_options_status(options.get()) != CAIRO_STATUS_SUCCESS)
         throw std::runtime_error("The native Cairo measurement font options are unavailable");

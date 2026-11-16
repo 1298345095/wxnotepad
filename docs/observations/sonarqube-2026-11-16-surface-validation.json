@@ -1,0 +1,574 @@
+{
+  "phase": "local validation before the batched branch push",
+  "base_revision": "a308c6b181674358205df90669293cc4afcab3af",
+  "reproduction_baseline_revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+  "baseline_note": "Application, patch and test trees are identical between these baseline revisions.",
+  "branch": "codex/sonarcloud-followup-2026-11-16",
+  "prepared_core": {
+    "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+    "archive_sha256": "6872820d13812093dc26fab944efc1a6408dd296c786154c03c90ff65f042315",
+    "patch_sha256": "6a14fdca5bae09352a42475d06ae7cc316cb02316e77dc65b2fe4801527922f6",
+    "preparation_sha256": "cd85c9def6a4c4f4473f796286906e5642464aaf66ac4686188182d74d2db4fa"
+  },
+  "source_inputs": {
+    "CMakeLists.txt": "262512c1493bc6b3fd8659d8929d4e177cb6d98960758b164cde2b1d24fe11e7",
+    "patches/original-core.patch": "6a14fdca5bae09352a42475d06ae7cc316cb02316e77dc65b2fe4801527922f6",
+    "src/editor/editor_control.cpp": "60ff0d4e645eb2c311f06456f5d6bb3179d2b7aaa58c8741525cd891a4f38bd2",
+    "src/editor/editor_control.h": "dc33c9502cce647552c4f75c683927b478336e4fb897bb3d45df2f3535951f09",
+    "src/editor/editor_core.cpp": "f3f759f82f0753adf58f4707fd8277047e293302dbab65a3787ba15366915db6",
+    "src/editor/editor_core.h": "9ad0c9f4550a46ce2fa6f334c6eaecb3bd62e699410d06ea3f0995e4d192b38f",
+    "src/editor/platform/gtk_drag_drop.cpp": "4edb1b30644d6ec7f2ed938d38b7e416e47e45122489f359e7c62e7b1e2583fd",
+    "src/editor/platform/gtk_drag_drop.h": "6cfcb721389bce9f3da82cc118d9327f428e765c065695913e3a9ce7a79fa101",
+    "src/editor/platform/parallel_tasks.h": "d8ed2d6f56fa75b9748c35bf8271c4a26709985ac0faaba4a901ef99c74765f9",
+    "src/editor/platform/text_measurement_gtk.cpp": "c3a01b2d550fb40883eae6b23aee335bdbaf5f6c62012eafd806a703f6fd0f8d",
+    "src/editor/platform/text_measurement_msw.cpp": "e81c1de2c56acd07e4fafde9266e371fe4cf440d0cd3ac80f454b28f3d431d32",
+    "src/editor/platform/wx_platform.cpp": "9c05bf938a7d775637655b08361c311a356f8051ae525277e08c3578289a5963",
+    "tests/completion_allocation_fault.cpp": "fbc09ae8e5c484498962fff09a47558af5916952590928d14d38d54b99b85e30",
+    "tests/completion_allocation_fault.h": "df3b16d68fe3f8c9c8becee8275bc697c06e38832d1312d799f07db00253ed3d",
+    "tests/parallel_surface_failure.cpp": "7fd3cce85dd6bd2401dc5a312589b02b04cb389e0899a8437fdd23a080536f25",
+    "tests/surface_initialization.cpp": "a351a2f0067bad7a16246a569fc5863a41e8f869eff4039f297a14a269b6dd30"
+  },
+  "native_evidence": {
+    "baseline_commit": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+    "scope": "Actual wxWidgets/Cairo/Pango surface initialization and clipping; GUI event/history fixture is compiled and pending hosted execution",
+    "probe_results": {
+      "surface-init-red": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-init-red"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": false,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-init-red"
+            ],
+            "status": "completed",
+            "exit_code": 86,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-init-red/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-init-green": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-init-green"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-init-green"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-init-green/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-borrowed-red": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+          "init"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": false,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+              "init"
+            ],
+            "status": "completed",
+            "exit_code": 86,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-borrowed-red/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-borrowed-green": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "init"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "init"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-borrowed-green/run-001.log",
+            "seconds": 0.032
+          }
+        ]
+      },
+      "surface-clip-red": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+          "clip"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": false,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+              "clip"
+            ],
+            "status": "completed",
+            "exit_code": 86,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-clip-red/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-clip-green": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "clip"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "clip"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-clip-green/run-001.log",
+            "seconds": 0.032
+          }
+        ]
+      },
+      "surface-lifo-red": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+          "lifo"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": false,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-red",
+              "lifo"
+            ],
+            "status": "completed",
+            "exit_code": 1,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-lifo-red/run-001.log",
+            "seconds": 0.024
+          }
+        ]
+      },
+      "surface-lifo-green": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "lifo"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "lifo"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-lifo-green/run-001.log",
+            "seconds": 0.035
+          }
+        ]
+      },
+      "parallel-surface-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/cmake/parallel_surface_failure"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/cmake/parallel_surface_failure"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-surface-final/run-001.log",
+            "seconds": 0.114
+          }
+        ]
+      },
+      "surface-init-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-init-green"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-init-green"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-init-final/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-borrowed-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "init"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "init"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-borrowed-final/run-001.log",
+            "seconds": 0.032
+          }
+        ]
+      },
+      "surface-clip-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "clip"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "clip"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-clip-final/run-001.log",
+            "seconds": 0.033
+          }
+        ]
+      },
+      "surface-lifo-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+          "lifo"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/surface-borrowed-green",
+              "lifo"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/surface-lifo-final/run-001.log",
+            "seconds": 0.032
+          }
+        ]
+      },
+      "parallel-surface-rectangular-final": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/cmake/parallel_surface_failure"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/cmake/parallel_surface_failure"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-surface-rectangular-final/run-001.log",
+            "seconds": 0.115
+          }
+        ]
+      }
+    },
+    "outputs": {
+      "surface-init-red": "",
+      "surface-init-green": "PASS: exact owned DC allocation fails before native handle access and leaves an uninitialized surface\n",
+      "surface-borrowed-red": "",
+      "surface-borrowed-green": "PASS: actual Cairo/Pango borrowed object/data initialization failure and retry\n",
+      "surface-clip-red": "",
+      "surface-clip-green": "PASS: actual Cairo clipping clip; allocation failures=3\n",
+      "surface-lifo-red": "FAIL: native clipping rectangle is preserved\n",
+      "surface-lifo-green": "PASS: actual Cairo clipping lifo; allocation failures=0\n",
+      "parallel-surface-final": "PASS: production parallel tasks join before propagating resource failures and permit retry\n",
+      "surface-init-final": "PASS: exact owned DC allocation fails before native handle access and leaves an uninitialized surface\n",
+      "surface-borrowed-final": "PASS: actual Cairo/Pango borrowed object/data initialization failure and retry\n",
+      "surface-clip-final": "PASS: actual Cairo clipping clip; allocation failures=3\n",
+      "surface-lifo-final": "PASS: actual Cairo clipping lifo; allocation failures=0\n",
+      "parallel-surface-rectangular-final": "PASS: production parallel tasks join before propagating resource failures and permit retry\n"
+    },
+    "source_sha256": {
+      "native-build/baseline-wx-platform.cpp": "06e1960cac7063f3607048d8e071331b5b1e7bc6a1ec4394e8e14540d97b334d",
+      "native-build/surface-init-headless-probe.cpp": "846fd0b9f588e6a6d8c991dfde589514fe95a6870f18a0966aa60be37d19b1d9",
+      "native-build/surface-borrowed-headless-probe.cpp": "c18d71d306b2dac8da896496af2a25c3c618546a3e05af5c47918e37959d7797",
+      "wxnotepad/src/editor/platform/wx_platform.cpp": "9c05bf938a7d775637655b08361c311a356f8051ae525277e08c3578289a5963",
+      "wxnotepad/tests/completion_allocation_fault.cpp": "fbc09ae8e5c484498962fff09a47558af5916952590928d14d38d54b99b85e30",
+      "wxnotepad/src/editor/platform/text_measurement_gtk.cpp": "c3a01b2d550fb40883eae6b23aee335bdbaf5f6c62012eafd806a703f6fd0f8d",
+      "wxnotepad/src/editor/platform/text_measurement_msw.cpp": "e81c1de2c56acd07e4fafde9266e371fe4cf440d0cd3ac80f454b28f3d431d32",
+      "wxnotepad/src/editor/platform/parallel_tasks.h": "d8ed2d6f56fa75b9748c35bf8271c4a26709985ac0faaba4a901ef99c74765f9",
+      "wxnotepad/tests/completion_allocation_fault.h": "df3b16d68fe3f8c9c8becee8275bc697c06e38832d1312d799f07db00253ed3d",
+      "wxnotepad/tests/surface_initialization.cpp": "a351a2f0067bad7a16246a569fc5863a41e8f869eff4039f297a14a269b6dd30",
+      "wxnotepad/tests/parallel_surface_failure.cpp": "7fd3cce85dd6bd2401dc5a312589b02b04cb389e0899a8437fdd23a080536f25",
+      "wxnotepad/patches/original-core.patch": "6a14fdca5bae09352a42475d06ae7cc316cb02316e77dc65b2fe4801527922f6",
+      "wxnotepad/CMakeLists.txt": "262512c1493bc6b3fd8659d8929d4e177cb6d98960758b164cde2b1d24fe11e7",
+      "wxnotepad/src/editor/editor_core.cpp": "f3f759f82f0753adf58f4707fd8277047e293302dbab65a3787ba15366915db6",
+      "wxnotepad/src/editor/editor_core.h": "9ad0c9f4550a46ce2fa6f334c6eaecb3bd62e699410d06ea3f0995e4d192b38f",
+      "wxnotepad/src/editor/editor_control.cpp": "60ff0d4e645eb2c311f06456f5d6bb3179d2b7aaa58c8741525cd891a4f38bd2",
+      "wxnotepad/src/editor/editor_control.h": "dc33c9502cce647552c4f75c683927b478336e4fb897bb3d45df2f3535951f09",
+      "wxnotepad/src/editor/platform/gtk_drag_drop.cpp": "4edb1b30644d6ec7f2ed938d38b7e416e47e45122489f359e7c62e7b1e2583fd",
+      "wxnotepad/src/editor/platform/gtk_drag_drop.h": "6cfcb721389bce9f3da82cc118d9327f428e765c065695913e3a9ce7a79fa101"
+    },
+    "validated_utc": "2026-11-16T13:58:02.776405+00:00",
+    "final_native_builds": [
+      {
+        "targets": [
+          "surface_initialization",
+          "parallel_surface_failure",
+          "measurement_threads",
+          "surface_images",
+          "completion_allocation"
+        ],
+        "command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && cmake --build /workspace/scratch/44c8652c3121/native-build/cmake --target surface_initialization parallel_surface_failure measurement_threads surface_images completion_allocation -j8",
+        "exit_code": 0,
+        "log": "/workspace/scratch/44c8652c3121/native-build/final-rectangular-build.log",
+        "log_sha256": "9620057c9fd1b87f235e89c22119e59a8c4eea892ff853b932ff7d42da1ef30d",
+        "log_tail": [
+          "[35/41] Linking CXX executable surface_images",
+          "[36/41] Linking CXX executable measurement_threads",
+          "[37/41] Building CXX object CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.o",
+          "[38/41] Linking CXX executable surface_initialization",
+          "[39/41] Building CXX object CMakeFiles/completion_allocation.dir/tests/completion_allocation.cpp.o",
+          "[40/41] Linking CXX executable completion_allocation"
+        ]
+      },
+      {
+        "command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && python3 /workspace/scratch/44c8652c3121/native-build/build-surface-probes.py",
+        "exit_code": 0,
+        "log": "/workspace/scratch/44c8652c3121/native-build/surface-probe-build-final-rectangular.log",
+        "log_sha256": "0b775b6c2f86f6771ff275173a24baf2a31ec2bbcf9d72fa1546086b914df95f",
+        "log_tail": [
+          "Built exact-baseline and current owned-Init allocation probes"
+        ]
+      },
+      {
+        "targets": [
+          "wxnotepad"
+        ],
+        "command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && cmake --build /workspace/scratch/44c8652c3121/native-build/cmake --target wxnotepad -j8",
+        "exit_code": 0,
+        "log": "/workspace/scratch/44c8652c3121/native-build/final-application-build.log",
+        "log_sha256": "2f2965a6dd2565ba94365f0f5e2ff8444d1d16313e8b4aa8592987d8b442d148",
+        "log_tail": [
+          "/workspace/scratch/44c8652c3121/wxnotepad/po/wxstd/zh_CN.po: 1983 translated messages.",
+          "/workspace/scratch/44c8652c3121/wxnotepad/po/zh_TW.po: 546 translated messages.",
+          "/workspace/scratch/44c8652c3121/wxnotepad/po/wxstd/zh_TW.po: 1922 translated messages, 33 fuzzy translations, 28 untranslated messages.",
+          "[2/5] cd /workspace/scratch/44c8652c3121/native-build/cmake && /workspace/scratch/44c8652c3121/local-python/cmake/data/bin/cmake -E copy_directory /workspace/scratch/44c8652c3121/native-build/cmake/catalogs/locale /workspace/scratch/44c8652c3121/native-build/cmake/locale",
+          "[3/5] Building CXX object CMakeFiles/wxnotepad.dir/src/app/main.cpp.o",
+          "[4/5] Linking CXX executable wxnotepad"
+        ]
+      }
+    ],
+    "local_environment": {
+      "wxwidgets": "3.3.3",
+      "gtk": "3.24.49",
+      "compiler": "GCC 14.2",
+      "configuration": "Release with wxDEBUG_LEVEL=0 matching local SDK",
+      "gui_runtime": "Unavailable: sandbox disallows AF_UNIX sockets; GUI paint/history/rectangular cases compiled and linked, awaiting hosted Windows/X11/Wayland CI."
+    },
+    "final_checks": {
+      "canonical_clang_format_23_1_2": 0,
+      "git_diff_check": 0
+    }
+  },
+  "parallel_exception_regression": {
+    "kind": "observed regression mutation run",
+    "capture": "Recorded from the successful tool execution that compiled and ran this scratch mutant; execution was not repeated for this receipt.",
+    "baseline_probe_directory": "/workspace/scratch/44c8652c3121/parallel-probe-1",
+    "baseline_exit_code": 0,
+    "mutation": "Replace the one future.get(); in ParallelTasks::Detail::RunAsync with future.wait();",
+    "mutant_header": "/workspace/scratch/44c8652c3121/parallel-core-review/mutant/editor/platform/parallel_tasks.h",
+    "mutant_header_sha256": "9c65528b4bfecbdf265d98e75f03a63f882229399ee65dfcfbfe0ecefefd1e27",
+    "compile_argv": [
+      "g++",
+      "-std=c++23",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-pthread",
+      "-I/workspace/scratch/44c8652c3121/parallel-core-review/mutant",
+      "/workspace/scratch/44c8652c3121/wxnotepad/tests/parallel_surface_failure.cpp",
+      "-o",
+      "/workspace/scratch/44c8652c3121/parallel-core-review/mutant-wait"
+    ],
+    "compile_exit_code": 0,
+    "run_argv": [
+      "/workspace/scratch/44c8652c3121/parallel-core-review/mutant-wait"
+    ],
+    "run_timeout_seconds": 20,
+    "run_exit_code": 1,
+    "stdout": "",
+    "stderr": "FAIL: a failed worker must prevent consuming its incomplete output\n",
+    "mutant_executable_sha256": "68a0d489a3774f78c41f9052d451354f83d6b218fc9910929ac5ed3fb5a1900b"
+  },
+  "parallel_sanitizers": {
+    "compile_argv": [
+      "g++",
+      "-std=c++23",
+      "-O1",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-fsanitize=address,undefined",
+      "-fno-omit-frame-pointer",
+      "-pthread",
+      "-Isrc",
+      "tests/parallel_surface_failure.cpp",
+      "-o",
+      "/workspace/scratch/44c8652c3121/parallel_surface_failure_san"
+    ],
+    "environment": {
+      "ASAN_OPTIONS": "detect_leaks=0",
+      "UBSAN_OPTIONS": "halt_on_error=1"
+    },
+    "scope": "AddressSanitizer and UndefinedBehaviorSanitizer; LeakSanitizer disabled for the sandbox ptrace restriction.",
+    "probe": {
+      "command": [
+        "/workspace/scratch/44c8652c3121/parallel_surface_failure_san"
+      ],
+      "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+      "timeout_seconds": 30.0,
+      "requested_runs": 1,
+      "completed_runs": 1,
+      "success": true,
+      "results": [
+        {
+          "command": [
+            "/workspace/scratch/44c8652c3121/parallel_surface_failure_san"
+          ],
+          "status": "completed",
+          "exit_code": 0,
+          "log": "/workspace/scratch/44c8652c3121/native-build/probes/parallel-surface-sanitized/run-001.log",
+          "seconds": 0.114
+        }
+      ]
+    },
+    "output": "PASS: production parallel tasks join before propagating resource failures and permit retry\n"
+  },
+  "python_helpers": {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_*.py",
+      "-v"
+    ],
+    "environment": "CMake and Ninja from the local tool runtime on PATH",
+    "tests_run": 53,
+    "passed": 44,
+    "skipped": 9,
+    "exit_code": 0,
+    "log_sha256": "825f868f2629c1a28f546be129acb96255abcdcfd51e39de1150ba520eda293f",
+    "log_tail": [
+      "----------------------------------------------------------------------",
+      "Ran 53 tests in 2.076s",
+      "",
+      "OK (skipped=9)"
+    ]
+  },
+  "other_checks": {
+    "canonical_formatter": "clang-format 23.1.2",
+    "changed_and_new_cpp_format_exit_code": 0,
+    "python_syntax_command": [
+      "python3",
+      "-m",
+      "compileall",
+      "-q",
+      ".github/scripts",
+      "tools",
+      "tests"
+    ],
+    "python_syntax_exit_code": 0,
+    "git_diff_check_exit_code": 0,
+    "tracked_cpp_files_formatted": 373,
+    "canonical_format_exit_code": 0
+  },
+  "hosted_validation": {
+    "status": "scheduled by the pull request after this code commit",
+    "required_platforms": [
+      "Windows MSVC",
+      "Linux GCC 13 / X11",
+      "Linux GCC 13 / Wayland"
+    ],
+    "gui_execution": "The new GUI paint, document-history and rectangular-Undo fixture is compiled locally; its desktop execution is recorded by the pull request checks.",
+    "result_location": "The continuation pull request description records final CI, Quality, Fuzz, CodeQL and SonarCloud results for the pushed SHA."
+  }
+}

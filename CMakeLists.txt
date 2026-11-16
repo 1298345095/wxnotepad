@@ -799,6 +799,18 @@ if(BUILD_TESTING)
     target_sources(completion_allocation PRIVATE tests/completion_allocation_fault.cpp)
     target_include_directories(completion_allocation PRIVATE src/editor/platform)
 
+    add_editor_test(surface_initialization native_surface_initialization_failures 60)
+    target_sources(surface_initialization PRIVATE tests/completion_allocation_fault.cpp)
+    target_include_directories(surface_initialization PRIVATE src/editor/platform
+        "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+
+    add_executable(parallel_surface_failure tests/parallel_surface_failure.cpp)
+    target_include_directories(parallel_surface_failure PRIVATE src)
+    target_link_libraries(parallel_surface_failure PRIVATE Threads::Threads)
+    target_compile_definitions(parallel_surface_failure PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+    add_test(NAME native_parallel_surface_failures COMMAND parallel_surface_failure)
+    set_tests_properties(native_parallel_surface_failures PROPERTIES TIMEOUT 20)
+
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

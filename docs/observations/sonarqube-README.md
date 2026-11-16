@@ -8,8 +8,9 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [2026-11-16 follow-up after PR #219](#2026-11-16-follow-up-after-pr-219),
-tracked in [PR #220](https://github.com/1298345095/wxnotepad/pull/220).
+Latest review: [2026-11-16 surface and parallel failure follow-up](#2026-11-16-surface-and-parallel-failure-follow-up),
+continuing on `codex/sonarcloud-followup-2026-11-16` after
+[PR #220](https://github.com/1298345095/wxnotepad/pull/220) merged.
 
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
@@ -547,18 +548,13 @@ checks against the code revision.
 
 ### Surface initialization follow-up
 
-Source review also identified an allocation/native-resource failure boundary in
+The PR #220 source review identified an allocation/native-resource failure boundary in
 `WxSurface::Init`: both overloads are `noexcept`, while constructing their
-device context or text-measurement state can throw. This is a source-observed
-risk; the present workspace has no GUI resource-failure reproduction.
-
-Recovery requires coordinated failure handling across surface initialization
-and its consumers. The current factories return a surface without checking
-`Initialised`, and several consumers dereference it unconditionally. A local
-catch followed by returning a partially initialized surface would therefore
-leave another failure path. The focused follow-up leaves this larger change
-open for owned/borrowed context fault injection, retry, native event-boundary
-handling and document-history validation on the supported backends.
+device context or text-measurement state can throw. Its factories also returned
+a surface without checking `Initialised`, and consumers dereferenced the result.
+The [continuation below](#2026-11-16-surface-and-parallel-failure-follow-up)
+implements coordinated initialization, factory, worker and host recovery, with
+owned/borrowed context fault injection and document-history regression fixtures.
 
 Source references: [wx surface adapter](../../src/editor/platform/wx_platform.cpp),
 [GTK measurement](../../src/editor/platform/text_measurement_gtk.cpp),
@@ -566,3 +562,120 @@ Source references: [wx surface adapter](../../src/editor/platform/wx_platform.cp
 [native core entry points](../../src/editor/editor_core.cpp),
 [pinned surface contract](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Platform.h)
 and [pinned surface factories](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.cxx).
+
+## 2026-11-16 surface and parallel failure follow-up
+
+This continuation starts from merged `main` revision
+`a308c6b181674358205df90669293cc4afcab3af` and reuses
+`codex/sonarcloud-followup-2026-11-16`. The earlier branch tip
+`8d4e6be10afc17db6b88690db3407f7a73d5f29c` supplies the unchanged application
+baseline for the local failure reproductions and issue-by-issue source review.
+
+### Resource failure fixes
+
+- Build the owned drawing context and text-measurement state in local owners,
+  then publish the complete `WxSurface`. Failed `Init` leaves a reusable,
+  uninitialized surface under the pinned no-throw contract. A ready surface
+  requires both drawing and measurement resources. GTK checks the Pango context,
+  font map and Cairo font options; Windows checks the native DC and mapping
+  queries before retaining their results. Pixmap creation checks its bitmap and
+  context and publishes measurement state together with them.
+- Check readiness at the wx drawing and default-measurement factories, so a
+  failed initialization cannot reach an unconditional consumer dereference.
+  DirectWrite's measurement-only surface retains its existing targetless
+  initialization behavior.
+- Reserve clip ownership storage before changing native clipping and allow the
+  wx `SetClip` override to propagate allocation failure. Destroy nested clip
+  scopes from the innermost outward before releasing their context. The latter
+  fixes a separately reproduced native clipping-rectangle restoration error.
+- Use the shared production `ParallelTasks::Run` in both layout and wrapping.
+  Linux retrieves every future's result; Windows captures exceptions inside
+  the native thread-pool callback. Both implementations finish all started work
+  before propagating failure and releasing the worker or its output buffers.
+  A failed Windows work-item creation reports its original system error.
+- Recover at the editor's message, native event, paint, IME and drag boundaries.
+  Recovery records the failure status, resets transient painting/wrapping
+  state, and invalidates partial style, font and pixmap caches for the next
+  normal layout. A failed text drop reports failure to the native drag source.
+  Feedback cleanup also contains its own measurement failure and clears stale
+  drop-caret state.
+- Complete mandatory document notifications after a visual resource failure.
+  The pinned edit/Undo path contains individual visual updates while preserving
+  contraction, selection, revision and history work. The wx notification bridge
+  records mandatory document/selection changes before optional completion and
+  queued UI work. This keeps subsequent edits and Undo/Redo available after an
+  insertion has already committed its bytes.
+- Preserve the original main row when style refresh or a retry reconstructs a
+  rectangular selection. Undo restores that row after its final caret update,
+  and a later paint retry preserves it when rebuilding the ranges.
+
+The maintained core changes are in
+[`patches/original-core.patch`](../../patches/original-core.patch); the source
+archive remains pinned and SHA-256 checked. The same archive passed patch
+validation and native compilation with the complete changes.
+
+### Reviewed false positives
+
+The [surface continuation disposition ledger](sonarqube-2026-11-16-surface-dispositions.json)
+records 93 individually reviewed main-context findings, their exact source
+contracts, submitted MCP comments and transition receipts.
+All 93 transitions succeeded. An exact-key `FALSE_POSITIVE` query returned
+every reviewed key; the corresponding `OPEN`/`CONFIRMED` query returned zero.
+After the completed PR #220 main analysis and these dispositions, the current
+main query contains 3,819 OPEN/CONFIRMED issues, zero HIGH/BLOCKER issues and
+zero security/reliability findings.
+
+| Rule | Count | Source evidence |
+| --- | --- | --- |
+| S1238 | 23 | The methods implement the pinned Scintilla `Surface`, `Window` or calltip signatures. Changing their by-value parameters to references would change the required declaration or override. |
+| S6188 | 2 | `PolyLine` and `Polygon` implement the pinned pointer/count virtual interface; a span parameter would no longer override that interface. |
+| S6022 | 60 | Character literals index the 256-character completion membership set through a word index and bit position. Their values describe language characters used in arithmetic. |
+| S6022 | 8 | `GetRangePointer` transports the original `const char*` document text through the Scintilla message ABI; each reviewed consumer reads UTF-8 strings or individual characters. |
+
+General modernization suggestions retain their existing review status. These
+93 dispositions follow the actual declarations and data consumers for each
+issue key.
+
+### Regression coverage and local results
+
+`native_surface_initialization_failures` uses the real editor and native drawing
+contexts. It covers owned/borrowed initialization failure and retry, missing and
+invalid contexts, drawing-factory rejection, allocation failures in nested
+clipping, actual paint dispatch, and unchanged document bytes, selections,
+Undo/Redo and save points. It also injects failure after insertion commits and
+at successive visual allocations during Undo, checking continued editing and
+history restoration. A three-line rectangular case checks every anchor, caret
+and virtual-space offset, the original main row, and complete restoration after
+paint retry, Redo and another Undo.
+
+`native_parallel_surface_failures` executes the same task helper used by layout
+and wrapping. It checks allocation and native-resource exceptions, pending
+callbacks still writing their output, startup failure after 0/1/3 tasks, competing
+worker/startup errors, native work-item creation failure on Windows, and a
+successful subsequent batch. Existing parallel measurement and raster fixtures
+retain their numerical comparisons.
+
+Actual headless Cairo/Pango probes link the complete baseline or repaired wx
+platform implementation. They use real native image contexts and the production
+allocation-fault helper:
+
+| Probe | Baseline outcome | Repaired outcome |
+| --- | --- | --- |
+| Owned initialization, failure allocating `wxClientDC` | Terminate handler, exit 86 | Uninitialized/reusable surface, exit 0 |
+| Borrowed initialization, measurement object/data allocations | Terminate handler, exit 86 | Actual Cairo/Pango retry succeeds, exit 0 |
+| Nested clip allocation sweep | Terminate handler, exit 86 | Three allocation points recover and retry, exit 0 |
+| Release two nested clips | Wrong native clipping rectangle, exit 1 | Original native rectangle restored, exit 0 |
+| Production parallel task regression with `get()` changed back to `wait()` | Lost worker failure detected, exit 1 | All tasks joined and exception preserved, exit 0 |
+
+The [local validation record](sonarqube-2026-11-16-surface-validation.json)
+retains source hashes, probe outputs, process results and build evidence.
+The Python helper suite passes 44 tests with nine existing platform/tool skips.
+Canonical clang-format 23.1.2, Python syntax and whitespace checks pass.
+The production parallel helper also passes AddressSanitizer and
+UndefinedBehaviorSanitizer; leak detection is disabled for the sandbox's ptrace
+restriction.
+The application and affected native fixtures compile and link against
+wxWidgets 3.3.3 and the local GTK SDK. The local sandbox cannot create the display
+sockets needed to execute GUI fixtures; the continuation pull request runs those
+fixtures through the existing Windows, X11, Wayland and coverage jobs. Its checks
+and description record the final hosted revision and analysis results.

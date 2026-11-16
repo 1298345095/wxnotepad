@@ -453,3 +453,283 @@
  #include <cstring>
  
  #include <string>
+--- a/scintilla/src/Editor.cxx
++++ b/scintilla/src/Editor.cxx
+@@ -25,10 +25,15 @@
+ #include <algorithm>
+ #include <iterator>
+ #include <memory>
++#include <new>
++#include <stdexcept>
+ #include <atomic>
+ //#include <future>
+ 
+ #include "ParallelSupport.h"
++#ifdef __WX__
++#include "parallel_tasks.h"
++#endif
+ #include "ScintillaTypes.h"
+ #include "ScintillaMessages.h"
+ #include "ScintillaStructures.h"
+@@ -260,7 +265,15 @@
+ 			vs.Refresh(*surface, pdoc->tabInChars);
+ 		}
+ 		SetScrollBars();
++#ifdef __WX__
++		const size_t mainBeforeRefresh = sel.Main();
++#endif
+ 		SetRectangularRange();
++#ifdef __WX__
++		if (mainBeforeRefresh < sel.Count()) {
++			sel.SetMain(mainBeforeRefresh);
++		}
++#endif
+ 	}
+ }
+ 
+@@ -1618,7 +1631,9 @@
+ 		length = std::min(length/(blockSize/2), linesBeingWrapped);
+ 		const uint32_t threadCount = std::min(static_cast<uint32_t>(length), model.hardwareConcurrency);
+ 
+-#if USE_STD_ASYNC_FUTURE
++#if defined(__WX__)
++		ParallelTasks::Run(threadCount, [this] { DoWork(); });
++#elif USE_STD_ASYNC_FUTURE
+ 		std::vector<std::future<void>> features;
+ 		for (uint32_t i = 0; i < threadCount; i++) {
+ 			features.push_back(std::async(std::launch::async, [this] {
+@@ -1683,7 +1698,7 @@
+ 		wrappedBytesAllThread.fetch_add(wrappedBytesOneThread, std::memory_order_relaxed);
+ 	}
+ 
+-#if USE_WIN32_PTP_WORK
++#if USE_WIN32_PTP_WORK && !defined(__WX__)
+ 	static VOID CALLBACK WorkCallback([[maybe_unused]] PTP_CALLBACK_INSTANCE instance, PVOID context, [[maybe_unused]] PTP_WORK work) {
+ 		WrapBlockWorker *worker = static_cast<WrapBlockWorker *>(context);
+ 		worker->DoWork();
+@@ -2579,6 +2594,30 @@
+ }
+ 
+ void Editor::RestoreSelection(Sci::Position newPos, UndoRedo history) {
++	const auto updateView = [this](auto update) {
++#ifdef __WX__
++		try {
++			update();
++		} catch (const std::bad_alloc &) {
++			// A failed visual resource must not interrupt document notifications
++			// or the selection/history restoration surrounding this operation.
++			errorStatus = Status::BadAlloc;
++			vs.fontsValid = false;
++			insideWrapScroll = false;
++			InvalidateStyleData();
++		} catch (const std::runtime_error &) {
++			errorStatus = Status::Failure;
++			vs.fontsValid = false;
++			insideWrapScroll = false;
++			InvalidateStyleData();
++		}
++#else
++		update();
++#endif
++	};
++#ifdef __WX__
++	std::optional<size_t> restoredRectangularMain;
++#endif
+ 	EnsureModelState();
+ 	if (FlagSet(undoSelectionHistoryOption, UndoSelectionHistoryOption::Enabled) && modelState) {
+ 		// Undo wants the element after the current as it just undid it
+@@ -2586,14 +2625,17 @@
+ 		const SelectionWithScroll selAndLine = modelState->SelectionFromStack(index, history);
+ 		if (!selAndLine.selection.empty()) {
+ 			if (FlagSet(undoSelectionHistoryOption, UndoSelectionHistoryOption::Scroll)) {
+-				ScrollTo(selAndLine.topLine);
++				updateView([&] { ScrollTo(selAndLine.topLine); });
+ 			}
+ 			sel.~Selection();
+ 			::new (&sel) Selection(selAndLine.selection);
+ 			if (sel.IsRectangular()) {
+ 				const size_t mainForRectangular = sel.Main();
++#ifdef __WX__
++				restoredRectangularMain = mainForRectangular;
++#endif
+ 				// Reconstitute ranges from rectangular range
+-				SetRectangularRange();
++				updateView([&] { SetRectangularRange(); });
+ 				// Restore main if possible.
+ 				if (mainForRectangular < sel.Count()) {
+ 					sel.SetMain(mainForRectangular);
+@@ -2605,7 +2647,13 @@
+ 	}
+ 	if (newPos >= 0)
+ 		SetEmptySelection(newPos);
+-	EnsureCaretVisible();
++	updateView([&] { EnsureCaretVisible(); });
++#ifdef __WX__
++	// A resource retry inside EnsureCaretVisible can rebuild rectangular ranges.
++	if (restoredRectangularMain && *restoredRectangularMain < sel.Count()) {
++		sel.SetMain(*restoredRectangularMain);
++	}
++#endif
+ }
+ 
+ void Editor::Undo() {
+@@ -2990,6 +3038,27 @@
+ }
+ 
+ void Editor::NotifyModified(Document *, DocModification mh, void *) {
++	const auto updateView = [this](auto update) {
++#ifdef __WX__
++		try {
++			update();
++		} catch (const std::bad_alloc &) {
++			// A failed visual resource must not interrupt document notifications
++			// or the selection/history restoration surrounding this operation.
++			errorStatus = Status::BadAlloc;
++			vs.fontsValid = false;
++			insideWrapScroll = false;
++			InvalidateStyleData();
++		} catch (const std::runtime_error &) {
++			errorStatus = Status::Failure;
++			vs.fontsValid = false;
++			insideWrapScroll = false;
++			InvalidateStyleData();
++		}
++#else
++		update();
++#endif
++	};
+ 	// omitted ContainerNeedsUpdate(Update::Content);
+ 	if (FlagSet(mh.modificationType, ModificationFlags::InsertText | ModificationFlags::DeleteText)) {
+ 		ContainerNeedsUpdate(Update::Text);
+@@ -3059,7 +3128,7 @@
+ 		}
+ 		if (FlagSet(mh.modificationType, (ModificationFlags::BeforeInsert | ModificationFlags::BeforeDelete)) && pcs->HiddenLines()) {
+ 			// Some lines are hidden so may need shown.
+-			CheckModificationForShow(mh);
++			updateView([&] { CheckModificationForShow(mh); });
+ 		}
+ 		if (mh.linesAdded != 0) {
+ 			// Update contraction state for inserted and removed lines
+@@ -3078,7 +3147,7 @@
+ 			const Sci::Line lineDoc = pdoc->SciLineFromPosition(mh.position);
+ 			if (vs.annotationVisible != AnnotationVisible::Hidden) {
+ 				if (pcs->SetHeight(lineDoc, pcs->GetHeight(lineDoc) + static_cast<int>(mh.annotationLinesAdded))) {
+-					SetScrollBars();
++					updateView([&] { SetScrollBars(); });
+ 				}
+ 				Redraw();
+ 			}
+@@ -3089,7 +3158,7 @@
+ 			}
+ 		}
+ 		if (FlagSet(mh.modificationType, ModificationFlags::InsertText | ModificationFlags::DeleteText)) {
+-			CheckModificationForWrap(mh);
++			updateView([&] { CheckModificationForWrap(mh); });
+ 		}
+ 		if (mh.linesAdded != 0) {
+ 			// Avoid scrolling of display if change before current display
+@@ -3097,7 +3166,7 @@
+ 				const Sci::Line newTop = std::clamp<Sci::Line>(topLine + mh.linesAdded, 0, MaxScrollPos());
+ 				if (newTop != topLine) {
+ 					SetTopLine(newTop);
+-					SetVerticalScrollPos();
++					updateView([&] { SetVerticalScrollPos(); });
+ 				}
+ 			}
+ 
+@@ -3121,7 +3190,7 @@
+ 	}
+ 
+ 	if (mh.linesAdded != 0 && !CanDeferToLastStep(mh)) {
+-		SetScrollBars();
++		updateView([&] { SetScrollBars(); });
+ 	}
+ 
+ 	if (FlagSet(mh.modificationType, (ModificationFlags::ChangeMarker | ModificationFlags::ChangeMargin))) {
+@@ -3135,12 +3204,12 @@
+ 		}
+ 	}
+ 	if ((FlagSet(mh.modificationType, ModificationFlags::ChangeFold)) && (FlagSet(foldAutomatic, AutomaticFold::Change))) {
+-		FoldChanged(mh.line, mh.foldLevelNow, mh.foldLevelPrev);
++		updateView([&] { FoldChanged(mh.line, mh.foldLevelNow, mh.foldLevelPrev); });
+ 	}
+ 
+ 	// NOW pay the piper WRT "deferred" visual updates
+ 	if (IsLastStep(mh)) {
+-		SetScrollBars();
++		updateView([&] { SetScrollBars(); });
+ 		Redraw();
+ 	}
+ 
+@@ -6118,6 +6187,12 @@
+ 	}
+ 	std::unique_ptr<Surface> surf = Surface::Allocate(technology);
+ 	surf->Init(wMain.GetID());
++#ifdef __WX__
++	// DirectWrite measurement surfaces intentionally have no drawing target.
++	if (technology == Technology::Default && !surf->Initialised()) {
++		throw std::bad_alloc();
++	}
++#endif
+ 	surf->SetMode(CurrentSurfaceMode());
+ 	return surf;
+ }
+@@ -6128,6 +6203,11 @@
+ 	}
+ 	std::unique_ptr<Surface> surf = Surface::Allocate(printing ? Technology::Default : technology);
+ 	surf->Init(sid, wMain.GetID(), printing);
++#ifdef __WX__
++	if (!surf->Initialised()) {
++		throw std::bad_alloc();
++	}
++#endif
+ 	surf->SetMode(CurrentSurfaceMode());
+ 	return surf;
+ }
+--- a/scintilla/src/Platform.h
++++ b/scintilla/src/Platform.h
+@@ -258,7 +258,12 @@
+ 	virtual FontMetrics Metrics(const Font *font_) noexcept = 0;
+ 	//virtual XYPOSITION AverageCharWidth(const Font *font_) = 0;
+ 
++#ifdef __WX__
++	// wxDC clip scopes own storage and report allocation failure to the host.
++	virtual void SCICALL SetClip(PRectangle rc) = 0;
++#else
+ 	virtual void SCICALL SetClip(PRectangle rc) noexcept = 0;
++#endif
+ 	virtual void PopClip() noexcept = 0;
+ 	virtual void FlushCachedState() noexcept = 0;
+ 	virtual void FlushDrawing() noexcept = 0;
+--- a/scintilla/src/EditView.cxx
++++ b/scintilla/src/EditView.cxx
+@@ -30,6 +30,9 @@
+ //#include <future>
+ 
+ #include "ParallelSupport.h"
++#ifdef __WX__
++#include "parallel_tasks.h"
++#endif
+ #include "ScintillaTypes.h"
+ #include "ScintillaMessages.h"
+ #include "ScintillaStructures.h"
+@@ -455,7 +458,9 @@
+ 		if (!FlagSet(option, LayoutLineOption::CallerMultiThreaded) && length >= model.minParallelLayoutLength && model.hardwareConcurrency > 1) {
+ 			segmentCount = static_cast<uint32_t>(segmentList.size());
+ 			const uint32_t threadCount = std::min(length/(blockSize/2), model.hardwareConcurrency);
+-#if USE_STD_ASYNC_FUTURE
++#if defined(__WX__)
++			ParallelTasks::Run(threadCount, [this] { DoWork(); });
++#elif USE_STD_ASYNC_FUTURE
+ 			std::vector<std::future<void>> features;
+ 			for (uint32_t i = 0; i < threadCount; i++) {
+ 				features.push_back(std::async(std::launch::async, [this] {
+@@ -525,7 +530,7 @@
+ 		UpdateMaximum(finishedCount, finished);
+ 	}
+ 
+-#if USE_WIN32_PTP_WORK
++#if USE_WIN32_PTP_WORK && !defined(__WX__)
+ 	static VOID CALLBACK WorkCallback([[maybe_unused]] PTP_CALLBACK_INSTANCE instance, PVOID context, [[maybe_unused]] PTP_WORK work) {
+ 		LayoutWorker *worker = static_cast<LayoutWorker *>(context);
+ 		worker->DoWork();

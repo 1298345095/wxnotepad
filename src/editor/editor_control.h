@@ -135,6 +135,9 @@ public:
 private:
     friend struct EditorCoreObservation;
     class Core;
+    template <typename Action> bool RunNativeEvent(Action&& action);
+    template <typename Event, typename Handler>
+    void BindCoreEvent(const wxEventTypeTag<Event>& type, Handler handler, int id = wxID_ANY);
     wxTimer caretTimer_;
     wxTimer scrollTimer_;
     wxTimer widenTimer_;

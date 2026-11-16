@@ -1,0 +1,2861 @@
+{
+  "project": "1298345095_wxnotepad",
+  "organization": "1298345095",
+  "analysis_context": {
+    "branch": "main"
+  },
+  "continuation_branch": "codex/sonarcloud-followup-2026-11-16",
+  "continuation_base": "a308c6b181674358205df90669293cc4afcab3af",
+  "source_reviewed_revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+  "pinned_core_revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+  "review_kind": "Recommendations only; no Sonar status mutations performed by this agent",
+  "initial_open_snapshot": 3939,
+  "snapshot_note": "The initial read preceded the completed main analysis of PR #220. The current count also reflects those code fixes; the 93 exact-key transitions below are the dispositions performed in this continuation.",
+  "verified_count": 93,
+  "counts_by_rule": {
+    "cpp:S6022": 68,
+    "cpp:S1238": 23,
+    "cpp:S6188": 2
+  },
+  "verification": {
+    "checked_at": "2026-11-16 13:52:11 UTC",
+    "context": {
+      "organization": "1298345095",
+      "project": "1298345095_wxnotepad",
+      "branch": "main"
+    },
+    "exact_key_count": 93,
+    "false_positive_filter": {
+      "issueStatuses": [
+        "FALSE_POSITIVE"
+      ],
+      "total": 93,
+      "returned_issue_keys": [
+        "AaHaPjFxSajQlY95HQcR",
+        "AaHaPjFxSajQlY95HQcS",
+        "AaHaPjFxSajQlY95HQcT",
+        "AaHaPjFxSajQlY95HQcU",
+        "AaHaPjFxSajQlY95HQcV",
+        "AaHaPjFxSajQlY95HQcW",
+        "AaHaPjFxSajQlY95HQcX",
+        "AaHaPjFxSajQlY95HQcY",
+        "AaHaPjFxSajQlY95HQcZ",
+        "AaHaPjFxSajQlY95HQca",
+        "AaHaPjFxSajQlY95HQcb",
+        "AaHaPjFxSajQlY95HQcc",
+        "AaHaPjFxSajQlY95HQcd",
+        "AaHaPjFxSajQlY95HQce",
+        "AaHaPjFxSajQlY95HQcf",
+        "AaHaPjFxSajQlY95HQcg",
+        "AaHaPjFxSajQlY95HQch",
+        "AaHaPjFxSajQlY95HQci",
+        "AaHaPjFxSajQlY95HQcj",
+        "AaHaPjFxSajQlY95HQck",
+        "AaHaPjFxSajQlY95HQcl",
+        "AaHaPjFxSajQlY95HQcm",
+        "AaHaPjFxSajQlY95HQcn",
+        "AaHaPjFxSajQlY95HQco",
+        "AaHaPjFxSajQlY95HQcp",
+        "AaHaPjFxSajQlY95HQcq",
+        "AaHaPjFxSajQlY95HQcr",
+        "AaHaPjFxSajQlY95HQcs",
+        "AaHaPjFxSajQlY95HQct",
+        "AaHaPjFxSajQlY95HQcu",
+        "AaHaPjFxSajQlY95HQcv",
+        "AaHaPjFxSajQlY95HQcw",
+        "AaHaPjFxSajQlY95HQcx",
+        "AaHaPjFxSajQlY95HQcy",
+        "AaHaPjFxSajQlY95HQc0",
+        "AaHaPjFxSajQlY95HQcz",
+        "AaHaPjFxSajQlY95HQc1",
+        "AaHaPjFxSajQlY95HQc2",
+        "AaHaPjFxSajQlY95HQc3",
+        "AaHaPjFxSajQlY95HQc4",
+        "AaHaPjFxSajQlY95HQc5",
+        "AaHaPjFxSajQlY95HQc6",
+        "AaHaPjFxSajQlY95HQc7",
+        "AaHaPjFxSajQlY95HQc8",
+        "AaHaPjFxSajQlY95HQc-",
+        "AaHaPjFxSajQlY95HQc9",
+        "AaHaPjFxSajQlY95HQc_",
+        "AaHaPjFxSajQlY95HQdA",
+        "AaHaPjFxSajQlY95HQdB",
+        "AaHaPjFxSajQlY95HQdC",
+        "AaHaPjFxSajQlY95HQdD",
+        "AaHaPjFxSajQlY95HQdE",
+        "AaHaPjFxSajQlY95HQdF",
+        "AaHaPjFxSajQlY95HQdG",
+        "AaHaPjFxSajQlY95HQdH",
+        "AaHaPjFxSajQlY95HQdI",
+        "AaHaPjFxSajQlY95HQdJ",
+        "AaHaPjFxSajQlY95HQdK",
+        "AaHaPjFxSajQlY95HQdL",
+        "AaHaPjFxSajQlY95HQdM",
+        "AaG7NT_Rkxw1cHak34uw",
+        "AaG7NULBkxw1cHak34wL",
+        "AaG7NUJPkxw1cHak34vB",
+        "AaGyLIAJLjZQeDKjw6c_",
+        "AaGwmVTHEeGJK6USKRqF",
+        "AaGwmVUKEeGJK6USKRqS",
+        "AaG1r00Oyu4V9oip4YK6",
+        "AaGre78Glg4saI6oll0-",
+        "AaGpuAQYUHShZWS1j0bS",
+        "AaG1r0ztyu4V9oip4YJg",
+        "AaG1r0ztyu4V9oip4YJw",
+        "AaG1r0ztyu4V9oip4YJc",
+        "AaG1r0ztyu4V9oip4YJd",
+        "AaG1r0ztyu4V9oip4YJe",
+        "AaG1r0ztyu4V9oip4YJh",
+        "AaG1r0ztyu4V9oip4YJi",
+        "AaG1r0ztyu4V9oip4YJl",
+        "AaG1r0ztyu4V9oip4YJn",
+        "AaG1r0ztyu4V9oip4YJp",
+        "AaG1r0ztyu4V9oip4YJq",
+        "AaG1r0ztyu4V9oip4YJr",
+        "AaG1r0ztyu4V9oip4YJt",
+        "AaG1r0ztyu4V9oip4YJu",
+        "AaG1r0ztyu4V9oip4YJv",
+        "AaG1r0ztyu4V9oip4YJz",
+        "AaG1r0ztyu4V9oip4YJ0",
+        "AaG1r0ztyu4V9oip4YJ1",
+        "AaG1r0ztyu4V9oip4YJa",
+        "AaG1r0ztyu4V9oip4YJb",
+        "AaG1r0ztyu4V9oip4YJf",
+        "AaG1r0ztyu4V9oip4YJj",
+        "AaG1r0ztyu4V9oip4YJk",
+        "AaG1r0ztyu4V9oip4YJm"
+      ],
+      "returned_legacy_status_values": [
+        "RESOLVED"
+      ]
+    },
+    "open_confirmed_filter": {
+      "issueStatuses": [
+        "OPEN",
+        "CONFIRMED"
+      ],
+      "total": 0
+    },
+    "current_main": {
+      "open_confirmed": 3819,
+      "open_high_blocker": 0,
+      "open_security_or_reliability": 0,
+      "quality_gate": {
+        "status": "OK",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "OK",
+            "errorThreshold": "80",
+            "actualValue": "87.9"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "1.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      }
+    }
+  },
+  "entries": [
+    {
+      "key": "AaHaPjFxSajQlY95HQcR",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 49,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:49. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 49
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcR",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcS",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 49,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:49. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 49
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcS",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcT",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 50,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:50. The literal ':' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters[':' >> 5] |= (1 << (':' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters[':' >> 5] |= (1 << (':' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 50
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcT",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcU",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 50,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:50. The literal ':' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters[':' >> 5] |= (1 << (':' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters[':' >> 5] |= (1 << (':' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 50
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcU",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcV",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 51,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:51. The literal 'b' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 51
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcV",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcW",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 51,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:51. The literal 'b' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 51
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcW",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcX",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 62,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:62. The literal '-' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['-' >> 5] |= (1 << ('-' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 62
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcX",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcY",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 62,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:62. The literal '-' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['-' >> 5] |= (1 << ('-' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 62
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcY",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcZ",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 67,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:67. The literal '#' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['#' >> 5] |= (1 << ('#' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['#' >> 5] |= (1 << ('#' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 67
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcZ",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQca",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 67,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:67. The literal '#' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['#' >> 5] |= (1 << ('#' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['#' >> 5] |= (1 << ('#' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 67
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQca",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcb",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 68,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:68. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 68
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcb",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcc",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 68,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:68. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 68
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcc",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcd",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 69,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:69. The literal '@' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['@' >> 5] |= (1 << ('@' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['@' >> 5] |= (1 << ('@' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 69
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcd",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQce",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 69,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:69. The literal '@' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['@' >> 5] |= (1 << ('@' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['@' >> 5] |= (1 << ('@' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 69
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQce",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcf",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 79,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:79. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 79
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcf",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcg",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 79,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:79. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 79
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcg",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQch",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 80,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:80. The literal '-' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['-' >> 5] |= (1 << ('-' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 80
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQch",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQci",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 80,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:80. The literal '-' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['-' >> 5] |= (1 << ('-' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 80
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQci",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcj",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 85,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:85. The literal ':' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters[':' >> 5] |= (1 << (':' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters[':' >> 5] |= (1 << (':' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 85
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcj",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQck",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 85,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:85. The literal ':' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters[':' >> 5] |= (1 << (':' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters[':' >> 5] |= (1 << (':' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 85
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQck",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcl",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 86,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:86. The literal 'L' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['L' >> 5] |= (1 << ('L' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['L' >> 5] |= (1 << ('L' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 86
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcl",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcm",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 86,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:86. The literal 'L' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['L' >> 5] |= (1 << ('L' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['L' >> 5] |= (1 << ('L' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 86
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcm",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcn",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 87,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:87. The literal 'U' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['U' >> 5] |= (1 << ('U' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['U' >> 5] |= (1 << ('U' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 87
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcn",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQco",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 87,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:87. The literal 'U' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['U' >> 5] |= (1 << ('U' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['U' >> 5] |= (1 << ('U' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 87
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQco",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcp",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 88,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:88. The literal 'u' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['u' >> 5] |= (1 << ('u' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['u' >> 5] |= (1 << ('u' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 88
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcp",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcq",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 88,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:88. The literal 'u' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['u' >> 5] |= (1 << ('u' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['u' >> 5] |= (1 << ('u' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 88
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcq",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcr",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 115,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:115. The literal '-' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['-' >> 5] |= (1 << ('-' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 115
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcr",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcs",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 115,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:115. The literal '-' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['-' >> 5] |= (1 << ('-' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 115
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcs",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQct",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 116,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:116. The literal ':' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters[':' >> 5] |= (1 << (':' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters[':' >> 5] |= (1 << (':' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 116
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQct",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcu",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 116,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:116. The literal ':' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters[':' >> 5] |= (1 << (':' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters[':' >> 5] |= (1 << (':' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 116
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcu",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcv",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 148,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:148. The literal '#' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['#' >> 5] |= (1 << ('#' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['#' >> 5] |= (1 << ('#' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 148
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcv",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcw",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 148,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:148. The literal '#' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['#' >> 5] |= (1 << ('#' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['#' >> 5] |= (1 << ('#' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 148
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcw",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcx",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 149,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:149. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 149
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcx",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcy",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 149,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:149. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 149
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcy",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc0",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 150,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:150. The literal '@' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['@' >> 5] |= (1 << ('@' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['@' >> 5] |= (1 << ('@' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 150
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc0",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQcz",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 150,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:150. The literal '@' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['@' >> 5] |= (1 << ('@' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['@' >> 5] |= (1 << ('@' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 150
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQcz",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc1",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 154,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:154. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 154
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc1",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc2",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 154,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:154. The literal '$' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['$' >> 5] |= (1 << ('$' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 154
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc2",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc3",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 155,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:155. The literal 'B' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['B' >> 5] |= (1 << ('B' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['B' >> 5] |= (1 << ('B' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 155
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc3",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc4",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 155,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:155. The literal 'B' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['B' >> 5] |= (1 << ('B' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['B' >> 5] |= (1 << ('B' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 155
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc4",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc5",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 156,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:156. The literal 'F' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['F' >> 5] |= (1 << ('F' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['F' >> 5] |= (1 << ('F' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 156
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc5",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc6",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 156,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:156. The literal 'F' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['F' >> 5] |= (1 << ('F' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['F' >> 5] |= (1 << ('F' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 156
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc6",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc7",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 157,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:157. The literal 'R' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['R' >> 5] |= (1 << ('R' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['R' >> 5] |= (1 << ('R' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 157
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc7",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc8",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 157,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:157. The literal 'R' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['R' >> 5] |= (1 << ('R' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['R' >> 5] |= (1 << ('R' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 157
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc8",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc-",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 158,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:158. The literal 'T' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['T' >> 5] |= (1 << ('T' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['T' >> 5] |= (1 << ('T' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 158
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc-",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc9",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 158,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:158. The literal 'T' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['T' >> 5] |= (1 << ('T' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['T' >> 5] |= (1 << ('T' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 158
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc9",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQc_",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 159,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:159. The literal 'U' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['U' >> 5] |= (1 << ('U' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['U' >> 5] |= (1 << ('U' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 159
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQc_",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdA",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 159,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:159. The literal 'U' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['U' >> 5] |= (1 << ('U' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['U' >> 5] |= (1 << ('U' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 159
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdA",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdB",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 160,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:160. The literal 'b' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 160
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdB",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdC",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 160,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:160. The literal 'b' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 160
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdC",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdD",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 161,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:161. The literal 'f' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['f' >> 5] |= (1 << ('f' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['f' >> 5] |= (1 << ('f' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 161
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdD",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdE",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 161,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:161. The literal 'f' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['f' >> 5] |= (1 << ('f' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['f' >> 5] |= (1 << ('f' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 161
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdE",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdF",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 162,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:162. The literal 'r' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['r' >> 5] |= (1 << ('r' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['r' >> 5] |= (1 << ('r' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 162
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdF",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdG",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 162,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:162. The literal 'r' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['r' >> 5] |= (1 << ('r' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['r' >> 5] |= (1 << ('r' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 162
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdG",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdH",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 163,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:163. The literal 't' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['t' >> 5] |= (1 << ('t' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['t' >> 5] |= (1 << ('t' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 163
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdH",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdI",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 163,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:163. The literal 't' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['t' >> 5] |= (1 << ('t' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['t' >> 5] |= (1 << ('t' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 163
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdI",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdJ",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 164,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:164. The literal 'u' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['u' >> 5] |= (1 << ('u' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['u' >> 5] |= (1 << ('u' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 164
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdJ",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdK",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 164,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:164. The literal 'u' is a character in the language syntax, used as the numeric index of the characterPrefixes membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.characterPrefixes['u' >> 5] |= (1 << ('u' & 31)); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.characterPrefixes['u' >> 5] |= (1 << ('u' & 31));",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 164
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdK",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdL",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 189,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:189. The literal '.' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['.' >> 5] |= 1U << ('.' & 31); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['.' >> 5] |= 1U << ('.' & 31);",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 189
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdL",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaHaPjFxSajQlY95HQdM",
+      "rule": "cpp:S6022",
+      "file": "src/editor/completion_styles.cpp",
+      "line": 189,
+      "symbol": "CompletionStylesFor",
+      "review_category": "character-index-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed CompletionStylesFor at 8d4e6be10afc17db6b88690db3407f7a73d5f29c, src/editor/completion_styles.cpp:189. The literal '.' is a character in the language syntax, used as the numeric index of the wordCharacters membership set. The expression shifts its character code by five for a uint32_t array index and masks by 31 for a bit position: result.wordCharacters['.' >> 5] |= 1U << ('.' & 31); These are character-index calculations for 256-element membership, not access to an object representation as bytes. CompletionStyleContains tests those same character-code indices. Converting this character to std::byte would remove the intended arithmetic/index interface and require conversion back to an integer. S6022 is a false positive on this character-valued expression.",
+      "source_line": "result.wordCharacters['.' >> 5] |= 1U << ('.' & 31);",
+      "evidence": [
+        {
+          "file": "src/editor/completion_styles.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 189
+        },
+        {
+          "file": "src/editor/completion_styles.h",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "symbol": "CompletionStyleContains"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjFxSajQlY95HQdM",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r00Oyu4V9oip4YK6",
+      "rule": "cpp:S1238",
+      "file": "src/editor/editor_core.cpp",
+      "line": 991,
+      "symbol": "CreateCallTipWindow",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/editor_core.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. CreateCallTipWindow implements a virtual override from Scintilla::Internal::ScintillaBase; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/ScintillaBase.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL CreateCallTipWindow(PRectangle rc) noexcept = 0;",
+      "source_line": "void SCICALL EditorControl::Core::CreateCallTipWindow(core::PRectangle) noexcept {",
+      "evidence": [
+        {
+          "file": "scintilla/src/ScintillaBase.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            89
+          ],
+          "declaration": "virtual void SCICALL CreateCallTipWindow(PRectangle rc) noexcept = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r00Oyu4V9oip4YK6",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJg",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 163,
+      "symbol": "FillRectangle",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. FillRectangle implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL FillRectangle(PRectangle rc, Surface &surfacePattern) = 0;",
+      "source_line": "void SCICALL FillRectangle(PRectangle r, Surface& pattern) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            226
+          ],
+          "declaration": "virtual void SCICALL FillRectangle(PRectangle rc, Surface &surfacePattern) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJg",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJw",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 290,
+      "symbol": "SetClip",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. SetClip implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL SetClip(PRectangle rc) noexcept = 0;",
+      "source_line": "void SCICALL SetClip(PRectangle r) noexcept override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            261
+          ],
+          "declaration": "virtual void SCICALL SetClip(PRectangle rc) noexcept = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJw",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJc",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 132,
+      "symbol": "RectangleDraw",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. RectangleDraw implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL RectangleDraw(PRectangle rc, FillStroke fillStroke) = 0;",
+      "source_line": "void SCICALL RectangleDraw(PRectangle r, FillStroke s) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            222
+          ],
+          "declaration": "virtual void SCICALL RectangleDraw(PRectangle rc, FillStroke fillStroke) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJc",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJd",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 137,
+      "symbol": "RectangleFrame",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. RectangleFrame implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL RectangleFrame(PRectangle rc, Stroke stroke) = 0;",
+      "source_line": "void SCICALL RectangleFrame(PRectangle r, Stroke s) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            223
+          ],
+          "declaration": "virtual void SCICALL RectangleFrame(PRectangle rc, Stroke stroke) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJd",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJe",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 142,
+      "symbol": "FillRectangle",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. FillRectangle implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL FillRectangle(PRectangle rc, Fill fill) = 0;",
+      "source_line": "void SCICALL FillRectangle(PRectangle r, Fill f) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            224
+          ],
+          "declaration": "virtual void SCICALL FillRectangle(PRectangle rc, Fill fill) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJe",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJh",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 179,
+      "symbol": "RoundedRectangle",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. RoundedRectangle implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL RoundedRectangle(PRectangle rc, FillStroke fillStroke) = 0;",
+      "source_line": "void SCICALL RoundedRectangle(PRectangle r, FillStroke s) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            227
+          ],
+          "declaration": "virtual void SCICALL RoundedRectangle(PRectangle rc, FillStroke fillStroke) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJh",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJi",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 184,
+      "symbol": "AlphaRectangle",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. AlphaRectangle implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL AlphaRectangle(PRectangle rc, XYPOSITION cornerSize, FillStroke fillStroke) = 0;",
+      "source_line": "void SCICALL AlphaRectangle(PRectangle r, XYPOSITION radius, FillStroke s) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            228
+          ],
+          "declaration": "virtual void SCICALL AlphaRectangle(PRectangle rc, XYPOSITION cornerSize, FillStroke fillStroke) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJi",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJl",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 227,
+      "symbol": "Ellipse",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Ellipse implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL Ellipse(PRectangle rc, FillStroke fillStroke) = 0;",
+      "source_line": "void SCICALL Ellipse(PRectangle r, FillStroke s) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            234
+          ],
+          "declaration": "virtual void SCICALL Ellipse(PRectangle rc, FillStroke fillStroke) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJl",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJn",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 233,
+      "symbol": "Copy",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Copy implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL Copy(PRectangle rc, Point from, Surface &surfaceSource) = 0;",
+      "source_line": "void SCICALL Copy(PRectangle r, Point from, Surface& source) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            236
+          ],
+          "declaration": "virtual void SCICALL Copy(PRectangle rc, Point from, Surface &surfaceSource) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJn",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJp",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 244,
+      "symbol": "DrawTextTransparent",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. DrawTextTransparent implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) = 0;",
+      "source_line": "void SCICALL DrawTextTransparent(PRectangle r, const Font* f, XYPOSITION base, std::string_view text,",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            242
+          ],
+          "declaration": "virtual void SCICALL DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJp",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJq",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 251,
+      "symbol": "DrawTextNoClip",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. DrawTextNoClip implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL DrawTextNoClip(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) = 0;",
+      "source_line": "void SCICALL DrawTextNoClip(PRectangle r, const Font* f, XYPOSITION base, std::string_view text, ColourRGBA fore,",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            240
+          ],
+          "declaration": "virtual void SCICALL DrawTextNoClip(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJq",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJr",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 256,
+      "symbol": "DrawTextClipped",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. DrawTextClipped implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL DrawTextClipped(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) = 0;",
+      "source_line": "void SCICALL DrawTextClipped(PRectangle r, const Font* f, XYPOSITION base, std::string_view text, ColourRGBA fore,",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            241
+          ],
+          "declaration": "virtual void SCICALL DrawTextClipped(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJr",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJt",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 268,
+      "symbol": "DrawTextNoClipUTF8",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. DrawTextNoClipUTF8 implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL DrawTextNoClipUTF8(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) = 0;",
+      "source_line": "void SCICALL DrawTextNoClipUTF8(PRectangle r, const Font* f, XYPOSITION y, std::string_view t, ColourRGBA a,",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            246
+          ],
+          "declaration": "virtual void SCICALL DrawTextNoClipUTF8(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJt",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJu",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 273,
+      "symbol": "DrawTextClippedUTF8",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. DrawTextClippedUTF8 implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL DrawTextClippedUTF8(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) = 0;",
+      "source_line": "void SCICALL DrawTextClippedUTF8(PRectangle r, const Font* f, XYPOSITION y, std::string_view t, ColourRGBA a,",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            247
+          ],
+          "declaration": "virtual void SCICALL DrawTextClippedUTF8(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJu",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJv",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 278,
+      "symbol": "DrawTextTransparentUTF8",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. DrawTextTransparentUTF8 implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL DrawTextTransparentUTF8(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) = 0;",
+      "source_line": "void SCICALL DrawTextTransparentUTF8(PRectangle r, const Font* f, XYPOSITION y, std::string_view t,",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            248
+          ],
+          "declaration": "virtual void SCICALL DrawTextTransparentUTF8(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJv",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJz",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 318,
+      "symbol": "SetPosition",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. SetPosition defines the upstream-declared member from Scintilla::Internal::Window; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: void SCICALL SetPosition(PRectangle rc) noexcept;",
+      "source_line": "void SCICALL Window::SetPosition(PRectangle r) noexcept {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            295
+          ],
+          "declaration": "void SCICALL SetPosition(PRectangle rc) noexcept;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJz",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJ0",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 321,
+      "symbol": "SetPositionRelative",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. SetPositionRelative defines the upstream-declared member from Scintilla::Internal::Window; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: void SCICALL SetPositionRelative(PRectangle rc, const Window *relativeTo) noexcept;",
+      "source_line": "void SCICALL Window::SetPositionRelative(PRectangle r, const Window* relative) noexcept {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            296
+          ],
+          "declaration": "void SCICALL SetPositionRelative(PRectangle rc, const Window *relativeTo) noexcept;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJ0",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJ1",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 344,
+      "symbol": "InvalidateRectangle",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. InvalidateRectangle defines the upstream-declared member from Scintilla::Internal::Window; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: void SCICALL InvalidateRectangle(PRectangle rc) noexcept;",
+      "source_line": "void SCICALL Window::InvalidateRectangle(PRectangle r) noexcept {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            300
+          ],
+          "declaration": "void SCICALL InvalidateRectangle(PRectangle rc) noexcept;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJ1",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJa",
+      "rule": "cpp:S6188",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 115,
+      "symbol": "PolyLine",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed WxSurface::PolyLine at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. This is the platform implementation of Surface::PolyLine, declared by pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a in scintilla/src/Platform.h as virtual void SCICALL PolyLine(const Point *pts, size_t npts, Stroke stroke) = 0; The pointer-plus-count parameters are required by that virtual interface, and the implementation traverses exactly n points. Replacing those parameters with std::span changes the virtual function type and does not override the core contract. This is an interface-signature false positive; an extra span wrapper would leave the required entry signature unchanged.",
+      "source_line": "void SCICALL PolyLine(const Point* p, size_t n, Stroke s) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "line": 220,
+          "declaration": "virtual void SCICALL PolyLine(const Point *pts, size_t npts, Stroke stroke) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJa",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJb",
+      "rule": "cpp:S6188",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 123,
+      "symbol": "Polygon",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed WxSurface::Polygon at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. This is the platform implementation of Surface::Polygon, declared by pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a in scintilla/src/Platform.h as virtual void SCICALL Polygon(const Point *pts, size_t npts, FillStroke fillStroke) = 0; The pointer-plus-count parameters are required by that virtual interface, and the implementation traverses exactly n points. Replacing those parameters with std::span changes the virtual function type and does not override the core contract. This is an interface-signature false positive; an extra span wrapper would leave the required entry signature unchanged.",
+      "source_line": "void SCICALL Polygon(const Point* p, size_t n, FillStroke s) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "line": 221,
+          "declaration": "virtual void SCICALL Polygon(const Point *pts, size_t npts, FillStroke fillStroke) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJb",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJf",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 162,
+      "symbol": "FillRectangleAligned",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. FillRectangleAligned implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL FillRectangleAligned(PRectangle rc, Fill fill) = 0;",
+      "source_line": "void SCICALL FillRectangleAligned(PRectangle r, Fill f) override { FillRectangle(r, f); }",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            225
+          ],
+          "declaration": "virtual void SCICALL FillRectangleAligned(PRectangle rc, Fill fill) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJf",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJj",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 206,
+      "symbol": "GradientRectangle",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. GradientRectangle implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL GradientRectangle(PRectangle rc, const std::vector<ColourStop> &stops, GradientOptions options) = 0;",
+      "source_line": "void SCICALL GradientRectangle(PRectangle r, const std::vector<ColourStop>& stops, GradientOptions o) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            232
+          ],
+          "declaration": "virtual void SCICALL GradientRectangle(PRectangle rc, const std::vector<ColourStop> &stops, GradientOptions options) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJj",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJk",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 211,
+      "symbol": "DrawRGBAImage",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. DrawRGBAImage implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL DrawRGBAImage(PRectangle rc, int width, int height, const unsigned char *pixelsImage) = 0;",
+      "source_line": "void SCICALL DrawRGBAImage(PRectangle r, int width, int height, const unsigned char* data) override {",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            233
+          ],
+          "declaration": "virtual void SCICALL DrawRGBAImage(PRectangle rc, int width, int height, const unsigned char *pixelsImage) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJk",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJm",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "line": 232,
+      "symbol": "Stadium",
+      "review_category": "pinned-interface-signature",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/platform/wx_platform.cpp at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Stadium implements a virtual override from Scintilla::Internal::Surface; pinned Notepad4 89b8b36e0ee2c23f73be922315f17261ccfbbe1a, scintilla/src/Platform.h, declares its rectangle parameter as PRectangle by value. The adapter must keep that exact function type. Changing this parameter to const PRectangle& would fail to implement the declared member/override, rather than remove an independently chosen expensive copy. This is an interface-signature false positive; the by-value contract is retained. Declaration reviewed: virtual void SCICALL Stadium(PRectangle rc, FillStroke fillStroke, Ends ends) = 0;",
+      "source_line": "void SCICALL Stadium(PRectangle r, FillStroke s, Ends) override { RoundedRectangle(r, s); }",
+      "evidence": [
+        {
+          "file": "scintilla/src/Platform.h",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "lines": [
+            235
+          ],
+          "declaration": "virtual void SCICALL Stadium(PRectangle rc, FillStroke fillStroke, Ends ends) = 0;"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r0ztyu4V9oip4YJm",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG7NT_Rkxw1cHak34uw",
+      "rule": "cpp:S6022",
+      "file": "src/app/editor_frame.cpp",
+      "line": 627,
+      "symbol": "EditorFrame::CanDiscardUntitledWhitespace",
+      "review_category": "text-abi-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/app/editor_frame.cpp:627 at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Message::GetRangePointer returns a pointer to document characters through Scintilla's pointer-sized message return type; this cast restores the const char* string interface of that API. The immediate consumer reads actual document characters and compares them with the ASCII space/TAB..CR character set. The data is text represented as characters, not arbitrary object representation being inspected byte-by-byte. std::byte* cannot serve these string/character consumers without casting back to char*. The existing const char* conversion preserves the native Scintilla text ABI and is appropriate here; S6022 is a false positive.",
+      "source_line": "const auto* bytes = reinterpret_cast<const char*>(editor_->Send(Scintilla::Message::GetRangePointer, 0, length));",
+      "evidence": [
+        {
+          "file": "src/app/editor_frame.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 627,
+          "consumer": "reads actual document characters and compares them with the ASCII space/TAB..CR character set"
+        },
+        {
+          "file": "scintilla/src/Editor.cxx",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "symbol": "WndProc/GetRangePointer"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NT_Rkxw1cHak34uw",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG7NULBkxw1cHak34wL",
+      "rule": "cpp:S6022",
+      "file": "src/editor/align_lines.cpp",
+      "line": 101,
+      "symbol": "AlignLine",
+      "review_category": "text-abi-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/align_lines.cpp:101 at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Message::GetRangePointer returns a pointer to document characters through Scintilla's pointer-sized message return type; this cast restores the const char* string interface of that API. The immediate consumer constructs std::string from the returned UTF-8 characters, then computes UTF16Length and splits textual words for alignment. The data is text represented as characters, not arbitrary object representation being inspected byte-by-byte. std::byte* cannot serve these string/character consumers without casting back to char*. The existing const char* conversion preserves the native Scintilla text ABI and is appropriate here; S6022 is a false positive.",
+      "source_line": "const auto* bytes = reinterpret_cast<const char*>(editor.Send(Message::GetRangePointer, start, length));",
+      "evidence": [
+        {
+          "file": "src/editor/align_lines.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 101,
+          "consumer": "constructs std::string from the returned UTF-8 characters, then computes UTF16Length and splits textual words for alignment"
+        },
+        {
+          "file": "scintilla/src/Editor.cxx",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "symbol": "WndProc/GetRangePointer"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NULBkxw1cHak34wL",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaG7NUJPkxw1cHak34vB",
+      "rule": "cpp:S6022",
+      "file": "src/editor/sort_lines.cpp",
+      "line": 57,
+      "symbol": "ReadSortLine",
+      "review_category": "text-abi-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/sort_lines.cpp:57 at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Message::GetRangePointer returns a pointer to document characters through Scintilla's pointer-sized message return type; this cast restores the const char* string interface of that API. The immediate consumer constructs std::string_view of the line characters, locates the NUL character, and converts UTF-8 text to UTF-16 for sorting. The data is text represented as characters, not arbitrary object representation being inspected byte-by-byte. std::byte* cannot serve these string/character consumers without casting back to char*. The existing const char* conversion preserves the native Scintilla text ABI and is appropriate here; S6022 is a false positive.",
+      "source_line": "std::string_view bytes(reinterpret_cast<const char*>(editor.Send(Message::GetRangePointer, start, end - start)),",
+      "evidence": [
+        {
+          "file": "src/editor/sort_lines.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 57,
+          "consumer": "constructs std::string_view of the line characters, locates the NUL character, and converts UTF-8 text to UTF-16 for sorting"
+        },
+        {
+          "file": "scintilla/src/Editor.cxx",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "symbol": "WndProc/GetRangePointer"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NUJPkxw1cHak34vB",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaGyLIAJLjZQeDKjw6c_",
+      "rule": "cpp:S6022",
+      "file": "src/editor/line_wrap.cpp",
+      "line": 87,
+      "symbol": "EditorControl::WrapToColumn",
+      "review_category": "text-abi-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/line_wrap.cpp:87 at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Message::GetRangePointer returns a pointer to document characters through Scintilla's pointer-sized message return type; this cast restores the const char* string interface of that API. The immediate consumer constructs std::string_view of selected UTF-8 characters and converts them through UTF16Length and UTF16FromUTF8. The data is text represented as characters, not arbitrary object representation being inspected byte-by-byte. std::byte* cannot serve these string/character consumers without casting back to char*. The existing const char* conversion preserves the native Scintilla text ABI and is appropriate here; S6022 is a false positive.",
+      "source_line": "const auto* bytes = reinterpret_cast<const char*>(Send(Message::GetRangePointer, start, length));",
+      "evidence": [
+        {
+          "file": "src/editor/line_wrap.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 87,
+          "consumer": "constructs std::string_view of selected UTF-8 characters and converts them through UTF16Length and UTF16FromUTF8"
+        },
+        {
+          "file": "scintilla/src/Editor.cxx",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "symbol": "WndProc/GetRangePointer"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGyLIAJLjZQeDKjw6c_",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaGwmVTHEeGJK6USKRqF",
+      "rule": "cpp:S6022",
+      "file": "src/editor/tab_conversion.cpp",
+      "line": 12,
+      "symbol": "SelectedUnits",
+      "review_category": "text-abi-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/tab_conversion.cpp:12 at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Message::GetRangePointer returns a pointer to document characters through Scintilla's pointer-sized message return type; this cast restores the const char* string interface of that API. The immediate consumer constructs std::string_view of selected UTF-8 characters and converts them through UTF16Length and UTF16FromUTF8. The data is text represented as characters, not arbitrary object representation being inspected byte-by-byte. std::byte* cannot serve these string/character consumers without casting back to char*. The existing const char* conversion preserves the native Scintilla text ABI and is appropriate here; S6022 is a false positive.",
+      "source_line": "reinterpret_cast<const char*>(editor.Send(Message::GetRangePointer, start, end - start)),",
+      "evidence": [
+        {
+          "file": "src/editor/tab_conversion.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 12,
+          "consumer": "constructs std::string_view of selected UTF-8 characters and converts them through UTF16Length and UTF16FromUTF8"
+        },
+        {
+          "file": "scintilla/src/Editor.cxx",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "symbol": "WndProc/GetRangePointer"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGwmVTHEeGJK6USKRqF",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaGwmVUKEeGJK6USKRqS",
+      "rule": "cpp:S6022",
+      "file": "src/editor/join_lines.cpp",
+      "line": 55,
+      "symbol": "EditorControl::JoinLines",
+      "review_category": "text-abi-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/join_lines.cpp:55 at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Message::GetRangePointer returns a pointer to document characters through Scintilla's pointer-sized message return type; this cast restores the const char* string interface of that API. The immediate consumer constructs std::string of selected characters for JoinParagraphText and explicit CR/LF textual handling. The data is text represented as characters, not arbitrary object representation being inspected byte-by-byte. std::byte* cannot serve these string/character consumers without casting back to char*. The existing const char* conversion preserves the native Scintilla text ABI and is appropriate here; S6022 is a false positive.",
+      "source_line": "const auto* bytes = reinterpret_cast<const char*>(Send(Message::GetRangePointer, start, length));",
+      "evidence": [
+        {
+          "file": "src/editor/join_lines.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 55,
+          "consumer": "constructs std::string of selected characters for JoinParagraphText and explicit CR/LF textual handling"
+        },
+        {
+          "file": "scintilla/src/Editor.cxx",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "symbol": "WndProc/GetRangePointer"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGwmVUKEeGJK6USKRqS",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaGre78Glg4saI6oll0-",
+      "rule": "cpp:S6022",
+      "file": "src/editor/line_comments.cpp",
+      "line": 37,
+      "symbol": "ToggleLineComment",
+      "review_category": "text-abi-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/line_comments.cpp:37 at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Message::GetRangePointer returns a pointer to document characters through Scintilla's pointer-sized message return type; this cast restores the const char* string interface of that API. The immediate consumer compares actual document characters with the syntax scheme comment-prefix string before adding or deleting a line comment. The data is text represented as characters, not arbitrary object representation being inspected byte-by-byte. std::byte* cannot serve these string/character consumers without casting back to char*. The existing const char* conversion preserves the native Scintilla text ABI and is appropriate here; S6022 is a false positive.",
+      "source_line": "const auto* bytes = reinterpret_cast<const char*>(editor.Send(Message::GetRangePointer, indent, length));",
+      "evidence": [
+        {
+          "file": "src/editor/line_comments.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 37,
+          "consumer": "compares actual document characters with the syntax scheme comment-prefix string before adding or deleting a line comment"
+        },
+        {
+          "file": "scintilla/src/Editor.cxx",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "symbol": "WndProc/GetRangePointer"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGre78Glg4saI6oll0-",
+        "newStatus": "falsepositive"
+      }
+    },
+    {
+      "key": "AaGpuAQYUHShZWS1j0bS",
+      "rule": "cpp:S6022",
+      "file": "src/editor/indentation_settings.cpp",
+      "line": 93,
+      "symbol": "IndentationSettings::Load",
+      "review_category": "text-abi-not-byte-access",
+      "suggested_status": "falsepositive",
+      "comment": "Reviewed src/editor/indentation_settings.cpp:93 at 8d4e6be10afc17db6b88690db3407f7a73d5f29c. Message::GetRangePointer returns a pointer to document characters through Scintilla's pointer-sized message return type; this cast restores the const char* string interface of that API. The immediate consumer passes a view of the document characters to DetectIndentation, which counts spaces and tabs. The data is text represented as characters, not arbitrary object representation being inspected byte-by-byte. std::byte* cannot serve these string/character consumers without casting back to char*. The existing const char* conversion preserves the native Scintilla text ABI and is appropriate here; S6022 is a false positive.",
+      "source_line": "const auto* bytes = reinterpret_cast<const char*>(editor.Send(Scintilla::Message::GetRangePointer, 0, length));",
+      "evidence": [
+        {
+          "file": "src/editor/indentation_settings.cpp",
+          "revision": "8d4e6be10afc17db6b88690db3407f7a73d5f29c",
+          "line": 93,
+          "consumer": "passes a view of the document characters to DetectIndentation, which counts spaces and tabs"
+        },
+        {
+          "file": "scintilla/src/Editor.cxx",
+          "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+          "symbol": "WndProc/GetRangePointer"
+        }
+      ],
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaGpuAQYUHShZWS1j0bS",
+        "newStatus": "falsepositive"
+      }
+    }
+  ],
+  "retained_review": [
+    {
+      "rule": "cpp:S1238",
+      "keys": [
+        "AaG7NULBkxw1cHak34wJ",
+        "AaG1r0ztyu4V9oip4YJX"
+      ],
+      "reason": "Ordinary by-value helper parameters (AlignmentSpacing / Rect PRectangle) are not constrained by the core ABI. The recommendation is applicable; no behavior defect found."
+    },
+    {
+      "rule": "cpp:S872",
+      "reason": "Explicit bool arithmetic in count/persisted encoding may be intentional but the rule expressly recommends avoiding such operand usage; intention alone does not establish a false positive."
+    },
+    {
+      "rule": "cpp:S110",
+      "reason": "wxWidgets framework inheritance recommendation reflects actual depth; prior record retains a deliberate design exception rather than calling depth computation false."
+    },
+    {
+      "rule": "cpp:S7040",
+      "reason": "Bounded escape syntax is supported by the recorded compiler baseline; valid modernization recommendation retained."
+    }
+  ]
+}

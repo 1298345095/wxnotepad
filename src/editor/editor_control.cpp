@@ -7,6 +7,8 @@
 #include "diagnostics/trace.h"
 #include <wx/dcclient.h>
 #include <cmath>
+#include <type_traits>
+#include <utility>
 
 using Scintilla::Message;
 namespace core = Scintilla::Internal;
@@ -35,6 +37,25 @@ bool HandleControlDelete(EditorControl& editor, const wxKeyEvent& event) {
     return true;
 }
 } // namespace
+
+template <typename Action> bool EditorControl::RunNativeEvent(Action&& action) {
+    return core_->RunNativeOperation(std::forward<Action>(action));
+}
+
+template <typename Event, typename Handler>
+void EditorControl::BindCoreEvent(const wxEventTypeTag<Event>& type, Handler handler, int id) {
+    Bind(
+        type,
+        [this, handler](Event& event) {
+            RunNativeEvent([&] {
+                if constexpr (std::is_member_function_pointer_v<Handler>)
+                    (this->*handler)(event);
+                else
+                    handler(event);
+            });
+        },
+        id);
+}
 
 EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
@@ -82,7 +103,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     }
     SetCurrentBlockHighlighted(true);
     ApplyCaretAppearance();
-    Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
+    BindCoreEvent(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         core_->DpiChanged();
         bookmarkMarginWidthDirty_ = true;
         UpdateBookmarkMargin();
@@ -91,7 +112,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         Refresh(false);
         event.Skip();
     });
-    Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& event) {
+    BindCoreEvent(wxEVT_SET_FOCUS, [this](wxFocusEvent& event) {
         WXNOTE_TRACE("editor.focus-in", "\ttarget=%p\tfocus=%p", static_cast<void*>(this),
                      static_cast<void*>(wxWindow::FindFocus()));
         Send(Message::SetFocus, 1);
@@ -99,7 +120,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         Refresh(false);
         event.Skip();
     });
-    Bind(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) {
+    BindCoreEvent(wxEVT_KILL_FOCUS, [this](wxFocusEvent& event) {
         WXNOTE_TRACE("editor.focus-out", "\ttarget=%p\tfocus=%p", static_cast<void*>(this),
                      static_cast<void*>(wxWindow::FindFocus()));
         Send(Message::SetFocus, 0);
@@ -107,26 +128,26 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         Refresh(false);
         event.Skip();
     });
-    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickCaret(); }, caretTimer_.GetId());
-    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickScroll(); }, scrollTimer_.GetId());
-    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickWiden(); }, widenTimer_.GetId());
-    Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) { core_->Mouse(event); });
-    Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& event) { core_->Mouse(event); });
-    Bind(wxEVT_MOTION, [this](wxMouseEvent& event) { core_->Mouse(event); });
-    Bind(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) { core_->CaptureLost(); });
-    Bind(wxEVT_MOUSEWHEEL, [this](wxMouseEvent& event) { core_->Wheel(event); });
+    BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickCaret(); }, caretTimer_.GetId());
+    BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickScroll(); }, scrollTimer_.GetId());
+    BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickWiden(); }, widenTimer_.GetId());
+    BindCoreEvent(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    BindCoreEvent(wxEVT_LEFT_UP, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    BindCoreEvent(wxEVT_MOTION, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    BindCoreEvent(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) { core_->CaptureLost(); });
+    BindCoreEvent(wxEVT_MOUSEWHEEL, [this](wxMouseEvent& event) { core_->Wheel(event); });
     const auto scroll = [this](wxScrollWinEvent& event) { core_->Scroll(event); };
-    Bind(wxEVT_SCROLLWIN_TOP, scroll);
-    Bind(wxEVT_SCROLLWIN_BOTTOM, scroll);
-    Bind(wxEVT_SCROLLWIN_LINEUP, scroll);
-    Bind(wxEVT_SCROLLWIN_LINEDOWN, scroll);
-    Bind(wxEVT_SCROLLWIN_PAGEUP, scroll);
-    Bind(wxEVT_SCROLLWIN_PAGEDOWN, scroll);
-    Bind(wxEVT_SCROLLWIN_THUMBTRACK, scroll);
-    Bind(wxEVT_SCROLLWIN_THUMBRELEASE, scroll);
-    Bind(wxEVT_KEY_DOWN, &EditorControl::OnKeyDown, this);
+    BindCoreEvent(wxEVT_SCROLLWIN_TOP, scroll);
+    BindCoreEvent(wxEVT_SCROLLWIN_BOTTOM, scroll);
+    BindCoreEvent(wxEVT_SCROLLWIN_LINEUP, scroll);
+    BindCoreEvent(wxEVT_SCROLLWIN_LINEDOWN, scroll);
+    BindCoreEvent(wxEVT_SCROLLWIN_PAGEUP, scroll);
+    BindCoreEvent(wxEVT_SCROLLWIN_PAGEDOWN, scroll);
+    BindCoreEvent(wxEVT_SCROLLWIN_THUMBTRACK, scroll);
+    BindCoreEvent(wxEVT_SCROLLWIN_THUMBRELEASE, scroll);
+    BindCoreEvent(wxEVT_KEY_DOWN, &EditorControl::OnKeyDown);
 #ifdef WXNOTEPAD_DIAGNOSTICS
-    Bind(wxEVT_KEY_UP, [this](wxKeyEvent& event) {
+    BindCoreEvent(wxEVT_KEY_UP, [this](wxKeyEvent& event) {
         WXNOTE_TRACE(
             "editor.key-up", "\ttarget=%p\tfocus=%p\tkey=%d\tmodifiers=%d\tlength=%lld\tanchor=%lld\tcaret=%lld",
             static_cast<void*>(this), static_cast<void*>(wxWindow::FindFocus()), event.GetKeyCode(),
@@ -135,7 +156,7 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
         event.Skip();
     });
 #endif
-    Bind(wxEVT_CHAR, [this](wxKeyEvent& event) {
+    BindCoreEvent(wxEVT_CHAR, [this](wxKeyEvent& event) {
         const int character = event.GetUnicodeKey();
         if (character >= 32 && character != WXK_DELETE && !event.ControlDown() && !event.AltDown()) {
             // Keep the conversion owner alive: ToUTF8().data() on a temporary
@@ -147,8 +168,8 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
             event.Skip();
         }
     });
-    Bind(wxEVT_PAINT, &EditorControl::OnPaint, this);
-    Bind(wxEVT_SIZE, &EditorControl::OnSize, this);
+    BindCoreEvent(wxEVT_PAINT, &EditorControl::OnPaint);
+    BindCoreEvent(wxEVT_SIZE, &EditorControl::OnSize);
 }
 
 EditorControl::~EditorControl() {
@@ -491,7 +512,7 @@ void EditorControl::OnSize(wxSizeEvent& event) {
 
 #ifdef __WXMSW__
 void EditorControl::OnHostMove(wxMoveEvent& event) {
-    core_->RenderingSettingsChanged(false);
+    RunNativeEvent([&] { core_->RenderingSettingsChanged(false); });
     event.Skip();
 }
 
@@ -503,8 +524,13 @@ WXLRESULT EditorControl::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM
                      static_cast<unsigned long long>(wParam));
 #endif
     if (core_) {
-        if (message == WM_SETTINGCHANGE) core_->RenderingSettingsChanged(true);
-        if (const auto result = core_->ImeMessage(message, wParam, lParam)) return *result;
+        std::optional<intptr_t> result;
+        if (!RunNativeEvent([&] {
+                if (message == WM_SETTINGCHANGE) core_->RenderingSettingsChanged(true);
+                result = core_->ImeMessage(message, wParam, lParam);
+            }))
+            return 0;
+        if (result) return *result;
     }
     return wxControl::MSWWindowProc(message, wParam, lParam);
 }

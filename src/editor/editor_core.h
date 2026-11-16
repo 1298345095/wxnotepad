@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include "editor/platform/core_headers.h"
 #include <span>
+#include <utility>
 #ifdef __WXGTK__
 class GtkTextDragDrop;
 #endif
@@ -14,6 +15,20 @@ public:
     Core(EditorControl& window, int selectionOptions);
     ~Core() override;
     intptr_t WndProc(Scintilla::Message message, uintptr_t wParam, intptr_t lParam) override;
+    void RecoverFromResourceFailure(Scintilla::Status status) noexcept;
+    template <typename Action> bool RunNativeOperation(Action&& action) {
+        try {
+            std::forward<Action>(action)();
+            return true;
+        } catch (const std::bad_alloc&) {
+            RecoverFromResourceFailure(Scintilla::Status::BadAlloc);
+        } catch (const Scintilla::Internal::Failure& failure) {
+            RecoverFromResourceFailure(failure.status);
+        } catch (const std::runtime_error&) {
+            RecoverFromResourceFailure(Scintilla::Status::Failure);
+        }
+        return false;
+    }
 
     uint64_t SelectionRevision() const noexcept;
 
@@ -80,11 +95,11 @@ private:
     void NotifyChange() const noexcept override;
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override;
     void RecordNotificationChanges(const Scintilla::NotificationData& notification) const noexcept;
-    void HandleCompletionNotification(const Scintilla::NotificationData& notification) const noexcept;
-    void HandleCharacterAdded(const Scintilla::NotificationData& notification) const noexcept;
+    void HandleCompletionNotification(const Scintilla::NotificationData& notification) const;
+    void HandleCharacterAdded(const Scintilla::NotificationData& notification) const;
     void CompleteTagOrMemberAccess() const;
     bool ShouldCompleteTypedWord(const Scintilla::NotificationData& notification) const;
-    void UpdateNotificationState(const Scintilla::NotificationData& notification) const noexcept;
+    void UpdateNotificationState(const Scintilla::NotificationData& notification) const;
     std::unique_ptr<Scintilla::Internal::CaseFolder> CaseFolderForEncoding() const override;
     std::string CaseMapString(const std::string& value, CaseMapping mapping) const override;
     bool SCICALL DragThreshold(Scintilla::Internal::Point start,
