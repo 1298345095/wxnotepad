@@ -1,7 +1,8 @@
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 #include "editor/platform/character_hex.h"
 #include <cstdint>
-#include <cstdio>
+#include <format>
+#include <iterator>
 
 namespace {
 bool InvalidScalarPrefix(unsigned char first, unsigned char next) {
@@ -112,15 +113,15 @@ std::string CharacterToHex(std::string_view text) {
     // platforms, including the extra annotation for exactly one surrogate pair.
     const auto input = Utf16(text);
     std::string result;
-    char buffer[16];
     for (const uint32_t unit : input) {
-        std::snprintf(buffer, sizeof(buffer), unit <= 0xff ? "\\x%02X" : "\\u%04X", unit);
-        result += buffer;
+        if (unit <= 0xff)
+            std::format_to(std::back_inserter(result), "\\x{:02X}", unit);
+        else
+            std::format_to(std::back_inserter(result), "\\u{:04X}", unit);
     }
     if (input.size() == 2 && input[0] >= 0xd800 && input[0] <= 0xdbff && input[1] >= 0xdc00 && input[1] <= 0xdfff) {
         const uint32_t scalar = 0x10000 + ((input[0] - 0xd800) << 10) + input[1] - 0xdc00;
-        std::snprintf(buffer, sizeof(buffer), " U+%06X", scalar);
-        result += buffer;
+        std::format_to(std::back_inserter(result), " U+{:06X}", scalar);
     }
     return result;
 }

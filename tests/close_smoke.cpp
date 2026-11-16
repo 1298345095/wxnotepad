@@ -13,19 +13,23 @@
 #include <string_view>
 
 namespace {
-void Trace(const char* transition) {
+void TracePrefix(const char* transition) {
     static const auto start = std::chrono::steady_clock::now();
     static unsigned sequence = 0;
     const auto elapsed =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
-    std::fprintf(stderr, "CLOSE-LIFECYCLE %u +%lldms %s\n", ++sequence, static_cast<long long>(elapsed.count()),
+    std::fprintf(stderr, "CLOSE-LIFECYCLE %u +%lldms %s", ++sequence, static_cast<long long>(elapsed.count()),
                  transition);
+}
+void Trace(const char* transition) {
+    TracePrefix(transition);
+    std::fputc('\n', stderr);
     std::fflush(stderr);
 }
 void TraceFrame(const char* transition, const EditorFrame* frame) {
-    char message[128];
-    std::snprintf(message, sizeof message, "%s frame=%p", transition, static_cast<const void*>(frame));
-    Trace(message);
+    TracePrefix(transition);
+    std::fprintf(stderr, " frame=%p\n", static_cast<const void*>(frame));
+    std::fflush(stderr);
 }
 EditorFrame* NewFrame() {
     auto* frame = new EditorFrame;
