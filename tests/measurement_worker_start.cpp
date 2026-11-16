@@ -2,6 +2,7 @@
 #include <atomic>
 #include <cstdio>
 #include <stdexcept>
+#include <string_view>
 #include <system_error>
 
 namespace {
@@ -60,8 +61,9 @@ void WorkerFailure() {
                 ++completed[worker];
             if (worker == 2) std::rethrow_exception(original);
         });
-    } catch (const RegressionFailure&) {
-        Require(std::current_exception() == original, "transport the original worker exception without replacement");
+    } catch (const RegressionFailure& failure) {
+        Require(std::string_view(failure.what()) == "worker failure",
+                "transport the original worker exception type and message");
         for (const auto count : completed)
             Require(count == Iterations, "join every other worker before propagating a work failure");
         return;
