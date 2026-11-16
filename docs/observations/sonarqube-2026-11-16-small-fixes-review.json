@@ -1283,8 +1283,83 @@
         }
       }
     },
+    "first_failed_followup_validation": {
+      "source_revision": "116551daf2cee9fcb06c9a76113dae9373eb393d",
+      "checkout_merge_revision": "e25fb234d6412a96d1ce9a961f180c21016803a3",
+      "ci_run_id": 43951652825,
+      "ci_run_url": "https://github.com/1298345095/wxnotepad/actions/runs/43951652825",
+      "snapshot": "Failed first coverage follow-up; retained independently of the corrected test and later hosted results.",
+      "windows": {
+        "job_id": 133595404333,
+        "job_url": "https://github.com/1298345095/wxnotepad/actions/runs/43951652825/job/133595404333",
+        "conclusion": "failure",
+        "registered": 217,
+        "passed": 214,
+        "failed": 2,
+        "skipped": 1,
+        "skipped_tests": [
+          "windows_inline_ime_input"
+        ],
+        "automatic_encoding_decisions": {
+          "result": "passed",
+          "duration_seconds": 1.67
+        },
+        "failed_tests": [
+          {
+            "name": "original_automatic_completion",
+            "log_time_utc": "20:50:05"
+          },
+          {
+            "name": "native_directwrite_automatic_completion",
+            "log_time_utc": "20:51:50"
+          }
+        ],
+        "shared_failure_messages": [
+          "Selection anchor/caret: 0/0; expected 4/4",
+          "FAIL: LaTeX conversion Redo restores the UTF-8 caret"
+        ],
+        "diagnostics": {
+          "passed": 2,
+          "total": 2
+        },
+        "visual_brace_repeat": {
+          "passed": 20,
+          "total": 20
+        }
+      },
+      "wayland_coverage": {
+        "job_id": 133595404264,
+        "job_url": "https://github.com/1298345095/wxnotepad/actions/runs/43951652825/job/133595404264",
+        "conclusion": "failure",
+        "automatic_encoding_decisions": {
+          "result": "passed",
+          "duration_seconds": 0.44,
+          "log_timestamp": "2026-11-16T20:44:46.7214999Z"
+        },
+        "original_automatic_completion": {
+          "result": "failed",
+          "duration_seconds": 26.29,
+          "log_timestamp": "2026-11-16T20:47:50.6648840Z",
+          "messages": [
+            "Selection anchor/caret: 0/0; expected 4/4",
+            "FAIL: LaTeX conversion Redo restores the UTF-8 caret"
+          ],
+          "passed_checks_before_failure": [
+            "Exact supplementary UTF-8 bytes",
+            "Popup closure",
+            "Immediate anchor/caret 4/4",
+            "Undo restores the complete command",
+            "Undo anchor/caret 4/4",
+            "Redo restores the exact supplementary UTF-8 bytes"
+          ],
+          "cause": "The new final assertion expected Redo selection 4/4; the grouped replacement records 0/0 before the later immediate caret move.",
+          "correction": "Expect anchor/caret 0/0 after Redo; retain immediate and Undo anchor/caret 4/4."
+        }
+      }
+    },
     "coverage_followup": {
       "publication_status": "pending_at_publication",
+      "pending_scope": "Hosted validation after correcting the SupplementaryLatex Redo selection expectation to 0/0.",
       "base_source_revision": "e3cebb53b35032db55defcb53ea5ada227877011",
       "result_record": "Commit-specific execution and final Sonar results are recorded on PR #222.",
       "result_url": "https://github.com/1298345095/wxnotepad/pull/222",
@@ -1383,11 +1458,107 @@
           "call_path": "Native Tab -> AcceptWordCompletion with Tab fill-up disabled -> popup cancellation -> CompleteLatex -> two-UTF-16-unit conversion.",
           "assertions": [
             "Exact four UTF-8 output bytes",
-            "Anchor and caret both 4",
+            "Immediate anchor and caret both 4",
             "Completion popup closes",
             "Undo restores the full \\bbi command with anchor/caret 4",
-            "Redo restores the glyph with anchor/caret 4"
+            "Redo restores the glyph with the grouped replacement selection at anchor/caret 0"
           ],
+          "redo_selection_contract": {
+            "evidence_basis": "Pinned original and prepared-core source contracts, corroborated by hosted Linux and Windows logs for 116551daf2cee9fcb06c9a76113dae9373eb393d.",
+            "expected_immediate_selection": {
+              "anchor": 4,
+              "caret": 4
+            },
+            "expected_undo_selection": {
+              "anchor": 4,
+              "caret": 4
+            },
+            "expected_redo_selection": {
+              "anchor": 0,
+              "caret": 0
+            },
+            "event_order": [
+              "ReplaceTarget owns a local UndoGroup. Replacement leaves an empty selection at its start; insertion at that empty selection does not advance it.",
+              "UndoGroup destruction closes Document::EndUndoAction, which notifies Editor::NotifyGroupCompleted.",
+              "RememberCurrentSelectionForRedoOntoStack saves the empty 0/0 selection and clears the pending remember flag.",
+              "CompleteLatex subsequently calls SetSel to move the immediate selection to 4/4.",
+              "Redo restores the recorded 0/0 selection after restoring the supplementary glyph."
+            ],
+            "application_source": {
+              "path": "src/editor/completion_selection.cpp",
+              "revision": "116551daf2cee9fcb06c9a76113dae9373eb393d",
+              "function": "CompleteLatex (unnamed namespace)",
+              "url": "https://github.com/1298345095/wxnotepad/blob/116551daf2cee9fcb06c9a76113dae9373eb393d/src/editor/completion_selection.cpp"
+            },
+            "pinned_original": {
+              "repository": "zufuliu/notepad4",
+              "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+              "contract": "ScintillaWin::HandleLaTeXTabCompletion also calls ReplaceTarget before SetEmptySelection. SelectOption_Default is 15 and enables selection history; Notepad4 loads that default.",
+              "sources": [
+                {
+                  "path": "scintilla/win32/ScintillaWin.cxx",
+                  "symbols": [
+                    "ScintillaWin::HandleLaTeXTabCompletion"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/win32/ScintillaWin.cxx"
+                },
+                {
+                  "path": "scintilla/src/Editor.cxx",
+                  "symbols": [
+                    "Editor::ReplaceTarget",
+                    "Editor::NotifyGroupCompleted",
+                    "Editor::RememberCurrentSelectionForRedoOntoStack",
+                    "Editor::RestoreSelection"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.cxx"
+                },
+                {
+                  "path": "scintilla/src/Document.cxx",
+                  "symbols": [
+                    "Document::EndUndoAction"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.cxx"
+                },
+                {
+                  "path": "scintilla/src/Document.h",
+                  "symbols": [
+                    "UndoGroup"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h"
+                },
+                {
+                  "path": "scintilla/src/Selection.cxx",
+                  "symbols": [
+                    "SelectionRange::MoveForInsertDelete"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Selection.cxx"
+                },
+                {
+                  "path": "scintilla/src/EditModel.cxx",
+                  "symbols": [
+                    "ModelState::RememberSelectionForRedoOntoStack",
+                    "ModelState::SelectionFromStack"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/EditModel.cxx"
+                },
+                {
+                  "path": "src/Edit.h",
+                  "symbols": [
+                    "SelectOption_Default"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/src/Edit.h"
+                },
+                {
+                  "path": "src/Notepad4.cpp",
+                  "symbols": [
+                    "SelectOption default loading"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/src/Notepad4.cpp"
+                }
+              ]
+            },
+            "correction_scope": "Change the new test's final Redo selection assertion to 0/0; preserve the production ordering, immediate and Undo 4/4 assertions, and exact output/history checks."
+          },
           "local_format_check": "clang-format 23.1.2 --dry-run --Werror passed",
           "local_diff_check": "git diff --check passed",
           "hosted_execution": "pending_at_publication"

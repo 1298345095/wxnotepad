@@ -1123,7 +1123,8 @@ The selected follow-up adds regressions to two existing fixtures:
   after `\bb` through native input, then presses Tab with Tab fill-up disabled
   and LaTeX input enabled. The `\bbi` command produces U+1D55A (`𝕚`) through
   `CompleteLatex`'s two-UTF-16-unit path. It checks the exact four UTF-8 bytes,
-  anchor/caret position 4, popup closure, Undo to `\bbi` and Redo to the glyph.
+  immediate anchor/caret position 4, popup closure, Undo to `\bbi` at 4/4 and
+  Redo to the glyph with the grouped replacement's saved selection at 0/0.
   The existing `original_automatic_completion` and Windows
   `native_directwrite_automatic_completion` targets execute this case.
 
@@ -1138,7 +1139,37 @@ byte streams with exit 0 through `ci.py probe`. Its gcov results reached 8/8
 cross-unit branch outcomes and 7/8 terminal outcomes, consistent with the
 unreachable outcome identified above.
 
-Hosted validation of these additions is pending in this publication snapshot.
+### First follow-up failure and corrected selection expectation
+
+Follow-up revision `116551daf2cee9fcb06c9a76113dae9373eb393d` checked out merge
+revision `e25fb234d6412a96d1ce9a961f180c21016803a3`. Its
+[Wayland coverage job](https://github.com/1298345095/wxnotepad/actions/runs/43951652825/job/133595404264)
+passed `automatic_encoding_decisions` in 0.44 seconds. At 20:47:50 UTC,
+`original_automatic_completion` failed with `Selection anchor/caret: 0/0;
+expected 4/4` and `LaTeX conversion Redo restores the UTF-8 caret`. The exact
+output, popup closure, immediate 4/4 selection, Undo text and 4/4 selection,
+and Redo text assertions had all passed before this final assertion.
+
+The same revision's
+[Windows job](https://github.com/1298345095/wxnotepad/actions/runs/43951652825/job/133595404333)
+reported the same 0/0-versus-4/4 failure in both `original_automatic_completion`
+and `native_directwrite_automatic_completion`: 214 passed, two failed and
+`windows_inline_ime_input` skipped. `automatic_encoding_decisions` passed in
+1.67 seconds, diagnostics passed 2/2, and the visual-brace repeat passed 20/20.
+
+The pinned source explains the saved selection: `ReplaceTarget` owns an
+`UndoGroup`. Its closure reaches `Document::EndUndoAction`, then
+`Editor::NotifyGroupCompleted` and `RememberCurrentSelectionForRedoOntoStack`,
+which save the replacement's empty selection at 0/0 before `CompleteLatex`
+performs its final `SetSel` to 4/4. The
+[pinned original LaTeX handler](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/win32/ScintillaWin.cxx)
+also calls `ReplaceTarget` before `SetEmptySelection`, and its default selection
+options enable selection history. This source contract and the hosted Linux
+and Windows results establish the corrected Redo assertion at 0/0. The immediate and Undo
+assertions remain 4/4; production behaviour is preserved.
+
+Hosted validation of the corrected Redo assertion is pending in this
+publication snapshot.
 Commit-specific execution and final Sonar results are recorded on
 [PR #222](https://github.com/1298345095/wxnotepad/pull/222).
 

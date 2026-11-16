@@ -275,7 +275,8 @@ void SupplementaryLatex(EditorFrame* frame) {
     TestEditor::RequireSelection(editor, 4, 4, "LaTeX conversion Undo restores the input caret");
     editor->Send(Redo);
     Require(TestEditor::Text(editor) == Expected, "Redo restores the complete supplementary character");
-    TestEditor::RequireSelection(editor, 4, 4, "LaTeX conversion Redo restores the UTF-8 caret");
+    // The replacement undo group captures the Redo selection before the final caret move.
+    TestEditor::RequireSelection(editor, 0, 0, "LaTeX conversion Redo restores the grouped replacement selection");
     std::puts("PASS: native Tab LaTeX surrogate-pair conversion, UTF-8 caret and Undo/Redo");
 }
 
