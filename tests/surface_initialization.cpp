@@ -7,6 +7,7 @@
 #include <wx/dcgraph.h>
 #include <wx/dcmemory.h>
 #include <array>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
@@ -221,15 +222,33 @@ public:
     explicit PaintFailure(EditorControl* editor) : editor_(editor) { editor_->PushEventHandler(this); }
     ~PaintFailure() override { editor_->PopEventHandler(false); }
 
+    void Complete() {
+        // Stay at the head of the native handler chain: another pushed
+        // observer would restrict this handler to processing its own table,
+        // ending the failure scope before the production paint handler runs.
+        editor_->Refresh(false);
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (!completed_ && std::chrono::steady_clock::now() < deadline) {
+            editor_->Update();
+            wxYield();
+            if (!completed_) wxMilliSleep(1);
+        }
+        Require(completed_, "the native allocation-failure paint dispatch completes");
+    }
+
     bool ProcessEvent(wxEvent& event) override {
         if (event.GetEventType() != wxEVT_PAINT || called) return wxEvtHandler::ProcessEvent(event);
         called = true;
         // Arm only inside the native paint dispatch, after Refresh/Update and
         // event-loop bookkeeping. Forward to the actual production handler.
-        const CompletionAllocationFault::ScopedFailure failure(sizeof(core::TextMeasurement));
-        const bool handled = wxEvtHandler::ProcessEvent(event);
-        injected = failure.Injected();
+        bool handled = false;
+        {
+            const CompletionAllocationFault::ScopedFailure failure(sizeof(core::TextMeasurement));
+            handled = wxEvtHandler::ProcessEvent(event);
+            injected = failure.Injected();
+        }
         recovered = editor_->Send(Message::GetStatus) == BadAlloc && EditorCoreObservation::PaintIdle(*editor_);
+        completed_ = true;
         return handled;
     }
 
@@ -239,6 +258,7 @@ public:
 
 private:
     EditorControl* editor_;
+    bool completed_ = false;
 };
 
 enum class DocumentFailurePoint { Insertion, Undo };
@@ -497,7 +517,7 @@ void CheckNativeRecovery(EditorControl* editor) {
 
     {
         PaintFailure failure(editor);
-        NativePaint::Complete(editor);
+        failure.Complete();
         Require(failure.called && failure.injected && failure.recovered,
                 "actual native paint contains allocation failure and restores its idle paint state");
     }

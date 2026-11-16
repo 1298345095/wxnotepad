@@ -570,5 +570,239 @@
     ],
     "gui_execution": "The new GUI paint, document-history and rectangular-Undo fixture is compiled locally; its desktop execution is recorded by the pull request checks.",
     "result_location": "The continuation pull request description records final CI, Quality, Fuzz, CodeQL and SonarCloud results for the pushed SHA."
+  },
+  "initial_published_revision": "187ee054ad8d6a1e5357b3b68e928e2ee891dc29",
+  "first_hosted_validation": {
+    "head_sha": "187ee054ad8d6a1e5357b3b68e928e2ee891dc29",
+    "checkout_merge_sha": "48c4b280c983e2119a0d35e9205a8a8cb6b24881",
+    "ci_run": 43881661997,
+    "ci_url": "https://github.com/1298345095/wxnotepad/actions/runs/43881661997",
+    "quality": {
+      "run_id": 43881661891,
+      "conclusion": "success",
+      "maintained_translation_units_analyzed": 228
+    },
+    "fuzz": {
+      "run_id": 43881662138,
+      "conclusion": "success"
+    },
+    "codeql": {
+      "run_id": 43881662041,
+      "conclusion": "success"
+    },
+    "linux": {
+      "run_id": 43881661997,
+      "run_attempt": 1,
+      "head_sha": "187ee054ad8d6a1e5357b3b68e928e2ee891dc29",
+      "checkout_merge_sha": "48c4b280c983e2119a0d35e9205a8a8cb6b24881",
+      "coverage_wayland": {
+        "job_id": 133348823363,
+        "conclusion": "failure",
+        "counts": {
+          "total": 205,
+          "passed": 204,
+          "skipped": 0,
+          "failed": 1,
+          "other": []
+        },
+        "failed_test": "native_surface_initialization_failures",
+        "message": "actual native paint contains allocation failure and restores its idle paint state",
+        "parallel_surface": "passed",
+        "artifact_id": 14233342086,
+        "artifact_sha256": "14984c759b3472a8d3414659cec93ddd724a60ab5b9472c8eb1a2c32d29a2ca6",
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43881661997/coverage-wayland-job.log"
+      },
+      "coverage_x11": {
+        "job_id": 133348823383,
+        "conclusion": "failure",
+        "counts": {
+          "total": 205,
+          "passed": 202,
+          "skipped": 2,
+          "failed": 1,
+          "other": []
+        },
+        "failed_test": "native_surface_initialization_failures",
+        "message": "actual native paint contains allocation failure and restores its idle paint state",
+        "parallel_surface": "passed",
+        "skipped_tests": [
+          "original_new_window_maximized",
+          "native_peer_geometry_ready"
+        ],
+        "artifact_id": 14232923918,
+        "artifact_sha256": "b65d26a129ab2e29f436bab1e89cefb418dbf9da0f94ec822ee82c26a96fb77f",
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43881661997/coverage-x11-job.log"
+      },
+      "ordinary_linux": {
+        "job_id": 133348823087,
+        "status": "completed",
+        "conclusion": "failure",
+        "x11": {
+          "total": 205,
+          "passed": 202,
+          "failed": 1,
+          "skipped": 2,
+          "skipped_tests": [
+            "original_new_window_maximized",
+            "native_peer_geometry_ready"
+          ]
+        },
+        "wayland": {
+          "total": 205,
+          "passed": 204,
+          "failed": 1,
+          "skipped": 0
+        },
+        "failed_test": "native_surface_initialization_failures",
+        "message": "actual native paint contains allocation failure and restores its idle paint state",
+        "parallel_surface": "passed in both backends",
+        "wayland_json_repetitions": {
+          "passed": 20,
+          "failed": 0
+        },
+        "x11_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "wayland_diagnostics": {
+          "passed": 2,
+          "failed": 0
+        },
+        "application_and_tests_build": "success",
+        "bundle": "success",
+        "sdk_contract": "success",
+        "evidence_artifact_id": 14233568729,
+        "build_artifact_id": 14233637374,
+        "log": "/workspace/scratch/44c8652c3121/ci-run-43881661997/linux-ordinary-job.log"
+      },
+      "coverage_aggregate": {
+        "job_id": 133357221283,
+        "conclusion": "failure",
+        "step": "Require both coverage backends"
+      },
+      "failure_diagnosis": {
+        "source": "Actual wxWidgets 3.3.3 src/common/event.cpp DoTryChain/ProcessEvent",
+        "cause": "NativePaint::Complete pushes a second handler ahead of PaintFailure, so wxEventProcessInHandlerOnly restricts PaintFailure's base ProcessEvent to its own event table. The allocation fault scope is destroyed before the outer chain calls the production paint handler.",
+        "verification": "Actual wxWidgets handler-chain probe, using wxThreadEvent without a display and the repository's allocation fault helper",
+        "report": "/workspace/scratch/44c8652c3121/native-build/probes/paint-handler-chain/summary.json",
+        "log": "/workspace/scratch/44c8652c3121/native-build/probes/paint-handler-chain/run-001.log",
+        "result": "exit 0; nested called=1/injected=0/production=1/recovered=0; single called=1/injected=1/production=1/recovered=1",
+        "probe_source": "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe.cpp",
+        "probe_source_sha256": "715e9fc4f7bdf25fea0ec3e61c5e83293f29323b4aa49496d4089d9b2c601525",
+        "probe_environment": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh",
+        "probe_compile_argv": [
+          "g++",
+          "-std=c++23",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-DwxDEBUG_LEVEL=0",
+          "-I/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib/wx/include/gtk3-unicode-static-3.3",
+          "-I/workspace/scratch/44c8652c3121/native-sdk/wx-install/include/wx-3.3",
+          "-D__WXGTK3__",
+          "-D__WXGTK__",
+          "-D_FILE_OFFSET_BITS=64",
+          "-I/workspace/scratch/44c8652c3121/wxnotepad/tests",
+          "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe.cpp",
+          "/workspace/scratch/44c8652c3121/wxnotepad/tests/completion_allocation_fault.cpp",
+          "-o",
+          "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe",
+          "-L/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib",
+          "/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib/libwx_baseu-3.3.a",
+          "/workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libz.so",
+          "/workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libpcre2-32.so",
+          "/workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libc.so",
+          "-ldl"
+        ],
+        "probe_compile_command": "g++ -std=c++23 -O2 -Wall -Wextra -Werror -DwxDEBUG_LEVEL=0 -I/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib/wx/include/gtk3-unicode-static-3.3 -I/workspace/scratch/44c8652c3121/native-sdk/wx-install/include/wx-3.3 -D__WXGTK3__ -D__WXGTK__ -D_FILE_OFFSET_BITS=64 -I/workspace/scratch/44c8652c3121/wxnotepad/tests /workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe.cpp /workspace/scratch/44c8652c3121/wxnotepad/tests/completion_allocation_fault.cpp -o /workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe -L/workspace/scratch/44c8652c3121/native-sdk/wx-install/lib /workspace/scratch/44c8652c3121/native-sdk/wx-install/lib/libwx_baseu-3.3.a /workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libz.so /workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libpcre2-32.so /workspace/scratch/44c8652c3121/native-sdk/root/usr/lib/x86_64-linux-gnu/libc.so -ldl",
+        "probe_compiler_resolved": "/usr/bin/g++",
+        "probe_execution_command": "python3 -X utf8 .github/scripts/ci.py probe --report-dir /workspace/scratch/44c8652c3121/native-build/probes/paint-handler-chain --timeout 30 --runs 1 -- /workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe"
+      },
+      "fix": {
+        "file": "tests/surface_initialization.cpp",
+        "description": "The fault hook waits for its own native paint completion and remains the first pushed handler; original assertion preserved.",
+        "compile_exit": 0,
+        "compile_log": "/workspace/scratch/44c8652c3121/native-build/surface-paint-handler-build.log",
+        "native_gui_execution": "pending a new hosted run",
+        "commit": "not committed",
+        "patch": "/workspace/scratch/44c8652c3121/ci-run-43881661997/paint-handler-fix.patch",
+        "source_sha256": "da2476aa672493f3c4556b50a0804a327a1f4946c64cb5f82dae606f2d2d3b00",
+        "compile_command": "source /workspace/scratch/44c8652c3121/native-sdk/environment.sh && cmake --build /workspace/scratch/44c8652c3121/native-build/cmake --target surface_initialization -j8"
+      },
+      "recorded_utc": "2026-11-16T14:24:12.388376+00:00",
+      "artifact_metadata": "/workspace/scratch/44c8652c3121/ci-run-43881661997/github-artifacts.json",
+      "final_linux_job_steps": "/workspace/scratch/44c8652c3121/ci-run-43881661997/github-linux-jobs.json",
+      "raw_log_sha256": {
+        "linux-ordinary-job.log": "9fb54e05d4687ac9f2ef3be72b13caaaf03d255842e23bcb456dd899c7373917",
+        "coverage-wayland-job.log": "51773668a494d00172a32603ecebe0e01c1268b3a024aa78a8781191af20a473",
+        "coverage-x11-job.log": "063de211c52258b5bdd9fd6d5a4542f46520e805bc9e20c2dc75f4ba3fba8bc4"
+      }
+    },
+    "sonar_analysis": "Not submitted: the existing gate requires both coverage backend jobs to pass.",
+    "windows": {
+      "job_id": 133348823555,
+      "conclusion": "failure",
+      "ordinary_tests": {
+        "total": 217,
+        "passed": 215,
+        "failed": 1,
+        "skipped": 1
+      },
+      "failed_test": "native_surface_initialization_failures",
+      "failure": "actual native paint contains allocation failure and restores its idle paint state",
+      "skipped_test": "windows_inline_ime_input",
+      "parallel_surface": "passed",
+      "diagnostic_tests": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "log": "/workspace/scratch/44c8652c3121/ci-windows-187ee054-job.log",
+      "log_sha256": "b5fa570e8ad50765ba39c6951ab3f4a1eede2ff8e7bb44491ed743b5514566ff"
+    },
+    "ci_conclusion": "failure"
+  },
+  "paint_handler_correction": {
+    "scope": "Test fixture correction; the application implementation is unchanged from the initial published revision.",
+    "source_sha256": {
+      "tests/surface_initialization.cpp": "da2476aa672493f3c4556b50a0804a327a1f4946c64cb5f82dae606f2d2d3b00"
+    },
+    "change": "Keep the fault observer at the native event-chain head by waiting for paint completion inside PaintFailure itself. Retain the original called/injected/BadAlloc/idle-state assertions.",
+    "native_fixture_build": {
+      "target": "surface_initialization",
+      "exit_code": 0,
+      "log": "/workspace/scratch/44c8652c3121/native-build/surface-paint-handler-build.log",
+      "log_sha256": "7c8af626657a731174706b444e459ad34b097aa9ea4e5b1d4c3a047a82c95023",
+      "output": "[0/2] Re-checking globbed directories...\n[1/3] Building CXX object CMakeFiles/surface_initialization.dir/tests/surface_initialization.cpp.o\n[2/3] Linking CXX executable surface_initialization\n"
+    },
+    "event_chain_probe": {
+      "scope": "Actual wxWidgets 3.3.3 handler dispatch using a standalone target wxThreadEvent handler and the production allocation-fault helper; it establishes injection lifetime independently of GUI painting.",
+      "source": "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe.cpp",
+      "source_sha256": "715e9fc4f7bdf25fea0ec3e61c5e83293f29323b4aa49496d4089d9b2c601525",
+      "summary": {
+        "command": [
+          "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe"
+        ],
+        "cwd": "/workspace/scratch/44c8652c3121/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/44c8652c3121/native-build/paint-handler-chain-probe"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/44c8652c3121/native-build/probes/paint-handler-chain/run-001.log",
+            "seconds": 0.004
+          }
+        ]
+      },
+      "output": "nested hooks: handled=1 called=1 injected=0 production=1 recovered=0 completion=1\nsingle hook: handled=1 called=1 injected=1 production=1 recovered=1 completion=0\nPASS: actual wxWidgets nested handler chain expires injection before production; a single head handler covers production\n"
+    },
+    "gui_validation": "Paint recovery and the subsequent committed-edit, Undo and rectangular-selection cases require the next hosted run."
   }
 }

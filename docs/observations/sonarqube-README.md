@@ -679,3 +679,38 @@ wxWidgets 3.3.3 and the local GTK SDK. The local sandbox cannot create the displ
 sockets needed to execute GUI fixtures; the continuation pull request runs those
 fixtures through the existing Windows, X11, Wayland and coverage jobs. Its checks
 and description record the final hosted revision and analysis results.
+
+### First hosted run and paint-hook correction
+
+The first [CI run at `187ee05`](https://github.com/1298345095/wxnotepad/actions/runs/43881661997)
+compiled both supported platforms. Each ordinary and coverage Linux backend
+reported one failure in the new surface fixture's paint-injection assertion;
+the preceding initialization, factory and clipping checks passed, as did the
+production parallel-task fixture. X11 recorded 202 passes, two existing skips
+and one failure; Wayland recorded 204 passes and one failure. Coverage analysis
+stopped at its existing requirement that both backend test jobs pass.
+Windows recorded the same single paint-injection failure, 215 passes and one
+existing IME skip; its parallel-task regression and both diagnostics passed.
+Ordinary Linux diagnostics passed on both backends, and its Wayland JSON check
+passed all 20 repeated runs.
+
+The cause was the test's handler arrangement. `NativePaint::Complete` pushed its
+completion observer ahead of `PaintFailure`. wxWidgets' native event-chain
+dispatch then restricted the inner handler to its own event table; its scoped
+allocation failure expired before dispatch reached the editor's paint handler.
+`PaintFailure` now waits for its own native paint completion and remains at the
+head of the chain. The original assertions still require an actual injection,
+`BadAlloc` status and an idle paint state.
+
+A standalone probe linked against actual wxWidgets 3.3.3 reproduces that dispatch
+behavior with a target event handler and the production allocation-fault helper:
+the nested observers invoke the target after injection has expired, while a
+single observer covers the target allocation. The corrected GUI fixture
+compiles and links; its actual paint and subsequent document-history cases are
+executed by the following hosted run. The validation record retains this first
+failure, its diagnosis and the event-chain probe evidence.
+
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43881661891),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43881662138) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43881662041) all passed
+at `187ee05`. Clang-tidy analyzed all 228 maintained translation units.
