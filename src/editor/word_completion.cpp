@@ -20,6 +20,7 @@
 #include <cctype>
 #include <type_traits>
 #include <memory>
+#include <new>
 #include <vector>
 using Scintilla::Message;
 namespace {
@@ -77,7 +78,7 @@ template <size_t StackSize = 32> class CharBuffer {
     std::unique_ptr<char[]> heap;
 
 public:
-    explicit CharBuffer(size_t size) noexcept {
+    explicit CharBuffer(size_t size) {
         if (size <= StackSize) {
             ptr = buffer;
         } else {
@@ -119,22 +120,22 @@ struct WordList {
     WordList(const WordList&) = delete;
     WordList& operator=(const WordList&) = delete;
 
-    void Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) noexcept;
+    void Init(const char* pRoot, unsigned iRootLen, bool ignoreCase);
     std::unique_ptr<char[]> GetList() const;
-    void AddBuffer() noexcept;
-    void AddWord(const char* pWord, unsigned len) noexcept;
+    void AddBuffer(unsigned newCapacity);
+    void AddWord(const char* pWord, unsigned len);
     int CompareNode(const WordNode& node, const char* word, unsigned length, unsigned sortKey) const noexcept;
     void UpdateRoot(const char* pRoot, unsigned iRootLen) noexcept;
     bool StartsWith(const char* pWord) const noexcept;
-    void AddListEx(const char* pList) noexcept;
-    void AddList(const char* pList) noexcept {
+    void AddListEx(const char* pList);
+    void AddList(const char* pList) {
         if (StrNotEmpty(pList)) {
             AddListEx(pList);
         }
     }
-    void AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) noexcept;
+    void AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen);
     void AddWordPrefixes(char* word, unsigned end, unsigned rootLength, std::span<const char* const> words,
-                         std::span<const unsigned> starts) noexcept;
+                         std::span<const unsigned> starts);
 };
 
 // TODO: replace _stricmp() and CompareNoCase() with other functions
@@ -244,8 +245,9 @@ WordNode* SplitTree(WordNode* node) noexcept {
 }
 
 #define WordList_AddNode() (reinterpret_cast<WordNode*>(reinterpret_cast<char*>(buffer) + offset))
-void WordList::AddBuffer() noexcept {
-    buffers.push_back(std::make_unique<std::byte[]>(capacity));
+void WordList::AddBuffer(unsigned newCapacity) {
+    buffers.push_back(std::make_unique<std::byte[]>(newCapacity));
+    capacity = newCapacity;
     offset = 0;
     buffer = buffers.back().get();
 }
@@ -257,7 +259,7 @@ int WordList::CompareNode(const WordNode& node, const char* word, unsigned lengt
     return difference;
 }
 
-void WordList::AddWord(const char* pWord, unsigned len) noexcept {
+void WordList::AddWord(const char* pWord, unsigned len) {
     WordNode* root = pListHead;
 #if NP2_AUTOC_CACHE_SORT_KEY
     const unsigned sortKey = (iStartLen > NP2_AUTOC_SORT_KEY_LENGTH) ? 0 : WL_SortKeyFunc(pWord, len);
@@ -300,8 +302,7 @@ void WordList::AddWord(const char* pWord, unsigned len) noexcept {
         }
 
         if (capacity < offset + len + 1 + sizeof(WordNode)) {
-            capacity <<= 1;
-            AddBuffer();
+            AddBuffer(capacity << 1);
         }
 
         WordNode* node = WordList_AddNode();
@@ -368,7 +369,7 @@ std::unique_ptr<char[]> WordList::GetList() const {
     return list;
 }
 
-void WordList::Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) noexcept {
+void WordList::Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) {
     pListHead = nullptr;
     nWordCount = 0;
     nTotalLen = 0;
@@ -396,9 +397,8 @@ void WordList::Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) noexc
     bIgnoreCase = ignoreCase;
 #endif
 
-    capacity = NP2_AUTOC_INIT_BUFFER_SIZE;
     insertionPath.reserve(InitialTreePathCapacity);
-    AddBuffer();
+    AddBuffer(NP2_AUTOC_INIT_BUFFER_SIZE);
 }
 
 void WordList::UpdateRoot(const char* pRoot, unsigned iRootLen) noexcept {
@@ -454,7 +454,7 @@ static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
 #endif
 }
 
-void WordList::AddListEx(const char* pList) noexcept {
+void WordList::AddListEx(const char* pList) {
     // StopWatch watch;
     // watch.Start();
     char word[NP2_AUTOC_WORD_BUFFER_SIZE];
@@ -506,7 +506,7 @@ void WordList::AddListEx(const char* pList) noexcept {
 }
 
 void WordList::AddWordPrefixes(char* word, unsigned end, unsigned rootLength, std::span<const char* const> words,
-                               std::span<const unsigned> starts) noexcept {
+                               std::span<const unsigned> starts) {
     const char separator = word[end];
     word[end] = '\0';
     AddWord(word, end);
@@ -517,7 +517,7 @@ void WordList::AddWordPrefixes(char* word, unsigned end, unsigned rootLength, st
     word[end] = separator;
 }
 
-void WordList::AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) noexcept {
+void WordList::AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) {
     /*
     when pRoot is 'b', split 'bugprone-branch-clone' as following:
     1. first hyphen: 'bugprone-branch-clone' => 'bugprone', 'branch-clone'.
@@ -791,7 +791,7 @@ class Collector final {
     }
 
     void CollectDocumentWord(WordList& pWList, Sci_Position iPosFind, Sci_Position& wordEnd, int style, char prefix,
-                             bool bSubWord) noexcept {
+                             bool bSubWord) {
         const int iRootLen = pWList.iStartLen;
         if (wordEnd - iPosFind < iRootLen) return;
         char wordBuf[NP2_AUTOC_WORD_BUFFER_SIZE];
@@ -824,7 +824,7 @@ class Collector final {
     }
 
     void AutoC_AddDocWord(WordList& pWList, const std::array<uint32_t, 8>& ignoredStyleMask, bool bIgnoreCase,
-                          char prefix) noexcept {
+                          char prefix) {
         const char* const pRoot = pWList.pWordStart;
         const int iRootLen = pWList.iStartLen;
 
@@ -1337,9 +1337,17 @@ void CompleteWord(EditorControl& editor, const SyntaxDefinition& definition, con
         state.previousItemCount <= 2U * static_cast<unsigned>(settings.visibleItemCount))
         return;
     if (condition == WordCompletionCondition::Normal) state.previousItemCount = 0;
-    editor.SetCompletionSettings(settings);
-    if (!Collector(editor, definition, settings).Run(autoInsert, condition, state)) {
-        state.previousItemCount = 0;
-        if (condition != WordCompletionCondition::Normal) editor.Send(Message::AutoCCancel);
+    try {
+        editor.SetCompletionSettings(settings);
+        if (!Collector(editor, definition, settings).Run(autoInsert, condition, state)) {
+            state.previousItemCount = 0;
+            if (condition != WordCompletionCondition::Normal) editor.Send(Message::AutoCCancel);
+        }
+    } catch (const std::bad_alloc&) {
+        // Completion is optional; keep the edit that triggered the native
+        // notification and stop before crossing its noexcept boundary.
+        state = {};
+        editor.Send(Message::AutoCCancel);
+        editor.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::BadAlloc));
     }
 }
