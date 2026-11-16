@@ -265,7 +265,7 @@ does not supply PowerShell coverage. The 80% new-code gate is unchanged.
 Configure these project settings before enabling the CI scanner:
 
 1. Add the repository Actions secret `SONAR_TOKEN`, using a SonarCloud token with
-   Execute Analysis permission on `1298345095_wxnotepad2`.
+   Execute Analysis permission on `1298345095_wxnotepad`.
 2. Turn off **Administration > Analysis Method > Automatic Analysis** in that
    SonarCloud project. CI analysis and Automatic Analysis must not run together.
 

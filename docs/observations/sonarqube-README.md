@@ -1,6 +1,6 @@
 # SonarQube analysis
 
-Project: `1298345095_wxnotepad2`, default branch `main`.
+Project: `1298345095_wxnotepad`, default branch `main`.
 
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
