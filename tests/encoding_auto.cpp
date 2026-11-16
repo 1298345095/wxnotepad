@@ -2,6 +2,7 @@
 #include "editor/editor_control.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
+#include <array>
 #include <cstdio>
 #include <stdexcept>
 #ifdef __WXMSW__
@@ -212,6 +213,44 @@ void CheckWeakNativeAnsi(EditorControl* editor, const std::filesystem::path& dir
                 "a native UTF-8 locale does not invent CP936 as weak ANSI fallback");
 #endif
 }
+void CheckUnicodeLineEndings(const AutomaticFixture& check) {
+    using enum FileEncoding;
+    EncodingOptions statistics;
+    statistics.skipUnicodeDetection = false;
+    statistics.loadANSIasUTF8 = false;
+    // The Georgian prefix reaches Unicode statistics even on native single-byte
+    // code pages. The suffixes distinguish Unicode code units from byte CR/LF.
+    const std::string prefix = "\x{d0}\x{10}\x{d1}\x{10}\x{d2}\x{10}\x{d3}\x{10}"
+                               "\x{d4}\x{10}\x{d5}\x{10}\x{d6}\x{10}\x{d7}\x{10}";
+    check("statistics-unicode-line-bytes.txt", prefix + "\x{15}\x{0a}\x{15}\x{0d}\x{15}\x{0d}",
+          "აბგდევზთ\u{a15}\u{d15}\u{d15}", Utf16Le, false, statistics);
+
+    struct ByteLineEnding {
+        const char* name;
+        const char* suffix;
+    };
+    constexpr std::array samples = {
+        ByteLineEnding{"statistics-cross-lfcr.txt", "\x{15}\x{0a}\x{0d}\x{10}\x{15}\x{0a}"},
+        ByteLineEnding{"statistics-cross-crlf.txt", "\x{15}\x{0d}\x{0a}\x{10}"},
+        ByteLineEnding{"statistics-final-lfcr.txt", "\x{0a}\x{0d}"},
+    };
+    auto skipStatistics = statistics;
+    skipStatistics.skipUnicodeDetection = true;
+    for (const auto& sample : samples) {
+        const auto bytes = prefix + sample.suffix;
+        // These streams contain no NUL. The existing skip option provides the
+        // platform's native/legacy fallback, including Windows UTF-8 ACP mode.
+        const auto fallback = DetectEncoding(sample.name, bytes, std::nullopt, skipStatistics);
+        Require(fallback.encoding != Utf16Le && fallback.encoding != Utf16Be && !fallback.bom,
+                "skipping Unicode statistics retains the byte stream's native fallback");
+        const auto detected = DetectEncoding(sample.name, bytes, std::nullopt, statistics);
+        Require(detected.encoding == fallback.encoding && detected.bom == fallback.bom &&
+                    detected.unsupportedCodePage == fallback.unsupportedCodePage &&
+                    detected.systemDefault == fallback.systemDefault && detected.systemOem == fallback.systemOem,
+                sample.name);
+    }
+    std::puts("PASS: Unicode code units and byte CR/LF retain distinct automatic encoding decisions");
+}
 void CheckConfiguredDetection(EditorControl* editor, const std::filesystem::path& directory,
                               const AutomaticFixture& check) {
     check("nonlatin-utf16.txt", std::string("\x2d\x4e\x87\x65 \0E\0n\0g\0l\0i\0s\0h\0\n\0", 22), "中文 English\n",
@@ -222,6 +261,7 @@ void CheckConfiguredDetection(EditorControl* editor, const std::filesystem::path
     // the native code page accepts every byte (for example CP1252).
     check("statistics-utf16.txt", std::string("\xd0\x10\xd1\x10\xd2\x10\xd3\x10\xd4\x10\xd5\x10\xd6\x10\xd7\x10", 16),
           "აბგდევზთ", FileEncoding::Utf16Le, false, unicodeStatistics);
+    CheckUnicodeLineEndings(check);
     const std::string masked = "# tab-width: 8\n" + std::string(600, 'x') + "\n# coding: windows1252\n";
     check("first-window.txt", masked, masked, FileEncoding::Utf8, false);
     const std::string footer = std::string(600, 'x') + "\n# coding: gbk\n\xd6\xd0\xce\xc4";

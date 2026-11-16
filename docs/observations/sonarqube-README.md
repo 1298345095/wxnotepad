@@ -1064,14 +1064,85 @@ These contracts were checked against the pinned wxWidgets 3.3.3 event storage,
 native handle accessors and `wxDynamicCast` implementation. The ledger links
 those exact framework sources and the application/test paths that consume them.
 
-### Validation and retained work
+### Local validation
 
 Canonical clang-format 23.1.2 passed for all 374 tracked C/C++ files, and
 `git diff --check` passed. Independent complete-source review checked parameter
 lifetimes, single evaluations, persisted values and the character result type.
 The documented core preparation verified the pinned archive and patch set.
-This workspace has no wxWidgets SDK; the continuation pull request records the
-commit-specific Windows, X11, Wayland, native analyzer and SonarCloud results.
+This workspace has no wxWidgets SDK; native execution uses the hosted checks.
+
+### First hosted validation
+
+The first published revision, `e3cebb53b35032db55defcb53ea5ada227877011`, passed
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43945699409),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43945699336),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43945699453) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43945699715).
+Native jobs checked out merge revision
+`094a8bc7c0a090c2d6035e7467829204ed0f74da`.
+
+| Platform | Native tests | Skipped cases | Diagnostics | Repeated regression |
+| --- | --- | --- | --- | --- |
+| Windows | 216 passed, 1 skipped | `windows_inline_ime_input` | 2/2 passed | Visual brace: 20/20 passed |
+| X11 | 203 passed, 2 skipped | `original_new_window_maximized`, `native_peer_geometry_ready` | 2/2 passed | — |
+| Wayland | 205/205 passed | None | 2/2 passed | JSON: 20/20 passed |
+
+Both coverage backends completed successfully. The
+[first Sonar task](https://sonarcloud.io/api/ce/task?id=AaHmCEfquUWaKV8HNVdA)
+recorded the exact source revision above and an **ERROR** quality gate:
+new-code coverage was 76.36363636363636% (displayed as 76.4%), below the 80%
+threshold. All 13 new lines were covered; 13 of 42 new conditions were
+uncovered, giving `(13 + 29) / (13 + 42)` combined coverage. The missing
+conditions were localized as follows at that revision:
+
+| Source | Conditions | Covered | Uncovered |
+| --- | ---: | ---: | ---: |
+| `src/document/encoding/encoding_detection.cpp:255` | 8 | 2 | 6 |
+| `src/document/encoding/encoding_detection.cpp:261` | 8 | 2 | 6 |
+| `src/editor/completion_selection.cpp:31` | 3 | 2 | 1 |
+
+PR-scoped queries returned zero OPEN/CONFIRMED findings and zero security
+hotspots. Every other gate condition passed: A reliability, security and
+maintainability; 0.0% new duplication; 100% hotspot review. This first hosted
+result remains recorded independently of the follow-up validation.
+
+### Focused coverage follow-up
+
+The selected follow-up adds regressions to two existing fixtures:
+
+- `automatic_encoding_decisions` distinguishes valid UTF-16 code units containing
+  CR/LF-valued bytes from byte line endings that cross code-unit boundaries or
+  end the stream. The valid control checks automatic Open, exact decoded text,
+  encoding/BOM identity and byte-for-byte Save. Three CR/LF samples compare all
+  five `DetectEncoding` identity fields with Unicode statistics enabled and
+  skipped; the skipped control must choose a non-UTF-16 fallback without a BOM.
+  This retains the platform's native/legacy fallback, including Windows UTF-8
+  ACP mode.
+- `SupplementaryLatex` in the existing automatic-completion fixture types `i`
+  after `\bb` through native input, then presses Tab with Tab fill-up disabled
+  and LaTeX input enabled. The `\bbi` command produces U+1D55A (`𝕚`) through
+  `CompleteLatex`'s two-UTF-16-unit path. It checks the exact four UTF-8 bytes,
+  anchor/caret position 4, popup closure, Undo to `\bbi` and Redo to the glyph.
+  The existing `original_automatic_completion` and Windows
+  `native_directwrite_automatic_completion` targets execute this case.
+
+At the first revision's `encoding_detection.cpp:261`, the true outcome of
+`previousHigh == 10 && previousLow == 13` cannot reach the final check: its
+`0x0A0D` code unit was already rejected earlier in the loop. The follow-up
+targets reachable cross-unit and terminal paths while preserving the
+production predicates and the 80% coverage threshold.
+
+A GCC 14.2 probe of the extracted production encoding helpers passed all four
+byte streams with exit 0 through `ci.py probe`. Its gcov results reached 8/8
+cross-unit branch outcomes and 7/8 terminal outcomes, consistent with the
+unreachable outcome identified above.
+
+Hosted validation of these additions is pending in this publication snapshot.
+Commit-specific execution and final Sonar results are recorded on
+[PR #222](https://github.com/1298345095/wxnotepad/pull/222).
+
+### Retained work
 
 The four recommendations retained by PR #221 remain mapped to their current
 main keys in the ledger: two production recovery boundaries, the surface test's

@@ -1102,7 +1102,306 @@
       "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
       "archive_and_patch_verification": "passed"
     },
-    "local_native_execution": "Unavailable: this workspace has no wxWidgets SDK. Commit-specific native CI and SonarCloud results are recorded on the continuation pull request."
+    "local_native_execution": "Unavailable: this workspace has no wxWidgets SDK. Commit-specific native CI and SonarCloud results are recorded on the continuation pull request.",
+    "first_hosted_validation": {
+      "source_revision": "e3cebb53b35032db55defcb53ea5ada227877011",
+      "checkout_merge_revision": "094a8bc7c0a090c2d6035e7467829204ed0f74da",
+      "pull_request": 222,
+      "pull_request_url": "https://github.com/1298345095/wxnotepad/pull/222",
+      "snapshot": "Initial hosted outcome; retained independently of later follow-up validation.",
+      "workflows": [
+        {
+          "name": "CI",
+          "run_id": 43945699409,
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43945699409",
+          "conclusion": "success"
+        },
+        {
+          "name": "Quality",
+          "run_id": 43945699336,
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43945699336",
+          "conclusion": "success"
+        },
+        {
+          "name": "Fuzz",
+          "run_id": 43945699453,
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43945699453",
+          "conclusion": "success"
+        },
+        {
+          "name": "CodeQL",
+          "run_id": 43945699715,
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43945699715",
+          "conclusion": "success"
+        }
+      ],
+      "native": {
+        "windows": {
+          "job_id": 133574651939,
+          "passed": 216,
+          "skipped": 1,
+          "skipped_tests": [
+            "windows_inline_ime_input"
+          ],
+          "diagnostics": {
+            "passed": 2,
+            "total": 2
+          },
+          "visual_brace_repeat": {
+            "passed": 20,
+            "total": 20
+          }
+        },
+        "x11": {
+          "job_id": 133574652570,
+          "passed": 203,
+          "skipped": 2,
+          "skipped_tests": [
+            "original_new_window_maximized",
+            "native_peer_geometry_ready"
+          ],
+          "diagnostics": {
+            "passed": 2,
+            "total": 2
+          }
+        },
+        "wayland": {
+          "job_id": 133574652570,
+          "passed": 205,
+          "skipped": 0,
+          "skipped_tests": [],
+          "diagnostics": {
+            "passed": 2,
+            "total": 2
+          },
+          "json_repeat": {
+            "passed": 20,
+            "total": 20
+          }
+        }
+      },
+      "coverage_jobs": [
+        {
+          "backend": "x11",
+          "job_id": 133574652345,
+          "conclusion": "success"
+        },
+        {
+          "backend": "wayland",
+          "job_id": 133574652463,
+          "conclusion": "success"
+        }
+      ],
+      "sonar": {
+        "project": "1298345095_wxnotepad",
+        "pull_request": "222",
+        "dashboard_url": "https://sonarcloud.io/dashboard?id=1298345095_wxnotepad&pullRequest=222",
+        "scanner_job_id": 133583233554,
+        "source_revision": "e3cebb53b35032db55defcb53ea5ada227877011",
+        "compute_engine_task_id": "AaHmCEfquUWaKV8HNVdA",
+        "task_url": "https://sonarcloud.io/api/ce/task?id=AaHmCEfquUWaKV8HNVdA",
+        "quality_gate": "ERROR",
+        "gate_conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "ERROR",
+            "errorThreshold": "80",
+            "actualValue": "76.4"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ],
+        "new_coverage_percent": 76.36363636363636,
+        "displayed_new_coverage_percent": 76.4,
+        "required_new_coverage_percent": 80,
+        "new_lines_to_cover": 13,
+        "new_uncovered_lines": 0,
+        "new_conditions_to_cover": 42,
+        "new_uncovered_conditions": 13,
+        "combined_coverage_fraction": "(13 covered lines + 29 covered conditions) / (13 lines + 42 conditions) = 42 / 55",
+        "uncovered_conditions": [
+          {
+            "file": "src/document/encoding/encoding_detection.cpp",
+            "line": 255,
+            "conditions": 8,
+            "covered": 2,
+            "uncovered": 6
+          },
+          {
+            "file": "src/document/encoding/encoding_detection.cpp",
+            "line": 261,
+            "conditions": 8,
+            "covered": 2,
+            "uncovered": 6
+          },
+          {
+            "file": "src/editor/completion_selection.cpp",
+            "line": 31,
+            "conditions": 3,
+            "covered": 2,
+            "uncovered": 1
+          }
+        ],
+        "issue_query": {
+          "statuses": [
+            "OPEN",
+            "CONFIRMED"
+          ],
+          "total": 0
+        },
+        "hotspot_query": {
+          "status_filter": "none",
+          "total": 0
+        }
+      }
+    },
+    "coverage_followup": {
+      "publication_status": "pending_at_publication",
+      "base_source_revision": "e3cebb53b35032db55defcb53ea5ada227877011",
+      "result_record": "Commit-specific execution and final Sonar results are recorded on PR #222.",
+      "result_url": "https://github.com/1298345095/wxnotepad/pull/222",
+      "regressions": [
+        {
+          "file": "tests/encoding_auto.cpp",
+          "function": "CheckUnicodeLineEndings",
+          "target": "automatic_encoding_decisions",
+          "options": {
+            "skipUnicodeDetection": false,
+            "loadANSIasUTF8": false
+          },
+          "prefix_hex": "d0 10 d1 10 d2 10 d3 10 d4 10 d5 10 d6 10 d7 10",
+          "valid_control": {
+            "name": "statistics-unicode-line-bytes.txt",
+            "suffix_hex": "15 0a 15 0d 15 0d",
+            "expected_text": "აბგდევზთਕകക",
+            "expected_encoding": "Utf16Le",
+            "expected_bom": false,
+            "assertions": [
+              "DocumentSession::Open succeeds",
+              "Exact decoded text and encoding/BOM identity",
+              "Save preserves all source bytes"
+            ]
+          },
+          "byte_line_ending_samples": [
+            {
+              "name": "statistics-cross-lfcr.txt",
+              "suffix_hex": "15 0a 0d 10 15 0a",
+              "purpose": "LF/CR bytes cross adjacent code units; the terminal high byte is LF with a different low byte."
+            },
+            {
+              "name": "statistics-cross-crlf.txt",
+              "suffix_hex": "15 0d 0a 10",
+              "purpose": "CR/LF bytes cross adjacent code units."
+            },
+            {
+              "name": "statistics-final-lfcr.txt",
+              "suffix_hex": "0a 0d",
+              "purpose": "The final code unit has an LF low byte and a CR high byte."
+            }
+          ],
+          "fallback_control": "For each NUL-free byte stream, compare public DetectEncoding against the same options with skipUnicodeDetection=true. The control must select neither Utf16Le nor Utf16Be and must have no BOM.",
+          "equality_fields": [
+            "encoding",
+            "bom",
+            "unsupportedCodePage",
+            "systemDefault",
+            "systemOem"
+          ],
+          "rationale": "Check the native/legacy fallback consistently across platforms, including Windows UTF-8 ACP mode, while exercising the reachable CR/LF statistics paths.",
+          "local_helper_probe": {
+            "scope": "Extracted production LatinUtf16, MaybeBinary, ExamineUtf16Bytes, DbcsVariationFactor and IsUtf8 helpers with the four selected byte streams.",
+            "compiler": "GCC 14.2",
+            "flags": "-std=c++23 -O0 --coverage -Wall -Wextra -Werror",
+            "compilation": "passed",
+            "runner": ".github/scripts/ci.py probe",
+            "exit_code": 0,
+            "all_samples": {
+              "LatinUtf16": false,
+              "IsUtf8": false,
+              "MaybeBinary": true
+            },
+            "utf16_statistics_results": [
+              true,
+              false,
+              false,
+              false
+            ],
+            "gcov_taken_branch_outcomes": {
+              "cross_unit_check": "8/8",
+              "terminal_check": "7/8"
+            }
+          },
+          "local_format_check": "clang-format 23.1.2 --dry-run --Werror passed",
+          "local_diff_check": "git diff --check passed",
+          "hosted_execution": "pending_at_publication"
+        },
+        {
+          "file": "tests/automatic_completion.cpp",
+          "function": "SupplementaryLatex",
+          "targets": [
+            "original_automatic_completion",
+            "native_directwrite_automatic_completion"
+          ],
+          "settings": {
+            "scheme": "Plain Text",
+            "latexInputMethod": true,
+            "tab_fill_up": false
+          },
+          "native_input": "ResetStream(\"\\\\bb\", 3, 3), Type('i') to open the candidate popup, then Key(Tab).",
+          "command": "\\bbi",
+          "expected_code_point": "U+1D55A",
+          "expected_utf8_hex": "f0 9d 95 9a",
+          "expected_utf16le_hex": "35 d8 5a dd",
+          "call_path": "Native Tab -> AcceptWordCompletion with Tab fill-up disabled -> popup cancellation -> CompleteLatex -> two-UTF-16-unit conversion.",
+          "assertions": [
+            "Exact four UTF-8 output bytes",
+            "Anchor and caret both 4",
+            "Completion popup closes",
+            "Undo restores the full \\bbi command with anchor/caret 4",
+            "Redo restores the glyph with anchor/caret 4"
+          ],
+          "local_format_check": "clang-format 23.1.2 --dry-run --Werror passed",
+          "local_diff_check": "git diff --check passed",
+          "hosted_execution": "pending_at_publication"
+        }
+      ],
+      "source_constraint": {
+        "file": "src/document/encoding/encoding_detection.cpp",
+        "revision": "e3cebb53b35032db55defcb53ea5ada227877011",
+        "line": 261,
+        "expression": "previousHigh == 10 && previousLow == 13",
+        "finding": "The true outcome cannot reach this final check: the same 0x0A0D code unit was rejected earlier by ExamineUtf16Bytes.",
+        "followup_scope": "Exercise reachable cross-unit and terminal paths; preserve the production predicates, analysis scope and 80% coverage threshold."
+      }
+    }
   },
   "regression_targets": [
     "original_complete_word",
