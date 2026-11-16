@@ -8,7 +8,7 @@ from pathlib import Path
 from localization_layout import screenshot_windows
 
 
-def capture(processes, destination):
+def capture(processes, destination, before_launch):
     destination.mkdir(parents=True, exist_ok=True)
     user = ctypes.WinDLL('user32', use_last_error=True)
     user.SetProcessDpiAwarenessContext.argtypes = [wintypes.HANDLE]
@@ -69,7 +69,9 @@ def capture(processes, destination):
     if not user.EnumWindows(owned, 0):
         raise ctypes.WinError(ctypes.get_last_error())
     (destination / 'windows.json').write_text(json.dumps({'owned_processes': processes,
-                                                        'capture': 'presented pixels within owned window bounds; overlapping windows may cover them',
+                                                        'before_helper_launch': before_launch,
+                                                        'window_metadata_timing': 'after helper process started',
+                                                        'capture': 'desktop DC pixels within owned window bounds; overlapping windows may cover them',
                                                         'windows': records}, indent=2) + '\n',
                                                encoding='utf-8')
 
@@ -78,8 +80,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--pid', type=int, action='append', required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--before-foreground', type=int)
+    parser.add_argument('--before-active', type=int)
+    parser.add_argument('--before-focus', type=int)
     arguments = parser.parse_args()
-    capture(arguments.pid, arguments.output)
+    before_launch = {'foreground': arguments.before_foreground, 'active': arguments.before_active,
+                     'focus': arguments.before_focus}
+    capture(arguments.pid, arguments.output, before_launch)
 
 
 if __name__ == '__main__':
