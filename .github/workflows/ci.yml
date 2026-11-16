@@ -158,27 +158,6 @@ jobs:
         run: |
           python -X utf8 .github/scripts/ci.py probe --report-dir .ci/reports/visual-brace-repeat `
             --cwd .ci/build/cmake --timeout 90 --runs 20 -- "$env:GITHUB_WORKSPACE/.ci/build/cmake/visual_brace.exe"
-      - name: Diagnose intermittent Windows path clipboard timeout
-        if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $fullCTestTemporary = Join-Path $env:GITHUB_WORKSPACE '.ci/build/cmake/Testing/Temporary'
-          if (Test-Path -LiteralPath $fullCTestTemporary) {
-            Copy-Item -LiteralPath $fullCTestTemporary -Destination .ci/reports/windows-full-suite-ctest -Recurse
-          }
-          # The registered CTest deadline remains 180s; allow 30s for wrapper/evidence work.
-          $clipboardProbeTimeoutSeconds = 210
-          $clipboardRepeatRuns = 20
-          for ($clipboardRun = 1; $clipboardRun -le $clipboardRepeatRuns; ++$clipboardRun) {
-            $clipboardRunDirectory = '.ci/reports/path-text-clipboard-repeat/run-{0:D2}' -f $clipboardRun
-            python -X utf8 .github/scripts/ci.py probe --report-dir "$clipboardRunDirectory/probe" `
-              --cwd "$env:GITHUB_WORKSPACE" --timeout $clipboardProbeTimeoutSeconds --runs 1 -- `
-              python -X utf8 .github/scripts/ci.py test --backend windows `
-                --cmake-dir "$env:GITHUB_WORKSPACE/.ci/build/cmake" `
-                --report-dir "$clipboardRunDirectory/ctest" --tests '^original_path_text_clipboard$'
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
       - name: Test private X11
         if: runner.os == 'Linux'
         shell: bash
