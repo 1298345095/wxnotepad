@@ -7,6 +7,7 @@
 #include <wx/display.h>
 #include <wx/modalhook.h>
 #include <wx/wx.h>
+#include <bit>
 #include <cstdio>
 #include <stdexcept>
 namespace {
@@ -32,9 +33,7 @@ void Typing(EditorFrame* frame, int bit, bool enabled) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     const char openings[] = "({[<\"'`,";
     if (bit < 256) {
-        int index = 0;
-        while ((1 << index) != bit)
-            ++index;
+        const auto index = std::countr_zero(static_cast<unsigned>(bit));
         Reset(editor, index == 3 ? "int" : "");
         Character(editor, openings[index]);
         const std::string expected =
@@ -218,8 +217,8 @@ public:
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             try {
-                long bit = 0;
-                Require(argc == 3 && argv[2].ToLong(&bit), "settings test requires mode and original bit");
+                long requestedBit = 0;
+                Require(argc == 3 && argv[2].ToLong(&requestedBit), "settings test requires mode and original bit");
                 if (argv[1] == "--tags" || argv[1] == "--tags-reopen") {
                     TagSettings(frame, *settings_, argv[1] == "--tags-reopen");
                     frame->Editor()->Send(Message::SetSavePoint);
@@ -238,13 +237,15 @@ public:
                     ExitMainLoop();
                     return;
                 }
+                Require(requestedBit > 0 && requestedBit <= 256 &&
+                            std::has_single_bit(static_cast<unsigned long>(requestedBit)),
+                        "insertion setting bit must be a power of two from 1 through 256");
+                const auto bit = static_cast<int>(requestedBit);
                 const bool reopen = argv[1] == "--reopen";
                 const char* labels[] = {"Parentheses ()",    "Braces {}",         "Square brackets []",
                                         "Angle brackets <>", "Double quotes",     "Single quotes",
                                         "Backticks",         "Space after comma", "Space after comment"};
-                int index = 0;
-                while ((1 << index) != bit)
-                    ++index;
+                const auto index = std::countr_zero(static_cast<unsigned>(bit));
                 if (reopen) {
                     Require(settings_->values.autoInsertMask == (PreservedBit | (511 ^ bit)),
                             "saved original bits reopen exactly");
