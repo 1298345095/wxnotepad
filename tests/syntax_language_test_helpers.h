@@ -8,6 +8,7 @@
 #include <fstream>
 #include <span>
 #include <sstream>
+#include <utility>
 
 namespace TestLanguages {
 using Scintilla::Message;
@@ -35,7 +36,7 @@ struct SchemeFixture {
 inline std::string ResumeHighlighting(EditorFrame* frame, const SchemeFixture& fixture,
                                       const std::filesystem::path& path, intptr_t fontSize) {
     auto* editor = frame->Editor();
-    constexpr auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+    constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
     Require(editor->Send(Message::StyleGetSizeFractional, defaultStyle) == fontSize,
             "language installation must retain native font point size");
     const auto original = TestEditor::Text(editor);
@@ -57,7 +58,7 @@ inline void FoldCommands(EditorFrame* frame) {
     intptr_t header = -1;
     for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line) {
         if (static_cast<unsigned>(editor->Send(Message::GetFoldLevel, static_cast<uintptr_t>(line))) &
-            static_cast<unsigned>(Scintilla::FoldLevel::HeaderFlag)) {
+            static_cast<unsigned>(std::to_underlying(Scintilla::FoldLevel::HeaderFlag))) {
             header = line;
             break;
         }
@@ -82,8 +83,7 @@ inline void CommentCommands(EditorFrame* frame, const SchemeFixture& fixture, co
     if (fixture.blockOpen) {
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
         const auto commented = TestEditor::Text(editor);
-        Require(commented.starts_with(fixture.blockOpen) && commented.find(fixture.blockClose) != std::string::npos,
-                blockMessage);
+        Require(commented.starts_with(fixture.blockOpen) && commented.contains(fixture.blockClose), blockMessage);
         TestSyntax::Command(frame, wxID_UNDO);
     }
     Require(TestEditor::Text(editor) == "call()\n", "language comment edits must remain undoable");
@@ -153,7 +153,12 @@ size_t OriginalStyleFoldStates(EditorFrame* frame, const std::filesystem::path& 
     while (std::getline(input, line)) {
         if (line.empty() || line.front() == '#') continue;
         std::istringstream row(line);
-        std::string name, state, deleted, textHex, styleHex, foldText;
+        std::string name;
+        std::string state;
+        std::string deleted;
+        std::string textHex;
+        std::string styleHex;
+        std::string foldText;
         std::getline(row, name, '\t');
         std::getline(row, state, '\t');
         std::getline(row, deleted, '\t');
