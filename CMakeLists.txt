@@ -117,6 +117,7 @@ if(WXNOTEPAD_ENABLE_DIAGNOSTICS)
 endif()
 
 add_library(editor_features STATIC
+    src/editor/completion_candidates.cpp
     src/editor/word_completion.cpp
     src/editor/completion_styles.cpp
     src/editor/go_to_location.cpp
@@ -810,6 +811,12 @@ if(BUILD_TESTING)
     target_compile_definitions(parallel_surface_failure PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
     add_test(NAME native_parallel_surface_failures COMMAND parallel_surface_failure)
     set_tests_properties(native_parallel_surface_failures PROPERTIES TIMEOUT 20)
+
+    add_executable(completion_candidates tests/completion_candidates.cpp src/editor/completion_candidates.cpp
+        tests/completion_allocation_fault.cpp)
+    target_include_directories(completion_candidates PRIVATE src)
+    add_test(NAME completion_candidate_contract COMMAND completion_candidates)
+    set_tests_properties(completion_candidate_contract PROPERTIES TIMEOUT 20)
 
 endif()
 

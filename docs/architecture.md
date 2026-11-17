@@ -22,6 +22,7 @@ search algorithm or own the document's language choice.
 | `src/search/search_session.*` | Find/replace, match validity, zero-width progress, fold reveal and history grouping | The interface takes requests and returns structured outcomes; it creates no widgets. |
 | `src/syntax/*`, `src/syntax/generated/*` | Static catalog, extension detection, lexer/style installation and generated data | Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
 | `src/editor/editor_control.*`, `editor_core.*` | wx window lifetime/event binding and its private original-core adapter | The private nested core owns input, selection/scrolling, IME, notifications and fold repair; editing-command implementations remain separate. |
+| `src/editor/word_completion.cpp`, `completion_candidates.*` | Language/document candidate collection and the completion candidate set | The collector reads live editor state; the candidate module owns matching, deduplication, ordering, prefix fallback and serialization behind the same interface used by its contract tests. |
 | `src/editor/go_to_location.*` | Original line, column and byte-position parsing and navigation | Separate from the host's keyboard-navigation mapping. |
 | `src/editor/tab_conversion.cpp`, `strip_blanks.cpp`, `compress_whitespace.cpp`, `blank_lines.cpp`, `strip_characters.cpp`, `join_lines.cpp`, `pad_spaces.cpp`, `duplicate_lines.cpp`, `enclose_selection.cpp`, `line_comments.cpp`, `block_comments.cpp`, `align_lines.cpp` | Original text transformations behind public editor commands | Algorithms share the live core's text, column and history operations across languages. Each preserves its own original scope, rectangle and replacement rules. |
 | `src/editor/platform/*` | Original platform interface, rendering/fonts/windows and portability primitives | Tightly coupled to the pinned core, behind the editor host. |
@@ -314,6 +315,34 @@ The build still needs an explicit delivered-lexer source list and upstream lexer
 registration. Document those together and verify agreement when adding a language;
 runtime metadata alone cannot change what is compiled. A plugin loader or a new
 code-generation framework is not needed for this catalog.
+
+### Completion candidates
+
+`CompletionCandidates` is an in-process module behind the word-completion
+collector. Construction establishes its root and case policy. Keyword lists and
+document words enter through semantic operations; the collector reads the root,
+candidate count and whether a completion is useful, then serializes the ordered
+list for the existing native popup.
+
+The AA tree, cached sort keys, insertion path, arena growth and serialized byte
+count remain private implementation details. Prefix fallback is an operation on
+an empty candidate set, so the caller cannot change the ordering context of an
+existing tree. The root borrows the collector's live text buffer; that buffer
+outlives the candidate set. Short prefix matching reads only the supplied bytes
+and requires no extra padding from callers.
+
+This seam uses one concrete implementation and needs no adapter. Its locality
+keeps keyword tokenization, qualified subwords, case-sensitive deduplication and
+the original candidate order together. Its leverage is shared by the collector
+and direct contract tests: both cross the same interface, without including a
+production `.cpp` file or inspecting tree/storage fields.
+
+The direct candidate contract checks exact serialized candidates and recovery
+after allocation failure. The existing native completion fixture retains its
+seven targeted failure points, typed-character/Undo/Redo assertions and popup
+recovery. Native failures are targeted before popup construction; a general
+allocation sweep through toolkit callbacks would exercise unrelated `noexcept`
+code. Candidate-only allocation sweeps stay within the in-process module.
 
 ## Where later features belong
 

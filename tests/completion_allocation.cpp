@@ -1,92 +1,27 @@
-// Include the production implementation so this fixture can also exercise its
-// private candidate storage. The executable supplies CompleteWord to app_shell.
-#include "editor/word_completion.cpp"
+#include "editor/word_completion.h"
+#include "syntax/syntax_catalog.h"
 #include "completion_allocation_fault.h"
 #include "native_completion_helpers.h"
+#include <array>
+#include <cstdio>
+#include <exception>
 #include <format>
 #include <iterator>
+#include <string>
 #include <string_view>
 #include <utility>
 
 namespace {
+using Scintilla::Message;
+
 void Require(bool condition, const char* message) {
     if (!condition) throw TestEditor::Failure(message);
-}
-
-template <class Action> void RequireAllocationFailure(size_t size, Action action) {
-    bool caught = false;
-    bool injected = false;
-    {
-        const CompletionAllocationFault::ScopedFailure failure(size);
-        try {
-            action();
-        } catch (const std::bad_alloc&) {
-            caught = true;
-        }
-        injected = failure.Injected();
-    }
-    if (!injected || !caught)
-        throw TestEditor::Failure(std::format(
-            "candidate storage propagates its injected allocation failure (size={}, injected={}, caught={})", size,
-            injected, caught));
 }
 
 size_t CandidateBufferAllocationSize(size_t size) {
     const auto requested = CompletionAllocationFault::ByteVectorAllocationSize(size);
     Require(requested >= size, "candidate buffer probe observes the allocator's complete backing-storage request");
     return requested;
-}
-
-void CandidateAllocationFailures() {
-    // Production roots use CharBuffer's padded storage for the cached sort key.
-    constexpr std::array<char, NP2_AUTOC_SORT_KEY_LENGTH> root{'a'};
-    RequireAllocationFailure(0, [] { const CharBuffer<> buffer(33); });
-    RequireAllocationFailure(0, [&root] {
-        WordList words;
-        words.Init(root.data(), 1, false);
-    });
-    RequireAllocationFailure(CandidateBufferAllocationSize(NP2_AUTOC_INIT_BUFFER_SIZE), [&root] {
-        WordList words;
-        words.Init(root.data(), 1, false);
-    });
-
-    WordList words;
-    words.Init(root.data(), 1, false);
-    words.AddWord("a00000", 6);
-    unsigned failedIndex = 0;
-    for (unsigned index = 1; index < 256; ++index) {
-        const auto word = std::format("a{:05}", index);
-        const auto capacity = words.capacity;
-        const auto offset = words.offset;
-        const auto* buffer = words.buffer;
-        bool caught = false;
-        {
-            const CompletionAllocationFault::ScopedFailure failure;
-            try {
-                words.AddWord(word.c_str(), static_cast<unsigned>(word.size()));
-            } catch (const std::bad_alloc&) {
-                caught = true;
-            }
-        }
-        if (!caught) continue;
-        Require(words.capacity == capacity && words.offset == offset && words.buffer == buffer &&
-                    words.nWordCount == index,
-                "failed candidate growth retains the previous buffer bounds and tree");
-        words.AddWord(word.c_str(), static_cast<unsigned>(word.size()));
-        failedIndex = index;
-        break;
-    }
-    Require(failedIndex != 0 && words.nWordCount == failedIndex + 1,
-            "candidate insertion succeeds after a failed buffer expansion");
-    std::string expected;
-    for (unsigned index = 0; index <= failedIndex; ++index) {
-        if (index) expected += '\n';
-        std::format_to(std::back_inserter(expected), "a{:05}", index);
-    }
-    Require(expected == words.GetList().get(), "failed growth and retry preserve every sorted candidate");
-    RequireAllocationFailure(words.nTotalLen + 1, [&words] { const auto list = words.GetList(); });
-    Require(expected == words.GetList().get(), "failed list serialization preserves reusable candidate storage");
-    std::puts("PASS: completion allocation failures unwind and retain reusable candidate buffers");
 }
 
 constexpr size_t RootLength = 33;
@@ -174,13 +109,14 @@ void NativeAllocationFailure(const EditorFrame* frame, const FailurePoint& point
 
 void CheckAllocationFailures(EditorFrame* frame, bool presented) {
     Require(presented, "native compositor presents the completion allocation fixture");
-    CandidateAllocationFailures();
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
+    // Keep the original seven native failure stages. Their allocation sizes
+    // select known candidate work before the popup's noexcept native callbacks.
     const std::array points{
         FailurePoint{"root buffer", RootLength + 1},
-        FailurePoint{"insertion path", InitialTreePathCapacity * sizeof(WordNode*)},
-        FailurePoint{"initial candidate buffer", CandidateBufferAllocationSize(NP2_AUTOC_INIT_BUFFER_SIZE)},
-        FailurePoint{"candidate buffer growth", CandidateBufferAllocationSize(2 * NP2_AUTOC_INIT_BUFFER_SIZE)},
+        FailurePoint{"insertion path", 32 * sizeof(void*)},
+        FailurePoint{"initial candidate buffer", CandidateBufferAllocationSize(4096)},
+        FailurePoint{"candidate buffer growth", CandidateBufferAllocationSize(8192)},
         FailurePoint{"serialized candidates", CandidateCount * (CandidateLength + 1) + 1},
         FailurePoint{"document search buffer", RootLength + 2, true},
         FailurePoint{"active popup root buffer", RootLength + 1, false, true},
