@@ -22,7 +22,7 @@ constexpr std::array Utf8Samples{std::string_view("Wim 0123456789"), std::string
                                  std::string_view("Café"),           std::string_view("👩‍💻"),
                                  std::string_view("AΩ中😀א"),        std::string_view("office ffi"),
                                  std::string_view("a\tb"),           std::string_view("a\0b", 3)};
-constexpr std::array Latin1Samples{std::string_view("Wim 0123456789"), std::string_view("A\xc0\xe9\xffZ"),
+constexpr std::array Latin1Samples{std::string_view("Wim 0123456789"), std::string_view("A\x{c0}\x{e9}\x{ff}Z"),
                                    std::string_view("a\tb"), std::string_view("a\0b", 3)};
 
 void Require(bool condition, const char* message) {

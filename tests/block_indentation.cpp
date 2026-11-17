@@ -212,12 +212,14 @@ void SavedBytes(EditorFrame* frame) {
     };
     const Fixture fixtures[] = {
         {"utf8-bom", FileEncoding::Utf8,
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "中文\r\nB\nlast",
-         "\xef\xbb\xbf\t中文\r\n\tB\n\tlast"},
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0\xce\xc4\rB\r\nlast\n", "\t\xd6\xd0\xce\xc4\r\tB\r\n\tlast\n"},
-        {"utf16-bom", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\x87\x65\x0d\0\x0a\0\x42\0", 12),
-         std::string("\xff\xfe\x09\0\x2d\x4e\x87\x65\x0d\0\x0a\0\x09\0\x42\0", 16)},
+         "\x{ef}\x{bb}\x{bf}\t中文\r\n\tB\n\tlast"},
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\x{ce}\x{c4}\rB\r\nlast\n",
+         "\t\x{d6}\x{d0}\x{ce}\x{c4}\r\tB\r\n\tlast\n"},
+        {"utf16-bom", FileEncoding::Utf16Le,
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0\x{42}\0", 12),
+         std::string("\x{ff}\x{fe}\x{09}\0\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0\x{09}\0\x{42}\0", 16)},
     };
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");

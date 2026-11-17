@@ -304,21 +304,21 @@ void SavedBytes(EditorFrame* frame) {
     const Fixture fixtures[] = {
         {"utf8-bom",
          FileEncoding::Utf8,
-         "\xef\xbb\xbf中\r\nB",
-         {"\xef\xbb\xbf中中\r\nB", "\xef\xbb\xbf中\r\n中\r\nB",
-          "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}中\r\nB",
+         {"\x{ef}\x{bb}\x{bf}中中\r\nB", "\x{ef}\x{bb}\x{bf}中\r\n中\r\nB",
+          "\x{ef}\x{bb}\x{bf}"
           "B\r\n中"}},
         {"gbk",
          FileEncoding::Gbk,
-         "\xd6\xd0\r\nB",
-         {"\xd6\xd0\xd6\xd0\r\nB", "\xd6\xd0\r\n\xd6\xd0\r\nB", "B\r\n\xd6\xd0"}},
+         "\x{d6}\x{d0}\r\nB",
+         {"\x{d6}\x{d0}\x{d6}\x{d0}\r\nB", "\x{d6}\x{d0}\r\n\x{d6}\x{d0}\r\nB", "B\r\n\x{d6}\x{d0}"}},
         {"utf16le-bom",
          FileEncoding::Utf16Le,
-         std::string("\xff\xfe\x2d\x4e\r\0\n\0B\0", 10),
-         {std::string("\xff\xfe\x2d\x4e\x2d\x4e\r\0\n\0B\0", 12),
-          std::string("\xff\xfe\x2d\x4e\r\0\n\0\x2d\x4e\r\0\n\0B\0", 16),
-          std::string("\xff\xfe"
-                      "B\0\r\0\n\0\x2d\x4e",
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\r\0\n\0B\0", 10),
+         {std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{2d}\x{4e}\r\0\n\0B\0", 12),
+          std::string("\x{ff}\x{fe}\x{2d}\x{4e}\r\0\n\0\x{2d}\x{4e}\r\0\n\0B\0", 16),
+          std::string("\x{ff}\x{fe}"
+                      "B\0\r\0\n\0\x{2d}\x{4e}",
                       10)}},
     };
     const std::array<const char*, 3> commands = {"Duplicate", "Duplicate Line", "Transpose"};

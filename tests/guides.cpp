@@ -333,10 +333,10 @@ void DisplayInvariant(EditorFrame* frame) {
 void SavedHistoryAndViews(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中\r\n", "\xef\xbb\xbf中\r\n!"},
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0\r", "\xd6\xd0\r!"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\x0a\x00", 6),
-         std::string("\xff\xfe\x2d\x4e\x0a\x00\x21\x00", 8)},
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\r\n", "\x{ef}\x{bb}\x{bf}中\r\n!"},
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\r", "\x{d6}\x{d0}\r!"},
+        {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0a}\x{00}", 6),
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0a}\x{00}\x{21}\x{00}", 8)},
     };
     for (const auto& fixture : fixtures) {
         const auto path = TestFiles::TemporaryDirectory() / std::filesystem::path(u8"显示状态-") / fixture.name;

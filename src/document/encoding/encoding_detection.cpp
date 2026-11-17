@@ -9,6 +9,7 @@
 #include <wx/intl.h>
 #include <wx/strconv.h>
 #include <algorithm>
+#include <bit>
 #include <cctype>
 #include <climits>
 #include <cstdint>
@@ -219,7 +220,7 @@ bool MaybeBinary(std::string_view bytes, bool& binary) {
             mask |= 1U << static_cast<unsigned char>(bytes[offset]);
             adjacent |= ++count >= 8 || (offset + 1 < std::min<size_t>(bytes.size(), 1024) &&
                                          control(static_cast<unsigned char>(bytes[offset + 1])));
-            binary = adjacent && (mask & (mask - 1)) != 0;
+            binary = adjacent && !std::has_single_bit(mask);
             if (binary) break;
         }
     }
@@ -252,13 +253,13 @@ std::optional<Utf16Statistics> ExamineUtf16Bytes(std::string_view bytes) {
         statistics.reverseControls |= unit == 0x900 || unit == 0xa00 || unit == 0xd00 || unit == 0x2000;
         const int low = static_cast<int>(unit & 0xff);
         const int high = static_cast<int>(unit >> 8);
-        crossLineEndings += (previousHigh == 10 && low == 13) || (previousHigh == 13 && low == 10);
+        if ((previousHigh == 10 && low == 13) || (previousHigh == 13 && low == 10)) ++crossLineEndings;
         statistics.lowVariation += std::abs(low - previousLow);
         statistics.highVariation += std::abs(high - previousHigh);
         previousLow = low;
         previousHigh = high;
     }
-    crossLineEndings += (previousHigh == 10 && previousLow == 13) || (previousHigh == 13 && previousLow == 10);
+    if ((previousHigh == 10 && previousLow == 13) || (previousHigh == 13 && previousLow == 10)) ++crossLineEndings;
     if (crossLineEndings && crossLineEndings >= std::min<size_t>(bytes.size(), 512) / 40) return std::nullopt;
     return statistics;
 }
@@ -381,17 +382,18 @@ std::optional<DetectedEncoding> DetectSignatureEncoding(std::string_view bytes,
     constexpr size_t maxConvertedSize = (1U << 30) - 16;
     if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == FileEncoding::Utf8)) {
         return DetectedEncoding{explicitEncoding,
-                                *explicitEncoding == FileEncoding::Utf16Le ? bytes.starts_with("\xff\xfe")
+                                *explicitEncoding == FileEncoding::Utf16Le ? bytes.starts_with("\x{ff}\x{fe}")
                                 : *explicitEncoding == FileEncoding::Utf16Be
-                                    ? bytes.starts_with("\xfe\xff")
-                                    : *explicitEncoding == FileEncoding::Utf8 && bytes.starts_with("\xef\xbb\xbf"),
+                                    ? bytes.starts_with("\x{fe}\x{ff}")
+                                    : *explicitEncoding == FileEncoding::Utf8 &&
+                                          bytes.starts_with("\x{ef}\x{bb}\x{bf}"),
                                 {}};
     }
     if (bytes.size() < maxConvertedSize && bytes.size() % 2 == 0) {
-        if (bytes.starts_with("\xff\xfe")) return Choice(CPI_UNICODEBOM, legacy, oem);
-        if (bytes.starts_with("\xfe\xff")) return Choice(CPI_UNICODEBEBOM, legacy, oem);
+        if (bytes.starts_with("\x{ff}\x{fe}")) return Choice(CPI_UNICODEBOM, legacy, oem);
+        if (bytes.starts_with("\x{fe}\x{ff}")) return Choice(CPI_UNICODEBEBOM, legacy, oem);
     }
-    if (bytes.starts_with("\xef\xbb\xbf")) return Choice(CPI_UTF8SIGN, legacy, oem);
+    if (bytes.starts_with("\x{ef}\x{bb}\x{bf}")) return Choice(CPI_UTF8SIGN, legacy, oem);
     if (bytes.size() >= maxConvertedSize) return Choice(IsUtf8(bytes) ? CPI_UTF8 : CPI_DEFAULT, legacy, oem);
     return std::nullopt;
 }

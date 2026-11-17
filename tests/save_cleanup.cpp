@@ -197,10 +197,11 @@ void Encodings(EditorFrame* frame, const std::filesystem::path& directory) {
         std::string expected;
         std::optional<FileEncoding> encoding;
     };
-    const Sample samples[] = {{"utf8", "中 \t\r\nnext \nlast\t", "中\nnext\nlast", FileEncoding::Utf8},
-                              {"utf16", "\xff\xfe\x2d\x4e \0\t\0\r\0\n\0n\0 \0\n\0z\0\t\0"s,
-                               "\xff\xfe\x2d\x4e\n\0n\0\n\0z\0"s, FileEncoding::Utf16Le},
-                              {"gbk", "\xd6\xd0 \t\r\nnext \nlast\t", "\xd6\xd0\nnext\nlast", FileEncoding::Gbk}};
+    const Sample samples[] = {
+        {"utf8", "中 \t\r\nnext \nlast\t", "中\nnext\nlast", FileEncoding::Utf8},
+        {"utf16", "\x{ff}\x{fe}\x{2d}\x{4e} \0\t\0\r\0\n\0n\0 \0\n\0z\0\t\0"s,
+         "\x{ff}\x{fe}\x{2d}\x{4e}\n\0n\0\n\0z\0"s, FileEncoding::Utf16Le},
+        {"gbk", "\x{d6}\x{d0} \t\r\nnext \nlast\t", "\x{d6}\x{d0}\nnext\nlast", FileEncoding::Gbk}};
     for (const auto& sample : samples) {
         const auto input = directory / (std::string(sample.name) + ".txt");
         const auto output = directory / (std::string(sample.name) + "-as.txt");
@@ -227,7 +228,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
     Options(frame, true, true);
     const std::string source = "中 \t\r\n😀 \t\nlast \t";
     const auto seed = directory / "seed-gbk.txt";
-    std::ofstream(seed, std::ios::binary) << "\xd6\xd0";
+    std::ofstream(seed, std::ios::binary) << "\x{d6}\x{d0}";
     editor->Send(Message::SetSavePoint);
     Require(frame->Open(Filename(seed), FileEncoding::Gbk).status == OpenStatus::Opened, "GBK seed must open");
     Load(editor, source);
@@ -253,7 +254,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
                          return EncodingLossChoice::Cancel;
                      }).status == SaveStatus::Cancelled &&
                 sawCleaned && NativeSearch::Text(editor) == "中\n😀\nlast" && editor->Send(Message::GetModify) &&
-                frame->DocumentPath() == identity && Bytes(seed) == "\xd6\xd0" && !std::filesystem::exists(output),
+                frame->DocumentPath() == identity && Bytes(seed) == "\x{d6}\x{d0}" && !std::filesystem::exists(output),
             "lossy cancellation must retain undoable cleanup while preserving disk and identity");
     editor->Send(Message::Undo);
     Require(NativeSearch::Text(editor) == "中 \t\n😀 \t\nlast \t",
@@ -262,7 +263,7 @@ void Failures(EditorFrame* frame, const std::filesystem::path& directory) {
     Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify),
             "cancelled cleanup Undo must return to the old save point");
     Require(frame->SaveAs(Filename(output), [] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
-                Bytes(output) == "\xd6\xd0\n??\nlast" && NativeSearch::Text(editor) == "中\n😀\nlast" &&
+                Bytes(output) == "\x{d6}\x{d0}\n??\nlast" && NativeSearch::Text(editor) == "中\n😀\nlast" &&
                 !editor->Send(Message::GetModify),
             "accepted GBK loss must save cleaned replacement bytes without rewriting Unicode text");
     Load(editor, source);

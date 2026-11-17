@@ -23,7 +23,7 @@ void CheckVariables(std::string_view bytes, bool noVariables, bool noEncoding) {
                         !parsed.longLinesLimit.has_value() && !parsed.tabsAsSpaces.has_value() &&
                         !parsed.tabIndents.has_value(),
                     "disabling file variables leaves editor properties absent");
-    if (noEncoding || bytes.starts_with("\xef\xbb\xbf"))
+    if (noEncoding || bytes.starts_with("\x{ef}\x{bb}\x{bf}"))
         Fuzz::Check(!parsed.encodingName, "disabled declarations and UTF-8 BOM suppress encoding tags");
     if (parsed.encodingName)
         Fuzz::Check(parsed.encodingName->size() <= OriginalEncodingNameMaxBytes,

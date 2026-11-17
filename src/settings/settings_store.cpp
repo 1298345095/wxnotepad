@@ -481,7 +481,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteInt("RenderingTechnology", values.renderingTechnology, defaults.renderingTechnology);
 #endif
         WriteInt("CaretStyle",
-                 values.caret.lineWidth + 10 * values.caret.overstrikeBlock + 100 * values.caret.blockAfterSelection,
+                 values.caret.lineWidth + (values.caret.overstrikeBlock ? 10 : 0) +
+                     (values.caret.blockAfterSelection ? 100 : 0),
                  defaults.caret.lineWidth);
         WriteInt("CaretBlinkPeriod", values.caret.blinkPeriod, defaults.caret.blinkPeriod);
         WriteInt("HighlightCurrentLine", values.highlightCurrentLine, defaults.highlightCurrentLine);

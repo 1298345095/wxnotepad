@@ -1,0 +1,1756 @@
+{
+  "project": "1298345095_wxnotepad",
+  "organization": "1298345095",
+  "review_date": "2026-11-16",
+  "branch": "codex/sonarcloud-small-fixes-2026-11-16",
+  "baseline_commit": "c3d98ca4d270f2367b85ec9a96e0a14e582830ad",
+  "review_method": "Repository text search and complete relevant source/implementation reads, with independent patch review.",
+  "baseline": {
+    "context": "main",
+    "analysis_date": "2026-11-16T19:01:05+0000",
+    "open_confirmed": 3767,
+    "open_confirmed_security_or_reliability": 0,
+    "quality_gate": "OK"
+  },
+  "counts": {
+    "code_fix_keys": 23,
+    "code_fixes_by_rule": {
+      "cpp:S872": 12,
+      "cpp:S1238": 7,
+      "cpp:S5276": 2,
+      "cpp:S5416": 1,
+      "cpp:S2209": 1
+    },
+    "verified_false_positive_keys": 8
+  },
+  "code_fixes": [
+    {
+      "key": "AaHaPjLPSajQlY95HQd4",
+      "rule": "cpp:S872",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 445,
+        "endLine": 445
+      },
+      "change": "Express the separator bit test using an unsigned one-bit mask and an explicit nonzero comparison, including the corresponding Windows branch.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjLPSajQlY95HQeQ",
+      "rule": "cpp:S872",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 820,
+        "endLine": 820
+      },
+      "change": "Select the completion-prefix buffer offset explicitly as zero or one; retain buffer size, copied bytes and evaluation order.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjD5SajQlY95HQcD",
+      "rule": "cpp:S872",
+      "file": "src/editor/completion_selection.cpp",
+      "analyzed_range": {
+        "startLine": 31,
+        "endLine": 31
+      },
+      "change": "Select two or four UTF-16 bytes directly before the existing LaTeX conversion.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NUK5kxw1cHak34v_",
+      "rule": "cpp:S872",
+      "file": "src/editor/occurrence_marking.cpp",
+      "analyzed_range": {
+        "startLine": 193,
+        "endLine": 193
+      },
+      "change": "Select the regular-expression anchor count adjustment explicitly as zero or one.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NT_ukxw1cHak34u0",
+      "rule": "cpp:S872",
+      "file": "src/settings/settings_store.cpp",
+      "analyzed_range": {
+        "startLine": 484,
+        "endLine": 484
+      },
+      "change": "Encode the caret overstrike flag explicitly as decimal ten, preserving the existing INI format.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NT_ukxw1cHak34u1",
+      "rule": "cpp:S872",
+      "file": "src/settings/settings_store.cpp",
+      "analyzed_range": {
+        "startLine": 484,
+        "endLine": 484
+      },
+      "change": "Encode the caret selection flag explicitly as decimal one hundred, preserving the existing INI format.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaGpuAQAUHShZWS1j0bE",
+      "rule": "cpp:S872",
+      "file": "src/document/document_session.h",
+      "analyzed_range": {
+        "startLine": 38,
+        "endLine": 38
+      },
+      "change": "Express mixed line endings as coexistence of at least two nonzero counters using logical operators.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaGpuAQAUHShZWS1j0bF",
+      "rule": "cpp:S872",
+      "file": "src/document/document_session.h",
+      "analyzed_range": {
+        "startLine": 38,
+        "endLine": 38
+      },
+      "change": "The same logical coexistence expression removes the second boolean addition.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaGpuAPmUHShZWS1j0aP",
+      "rule": "cpp:S872",
+      "file": "src/document/encoding/encoding_detection.cpp",
+      "analyzed_range": {
+        "startLine": 255,
+        "endLine": 255
+      },
+      "change": "Increment the cross-byte line-ending count only when the original predicate is true; retain the statistics update order.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaGpuAPmUHShZWS1j0aJ",
+      "rule": "cpp:S872",
+      "file": "src/document/encoding/encoding_detection.cpp",
+      "analyzed_range": {
+        "startLine": 261,
+        "endLine": 261
+      },
+      "change": "Apply the same explicit conditional increment to the final byte pair.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NURwkxw1cHak34z-",
+      "rule": "cpp:S872",
+      "file": "tests/visual_brace.cpp",
+      "analyzed_range": {
+        "startLine": 96,
+        "endLine": 96
+      },
+      "change": "Name the original pixel-colour predicate and increment the count on a match, preserving each pixel read and predicate grouping.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r0_Fyu4V9oip4YRK",
+      "rule": "cpp:S872",
+      "file": "tests/url_conversion.cpp",
+      "analyzed_range": {
+        "startLine": 161,
+        "endLine": 161
+      },
+      "change": "Select the original two-byte or three-byte URL fixture endpoint explicitly.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NULBkxw1cHak34wJ",
+      "rule": "cpp:S1238",
+      "file": "src/editor/align_lines.cpp",
+      "analyzed_range": {
+        "startLine": 72,
+        "endLine": 72
+      },
+      "change": "Pass AlignmentSpacing by const reference; its sole caller owns the local value throughout the synchronous read.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJX",
+      "rule": "cpp:S1238",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "analyzed_range": {
+        "startLine": 35,
+        "endLine": 35
+      },
+      "change": "Pass PRectangle to Rect by const reference; all 15 local calls are synchronous and the helper returns an independent wxRect.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG7NUT4kxw1cHak341E",
+      "rule": "cpp:S1238",
+      "file": "tests/occurrence_marking.cpp",
+      "analyzed_range": {
+        "startLine": 53,
+        "endLine": 53
+      },
+      "change": "Read the expected occurrence ranges by const reference; braced temporary vectors live through the synchronous comparison.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r1N0yu4V9oip4YbM",
+      "rule": "cpp:S1238",
+      "file": "tests/current_line.cpp",
+      "analyzed_range": {
+        "startLine": 153,
+        "endLine": 153
+      },
+      "change": "Read the Yellow colour sample by const reference without copying or slicing the polymorphic wxColour.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r1N0yu4V9oip4YbN",
+      "rule": "cpp:S1238",
+      "file": "tests/current_line.cpp",
+      "analyzed_range": {
+        "startLine": 156,
+        "endLine": 156
+      },
+      "change": "Read the Gray colour sample by const reference without copying or slicing the polymorphic wxColour.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r1DEyu4V9oip4YUM",
+      "rule": "cpp:S1238",
+      "file": "tests/gbk_native.cpp",
+      "analyzed_range": {
+        "startLine": 31,
+        "endLine": 31
+      },
+      "change": "Read the GBK driver path constructor argument by const reference; the driver retains its own wxString value before starting its timer.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r1ALyu4V9oip4YSc",
+      "rule": "cpp:S1238",
+      "file": "tests/save_native.cpp",
+      "analyzed_range": {
+        "startLine": 47,
+        "endLine": 47
+      },
+      "change": "Read the Save driver destination constructor argument by const reference; the driver retains its own wxString value before starting its timer.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHlwks89oTYNiRoCpVP",
+      "rule": "cpp:S5276",
+      "file": "src/editor/word_completion.cpp",
+      "analyzed_range": {
+        "startLine": 717,
+        "endLine": 717
+      },
+      "change": "Use the existing unsigned-byte CharacterAt accessor in ExtendDocumentWord. Pinned Editor.cxx GetCharAt returns Document::UCharAt, whose result is unsigned char.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaG1r0ztyu4V9oip4YJE",
+      "rule": "cpp:S5276",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "analyzed_range": {
+        "startLine": 151,
+        "endLine": 151
+      },
+      "change": "Make the wx DrawPolygon count conversion explicit after checking every pinned core caller: call tips/indicators use three points; markers use 3, 4, 5, 8 or 12 points.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHaPjFYSajQlY95HQcG",
+      "rule": "cpp:S5416",
+      "file": "src/editor/completion_extra_words.h",
+      "analyzed_range": {
+        "startLine": 4,
+        "endLine": 4
+      },
+      "change": "Express the exact existing constant pointer-array alias with using; keyword bytes, order and layout are retained.",
+      "status": "implemented_on_followup_branch"
+    },
+    {
+      "key": "AaHEzXpUhpq0YxBZ9SGY",
+      "rule": "cpp:S2209",
+      "file": "tests/default_encoding.cpp",
+      "analyzed_range": {
+        "startLine": 44,
+        "endLine": 44
+      },
+      "change": "Call static FindWindowByName through wxWindow at all three locations in the default-encoding fixture, retaining the explicit parent argument.",
+      "status": "implemented_on_followup_branch"
+    }
+  ],
+  "false_positives": [
+    {
+      "key": "AaG7NT-gkxw1cHak34ug",
+      "rule": "cpp:S5495",
+      "file": "src/app/dialogs/sort_lines_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 46,
+        "endLine": 46
+      },
+      "status": "FALSE_POSITIVE",
+      "comment": "Reviewed against main c3d98ca4d270f2367b85ec9a96e0a14e582830ad using repository search and complete relevant source, with pinned wxWidgets 3.3.3. S5495 assumes a lambda is used only locally/synchronously. ShowSortLinesDialog also copies updateMode into each radio button's stored [updateMode] Bind callback. The radios/boxes observer arrays therefore travel inside a framework-owned callback. wxWidgets include/wx/event.h (wxEventFunctorFunctor and Bind) copies the functor into m_handler; src/common/event.cpp::DoBind retains it in m_dynamicEvents until handler destruction. The direct updateMode() call is only one use, so the rule's local-only classification misses the retained event use. Keep these value captures. Evidence: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/event.h and https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/event.cpp .",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NT-gkxw1cHak34ug",
+        "newStatus": "falsepositive"
+      },
+      "source_review": {
+        "evidence": [
+          {
+            "path": "src/app/dialogs/sort_lines_dialog.cpp",
+            "symbols": [
+              "ShowSortLinesDialog",
+              "updateMode"
+            ],
+            "detail": "updateMode captures radios/boxes, runs during setup, and is copied into radio->Bind callbacks.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/app/dialogs/sort_lines_dialog.cpp"
+          },
+          {
+            "path": "include/wx/event.h",
+            "revision": "v3.3.3",
+            "lines": [
+              527,
+              572,
+              4000,
+              4011
+            ],
+            "detail": "Bind creates an allocated event functor whose member owns a copy of the supplied closure.",
+            "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/event.h"
+          },
+          {
+            "path": "src/common/event.cpp",
+            "revision": "v3.3.3",
+            "lines": [
+              1210,
+              1249,
+              1775,
+              1809,
+              1888,
+              1968
+            ],
+            "detail": "Dynamic entries are retained for subsequent dispatch and deleted during handler cleanup.",
+            "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/event.cpp"
+          }
+        ]
+      }
+    },
+    {
+      "key": "AaG7NT77kxw1cHak34uc",
+      "rule": "cpp:S5495",
+      "file": "src/app/dialogs/tab_settings_dialog.cpp",
+      "analyzed_range": {
+        "startLine": 80,
+        "endLine": 80
+      },
+      "status": "FALSE_POSITIVE",
+      "comment": "Reviewed against main c3d98ca4d270f2367b85ec9a96e0a14e582830ad using repository search and complete relevant source, with pinned wxWidgets 3.3.3. The changed closure in ShowTabSettingsDialog is copied into three dialog.Bind callbacks (checkbox, spin control and text), carrying its control observers and the sync closure. It is retained for later event dispatch, rather than used only as a synchronous local algorithm callback. wxWidgets include/wx/event.h::Bind allocates wxEventFunctorFunctor, whose m_handler owns a copy; src/common/event.cpp::DoBind stores that functor in the dynamic event table. S5495's local-only use premise omits these stored uses. Keep the explicit value captures. Evidence: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/event.h and https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/event.cpp .",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG7NT77kxw1cHak34uc",
+        "newStatus": "falsepositive"
+      },
+      "source_review": {
+        "evidence": [
+          {
+            "path": "src/app/dialogs/tab_settings_dialog.cpp",
+            "symbols": [
+              "ShowTabSettingsDialog",
+              "changed",
+              "sync"
+            ],
+            "detail": "changed is copied into three Bind callbacks; the nested sync callable performs control synchronization.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/app/dialogs/tab_settings_dialog.cpp"
+          },
+          {
+            "path": "include/wx/event.h",
+            "revision": "v3.3.3",
+            "lines": [
+              527,
+              572,
+              4000,
+              4011
+            ],
+            "detail": "Bind copies and stores supplied functors.",
+            "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/event.h"
+          },
+          {
+            "path": "src/common/event.cpp",
+            "revision": "v3.3.3",
+            "lines": [
+              1210,
+              1249,
+              1775,
+              1809,
+              1888,
+              1968
+            ],
+            "detail": "Retained dynamic handlers are invoked by later events.",
+            "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/event.cpp"
+          }
+        ]
+      }
+    },
+    {
+      "key": "AaHaPjvySajQlY95HQpe",
+      "rule": "cpp:S995",
+      "file": "tests/native_completion_helpers.h",
+      "analyzed_range": {
+        "startLine": 8,
+        "endLine": 8
+      },
+      "status": "FALSE_POSITIVE",
+      "comment": "Reviewed against main c3d98ca4d270f2367b85ec9a96e0a14e582830ad using repository search and complete relevant source, with pinned wxWidgets 3.3.3. NativeCompletion::Key modifies the supplied editor through its native event target: Windows SendMessageW(WM_KEYDOWN), or GTK gtk_widget_event(GDK_KEY_PRESS). EditorControl binds wxEVT_KEY_DOWN to OnKeyDown, then Core::Navigation/EditingKey invokes the mutating core keyboard handlers. Existing completion_popup and automatic_completion scenarios verify selection/confirmation and Escape cancellation on this editor. GetHandle/GetConnectWidget/GTKGetDrawingWindow are const-qualified wx accessors returning mutable native handles; their signatures hide this mutation from the rule. The corresponding editor object is modified, so S995's read-only-parameter premise is false. Header evidence: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h and https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/gtk/window.h .",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjvySajQlY95HQpe",
+        "newStatus": "falsepositive"
+      },
+      "source_review": {
+        "evidence": [
+          {
+            "path": "tests/native_completion_helpers.h",
+            "symbol": "NativeCompletion::Key",
+            "lines": [
+              8,
+              20
+            ],
+            "detail": "Sends native key input to the addressed editor.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/native_completion_helpers.h"
+          },
+          {
+            "path": "src/editor/editor_control.cpp",
+            "symbols": [
+              "EditorControl::EditorControl",
+              "EditorControl::OnKeyDown"
+            ],
+            "detail": "Key binding dispatches to editing/navigation behavior.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/editor/editor_control.cpp"
+          },
+          {
+            "path": "src/editor/editor_core.cpp",
+            "symbols": [
+              "EditorControl::Core::EditingKey",
+              "EditorControl::Core::Navigation"
+            ],
+            "detail": "Native key input reaches mutating core operations.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/editor/editor_core.cpp"
+          },
+          {
+            "path": "tests/completion_popup.cpp",
+            "symbol": "CheckInitialPopup",
+            "detail": "Existing assertions observe popup cancellation through NativeCompletion::Key.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/completion_popup.cpp"
+          }
+        ]
+      }
+    },
+    {
+      "key": "AaHaPjvySajQlY95HQpf",
+      "rule": "cpp:S995",
+      "file": "tests/native_completion_helpers.h",
+      "analyzed_range": {
+        "startLine": 21,
+        "endLine": 21
+      },
+      "status": "FALSE_POSITIVE",
+      "comment": "Reviewed against main c3d98ca4d270f2367b85ec9a96e0a14e582830ad using repository search and complete relevant source, with pinned wxWidgets 3.3.3. NativeCompletion::Wheel delivers WM_MOUSEWHEEL or GDK_SCROLL to the supplied editor's mutable native handle. EditorControl's wxEVT_MOUSEWHEEL binding calls Core::Wheel, which routes an active completion event to its owned popup or changes editor wheel accumulators/scroll/zoom state. tests/completion_popup.cpp::CheckPopupWheelAndFocus exercises this routing. The const-qualified wx handle getters expose writable native objects; they do not make the event operation observational. S995's unmodified-object premise is false for this input helper. Header evidence: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h and https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/gtk/window.h .",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjvySajQlY95HQpf",
+        "newStatus": "falsepositive"
+      },
+      "source_review": {
+        "evidence": [
+          {
+            "path": "tests/native_completion_helpers.h",
+            "symbol": "NativeCompletion::Wheel",
+            "lines": [
+              21,
+              39
+            ],
+            "detail": "Dispatches native wheel input to the editor.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/native_completion_helpers.h"
+          },
+          {
+            "path": "src/editor/editor_core.cpp",
+            "symbol": "EditorControl::Core::Wheel",
+            "lines": [
+              578,
+              615
+            ],
+            "detail": "Routes active-completion wheel events to the popup and its native event handler.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/editor/editor_core.cpp"
+          },
+          {
+            "path": "tests/completion_popup.cpp",
+            "symbol": "CheckPopupWheelAndFocus",
+            "detail": "Exercises active-list wheel behavior and asserts retained popup and fixed document viewport.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/completion_popup.cpp"
+          }
+        ]
+      }
+    },
+    {
+      "key": "AaHaPjvySajQlY95HQpg",
+      "rule": "cpp:S995",
+      "file": "tests/native_completion_helpers.h",
+      "analyzed_range": {
+        "startLine": 40,
+        "endLine": 40
+      },
+      "status": "FALSE_POSITIVE",
+      "comment": "Reviewed against main c3d98ca4d270f2367b85ec9a96e0a14e582830ad using repository search and complete relevant source, with pinned wxWidgets 3.3.3. NativeCompletion::DoubleClick changes the supplied list through native mouse-down/up/double-click events: SendMessageW on Windows and gtk_widget_event on GTK. The actual native list updates its selection and dispatches candidate confirmation. tests/completion_popup.cpp::CheckInitialPopup verifies that this helper commits alpine, closes completion and preserves the expected Undo step; automatic_completion.cpp also exercises it. Const-qualified wx native-handle getters conceal the writable alias from S995. The list is an input target being mutated, so a pointer-to-const would describe the wrong contract. Header evidence: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h and https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/gtk/window.h .",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjvySajQlY95HQpg",
+        "newStatus": "falsepositive"
+      },
+      "source_review": {
+        "evidence": [
+          {
+            "path": "tests/native_completion_helpers.h",
+            "symbol": "NativeCompletion::DoubleClick",
+            "lines": [
+              40,
+              61
+            ],
+            "detail": "Delivers mutating native mouse events to the addressed list.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/native_completion_helpers.h"
+          },
+          {
+            "path": "src/editor/platform/wx_platform.cpp",
+            "symbols": [
+              "CompletionList",
+              "CompletionList::Notify"
+            ],
+            "detail": "Native list selection/double-click handlers notify the core delegate.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/editor/platform/wx_platform.cpp"
+          },
+          {
+            "path": "tests/completion_popup.cpp",
+            "symbol": "CheckInitialPopup",
+            "detail": "Checks selected candidate insertion, popup closure, and one-step Undo after this helper.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/completion_popup.cpp"
+          }
+        ]
+      }
+    },
+    {
+      "key": "AaHaPjuXSajQlY95HQo4",
+      "rule": "cpp:S995",
+      "file": "tests/native_selection_helpers.h",
+      "analyzed_range": {
+        "startLine": 4,
+        "endLine": 4
+      },
+      "status": "FALSE_POSITIVE",
+      "comment": "Reviewed against main c3d98ca4d270f2367b85ec9a96e0a14e582830ad using repository search and complete relevant source, with pinned wxWidgets 3.3.3. NativeSelection::Mouse sends native button/motion input to this editor via SendMessageW or gtk_widget_event. EditorControl binds those events to Core::Mouse, which changes focus and invokes ButtonDownWithModifiers, ButtonMoveWithModifiers or ButtonUpWithModifiers to mutate its selection. tests/selection_preferences.cpp::Drag/Gestures exercises real multiple and rectangular selections. The const-qualified wx GetHandle/GetConnectWidget/GTKGetDrawingWindow accessors return mutable native handles and obscure this side effect. S995 assumes the corresponding object is not modified; that assumption is false for this input delivery helper. Evidence: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h and https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/gtk/window.h .",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjuXSajQlY95HQo4",
+        "newStatus": "falsepositive"
+      },
+      "source_review": {
+        "evidence": [
+          {
+            "path": "tests/native_selection_helpers.h",
+            "symbol": "NativeSelection::Mouse",
+            "lines": [
+              4,
+              45
+            ],
+            "detail": "Sends native mouse input to the supplied editor.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/native_selection_helpers.h"
+          },
+          {
+            "path": "src/editor/editor_control.cpp",
+            "lines": [
+              134,
+              136
+            ],
+            "detail": "Binds mouse events to Core::Mouse.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/editor/editor_control.cpp"
+          },
+          {
+            "path": "src/editor/editor_core.cpp",
+            "symbol": "EditorControl::Core::Mouse",
+            "lines": [
+              617,
+              631
+            ],
+            "detail": "Changes editor focus and calls mutating selection operations.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/editor/editor_core.cpp"
+          },
+          {
+            "path": "tests/selection_preferences.cpp",
+            "symbols": [
+              "Drag",
+              "Gestures"
+            ],
+            "detail": "Asserts resulting native multi-selection/rectangle state and edited document bytes.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/selection_preferences.cpp"
+          }
+        ]
+      }
+    },
+    {
+      "key": "AaHaPjh1SajQlY95HQlj",
+      "rule": "cpp:S995",
+      "file": "tests/automatic_completion.cpp",
+      "analyzed_range": {
+        "startLine": 10,
+        "endLine": 10
+      },
+      "status": "FALSE_POSITIVE",
+      "comment": "Reviewed against main c3d98ca4d270f2367b85ec9a96e0a14e582830ad using repository search and complete relevant source, with pinned wxWidgets 3.3.3. Type is a mutating native input helper. Windows sends WM_KEYDOWN/WM_CHAR/WM_KEYUP to editor->GetHandle(); GTK obtains the owning EditorFrame and calls NativeKeys::Shortcut, which targets that frame's editor. EditorControl's wxEVT_CHAR handler calls Core::Character, then InsertCharacter and RememberCurrentSelectionForRedoOntoStack. The same file's Frozen and Behavior cases verify inserted bytes, caret and Undo/Redo. The const-qualified handle/parent getters hide the writable alias from S995; the editor's document and selection history are changed. Keep EditorControl* to express that contract. Header evidence: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h .",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHaPjh1SajQlY95HQlj",
+        "newStatus": "falsepositive"
+      },
+      "source_review": {
+        "evidence": [
+          {
+            "path": "tests/automatic_completion.cpp",
+            "symbols": [
+              "Type",
+              "Frozen",
+              "Behavior"
+            ],
+            "detail": "Native typing changes the supplied editor; callers assert resulting bytes and editing history.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/automatic_completion.cpp"
+          },
+          {
+            "path": "tests/native_key_helpers.h",
+            "symbols": [
+              "NativeKeys::Shortcut",
+              "NativeKeys::FocusEditor"
+            ],
+            "detail": "GTK path reaches and focuses the same frame-owned editor before sending native keys.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/native_key_helpers.h"
+          },
+          {
+            "path": "src/editor/editor_control.cpp",
+            "lines": [
+              159,
+              170
+            ],
+            "detail": "Native character handler converts and passes input to Core::Character.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/editor/editor_control.cpp"
+          },
+          {
+            "path": "src/editor/editor_core.cpp",
+            "symbol": "EditorControl::Core::Character",
+            "lines": [
+              484,
+              488
+            ],
+            "detail": "Inserts characters and updates selection history.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/src/editor/editor_core.cpp"
+          }
+        ]
+      }
+    },
+    {
+      "key": "AaG1r1Hwyu4V9oip4YXd",
+      "rule": "cpp:S5350",
+      "file": "tests/tab_settings_helpers.h",
+      "analyzed_range": {
+        "startLine": 25,
+        "endLine": 25
+      },
+      "status": "FALSE_POSITIVE",
+      "comment": "Reviewed against main c3d98ca4d270f2367b85ec9a96e0a14e582830ad using repository search and complete relevant source, with pinned wxWidgets 3.3.3. TabDialog::Show obtains window from wxTopLevelWindows and wxDynamicCast(window, wxDialog) returns an alias to the same object. The callback passes that alias to edit(dialog), which changes its controls, and then calls dialog->EndModal to change the dialog's own modal state. In pinned include/wx/object.h, wxDynamicCast goes through const_cast<wxObject*> and wxCheckDynamicCast returns the original obj after the type check. This macro obscures the mutable alias; window's pointee is not a read-only observer. S5350's unmodified-object premise is therefore false. Evidence: https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h .",
+      "transition_receipt": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaG1r1Hwyu4V9oip4YXd",
+        "newStatus": "falsepositive"
+      },
+      "source_review": {
+        "evidence": [
+          {
+            "path": "tests/tab_settings_helpers.h",
+            "symbol": "TabDialog::Show",
+            "lines": [
+              21,
+              40
+            ],
+            "detail": "window and dialog alias the same object; edit(dialog) and EndModal mutate it.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/tab_settings_helpers.h"
+          },
+          {
+            "path": "tests/tab_settings_helpers.h",
+            "symbol": "TabDialog::File",
+            "lines": [
+              42,
+              49
+            ],
+            "detail": "Representative edit callback changes spin-control values and checkbox state.",
+            "url": "https://github.com/1298345095/wxnotepad/blob/c3d98ca4d270f2367b85ec9a96e0a14e582830ad/tests/tab_settings_helpers.h"
+          },
+          {
+            "path": "include/wx/object.h",
+            "revision": "v3.3.3",
+            "lines": [
+              118,
+              121,
+              413,
+              416
+            ],
+            "detail": "wxDynamicCast removes const qualification, checks the class, and returns the same object address.",
+            "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h"
+          }
+        ]
+      }
+    }
+  ],
+  "verification": {
+    "tool": "SonarCloud MCP search_sonar_issues_in_projects",
+    "context": "main",
+    "issue_keys": [
+      "AaG7NT-gkxw1cHak34ug",
+      "AaG7NT77kxw1cHak34uc",
+      "AaHaPjvySajQlY95HQpe",
+      "AaHaPjvySajQlY95HQpf",
+      "AaHaPjvySajQlY95HQpg",
+      "AaHaPjuXSajQlY95HQo4",
+      "AaHaPjh1SajQlY95HQlj",
+      "AaG1r1Hwyu4V9oip4YXd"
+    ],
+    "false_positive_filter": {
+      "issues": [
+        {
+          "key": "AaHaPjh1SajQlY95HQlj",
+          "rule": "cpp:S995",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/automatic_completion.cpp",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this parameter a pointer-to-const. The current type of \"editor\" is \"class EditorControl *\".",
+          "cleanCodeAttribute": "CONVENTIONAL",
+          "cleanCodeAttributeCategory": "CONSISTENT",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-11T09:44:31+0000",
+          "textRange": {
+            "startLine": 10,
+            "endLine": 10
+          }
+        },
+        {
+          "key": "AaHaPjvySajQlY95HQpe",
+          "rule": "cpp:S995",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/native_completion_helpers.h",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this parameter a pointer-to-const. The current type of \"editor\" is \"class EditorControl *\".",
+          "cleanCodeAttribute": "CONVENTIONAL",
+          "cleanCodeAttributeCategory": "CONSISTENT",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-11T08:46:09+0000",
+          "textRange": {
+            "startLine": 8,
+            "endLine": 8
+          }
+        },
+        {
+          "key": "AaHaPjvySajQlY95HQpf",
+          "rule": "cpp:S995",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/native_completion_helpers.h",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this parameter a pointer-to-const. The current type of \"editor\" is \"class EditorControl *\".",
+          "cleanCodeAttribute": "CONVENTIONAL",
+          "cleanCodeAttributeCategory": "CONSISTENT",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-11T08:46:09+0000",
+          "textRange": {
+            "startLine": 21,
+            "endLine": 21
+          }
+        },
+        {
+          "key": "AaHaPjvySajQlY95HQpg",
+          "rule": "cpp:S995",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/native_completion_helpers.h",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this parameter a pointer-to-const. The current type of \"list\" is \"class wxWindow *\".",
+          "cleanCodeAttribute": "CONVENTIONAL",
+          "cleanCodeAttributeCategory": "CONSISTENT",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-11T08:46:09+0000",
+          "textRange": {
+            "startLine": 40,
+            "endLine": 40
+          }
+        },
+        {
+          "key": "AaHaPjuXSajQlY95HQo4",
+          "rule": "cpp:S995",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/native_selection_helpers.h",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this parameter a pointer-to-const. The current type of \"editor\" is \"class EditorControl *\".",
+          "cleanCodeAttribute": "CONVENTIONAL",
+          "cleanCodeAttributeCategory": "CONSISTENT",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-11T08:28:00+0000",
+          "textRange": {
+            "startLine": 4,
+            "endLine": 4
+          }
+        },
+        {
+          "key": "AaG7NT-gkxw1cHak34ug",
+          "rule": "cpp:S5495",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:src/app/dialogs/sort_lines_dialog.cpp",
+          "severity": "MAJOR",
+          "status": "RESOLVED",
+          "message": "Capture variables by reference, it is safe in this context.",
+          "cleanCodeAttribute": "EFFICIENT",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-08T08:11:00+0000",
+          "textRange": {
+            "startLine": 46,
+            "endLine": 46
+          }
+        },
+        {
+          "key": "AaG7NT77kxw1cHak34uc",
+          "rule": "cpp:S5495",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:src/app/dialogs/tab_settings_dialog.cpp",
+          "severity": "MAJOR",
+          "status": "RESOLVED",
+          "message": "Capture variables by reference, it is safe in this context.",
+          "cleanCodeAttribute": "EFFICIENT",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-08T08:11:00+0000",
+          "textRange": {
+            "startLine": 80,
+            "endLine": 80
+          }
+        },
+        {
+          "key": "AaG1r1Hwyu4V9oip4YXd",
+          "rule": "cpp:S5350",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/tab_settings_helpers.h",
+          "severity": "MINOR",
+          "status": "RESOLVED",
+          "message": "Make the type of this variable a pointer-to-const. The current type of \"window\" is \"class wxWindow *\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-01T00:39:52+0000",
+          "textRange": {
+            "startLine": 25,
+            "endLine": 25
+          }
+        }
+      ],
+      "paging": {
+        "pageIndex": 1,
+        "pageSize": 100,
+        "total": 8
+      }
+    },
+    "open_confirmed_filter": {
+      "issues": [],
+      "paging": {
+        "pageIndex": 1,
+        "pageSize": 100,
+        "total": 0
+      }
+    },
+    "note": "The API returns legacy status RESOLVED for these issues; the exact-key FALSE_POSITIVE filter and successful transition receipts establish their disposition."
+  },
+  "previous_batch": {
+    "merged_pr": {
+      "pr_url": "https://github.com/1298345095/wxnotepad/pull/221",
+      "merged": true,
+      "merged_at": "2026-11-16T18:44:43Z",
+      "head_sha": "e42fc4053657534d8eed4284c24bac66a4027422",
+      "merge_commit_sha": "c3d98ca4d270f2367b85ec9a96e0a14e582830ad"
+    },
+    "main_type_safety_fixes": {
+      "selection": "All code_fixes with context == main",
+      "request": {
+        "organization": "1298345095",
+        "projectKeys": [
+          "1298345095_wxnotepad"
+        ],
+        "branch": "main",
+        "issueKey": [
+          "AaHkPxb7gCAub8Zgymjt",
+          "AaHkPxw7gCAub8ZgymkK",
+          "AaHkPxw7gCAub8ZgymkJ",
+          "AaHkPxw7gCAub8ZgymkD",
+          "AaHkPxw7gCAub8ZgymkE",
+          "AaHkPxysgCAub8ZgymkR",
+          "AaHkPxysgCAub8ZgymkW",
+          "AaHkPxysgCAub8ZgymkS",
+          "AaHkPxysgCAub8ZgymkT",
+          "AaHkPxysgCAub8ZgymkU",
+          "AaHjdOeT36FRZpqmyqA5",
+          "AaHjdOdQ36FRZpqmyqAd",
+          "AaHjdOdQ36FRZpqmyqAe",
+          "AaHjdOdQ36FRZpqmyqAf",
+          "AaHjdObJ36FRZpqmyp_9",
+          "AaHjdObJ36FRZpqmyp_-",
+          "AaHjdObJ36FRZpqmyp__",
+          "AaHjdObJ36FRZpqmyqAA",
+          "AaHjdObJ36FRZpqmyqAC",
+          "AaHjdObJ36FRZpqmyqAG",
+          "AaHb6ijQTfmq54B5ATsu",
+          "AaHaPjDeSajQlY95HQb2",
+          "AaHaPjDeSajQlY95HQb3",
+          "AaHaPjDeSajQlY95HQb5",
+          "AaHaPjDeSajQlY95HQb8",
+          "AaHaPjLPSajQlY95HQeK",
+          "AaHaPjLPSajQlY95HQeS",
+          "AaHaPjLPSajQlY95HQeU",
+          "AaHaPjLPSajQlY95HQeX",
+          "AaHaPinBSajQlY95HQbR",
+          "AaHaPjLPSajQlY95HQeb",
+          "AaHaPjLPSajQlY95HQeD",
+          "AaHaPjLPSajQlY95HQeF",
+          "AaHaPjLPSajQlY95HQeM",
+          "AaHaPjLPSajQlY95HQeV",
+          "AaHEzXBthpq0YxBZ9SAx",
+          "AaHEzXBthpq0YxBZ9SA3",
+          "AaG7NUW_kxw1cHak3429",
+          "AaG7NT77kxw1cHak34ud",
+          "AaG7NT77kxw1cHak34ue",
+          "AaG7NT77kxw1cHak34uf",
+          "AaGwmVW4EeGJK6USKRrw",
+          "AaG1r0jAyu4V9oip4YGC",
+          "AaG1r1NAyu4V9oip4Yaw",
+          "AaG1r1NAyu4V9oip4Yax",
+          "AaGRP44_XbG6mhdFE6k5"
+        ],
+        "issueStatuses": [
+          "FIXED"
+        ],
+        "pageSize": 100
+      },
+      "summary": {
+        "requested": 46,
+        "returned_fixed": 46,
+        "missing_keys": [],
+        "observed_date_utc": "2026-11-16"
+      },
+      "matched_keys": [
+        "AaHkPxb7gCAub8Zgymjt",
+        "AaHkPxw7gCAub8ZgymkK",
+        "AaHkPxw7gCAub8ZgymkJ",
+        "AaHkPxw7gCAub8ZgymkD",
+        "AaHkPxw7gCAub8ZgymkE",
+        "AaHkPxysgCAub8ZgymkR",
+        "AaHkPxysgCAub8ZgymkW",
+        "AaHkPxysgCAub8ZgymkS",
+        "AaHkPxysgCAub8ZgymkT",
+        "AaHkPxysgCAub8ZgymkU",
+        "AaHjdOeT36FRZpqmyqA5",
+        "AaHjdOdQ36FRZpqmyqAd",
+        "AaHjdOdQ36FRZpqmyqAe",
+        "AaHjdOdQ36FRZpqmyqAf",
+        "AaHjdObJ36FRZpqmyp_9",
+        "AaHjdObJ36FRZpqmyp_-",
+        "AaHjdObJ36FRZpqmyp__",
+        "AaHjdObJ36FRZpqmyqAA",
+        "AaHjdObJ36FRZpqmyqAC",
+        "AaHjdObJ36FRZpqmyqAG",
+        "AaHb6ijQTfmq54B5ATsu",
+        "AaHaPjDeSajQlY95HQb2",
+        "AaHaPjDeSajQlY95HQb3",
+        "AaHaPjDeSajQlY95HQb5",
+        "AaHaPjDeSajQlY95HQb8",
+        "AaHaPjLPSajQlY95HQeK",
+        "AaHaPjLPSajQlY95HQeS",
+        "AaHaPjLPSajQlY95HQeU",
+        "AaHaPjLPSajQlY95HQeX",
+        "AaHaPinBSajQlY95HQbR",
+        "AaHaPjLPSajQlY95HQeb",
+        "AaHaPjLPSajQlY95HQeD",
+        "AaHaPjLPSajQlY95HQeF",
+        "AaHaPjLPSajQlY95HQeM",
+        "AaHaPjLPSajQlY95HQeV",
+        "AaHEzXBthpq0YxBZ9SAx",
+        "AaHEzXBthpq0YxBZ9SA3",
+        "AaG7NUW_kxw1cHak3429",
+        "AaG7NT77kxw1cHak34ud",
+        "AaG7NT77kxw1cHak34ue",
+        "AaG7NT77kxw1cHak34uf",
+        "AaGwmVW4EeGJK6USKRrw",
+        "AaG1r0jAyu4V9oip4YGC",
+        "AaG1r1NAyu4V9oip4Yaw",
+        "AaG1r1NAyu4V9oip4Yax",
+        "AaGRP44_XbG6mhdFE6k5"
+      ]
+    }
+  },
+  "retained_prior_recommendations": [
+    {
+      "key": "AaHlwkt49oTYNiRoCpVY",
+      "prior_pr_key": "AaHk8Wa9hnL9Urv53rXU",
+      "rule": "cpp:S1181",
+      "file": "src/editor/editor_core.cpp",
+      "line": 240,
+      "status": "OPEN",
+      "reason": "Runtime-error-to-editor-status recovery boundary; narrowing requires verification of all cross-platform propagated exception categories."
+    },
+    {
+      "key": "AaHlwkse9oTYNiRoCpVO",
+      "prior_pr_key": "AaHk8WZ2hnL9Urv53rXN",
+      "rule": "cpp:S1181",
+      "file": "src/editor/editor_core.h",
+      "line": 27,
+      "status": "OPEN",
+      "reason": "RunNativeOperation recovery boundary; intentional recovery alone is not an S1181 false-positive exception."
+    },
+    {
+      "key": "AaHlwkx59oTYNiRoCpVy",
+      "prior_pr_key": "AaHk8WbnhnL9Urv53rXv",
+      "rule": "cpp:S110",
+      "file": "tests/surface_initialization.cpp",
+      "line": 572,
+      "status": "OPEN",
+      "reason": "Native test app inherits wxWidgets' actual class depth; retained framework-integration design recommendation."
+    },
+    {
+      "key": "AaHlwkx59oTYNiRoCpV0",
+      "prior_pr_key": "AaHk8WbnhnL9Urv53rXx",
+      "rule": "cpp:S1181",
+      "file": "tests/surface_initialization.cpp",
+      "line": 582,
+      "status": "OPEN",
+      "reason": "Native test-result callback records failure before cleanup/exit; rule's stated exclusions do not establish a false positive here."
+    }
+  ],
+  "retained_reviewed_items": [
+    {
+      "key": "AaG1r0ztyu4V9oip4YJD",
+      "rule": "cpp:S5276",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "reason": "PolyLine receives width-dependent dynamic squiggle vectors from Indicator::Draw; the fixed-polygon point bound does not apply."
+    },
+    {
+      "rule": "cpp:S5276",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "keys": [
+        "AaHaPjC3SajQlY95HQbk",
+        "AaHaPjC3SajQlY95HQbl",
+        "AaHaPjC3SajQlY95HQbm",
+        "AaHaPjC3SajQlY95HQbn",
+        "AaG1r0ztyu4V9oip4YI-",
+        "AaG1r0ztyu4V9oip4YI8",
+        "AaG1r0ztyu4V9oip4YI9",
+        "AaG1r0ztyu4V9oip4YI7",
+        "AaG1r0ztyu4V9oip4YI_",
+        "AaG1r0ztyu4V9oip4YJA",
+        "AaG1r0ztyu4V9oip4YJB",
+        "AaG1r0ztyu4V9oip4YJC",
+        "AaG1r0ztyu4V9oip4YJH",
+        "AaG1r0ztyu4V9oip4YJI",
+        "AaG1r0ztyu4V9oip4YJJ",
+        "AaG1r0ztyu4V9oip4YJK",
+        "AaG1r0ztyu4V9oip4YJL",
+        "AaG1r0ztyu4V9oip4YJM",
+        "AaG1r0ztyu4V9oip4YJN",
+        "AaG1r0ztyu4V9oip4YJO"
+      ],
+      "reason": "Coordinate conversions require a shared out-of-range, rounding and clipping contract before changing behaviour."
+    },
+    {
+      "key": "AaGQhgRyusAIaC0DBL39",
+      "rule": "cpp:S5271",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "reason": "Adding language-level noreturn only at the definition fails compilation because pinned Debugging.h first declares Platform::Assert without it. A correct fix must update the prepared-core declaration patch as well."
+    },
+    {
+      "key": "AaG7NUK5kxw1cHak34vw",
+      "rule": "cpp:S5276",
+      "file": "src/editor/occurrence_marking.cpp",
+      "reason": "The position delta enters a floating-point duration estimate; its precision/threshold contract remains for a focused review."
+    }
+  ],
+  "validation": {
+    "canonical_format": {
+      "version": "23.1.2",
+      "tracked_files": 374,
+      "result": "passed"
+    },
+    "git_diff_check": "passed",
+    "independent_complete_source_review": "passed",
+    "pinned_core_preparation": {
+      "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+      "archive_and_patch_verification": "passed"
+    },
+    "local_native_execution": "Unavailable: this workspace has no wxWidgets SDK. Commit-specific native CI and SonarCloud results are recorded on the continuation pull request.",
+    "first_hosted_validation": {
+      "source_revision": "e3cebb53b35032db55defcb53ea5ada227877011",
+      "checkout_merge_revision": "094a8bc7c0a090c2d6035e7467829204ed0f74da",
+      "pull_request": 222,
+      "pull_request_url": "https://github.com/1298345095/wxnotepad/pull/222",
+      "snapshot": "Initial hosted outcome; retained independently of later follow-up validation.",
+      "workflows": [
+        {
+          "name": "CI",
+          "run_id": 43945699409,
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43945699409",
+          "conclusion": "success"
+        },
+        {
+          "name": "Quality",
+          "run_id": 43945699336,
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43945699336",
+          "conclusion": "success"
+        },
+        {
+          "name": "Fuzz",
+          "run_id": 43945699453,
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43945699453",
+          "conclusion": "success"
+        },
+        {
+          "name": "CodeQL",
+          "run_id": 43945699715,
+          "url": "https://github.com/1298345095/wxnotepad/actions/runs/43945699715",
+          "conclusion": "success"
+        }
+      ],
+      "native": {
+        "windows": {
+          "job_id": 133574651939,
+          "passed": 216,
+          "skipped": 1,
+          "skipped_tests": [
+            "windows_inline_ime_input"
+          ],
+          "diagnostics": {
+            "passed": 2,
+            "total": 2
+          },
+          "visual_brace_repeat": {
+            "passed": 20,
+            "total": 20
+          }
+        },
+        "x11": {
+          "job_id": 133574652570,
+          "passed": 203,
+          "skipped": 2,
+          "skipped_tests": [
+            "original_new_window_maximized",
+            "native_peer_geometry_ready"
+          ],
+          "diagnostics": {
+            "passed": 2,
+            "total": 2
+          }
+        },
+        "wayland": {
+          "job_id": 133574652570,
+          "passed": 205,
+          "skipped": 0,
+          "skipped_tests": [],
+          "diagnostics": {
+            "passed": 2,
+            "total": 2
+          },
+          "json_repeat": {
+            "passed": 20,
+            "total": 20
+          }
+        }
+      },
+      "coverage_jobs": [
+        {
+          "backend": "x11",
+          "job_id": 133574652345,
+          "conclusion": "success"
+        },
+        {
+          "backend": "wayland",
+          "job_id": 133574652463,
+          "conclusion": "success"
+        }
+      ],
+      "sonar": {
+        "project": "1298345095_wxnotepad",
+        "pull_request": "222",
+        "dashboard_url": "https://sonarcloud.io/dashboard?id=1298345095_wxnotepad&pullRequest=222",
+        "scanner_job_id": 133583233554,
+        "source_revision": "e3cebb53b35032db55defcb53ea5ada227877011",
+        "compute_engine_task_id": "AaHmCEfquUWaKV8HNVdA",
+        "task_url": "https://sonarcloud.io/api/ce/task?id=AaHmCEfquUWaKV8HNVdA",
+        "quality_gate": "ERROR",
+        "gate_conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "ERROR",
+            "errorThreshold": "80",
+            "actualValue": "76.4"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ],
+        "new_coverage_percent": 76.36363636363636,
+        "displayed_new_coverage_percent": 76.4,
+        "required_new_coverage_percent": 80,
+        "new_lines_to_cover": 13,
+        "new_uncovered_lines": 0,
+        "new_conditions_to_cover": 42,
+        "new_uncovered_conditions": 13,
+        "combined_coverage_fraction": "(13 covered lines + 29 covered conditions) / (13 lines + 42 conditions) = 42 / 55",
+        "uncovered_conditions": [
+          {
+            "file": "src/document/encoding/encoding_detection.cpp",
+            "line": 255,
+            "conditions": 8,
+            "covered": 2,
+            "uncovered": 6
+          },
+          {
+            "file": "src/document/encoding/encoding_detection.cpp",
+            "line": 261,
+            "conditions": 8,
+            "covered": 2,
+            "uncovered": 6
+          },
+          {
+            "file": "src/editor/completion_selection.cpp",
+            "line": 31,
+            "conditions": 3,
+            "covered": 2,
+            "uncovered": 1
+          }
+        ],
+        "issue_query": {
+          "statuses": [
+            "OPEN",
+            "CONFIRMED"
+          ],
+          "total": 0
+        },
+        "hotspot_query": {
+          "status_filter": "none",
+          "total": 0
+        }
+      }
+    },
+    "first_failed_followup_validation": {
+      "source_revision": "116551daf2cee9fcb06c9a76113dae9373eb393d",
+      "checkout_merge_revision": "e25fb234d6412a96d1ce9a961f180c21016803a3",
+      "ci_run_id": 43951652825,
+      "ci_run_url": "https://github.com/1298345095/wxnotepad/actions/runs/43951652825",
+      "snapshot": "Failed first coverage follow-up; retained independently of the corrected test and later hosted results.",
+      "windows": {
+        "job_id": 133595404333,
+        "job_url": "https://github.com/1298345095/wxnotepad/actions/runs/43951652825/job/133595404333",
+        "conclusion": "failure",
+        "registered": 217,
+        "passed": 214,
+        "failed": 2,
+        "skipped": 1,
+        "skipped_tests": [
+          "windows_inline_ime_input"
+        ],
+        "automatic_encoding_decisions": {
+          "result": "passed",
+          "duration_seconds": 1.67
+        },
+        "failed_tests": [
+          {
+            "name": "original_automatic_completion",
+            "log_time_utc": "20:50:05"
+          },
+          {
+            "name": "native_directwrite_automatic_completion",
+            "log_time_utc": "20:51:50"
+          }
+        ],
+        "shared_failure_messages": [
+          "Selection anchor/caret: 0/0; expected 4/4",
+          "FAIL: LaTeX conversion Redo restores the UTF-8 caret"
+        ],
+        "diagnostics": {
+          "passed": 2,
+          "total": 2
+        },
+        "visual_brace_repeat": {
+          "passed": 20,
+          "total": 20
+        }
+      },
+      "wayland_coverage": {
+        "job_id": 133595404264,
+        "job_url": "https://github.com/1298345095/wxnotepad/actions/runs/43951652825/job/133595404264",
+        "conclusion": "failure",
+        "automatic_encoding_decisions": {
+          "result": "passed",
+          "duration_seconds": 0.44,
+          "log_timestamp": "2026-11-16T20:44:46.7214999Z"
+        },
+        "original_automatic_completion": {
+          "result": "failed",
+          "duration_seconds": 26.29,
+          "log_timestamp": "2026-11-16T20:47:50.6648840Z",
+          "messages": [
+            "Selection anchor/caret: 0/0; expected 4/4",
+            "FAIL: LaTeX conversion Redo restores the UTF-8 caret"
+          ],
+          "passed_checks_before_failure": [
+            "Exact supplementary UTF-8 bytes",
+            "Popup closure",
+            "Immediate anchor/caret 4/4",
+            "Undo restores the complete command",
+            "Undo anchor/caret 4/4",
+            "Redo restores the exact supplementary UTF-8 bytes"
+          ],
+          "cause": "The new final assertion expected Redo selection 4/4; the grouped replacement records 0/0 before the later immediate caret move.",
+          "correction": "Expect anchor/caret 0/0 after Redo; retain immediate and Undo anchor/caret 4/4."
+        }
+      }
+    },
+    "coverage_followup": {
+      "publication_status": "pending_at_publication",
+      "pending_scope": "Hosted validation after correcting the SupplementaryLatex Redo selection expectation to 0/0.",
+      "base_source_revision": "e3cebb53b35032db55defcb53ea5ada227877011",
+      "result_record": "Commit-specific execution and final Sonar results are recorded on PR #222.",
+      "result_url": "https://github.com/1298345095/wxnotepad/pull/222",
+      "regressions": [
+        {
+          "file": "tests/encoding_auto.cpp",
+          "function": "CheckUnicodeLineEndings",
+          "target": "automatic_encoding_decisions",
+          "options": {
+            "skipUnicodeDetection": false,
+            "loadANSIasUTF8": false
+          },
+          "prefix_hex": "d0 10 d1 10 d2 10 d3 10 d4 10 d5 10 d6 10 d7 10",
+          "valid_control": {
+            "name": "statistics-unicode-line-bytes.txt",
+            "suffix_hex": "15 0a 15 0d 15 0d",
+            "expected_text": "აბგდევზთਕകക",
+            "expected_encoding": "Utf16Le",
+            "expected_bom": false,
+            "assertions": [
+              "DocumentSession::Open succeeds",
+              "Exact decoded text and encoding/BOM identity",
+              "Save preserves all source bytes"
+            ]
+          },
+          "byte_line_ending_samples": [
+            {
+              "name": "statistics-cross-lfcr.txt",
+              "suffix_hex": "15 0a 0d 10 15 0a",
+              "purpose": "LF/CR bytes cross adjacent code units; the terminal high byte is LF with a different low byte."
+            },
+            {
+              "name": "statistics-cross-crlf.txt",
+              "suffix_hex": "15 0d 0a 10",
+              "purpose": "CR/LF bytes cross adjacent code units."
+            },
+            {
+              "name": "statistics-final-lfcr.txt",
+              "suffix_hex": "0a 0d",
+              "purpose": "The final code unit has an LF low byte and a CR high byte."
+            }
+          ],
+          "fallback_control": "For each NUL-free byte stream, compare public DetectEncoding against the same options with skipUnicodeDetection=true. The control must select neither Utf16Le nor Utf16Be and must have no BOM.",
+          "equality_fields": [
+            "encoding",
+            "bom",
+            "unsupportedCodePage",
+            "systemDefault",
+            "systemOem"
+          ],
+          "rationale": "Check the native/legacy fallback consistently across platforms, including Windows UTF-8 ACP mode, while exercising the reachable CR/LF statistics paths.",
+          "local_helper_probe": {
+            "scope": "Extracted production LatinUtf16, MaybeBinary, ExamineUtf16Bytes, DbcsVariationFactor and IsUtf8 helpers with the four selected byte streams.",
+            "compiler": "GCC 14.2",
+            "flags": "-std=c++23 -O0 --coverage -Wall -Wextra -Werror",
+            "compilation": "passed",
+            "runner": ".github/scripts/ci.py probe",
+            "exit_code": 0,
+            "all_samples": {
+              "LatinUtf16": false,
+              "IsUtf8": false,
+              "MaybeBinary": true
+            },
+            "utf16_statistics_results": [
+              true,
+              false,
+              false,
+              false
+            ],
+            "gcov_taken_branch_outcomes": {
+              "cross_unit_check": "8/8",
+              "terminal_check": "7/8"
+            }
+          },
+          "local_format_check": "clang-format 23.1.2 --dry-run --Werror passed",
+          "local_diff_check": "git diff --check passed",
+          "hosted_execution": "pending_at_publication"
+        },
+        {
+          "file": "tests/automatic_completion.cpp",
+          "function": "SupplementaryLatex",
+          "targets": [
+            "original_automatic_completion",
+            "native_directwrite_automatic_completion"
+          ],
+          "settings": {
+            "scheme": "Plain Text",
+            "latexInputMethod": true,
+            "tab_fill_up": false
+          },
+          "native_input": "ResetStream(\"\\\\bb\", 3, 3), Type('i') to open the candidate popup, then Key(Tab).",
+          "command": "\\bbi",
+          "expected_code_point": "U+1D55A",
+          "expected_utf8_hex": "f0 9d 95 9a",
+          "expected_utf16le_hex": "35 d8 5a dd",
+          "call_path": "Native Tab -> AcceptWordCompletion with Tab fill-up disabled -> popup cancellation -> CompleteLatex -> two-UTF-16-unit conversion.",
+          "assertions": [
+            "Exact four UTF-8 output bytes",
+            "Immediate anchor and caret both 4",
+            "Completion popup closes",
+            "Undo restores the full \\bbi command with anchor/caret 4",
+            "Redo restores the glyph with the grouped replacement selection at anchor/caret 0"
+          ],
+          "redo_selection_contract": {
+            "evidence_basis": "Pinned original and prepared-core source contracts, corroborated by hosted Linux and Windows logs for 116551daf2cee9fcb06c9a76113dae9373eb393d.",
+            "expected_immediate_selection": {
+              "anchor": 4,
+              "caret": 4
+            },
+            "expected_undo_selection": {
+              "anchor": 4,
+              "caret": 4
+            },
+            "expected_redo_selection": {
+              "anchor": 0,
+              "caret": 0
+            },
+            "event_order": [
+              "ReplaceTarget owns a local UndoGroup. Replacement leaves an empty selection at its start; insertion at that empty selection does not advance it.",
+              "UndoGroup destruction closes Document::EndUndoAction, which notifies Editor::NotifyGroupCompleted.",
+              "RememberCurrentSelectionForRedoOntoStack saves the empty 0/0 selection and clears the pending remember flag.",
+              "CompleteLatex subsequently calls SetSel to move the immediate selection to 4/4.",
+              "Redo restores the recorded 0/0 selection after restoring the supplementary glyph."
+            ],
+            "application_source": {
+              "path": "src/editor/completion_selection.cpp",
+              "revision": "116551daf2cee9fcb06c9a76113dae9373eb393d",
+              "function": "CompleteLatex (unnamed namespace)",
+              "url": "https://github.com/1298345095/wxnotepad/blob/116551daf2cee9fcb06c9a76113dae9373eb393d/src/editor/completion_selection.cpp"
+            },
+            "pinned_original": {
+              "repository": "zufuliu/notepad4",
+              "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+              "contract": "ScintillaWin::HandleLaTeXTabCompletion also calls ReplaceTarget before SetEmptySelection. SelectOption_Default is 15 and enables selection history; Notepad4 loads that default.",
+              "sources": [
+                {
+                  "path": "scintilla/win32/ScintillaWin.cxx",
+                  "symbols": [
+                    "ScintillaWin::HandleLaTeXTabCompletion"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/win32/ScintillaWin.cxx"
+                },
+                {
+                  "path": "scintilla/src/Editor.cxx",
+                  "symbols": [
+                    "Editor::ReplaceTarget",
+                    "Editor::NotifyGroupCompleted",
+                    "Editor::RememberCurrentSelectionForRedoOntoStack",
+                    "Editor::RestoreSelection"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.cxx"
+                },
+                {
+                  "path": "scintilla/src/Document.cxx",
+                  "symbols": [
+                    "Document::EndUndoAction"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.cxx"
+                },
+                {
+                  "path": "scintilla/src/Document.h",
+                  "symbols": [
+                    "UndoGroup"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Document.h"
+                },
+                {
+                  "path": "scintilla/src/Selection.cxx",
+                  "symbols": [
+                    "SelectionRange::MoveForInsertDelete"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Selection.cxx"
+                },
+                {
+                  "path": "scintilla/src/EditModel.cxx",
+                  "symbols": [
+                    "ModelState::RememberSelectionForRedoOntoStack",
+                    "ModelState::SelectionFromStack"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/EditModel.cxx"
+                },
+                {
+                  "path": "src/Edit.h",
+                  "symbols": [
+                    "SelectOption_Default"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/src/Edit.h"
+                },
+                {
+                  "path": "src/Notepad4.cpp",
+                  "symbols": [
+                    "SelectOption default loading"
+                  ],
+                  "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/src/Notepad4.cpp"
+                }
+              ]
+            },
+            "correction_scope": "Change the new test's final Redo selection assertion to 0/0; preserve the production ordering, immediate and Undo 4/4 assertions, and exact output/history checks."
+          },
+          "local_format_check": "clang-format 23.1.2 --dry-run --Werror passed",
+          "local_diff_check": "git diff --check passed",
+          "hosted_execution": "pending_at_publication"
+        }
+      ],
+      "source_constraint": {
+        "file": "src/document/encoding/encoding_detection.cpp",
+        "revision": "e3cebb53b35032db55defcb53ea5ada227877011",
+        "line": 261,
+        "expression": "previousHigh == 10 && previousLow == 13",
+        "finding": "The true outcome cannot reach this final check: the same 0x0A0D code unit was rejected earlier by ExamineUtf16Bytes.",
+        "followup_scope": "Exercise reachable cross-unit and terminal paths; preserve the production predicates, analysis scope and 80% coverage threshold."
+      }
+    },
+    "corrected_followup_validation": {
+      "source_revision": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+      "checkout_merge_revision": "d37d8f1b6b79739c0c30611b2a265cf82eb3617c",
+      "workflows": [
+        {
+          "id": 43955000767,
+          "name": "Fuzz",
+          "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000767",
+          "created_at": "2026-11-16T20:56:56Z",
+          "updated_at": "2026-11-16T21:01:08Z"
+        },
+        {
+          "id": 43955000718,
+          "name": "CodeQL",
+          "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000718",
+          "created_at": "2026-11-16T20:56:56Z",
+          "updated_at": "2026-11-16T21:02:24Z"
+        },
+        {
+          "id": 43955000805,
+          "name": "CI",
+          "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000805",
+          "created_at": "2026-11-16T20:56:56Z",
+          "updated_at": "2026-11-16T21:13:33Z"
+        },
+        {
+          "id": 43955000673,
+          "name": "Quality",
+          "head_sha": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/43955000673",
+          "created_at": "2026-11-16T20:56:56Z",
+          "updated_at": "2026-11-16T21:22:36Z"
+        }
+      ],
+      "sonar_quality_gate": {
+        "status": "OK",
+        "conditions": [
+          {
+            "metricKey": "new_reliability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_security_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_maintainability_rating",
+            "status": "OK",
+            "errorThreshold": "1",
+            "actualValue": "1"
+          },
+          {
+            "metricKey": "new_coverage",
+            "status": "OK",
+            "errorThreshold": "80",
+            "actualValue": "98.2"
+          },
+          {
+            "metricKey": "new_duplicated_lines_density",
+            "status": "OK",
+            "errorThreshold": "3",
+            "actualValue": "0.0"
+          },
+          {
+            "metricKey": "new_security_hotspots_reviewed",
+            "status": "OK",
+            "errorThreshold": "100",
+            "actualValue": "100.0"
+          }
+        ]
+      },
+      "sonar_measures": [
+        {
+          "metric": "new_coverage",
+          "value": "98.18181818181819",
+          "period": 1,
+          "bestValue": false
+        },
+        {
+          "metric": "new_conditions_to_cover",
+          "value": "42",
+          "period": 1
+        },
+        {
+          "metric": "new_uncovered_lines",
+          "value": "0",
+          "period": 1,
+          "bestValue": true
+        },
+        {
+          "metric": "new_uncovered_conditions",
+          "value": "1",
+          "period": 1,
+          "bestValue": false
+        },
+        {
+          "metric": "new_lines_to_cover",
+          "value": "13",
+          "period": 1
+        }
+      ],
+      "open_confirmed_pr_issues": 0,
+      "verification": "GitHub workflow-run exact-head query and fresh PR-scoped SonarCloud MCP queries on 2026-11-16."
+    }
+  },
+  "regression_targets": [
+    "original_complete_word",
+    "original_automatic_completion",
+    "original_find_all",
+    "original_occurrence_marking",
+    "original_caret_preference",
+    "mixed_line_ending_open",
+    "automatic_encoding_decisions",
+    "original_align_lines",
+    "original_current_line_preference",
+    "original_default_encoding_dialog",
+    "original_visual_brace",
+    "original_url_conversion"
+  ],
+  "pinned_framework_sources": [
+    {
+      "repository": "wxWidgets/wxWidgets",
+      "ref": "v3.3.3",
+      "path": "include/wx/event.h",
+      "blob_sha": "7ad0a497b6d4af02156d742b40a8d7d5fe4c954c",
+      "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/event.h"
+    },
+    {
+      "repository": "wxWidgets/wxWidgets",
+      "ref": "v3.3.3",
+      "path": "src/common/event.cpp",
+      "blob_sha": "d318896753e6be07ff3bdd2e36329ab73d1b4228",
+      "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/src/common/event.cpp"
+    },
+    {
+      "repository": "wxWidgets/wxWidgets",
+      "ref": "v3.3.3",
+      "path": "include/wx/window.h",
+      "blob_sha": "389d2010d49702c053e0d61ff087b746c62ac835",
+      "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/window.h"
+    },
+    {
+      "repository": "wxWidgets/wxWidgets",
+      "ref": "v3.3.3",
+      "path": "include/wx/gtk/window.h",
+      "blob_sha": "f114aa221f40d2f585dafb90ee87670c2992027d",
+      "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/gtk/window.h"
+    },
+    {
+      "repository": "wxWidgets/wxWidgets",
+      "ref": "v3.3.3",
+      "path": "include/wx/object.h",
+      "blob_sha": "fd7d4dae958f87b93ffc75aabaf99c172226e0e3",
+      "url": "https://github.com/wxWidgets/wxWidgets/blob/v3.3.3/include/wx/object.h"
+    }
+  ],
+  "continuation": {
+    "review": "sonarqube-2026-11-16-declarations-literals-review.json",
+    "starting_revision": "cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b",
+    "retained_items_addressed": [
+      "cpp:S5271 Platform::Assert first declaration and definition",
+      "205 of 852 cpp:S7040 current-main literal recommendations"
+    ],
+    "scope": "The new review ledger records continuation changes and dispositions separately from this earlier batch."
+  }
+}

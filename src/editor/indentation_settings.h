@@ -19,7 +19,10 @@ public:
     void SetFileSettings(std::optional<OriginalTabs> tabs);
     OriginalTabs Effective(SyntaxLanguage language) const;
     bool TabIndents() const { return fileTabIndents_.value_or(preferences_.tabIndents); }
-    void SetTabIndents(bool value) { fileTabIndents_ = preferences_.tabIndents = value; }
+    void SetTabIndents(bool value) {
+        preferences_.tabIndents = value;
+        fileTabIndents_ = value;
+    }
 
 private:
     OriginalSettings& preferences_;

@@ -33,6 +33,9 @@ The patch has these narrowly scoped purposes:
 - `Platform.h`: permit the wx clip operation to propagate allocation failure to
   the host recovery boundary. Other platform signatures retain their original
   exception contract.
+- `Debugging.h`: declare the wx host's aborting `Platform::Assert` as `[[noreturn]]`
+  at its first declaration. The `__WX__` condition preserves the original Windows
+  assertion dialog's returning Ignore/Retry paths and non-trace implementation.
 - `Document.cxx`: use wx conversion in place of the Windows conversion function
   on Linux, and pass native 32-bit `wchar_t` characters to the vendored regex
   matcher. The adapter currently exposes UTF-8 only. Regex matching otherwise

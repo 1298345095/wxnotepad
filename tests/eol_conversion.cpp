@@ -123,10 +123,10 @@ void Files(EditorFrame* frame, const std::filesystem::path& directory) {
     };
     const Sample samples[] = {
         {"utf8", "中文\r\nnext\rlast", "中文\nnext\nlast"},
-        {"utf8-bom", "\xef\xbb\xbf中文\r\nnext\rlast", "\xef\xbb\xbf中文\nnext\nlast"},
-        {"utf16-bom", "\xff\xfe\x2d\x4e\r\0\n\0n\0\r\0z\0"s, "\xff\xfe\x2d\x4e\n\0n\0\n\0z\0"s},
-        {"utf16-no-bom", "\x2d\x4e\r\0\n\0n\0\r\0z\0"s, "\x2d\x4e\n\0n\0\n\0z\0"s, FileEncoding::Utf16Le},
-        {"gbk", "\xd6\xd0\r\nnext\rlast", "\xd6\xd0\nnext\nlast", FileEncoding::Gbk},
+        {"utf8-bom", "\x{ef}\x{bb}\x{bf}中文\r\nnext\rlast", "\x{ef}\x{bb}\x{bf}中文\nnext\nlast"},
+        {"utf16-bom", "\x{ff}\x{fe}\x{2d}\x{4e}\r\0\n\0n\0\r\0z\0"s, "\x{ff}\x{fe}\x{2d}\x{4e}\n\0n\0\n\0z\0"s},
+        {"utf16-no-bom", "\x{2d}\x{4e}\r\0\n\0n\0\r\0z\0"s, "\x{2d}\x{4e}\n\0n\0\n\0z\0"s, FileEncoding::Utf16Le},
+        {"gbk", "\x{d6}\x{d0}\r\nnext\rlast", "\x{d6}\x{d0}\nnext\nlast", FileEncoding::Gbk},
     };
     std::filesystem::create_directory(directory);
     for (const auto& sample : samples) {

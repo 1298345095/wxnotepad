@@ -32,7 +32,7 @@ namespace Scintilla::Internal {
 static wxWindow* Host(WindowID id) {
     return static_cast<wxWindow*>(id);
 }
-static wxRect Rect(PRectangle r) {
+static wxRect Rect(const PRectangle& r) {
     return wxRect(std::lround(r.left), std::lround(r.top), std::max(0L, std::lround(r.Width())),
                   std::max(0L, std::lround(r.Height())));
 }
@@ -148,7 +148,8 @@ public:
         points.reserve(n);
         for (size_t i = 0; i < n; ++i)
             points.emplace_back(p[i].x, p[i].y);
-        dc_->DrawPolygon(n, points.data());
+        // The pinned marker, indicator and call-tip polygons contain at most 12 points.
+        dc_->DrawPolygon(static_cast<int>(n), points.data());
     }
     void SCICALL RectangleDraw(PRectangle r, FillStroke s) override {
         StrokeSet(s.stroke);
@@ -600,7 +601,7 @@ void DebugPrintf(const char* fmt, ...) noexcept {
 bool ShowAssertionPopUps(bool value) noexcept {
     return value;
 }
-void Assert(const char* c, const char* file, int line) noexcept {
+[[noreturn]] void Assert(const char* c, const char* file, int line) noexcept {
     std::fprintf(stderr, "%s:%d: %s\n", file, line, c);
     std::abort();
 }

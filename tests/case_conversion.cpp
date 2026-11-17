@@ -172,24 +172,29 @@ void SavedBytes(EditorFrame* frame) {
         bool upper;
     };
     const Fixture fixtures[] = {
-        {{"utf8-upper", FileEncoding::Utf8, "\xef\xbb\xbfStraße ﬃ ΐ\r\n", "\xef\xbb\xbfSTRASSE FFI Ϊ́\r\n"}, true},
+        {{"utf8-upper", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}Straße ﬃ ΐ\r\n", "\x{ef}\x{bb}\x{bf}STRASSE FFI Ϊ́\r\n"},
+         true},
         {{"gbk-upper", FileEncoding::Gbk,
-          "\xd6\xd0"
+          "\x{d6}\x{d0}"
           "a\r\nB",
-          "\xd6\xd0"
+          "\x{d6}\x{d0}"
           "A\r\nB"},
          true},
         {{"gbk-lower", FileEncoding::Gbk,
-          "\xd6\xd0"
+          "\x{d6}\x{d0}"
           "a\r\nB",
-          "\xd6\xd0"
+          "\x{d6}\x{d0}"
           "a\r\nb"},
          false},
-        {{"utf16-upper", FileEncoding::Utf16Le, std::string("\xff\xfe\x61\0\xe9\0\x01\xd8\x28\xdc\r\0\n\0", 14),
-          std::string("\xff\xfe\x41\0\xc9\0\x01\xd8\0\xdc\r\0\n\0", 14)},
+        {{"utf16-upper", FileEncoding::Utf16Le,
+          std::string("\x{ff}\x{fe}\x{61}\0\x{e9}\0\x{01}\x{d8}\x{28}\x{dc}\r\0\n\0", 14),
+          std::string("\x{ff}\x{fe}\x{41}\0\x{c9}\0\x{01}\x{d8}\0\x{dc}\r\0\n\0", 14)},
          true},
-        {{"utf16-lower", FileEncoding::Utf16Le, std::string("\xff\xfe\x41\0\x30\x01\x2a\x21\x01\xd8\0\xdc\r\0\n\0", 16),
-          std::string("\xff\xfe\x61\0\x69\0\x07\x03\x6b\0\x01\xd8\x28\xdc\r\0\n\0", 18)},
+        {{"utf16-lower", FileEncoding::Utf16Le,
+          std::string("\x{ff}\x{fe}\x{41}\0\x{30}\x{01}\x{2a}\x{21}\x{01}\x{d8}\0\x{dc}\r\0\n\0", 16),
+          std::string("\x{ff}\x{fe}\x{61}\0\x{69}\0\x{07}\x{03}\x{6b}\0\x{01}\x{d8}\x{28}\x{dc}\r\0\n"
+                      "\0",
+                      18)},
          false},
     };
     const auto directory = TestFiles::TemporaryDirectory("case-conversion");
@@ -214,7 +219,7 @@ void SavedBytes(EditorFrame* frame) {
                 "case Save retains external encoding, BOM, EOL mode and final save point");
     }
     const auto path = directory / "gbk-unrepresentable";
-    TestFiles::WriteBytes(path, "\xa8\xa6"); // CP936 é has no representable uppercase É.
+    TestFiles::WriteBytes(path, "\x{a8}\x{a6}"); // CP936 é has no representable uppercase É.
     Require(frame->Open(TestFiles::Filename(path), FileEncoding::Gbk).status == OpenStatus::Opened,
             "open GBK letter with unrepresentable uppercase");
     editor->Send(Message::SelectAll);
@@ -225,7 +230,7 @@ void SavedBytes(EditorFrame* frame) {
         asked = true;
         return EncodingLossChoice::Cancel;
     });
-    Require(asked && cancelled.status == SaveStatus::Cancelled && TestFiles::Bytes(path) == "\xa8\xa6" &&
+    Require(asked && cancelled.status == SaveStatus::Cancelled && TestFiles::Bytes(path) == "\x{a8}\x{a6}" &&
                 editor->Send(Message::GetModify) && frame->DocumentEncoding() == FileEncoding::Gbk,
             "existing GBK loss cancellation preserves disk bytes and unsaved Unicode result");
     Require(frame->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&

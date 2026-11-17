@@ -361,7 +361,7 @@ public:
                 std::puts("PASS: shortcut, unbroken fallback, hit testing, display-row navigation and search reveal");
 
                 Files files;
-                const std::string disk = "\xef\xbb\xbf" + text + "\r\nsecond 中文\r\n";
+                const std::string disk = "\x{ef}\x{bb}\x{bf}" + text + "\r\nsecond 中文\r\n";
                 {
                     wxFFile output(files.source, "wb");
                     Require(output.IsOpened() && output.Write(disk.data(), disk.size()) == disk.size(),
@@ -508,7 +508,8 @@ private:
 
         private:
             EditorFrame* frame_;
-        } responder(frame);
+        };
+        GoToLineResponder responder(frame);
         NativeSearch::Command(frame, goTo);
         if (responder.failure) std::rethrow_exception(responder.failure);
         Require(responder.observed, "native Go To Line opens in the combined view");

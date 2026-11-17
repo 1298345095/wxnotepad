@@ -84,7 +84,7 @@ public:
                 const auto bomPath = directory / "bom.txt";
                 {
                     std::ofstream output(bomPath, std::ios::binary);
-                    output << "\xef\xbb\xbf# coding: utf-8\n" << padding << tail;
+                    output << "\x{ef}\x{bb}\x{bf}# coding: utf-8\n" << padding << tail;
                 }
                 Require(frame->Open(TestFiles::Filename(bomPath)).status == OpenStatus::Opened, "BOM file opens");
                 Check(frame->Editor(), 6, 6, true);

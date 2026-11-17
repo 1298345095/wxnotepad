@@ -145,7 +145,7 @@ public:
                     std::printf("PASS: %s\n", fixture.name);
                 }
                 const auto bomPath = folder / "bom-script";
-                const std::string bomBytes = "\xef\xbb\xbf#!/bin/python\r\nreturn 42\n";
+                const std::string bomBytes = "\x{ef}\x{bb}\x{bf}#!/bin/python\r\nreturn 42\n";
                 std::ofstream(bomPath, std::ios::binary) << bomBytes;
                 Require(frame->Open(TestFiles::Filename(bomPath)).status == OpenStatus::Opened,
                         "BOM fixture must open");
@@ -188,7 +188,7 @@ public:
                 std::puts("PASS: BOM, explicit choices, Automatic recheck, selection, undo/redo and Save As");
                 const auto utf16Path = folder / "utf16-script";
                 const std::string decoded = "#!/bin/python\r\nreturn 42\n";
-                std::string utf16 = "\xff\xfe";
+                std::string utf16 = "\x{ff}\x{fe}";
                 for (const auto ch : decoded) {
                     utf16 += ch;
                     utf16 += '\0';

@@ -8,9 +8,10 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [2026-11-16 type safety and exception follow-up](#2026-11-16-type-safety-and-exception-follow-up),
-continuing on `codex/sonarcloud-followup-2026-11-16` in
-[PR #221](https://github.com/1298345095/wxnotepad/pull/221).
+Latest review: [2026-11-16 array follow-up](#2026-11-16-array-follow-up),
+on [`codex/sonarcloud-small-fixes-2026-11-16`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-small-fixes-2026-11-16).
+[PR #221](https://github.com/1298345095/wxnotepad/pull/221) was merged into main
+at `c3d98ca4d270f2367b85ec9a96e0a14e582830ad` before this review.
 
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
@@ -1000,3 +1001,468 @@ alone is insufficient for a false-positive disposition, and removing the
 runtime-error handlers would lose worker/native-resource recovery. The allocation
 fault helper's S6004 finding was already fixed at the starting revision and is
 excluded from this batch's counts.
+
+## 2026-11-16 small-fix continuation
+
+This batch starts from merged main revision
+`c3d98ca4d270f2367b85ec9a96e0a14e582830ad` on
+`codex/sonarcloud-small-fixes-2026-11-16`. The current main analysis at
+19:01:05 UTC had an OK quality gate and 3,767 OPEN/CONFIRMED findings.
+An explicit security/reliability filter returned zero OPEN/CONFIRMED findings;
+the selected work addresses maintainability findings. Exact-key queries also
+confirmed that all 46 main-context code-fix keys from the preceding type-safety
+batch are now FIXED after PR #221 merged.
+
+The [issue-by-issue review](sonarqube-2026-11-16-small-fixes-review.json) records
+23 code-fix keys, eight verified false-positive dispositions, source evidence,
+transition receipts and retained recommendations. Code-fix entries describe the
+follow-up branch; main receives those fixes through a later merge and analysis.
+
+### Small code changes
+
+| Rule | Main keys | Change |
+| --- | ---: | --- |
+| S872 | 12 | Express boolean counting, bit tests, buffer offsets and persisted caret flags with logical operations, conditional increments or explicit integer alternatives. |
+| S1238 | 7 | Read alignment spacing, rectangle values, expected ranges, colours and constructor inputs through const references. |
+| S5276 | 2 | Recover the completion character's unsigned-byte type and make the bounded polygon point-count conversion explicit. |
+| S5416 | 1 | Express the existing constant keyword pointer-array alias with `using`. |
+| S2209 | 1 | Call `FindWindowByName` through its class while retaining the explicit dialog search root. |
+
+This addresses every S872 and S1238 key in the current baseline. The caret
+encoding retains its original decimal positions and INI values. Mixed-line-ending
+classification still tests for at least two nonzero counters. Unicode statistics,
+LaTeX byte lengths, search anchor counts and fixture selection endpoints keep
+their original values and evaluation order. The two native test drivers still
+copy paths into their own `wxString` members before starting their timers.
+
+`ExtendDocumentWord` now calls the existing `CharacterAt` accessor. The pinned
+core's `Editor::WndProc(GetCharAt)` returns `Document::UCharAt`, an unsigned byte,
+through the general pointer-sized message result. The accessor restores that
+known byte domain before the existing character comparisons.
+
+The polygon count was checked against every caller in the pinned core revision
+`89b8b36e0ee2c23f73be922315f17261ccfbbe1a`. Call tips and indicators use three
+points; marker polygons use 3, 4, 5, 8 or 12 points. The explicit `int` conversion
+therefore preserves the entire reachable count domain. Dynamic polyline point
+counts have a different source and retain their separate finding.
+
+### Eight verified false positives
+
+Each disposition was applied through the SonarCloud MCP with an individual
+source-to-effect explanation. All eight transitions succeeded. Exact-key
+queries returned eight findings with the FALSE_POSITIVE filter and zero with
+OPEN/CONFIRMED. The API's legacy status field says RESOLVED; the disposition
+filter and transition receipts establish the specific false-positive resolution.
+
+| Rule | Keys | Reviewed contract |
+| --- | ---: | --- |
+| S5495 | 2 | Sort and tab settings copy the reported closures into retained native event callbacks. wxWidgets `Bind` stores a copy of the functor for later dispatch. |
+| S995 | 5 | Completion key/wheel/double-click, selection mouse input and automatic typing mutate their target widgets through native handles and events. Const-qualified handle getters obscure these writable aliases. |
+| S5350 | 1 | The tab-settings helper casts a top-level window to the same dialog object, edits its controls and calls `EndModal`. The framework cast preserves the writable alias. |
+
+These contracts were checked against the pinned wxWidgets 3.3.3 event storage,
+native handle accessors and `wxDynamicCast` implementation. The ledger links
+those exact framework sources and the application/test paths that consume them.
+
+### Local validation
+
+Canonical clang-format 23.1.2 passed for all 374 tracked C/C++ files, and
+`git diff --check` passed. Independent complete-source review checked parameter
+lifetimes, single evaluations, persisted values and the character result type.
+The documented core preparation verified the pinned archive and patch set.
+This workspace has no wxWidgets SDK; native execution uses the hosted checks.
+
+### First hosted validation
+
+The first published revision, `e3cebb53b35032db55defcb53ea5ada227877011`, passed
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43945699409),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43945699336),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43945699453) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43945699715).
+Native jobs checked out merge revision
+`094a8bc7c0a090c2d6035e7467829204ed0f74da`.
+
+| Platform | Native tests | Skipped cases | Diagnostics | Repeated regression |
+| --- | --- | --- | --- | --- |
+| Windows | 216 passed, 1 skipped | `windows_inline_ime_input` | 2/2 passed | Visual brace: 20/20 passed |
+| X11 | 203 passed, 2 skipped | `original_new_window_maximized`, `native_peer_geometry_ready` | 2/2 passed | — |
+| Wayland | 205/205 passed | None | 2/2 passed | JSON: 20/20 passed |
+
+Both coverage backends completed successfully. The
+[first Sonar task](https://sonarcloud.io/api/ce/task?id=AaHmCEfquUWaKV8HNVdA)
+recorded the exact source revision above and an **ERROR** quality gate:
+new-code coverage was 76.36363636363636% (displayed as 76.4%), below the 80%
+threshold. All 13 new lines were covered; 13 of 42 new conditions were
+uncovered, giving `(13 + 29) / (13 + 42)` combined coverage. The missing
+conditions were localized as follows at that revision:
+
+| Source | Conditions | Covered | Uncovered |
+| --- | ---: | ---: | ---: |
+| `src/document/encoding/encoding_detection.cpp:255` | 8 | 2 | 6 |
+| `src/document/encoding/encoding_detection.cpp:261` | 8 | 2 | 6 |
+| `src/editor/completion_selection.cpp:31` | 3 | 2 | 1 |
+
+PR-scoped queries returned zero OPEN/CONFIRMED findings and zero security
+hotspots. Every other gate condition passed: A reliability, security and
+maintainability; 0.0% new duplication; 100% hotspot review. This first hosted
+result remains recorded independently of the follow-up validation.
+
+### Focused coverage follow-up
+
+The selected follow-up adds regressions to two existing fixtures:
+
+- `automatic_encoding_decisions` distinguishes valid UTF-16 code units containing
+  CR/LF-valued bytes from byte line endings that cross code-unit boundaries or
+  end the stream. The valid control checks automatic Open, exact decoded text,
+  encoding/BOM identity and byte-for-byte Save. Three CR/LF samples compare all
+  five `DetectEncoding` identity fields with Unicode statistics enabled and
+  skipped; the skipped control must choose a non-UTF-16 fallback without a BOM.
+  This retains the platform's native/legacy fallback, including Windows UTF-8
+  ACP mode.
+- `SupplementaryLatex` in the existing automatic-completion fixture types `i`
+  after `\bb` through native input, then presses Tab with Tab fill-up disabled
+  and LaTeX input enabled. The `\bbi` command produces U+1D55A (`𝕚`) through
+  `CompleteLatex`'s two-UTF-16-unit path. It checks the exact four UTF-8 bytes,
+  immediate anchor/caret position 4, popup closure, Undo to `\bbi` at 4/4 and
+  Redo to the glyph with the grouped replacement's saved selection at 0/0.
+  The existing `original_automatic_completion` and Windows
+  `native_directwrite_automatic_completion` targets execute this case.
+
+At the first revision's `encoding_detection.cpp:261`, the true outcome of
+`previousHigh == 10 && previousLow == 13` cannot reach the final check: its
+`0x0A0D` code unit was already rejected earlier in the loop. The follow-up
+targets reachable cross-unit and terminal paths while preserving the
+production predicates and the 80% coverage threshold.
+
+A GCC 14.2 probe of the extracted production encoding helpers passed all four
+byte streams with exit 0 through `ci.py probe`. Its gcov results reached 8/8
+cross-unit branch outcomes and 7/8 terminal outcomes, consistent with the
+unreachable outcome identified above.
+
+### First follow-up failure and corrected selection expectation
+
+Follow-up revision `116551daf2cee9fcb06c9a76113dae9373eb393d` checked out merge
+revision `e25fb234d6412a96d1ce9a961f180c21016803a3`. Its
+[Wayland coverage job](https://github.com/1298345095/wxnotepad/actions/runs/43951652825/job/133595404264)
+passed `automatic_encoding_decisions` in 0.44 seconds. At 20:47:50 UTC,
+`original_automatic_completion` failed with `Selection anchor/caret: 0/0;
+expected 4/4` and `LaTeX conversion Redo restores the UTF-8 caret`. The exact
+output, popup closure, immediate 4/4 selection, Undo text and 4/4 selection,
+and Redo text assertions had all passed before this final assertion.
+
+The same revision's
+[Windows job](https://github.com/1298345095/wxnotepad/actions/runs/43951652825/job/133595404333)
+reported the same 0/0-versus-4/4 failure in both `original_automatic_completion`
+and `native_directwrite_automatic_completion`: 214 passed, two failed and
+`windows_inline_ime_input` skipped. `automatic_encoding_decisions` passed in
+1.67 seconds, diagnostics passed 2/2, and the visual-brace repeat passed 20/20.
+
+The pinned source explains the saved selection: `ReplaceTarget` owns an
+`UndoGroup`. Its closure reaches `Document::EndUndoAction`, then
+`Editor::NotifyGroupCompleted` and `RememberCurrentSelectionForRedoOntoStack`,
+which save the replacement's empty selection at 0/0 before `CompleteLatex`
+performs its final `SetSel` to 4/4. The
+[pinned original LaTeX handler](https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/win32/ScintillaWin.cxx)
+also calls `ReplaceTarget` before `SetEmptySelection`, and its default selection
+options enable selection history. This source contract and the hosted Linux
+and Windows results establish the corrected Redo assertion at 0/0. The immediate and Undo
+assertions remain 4/4; production behaviour is preserved.
+
+The corrected revision `cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b` passed
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/43955000805),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43955000673),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43955000767) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43955000718).
+The PR quality gate is OK: new-code coverage is 98.2%, with all 13 changed
+coverable lines and 41 of 42 conditions covered. The PR issue query returns
+zero OPEN/CONFIRMED findings. This completes the earlier pending validation;
+the issue-by-issue ledger retains both failed attempts and the successful result.
+
+### Retained work
+
+The four recommendations retained by PR #221 remain mapped to their current
+main keys in the ledger: two production recovery boundaries, the surface test's
+result boundary and its wxWidgets inheritance depth. Their earlier design-review
+rationale remains applicable. Broader S1181, S110 and S112 recommendations keep
+their existing status.
+
+The platform's remaining coordinate conversions require explicit rounding,
+clipping and out-of-range behaviour. Dynamic squiggle polylines also require a
+separate point-count bound. The following continuation supplies the matching
+`Platform::Assert` declaration and begins the S7040 literal-data pass with
+byte-preservation checks. The earlier definition-only compilation failure
+remains recorded in the small-fix ledger.
+
+## 2026-11-16 declaration and literal continuation
+
+This batch continues on PR #222 from
+`cf95ea8d7d2f2f3cb73c22322cee8b02d086a74b`. The starting head passed all four
+workflows and had an OK SonarCloud gate. Main had 3,759 OPEN/CONFIRMED findings;
+the explicit security/reliability filter returned zero. The
+[issue-by-issue review](sonarqube-2026-11-16-declarations-literals-review.json)
+records 227 main-context code-fix keys and four verified false-positive
+dispositions. Main receives code fixes through merge and its subsequent analysis.
+
+### Small declaration and expression changes
+
+| Rule | Main keys | Change and checked contract |
+| --- | ---: | --- |
+| S3646 | 13 | Separate existing named local types from their objects. Preserve each initializer, enclosing block, construction point and destruction order. |
+| S1121 | 6 | Split chained assignments in their existing right-to-left write order, retaining plain boolean fields and the engaged indentation override. |
+| S6228 | 1 | Use `!std::has_single_bit(mask)` after the control byte has set a bit, so the checked mask is nonzero. Retain the existing adjacency short circuit. |
+| S6045 | 1 | Use `std::less<>` for the fixture's local string map, preserving its existing string-key ordering and lookups. |
+| S5271 | 1 | Add `[[noreturn]]` to both the wx `Assert` definition and its first prepared-core declaration. |
+
+The declaration split is limited to the original local type and immediately
+following object declaration. Reversing the 13 splits restores all 11 files
+byte for byte to the starting revision. Event registration, callback data
+addresses, fixture cleanup and GTK transfer lifetimes retain their original
+order and scopes.
+
+The wx `Platform::Assert` implementation always reports its diagnostic and calls
+`std::abort`. Its prepared `Debugging.h` declaration receives the attribute only
+under `__WX__`: the pinned original Windows implementation has returning
+Ignore/Retry paths and a non-trace implementation. The original reference target
+keeps that contract. The prepared header and exact production definition compile
+together with GCC 14.2, C++23 and strict warnings; a caller ending in `Assert`
+also compiles without a missing-return diagnostic. The non-wx returning control
+definition compiles with the same header.
+
+### Literal data with verified byte preservation
+
+S7040 applies to 205 current-main keys across four maintained tables:
+
+| File | Main keys | Complete string groups compared |
+| --- | ---: | ---: |
+| `tests/escape_text_fixtures.h` | 136 | 204 |
+| `tests/character_hex_fixtures.h` | 36 | 54 |
+| `tests/custom_case_fixtures.h` | 6 | 108 |
+| `src/editor/special_insert.h` | 27 | 54 |
+
+The actual numerical escapes use bounded C++23 forms such as `\x{e2}` and
+`\u{2028}`. Fixture text that describes escape syntax retains its literal
+backslashes. The compiler compares complete original and final formatted
+string arrays: their types, lengths and every byte, including embedded and
+terminating NULs. All 420 groups match. The separate token comparison retains
+all nonliteral tokens, explicit lengths, table ordering, command/state values
+and original comments. Existing original-observation provenance is preserved.
+
+The supported GCC 13 baseline implements
+[P2290R3](https://gcc.gnu.org/gcc-13/changes.html), as does
+[Clang 15 and later](https://clang.llvm.org/cxx_status.html), including the
+clang-tidy 18 frontend. Microsoft's
+[conformance table](https://learn.microsoft.com/en-us/cpp/overview/visual-cpp-language-conformance?view=msvc-170)
+lists support from Build Tools 14.50. The starting head's successful
+[Windows job](https://github.com/1298345095/wxnotepad/actions/runs/43955000805/job/133607101050)
+used MSVC 19.51.36260.0 / Build Tools 14.51.36231 with the repository's C++23 mode.
+GNU gettext 0.22.5 was built from its official source archive. Running the
+repository's localization extractor with that exact `xgettext` exits zero and
+produces a byte-identical 46,187-byte `wxnotepad.pot`. Its only diagnostic is the
+existing `--sort-output` deprecation notice. The ledger records the command,
+output hashes and matching lexer source review for the untranslated byte fields.
+
+### Four verified false positives
+
+The two `EncodingPicker::Notify` findings and two `ReloadPicker::Notify`
+findings in `tests/chinese_encoding.cpp` suggest pointer-to-const for `window`
+and `dialog`. Complete source and pinned wxWidgets 3.3.3 review establish that
+these aliases refer to the same mutable dialog. The drivers select its controls
+and dispatch OK/Cancel through `GetEventHandler()->ProcessEvent`. The framework
+then reaches `wxDialogBase::OnButton`, `AcceptAndClose` / `EndDialog` and
+`EndModal`, modifying the dialog's modal state and return code. The const getter
+and `wxDynamicCast` conceal this writable alias from the analyzer.
+
+All four issue-specific FALSE_POSITIVE transitions succeeded through MCP with
+their source-to-effect explanations. Exact-key queries return four with the
+FALSE_POSITIVE filter and zero with OPEN/CONFIRMED. Main now has 3,755
+OPEN/CONFIRMED findings; the unmerged code-fix keys remain in that context.
+Comments, exact keys, framework source hashes and receipts are in the ledger.
+
+### Validation and remaining work
+
+Canonical clang-format 23.1.2 passes all 374 tracked C/C++ files and
+`git diff --check` passes. The documented core preparation validates the pinned
+archive and complete patch set. The strict compiler checks above and the
+420-group data comparison pass; the latter executes through `ci.py probe` with
+exit zero. This batch adds no persistent tests. Existing hosted checks validate
+the combined branch; their exact-head results are recorded on
+[PR #222](https://github.com/1298345095/wxnotepad/pull/222).
+
+At that checkpoint, 647 S7040 keys remained for file-specific data review.
+Coordinate rounding/clipping, dynamic polyline bounds, the occurrence-marking
+duration conversion and the previously documented exception/inheritance
+recommendations retain their separate review status and current keys.
+
+### Completed hosted validation for the declaration/literal batch
+
+Revision `ac7fab65c98ee200a9ff307c838abe066351e7c1` passed all 12 GitHub
+checks, including the Windows and Linux native suites, both coverage backends,
+clang-tidy, formatting, fuzzing, CodeQL and SonarCloud. The completed workflows
+are [CI](https://github.com/1298345095/wxnotepad/actions/runs/43963778445),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/43963778643),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/43963778358) and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/43963778369).
+Fresh PR-scoped MCP queries before the following continuation confirm an OK
+SonarCloud gate, zero OPEN/CONFIRMED findings and 96.96969696969697% new-code
+coverage: 19 of 20 lines and 45 of 46 conditions. New duplication is 0.0%.
+
+The earlier ledger now includes these completed checks alongside its historical
+publication-time pending status. This records the result for `ac7fab65` before
+the next batch changes the branch head.
+
+## 2026-11-16 byte-literal continuation
+
+This batch continues PR #222 from
+`ac7fab65c98ee200a9ff307c838abe066351e7c1`. Main contained 3,755
+OPEN/CONFIRMED findings; its explicit security/reliability query returned zero.
+The [issue-by-issue record](sonarqube-2026-11-16-byte-literals-review.json)
+adds **647 code-fix keys and 10 verified false-positive dispositions**.
+Including the earlier #222 batches, the branch addresses **897 distinct main
+code-fix keys and 22 reviewed false positives**. Main receives the code fixes
+through merge and its subsequent analysis.
+
+### Literal and declaration changes
+
+| Rule | Main keys | Change |
+| --- | ---: | --- |
+| S7040 | 18 | Bound actual numerical escapes in eight application files: BOMs, legacy encoding bytes, replacement characters, search ESC and collation weights. |
+| S7040 | 628 | Bound actual numerical escapes in 82 existing fixture and reference-data files. |
+| S5350 | 1 | Make `Untitled::menus` in `tests/reload_encoding.cpp` a pointer to const; its consumers only find menu items and read their enabled state. |
+
+The literal changes replace 2,225 numerical escapes in 90 files. Source review
+follows the actual decoding, encoding, save, search and collation consumers.
+The independent fixture records retain their original captured values and
+provenance. Raw strings, text describing backslash syntax, conventional
+one-digit octal controls, explicit byte lengths and `s` literal suffixes retain
+their original form. The application predicates, parser grammar, commands,
+selection endpoints, history expectations and native event paths are unchanged.
+
+The menu declaration was checked against wxWidgets 3.3.3's common and GTK
+`FindMenuItem`, `FindItem` and `IsEnabled` implementations and the Windows
+inherited interface. Those calls already use const methods and perform queries.
+
+### Compiled data equivalence and formatting
+
+GCC 14.2, C++23, `-O2 -Wall -Wextra -Werror -pedantic-errors` compares all
+**14,816 complete literal groups**, including the **651 changed groups**,
+extracted from the starting and final formatted sources. Compile-time assertions
+check their types, complete array sizes and every element, including embedded
+and terminating NULs. The comparison also passes with `-fshort-wchar`, checking
+the same data with 16-bit wide characters. Both executables run successfully
+through the documented `ci.py probe` entry point with exit zero.
+
+Whole-file lexical comparison preserves every nonliteral code token and comment
+through the literal commits. It also verifies raw strings and literal suffixes.
+A separate lexer independently checks the first 41-file fixture group, and the
+second 41-file group receives complete source and diff review. Large frozen
+tables receive full data/token comparison and review of their complete consumers
+and changed records; the ledger distinguishes these checks from manual source
+reading.
+
+The initial formatting pass exposed clang-format 23.1.2 splitting a long
+delimited escape in `chinese_encoding.cpp`. The local check rejected that output.
+Splitting long strings between complete escape units before canonical formatting
+preserves valid syntax and yields matching complete literal arrays. The final
+374-file canonical formatting check and `git diff --check` both pass.
+
+This continuation adds no persistent tests. It uses two literal commits
+(`8a593c7` for application code and `6d157ed` for fixtures), followed by the
+menu declaration and records, published together in one branch update.
+The existing hosted workflows validate that combined head; their resulting
+checks are recorded on [PR #222](https://github.com/1298345095/wxnotepad/pull/222).
+
+### Ten verified writable-alias false positives
+
+The reviewed S5350 suggestions cross `wxDynamicCast`, native handles or
+`GetEventHandler()`. Complete application paths and wxWidgets 3.3.3 definitions
+establish mutation of the same reported object:
+
+| File / driver | Keys | Same-object modification |
+| --- | ---: | --- |
+| `western_encoding.cpp`: `Picker`, `WarningDriver` | 3 | OK/Cancel/No dispatch changes the dialog's return code and modal state. |
+| `current_encoding.cpp`: `EncodingPicker`, `ConversionPrompt` | 2 | Direct cancellation or dispatched button handlers call `EndModal` on that dialog. |
+| `gbk_native.cpp`: `NativeDriver` | 1 | Native loss-confirmation input completes the reported dialog. |
+| `save_copy.cpp`: `CopyChooser` | 1 | Native OK/Cancel input completes the Save Copy loss dialog. |
+| `reload_encoding.cpp`: `ReloadDialogs` | 3 | Two window/dialog aliases reach modal completion; the child alias becomes the same list box and changes its selection. |
+
+The `reload_encoding.cpp` if-initializer finding is specifically the
+**Inconsistent Line Endings** dialog's Cancel path. Its issue is kept distinct
+from the later Reload With Encoding dialog variable.
+
+Each MCP transition has its own explanation, source path and framework trace.
+Exact-key queries return all 10 as FALSE_POSITIVE and none as OPEN/CONFIRMED.
+Main's remaining OPEN/CONFIRMED count is **3,745**, including this PR's unmerged
+code fixes. Submitted comments, transition receipts, verification counts and
+framework blob/source hashes are retained in the issue record.
+
+### Remaining work
+
+One of the previously remaining 647 S7040 recommendations is retained:
+`AaG1r0uxyu4V9oip4YId` in `src/editor/platform/generated/sort_nls_data.h`.
+It covers the frozen **497,834-byte** compressed NLS stream emitted by
+`tools/capture_sort_nls.py`. Applying bounded syntax to every byte would add
+995,668 source bytes and change 15,558 data lines for this one style finding.
+The coordinated generator/payload representation review remains separate;
+the issue stays open.
+
+The original capture exporters also retain their existing JSON-style UCN output.
+A later reference recapture can reproduce that spelling. Current builds consume
+the checked-in, value-identical reference tables; their captured observations
+and provenance are preserved.
+
+Coordinate rounding/clipping, dynamic polyline bounds, occurrence-marking time
+precision and the documented exception/inheritance recommendations keep their
+existing individual review status. Their exact keys and source-contract evidence
+remain in the preceding review records.
+
+## 2026-11-16 array follow-up
+
+The byte-literal head `85f296e8e1e05da2c57362807e75ecb583aeb0df` completed all
+12 GitHub checks and all four workflows successfully. Its SonarCloud gate was
+OK: new-code coverage **95.2%** (37/38 executable lines and 82/87 conditions),
+duplicated-lines density **0.9671%** (shown as 1.0% in the gate), and all three
+new-code quality ratings A. The gate's coverage and duplication limits remain
+80% and 3% respectively.
+
+That completed analysis reported two OPEN S5945 findings in the PR: `invalid`
+in `utf16_smoke.cpp` and `fixtures` in `visual_brace.cpp`. Their existing array
+declarations entered the new-code range after literal formatting. Complete
+source and rule review confirms that both are fixed object arrays to which the
+std::array recommendation applies. This follow-up also handles the two other
+already-open S5945 findings in those same files.
+
+| File / object | Main issue key | Change |
+| --- | --- | --- |
+| `utf16_smoke.cpp` / `invalid` | `AaGQhgSWusAIaC0DBL7m` | `const std::array<std::string, 5>`; same malformed-byte cases and index-zero access. |
+| `utf16_smoke.cpp` / `payloads` | `AaGQhgSWusAIaC0DBL7s` | `const std::array<std::string, 3>`; same empty, 22-byte and 2-byte payloads. |
+| `visual_brace.cpp` / `fixtures` | `AaG7NURwkxw1cHak340H` | `const std::array<EncodedFixture, 3>`; same UTF-8 / UTF-16LE / GBK records. |
+| `visual_brace.cpp` / `font` | `AaG7NURwkxw1cHak340F` | Zero-initialized `std::array<char, 256>` with `.data()` at all four pointer consumers. |
+
+The PR keys `AaHmz451xHJDvo969oYO` and `AaHmz5NnxHJDvo969oYP` correspond
+to the first and third rows. The other two rows were verified in the main-context
+MCP query. All four are code fixes.
+
+The object arrays are only traversed by const-reference range-for loops, with
+one existing `invalid[0]` access. The `EncodedFixture` consumer receives one
+element at a time. The font buffer retains its capacity and local lifetime;
+the fixed upstream core's `StyleGetFont` path writes through `char*`, including
+the terminating NUL. Its two native sends, string construction and comparison
+all receive `.data()`.
+
+These four additional, non-overlapping main keys bring PR #222 to **901** code
+fixes and **22** verified false positives. The continuation from `ac7fab6`
+accounts for **651** code fixes and **10** false positives. Main's review-time
+OPEN/CONFIRMED count remains 3,745 while the code changes await merge and main
+analysis.
+
+The canonical clang-format 23.1.2 check passes all 374 tracked C/C++ files, and
+`git diff --check` passes. This follow-up adds no persistent tests. The four
+changes and completed preceding-run evidence are grouped into one additional
+commit; its existing native/coverage/quality/fuzz/CodeQL workflows verify that
+head. Follow-up results are recorded on [PR #222](https://github.com/1298345095/wxnotepad/pull/222).
+
+The [array follow-up record](sonarqube-2026-11-16-array-followup-review.json)
+contains exact main/PR issue mappings, before/after source hashes, complete
+consumer review and the completed `85f296e` check/measure snapshot. The generated
+NLS table and other separately documented boundary/precision reviews retain
+their existing status.

@@ -201,7 +201,7 @@ void FilePolicyCases(EditorFrame* frame, const int* commands) {
     std::filesystem::create_directory(directory);
     const auto path = directory / "source.cpp";
     const std::string text = BlockReference::documents[3].text;
-    std::string bytes("\xff\xfe", 2);
+    std::string bytes("\x{ff}\x{fe}", 2);
     for (const char character : text) {
         bytes.push_back(character);
         bytes.push_back('\0');

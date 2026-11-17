@@ -204,22 +204,22 @@ void SavedBytes(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("escape-text");
     std::filesystem::create_directory(directory);
     const std::array<std::array<TestFiles::EncodedFixture, 3>, 4> fixtures{{
-        {{{"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中\"", "\xef\xbb\xbf中\\\""},
-          {"gbk", FileEncoding::Gbk, "\xd6\xd0\"", "\xd6\xd0\\\""},
-          {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\x22\0", 6),
-           std::string("\xff\xfe\x2d\x4e\x5c\0\x22\0", 8)}}},
-        {{{"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中\\t", "\xef\xbb\xbf中\t"},
-          {"gbk", FileEncoding::Gbk, "\xd6\xd0\\t", "\xd6\xd0\t"},
-          {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\x5c\0\x74\0", 8),
-           std::string("\xff\xfe\x2d\x4e\x09\0", 6)}}},
-        {{{"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中<", "\xef\xbb\xbf中&lt;"},
-          {"gbk", FileEncoding::Gbk, "\xd6\xd0<", "\xd6\xd0&lt;"},
-          {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\x3c\0", 6),
-           std::string("\xff\xfe\x2d\x4e\x26\0\x6c\0\x74\0\x3b\0", 12)}}},
-        {{{"utf8", FileEncoding::Utf8, "\xef\xbb\xbf中&lt;", "\xef\xbb\xbf中<"},
-          {"gbk", FileEncoding::Gbk, "\xd6\xd0&lt;", "\xd6\xd0<"},
-          {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\x26\0\x6c\0\x74\0\x3b\0", 12),
-           std::string("\xff\xfe\x2d\x4e\x3c\0", 6)}}},
+        {{{"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\"", "\x{ef}\x{bb}\x{bf}中\\\""},
+          {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\"", "\x{d6}\x{d0}\\\""},
+          {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{22}\0", 6),
+           std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{5c}\0\x{22}\0", 8)}}},
+        {{{"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\\t", "\x{ef}\x{bb}\x{bf}中\t"},
+          {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\\t", "\x{d6}\x{d0}\t"},
+          {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{5c}\0\x{74}\0", 8),
+           std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{09}\0", 6)}}},
+        {{{"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中<", "\x{ef}\x{bb}\x{bf}中&lt;"},
+          {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}<", "\x{d6}\x{d0}&lt;"},
+          {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{3c}\0", 6),
+           std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{26}\0\x{6c}\0\x{74}\0\x{3b}\0", 12)}}},
+        {{{"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中&lt;", "\x{ef}\x{bb}\x{bf}中<"},
+          {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}&lt;", "\x{d6}\x{d0}<"},
+          {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{26}\0\x{6c}\0\x{74}\0\x{3b}\0", 12),
+           std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{3c}\0", 6)}}},
     }};
     auto* editor = frame->Editor();
     for (int command = 0; command < 4; ++command) {

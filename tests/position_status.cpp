@@ -99,7 +99,8 @@ public:
             try {
                 auto* editor = frame->Editor();
                 Status(frame, "Ln 1, Col 1");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one\r\n\t\xE4\xB8\xAD\xF0\x9F\x98\x80"));
+                editor->Send(Message::SetText, 0,
+                             reinterpret_cast<intptr_t>("one\r\n\t\x{E4}\x{B8}\x{AD}\x{F0}\x{9F}\x{98}\x{80}"));
                 editor->Send(Message::SetTabWidth, 4);
                 editor->Send(Message::GotoPos, 13);
                 Status(frame, "Ln 2, Col 7");
@@ -111,8 +112,8 @@ public:
                 Status(frame, "Ln 2, Col 5");
                 Require(frame->GetStatusBar()->GetStatusText().Contains("UTF-8"), "metadata must remain visible");
                 std::puts("PASS: live logical line and core column use tab stops and Unicode characters");
-                const std::string selected = "\xE4\xB8\xAD\xE6\x96\x87\xF0\x9F\x98\x80"
-                                             "e\xCC\x81\t\r\n";
+                const std::string selected = "\x{E4}\x{B8}\x{AD}\x{E6}\x{96}\x{87}\x{F0}\x{9F}\x{98}\x{80}"
+                                             "e\x{CC}\x{81}\t\r\n";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(selected.c_str()));
                 editor->Send(Message::SetSel, 0, static_cast<intptr_t>(selected.size()));
                 Status(frame, "Ln 2, Col 1 | Sel 8");
@@ -127,12 +128,13 @@ public:
                 Status(frame, "Ln 1, Col 1");
                 std::puts(
                     "PASS: selection counts Unicode scalars, CR and LF separately and refreshes changed contents");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one\n\xE4\xB8\xAD\xE6\x96\x87"));
+                editor->Send(Message::SetText, 0,
+                             reinterpret_cast<intptr_t>("one\n\x{E4}\x{B8}\x{AD}\x{E6}\x{96}\x{87}"));
                 editor->Send(Message::GotoPos, 0);
                 NativeSearch::Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 Require(query, "Find must expose its native query input");
-                query->SetValue(wxString::FromUTF8("\xE4\xB8\xAD\xE6\x96\x87"));
+                query->SetValue(wxString::FromUTF8("\x{E4}\x{B8}\x{AD}\x{E6}\x{96}\x{87}"));
                 NativeSearch::Click(query->GetParent(), wxID_FORWARD);
                 NativeSearch::Selection(editor, 4, 10, "native Find must select the expected UTF-8 byte range");
                 Status(frame, "Ln 2, Col 3 | Sel 2");
@@ -215,7 +217,7 @@ public:
                 const auto source = wxFileName::CreateTempFileName("wxnotepad-position-");
                 {
                     wxFFile file(source, "wb");
-                    Require(file.IsOpened() && file.Write("\xEF\xBB\xBF"
+                    Require(file.IsOpened() && file.Write("\x{EF}\x{BB}\x{BF}"
                                                           "new\r\ntext",
                                                           12) == 12,
                             "write UTF-8 BOM fixture");
@@ -267,7 +269,7 @@ public:
                 editor->Send(Message::Undo);
                 Require(!editor->Send(Message::GetModify), "observing status leaves the original save point intact");
                 std::puts("PASS: wrapped lines remain logical; collapsed-text status refresh is observational");
-                const std::string batch = std::string(100, 'p') + "\xE4\xB8\xAD\xE4\xB8\xAD";
+                const std::string batch = std::string(100, 'p') + "\x{E4}\x{B8}\x{AD}\x{E4}\x{B8}\x{AD}";
                 editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(batch.c_str()));
                 editor->Send(Message::SetSel, 100, 106);
                 Status(frame, "Ln 1, Col 103 | Sel 2");

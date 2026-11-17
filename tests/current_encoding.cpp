@@ -47,7 +47,7 @@ void FormatOnly(EditorFrame* frame) {
             "returning to original encoding clears encoding-only modification");
     Command(frame, "UTF-8 BOM");
     Require(frame->Save().status == SaveStatus::Saved &&
-                TestFiles::Bytes(path) == "\xef\xbb\xbf"
+                TestFiles::Bytes(path) == "\x{ef}\x{bb}\x{bf}"
                                           "a\r\nb\n" &&
                 !frame->GetTitle().StartsWith("*") && editor->Send(Message::CanRedo),
             "Save writes the selected BOM and commits identity while retaining redo");
@@ -120,7 +120,7 @@ void BigEndian(EditorFrame* frame, bool native) {
     const auto copy = TestFiles::TemporaryDirectory("big-endian-copy.txt");
     const auto renamed = TestFiles::TemporaryDirectory("big-endian-renamed.txt");
     const std::string utf8 = "A中😀\r\nB\nC\r";
-    const std::string bytes("\0A\x4e\x2d\xd8\x3d\xde\0\0\r\0\n\0B\0\n\0C\0\r", 20);
+    const std::string bytes("\0A\x{4e}\x{2d}\x{d8}\x{3d}\x{de}\0\0\r\0\n\0B\0\n\0C\0\r", 20);
     TestFiles::WriteBytes(path, utf8);
     Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
             "UTF-16BE destination fixture opens");
@@ -132,7 +132,7 @@ void BigEndian(EditorFrame* frame, bool native) {
                 frame->GetTitle().StartsWith("*") && frame->Editor()->Send(Message::CanRedo),
             "direct UTF-16BE BOM choice updates live identity and preserves redo");
     Require(frame->SaveCopy(TestFiles::Filename(copy)).status == SaveStatus::Saved &&
-                TestFiles::Bytes(copy) == "\xfe\xff" + bytes && TestFiles::Bytes(path) == utf8 &&
+                TestFiles::Bytes(copy) == "\x{fe}\x{ff}" + bytes && TestFiles::Bytes(path) == utf8 &&
                 frame->DocumentIsModified(),
             "Save Copy writes exact UTF-16BE BOM bytes without committing the original identity");
     Require(frame->SaveAs(TestFiles::Filename(TestFiles::TemporaryDirectory())).status == SaveStatus::Failed &&
@@ -142,7 +142,7 @@ void BigEndian(EditorFrame* frame, bool native) {
                 TestFiles::Bytes(path) == utf8,
             "failed UTF-16BE write retains path, pending encoding, live history and original bytes");
     Require(frame->Save({}, SaveTimeMode::Original).status == SaveStatus::Saved &&
-                TestFiles::Bytes(path) == "\xfe\xff" + bytes && !frame->DocumentIsModified(),
+                TestFiles::Bytes(path) == "\x{fe}\x{ff}" + bytes && !frame->DocumentIsModified(),
             "Save with Original Time commits exact UTF-16BE BOM bytes");
     {
         EncodingPicker driver;
@@ -167,7 +167,7 @@ void BigEndian(EditorFrame* frame, bool native) {
         driver.Stop();
         Require(driver.initial == "UTF-16BE" && frame->DocumentHasBom(), "F9 offers both UTF-16BE destinations");
     }
-    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(renamed) == "\xfe\xff" + bytes,
+    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(renamed) == "\x{fe}\x{ff}" + bytes,
             "Save adds exactly the selected UTF-16BE BOM");
     Require(frame->NewDocument(), "saved UTF-16BE document closes cleanly");
     frame->SelectEncoding(EncodingChoice(FileEncoding::Utf16Be));
@@ -317,7 +317,7 @@ void SaveVariants(EditorFrame* frame) {
                 !frame->SelectEncoding(EncodingChoice(FileEncoding::Gbk)),
             "selecting current format is a no-op");
     Require(frame->SaveCopy(TestFiles::Filename(copy)).status == SaveStatus::Saved &&
-                TestFiles::Bytes(copy) == "\xd6\xd0\r\n" && TestFiles::Bytes(source) == "中\r\n" &&
+                TestFiles::Bytes(copy) == "\x{d6}\x{d0}\r\n" && TestFiles::Bytes(source) == "中\r\n" &&
                 frame->DocumentPath() == TestFiles::Filename(source) && frame->GetTitle().StartsWith("*") &&
                 frame->GetMenuBar()->IsChecked(python),
             "Save Copy writes pending GBK without committing identity, modification or language");
@@ -326,11 +326,11 @@ void SaveVariants(EditorFrame* frame) {
                 frame->GetTitle().StartsWith("*") && frame->DocumentEncoding() == FileEncoding::Gbk,
             "cancelled and failed saves retain pending encoding");
     Require(frame->SaveAs(TestFiles::Filename(renamed)).status == SaveStatus::Saved &&
-                TestFiles::Bytes(renamed) == "\xd6\xd0\r\n" && !frame->GetTitle().StartsWith("*"),
+                TestFiles::Bytes(renamed) == "\x{d6}\x{d0}\r\n" && !frame->GetTitle().StartsWith("*"),
             "Save As commits the pending format");
     frame->SelectEncoding(EncodingChoice(FileEncoding::Utf16Le, true));
     Require(frame->Save({}, SaveTimeMode::Original).status == SaveStatus::Saved &&
-                TestFiles::Bytes(renamed) == std::string("\xff\xfe\x2d\x4e\r\0\n\0", 8) &&
+                TestFiles::Bytes(renamed) == std::string("\x{ff}\x{fe}\x{2d}\x{4e}\r\0\n\0", 8) &&
                 !frame->GetTitle().StartsWith("*"),
             "Save with Original Time writes the selected BOM and codec");
     Require(frame->NewDocument(), "clean saved document can be replaced");
@@ -338,12 +338,12 @@ void SaveVariants(EditorFrame* frame) {
     TestEditor::Append(frame, "😀");
     const auto first = TestFiles::TemporaryDirectory("first.txt");
     Require(frame->SaveFirst(TestFiles::Filename(first)).status == SaveStatus::Saved &&
-                TestFiles::Bytes(first) == "\xef\xbb\xbf😀",
+                TestFiles::Bytes(first) == "\x{ef}\x{bb}\x{bf}😀",
             "first Save writes chosen UTF-8 BOM");
     frame->SelectEncoding(EncodingChoice(FileEncoding::Gbk));
     Require(frame->Save([] { return EncodingLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
                 frame->GetTitle().StartsWith("*") && frame->DocumentEncoding() == FileEncoding::Gbk &&
-                TestFiles::Bytes(first) == "\xef\xbb\xbf😀",
+                TestFiles::Bytes(first) == "\x{ef}\x{bb}\x{bf}😀",
             "loss cancellation retains pending GBK and original bytes");
     frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8, true));
     Require(!frame->GetTitle().StartsWith("*"), "loss cancellation did not commit original encoding");
@@ -372,7 +372,7 @@ void EmptyRules(EditorFrame* frame) {
         Require(driver.prompts == 1 && frame->DocumentPath() == TestFiles::Filename(path) && frame->DocumentHasBom(),
                 "cancelled New keeps pending empty BOM");
     }
-    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == "\xff\xfe",
+    Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == "\x{ff}\x{fe}",
             "empty named Save writes the BOM alone");
     TestEditor::Append(frame, "x");
     frame->Editor()->Send(Message::SelectAll);

@@ -36,12 +36,12 @@ public:
         const std::array names{"SkipUnicodeDetection", "LoadANSIasUTF8", "LoadASCIIasUTF8", "LoadNFOasOEM",
                                "NoEncodingTags"};
         for (size_t i = 0; i < names.size(); ++i) {
-            auto* check = wxDynamicCast(dialog->FindWindowByName(names[i], dialog), wxCheckBox);
+            auto* check = wxDynamicCast(wxWindow::FindWindowByName(names[i], dialog), wxCheckBox);
             Require(check && check->GetValue() == initialStates[i], "original checkbox states and polarity");
             if (initialStates[i] != finalStates[i]) Click(check);
         }
         stage = 1;
-        auto* choose = dialog->FindWindowByName("Choose default encoding", dialog);
+        auto* choose = wxWindow::FindWindowByName("Choose default encoding", dialog);
         // GTK timeout sources do not re-enter while their callback
         // is displaying a nested modal dialog.
         wxTheApp->CallAfter([choose] { Click(choose); });
@@ -61,7 +61,7 @@ public:
                     return;
                 }
             } else if (dialog->GetTitle() == "Select Encoding" && stage == 1) {
-                auto* tree = wxDynamicCast(dialog->FindWindowByName("Default encoding", dialog), wxTreeCtrl);
+                auto* tree = wxDynamicCast(wxWindow::FindWindowByName("Default encoding", dialog), wxTreeCtrl);
                 Require(tree, "default picker uses default-selection context");
                 initial = tree->GetItemText(tree->GetSelection());
                 Require(NativeDialogs::SelectTreeLabel(*tree, selected), "requested default encoding exists in picker");
@@ -127,7 +127,8 @@ void RunCommitCase(SettingsStore& settings, bool nested, bool outer) {
     TestEditor::Append(frame, "中\r\n");
     const auto destination = TestFiles::TemporaryDirectory("defaults-new.txt");
     Require(frame->SaveAs(TestFiles::Filename(destination)).status == SaveStatus::Saved &&
-                TestFiles::Bytes(destination) == (nested ? std::string("\xfe\xff\x4e\x2d\0\r\0\n", 8) : "中\r\n"),
+                TestFiles::Bytes(destination) ==
+                    (nested ? std::string("\x{fe}\x{ff}\x{4e}\x{2d}\0\r\0\n", 8) : "中\r\n"),
             "New saves exact independently specified default-format bytes");
     const auto empty = TestFiles::TemporaryDirectory("defaults-empty.txt");
     TestFiles::WriteBytes(empty, "");

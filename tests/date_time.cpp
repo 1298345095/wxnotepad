@@ -143,11 +143,11 @@ void SavedBytes(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("date-time");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {{"utf8.txt", FileEncoding::Utf8, "AoldZ", "A时刻Z"},
-                                                  {"utf16.txt", FileEncoding::Utf16Le,
-                                                   std::string("\xff\xfe\x41\0o\0l\0d\0Z\0", 12),
-                                                   std::string("\xff\xfe\x41\0\xf6\x65\x3b\x52Z\0", 10)},
-                                                  {"cp936.txt", FileEncoding::Gbk, "AoldZ", "A\xca\xb1\xbf\xccZ"}};
+    const TestFiles::EncodedFixture fixtures[] = {
+        {"utf8.txt", FileEncoding::Utf8, "AoldZ", "A时刻Z"},
+        {"utf16.txt", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{41}\0o\0l\0d\0Z\0", 12),
+         std::string("\x{ff}\x{fe}\x{41}\0\x{f6}\x{65}\x{3b}\x{52}Z\0", 10)},
+        {"cp936.txt", FileEncoding::Gbk, "AoldZ", "A\x{ca}\x{b1}\x{bf}\x{cc}Z"}};
     for (const auto& fixture : fixtures) {
         const auto path = directory / fixture.name;
         TestFiles::WriteBytes(path, fixture.before);

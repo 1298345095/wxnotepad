@@ -115,7 +115,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
                 "native Tab Settings persists to the shared original Markdown section");
         settings.values.schemeTabs[static_cast<size_t>(SyntaxLanguage::MarkdownGitHub)] = OriginalTabs{};
         Require(settings.SaveSchemeTabs(dialect.language), "Markdown tab defaults must restore through every dialect");
-        const std::string bytes = std::string("\xEF\xBB\xBF") + "# UTF-8 \xE7\x95\x8C\r\n" + text;
+        const std::string bytes = std::string("\x{EF}\x{BB}\x{BF}") + "# UTF-8 \x{E7}\x{95}\x{8C}\r\n" + text;
         TestFiles::WriteBytes(path, bytes);
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "BOM Markdown must Open");
         Choose(frame, dialect.name);

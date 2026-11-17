@@ -137,11 +137,11 @@ void NativeAndProtection(EditorFrame* frame) {
                         !editor->Send(Message::GetModify),
                     "core read-only protection rejects manual deletion");
         }
-        Set(editor, "\vA\f\n\u00a0X\u3000", 0, 0);
+        Set(editor, "\vA\f\n\u{00a0}X\u{3000}", 0, 0);
         editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
         editor->Send(Message::Undo);
         NativeSearch::Command(frame, Command(frame, leading));
-        Require(TestEditor::Text(editor) == "\vA\f\n\u00a0X\u3000" && editor->Send(Message::CanRedo) &&
+        Require(TestEditor::Text(editor) == "\vA\f\n\u{00a0}X\u{3000}" && editor->Send(Message::CanRedo) &&
                     !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
                 "non-ASCII whitespace and other control bytes preserve no-change redo and save point");
         Set(editor, leading ? "  A\n B" : "A  \nB  ", 0, leading ? 1 : 2);
@@ -184,10 +184,10 @@ void SavedBytes(EditorFrame* frame) {
     using namespace std::string_literals;
     using Fixture = TestFiles::EncodedFixture;
     const Fixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "\xef\xbb\xbf \t中 \t\r\n \tx \t\n \ty\t", "\xef\xbb\xbf中\r\nx\ny"},
-        {"gbk", FileEncoding::Gbk, " \t\xd6\xd0 \t\r\n \tx \t\n \ty\t", "\xd6\xd0\r\nx\ny"},
-        {"utf16", FileEncoding::Utf16Le, "\xff\xfe \0\t\0\x2d\x4e \0\t\0\r\0\n\0 \0x\0 \0\n\0 \0y\0\t\0"s,
-         "\xff\xfe\x2d\x4e\r\0\n\0x\0\n\0y\0"s},
+        {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf} \t中 \t\r\n \tx \t\n \ty\t", "\x{ef}\x{bb}\x{bf}中\r\nx\ny"},
+        {"gbk", FileEncoding::Gbk, " \t\x{d6}\x{d0} \t\r\n \tx \t\n \ty\t", "\x{d6}\x{d0}\r\nx\ny"},
+        {"utf16", FileEncoding::Utf16Le, "\x{ff}\x{fe} \0\t\0\x{2d}\x{4e} \0\t\0\r\0\n\0 \0x\0 \0\n\0 \0y\0\t\0"s,
+         "\x{ff}\x{fe}\x{2d}\x{4e}\r\0\n\0x\0\n\0y\0"s},
     };
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {

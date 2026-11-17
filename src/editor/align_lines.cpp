@@ -69,7 +69,8 @@ AlignmentSpacing MeasureSpacing(const std::vector<std::string_view>& words, Alig
     return {extraSpaces, gaps, justify ? (width - wordsLength) / gaps : 1, justify ? (width - wordsLength) % gaps : 0};
 }
 
-std::string AlignWords(const std::vector<std::string_view>& words, AlignmentMode mode, AlignmentSpacing spacing) {
+std::string AlignWords(const std::vector<std::string_view>& words, AlignmentMode mode,
+                       const AlignmentSpacing& spacing) {
     std::string aligned;
     if (mode == AlignmentMode::Right && spacing.extra > 0) aligned.append(static_cast<size_t>(spacing.extra), ' ');
     auto oddSpaces = spacing.extra % 2;

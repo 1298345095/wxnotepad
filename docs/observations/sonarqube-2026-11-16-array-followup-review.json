@@ -1,0 +1,644 @@
+{
+  "project": "1298345095_wxnotepad",
+  "organization": "1298345095",
+  "review_date": "2026-11-16",
+  "review_timezone": "America/Los_Angeles",
+  "recorded_at_utc": "2026-11-17T00:12:36.734329+00:00",
+  "pull_request": 222,
+  "branch": "codex/sonarcloud-small-fixes-2026-11-16",
+  "baseline_commit": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+  "trigger": "The successful 85f296e analysis exposed two pre-existing fixed object arrays in the PR new-code range after literal formatting. Both are genuine S5945 findings. The two other already-open S5945 findings in the same files are included in this single follow-up commit.",
+  "counts": {
+    "new_main_context_code_fix_keys": 4,
+    "matching_pr_context_keys": 2,
+    "previous_pr222_main_code_fix_keys": 897,
+    "cumulative_pr222_main_code_fix_keys": 901,
+    "continuation_from_ac7fab6_main_code_fix_keys": 651,
+    "new_false_positives": 0,
+    "cumulative_pr222_false_positive_keys": 22,
+    "main_open_confirmed_at_review": 3745
+  },
+  "rule_review": {
+    "key": "cpp:S5945",
+    "source": "SonarCloud MCP show_rule for organization 1298345095",
+    "result": "All four are actual C++ fixed arrays; the documented extern C and main-argument exceptions do not apply. The recommendation is implemented with std::array; none of these issues is marked false positive."
+  },
+  "code_fixes": [
+    {
+      "file": "tests/visual_brace.cpp",
+      "scope": "Lifecycle",
+      "variable": "font",
+      "replacement": "std::array<char, 256>",
+      "pr_issue_key": null,
+      "review": "Value initialization retains 256 zeroed characters. Both StyleGetFont sends, the std::string constructor and its comparison receive font.data(), with the same writable char* storage and function-local lifetime. The pinned native getter writes the font name including NUL, or writes a leading NUL for a null name.",
+      "main_issue_key": "AaG7NURwkxw1cHak340F",
+      "rule": "cpp:S5945",
+      "baseline_main_line": 171,
+      "baseline_main_status": "OPEN",
+      "disposition": "code_fix"
+    },
+    {
+      "file": "tests/visual_brace.cpp",
+      "scope": "SavedState",
+      "variable": "fixtures",
+      "replacement": "const std::array<TestFiles::EncodedFixture, 3>",
+      "pr_issue_key": "AaHmz5NnxHJDvo969oYP",
+      "review": "Double-braced std::array aggregate initialization retains UTF-8, UTF-16LE and GBK ordering and all element fields. The UTF-16 strings retain explicit lengths of 8 and 10 bytes. Only individual const EncodedFixture references reach RequireSavedUndoRedo; the whole array has no pointer, sizeof or array-overload consumer.",
+      "main_issue_key": "AaG7NURwkxw1cHak340H",
+      "rule": "cpp:S5945",
+      "baseline_main_line": 195,
+      "baseline_main_status": "OPEN",
+      "disposition": "code_fix"
+    },
+    {
+      "file": "tests/utf16_smoke.cpp",
+      "scope": "Utf16App::OnInit callback",
+      "variable": "invalid",
+      "replacement": "const std::array<std::string, 5>",
+      "pr_issue_key": "AaHmz451xHJDvo969oYO",
+      "review": "Five complete std::string fixtures retain their explicit byte lengths and order. The only consumers are a const-reference range-for and invalid[0]; the whole array does not escape or select an array-specific overload.",
+      "main_issue_key": "AaGQhgSWusAIaC0DBL7m",
+      "rule": "cpp:S5945",
+      "baseline_main_line": 46,
+      "baseline_main_status": "OPEN",
+      "disposition": "code_fix"
+    },
+    {
+      "file": "tests/utf16_smoke.cpp",
+      "scope": "Utf16App::OnInit callback",
+      "variable": "payloads",
+      "replacement": "const std::array<std::string, 3>",
+      "pr_issue_key": null,
+      "review": "The empty, 22-byte and 2-byte payload strings retain all bytes, including embedded NULs. Both BOM rounds continue to visit the same three const references in the same order.",
+      "main_issue_key": "AaGQhgSWusAIaC0DBL7s",
+      "rule": "cpp:S5945",
+      "baseline_main_line": 58,
+      "baseline_main_status": "OPEN",
+      "disposition": "code_fix"
+    }
+  ],
+  "source_hashes": [
+    {
+      "file": "tests/utf16_smoke.cpp",
+      "before_sha256": "5dfdb1927ce0ebd9c46a4fbcf97ef38239ae60bfa3b8159d27318a20939f46fd",
+      "after_sha256": "f12226ae526a5f6bcfb3adbbd1106516f13502852d386cf47894b644f455760a"
+    },
+    {
+      "file": "tests/visual_brace.cpp",
+      "before_sha256": "14d3d32d41e18304c98f29ce6122c27d6a23593ac19cbb30cd1dbc9ccf5d0dee",
+      "after_sha256": "e7fc83dddc2a319cf7072f692a64a1e0b50fb4d2ebd39653f000550066a71eb6"
+    }
+  ],
+  "source_review": {
+    "schema_version": 1,
+    "reviewer": "/root/publish_review",
+    "recorded_at_utc": "2026-11-17T00:11:19.473Z",
+    "baseline_revision": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+    "rule": "cpp:S5945",
+    "result": "PASS: The four reviewed C-style-array replacements preserve the consumers' data, element order, extents, pointer interfaces and lifetimes.",
+    "method": "Repository search, complete current test-source reads and the complete before-to-current diff, complete relevant helper functions, pinned upstream source retrieval and review of the precise getter/dispatch path. No CodeGraph.",
+    "modifications_by_reviewer": "Only this temporary review record was written. Repository files and Sonar issue status were not changed.",
+    "files": [
+      {
+        "file": "tests/utf16_smoke.cpp",
+        "before_sha256": "5dfdb1927ce0ebd9c46a4fbcf97ef38239ae60bfa3b8159d27318a20939f46fd",
+        "before_lines": 129,
+        "after_sha256": "f12226ae526a5f6bcfb3adbbd1106516f13502852d386cf47894b644f455760a",
+        "after_lines": 130,
+        "read_scope": "Complete current file and complete baseline-to-current diff."
+      },
+      {
+        "file": "tests/visual_brace.cpp",
+        "before_sha256": "14d3d32d41e18304c98f29ce6122c27d6a23593ac19cbb30cd1dbc9ccf5d0dee",
+        "before_lines": 300,
+        "after_sha256": "e7fc83dddc2a319cf7072f692a64a1e0b50fb4d2ebd39653f000550066a71eb6",
+        "after_lines": 301,
+        "read_scope": "Complete baseline and current files, plus complete baseline-to-current diff."
+      }
+    ],
+    "changes": [
+      {
+        "file": "tests/utf16_smoke.cpp",
+        "object": "invalid",
+        "before": "const std::string invalid[]",
+        "after": "const std::array<std::string, 5> invalid",
+        "conclusion": "Verified genuine S5945; std::array retains five strings in the same order.",
+        "preserved": {
+          "element_count": 5,
+          "explicit_string_byte_lengths": [
+            4,
+            4,
+            6,
+            3,
+            8
+          ],
+          "const_elements": true,
+          "scope": "Utf16App::OnInit CallAfter lambda"
+        },
+        "consumers": [
+          "The range-for binds each element as const auto& bytes and calls Write(bad, bytes).",
+          "Write takes const std::string& and writes bytes.data(), bytes.size().",
+          "invalid[0] later supplies exactly the original first malformed UTF-16 input to Write."
+        ],
+        "impact": "No whole-array pointer, sizeof expression, array-reference parameter or array-specific overload consumes invalid. Initializer literals and explicit lengths are unchanged."
+      },
+      {
+        "file": "tests/utf16_smoke.cpp",
+        "object": "payloads",
+        "before": "const std::string payloads[]",
+        "after": "const std::array<std::string, 3> payloads",
+        "conclusion": "Verified genuine S5945; std::array retains three payload strings in the same order.",
+        "preserved": {
+          "element_count": 3,
+          "string_byte_lengths": [
+            0,
+            22,
+            2
+          ],
+          "const_elements": true,
+          "scope": "Utf16App::OnInit CallAfter lambda"
+        },
+        "consumers": [
+          "For each original bool bom value false/true, the inner range-for binds const auto& payload.",
+          "The existing BOM-prefix std::string concatenation and subsequent Write/Open/Save/SaveAs comparisons consume the same string values."
+        ],
+        "impact": "Container type changes while literal text, explicit lengths, nested iteration order and local lifetime stay identical. No whole-array interface depends on the previous array type."
+      },
+      {
+        "file": "tests/visual_brace.cpp",
+        "object": "font",
+        "before": "char font[256]{}",
+        "after": "std::array<char, 256> font{}",
+        "conclusion": "Verified genuine S5945; a fixed std::array with data() preserves the writable buffer interface.",
+        "preserved": {
+          "element_count": 256,
+          "element_type": "char",
+          "initialization": "Every character is value-initialized to zero.",
+          "scope": "Lifecycle function",
+          "storage": "Contiguous local character storage."
+        },
+        "adapted_uses": [
+          "First StyleGetFont Send receives reinterpret_cast<intptr_t>(font.data()).",
+          "originalFont construction receives font.data() as the same null-terminated character-pointer interface.",
+          "StyleGetFont inside the language loop receives reinterpret_cast<intptr_t>(font.data()).",
+          "originalFont == font.data() retains the string-versus-character-pointer comparison."
+        ],
+        "consumer_trace": [
+          "EditorControl::Send forwards message, wParam=0 and lParam synchronously to Core::WndProc.",
+          "Core::WndProc forwards StyleGetFont to ScintillaBase::WndProc.",
+          "ScintillaBase::WndProc has no StyleGetFont-specific case and dispatches through its default branch to Editor::WndProc.",
+          "Editor::WndProc routes StyleGetFont to StyleGetMessage.",
+          "StyleGetMessage ensures the style and calls StringResult(lParam, vs.styles[wParam].fontName).",
+          "StringResult gets char* from lParam; for a non-null font name it copies strlen(val)+1 bytes including NUL, otherwise it writes zero to the first character. It returns the length excluding NUL."
+        ],
+        "impact": "Capacity and lifetime are the existing 256-character local buffer. The getter writes through char* and does not retain the caller buffer. All four array-decay uses have corresponding data() conversions."
+      },
+      {
+        "file": "tests/visual_brace.cpp",
+        "object": "fixtures",
+        "before": "const TestFiles::EncodedFixture fixtures[]",
+        "after": "const std::array<TestFiles::EncodedFixture, 3> fixtures",
+        "conclusion": "Verified genuine S5945; the double-braced aggregate correctly initializes all three EncodedFixture elements.",
+        "preserved": {
+          "element_count": 3,
+          "order": [
+            "utf8",
+            "utf16",
+            "gbk"
+          ],
+          "utf16_explicit_byte_lengths": {
+            "before": 8,
+            "after": 10
+          },
+          "const_elements": true,
+          "scope": "SavedState function"
+        },
+        "consumers": [
+          "The immediate range-for continues to bind const auto& fixture.",
+          "The body reads the same name/encoding/before/after fields and uses the same byte-preserving file output and comparisons.",
+          "RequireSavedUndoRedo receives const EncodedFixture&; its complete helper saves after, performs Undo and saves before, then performs Redo and saves after."
+        ],
+        "impact": "The full array is never passed out or used in sizeof/array-specific overloads. Its element contents, order, explicit byte lengths and local lifetime remain unchanged."
+      }
+    ],
+    "local_reads": [
+      {
+        "file": "tests/utf16_smoke.cpp",
+        "scope": "Complete current file",
+        "start_line": 1,
+        "end_line": 130
+      },
+      {
+        "file": "tests/visual_brace.cpp",
+        "scope": "Complete current file",
+        "start_line": 1,
+        "end_line": 301
+      },
+      {
+        "file": "tests/encoded_file_helpers.h",
+        "scope": "Complete file, including EncodedFixture and RequireSavedUndoRedo"
+      },
+      {
+        "file": "tests/file_helpers.h",
+        "scope": "Complete file, including Bytes/WriteBytes and filename/path helpers"
+      },
+      {
+        "file": "src/editor/matching_brace.cpp",
+        "scope": "Complete file; unchanged visual-feedback consumer context"
+      },
+      {
+        "file": "src/editor/editor_control.cpp",
+        "scope": "Complete file",
+        "start_line": 1,
+        "end_line": 537,
+        "sha256": "60ff0d4e645eb2c311f06456f5d6bb3179d2b7aaa58c8741525cd891a4f38bd2",
+        "relevant_function": {
+          "name": "EditorControl::Send",
+          "start_line": 341,
+          "end_line": 373,
+          "scope": "Complete function"
+        }
+      },
+      {
+        "file": "src/editor/editor_control.h",
+        "scope": "Complete file"
+      },
+      {
+        "file": "src/editor/editor_core.h",
+        "scope": "Complete file"
+      },
+      {
+        "file": "src/editor/editor_core.cpp",
+        "scope": "Complete relevant function",
+        "function": "EditorControl::Core::WndProc",
+        "start_line": 204,
+        "end_line": 244,
+        "sha256": "b16b0d3e621b2c6fa395c684d1e1cedc7873197fe0b2b3cc2228ded340754fb9"
+      },
+      {
+        "file": "patches/original-core.patch",
+        "scope": "Complete file",
+        "start_line": 1,
+        "end_line": 747,
+        "sha256": "eb66ca5a38e46444c52d1d1cb4c135f6a4214ac9f27bf8198ed72850506d5139",
+        "result": "The patch changes other Editor.cxx paths, but does not change StyleGetMessage, StringResult or the StyleGetFont dispatch path; ScintillaBase.cxx is not a patch target."
+      },
+      {
+        "file": "tools/build.py",
+        "scope": "Pinned upstream, revision and source preparation contract",
+        "start_line": 1,
+        "end_line": 65
+      },
+      {
+        "file": "CMakeLists.txt",
+        "scope": "Pinned revision search result",
+        "start_line": 27,
+        "end_line": 28
+      }
+    ],
+    "upstream": {
+      "repository": "https://github.com/zufuliu/notepad4",
+      "revision": "89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
+      "repository_confirmation": "tools/build.py UPSTREAM/REVISION and CMakeLists.txt pinned core revision check",
+      "files": [
+        {
+          "file": "scintilla/src/Editor.cxx",
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.cxx",
+          "retrieval_url": "https://raw.githubusercontent.com/zufuliu/notepad4/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/Editor.cxx",
+          "retrieval": "Complete file fetched via GitHub MCP",
+          "manual_reads": [
+            {
+              "function": "Editor::StyleGetMessage",
+              "start_line": 6268,
+              "end_line": 6313,
+              "scope": "Complete function"
+            },
+            {
+              "function": "Editor::StringResult",
+              "start_line": 6390,
+              "end_line": 6400,
+              "scope": "Complete function"
+            },
+            {
+              "function": "Editor::WndProc",
+              "start_line": 6423,
+              "end_line": 6443,
+              "scope": "Dispatch entry and surrounding context; partial function"
+            },
+            {
+              "function": "Editor::WndProc",
+              "start_line": 7800,
+              "end_line": 7845,
+              "scope": "Complete relevant grouped StyleGetFont case and return to StyleGetMessage, with context; partial function"
+            }
+          ]
+        },
+        {
+          "file": "scintilla/src/ScintillaBase.cxx",
+          "url": "https://github.com/zufuliu/notepad4/blob/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/ScintillaBase.cxx",
+          "retrieval_url": "https://raw.githubusercontent.com/zufuliu/notepad4/89b8b36e0ee2c23f73be922315f17261ccfbbe1a/scintilla/src/ScintillaBase.cxx",
+          "retrieval": "Complete file fetched via GitHub MCP",
+          "manual_reads": [
+            {
+              "function": "ScintillaBase::WndProc",
+              "start_line": 906,
+              "end_line": 1242,
+              "scope": "Complete function"
+            }
+          ]
+        }
+      ]
+    },
+    "rule_review": "Complete cpp:S5945 rule description and exceptions were obtained via SonarCloud MCP show_rule. These local ordinary-C++ arrays are outside the extern-C/main-argument exceptions.",
+    "validation_scope": "Source review only. This reviewer did not run additional tests or change repository code."
+  },
+  "completed_baseline_validation": {
+    "source_revision": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+    "github_checks": [
+      {
+        "id": 133708329350,
+        "name": "SonarCloud Code Analysis",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://sonarcloud.io/dashboard?id=1298345095_wxnotepad&pullRequest=222",
+        "completed_at": "2026-11-17T00:02:07Z"
+      },
+      {
+        "id": 133704991387,
+        "name": "Linux coverage / SonarCloud",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149502/job/133704991387",
+        "completed_at": "2026-11-17T00:02:09Z"
+      },
+      {
+        "id": 133697894977,
+        "name": "CodeQL",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/runs/133697894977",
+        "completed_at": "2026-11-16T23:39:56Z"
+      },
+      {
+        "id": 133697820190,
+        "name": "Native clang-tidy",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149460/job/133697820190",
+        "completed_at": "2026-11-16T23:55:42Z"
+      },
+      {
+        "id": 133697634139,
+        "name": "Linux coverage / x11",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149502/job/133697634139",
+        "completed_at": "2026-11-16T23:52:23Z"
+      },
+      {
+        "id": 133697634040,
+        "name": "Windows MSVC",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149502/job/133697634040",
+        "completed_at": "2026-11-16T23:53:53Z"
+      },
+      {
+        "id": 133697633927,
+        "name": "Linux GCC 13 / X11 + Wayland",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149502/job/133697633927",
+        "completed_at": "2026-11-16T23:59:52Z"
+      },
+      {
+        "id": 133697633569,
+        "name": "Linux coverage / wayland",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149502/job/133697633569",
+        "completed_at": "2026-11-16T23:54:57Z"
+      },
+      {
+        "id": 133697633461,
+        "name": "CodeQL / actions",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149496/job/133697633461",
+        "completed_at": "2026-11-16T23:40:03Z"
+      },
+      {
+        "id": 133697633165,
+        "name": "Format and workflow syntax",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149460/job/133697633165",
+        "completed_at": "2026-11-16T23:39:44Z"
+      },
+      {
+        "id": 133697633089,
+        "name": "CodeQL / cpp",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149496/job/133697633089",
+        "completed_at": "2026-11-16T23:46:10Z"
+      },
+      {
+        "id": 133697633069,
+        "name": "Linux Clang 18 / libFuzzer + ASan + UBSan",
+        "head_sha": "85f296e8e1e05da2c57362807e75ecb583aeb0df",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149573/job/133697633069",
+        "completed_at": "2026-11-16T23:44:57Z"
+      }
+    ],
+    "workflow_runs": [
+      {
+        "id": 43981149573,
+        "name": "Fuzz",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 94,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43981149573/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43981149573/logs",
+        "workflow_id": 413097809,
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149573"
+      },
+      {
+        "id": 43981149496,
+        "name": "CodeQL",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 236,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43981149496/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43981149496/logs",
+        "workflow_id": 403089439,
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149496"
+      },
+      {
+        "id": 43981149460,
+        "name": "Quality",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 236,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43981149460/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43981149460/logs",
+        "workflow_id": 403089438,
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149460"
+      },
+      {
+        "id": 43981149502,
+        "name": "CI",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 237,
+        "jobs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43981149502/jobs",
+        "logs_url": "https://api.github.com/repos/1298345095/wxnotepad/actions/runs/43981149502/logs",
+        "workflow_id": 403089440,
+        "url": "https://github.com/1298345095/wxnotepad/actions/runs/43981149502"
+      }
+    ],
+    "quality_gate": {
+      "status": "OK",
+      "conditions": [
+        {
+          "metricKey": "new_reliability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_security_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_maintainability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_coverage",
+          "status": "OK",
+          "errorThreshold": "80",
+          "actualValue": "95.2"
+        },
+        {
+          "metricKey": "new_duplicated_lines_density",
+          "status": "OK",
+          "errorThreshold": "3",
+          "actualValue": "1.0"
+        },
+        {
+          "metricKey": "new_security_hotspots_reviewed",
+          "status": "OK",
+          "errorThreshold": "100",
+          "actualValue": "100.0"
+        }
+      ]
+    },
+    "measures": [
+      {
+        "metric": "new_coverage",
+        "value": "95.2",
+        "period": 1,
+        "bestValue": false
+      },
+      {
+        "metric": "new_conditions_to_cover",
+        "value": "87",
+        "period": 1
+      },
+      {
+        "metric": "new_uncovered_lines",
+        "value": "1",
+        "period": 1,
+        "bestValue": false
+      },
+      {
+        "metric": "new_uncovered_conditions",
+        "value": "5",
+        "period": 1,
+        "bestValue": false
+      },
+      {
+        "metric": "new_lines_to_cover",
+        "value": "38",
+        "period": 1
+      },
+      {
+        "metric": "new_duplicated_lines_density",
+        "value": "0.9671179883945842",
+        "period": 1,
+        "bestValue": false
+      }
+    ],
+    "pr_issues_before_array_followup": {
+      "issues": [
+        {
+          "key": "AaHmz451xHJDvo969oYO",
+          "rule": "cpp:S5945",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/utf16_smoke.cpp",
+          "severity": "MAJOR",
+          "status": "OPEN",
+          "message": "Replace this C-style array with \"std::vector\" (for dynamic size), or \"std::array\" (for static size)",
+          "cleanCodeAttribute": "COMPLETE",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T23:37:22+0000",
+          "textRange": {
+            "startLine": 49,
+            "endLine": 49
+          }
+        },
+        {
+          "key": "AaHmz5NnxHJDvo969oYP",
+          "rule": "cpp:S5945",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/visual_brace.cpp",
+          "severity": "MAJOR",
+          "status": "OPEN",
+          "message": "Replace this C-style array with \"std::vector\" (for dynamic size), or \"std::array\" (for static size)",
+          "cleanCodeAttribute": "COMPLETE",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-16T23:37:22+0000",
+          "textRange": {
+            "startLine": 197,
+            "endLine": 197
+          }
+        }
+      ],
+      "paging": {
+        "pageIndex": 1,
+        "pageSize": 100,
+        "total": 2
+      }
+    }
+  },
+  "validation": {
+    "canonical_format": "clang-format 23.1.2 passed all 374 tracked C/C++ files",
+    "diff_check": "git diff --check passed",
+    "review": "Complete changed files, actual diff, direct consumers and pinned StyleGetFont writeback path reviewed. Existing literal values, explicit lengths, order, range-for/subscript consumers and raw-pointer interface are preserved.",
+    "new_persistent_tests": 0,
+    "hosted_status_at_publication": "Pending for this follow-up commit. Completed results above apply specifically to baseline 85f296e.",
+    "hosted_result_record": "https://github.com/1298345095/wxnotepad/pull/222"
+  },
+  "publication": "All four code fixes and this scan-result record are published in one follow-up commit and one branch update. The preceding three commits were published in one earlier update.",
+  "issue_lifecycle": "PR issue keys are expected to be fixed by the subsequent PR analysis. Main code-fix keys remain open until merge and main analysis."
+}

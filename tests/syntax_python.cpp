@@ -81,7 +81,7 @@ public:
                                            "  message = f\"你好 {total:04d}\"\n"
                                            "  doc = \"\"\"中文\ninside\n\"\"\"\n"
                                            "  return int(total)\n";
-                const std::string bytes = "\xef\xbb\xbf" + source;
+                const std::string bytes = "\x{ef}\x{bb}\x{bf}" + source;
                 std::ofstream(path, std::ios::binary) << bytes;
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "full Python fixture must open");
                 Paint(frame);

@@ -150,10 +150,10 @@ private:
     EditorControl* editor_;
 #endif
 };
-bool Yellow(wxColour colour) {
+bool Yellow(const wxColour& colour) {
     return colour.Red() == 255 && colour.Green() == 255 && colour.Blue() >= 164 && colour.Blue() <= 166;
 }
-bool Gray(wxColour colour) {
+bool Gray(const wxColour& colour) {
     return colour.Red() >= 232 && colour.Red() <= 234 && colour.Green() >= 232 && colour.Green() <= 234 &&
            colour.Blue() >= 233 && colour.Blue() <= 235;
 }
@@ -240,15 +240,15 @@ void SavedState(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-current-line");
     std::filesystem::create_directory(directory);
     const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "A\xE4\xB8\xAD\r\nlast", "A\xE4\xB8\xAD\r\nlast!"},
+        {"utf8", FileEncoding::Utf8, "A\x{E4}\x{B8}\x{AD}\r\nlast", "A\x{E4}\x{B8}\x{AD}\r\nlast!"},
         {"utf16", FileEncoding::Utf16Le,
-         std::string("\xFF\xFE"
-                     "A\0-\x4E\r\0\n\0",
+         std::string("\x{FF}\x{FE}"
+                     "A\0-\x{4E}\r\0\n\0",
                      10),
-         std::string("\xFF\xFE"
-                     "A\0-\x4E\r\0\n\0!\0",
+         std::string("\x{FF}\x{FE}"
+                     "A\0-\x{4E}\r\0\n\0!\0",
                      12)},
-        {"gbk", FileEncoding::Gbk, "A\xD6\xD0\nlast", "A\xD6\xD0\nlast!"}};
+        {"gbk", FileEncoding::Gbk, "A\x{D6}\x{D0}\nlast", "A\x{D6}\x{D0}\nlast!"}};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         std::ofstream(path, std::ios::binary) << fixture.before;

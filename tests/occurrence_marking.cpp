@@ -50,7 +50,7 @@ void SelectByMouse(EditorControl* editor, intptr_t start, intptr_t end) {
             "native mouse drag changes the actual editor selection");
 }
 
-void Ranges(EditorControl* editor, std::vector<std::pair<intptr_t, intptr_t>> expected, const char* message) {
+void Ranges(EditorControl* editor, const std::vector<std::pair<intptr_t, intptr_t>>& expected, const char* message) {
     std::vector<std::pair<intptr_t, intptr_t>> actual;
     for (intptr_t pos = 0; pos < editor->Send(Message::GetLength); ++pos) {
         if (!editor->Send(Message::IndicatorValueAt, 8, pos)) continue;

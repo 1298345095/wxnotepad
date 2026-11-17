@@ -89,7 +89,8 @@ template <typename Action> void Dialog(EditorFrame* frame, int id, const Action&
     private:
         EditorFrame* frame_;
         const Action& action_;
-    } driver(frame, action);
+    };
+    Driver driver(frame, action);
     if (shortcut)
         Key(frame->Editor(), 'G', true);
     else
@@ -108,7 +109,7 @@ void LogicalLineNavigation(EditorFrame* frame) {
             }),
             "the private native frame must finish mapping before dialog interaction");
 #endif
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one\r\n\xE4\xB8\xAD\xE6\x96\x87\nlast"));
+    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one\r\n\x{E4}\x{B8}\x{AD}\x{E6}\x{96}\x{87}\nlast"));
     editor->Send(Message::SetSel, 1, 7);
     const int id = frame->GetMenuBar()->FindMenuItem("Search", "Goto Line...");
     Require(id != wxNOT_FOUND, "Search exposes the original navigation commands");
@@ -162,7 +163,7 @@ void LogicalLineNavigation(EditorFrame* frame) {
             "Ctrl+G cancellation must return editor focus");
     std::puts("PASS: owned native Ctrl+G opens the same dialog");
     for (const auto* eol : {"\r\n", "\n", "\r"}) {
-        const std::string text = std::string("one") + eol + "\xE4\xB8\xAD\xE6\x96\x87" + eol + "last";
+        const std::string text = std::string("one") + eol + "\x{E4}\x{B8}\x{AD}\x{E6}\x{96}\x{87}" + eol + "last";
         editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
         Dialog(frame, id, [](wxDialog* dialog, wxTextCtrl* input) {
             input->SetValue("2");
@@ -183,7 +184,7 @@ void LogicalLineNavigation(EditorFrame* frame) {
 void ColumnAndPositionNavigation(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const int id = frame->GetMenuBar()->FindMenuItem("Search", "Goto Line...");
-    const std::string columns = "\tA\xE4\xB8\xAD\xF0\x9F\x98\x80Z\r\nnext\n";
+    const std::string columns = "\tA\x{E4}\x{B8}\x{AD}\x{F0}\x{9F}\x{98}\x{80}Z\r\nnext\n";
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(columns.c_str()));
     editor->Send(Message::SetTabWidth, 4);
     struct Destination {

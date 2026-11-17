@@ -243,7 +243,7 @@ void NondefaultEolMetadata(EditorFrame* frame) {
     for (auto mode : {Scintilla::EndOfLine::Lf, Scintilla::EndOfLine::Cr}) {
         TestEditor::ResetStream(editor, before, 6, 9, mode);
         editor->InsertUnicodeControlCharacter(UnicodeControlCharacter::Ls, false);
-        Require(TestEditor::Text(editor) == "😀\r\n\xe2\x80\xa8\nZ\rQ" &&
+        Require(TestEditor::Text(editor) == "😀\r\n\x{e2}\x{80}\x{a8}\nZ\rQ" &&
                     editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode),
                 "line-separator insertion preserves nondefault EOL metadata and unrelated mixed-EOL bytes");
         editor->Send(Message::Undo);
@@ -302,7 +302,7 @@ void SavedBytes(EditorFrame* frame) {
             "explicit CP936 insertion fixture opens");
     editor->Send(Message::SetSel, 1, 4);
     NativeSearch::Command(frame, NativeControl(frame, controls, 40260));
-    Require(TestEditor::Text(editor) == "A\xe2\x80\x8eZ",
+    Require(TestEditor::Text(editor) == "A\x{e2}\x{80}\x{8e}Z",
             "explicit CP936 accepts the original multibyte control insertion");
     bool asked = false;
     Require(frame->Save([&asked] {
@@ -334,7 +334,7 @@ void NativeAnsi(EditorFrame* frame) {
             "actual ANSI identity blocks multibyte control insertion before editing or redo invalidation");
     TestEditor::RequireSelection(editor, 4, 1, "actual ANSI eligibility rejection retains the reversed selection");
     NativeSearch::Command(frame, NativeControl(frame, controls, 40275));
-    const TestFiles::EncodedFixture fixture{"ansi", FileEncoding::Gbk, "AoldZ", "A\x1eZ"};
+    const TestFiles::EncodedFixture fixture{"ansi", FileEncoding::Gbk, "AoldZ", "A\x{1e}Z"};
     TestFiles::RequireSavedUndoRedo(frame, path, fixture,
                                     {"ANSI Save retains original record-separator byte",
                                      "ANSI Undo Save restores original bytes",

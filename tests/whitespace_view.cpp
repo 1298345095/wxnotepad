@@ -118,7 +118,7 @@ public:
                 std::filesystem::create_directory(directory);
                 const auto input = directory / "input.txt";
                 const auto output = directory / "saved.cpp";
-                const std::string diskBytes = std::string("\xEF\xBB\xBF") + source;
+                const std::string diskBytes = std::string("\x{EF}\x{BB}\x{BF}") + source;
                 {
                     std::ofstream file(input, std::ios::binary);
                     file << diskBytes;

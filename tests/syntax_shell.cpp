@@ -201,7 +201,7 @@ void ShellOperations(EditorFrame* frame, SettingsStore& settings, const std::fil
               "precedence");
 }
 void EmptyShellBoms(EditorFrame* frame, EditorControl* editor, const std::filesystem::path& directory) {
-    for (const auto& bom : {std::string("\xef\xbb\xbf"), std::string("\xff\xfe")}) {
+    for (const auto& bom : {std::string("\x{ef}\x{bb}\x{bf}"), std::string("\x{ff}\x{fe}")}) {
         const auto bomPath = directory / (bom.size() == 3 ? "bom.sh" : "utf16.sh");
         std::ofstream(bomPath, std::ios::binary) << bom;
         Require(frame->Open(TestFiles::Filename(bomPath)).status == OpenStatus::Opened, "BOM-only shell must open");

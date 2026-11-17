@@ -89,7 +89,7 @@ void ReopenDecisions(DocumentSession& document, EditorControl* editor, const wxS
                 document.Open(path + ".missing", [] { return true; }).status == OpenStatus::Failed &&
                 editor->DocumentRevision() == revision && editor->Send(Message::GetModify),
             "a cancelled chooser or failed load retains the existing document");
-    Write(path, std::string(1, '\xff'));
+    Write(path, std::string(1, '\x{ff}'));
     Require(document.Open(
                         path, [] { return true; }, FileEncoding::Utf8)
                         .status == OpenStatus::Failed &&

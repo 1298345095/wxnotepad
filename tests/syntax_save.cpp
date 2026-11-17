@@ -193,7 +193,7 @@ public:
                 std::puts("PASS: native first Save selects C++ without an extra history action");
 
                 // Load BOM/mixed-EOL bytes before the extension transitions.
-                const std::string bytes = "\xef\xbb\xbf" + source;
+                const std::string bytes = "\x{ef}\x{bb}\x{bf}" + source;
                 std::ofstream(cpp, std::ios::binary) << bytes;
                 Require(frame->Open(Filename(cpp)).status == OpenStatus::Opened, "BOM fixture must open");
                 Require(frame->SaveAs(Filename(directory / "default.txt")).status == SaveStatus::Saved,

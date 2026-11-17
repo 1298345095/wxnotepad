@@ -97,11 +97,11 @@ void EncodedRevert(EditorFrame* frame, const std::filesystem::path& path) {
         bool bom;
     };
     const Fixture fixtures[] = {
-        {FileEncoding::Utf8, "before \xe4\xb8\xad\xe6\x96\x87", "after \xe4\xb8\xad\xe6\x96\x87",
-         "after \xe4\xb8\xad\xe6\x96\x87", false},
-        {FileEncoding::Gbk, "\xd6\xd0\xce\xc4", "plain\r\nsecond\nthird\r", "plain\r\nsecond\nthird\r", false},
-        {FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e\x87\x65", 6), std::string("\xff\xfe\x2d\x4e", 4),
-         "\xe4\xb8\xad", true},
+        {FileEncoding::Utf8, "before \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}",
+         "after \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}", "after \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}", false},
+        {FileEncoding::Gbk, "\x{d6}\x{d0}\x{ce}\x{c4}", "plain\r\nsecond\nthird\r", "plain\r\nsecond\nthird\r", false},
+        {FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}", 6),
+         std::string("\x{ff}\x{fe}\x{2d}\x{4e}", 4), "\x{e4}\x{b8}\x{ad}", true},
     };
     for (const auto& fixture : fixtures) {
         TestFiles::WriteBytes(path, fixture.before);
@@ -118,14 +118,14 @@ void EncodedRevert(EditorFrame* frame, const std::filesystem::path& path) {
                         frame->Editor()->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf),
                     "weak-encoding Revert retains original mixed-EOL counts and tie-breaking insertion mode");
     }
-    const std::string utf8Bom = "\xef\xbb\xbfUTF-8 wins";
+    const std::string utf8Bom = "\x{ef}\x{bb}\x{bf}UTF-8 wins";
     TestFiles::WriteBytes(path, utf8Bom);
     Require(frame->Revert().status == OpenStatus::Opened && frame->DocumentEncoding() == FileEncoding::Utf8 &&
                 frame->DocumentHasBom() && TestEditor::Text(frame) == "UTF-8 wins" && TestFiles::Bytes(path) == utf8Bom,
             "UTF-8 BOM detection overrides the current UTF-16 weak encoding hint");
-    TestFiles::WriteBytes(path, std::string("\xff\xfe\x2d\x4e", 4));
+    TestFiles::WriteBytes(path, std::string("\x{ff}\x{fe}\x{2d}\x{4e}", 4));
     Require(frame->Revert().status == OpenStatus::Opened && frame->DocumentEncoding() == FileEncoding::Utf16Le &&
-                frame->DocumentHasBom() && TestEditor::Text(frame) == "\xe4\xb8\xad",
+                frame->DocumentHasBom() && TestEditor::Text(frame) == "\x{e4}\x{b8}\x{ad}",
             "UTF-16 BOM detection overrides the current UTF-8 weak encoding hint");
     std::puts("PASS: UTF-8, UTF-16LE and GBK weak hints, BOM precedence and mixed EOL bytes");
 }
@@ -144,10 +144,10 @@ void FailedRevert(EditorFrame* frame, int revert, const std::filesystem::path& p
                 editor->DocumentRevision() == revision,
             "an unreadable backing file returns recoverable failure and retains the live document");
 #endif
-    TestFiles::WriteBytes(path, std::string("\xff\xfe\x00\xd8", 4));
+    TestFiles::WriteBytes(path, std::string("\x{ff}\x{fe}\x{00}\x{d8}", 4));
     Require(frame->Revert().status == OpenStatus::Failed && TestEditor::Text(frame) == text &&
                 editor->DocumentRevision() == revision && frame->DocumentEncoding() == FileEncoding::Utf16Le &&
-                TestFiles::Bytes(path) == std::string("\xff\xfe\x00\xd8", 4),
+                TestFiles::Bytes(path) == std::string("\x{ff}\x{fe}\x{00}\x{d8}", 4),
             "invalid encoded input retains the live document and source bytes");
     std::filesystem::remove(path);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);

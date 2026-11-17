@@ -94,7 +94,7 @@ size_t ChineseSequenceWidth(std::string_view bytes, FileEncoding encoding) {
         static_cast<unsigned char>(bytes[2]) <= 0xfe && bytes[3] >= '0' && bytes[3] <= '9')
         return 4;
     if (bytes.size() >= 2 && static_cast<unsigned char>(bytes[1]) >= 0x40 &&
-        static_cast<unsigned char>(bytes[1]) <= 0xfe && bytes[1] != '\x7f')
+        static_cast<unsigned char>(bytes[1]) <= 0xfe && bytes[1] != '\x{7f}')
         return 2;
     return 1;
 }
@@ -127,8 +127,8 @@ std::optional<std::string> CompatibilityEncode(unsigned scalar, FileEncoding enc
         case 0x256a:
             return PackedBytes(0xf9ea);
         }
-        if (scalar == 0x80) return std::string(1, '\x80');
-        if (scalar == 0xf8f8) return std::string(1, '\xff');
+        if (scalar == 0x80) return std::string(1, '\x{80}');
+        if (scalar == 0xf8f8) return std::string(1, '\x{ff}');
         for (const auto& range : big5PuaRanges) {
             if (scalar < range.unicode ||
                 scalar >= range.unicode + (range.lastLead - range.firstLead + 1) * Big5TrailsPerLead)

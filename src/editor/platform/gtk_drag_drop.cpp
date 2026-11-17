@@ -116,7 +116,8 @@ wxDragResult GtkTextDragDrop::Start(std::string_view text) {
         bool failed = false;
         GdkDragAction operation = static_cast<GdkDragAction>(0);
         wxDragResult result = wxDragNone;
-    } transfer{text};
+    };
+    Transfer transfer{text};
     auto* widget = window_.GetConnectWidget();
     const auto dataHandler = g_signal_connect(
         widget, "drag-data-get",

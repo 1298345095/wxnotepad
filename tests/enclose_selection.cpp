@@ -375,12 +375,12 @@ void SavedBytes(EditorFrame* frame) {
         const char* after;
     };
     const Fixture fixtures[] = {
-        {"cpp", "C/C++", "Triple Single Quotes", "\xef\xbb\xbf'''中文'''\r\nnext\nlast\r"},
-        {"py", "Python", "Triple Double Quotes", "\xef\xbb\xbf\"\"\"中文\"\"\"\r\nnext\nlast\r"},
-        {"json", "JSON", "Triple Backticks", "\xef\xbb\xbf```中文```\r\nnext\nlast\r"},
-        {"txt", "Plain Text", "Triple Single Quotes", "\xef\xbb\xbf'''中文'''\r\nnext\nlast\r"},
+        {"cpp", "C/C++", "Triple Single Quotes", "\x{ef}\x{bb}\x{bf}'''中文'''\r\nnext\nlast\r"},
+        {"py", "Python", "Triple Double Quotes", "\x{ef}\x{bb}\x{bf}\"\"\"中文\"\"\"\r\nnext\nlast\r"},
+        {"json", "JSON", "Triple Backticks", "\x{ef}\x{bb}\x{bf}```中文```\r\nnext\nlast\r"},
+        {"txt", "Plain Text", "Triple Single Quotes", "\x{ef}\x{bb}\x{bf}'''中文'''\r\nnext\nlast\r"},
     };
-    const std::string before = "\xef\xbb\xbf中文\r\nnext\nlast\r";
+    const std::string before = "\x{ef}\x{bb}\x{bf}中文\r\nnext\nlast\r";
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string("sample.") + fixture.extension);
         TestFiles::WriteBytes(path, before);
@@ -400,9 +400,9 @@ void SavedBytes(EditorFrame* frame) {
     }
     using EncodedFixture = TestFiles::EncodedFixture;
     const EncodedFixture encoded[] = {
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0", "\xce\xc4\n\xd6\xd0\xd6\xd0"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\xff\xfe\x2d\x4e", 4),
-         std::string("\xff\xfe\x87\x65\n\0\x2d\x4e\x2d\x4e", 10)},
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}", "\x{ce}\x{c4}\n\x{d6}\x{d0}\x{d6}\x{d0}"},
+        {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}", 4),
+         std::string("\x{ff}\x{fe}\x{87}\x{65}\n\0\x{2d}\x{4e}\x{2d}\x{4e}", 10)},
     };
     for (const auto& fixture : encoded) {
         const auto path = directory / (std::string(fixture.name) + ".txt");

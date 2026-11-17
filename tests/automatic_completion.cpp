@@ -250,6 +250,36 @@ void Behavior(EditorFrame* frame) {
               "and multiple selections");
 }
 
+void SupplementaryLatex(EditorFrame* frame) {
+    using enum Message;
+    auto* editor = frame->Editor();
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
+    WordCompletionSettings settings;
+    settings.latexInputMethod = true;
+    settings.fillUpMask &= ~CompletionFillUp::Tab;
+    editor->SetCompletionSettings(settings);
+    TestEditor::ResetStream(editor, "\\bb", 3, 3);
+    editor->Send(Colourise, 0, -1);
+    Type(editor, 'i');
+    Require(TestEditor::Text(editor) == "\\bbi" && editor->Send(AutoCActive),
+            "native typing opens LaTeX candidates for a supplementary character");
+
+    // Pinned LaTeXInputData.h maps \\bbi to U+1D55A using two UTF-16 code units.
+    constexpr auto Expected = "\x{f0}\x{9d}\x{95}\x{9a}";
+    Key(editor, 9);
+    Require(TestEditor::Text(editor) == Expected && !editor->Send(AutoCActive),
+            "native Tab converts the complete surrogate pair and closes the popup");
+    TestEditor::RequireSelection(editor, 4, 4, "supplementary LaTeX completion caret uses UTF-8 byte positions");
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "\\bbi", "one Undo restores the complete LaTeX input sequence");
+    TestEditor::RequireSelection(editor, 4, 4, "LaTeX conversion Undo restores the input caret");
+    editor->Send(Redo);
+    Require(TestEditor::Text(editor) == Expected, "Redo restores the complete supplementary character");
+    // The replacement undo group captures the Redo selection before the final caret move.
+    TestEditor::RequireSelection(editor, 0, 0, "LaTeX conversion Redo restores the grouped replacement selection");
+    std::puts("PASS: native Tab LaTeX surrogate-pair conversion, UTF-8 caret and Undo/Redo");
+}
+
 class CompletionApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -271,6 +301,7 @@ public:
                 std::puts("PASS: native typing opens original completion popup without inserting");
                 Frozen(frame);
                 Behavior(frame);
+                SupplementaryLatex(frame);
             } catch (const std::exception& e) {
                 std::fprintf(stderr, "FAIL: %s\n", e.what());
                 result_ = 1;

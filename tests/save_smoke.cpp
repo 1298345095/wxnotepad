@@ -32,7 +32,7 @@ public:
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "existing.txt";
                 {
-                    std::ofstream(path, std::ios::binary) << "\xef\xbb\xbf"
+                    std::ofstream(path, std::ios::binary) << "\x{ef}\x{bb}\x{bf}"
                                                              "one\r\ntwo\nthree\r";
                 }
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "source must open");
@@ -42,7 +42,7 @@ public:
                 Require(state.GetEnabled(), "Save menu must be enabled for an existing path");
                 wxCommandEvent save(wxEVT_MENU, wxID_SAVE);
                 frame->GetEventHandler()->ProcessEvent(save);
-                Require(Bytes(path) == "\xef\xbb\xbf"
+                Require(Bytes(path) == "\x{ef}\x{bb}\x{bf}"
                                        "one\r\ntwo\nthree\r中文😀",
                         "Save menu must write current text with BOM and actual EOL");
                 Require(frame->DocumentPath() == Filename(path) &&
@@ -53,10 +53,10 @@ public:
                 const auto copy = directory / u8"另存为.txt";
                 Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved,
                         "Save As to a new path must succeed");
-                Require(Bytes(copy) == "\xef\xbb\xbf"
+                Require(Bytes(copy) == "\x{ef}\x{bb}\x{bf}"
                                        "one\r\ntwo\nthree\r中文😀!",
                         "Save As must preserve BOM and mixed EOL bytes");
-                Require(Bytes(path) == "\xef\xbb\xbf"
+                Require(Bytes(path) == "\x{ef}\x{bb}\x{bf}"
                                        "one\r\ntwo\nthree\r中文😀",
                         "Save As must leave original file unchanged");
                 Require(frame->DocumentPath() == Filename(copy) && frame->DocumentHasUtf8Bom() &&
@@ -74,7 +74,7 @@ public:
                 frame->Editor()->Send(Scintilla::Message::Redo);
                 Require(frame->Editor()->Send(Scintilla::Message::GetModify),
                         "Redo away from save point must be dirty");
-                Require(frame->Save().status == SaveStatus::Saved && Bytes(copy) == "\xef\xbb\xbf"
+                Require(frame->Save().status == SaveStatus::Saved && Bytes(copy) == "\x{ef}\x{bb}\x{bf}"
                                                                                     "one\r\ntwo\nthree\r中文😀!?",
                         "next Save must use the Save As identity");
                 std::puts("PASS: Save As new path, original isolation and Undo/Redo save points");
@@ -86,7 +86,7 @@ public:
                     Require(frame->Editor()->Send(Scintilla::Message::GetModify) &&
                                 frame->Editor()->Send(Scintilla::Message::CanUndo),
                             "cancel/failure must retain dirty state and history");
-                    Require(Bytes(copy) == "\xef\xbb\xbf"
+                    Require(Bytes(copy) == "\x{ef}\x{bb}\x{bf}"
                                            "one\r\ntwo\nthree\r中文😀!?",
                             "cancel/failure must retain source disk bytes");
                 };
@@ -112,15 +112,15 @@ public:
                 Require(frame->Editor()->Send(Scintilla::Message::GetModify),
                         "cancel/failure must preserve pending text in Redo");
                 Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved &&
-                            Bytes(copy) == "\xef\xbb\xbf"
+                            Bytes(copy) == "\x{ef}\x{bb}\x{bf}"
                                            "one\r\ntwo\nthree\r中文😀!?pending",
                         "approved same-path Save As must preserve full pending text");
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(directory))
                     Require(!entry.path().filename().u8string().contains(u8".wxnotepad-"),
                             "failed saves must clean temporary siblings");
                 std::puts("PASS: Save As cancellation and creation/replacement failures preserve session and disk");
-                const std::string samples[] = {"", "\xef\xbb\xbf", "ASCII\r\n",
-                                               "\xef\xbb\xbf"
+                const std::string samples[] = {"", "\x{ef}\x{bb}\x{bf}", "ASCII\r\n",
+                                               "\x{ef}\x{bb}\x{bf}"
                                                "中文😀\n",
                                                "one\r\ntwo\nthree\r"};
                 for (size_t index = 0; index < std::size(samples); ++index) {

@@ -28,7 +28,7 @@ using NativeDialogs::Respond;
 // Only activate native modal widgets owned by this test process. No global input.
 class NativeDriver final : public wxTimer {
 public:
-    explicit NativeDriver(int choice, wxString path = {}) : choice_(choice), path_(path) { Start(150); }
+    explicit NativeDriver(int choice, const wxString& path = {}) : choice_(choice), path_(path) { Start(150); }
     int losses = 0, choosers = 0, errors = 0;
     wxString selectedType;
     void Notify() override {
@@ -168,7 +168,7 @@ public:
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";
-                const std::string original = "Native\r\n\xd6\xd0\xce\xc4\n\x80\r";
+                const std::string original = "Native\r\n\x{d6}\x{d0}\x{ce}\x{c4}\n\x{80}\r";
                 {
                     std::ofstream stream(source, std::ios::binary);
                     stream << original;
@@ -233,7 +233,7 @@ public:
                 const auto invalid = directory / "invalid.txt";
                 {
                     std::ofstream stream(invalid, std::ios::binary);
-                    stream << "\x81";
+                    stream << "\x{81}";
                 }
                 NativeDriver invalidOpen(wxID_CANCEL, Filename(invalid));
                 Command(frame, openGbk);

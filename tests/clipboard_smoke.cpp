@@ -1204,16 +1204,16 @@ void UtilitySavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     std::filesystem::create_directory(directory);
     const TestFiles::EncodedFixture fixtures[] = {
         {"utf8", FileEncoding::Utf8,
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "A B\r\n",
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "A B\r\n!"},
-        {"gbk", FileEncoding::Gbk, "\xd6\xd0\r\n", "\xd6\xd0\r\n!"},
+        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\r\n", "\x{d6}\x{d0}\r\n!"},
         {"utf16", FileEncoding::Utf16Le,
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "A\0 \0B\0\r\0\n\0",
                      12),
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "A\0 \0B\0\r\0\n\0!\0",
                      14)},
     };
@@ -1812,22 +1812,22 @@ void SwapSavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     const TestFiles::EncodedFixture fixtures[] = {
         {"utf8", FileEncoding::Utf8, "AoldZ", "AXZ"},
         {"utf8-bom", FileEncoding::Utf8,
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "AoldZ",
-         "\xef\xbb\xbf"
+         "\x{ef}\x{bb}\x{bf}"
          "AXZ"},
         {"gbk", FileEncoding::Gbk,
-         "\xc7\xb0"
+         "\x{c7}\x{b0}"
          "old"
-         "\xe1\xe1",
-         "\xc7\xb0"
+         "\x{e1}\x{e1}",
+         "\x{c7}\x{b0}"
          "X"
-         "\xe1\xe1"},
+         "\x{e1}\x{e1}"},
         {"utf16", FileEncoding::Utf16Le,
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "A\0o\0l\0d\0Z\0",
                      12),
-         std::string("\xff\xfe"
+         std::string("\x{ff}\x{fe}"
                      "A\0X\0Z\0",
                      8)},
     };
@@ -1871,7 +1871,7 @@ void SwapDefaultCaretEncoding(EditorFrame* frame, EditorControl* editor, Peer& p
         return;
     }
     const std::string expected = "Aoé中文??\r\nXldZ";
-    const std::string saved = "Ao\xa8\xa6\xd6\xd0\xce\xc4??\r\nXldZ";
+    const std::string saved = "Ao\x{a8}\x{a6}\x{d6}\x{d0}\x{ce}\x{c4}??\r\nXldZ";
     constexpr intptr_t end = 15;
 #else
     const std::string expected = "Aoé中文😀\r\nXldZ";
@@ -1915,7 +1915,7 @@ void SwapExplicitGbk(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-explicit-gbk");
     std::filesystem::create_directory(directory);
     const auto path = directory / "gbk.txt";
-    const std::string original = "\xc7\xb0old\xe1\xe1";
+    const std::string original = "\x{c7}\x{b0}old\x{e1}\x{e1}";
     for (const bool caret : {false, true}) {
         TestFiles::WriteBytes(path, original);
         editor->Send(Message::SetSavePoint);
@@ -1938,8 +1938,8 @@ void SwapExplicitGbk(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         Require(frame->Save([] { return EncodingLossChoice::Cancel; }).status == SaveStatus::Cancelled &&
                     TestFiles::Bytes(path) == original && Text(editor) == expected && editor->Send(Message::GetModify),
                 "explicit GBK save cancellation preserves Unicode, modification and original disk bytes");
-        const std::string saved =
-            caret ? "\xc7\xb0\xd6\xd0\xce\xc4??\r\nXold\xe1\xe1" : "\xc7\xb0\xd6\xd0\xce\xc4??\r\nX\xe1\xe1";
+        const std::string saved = caret ? "\x{c7}\x{b0}\x{d6}\x{d0}\x{ce}\x{c4}??\r\nXold\x{e1}\x{e1}"
+                                        : "\x{c7}\x{b0}\x{d6}\x{d0}\x{ce}\x{c4}??\r\nX\x{e1}\x{e1}";
         Require(frame->Save([] { return EncodingLossChoice::Replace; }).status == SaveStatus::Saved &&
                     TestFiles::Bytes(path) == saved && Text(editor) == expected,
                 "approved GBK save writes native placeholders while keeping Unicode in the editor");
@@ -1965,7 +1965,7 @@ void SwapDefaultReadOnly(EditorFrame* frame, EditorControl* editor, Peer& peer) 
     for (const bool dbcs : {false, true}) {
         const std::string original = dbcs ? "Aold中文XYZ" : ascii;
 #ifdef __WXMSW__
-        const std::string disk = dbcs ? "Aold\xd6\xd0\xce\xc4XYZ" : ascii;
+        const std::string disk = dbcs ? "Aold\x{d6}\x{d0}\x{ce}\x{c4}XYZ" : ascii;
         constexpr intptr_t end = 7;
 #else
         const std::string disk = original;
@@ -2006,7 +2006,7 @@ void SwapDefaultEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) 
         return;
     }
     const std::string replacement = "é中文??\r\nX";
-    const std::string saved = "A\xa8\xa6\xd6\xd0\xce\xc4??\r\nXZ";
+    const std::string saved = "A\x{a8}\x{a6}\x{d6}\x{d0}\x{ce}\x{c4}??\r\nXZ";
 #else
     const std::string replacement = "é中文😀\r\nX";
     const std::string saved = "Aé中文😀\r\nXZ";

@@ -128,7 +128,7 @@ public:
 #else
                 const std::filesystem::path nativePath(path.ToStdString(wxConvUTF8));
 #endif
-                const std::string original("\xff\xfe\x2d\x4e\x0d\0\x0a\0\x87\x65", 10);
+                const std::string original("\x{ff}\x{fe}\x{2d}\x{4e}\x{0d}\0\x{0a}\0\x{87}\x{65}", 10);
                 {
                     std::ofstream file(nativePath, std::ios::binary);
                     file.write(original.data(), static_cast<std::streamsize>(original.size()));
@@ -145,7 +145,7 @@ public:
                 const std::string bytes{std::istreambuf_iterator<char>(saved), std::istreambuf_iterator<char>()};
                 saved.close();
                 wxRemoveFile(path);
-                Require(bytes == std::string("\xff\xfe\x87\x65\x09\0\x2d\x4e", 8),
+                Require(bytes == std::string("\x{ff}\x{fe}\x{87}\x{65}\x{09}\0\x{2d}\x{4e}", 8),
                         "independent disk bytes preserve file encoding after transformed replacement");
                 std::puts("PASS: independent UTF-16LE disk bytes and UTF-8 search positions");
                 SearchSession nativeSearch(*editor);

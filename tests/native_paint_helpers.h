@@ -29,7 +29,8 @@ inline void Complete(EditorControl* editor) {
 
     private:
         EditorControl* editor_;
-    } completion(editor);
+    };
+    Completion completion(editor);
     // Styling can abandon the first layout. Observe a second real paint of
     // the settled layout; Update() alone is a no-op on wxGTK/Wayland.
     for (int pass = 0; pass < 2; ++pass) {
@@ -87,7 +88,8 @@ inline std::vector<wxColour> Read(EditorControl* editor, const wxRect& area) {
     private:
         EditorControl* editor_;
         std::function<void(wxDC&)> sample_;
-    } observation(editor, sample);
+    };
+    Observation observation(editor, sample);
     editor->Refresh(false);
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
     while (observation.pending && std::chrono::steady_clock::now() < deadline) {

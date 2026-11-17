@@ -154,8 +154,8 @@ void Rendering(EditorFrame* frame, PaintRows& paint) {
     std::string raw(16, '\0');
     editor->Send(Message::GetText, raw.size(), reinterpret_cast<intptr_t>(raw.data()));
     raw.resize(15);
-    Require(raw == "Wi\xE4\xB8\xAD\xF0\x9F\x98\x80"
-                   "e\xCC\x81 \r\n" &&
+    Require(raw == "Wi\x{E4}\x{B8}\x{AD}\x{F0}\x{9F}\x{98}\x{80}"
+                   "e\x{CC}\x{81} \r\n" &&
                 editor->Send(Message::GetLength) == 15 && editor->Send(Message::GetLineEndPosition, 0) == 13 &&
                 editor->Send(Message::GetCodePage) == 65001 && editor->Send(Message::GetBidirectional) == 0,
             "native caret fixture preserves original 15 UTF-8 bytes, line end 13 and LTR layout");

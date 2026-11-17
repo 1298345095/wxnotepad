@@ -3,6 +3,7 @@
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include "settings/settings_store.h"
@@ -33,7 +34,10 @@ public:
             try {
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "source.txt";
-                const std::string sample("\xff\xfe\x41\0\x2d\x4e\x3d\xd8\0\xde\r\0\n\0\x42\0\n\0\x43\0\r\0", 22);
+                const std::string sample(
+                    "\x{ff}\x{fe}\x{41}\0\x{2d}\x{4e}\x{3d}\x{d8}\0\x{de}\r\0\n\0\x{42}\0\n\0\x{43}"
+                    "\0\r\0",
+                    22);
                 Write(source, sample);
                 const auto opened = frame->Open(Filename(source));
                 Require(opened.status == OpenStatus::Opened, "UTF-16LE BOM must be detected");
@@ -43,9 +47,10 @@ public:
                         "unchanged UTF-16LE Save must retain exact bytes");
                 std::puts("PASS: UTF-16LE BOM detection and exact Unicode/EOL Save");
                 const auto bad = directory / "bad.txt";
-                const std::string invalid[] = {std::string("\xff\xfe\0\xdc", 4), std::string("\xff\xfe\0\xd8", 4),
-                                               std::string("\xff\xfe\0\xd8\x41\0", 6), std::string("\xff\xfe\x41", 3),
-                                               std::string("\xff\xfe\x41\0\0\0\0\xdc", 8)};
+                const std::array<std::string, 5> invalid = {
+                    std::string("\x{ff}\x{fe}\0\x{dc}", 4), std::string("\x{ff}\x{fe}\0\x{d8}", 4),
+                    std::string("\x{ff}\x{fe}\0\x{d8}\x{41}\0", 6), std::string("\x{ff}\x{fe}\x{41}", 3),
+                    std::string("\x{ff}\x{fe}\x{41}\0\0\0\0\x{dc}", 8)};
                 for (const auto& bytes : invalid) {
                     Write(bad, bytes);
                     const auto failed = frame->Open(Filename(bad), FileEncoding::Utf16Le);
@@ -55,12 +60,12 @@ public:
                             "malformed UTF-16LE must retain document and identity");
                 }
                 std::puts("PASS: incomplete bytes and unpaired surrogates rejected before replacement");
-                const std::string payloads[] = {
-                    "", std::string("\x41\0\x2d\x4e\0\0\x3d\xd8\0\xde\r\0\n\0\x42\0\n\0\x43\0\r\0", 22),
+                const std::array<std::string, 3> payloads = {
+                    "", std::string("\x{41}\0\x{2d}\x{4e}\0\0\x{3d}\x{d8}\0\x{de}\r\0\n\0\x{42}\0\n\0\x{43}\0\r\0", 22),
                     std::string("\n\0", 2)};
                 for (bool bom : {false, true})
                     for (const auto& payload : payloads) {
-                        const auto bytes = (bom ? std::string("\xff\xfe", 2) : std::string{}) + payload;
+                        const auto bytes = (bom ? std::string("\x{ff}\x{fe}", 2) : std::string{}) + payload;
                         Write(source, bytes);
                         Require(frame->Open(Filename(source), FileEncoding::Utf16Le).status == OpenStatus::Opened,
                                 "explicit UTF-16LE must accept BOM/no-BOM including empty");
@@ -74,7 +79,7 @@ public:
                         frame->Editor()->Send(Scintilla::Message::AddText, 4, reinterpret_cast<intptr_t>("😀"));
                         const auto copy = directory / u8"另存.txt";
                         Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved &&
-                                    Bytes(copy) == bytes + std::string("\x3d\xd8\0\xde", 4),
+                                    Bytes(copy) == bytes + std::string("\x{3d}\x{d8}\0\x{de}", 4),
                                 "edited Save As must preserve UTF-16LE BOM and exact bytes");
                         Require(Bytes(source) == bytes, "Save As must preserve original source bytes");
                         frame->Editor()->Send(Scintilla::Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
