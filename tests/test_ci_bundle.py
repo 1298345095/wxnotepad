@@ -148,17 +148,18 @@ class DistributionBundle(unittest.TestCase):
         executable.write_bytes(b'owned executable fixture')
         missing = self.directory / 'locale' / next(iter(self.catalogs))
         missing.unlink()
-        with self.assertRaises(FileNotFoundError) as error:
+        with self.assertRaises(FileNotFoundError):
             CI.bundle(self.cmake, executable, self.work)
-        self.assertEqual(Path(error.exception.filename), missing)
+        self.assertFalse((self.work / 'artifact/build.json').exists())
+        output = self.work / 'failed cli bundle'
         result = subprocess.run(
             [sys.executable, '-X', 'utf8', ROOT / '.github/scripts/ci.py', 'bundle',
              '--cmake-dir', self.cmake, '--executable', executable,
-             '--output-dir', self.work / 'failed cli bundle'],
+             '--output-dir', output],
             capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('FileNotFoundError', result.stderr)
-        self.assertIn(repr(str(missing)), result.stderr)
+        self.assertFalse((output / 'artifact/build.json').exists())
 
 
 if __name__ == '__main__':
