@@ -470,6 +470,12 @@ def argument_parser():
     return parser
 
 
+def _bundle_command(arguments):
+    filename = 'wxnotepad.exe' if WINDOWS else 'wxnotepad'
+    executable = arguments.executable or arguments.cmake_dir / filename
+    bundle(arguments.cmake_dir, executable, arguments.output_dir, report_dir=arguments.report_dir)
+
+
 def main():
     parser = argument_parser()
     arguments = parser.parse_args()
@@ -488,8 +494,7 @@ def main():
         test(arguments.backend, arguments.cmake_dir.resolve(), arguments.tests, arguments.jobs,
              report_directory=arguments.report_dir)
     elif arguments.command == 'bundle':
-        executable = arguments.executable or arguments.cmake_dir / ('wxnotepad.exe' if WINDOWS else 'wxnotepad')
-        bundle(arguments.cmake_dir, executable, arguments.output_dir, report_dir=arguments.report_dir)
+        _bundle_command(arguments)
     elif arguments.command == 'diagnostic-build':
         diagnostic_build(arguments.jobs, compiler_cache=arguments.compiler_cache)
     elif arguments.command == 'coverage-build':
