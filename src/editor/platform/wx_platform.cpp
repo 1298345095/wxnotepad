@@ -1,6 +1,7 @@
 // wx rendering and window adapter for the pinned Notepad4 Scintilla core.
 // Basic LTR rendering and native nonactivating completion UI.
 #include "core_headers.h"
+#include <utility>
 #include "editor/display_units.h"
 #include "text_measurement.h"
 #include "native_drawing_error.h"
@@ -49,7 +50,7 @@ public:
     explicit WxFont(const FontParameters& p)
         : font(wxFontInfo(p.size)
                    .FaceName(wxString::FromUTF8(p.faceName))
-                   .Weight(static_cast<wxFontWeight>(static_cast<int>(p.weight)))
+                   .Weight(static_cast<wxFontWeight>(std::to_underlying(p.weight)))
                    .Italic(p.italic)),
           measurement(font) {}
 };
@@ -369,11 +370,12 @@ void SCICALL Window::InvalidateRectangle(PRectangle r) noexcept {
     if (wid) Host(wid)->RefreshRect(Rect(r), false);
 }
 void Window::SetCursor(Cursor c) const noexcept {
+    using enum Scintilla::Internal::Window::Cursor;
     if (wid)
-        Host(wid)->SetCursor(wxCursor(c == Cursor::text   ? wxCURSOR_IBEAM
-                                      : c == Cursor::hand ? wxCURSOR_HAND
-                                      : c == Cursor::wait ? wxCURSOR_WAIT
-                                                          : wxCURSOR_ARROW));
+        Host(wid)->SetCursor(wxCursor(c == text   ? wxCURSOR_IBEAM
+                                      : c == hand ? wxCURSOR_HAND
+                                      : c == wait ? wxCURSOR_WAIT
+                                                  : wxCURSOR_ARROW));
 }
 PRectangle SCICALL Window::GetMonitorRect(Point point) const noexcept {
     const auto screen = Host(wid)->ClientToScreen(wxPoint(point.x, point.y));

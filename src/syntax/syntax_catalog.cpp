@@ -339,6 +339,7 @@ std::string_view InterpreterToken(std::string_view text, size_t& position) {
 // Only delivered interpreter results are retained. The original prefix and token
 // rules intentionally accept py*/ipy* and do not parse env options or quotes.
 std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
+    using enum SyntaxLanguage;
     text = text.substr(0, 255);
     if (!text.starts_with("#!")) return std::nullopt;
     size_t position = 2;
@@ -350,13 +351,13 @@ std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
         if (lower < 'a' || lower > 'z') break;
         letters += lower;
     }
-    if (letters.starts_with("py") || letters.starts_with("ipy")) return SyntaxLanguage::Python;
-    if (letters.starts_with("tcsh") || letters.starts_with("csh")) return SyntaxLanguage::CShell;
+    if (letters.starts_with("py") || letters.starts_with("ipy")) return Python;
+    if (letters.starts_with("tcsh") || letters.starts_with("csh")) return CShell;
     for (const auto* shell : {"bash", "dash", "ash", "zsh", "ksh", "sh"}) {
-        if (letters.starts_with(shell)) return SyntaxLanguage::Bash;
+        if (letters.starts_with(shell)) return Bash;
     }
-    if (letters.starts_with("node")) return SyntaxLanguage::JavaScript;
-    if (letters.starts_with("lua") || letters.starts_with("wlua")) return SyntaxLanguage::Lua;
+    if (letters.starts_with("node")) return JavaScript;
+    if (letters.starts_with("lua") || letters.starts_with("wlua")) return Lua;
     return std::nullopt;
 }
 
@@ -365,6 +366,7 @@ std::optional<SyntaxLanguage> SniffInterpreter(std::string_view text) {
 // Adapted from pinned Styles.cpp::Style_GetDocTypeLanguage. Its 4000-byte
 // header lookup precedes the ASP language directive and does not parse XML.
 std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view text) {
+    using enum SyntaxLanguage;
     std::string lower(text.substr(0, 3999));
     for (auto& ch : lower) {
         if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
@@ -374,9 +376,9 @@ std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view text) {
         auto type = std::string_view(lower).substr(position + 9);
         while (!type.empty() && Space(type.front()))
             type.remove_prefix(1);
-        if (type.starts_with("html")) return SyntaxLanguage::Html;
+        if (type.starts_with("html")) return Html;
         // The original schema check is case-sensitive.
-        if (text.substr(lower.size() - type.size()).starts_with("schema")) return SyntaxLanguage::Xsd;
+        if (text.substr(lower.size() - type.size()).starts_with("schema")) return Xsd;
     }
     position = text.find("<%@");
     if (position == std::string_view::npos) return std::nullopt;
@@ -385,42 +387,43 @@ std::optional<SyntaxLanguage> DetectMarkupDocType(std::string_view text) {
     auto language = std::string_view(lower).substr(std::min(position + 9, lower.size()));
     while (!language.empty() && (language.front() == ' ' || language.front() == '=' || language.front() == '"'))
         language.remove_prefix(1);
-    if (language.starts_with("c#")) return SyntaxLanguage::AspxCs;
-    if (language.starts_with("vbscript")) return SyntaxLanguage::AspVb;
-    if (language.starts_with("vb")) return SyntaxLanguage::AspxVb;
-    if (language.starts_with("jscript") || language.starts_with("javascript")) return SyntaxLanguage::AspJs;
-    if (language.starts_with("java")) return SyntaxLanguage::Jsp;
+    if (language.starts_with("c#")) return AspxCs;
+    if (language.starts_with("vbscript")) return AspVb;
+    if (language.starts_with("vb")) return AspxVb;
+    if (language.starts_with("jscript") || language.starts_with("javascript")) return AspJs;
+    if (language.starts_with("java")) return Jsp;
     return std::nullopt;
 }
 
 namespace {
 enum class FilenameMatch : uint8_t { Unknown, Associated, Config };
 FilenameMatch OriginalFilenameMatch(const wxString& path) {
+    using enum FilenameMatch;
     const wxFileName file(path);
     const auto name = file.GetFullName().Lower();
     const auto extension = FileExtension(path).Lower().ToStdString();
     // The original treats MySQL ini/cnf files as Config, permitting sniffing.
-    if (name.StartsWith("my") && (extension == "ini" || extension == "cnf")) return FilenameMatch::Config;
+    if (name.StartsWith("my") && (extension == "ini" || extension == "cnf")) return Config;
     size_t start = 0;
     while (start < originalAssociatedExtensions.size()) {
         const auto end = originalAssociatedExtensions.find(';', start);
-        if (originalAssociatedExtensions.substr(start, end - start) == extension) return FilenameMatch::Associated;
+        if (originalAssociatedExtensions.substr(start, end - start) == extension) return Associated;
         start = end + 1;
     }
     start = 0;
     while (start < originalConfigExtensions.size()) {
         const auto end = originalConfigExtensions.find(';', start);
-        if (originalConfigExtensions.substr(start, end - start) == extension) return FilenameMatch::Config;
+        if (originalConfigExtensions.substr(start, end - start) == extension) return Config;
         start = end + 1;
     }
     for (const auto* prefix : {"readme", "makefile", "kbuild", "jamfile"}) {
-        if (name.StartsWith(prefix)) return FilenameMatch::Associated;
+        if (name.StartsWith(prefix)) return Associated;
     }
     for (const auto* exact : {"cakefile", "rakefile", "podfile", "steepfile", "mozconfig", "apkbuild", "pkgbuild",
                               "jamroot", "emakefile"}) {
-        if (name.CmpNoCase(exact) == 0) return FilenameMatch::Associated;
+        if (name.CmpNoCase(exact) == 0) return Associated;
     }
-    return FilenameMatch::Unknown;
+    return Unknown;
 }
 
 bool MarkupNameStart(unsigned char ch) {
@@ -429,24 +432,25 @@ bool MarkupNameStart(unsigned char ch) {
 }
 
 std::optional<SyntaxLanguage> SniffMarkupFamily(std::string_view prefix, FilenameMatch match, bool noHtmlGuess) {
+    using enum SyntaxLanguage;
     // Styles.cpp::Style_SetLexerFromFile: only unknown names and Config may
     // inspect markup, and Config only accepts the exact XML declaration.
     auto head = prefix.substr(0, 255);
     while (!head.empty() && Space(head.front()))
         head.remove_prefix(1);
     if (!head.starts_with("<")) return std::nullopt;
-    if (head.starts_with("<?xml")) return SyntaxLanguage::Xml;
+    if (head.starts_with("<?xml")) return Xml;
     if (match != FilenameMatch::Unknown || head.starts_with("<?php")) return std::nullopt;
 
     std::string lower(head);
     for (auto& ch : lower) {
         if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
     }
-    if (lower.starts_with("<!doctype")) return SyntaxLanguage::Xml;
-    if (lower.starts_with("<html")) return SyntaxLanguage::Html;
+    if (lower.starts_with("<!doctype")) return Xml;
+    if (lower.starts_with("<html")) return Html;
     if (noHtmlGuess || head.size() <= 1) return std::nullopt;
-    if (lower.find("<html") != std::string::npos) return SyntaxLanguage::Html;
-    if (MarkupNameStart(static_cast<unsigned char>(head[1]))) return SyntaxLanguage::Xml;
+    if (lower.find("<html") != std::string::npos) return Html;
+    if (MarkupNameStart(static_cast<unsigned char>(head[1]))) return Xml;
     return std::nullopt;
 }
 } // namespace
@@ -463,19 +467,20 @@ const SyntaxDefinition& SyntaxFor(SyntaxLanguage language) {
 }
 
 SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
-    if (language >= SyntaxLanguage::Html && language <= SyntaxLanguage::Jspx) return SyntaxLanguage::Html;
-    if (language >= SyntaxLanguage::Xml && language <= SyntaxLanguage::Plist) return SyntaxLanguage::Xml;
+    using enum SyntaxLanguage;
+    if (language >= Html && language <= Jspx) return Html;
+    if (language >= Xml && language <= Plist) return Xml;
     switch (language) {
-    case SyntaxLanguage::CShell:
-    case SyntaxLanguage::M4:
-        return SyntaxLanguage::Bash;
-    case SyntaxLanguage::Jsx:
-        return SyntaxLanguage::JavaScript;
-    case SyntaxLanguage::Tsx:
-        return SyntaxLanguage::TypeScript;
-    case SyntaxLanguage::MarkdownGitLab:
-    case SyntaxLanguage::MarkdownPandoc:
-        return SyntaxLanguage::MarkdownGitHub;
+    case CShell:
+    case M4:
+        return Bash;
+    case Jsx:
+        return JavaScript;
+    case Tsx:
+        return TypeScript;
+    case MarkdownGitLab:
+    case MarkdownPandoc:
+        return MarkdownGitHub;
     default:
         return language;
     }
@@ -483,35 +488,36 @@ SyntaxLanguage SyntaxSettingsLanguage(SyntaxLanguage language) {
 
 const char* SyntaxSettingsSection(SyntaxLanguage language) {
     switch (SyntaxSettingsLanguage(language)) {
-    case SyntaxLanguage::Cpp:
+        using enum SyntaxLanguage;
+    case Cpp:
         return "C/C++ Source";
-    case SyntaxLanguage::Python:
+    case Python:
         return "Python Script";
-    case SyntaxLanguage::Json:
+    case Json:
         return "JSON Document";
-    case SyntaxLanguage::Html:
+    case Html:
         return "Web Source Code";
-    case SyntaxLanguage::Xml:
+    case Xml:
         return "XML Document";
-    case SyntaxLanguage::Bash:
+    case Bash:
         return "Shell Script";
-    case SyntaxLanguage::JavaScript:
+    case JavaScript:
         return "JavaScript";
-    case SyntaxLanguage::TypeScript:
+    case TypeScript:
         return "TypeScript";
-    case SyntaxLanguage::Rust:
+    case Rust:
         return rustSettingsSection;
-    case SyntaxLanguage::Go:
+    case Go:
         return goSettingsSection;
-    case SyntaxLanguage::Lua:
+    case Lua:
         return luaSettingsSection;
-    case SyntaxLanguage::MarkdownGitHub:
+    case MarkdownGitHub:
         return markdownSettingsSection;
-    case SyntaxLanguage::Toml:
+    case Toml:
         return tomlSettingsSection;
-    case SyntaxLanguage::Yaml:
+    case Yaml:
         return yamlSettingsSection;
-    case SyntaxLanguage::CMake:
+    case CMake:
         return cmakeSettingsSection;
     default:
         return "Text File";
@@ -519,20 +525,20 @@ const char* SyntaxSettingsSection(SyntaxLanguage language) {
 }
 
 SyntaxLanguage LanguageForPath(const wxString& path) {
+    using enum SyntaxLanguage;
     const auto name = wxFileName(path).GetFullName();
     // Pinned Styles.cpp::Style_GetLexerFromFile checks these .txt names first.
-    if (name.CmpNoCase("CMakeLists.txt") == 0 || name.CmpNoCase("CMakeCache.txt") == 0) return SyntaxLanguage::CMake;
+    if (name.CmpNoCase("CMakeLists.txt") == 0 || name.CmpNoCase("CMakeCache.txt") == 0) return CMake;
     const auto originalExtension = FileExtension(path);
-    if (name.StartsWith(".") && (originalExtension.StartsWith("bash") || originalExtension == "profile"))
-        return SyntaxLanguage::Bash;
+    if (name.StartsWith(".") && (originalExtension.StartsWith("bash") || originalExtension == "profile")) return Bash;
     wxString extension = FileExtension(path);
     for (size_t index = 0; index < extension.length(); ++index) {
         const auto ch = extension[index].GetValue();
         if (ch >= 'A' && ch <= 'Z') extension[index] = ch + ('a' - 'A');
     }
     // Dialect-specific associations precede their canonical scheme's full list.
-    if (extension == "asp") return SyntaxLanguage::AspVb;
-    if (extension == "aspx") return SyntaxLanguage::AspxCs;
+    if (extension == "asp") return AspVb;
+    if (extension == "aspx") return AspxCs;
     for (size_t index = std::size(definitions); index-- > 0;) {
         const auto& definition = definitions[index];
         for (const auto* candidate : definition.extensions) {
@@ -540,13 +546,14 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
         }
     }
     for (const auto* build : {"mozconfig", "apkbuild", "pkgbuild"}) {
-        if (name.CmpNoCase(build) == 0) return SyntaxLanguage::Bash;
+        if (name.CmpNoCase(build) == 0) return Bash;
     }
-    return SyntaxLanguage::PlainText;
+    return PlainText;
 }
 
 std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_view prefix,
                                              SyntaxDetectionOptions options) {
+    using enum SyntaxLanguage;
     if (!options.autoSelect) return std::nullopt;
     const auto extension = FileExtension(path).Lower();
     const auto interpreter = options.noCgiGuess ? std::nullopt : SniffInterpreter(prefix);
@@ -556,13 +563,12 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
     if (extension == "in") {
         const auto underlying = path.BeforeLast('.');
         const auto language = LanguageForPath(underlying);
-        if (language != SyntaxLanguage::PlainText) return DetectedSyntax{language};
-        if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated)
-            return DetectedSyntax{SyntaxLanguage::PlainText};
+        if (language != PlainText) return DetectedSyntax{language};
+        if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return DetectedSyntax{PlainText};
         templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }
-    const auto language = templateConfig ? SyntaxLanguage::PlainText : LanguageForPath(path);
-    if (language != SyntaxLanguage::PlainText) {
+    const auto language = templateConfig ? PlainText : LanguageForPath(path);
+    if (language != PlainText) {
         if (extension == "asp" || extension == "aspx" || extension == "xml")
             return DetectedSyntax{SyntaxSettingsLanguage(language), DetectMarkupDocType(prefix).value_or(language)};
         return DetectedSyntax{language};
@@ -572,16 +578,16 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
     // only after original filename matches. Config files are sniffed too.
     if ((extension == "cgi" || extension == "fcgi") && interpreter) return DetectedSyntax{*interpreter};
     const auto match = templateConfig ? FilenameMatch::Config : OriginalFilenameMatch(path);
-    if (match == FilenameMatch::Associated) return DetectedSyntax{SyntaxLanguage::PlainText};
+    if (match == FilenameMatch::Associated) return DetectedSyntax{PlainText};
     if (auto markup = SniffMarkupFamily(prefix, match, options.noHtmlGuess)) {
         const auto dialect = DetectMarkupDocType(prefix);
         // Pinned Style_SetLexerFromFile promotes a prefix-selected XML
         // family only for WEB; other sniffed dialects retain that family.
-        if (*markup == SyntaxLanguage::Xml && dialect == SyntaxLanguage::Html) markup = SyntaxLanguage::Html;
+        if (*markup == Xml && dialect == Html) markup = Html;
         return DetectedSyntax{*markup, dialect};
     }
     if (interpreter) return DetectedSyntax{*interpreter};
-    return match == FilenameMatch::Config ? std::optional{DetectedSyntax{SyntaxLanguage::PlainText}} : std::nullopt;
+    return match == FilenameMatch::Config ? std::optional{DetectedSyntax{PlainText}} : std::nullopt;
 }
 
 wxString LanguageName(SyntaxLanguage language) {

@@ -1,4 +1,5 @@
 #include "app/new_window.h"
+#include <utility>
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "settings/settings_store.h"
@@ -117,7 +118,8 @@ bool EditorFrame::LaunchWindow(bool currentFile) {
             encoding.bom = true;
         arguments.push_back(wxString::Format("%d", EncodingSetting(encoding)));
         arguments.emplace_back("--startup-scheme");
-        arguments.push_back(wxString::Format("%d", static_cast<int>(document_.EffectiveLanguage())));
+        arguments.push_back(
+            wxString::Format("%d", static_cast<int>(std::to_underlying(document_.EffectiveLanguage()))));
         const auto caret = editor_->Send(Scintilla::Message::GetCurrentPos);
         if (caret > 0) {
             const auto line = editor_->Send(Scintilla::Message::LineFromPosition, static_cast<uintptr_t>(caret));

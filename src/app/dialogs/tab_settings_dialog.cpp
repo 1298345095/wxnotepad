@@ -1,4 +1,5 @@
 #include "app/dialogs/tab_settings_dialog.h"
+#include <utility>
 #include "app/localization.h"
 #include <wx/translation.h>
 #include <wx/wx.h>
@@ -57,7 +58,7 @@ bool ShowTabSettingsDialog(wxWindow* parent, OriginalSettings& preferences, Synt
         controls.Set(value, true);
         return controls;
     };
-    auto& scheme = preferences.schemeTabs[static_cast<size_t>(SyntaxSettingsLanguage(language))];
+    auto& scheme = preferences.schemeTabs[static_cast<size_t>(std::to_underlying(SyntaxSettingsLanguage(language)))];
     wxCheckBox* useGlobal;
     wxCheckBox* useScheme;
     const auto global = addGroup(wxTRANSLATE("Global"), preferences.globalTabs, nullptr, {});

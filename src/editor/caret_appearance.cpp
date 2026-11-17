@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <utility>
 #include "editor/display_units.h"
 #include "editor/editor_core.h"
 #include <wx/caret.h>
@@ -16,9 +17,9 @@ void EditorControl::ApplyCaretAppearance() {
     // selection placement, Unicode block geometry, overstrike and blink drawing.
     const auto& appearance = caretAppearance_;
     const int style =
-        static_cast<int>(appearance.lineWidth ? Scintilla::CaretStyle::Line : Scintilla::CaretStyle::Block) |
-        (appearance.overstrikeBlock ? static_cast<int>(Scintilla::CaretStyle::OverstrikeBlock) : 0) |
-        (appearance.blockAfterSelection ? static_cast<int>(Scintilla::CaretStyle::BlockAfter) : 0);
+        std::to_underlying(appearance.lineWidth ? Scintilla::CaretStyle::Line : Scintilla::CaretStyle::Block) |
+        (appearance.overstrikeBlock ? std::to_underlying(Scintilla::CaretStyle::OverstrikeBlock) : 0) |
+        (appearance.blockAfterSelection ? std::to_underlying(Scintilla::CaretStyle::BlockAfter) : 0);
     core_->WndProc(Scintilla::Message::SetCaretStyle, style, 0);
     if (appearance.lineWidth) {
         int width = appearance.lineWidth;

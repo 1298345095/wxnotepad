@@ -146,10 +146,11 @@ FindReplaceDialog::FindReplaceDialog(wxWindow* parent, EditorControl& editor, Se
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Forward, true); }, selectNext);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Find(SearchDirection::Backward, true); }, selectPrevious);
     Bind(wxEVT_CHAR_HOOK, [this, onKey = std::move(onKey)](wxKeyEvent& event) {
+        using enum SearchDirection;
         if (event.GetKeyCode() == WXK_F3 && !event.ControlDown() && !event.AltDown() && !event.MetaDown())
-            Find(event.ShiftDown() ? SearchDirection::Backward : SearchDirection::Forward);
+            Find(event.ShiftDown() ? Backward : Forward);
         else if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown())
-            Find(event.ShiftDown() ? SearchDirection::Backward : SearchDirection::Forward, true);
+            Find(event.ShiftDown() ? Backward : Forward, true);
         else
             onKey(event);
     });
@@ -335,18 +336,19 @@ void FindReplaceDialog::ReplaceOne() {
 }
 
 void FindReplaceDialog::ReplaceAll(bool inSelection) {
+    using enum ReplaceAllStatus;
     if (query_->IsEmpty()) return;
     ConfigureSearch();
     const auto result = inSelection ? search_.ReplaceInSelection() : search_.ReplaceAll();
-    if (result.status == ReplaceAllStatus::RectangularSelection) {
+    if (result.status == RectangularSelection) {
         // TRANSLATORS: Original Notepad4 89b8b36 IDS_SELRECT; keep the original English spelling.
         wxMessageBox(_("This operation can't be perfomed within a rectangular selection."), "wxnotepad",
                      wxOK | wxICON_WARNING, this);
         return;
     }
-    if (result.status == ReplaceAllStatus::ExpansionFailed) return;
+    if (result.status == ExpansionFailed) return;
     replacementResult_->SetLabel(
-        result.status == ReplaceAllStatus::InvalidPattern
+        result.status == InvalidPattern
             ? _("Invalid regular expression")
             : wxString::Format(wxPLURAL("%zu replacement", "%zu replacements", result.count), result.count));
     GetSizer()->Fit(this);

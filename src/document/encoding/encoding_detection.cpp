@@ -116,32 +116,34 @@ int DefaultEncoding(int value) {
 
 int EncodingIndex(FileEncoding encoding) {
     switch (encoding) {
-    case FileEncoding::Utf8:
+        using enum FileEncoding;
+    case Utf8:
         return CPI_UTF8;
-    case FileEncoding::Utf16Le:
+    case Utf16Le:
         return CPI_UNICODE;
-    case FileEncoding::Utf16Be:
+    case Utf16Be:
         return CPI_UNICODEBE;
-    case FileEncoding::Gbk:
+    case Gbk:
         return CodePageIndex(936);
-    case FileEncoding::Windows1252:
+    case Windows1252:
         return CodePageIndex(1252);
-    case FileEncoding::Dos437:
+    case Dos437:
         return CodePageIndex(437);
-    case FileEncoding::Gb18030:
+    case Gb18030:
         return CodePageIndex(54936);
-    case FileEncoding::Big5:
+    case Big5:
         return CodePageIndex(950);
     }
     return CPI_NONE;
 }
 
 int EncodingIndex(const EncodingChoice& choice) {
+    using enum FileEncoding;
     if (choice.systemDefault) return CPI_DEFAULT;
     if (choice.systemOem) return CPI_OEM;
-    if (choice.bom && choice.encoding == FileEncoding::Utf16Le) return CPI_UNICODEBOM;
-    if (choice.bom && choice.encoding == FileEncoding::Utf16Be) return CPI_UNICODEBEBOM;
-    if (choice.bom && choice.encoding == FileEncoding::Utf8) return CPI_UTF8SIGN;
+    if (choice.bom && choice.encoding == Utf16Le) return CPI_UNICODEBOM;
+    if (choice.bom && choice.encoding == Utf16Be) return CPI_UNICODEBEBOM;
+    if (choice.bom && choice.encoding == Utf8) return CPI_UTF8SIGN;
     return EncodingIndex(choice.encoding);
 }
 
@@ -176,20 +178,20 @@ FileVariables ReadFileVariables(std::string_view bytes, const EncodingOptions& o
 }
 
 DetectedEncoding Choice(int index, unsigned native, unsigned oem, bool systemDefault = false) {
-    if (index == CPI_UNICODEBOM || index == CPI_UNICODE) return {FileEncoding::Utf16Le, index == CPI_UNICODEBOM, {}};
-    if (index == CPI_UNICODEBEBOM || index == CPI_UNICODEBE)
-        return {FileEncoding::Utf16Be, index == CPI_UNICODEBEBOM, {}};
-    if (index == CPI_UTF8 || index == CPI_UTF8SIGN) return {FileEncoding::Utf8, index == CPI_UTF8SIGN, {}};
+    using enum FileEncoding;
+    if (index == CPI_UNICODEBOM || index == CPI_UNICODE) return {Utf16Le, index == CPI_UNICODEBOM, {}};
+    if (index == CPI_UNICODEBEBOM || index == CPI_UNICODEBE) return {Utf16Be, index == CPI_UNICODEBEBOM, {}};
+    if (index == CPI_UTF8 || index == CPI_UTF8SIGN) return {Utf8, index == CPI_UTF8SIGN, {}};
     const unsigned page = index == CPI_DEFAULT ? native
                           : index == CPI_OEM   ? oem
                           : index >= 0         ? catalog[index].codePage
                                                : 0;
-    if (page == 936) return {FileEncoding::Gbk, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 1252) return {FileEncoding::Windows1252, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 437) return {FileEncoding::Dos437, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 54936) return {FileEncoding::Gb18030, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 950) return {FileEncoding::Big5, false, {}, systemDefault, index == CPI_OEM};
-    if (page == 65001) return {FileEncoding::Utf8, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 936) return {Gbk, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 1252) return {Windows1252, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 437) return {Dos437, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 54936) return {Gb18030, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 950) return {Big5, false, {}, systemDefault, index == CPI_OEM};
+    if (page == 65001) return {Utf8, false, {}, systemDefault, index == CPI_OEM};
     return {std::nullopt, false, page};
 }
 
@@ -379,14 +381,14 @@ DetectedEncoding AsciiChoice(int index, bool empty, const EncodingOptions& optio
 std::optional<DetectedEncoding> DetectSignatureEncoding(std::string_view bytes,
                                                         std::optional<FileEncoding> explicitEncoding, unsigned legacy,
                                                         unsigned oem) {
+    using enum FileEncoding;
     constexpr size_t maxConvertedSize = (1U << 30) - 16;
-    if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == FileEncoding::Utf8)) {
+    if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == Utf8)) {
         return DetectedEncoding{explicitEncoding,
-                                *explicitEncoding == FileEncoding::Utf16Le ? bytes.starts_with("\x{ff}\x{fe}")
-                                : *explicitEncoding == FileEncoding::Utf16Be
+                                *explicitEncoding == Utf16Le ? bytes.starts_with("\x{ff}\x{fe}")
+                                : *explicitEncoding == Utf16Be
                                     ? bytes.starts_with("\x{fe}\x{ff}")
-                                    : *explicitEncoding == FileEncoding::Utf8 &&
-                                          bytes.starts_with("\x{ef}\x{bb}\x{bf}"),
+                                    : *explicitEncoding == Utf8 && bytes.starts_with("\x{ef}\x{bb}\x{bf}"),
                                 {}};
     }
     if (bytes.size() < maxConvertedSize && bytes.size() % 2 == 0) {

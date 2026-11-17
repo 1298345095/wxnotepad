@@ -22,15 +22,16 @@
 namespace {
 const char* ObservationEncodingName(FileEncoding encoding) {
     switch (encoding) {
-    case FileEncoding::Utf8:
+        using enum FileEncoding;
+    case Utf8:
         return "UTF-8";
-    case FileEncoding::Utf16Le:
+    case Utf16Le:
         return "UTF-16LE";
-    case FileEncoding::Utf16Be:
+    case Utf16Be:
         return "UTF-16BE";
-    case FileEncoding::Windows1252:
+    case Windows1252:
         return "CP1252";
-    case FileEncoding::Dos437:
+    case Dos437:
         return "CP437";
     default:
         return "CP936";
@@ -112,14 +113,15 @@ void ProcessObserver::OnFrameDestroyed(wxWindowDestroyEvent& event) {
 // Opt-in external observation of this actual, shown application. No alternate
 // editor host or hidden operation path: Open/Save are the frame's commands.
 void ProcessObserver::Publish() {
+    using enum Scintilla::Message;
     if (!frame_) return;
     frame_->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     frame_->Update();
     frame_->Editor()->Update();
-    lastDirty_ = frame_->Editor()->Send(Scintilla::Message::GetModify) != 0;
+    lastDirty_ = frame_->Editor()->Send(GetModify) != 0;
     lastActive_ = frame_->IsActive();
-    lastCaret_ = frame_->Editor()->Send(Scintilla::Message::GetCurrentPos);
-    lastReadOnly_ = frame_->Editor()->Send(Scintilla::Message::GetReadOnly) != 0;
+    lastCaret_ = frame_->Editor()->Send(GetCurrentPos);
+    lastReadOnly_ = frame_->Editor()->Send(GetReadOnly) != 0;
     lastPositionStatus_ = frame_->GetStatusBar()->GetStatusText(1);
     wxString backend = "Windows";
 #ifdef __WXGTK__
@@ -134,51 +136,47 @@ void ProcessObserver::Publish() {
             "encoding\t%s\nbom\t%d\n"
             "tab_width\t%lld\nindent_width\t%lld\nuse_tabs\t%lld\ntab_indents\t%lld\nbackspace_unindents\t%lld\nauto_"
             "indent\t%d\n",
-            sequence_, result_, static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetLength)),
-            lastDirty_, frame_->IsShown() && !frame_->IsIconized(), wxWindow::FindFocus() == frame_->Editor(),
-            lastActive_, backend,
+            sequence_, result_, static_cast<long long>(frame_->Editor()->Send(GetLength)), lastDirty_,
+            frame_->IsShown() && !frame_->IsIconized(), wxWindow::FindFocus() == frame_->Editor(), lastActive_, backend,
             static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->Editor()->GetHandle())),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetWrapMode)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::WrapCount, 0)),
-            frame_->Editor()->GetClientSize().x, frame_->Editor()->LineNumbersVisible(),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetViewWS)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetEOLMode)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetZoom)), encoding,
-            frame_->DocumentHasBom(), static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetTabWidth)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetIndent)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetUseTabs)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetTabIndents)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetBackSpaceUnIndents)),
+            static_cast<long long>(frame_->Editor()->Send(GetWrapMode)),
+            static_cast<long long>(frame_->Editor()->Send(WrapCount, 0)), frame_->Editor()->GetClientSize().x,
+            frame_->Editor()->LineNumbersVisible(), static_cast<long long>(frame_->Editor()->Send(GetViewWS)),
+            static_cast<long long>(frame_->Editor()->Send(GetEOLMode)),
+            static_cast<long long>(frame_->Editor()->Send(GetZoom)), encoding, frame_->DocumentHasBom(),
+            static_cast<long long>(frame_->Editor()->Send(GetTabWidth)),
+            static_cast<long long>(frame_->Editor()->Send(GetIndent)),
+            static_cast<long long>(frame_->Editor()->Send(GetUseTabs)),
+            static_cast<long long>(frame_->Editor()->Send(GetTabIndents)),
+            static_cast<long long>(frame_->Editor()->Send(GetBackSpaceUnIndents)),
             frame_->Editor()->AutoIndentEnabled()) +
         "document_status\t" + frame_->GetStatusBar()->GetStatusText() + "\n" +
         wxString::Format(
             "line_selection\t%d\ncurrent_line_mode\t%d\ncurrent_line_subline\t%lld\n"
             "caret_style\t%lld\ncaret_width\t%lld\ncaret_period\t%lld\n"
             "mark_occurrences\t%d\ncode_folding\t%d\nmatch_braces\t%d\ncurrent_block\t%d\nfold_margin\t%lld\n",
-            static_cast<int>(frame_->Editor()->GetLineSelectionMode()),
-            static_cast<int>(frame_->Editor()->GetCurrentLineHighlightMode()),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretLineHighlightSubLine)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretStyle)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretWidth)),
-            static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCaretPeriod)),
-            frame_->Editor()->Occurrences().Options(), frame_->Editor()->CodeFoldingVisible(),
-            frame_->Editor()->VisualBraceMatching(), frame_->Editor()->CurrentBlockHighlighted(),
-            static_cast<long long>(
-                frame_->Editor()->Send(Scintilla::Message::GetMarginWidthN, EditorMargin::Folding))) +
+            std::to_underlying(frame_->Editor()->GetLineSelectionMode()),
+            std::to_underlying(frame_->Editor()->GetCurrentLineHighlightMode()),
+            static_cast<long long>(frame_->Editor()->Send(GetCaretLineHighlightSubLine)),
+            static_cast<long long>(frame_->Editor()->Send(GetCaretStyle)),
+            static_cast<long long>(frame_->Editor()->Send(GetCaretWidth)),
+            static_cast<long long>(frame_->Editor()->Send(GetCaretPeriod)), frame_->Editor()->Occurrences().Options(),
+            frame_->Editor()->CodeFoldingVisible(), frame_->Editor()->VisualBraceMatching(),
+            frame_->Editor()->CurrentBlockHighlighted(),
+            static_cast<long long>(frame_->Editor()->Send(GetMarginWidthN, EditorMargin::Folding))) +
         wxString::Format("bookmark_margin\t%d\nchange_history\t%lld\nauto_shrink_scroll_width\t%d\n",
                          frame_->Editor()->BookmarkMarginVisible(),
-                         static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetChangeHistory)),
+                         static_cast<long long>(frame_->Editor()->Send(GetChangeHistory)),
                          frame_->Editor()->AutoShrinkScrollWidth()) +
         wxString::Format("file_watching_mode\t%d\nfile_check_interval\t%d\nauto_reload_timeout\t%d\n",
-                         static_cast<int>(frame_->FileWatching().mode), frame_->FileWatching().checkInterval,
+                         std::to_underlying(frame_->FileWatching().mode), frame_->FileWatching().checkInterval,
                          frame_->FileWatching().autoReloadDelay) +
         wxString::Format("file_watching_option\t%d\nreset_file_watching\t%d\n", frame_->FileWatching().flags,
                          frame_->FileWatching().resetOnNewFile);
     contents += "title\t" + frame_->GetTitle() + "\n" + "document_path\t" + frame_->DocumentPath() + "\n";
     contents += wxString::Format("caret_position\t%lld\nread_only\t%lld\nclient_height\t%d\nframe_handle\t%llu\n",
-                                 static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetCurrentPos)),
-                                 static_cast<long long>(frame_->Editor()->Send(Scintilla::Message::GetReadOnly)),
-                                 frame_->GetClientSize().y,
+                                 static_cast<long long>(frame_->Editor()->Send(GetCurrentPos)),
+                                 static_cast<long long>(frame_->Editor()->Send(GetReadOnly)), frame_->GetClientSize().y,
                                  static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(frame_->GetHandle())));
     const auto position = frame_->GetPosition();
     const auto size = frame_->GetSize();
@@ -277,10 +275,11 @@ void ProcessObserver::Observe() {
                      DiagnosticRequest(sequence_), result_ == "ok");
         if (operation == "close") frame_->Close();
     } else {
+        using enum Scintilla::Message;
         commandPending_ = false;
-        if (publishPending_ || (frame_->Editor()->Send(Scintilla::Message::GetModify) != 0) != lastDirty_ ||
-            frame_->Editor()->Send(Scintilla::Message::GetCurrentPos) != lastCaret_ ||
-            (frame_->Editor()->Send(Scintilla::Message::GetReadOnly) != 0) != lastReadOnly_ ||
+        if (publishPending_ || (frame_->Editor()->Send(GetModify) != 0) != lastDirty_ ||
+            frame_->Editor()->Send(GetCurrentPos) != lastCaret_ ||
+            (frame_->Editor()->Send(GetReadOnly) != 0) != lastReadOnly_ ||
             frame_->GetStatusBar()->GetStatusText(1) != lastPositionStatus_ || frame_->IsActive() != lastActive_ ||
             frame_->GetSize() != lastFrameSize_)
             Publish();

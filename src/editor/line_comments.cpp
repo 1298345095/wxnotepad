@@ -6,51 +6,53 @@
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 
 namespace {
-using Scintilla::Message;
 enum class CommentAction { None, Add, Delete };
 
 void AddLineComment(EditorControl& editor, intptr_t line, intptr_t indent, intptr_t end, intptr_t column,
                     bool singleLine, const char* prefix, const std::string& padded) {
-    const auto position = editor.Send(Message::FindColumn, line, column);
+    using enum Scintilla::Message;
+    const auto position = editor.Send(FindColumn, line, column);
     if (column == 0 || singleLine || indent != end) {
         const char* comment = position == end ? prefix : padded.c_str();
-        editor.Send(Message::InsertText, position, reinterpret_cast<intptr_t>(comment));
+        editor.Send(InsertText, position, reinterpret_cast<intptr_t>(comment));
         return;
     }
     intptr_t tabs = 0;
     auto spaces = column;
-    if (editor.Send(Message::GetUseTabs)) {
-        const auto tabWidth = editor.Send(Message::GetTabWidth);
+    if (editor.Send(GetUseTabs)) {
+        const auto tabWidth = editor.Send(GetTabWidth);
         tabs = spaces / tabWidth;
         spaces %= tabWidth;
     }
     const std::string comment = std::string(tabs, '\t') + std::string(spaces, ' ') + prefix;
-    editor.Send(Message::InsertText, position, reinterpret_cast<intptr_t>(comment.c_str()));
+    editor.Send(InsertText, position, reinterpret_cast<intptr_t>(comment.c_str()));
 }
 
 void ToggleLineComment(EditorControl& editor, intptr_t line, intptr_t column, bool singleLine, const char* prefix,
                        intptr_t prefixLength, const std::string& padded, bool spaceAfterComment,
                        CommentAction& action) {
-    const auto indent = editor.Send(Message::GetLineIndentPosition, line);
-    const auto end = editor.Send(Message::GetLineEndPosition, line);
+    using enum CommentAction;
+    using enum Scintilla::Message;
+    const auto indent = editor.Send(GetLineIndentPosition, line);
+    const auto end = editor.Send(GetLineEndPosition, line);
     const auto length = std::min(prefixLength + 1, end - indent);
-    const auto* bytes = reinterpret_cast<const char*>(editor.Send(Message::GetRangePointer, indent, length));
+    const auto* bytes = reinterpret_cast<const char*>(editor.Send(GetRangePointer, indent, length));
     const bool commented = length >= prefixLength && std::memcmp(bytes, prefix, prefixLength) == 0;
-    if (action == CommentAction::None) action = commented ? CommentAction::Delete : CommentAction::Add;
+    if (action == None) action = commented ? Delete : Add;
     if (!commented) {
-        if (action == CommentAction::Add) AddLineComment(editor, line, indent, end, column, singleLine, prefix, padded);
+        if (action == Add) AddLineComment(editor, line, indent, end, column, singleLine, prefix, padded);
         return;
     }
-    if (action == CommentAction::Delete) {
+    if (action == Delete) {
         auto commentStart = indent;
         auto commentEnd = indent + prefixLength;
         if (spaceAfterComment && length > prefixLength && bytes[prefixLength] == ' ') ++commentEnd;
-        if (commentEnd == end) commentStart = editor.Send(Message::PositionFromLine, line);
-        editor.Send(Message::DeleteRange, commentStart, commentEnd - commentStart);
+        if (commentEnd == end) commentStart = editor.Send(PositionFromLine, line);
+        editor.Send(DeleteRange, commentStart, commentEnd - commentStart);
         return;
     }
-    const auto position = editor.Send(Message::FindColumn, line, column);
-    if (position != indent) editor.Send(Message::InsertText, position, reinterpret_cast<intptr_t>(padded.c_str()));
+    const auto position = editor.Send(FindColumn, line, column);
+    if (position != indent) editor.Send(InsertText, position, reinterpret_cast<intptr_t>(padded.c_str()));
 }
 } // namespace
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "settings/original_settings_constants.h"
+#include <utility>
 #include "settings/ui_language.h"
 #include "editor/display_units.h"
 #include "document/encoding/encoding_detection.h"
@@ -43,7 +44,7 @@ struct OriginalSettings {
     FileWatchingOptions fileWatching;
     EncodingOptions encoding;
     int zoomLevel = DisplayUnits::ZoomPercentScale;
-    int renderingTechnology = static_cast<int>(Scintilla::Technology::DirectWrite);
+    int renderingTechnology = std::to_underlying(Scintilla::Technology::DirectWrite);
     CaretAppearance caret;
     int highlightCurrentLine = 12;
     int longLinesLimit = 80;
@@ -67,11 +68,11 @@ struct OriginalSettings {
     int defaultEOLMode = 0;
     bool warnLineEndings = true;
     OriginalTabs globalTabs;
-    std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> schemeTabs = [] {
-        std::array<OriginalTabs, static_cast<size_t>(SyntaxLanguage::Count)> tabs{};
+    std::array<OriginalTabs, static_cast<size_t>(std::to_underlying(SyntaxLanguage::Count))> schemeTabs = [] {
+        std::array<OriginalTabs, static_cast<size_t>(std::to_underlying(SyntaxLanguage::Count))> tabs{};
         for (const auto& scheme : SyntaxCatalog()) {
             const auto& original = scheme.original;
-            tabs[static_cast<size_t>(scheme.language)] = {
+            tabs[static_cast<size_t>(std::to_underlying(scheme.language))] = {
                 original.tabWidth, original.indentWidth,
                 (original.lexerAttributes & SyntaxLexerAttribute::TabsAsSpaces) != 0,
                 (original.lexerAttributes & SyntaxLexerAttribute::NoGlobalTabSettings) == 0};

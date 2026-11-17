@@ -13,7 +13,6 @@
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 
 namespace {
-using Scintilla::Message;
 using namespace Scintilla::Internal;
 
 struct SortLine {
@@ -52,9 +51,10 @@ size_t ColumnOffset(std::wstring_view text, intptr_t column, intptr_t tabWidth) 
 }
 
 SortLine ReadSortLine(EditorControl& editor, intptr_t line, unsigned options, intptr_t column) {
-    const auto start = editor.Send(Message::PositionFromLine, line);
-    const auto end = editor.Send(Message::GetLineEndPosition, line);
-    std::string_view bytes(reinterpret_cast<const char*>(editor.Send(Message::GetRangePointer, start, end - start)),
+    using enum Scintilla::Message;
+    const auto start = editor.Send(PositionFromLine, line);
+    const auto end = editor.Send(GetLineEndPosition, line);
+    std::string_view bytes(reinterpret_cast<const char*>(editor.Send(GetRangePointer, start, end - start)),
                            static_cast<size_t>(end - start));
     // The original conversion reads NUL-terminated line text.
     bytes = bytes.substr(0, bytes.find('\0'));
@@ -63,7 +63,7 @@ SortLine ReadSortLine(EditorControl& editor, intptr_t line, unsigned options, in
     SortLine entry{std::move(text), line};
     entry.sortText = options & SortOption::IgnoreCase ? OriginalNlsUppercase(entry.text) : entry.text;
     if (options & SortOption::Column) {
-        entry.entryOffset = ColumnOffset(entry.sortText, column, editor.Send(Message::GetTabWidth));
+        entry.entryOffset = ColumnOffset(entry.sortText, column, editor.Send(GetTabWidth));
     } else if (options & SortOption::FileType) {
         entry.entryOffset = OriginalExtensionOffset(entry.sortText);
     }
@@ -146,24 +146,25 @@ std::string FormatSortLines(const std::vector<SortLine>& lines, std::string_view
 
 void RestoreSortRectangle(EditorControl& editor, intptr_t caretLine, intptr_t anchorLine, intptr_t caretColumn,
                           intptr_t anchorColumn, size_t eolLength) {
-    const auto targetStart = editor.Send(Message::GetTargetStart);
-    auto targetEnd = editor.Send(Message::GetTargetEnd);
-    editor.Send(Message::ClearSelections);
+    using enum Scintilla::Message;
+    const auto targetStart = editor.Send(GetTargetStart);
+    auto targetEnd = editor.Send(GetTargetEnd);
+    editor.Send(ClearSelections);
     if (targetStart == targetEnd) {
-        editor.Send(Message::SetSel, targetStart, targetStart);
+        editor.Send(SetSel, targetStart, targetStart);
         return;
     }
     // Preserve the original endpoint subtraction even for an unterminated result.
     targetEnd -= static_cast<intptr_t>(eolLength);
-    const auto firstLine = editor.Send(Message::LineFromPosition, targetStart);
-    const auto lastLine = editor.Send(Message::LineFromPosition, targetEnd);
-    const auto caret = editor.Send(Message::FindColumn, anchorLine > caretLine ? firstLine : lastLine, caretColumn);
-    const auto anchor = editor.Send(Message::FindColumn, anchorLine > caretLine ? lastLine : firstLine, anchorColumn);
+    const auto firstLine = editor.Send(LineFromPosition, targetStart);
+    const auto lastLine = editor.Send(LineFromPosition, targetEnd);
+    const auto caret = editor.Send(FindColumn, anchorLine > caretLine ? firstLine : lastLine, caretColumn);
+    const auto anchor = editor.Send(FindColumn, anchorLine > caretLine ? lastLine : firstLine, anchorColumn);
     if (caret != anchor) {
-        editor.Send(Message::SetRectangularSelectionCaret, caret);
-        editor.Send(Message::SetRectangularSelectionAnchor, anchor);
+        editor.Send(SetRectangularSelectionCaret, caret);
+        editor.Send(SetRectangularSelectionAnchor, anchor);
     } else {
-        editor.Send(Message::SetSel, targetStart, targetStart);
+        editor.Send(SetSel, targetStart, targetStart);
     }
 }
 } // namespace

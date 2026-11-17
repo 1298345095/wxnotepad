@@ -158,31 +158,31 @@ wxString FormatDateTimeInsertion(DateTimeInsertion command, const DateTimeInsert
                                  const wxString& format) {
     uint64_t timestamp = value.unixTicks;
     switch (command) {
-    case DateTimeInsertion::UnixSeconds:
+        using enum DateTimeInsertion;
+    case UnixSeconds:
         timestamp /= TicksPerSecond;
         break;
-    case DateTimeInsertion::UnixMilliseconds:
+    case UnixMilliseconds:
         timestamp /= TicksPerMillisecond;
         break;
-    case DateTimeInsertion::UnixMicroseconds:
+    case UnixMicroseconds:
         timestamp /= TicksPerMicrosecond;
         break;
-    case DateTimeInsertion::UnixNanoseconds:
+    case UnixNanoseconds:
         timestamp *= NanosecondsPerTick;
         break;
     default:
         const auto seconds = static_cast<time_t>(value.unixTicks / TicksPerSecond);
         std::tm time = value.local;
 #ifdef __WXMSW__
-        if (command == DateTimeInsertion::UtcDateTime) gmtime_s(&time, &seconds);
+        if (command == UtcDateTime) gmtime_s(&time, &seconds);
 #else
-        if (command == DateTimeInsertion::UtcDateTime) gmtime_r(&seconds, &time);
+        if (command == UtcDateTime) gmtime_r(&seconds, &time);
 #endif
-        if (command == DateTimeInsertion::Short || command == DateTimeInsertion::Long)
-            return LocalizedDateTime(time, command == DateTimeInsertion::Short, format);
-        return wxString::Format(command == DateTimeInsertion::LocalDate     ? "%04d-%02d-%02d"
-                                : command == DateTimeInsertion::UtcDateTime ? "%04d-%02d-%02dT%02d:%02d:%02dZ"
-                                                                            : "%04d-%02d-%02d %02d:%02d:%02d",
+        if (command == Short || command == Long) return LocalizedDateTime(time, command == Short, format);
+        return wxString::Format(command == LocalDate     ? "%04d-%02d-%02d"
+                                : command == UtcDateTime ? "%04d-%02d-%02dT%02d:%02d:%02dZ"
+                                                         : "%04d-%02d-%02d %02d:%02d:%02d",
                                 time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min,
                                 time.tm_sec);
     }

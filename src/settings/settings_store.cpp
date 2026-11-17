@@ -1,4 +1,5 @@
 #include "settings/settings_store.h"
+#include <utility>
 #include "search/search_limits.h"
 #include "settings/recent_files.h"
 #include <ScintillaTypes.h>
@@ -122,8 +123,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.fixLineEndings = ReadBool("FixLineEndings", defaults.fixLineEndings);
     values.fixTrailingBlanks = ReadBool("FixTrailingBlanks", defaults.fixTrailingBlanks);
     values.fileWatching.mode = static_cast<FileWatchingMode>(
-        std::clamp(ReadInt("FileWatchingMode", static_cast<int>(defaults.fileWatching.mode)),
-                   static_cast<int>(FileWatchingMode::None), static_cast<int>(FileWatchingMode::AutoReload)));
+        std::clamp(ReadInt("FileWatchingMode", std::to_underlying(defaults.fileWatching.mode)),
+                   std::to_underlying(FileWatchingMode::None), std::to_underlying(FileWatchingMode::AutoReload)));
     values.fileWatching.checkInterval = ReadInt("FileCheckInterval", defaults.fileWatching.checkInterval, "Settings2");
     values.fileWatching.autoReloadDelay =
         ReadInt("AutoReloadTimeout", defaults.fileWatching.autoReloadDelay, "Settings2");
@@ -140,8 +141,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.zoomLevel =
         std::clamp(ReadInt("ZoomLevel", defaults.zoomLevel), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
     values.renderingTechnology = std::clamp(ReadInt("RenderingTechnology", defaults.renderingTechnology),
-                                            static_cast<int>(Scintilla::Technology::Default),
-                                            static_cast<int>(Scintilla::Technology::DirectWrite1));
+                                            std::to_underlying(Scintilla::Technology::Default),
+                                            std::to_underlying(Scintilla::Technology::DirectWrite1));
     int caretStyle = ReadInt("CaretStyle", defaults.caret.lineWidth);
     values.caret.blockAfterSelection = caretStyle >= 100;
     caretStyle %= 100;
@@ -491,8 +492,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteInt("LongLineMode", values.longLineMode, defaults.longLineMode);
         WriteBool("FixLineEndings", values.fixLineEndings, defaults.fixLineEndings);
         WriteBool("FixTrailingBlanks", values.fixTrailingBlanks, defaults.fixTrailingBlanks);
-        WriteInt("FileWatchingMode", static_cast<int>(values.fileWatching.mode),
-                 static_cast<int>(defaults.fileWatching.mode));
+        WriteInt("FileWatchingMode", std::to_underlying(values.fileWatching.mode),
+                 std::to_underlying(defaults.fileWatching.mode));
         WriteInt("FileCheckInterval", values.fileWatching.checkInterval, defaults.fileWatching.checkInterval,
                  "Settings2");
         WriteInt("AutoReloadTimeout", values.fileWatching.autoReloadDelay, defaults.fileWatching.autoReloadDelay,
@@ -593,7 +594,7 @@ void SettingsStore::WriteSchemeTabs(size_t index) {
 bool SettingsStore::SaveSchemeTabs(SyntaxLanguage language) {
     if (wxFileExists(path_) && !wxIsWritable(path_)) return false;
     if (!LoadLines()) return false;
-    WriteSchemeTabs(static_cast<size_t>(SyntaxSettingsLanguage(language)));
+    WriteSchemeTabs(static_cast<size_t>(std::to_underlying(SyntaxSettingsLanguage(language))));
     return SaveLines();
 }
 

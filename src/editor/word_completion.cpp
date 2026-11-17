@@ -608,10 +608,11 @@ class Collector final {
         if (index < syntax.keywords.size()) words.AddList(syntax.keywords[index].text);
     }
     const NP2_KEYWORDS* ExtraWords() const {
+        using enum SyntaxLanguage;
         if (definition_.lexer == SCLEX_CPP) return &kwDoxyDoc;
-        if (definition_.language == SyntaxLanguage::Xsd) return &kwXmlSchema;
-        if (definition_.language == SyntaxLanguage::Xslt) return &kwXmlStylesheet;
-        if (definition_.language == SyntaxLanguage::Plist) return &kwPList;
+        if (definition_.language == Xsd) return &kwXmlSchema;
+        if (definition_.language == Xslt) return &kwXmlStylesheet;
+        if (definition_.language == Plist) return &kwPList;
         return nullptr;
     }
     static constexpr bool IsEscapeCharacter(int ch) noexcept {
@@ -681,16 +682,17 @@ class Collector final {
     }
 
     Sci_Position MemberWordEnd(Sci_Position wordEnd, Sci_Position iDocLen, int style) noexcept {
+        using enum Scintilla::Message;
         const Sci_Position before = wordEnd;
-        const int ch = Call(Message::GetCharAt, wordEnd);
+        const int ch = Call(GetCharAt, wordEnd);
         Sci_Position width = 0;
-        int chNext = Call(Message::GetCharacterAndWidth, wordEnd + 1, &width);
+        int chNext = Call(GetCharacterAndWidth, wordEnd + 1, &width);
         if ((ch == '-' && chNext == '>') || (ch == ':' && chNext == ':')) {
-            chNext = Call(Message::GetCharacterAndWidth, wordEnd + 2, &width);
+            chNext = Call(GetCharacterAndWidth, wordEnd + 2, &width);
             if (IsAutoCompletionWordCharacter(chNext)) {
                 wordEnd += 2;
             }
-        } else if (ch == '.' || (ch == '-' && style == Call(Message::GetStyleIndexAt, wordEnd))) {
+        } else if (ch == '.' || (ch == '-' && style == Call(GetStyleIndexAt, wordEnd))) {
             if (IsAutoCompletionWordCharacter(chNext)) {
                 ++wordEnd;
             }
@@ -699,13 +701,13 @@ class Collector final {
 
         while (wordEnd < iDocLen && (chNext < 0x80 && !IsDefaultWordChar(chNext))) {
             wordEnd += width;
-            chNext = Call(Message::GetCharacterAndWidth, wordEnd, &width);
+            chNext = Call(GetCharacterAndWidth, wordEnd, &width);
             if (!IsAutoCompletionWordCharacter(chNext)) {
                 break;
             }
         }
 
-        wordEnd = Call(Message::WordEndPosition, wordEnd, true);
+        wordEnd = Call(WordEndPosition, wordEnd, true);
         return wordEnd;
     }
 
@@ -925,11 +927,12 @@ class Collector final {
     }
 
     AddWordResult AddJavaScriptCommentWord(WordList& words, int currentStyle, int ch) {
+        using enum SyntaxLanguage;
         if (const auto scheme = SyntaxSettingsLanguage(definition_.language);
-            (ch == '@' || (ch == '<' && scheme == SyntaxLanguage::TypeScript)) && currentStyle >= SCE_JS_COMMENTLINE &&
+            (ch == '@' || (ch == '<' && scheme == TypeScript)) && currentStyle >= SCE_JS_COMMENTLINE &&
             currentStyle <= SCE_JS_TASKMARKER) {
             AddList(words, definition_, 10);
-            if (scheme != SyntaxLanguage::JavaScript) AddList(words, SyntaxFor(SyntaxLanguage::JavaScript), 10);
+            if (scheme != JavaScript) AddList(words, SyntaxFor(JavaScript), 10);
             return AddWordResult_Finish;
         }
         return AddWordResult_None;
@@ -1179,18 +1182,19 @@ class Collector final {
     }
 
     void ShowCandidates(const WordList& pWList, bool bIgnoreCase, bool autoInsert) {
+        using enum Scintilla::Message;
         const auto pList = pWList.GetList();
         const auto fillUps = FillUps();
-        Call(Message::AutoCSetOptions, SC_AUTOCOMPLETE_FIXED_SIZE);
-        Call(Message::AutoCSetIgnoreCase, bIgnoreCase); // case sensitivity
-        Call(Message::AutoCSetCaseInsensitiveBehaviour, bIgnoreCase);
-        Call(Message::AutoCSetFillUps, 0, fillUps.c_str());
-        Call(Message::AutoCSetMaxHeight,
+        Call(AutoCSetOptions, SC_AUTOCOMPLETE_FIXED_SIZE);
+        Call(AutoCSetIgnoreCase, bIgnoreCase); // case sensitivity
+        Call(AutoCSetCaseInsensitiveBehaviour, bIgnoreCase);
+        Call(AutoCSetFillUps, 0, fillUps.c_str());
+        Call(AutoCSetMaxHeight,
              std::min(pWList.nWordCount, static_cast<unsigned>(settings_.visibleItemCount))); // visible rows
-        Call(Message::AutoCSetCancelAtStart, false); // don't cancel the list when deleting character
-        Call(Message::AutoCSetChooseSingle, autoInsert);
-        Call(Message::AutoCSetSeparator, '\n');
-        Call(Message::AutoCShow, pWList.iStartLen, pList.get());
+        Call(AutoCSetCancelAtStart, false); // don't cancel the list when deleting character
+        Call(AutoCSetChooseSingle, autoInsert);
+        Call(AutoCSetSeparator, '\n');
+        Call(AutoCShow, pWList.iStartLen, pList.get());
     }
 
     struct SpecialSources {

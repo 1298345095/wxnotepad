@@ -1,4 +1,5 @@
 #include "editor/editor_core.h"
+#include <utility>
 #ifdef __WXMSW__
 #include "editor/platform/directwrite_surface.h"
 #endif
@@ -91,19 +92,20 @@ bool HandleClipboardKey(EditorControl& window, const wxKeyEvent& event) {
 
 bool HandleControlKey(EditorControl& window, const wxKeyEvent& event) {
     switch (event.GetKeyCode()) {
+        using enum Scintilla::Message;
     case '\\':
         if (event.ShiftDown()) return false;
-        window.Send(Message::SetZoom, DisplayUnits::ZoomPercentScale);
+        window.Send(SetZoom, DisplayUnits::ZoomPercentScale);
         return true;
     case WXK_TAB: {
         if (event.ShiftDown()) return false;
-        const auto useTabs = window.Send(Message::GetUseTabs);
-        const auto tabIndents = window.Send(Message::GetTabIndents);
-        window.Send(Message::SetTabIndents, 0);
-        window.Send(Message::SetUseTabs, 1);
-        window.Send(Message::Tab);
-        window.Send(Message::SetUseTabs, useTabs);
-        window.Send(Message::SetTabIndents, tabIndents);
+        const auto useTabs = window.Send(GetUseTabs);
+        const auto tabIndents = window.Send(GetTabIndents);
+        window.Send(SetTabIndents, 0);
+        window.Send(SetUseTabs, 1);
+        window.Send(Tab);
+        window.Send(SetUseTabs, useTabs);
+        window.Send(SetTabIndents, tabIndents);
         return true;
     }
     default:
@@ -112,25 +114,26 @@ bool HandleControlKey(EditorControl& window, const wxKeyEvent& event) {
 }
 
 Message ApplicationKeyCommand(const wxKeyEvent& event) {
+    using enum Scintilla::Message;
     if (event.AltDown() && !event.ControlDown() && !event.ShiftDown()) {
-        if (event.GetKeyCode() == 'D') return Message::SelectionDuplicate;
-        if (event.GetKeyCode() == 'S') return Message::LineTranspose;
+        if (event.GetKeyCode() == 'D') return SelectionDuplicate;
+        if (event.GetKeyCode() == 'S') return LineTranspose;
     }
     if (!event.ControlDown() || event.AltDown()) return Message{};
     switch (event.GetKeyCode()) {
     case '+':
     case '=':
     case WXK_NUMPAD_ADD:
-        return event.ShiftDown() ? Message{} : Message::ZoomIn;
+        return event.ShiftDown() ? Message{} : ZoomIn;
     case '-':
     case WXK_NUMPAD_SUBTRACT:
-        return event.ShiftDown() ? Message{} : Message::ZoomOut;
+        return event.ShiftDown() ? Message{} : ZoomOut;
     case 'D':
-        return event.ShiftDown() ? Message::LineDelete : Message::LineDuplicate;
+        return event.ShiftDown() ? LineDelete : LineDuplicate;
     case 'Y':
-        return event.ShiftDown() ? Message::Undo : Message::Redo;
+        return event.ShiftDown() ? Undo : Redo;
     case 'Z':
-        return event.ShiftDown() ? Message::Redo : Message::Undo;
+        return event.ShiftDown() ? Redo : Undo;
     default:
         return Message{};
     }
@@ -262,51 +265,57 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
     wMain = static_cast<wxWindow*>(&window_);
     Initialise();
     // Original Notepad4.cpp: wrapped Home/End visit visual then logical boundaries.
-    WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(Scintilla::Keys::Home),
-            static_cast<intptr_t>(Message::VCHomeWrap));
+    WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(std::to_underlying(Scintilla::Keys::Home)),
+            static_cast<intptr_t>(std::to_underlying(Message::VCHomeWrap)));
     WndProc(Message::AssignCmdKey,
-            static_cast<uintptr_t>(Scintilla::Keys::Home) | (static_cast<uintptr_t>(Scintilla::KeyMod::Shift) << 16),
-            static_cast<intptr_t>(Message::VCHomeWrapExtend));
-    WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(Scintilla::Keys::End),
-            static_cast<intptr_t>(Message::LineEndWrap));
+            static_cast<uintptr_t>(std::to_underlying(Scintilla::Keys::Home)) |
+                (static_cast<uintptr_t>(std::to_underlying(Scintilla::KeyMod::Shift)) << 16),
+            static_cast<intptr_t>(std::to_underlying(Message::VCHomeWrapExtend)));
+    WndProc(Message::AssignCmdKey, static_cast<uintptr_t>(std::to_underlying(Scintilla::Keys::End)),
+            static_cast<intptr_t>(std::to_underlying(Message::LineEndWrap)));
     WndProc(Message::AssignCmdKey,
-            static_cast<uintptr_t>(Scintilla::Keys::End) | (static_cast<uintptr_t>(Scintilla::KeyMod::Shift) << 16),
-            static_cast<intptr_t>(Message::LineEndWrapExtend));
+            static_cast<uintptr_t>(std::to_underlying(Scintilla::Keys::End)) |
+                (static_cast<uintptr_t>(std::to_underlying(Scintilla::KeyMod::Shift)) << 16),
+            static_cast<intptr_t>(std::to_underlying(Message::LineEndWrapExtend)));
     // Original application overrides the core's Ctrl+Page scroll bindings.
     WndProc(Message::AssignCmdKey,
-            static_cast<uintptr_t>(Scintilla::Keys::Prior) | (static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) << 16),
-            static_cast<intptr_t>(Message::ParaUp));
+            static_cast<uintptr_t>(std::to_underlying(Scintilla::Keys::Prior)) |
+                (static_cast<uintptr_t>(std::to_underlying(Scintilla::KeyMod::Ctrl)) << 16),
+            static_cast<intptr_t>(std::to_underlying(Message::ParaUp)));
     WndProc(Message::AssignCmdKey,
-            static_cast<uintptr_t>(Scintilla::Keys::Next) | (static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) << 16),
-            static_cast<intptr_t>(Message::ParaDown));
+            static_cast<uintptr_t>(std::to_underlying(Scintilla::Keys::Next)) |
+                (static_cast<uintptr_t>(std::to_underlying(Scintilla::KeyMod::Ctrl)) << 16),
+            static_cast<intptr_t>(std::to_underlying(Message::ParaDown)));
     WndProc(Message::AssignCmdKey,
-            static_cast<uintptr_t>(Scintilla::Keys::Prior) |
-                ((static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) | static_cast<uintptr_t>(Scintilla::KeyMod::Shift))
+            static_cast<uintptr_t>(std::to_underlying(Scintilla::Keys::Prior)) |
+                ((static_cast<uintptr_t>(std::to_underlying(Scintilla::KeyMod::Ctrl)) |
+                  static_cast<uintptr_t>(std::to_underlying(Scintilla::KeyMod::Shift)))
                  << 16),
-            static_cast<intptr_t>(Message::ParaUpExtend));
+            static_cast<intptr_t>(std::to_underlying(Message::ParaUpExtend)));
     WndProc(Message::AssignCmdKey,
-            static_cast<uintptr_t>(Scintilla::Keys::Next) |
-                ((static_cast<uintptr_t>(Scintilla::KeyMod::Ctrl) | static_cast<uintptr_t>(Scintilla::KeyMod::Shift))
+            static_cast<uintptr_t>(std::to_underlying(Scintilla::Keys::Next)) |
+                ((static_cast<uintptr_t>(std::to_underlying(Scintilla::KeyMod::Ctrl)) |
+                  static_cast<uintptr_t>(std::to_underlying(Scintilla::KeyMod::Shift)))
                  << 16),
-            static_cast<intptr_t>(Message::ParaDownExtend));
+            static_cast<intptr_t>(std::to_underlying(Message::ParaDownExtend)));
     WndProc(Message::SetCodePage, Scintilla::CpUtf8, 0);
     // Match unconfigured Notepad4 on every host; saving preserves actual EOLs.
-    WndProc(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf), 0);
-    const auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+    WndProc(Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::CrLf)), 0);
+    const auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
     WndProc(Message::StyleSetFont, defaultStyle, reinterpret_cast<intptr_t>(core::Platform::DefaultFont()));
     WndProc(Message::StyleSetSize, defaultStyle, core::Platform::DefaultFontSize());
     WndProc(Message::StyleSetBack, defaultStyle, 0xFFFFFF);
     WndProc(Message::StyleClearAll, 0, 0);
     // Original Mark Occurrences indicator and default bookmark background.
     WndProc(Message::IndicSetStyle, EditorIndicator::Occurrence,
-            static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox));
+            static_cast<intptr_t>(std::to_underlying(Scintilla::IndicatorStyle::RoundBox)));
     WndProc(Message::IndicSetFore, EditorIndicator::Occurrence,
             wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT).GetRGB());
     WndProc(Message::IndicSetAlpha, EditorIndicator::Occurrence, 25);
-    WndProc(Message::MarkerDefine, 0, static_cast<intptr_t>(Scintilla::MarkerSymbol::Background));
+    WndProc(Message::MarkerDefine, 0, static_cast<intptr_t>(std::to_underlying(Scintilla::MarkerSymbol::Background)));
     WndProc(Message::MarkerSetBackTranslucent, 0, 0x2800FF00);
-    WndProc(Message::MarkerSetLayer, 0, static_cast<intptr_t>(Scintilla::Layer::OverText));
-    WndProc(Message::SetCaretStyle, static_cast<uintptr_t>(Scintilla::CaretStyle::Line), 0);
+    WndProc(Message::MarkerSetLayer, 0, static_cast<intptr_t>(std::to_underlying(Scintilla::Layer::OverText)));
+    WndProc(Message::SetCaretStyle, static_cast<uintptr_t>(std::to_underlying(Scintilla::CaretStyle::Line)), 0);
     WndProc(Message::SetMarginWidthN, EditorMargin::Bookmark, 0);
     WndProc(Message::SetScrollWidth, 1, 0);
     WndProc(Message::SetScrollWidthTracking, 1, 0);
@@ -315,12 +324,14 @@ EditorControl::Core::Core(EditorControl& window, int selectionOptions) : window_
 #endif
     WndProc(Message::SetMultipleSelection, selectionOptions & SelectOption_EnableMultipleSelection, 0);
     WndProc(Message::SetAdditionalSelectionTyping, 1, 0);
-    WndProc(Message::SetMultiPaste, static_cast<uintptr_t>(Scintilla::MultiPaste::Each), 0);
-    WndProc(Message::SetVirtualSpaceOptions, static_cast<uintptr_t>(Scintilla::VirtualSpace::RectangularSelection), 0);
-    const auto history = (selectionOptions & SelectOption_UndoRedoRememberSelection)
-                             ? static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
-                                   static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll)
-                             : 0;
+    WndProc(Message::SetMultiPaste, static_cast<uintptr_t>(std::to_underlying(Scintilla::MultiPaste::Each)), 0);
+    WndProc(Message::SetVirtualSpaceOptions,
+            static_cast<uintptr_t>(std::to_underlying(Scintilla::VirtualSpace::RectangularSelection)), 0);
+    const auto history =
+        (selectionOptions & SelectOption_UndoRedoRememberSelection)
+            ? static_cast<uintptr_t>(std::to_underlying(Scintilla::UndoSelectionHistoryOption::Enabled)) |
+                  static_cast<uintptr_t>(std::to_underlying(Scintilla::UndoSelectionHistoryOption::Scroll))
+            : 0;
     WndProc(Message::SetUndoSelectionHistory, history, 0);
 #ifdef __WXGTK__
     gtkDragDrop_ = std::make_unique<GtkTextDragDrop>(
@@ -369,7 +380,8 @@ uint64_t EditorControl::Core::SelectionRevision() const noexcept {
 }
 
 intptr_t EditorControl::Core::SelectionCharacterCount() {
-    if (WndProc(Message::GetSelectionMode, 0, 0) != static_cast<intptr_t>(Scintilla::SelectionMode::Stream) ||
+    if (WndProc(Message::GetSelectionMode, 0, 0) !=
+            static_cast<intptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)) ||
         WndProc(Message::GetSelections, 0, 0) != 1)
         return 0;
     const auto start = WndProc(Message::GetSelectionStart, 0, 0);
@@ -471,8 +483,8 @@ void EditorControl::Core::RenderingSettingsChanged(bool force) {
 #endif
 
 void EditorControl::Core::DpiChanged() {
-    for (int marker = static_cast<int>(Scintilla::MarkerOutline::FolderEnd);
-         marker <= static_cast<int>(Scintilla::MarkerOutline::FolderOpen); ++marker)
+    for (int marker = std::to_underlying(Scintilla::MarkerOutline::FolderEnd);
+         marker <= std::to_underlying(Scintilla::MarkerOutline::FolderOpen); ++marker)
         WndProc(Message::MarkerSetStrokeWidth, marker, window_.FromDIP(100));
     InvalidateStyleRedraw();
     window_.lineNumberWidthDirty_ = true;
@@ -501,29 +513,30 @@ bool EditorControl::Core::Navigation(const wxKeyEvent& event) {
     if (event.MetaDown()) return false;
     Scintilla::Keys coreKey;
     switch (event.GetKeyCode()) {
+        using enum Scintilla::Keys;
     case WXK_LEFT:
-        coreKey = Scintilla::Keys::Left;
+        coreKey = Left;
         break;
     case WXK_RIGHT:
-        coreKey = Scintilla::Keys::Right;
+        coreKey = Right;
         break;
     case WXK_UP:
-        coreKey = Scintilla::Keys::Up;
+        coreKey = Up;
         break;
     case WXK_DOWN:
-        coreKey = Scintilla::Keys::Down;
+        coreKey = Down;
         break;
     case WXK_HOME:
-        coreKey = Scintilla::Keys::Home;
+        coreKey = Home;
         break;
     case WXK_END:
-        coreKey = Scintilla::Keys::End;
+        coreKey = End;
         break;
     case WXK_PAGEUP:
-        coreKey = Scintilla::Keys::Prior;
+        coreKey = Prior;
         break;
     case WXK_PAGEDOWN:
-        coreKey = Scintilla::Keys::Next;
+        coreKey = Next;
         break;
     default:
         return false;
@@ -641,12 +654,13 @@ void EditorControl::Core::RepairFoldSelection() {
     // The core keeps contraction state but can leave the selection in
     // hidden text. Move only hidden endpoints to their visible header.
     const auto visibleEndpoint = [this](Sci::Position position) {
-        auto line = WndProc(Message::LineFromPosition, position, 0);
-        if (WndProc(Message::GetLineVisible, line, 0)) return position;
-        while (line > 0 && !WndProc(Message::GetLineVisible, line, 0)) {
-            line = std::max<intptr_t>(0, WndProc(Message::GetFoldParent, line, 0));
+        using enum Scintilla::Message;
+        auto line = WndProc(LineFromPosition, position, 0);
+        if (WndProc(GetLineVisible, line, 0)) return position;
+        while (line > 0 && !WndProc(GetLineVisible, line, 0)) {
+            line = std::max<intptr_t>(0, WndProc(GetFoldParent, line, 0));
         }
-        return static_cast<Sci::Position>(WndProc(Message::PositionFromLine, line, 0));
+        return static_cast<Sci::Position>(WndProc(PositionFromLine, line, 0));
     };
     const auto caret = visibleEndpoint(sel.MainCaret());
     const auto anchor = visibleEndpoint(sel.MainAnchor());
@@ -688,8 +702,8 @@ bool EditorControl::Core::HandleApplicationKey(const wxKeyEvent& event) {
     if (event.ControlDown() && !event.AltDown()) {
         if (HandleControlKey(window_, event)) return true;
         if (event.GetKeyCode() == 'U') {
-            window_.Send(Message::CustomCaseMapping,
-                         static_cast<uintptr_t>(event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower));
+            window_.Send(Message::CustomCaseMapping, static_cast<uintptr_t>(std::to_underlying(
+                                                         event.ShiftDown() ? CaseMapping::upper : CaseMapping::lower)));
             return true;
         }
         if (event.GetKeyCode() == 'V' && !event.ShiftDown() && !event.MetaDown()) {
@@ -822,12 +836,13 @@ void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification
 
 void EditorControl::Core::RecordNotificationChanges(const Scintilla::NotificationData& notification) const noexcept {
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&
-        (static_cast<unsigned>(notification.modificationType) &
-         static_cast<unsigned>(Scintilla::ModificationFlags::DeleteText)))
+        (static_cast<unsigned>(std::to_underlying(notification.modificationType)) &
+         static_cast<unsigned>(std::to_underlying(Scintilla::ModificationFlags::DeleteText))))
         scrollWidthDirty_ = true;
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&
-        (static_cast<unsigned>(notification.modificationType) &
-         static_cast<unsigned>(Scintilla::ModificationFlags::ChangeStyle | Scintilla::ModificationFlags::LexerState)))
+        (static_cast<unsigned>(std::to_underlying(notification.modificationType)) &
+         static_cast<unsigned>(
+             std::to_underlying(Scintilla::ModificationFlags::ChangeStyle | Scintilla::ModificationFlags::LexerState))))
         braceStyleChanged_ = true;
     SelectionRevision();
     if (notification.nmhdr.code == Scintilla::Notification::Zoom) {
@@ -836,8 +851,8 @@ void EditorControl::Core::RecordNotificationChanges(const Scintilla::Notificatio
         window_.foldMarginWidthDirty_ = true;
     }
     if (notification.nmhdr.code == Scintilla::Notification::Modified &&
-        (static_cast<int>(notification.modificationType) &
-         static_cast<int>(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {
+        (std::to_underlying(notification.modificationType) &
+         std::to_underlying(Scintilla::ModificationFlags::InsertText | Scintilla::ModificationFlags::DeleteText))) {
         ++window_.documentRevision_;
         // An edit before or inside the cached range invalidates its count.
         if (notification.position <= countedEnd_) selectionCountDirty_ = true;
@@ -892,9 +907,9 @@ bool EditorControl::Core::ShouldCompleteTypedWord(const Scintilla::NotificationD
     return (settings.completeOption & WordCompletionOption::CompleteWord) &&
            (notification.characterSource == Scintilla::CharacterSource::DirectInput ||
             (ch < 0x80 && !(settings.completeOption & WordCompletionOption::EnglishIMEModeOnly))) &&
-           (ch < 0x80
-                ? CompletionStyleContains(window_.completionStyles_.wordCharacters, ch)
-                : window_.Send(Message::GetCharacterClass, ch) == static_cast<int>(Scintilla::CharacterClass::word)) &&
+           (ch < 0x80 ? CompletionStyleContains(window_.completionStyles_.wordCharacters, ch)
+                      : window_.Send(Message::GetCharacterClass, ch) ==
+                            std::to_underlying(Scintilla::CharacterClass::word)) &&
            window_.wordCompletionHandler_;
 }
 
@@ -909,8 +924,8 @@ void EditorControl::Core::UpdateNotificationState(const Scintilla::NotificationD
                      0);
     }
     if (notification.nmhdr.code == Scintilla::Notification::UpdateUI &&
-        (static_cast<unsigned>(notification.updated) &
-         ~static_cast<unsigned>(Scintilla::Update::VScroll | Scintilla::Update::HScroll))) {
+        (static_cast<unsigned>(std::to_underlying(notification.updated)) &
+         ~static_cast<unsigned>(std::to_underlying(Scintilla::Update::VScroll | Scintilla::Update::HScroll)))) {
         // The pinned NotifyParent virtual is const. EditorControl owns this
         // mutable Core, and brace decoration updates use its normal WndProc path.
         const_cast<Core*>(this)->UpdateVisualBraceMatching();
@@ -936,7 +951,7 @@ std::unique_ptr<core::CaseFolder> EditorControl::Core::CaseFolderForEncoding() c
 std::string EditorControl::Core::CaseMapString(const std::string& value, CaseMapping mapping) const {
     if (mapping == CaseMapping::upper) return core::CaseConvertString(value, core::CaseConversion::upper);
     if (mapping == CaseMapping::lower) return core::CaseConvertString(value, core::CaseConversion::lower);
-    return MapCustomCase(value, static_cast<int>(mapping));
+    return MapCustomCase(value, std::to_underlying(mapping));
 }
 
 bool SCICALL EditorControl::Core::DragThreshold(core::Point start, core::Point now) const noexcept {

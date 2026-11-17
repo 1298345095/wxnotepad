@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <utility>
 #include <ScintillaTypes.h>
 #include <string>
 #include <string_view>
@@ -7,11 +8,12 @@ using Scintilla::Message;
 
 namespace {
 std::string IndentPadding(EditorControl& editor) {
-    auto padding = editor.Send(Message::GetIndent);
+    using enum Scintilla::Message;
+    auto padding = editor.Send(GetIndent);
     char character = ' ';
-    if (editor.Send(Message::GetTabIndents)) {
-        if (!editor.Send(Message::GetUseTabs))
-            padding = editor.Send(Message::GetTabWidth);
+    if (editor.Send(GetTabIndents)) {
+        if (!editor.Send(GetUseTabs))
+            padding = editor.Send(GetTabWidth);
         else {
             padding = 1;
             character = '\t';
@@ -22,9 +24,10 @@ std::string IndentPadding(EditorControl& editor) {
 
 void AppendClosingDelimiterLine(EditorControl& editor, intptr_t line, bool delimiter,
                                 std::string_view leadingWhitespace, std::string& insertion) {
-    const auto next = editor.Send(Message::GetCharAt, editor.Send(Message::PositionFromLine, line));
+    using enum Scintilla::Message;
+    const auto next = editor.Send(GetCharAt, editor.Send(PositionFromLine, line));
     if (delimiter && (next == '}' || next == ']' || next == ')')) {
-        const auto eol = static_cast<Scintilla::EndOfLine>(editor.Send(Message::GetEOLMode));
+        const auto eol = static_cast<Scintilla::EndOfLine>(editor.Send(GetEOLMode));
         insertion += eol == Scintilla::EndOfLine::Lf ? "\n" : eol == Scintilla::EndOfLine::Cr ? "\r" : "\r\n";
         insertion += leadingWhitespace;
     }
@@ -33,7 +36,8 @@ void AppendClosingDelimiterLine(EditorControl& editor, intptr_t line, bool delim
 
 void EditorControl::IndentLines(bool forwards) {
     if (!Send(Message::GetReadOnly) && Send(Message::GetSelectionEmpty) && Send(Message::GetSelections) == 1 &&
-        Send(Message::GetSelectionMode) == static_cast<intptr_t>(Scintilla::SelectionMode::Stream)) {
+        Send(Message::GetSelectionMode) ==
+            static_cast<intptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream))) {
         // The core excludes an endpoint at a line start. Move an empty
         // selection to its line end so the explicit line command includes it.
         const auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));

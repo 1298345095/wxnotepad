@@ -1,4 +1,5 @@
 #include "app/dialogs/document_dialogs.h"
+#include <utility>
 #include "app/localization.h"
 #include <wx/translation.h>
 #include <wx/button.h>
@@ -67,18 +68,19 @@ std::optional<ChosenSaveFile> ChooseSaveFile(wxWindow* parent, const wxString& t
 }
 
 std::optional<FileEncoding> ChooseReloadEncoding(wxWindow* parent, std::optional<FileEncoding> initial) {
+    using enum FileEncoding;
     struct SourceEncoding {
         const char* label;
         FileEncoding encoding;
     };
-    const std::array<SourceEncoding, 8> choices = {{{"UTF-8", FileEncoding::Utf8},
-                                                    {"UTF-16LE", FileEncoding::Utf16Le},
-                                                    {"GBK (CP936)", FileEncoding::Gbk},
-                                                    {"UTF-16BE", FileEncoding::Utf16Be},
-                                                    {"GB18030 (CP54936)", FileEncoding::Gb18030},
-                                                    {"Big5 (CP950)", FileEncoding::Big5},
-                                                    {"Windows-1252", FileEncoding::Windows1252},
-                                                    {"DOS-437", FileEncoding::Dos437}}};
+    const std::array<SourceEncoding, 8> choices = {{{"UTF-8", Utf8},
+                                                    {"UTF-16LE", Utf16Le},
+                                                    {"GBK (CP936)", Gbk},
+                                                    {"UTF-16BE", Utf16Be},
+                                                    {"GB18030 (CP54936)", Gb18030},
+                                                    {"Big5 (CP950)", Big5},
+                                                    {"Windows-1252", Windows1252},
+                                                    {"DOS-437", Dos437}}};
     wxDialog dialog(parent, wxID_ANY, _("Reload With Encoding"));
     auto* contents = new wxBoxSizer(wxVERTICAL);
     contents->Add(new wxStaticText(&dialog, wxID_ANY, _("Select source &encoding to reload file:")), 0, wxALL,
@@ -226,7 +228,7 @@ std::optional<FileWatchingOptions> ChooseFileWatchingOptions(wxWindow* parent, c
     const std::array choices = {_("&None."), _("&Show message."), _("&Auto-reload (unmodified).")};
     auto* mode = new wxRadioBox(&dialog, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
                                 static_cast<int>(choices.size()), choices.data(), 1, wxRA_SPECIFY_COLS);
-    mode->SetSelection(static_cast<int>(initial.mode));
+    mode->SetSelection(std::to_underlying(initial.mode));
     layout->Add(mode, 1, wxEXPAND | wxALL, dialog.FromDIP(DialogPaddingDip));
     auto* log = new wxCheckBox(&dialog, wxID_ANY, _("&Monitor continuously updated file (e.g. log file)."));
     auto* keepEnd = new wxCheckBox(&dialog, wxID_ANY, _("&Keep at document end after reloading."));
@@ -322,9 +324,8 @@ LineEndingConversionDialog::LineEndingConversionDialog(wxWindow* parent, const L
 }
 
 LineEndingConversionChoice LineEndingConversionDialog::Choose() {
+    using enum Scintilla::EndOfLine;
     const bool convert = ShowModal() == wxID_OK;
-    const auto selected = mode_->GetSelection() == 0   ? Scintilla::EndOfLine::CrLf
-                          : mode_->GetSelection() == 1 ? Scintilla::EndOfLine::Lf
-                                                       : Scintilla::EndOfLine::Cr;
+    const auto selected = mode_->GetSelection() == 0 ? CrLf : mode_->GetSelection() == 1 ? Lf : Cr;
     return {convert, always_->GetValue(), selected};
 }

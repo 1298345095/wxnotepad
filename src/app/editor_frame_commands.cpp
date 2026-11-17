@@ -1,4 +1,5 @@
 #include "app/dialogs/auto_completion_settings_dialog.h"
+#include <utility>
 #include "app/editor_frame.h"
 #include "app/localization.h"
 #include "editor/display_units.h"
@@ -646,9 +647,9 @@ void EditorFrame::AppendSelectionCommands(wxMenu* edit) {
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) {
-                using Scintilla::Message;
-                event.Enable(editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionEnd)) >
-                             editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionStart)));
+                using enum Scintilla::Message;
+                event.Enable(editor_->Send(LineFromPosition, editor_->Send(GetSelectionEnd)) >
+                             editor_->Send(LineFromPosition, editor_->Send(GetSelectionStart)));
             },
             id);
     const int padSpaces = wxWindow::NewControlId();
@@ -699,9 +700,9 @@ void EditorFrame::AppendLineCommands(wxMenu* edit) {
         Bind(
             wxEVT_UPDATE_UI,
             [this](wxUpdateUIEvent& event) {
-                using Scintilla::Message;
-                event.Enable(editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionEnd)) >
-                             editor_->Send(Message::LineFromPosition, editor_->Send(Message::GetSelectionStart)));
+                using enum Scintilla::Message;
+                event.Enable(editor_->Send(LineFromPosition, editor_->Send(GetSelectionEnd)) >
+                             editor_->Send(LineFromPosition, editor_->Send(GetSelectionStart)));
             },
             id);
     const int modifyLines = wxWindow::NewControlId();
@@ -885,8 +886,8 @@ void EditorFrame::AppendLineEndingCommands(wxMenu* edit) {
         Bind(
             wxEVT_MENU,
             [this, mode](wxCommandEvent&) {
-                editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(mode));
-                editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
+                editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(std::to_underlying(mode)));
+                editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(mode)));
                 UpdateDocumentState();
                 UpdateWindowUI(wxUPDATE_UI_RECURSE);
             },
@@ -894,7 +895,8 @@ void EditorFrame::AppendLineEndingCommands(wxMenu* edit) {
         Bind(
             wxEVT_UPDATE_UI,
             [this, mode](wxUpdateUIEvent& event) {
-                event.Check(editor_->Send(Scintilla::Message::GetEOLMode) == static_cast<intptr_t>(mode));
+                event.Check(editor_->Send(Scintilla::Message::GetEOLMode) ==
+                            static_cast<intptr_t>(std::to_underlying(mode)));
             },
             id);
     };
@@ -908,11 +910,11 @@ void EditorFrame::AppendLineEndingCommands(wxMenu* edit) {
 }
 
 void EditorFrame::AppendLineSelectionCommands(wxMenu* edit) {
+    using enum LineSelectionMode;
     auto* lineSelection = new wxMenu;
-    for (const auto& [label, mode] : {std::pair{wxTRANSLATE("&None"), LineSelectionMode::None},
-                                      std::pair{wxTRANSLATE("&Visual Studio"), LineSelectionMode::VisualStudio},
-                                      std::pair{wxTRANSLATE("&Old Visual Studio"), LineSelectionMode::OldVisualStudio},
-                                      std::pair{wxTRANSLATE("&Normal"), LineSelectionMode::Normal}}) {
+    for (const auto& [label, mode] :
+         {std::pair{wxTRANSLATE("&None"), None}, std::pair{wxTRANSLATE("&Visual Studio"), VisualStudio},
+          std::pair{wxTRANSLATE("&Old Visual Studio"), OldVisualStudio}, std::pair{wxTRANSLATE("&Normal"), Normal}}) {
         const int id = wxWindow::NewControlId();
         lineSelection->AppendRadioItem(id, wxGetTranslation(label));
         Bind(wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->SetLineSelectionMode(mode); }, id);
@@ -1054,8 +1056,8 @@ void EditorFrame::AppendDisplayCommands(wxMenu* view) {
         [this, whitespace](wxCommandEvent&) {
             const bool visible = editor_->Send(Scintilla::Message::GetViewWS) == 0;
             editor_->Send(Scintilla::Message::SetViewWS,
-                          static_cast<uintptr_t>(visible ? Scintilla::WhiteSpace::VisibleAlways
-                                                         : Scintilla::WhiteSpace::Invisible));
+                          static_cast<uintptr_t>(std::to_underlying(visible ? Scintilla::WhiteSpace::VisibleAlways
+                                                                            : Scintilla::WhiteSpace::Invisible)));
             GetMenuBar()->Check(whitespace, visible);
         },
         whitespace);
@@ -1101,23 +1103,23 @@ void EditorFrame::ApplyWrapSymbols() {
     uintptr_t location = 0;
     switch (wordWrapSymbols_ % 10) {
     case 1:
-        location |= static_cast<uintptr_t>(Scintilla::WrapVisualLocation::EndByText);
+        location |= static_cast<uintptr_t>(std::to_underlying(Scintilla::WrapVisualLocation::EndByText));
         [[fallthrough]];
     case 2:
-        flags |= static_cast<uintptr_t>(Scintilla::WrapVisualFlag::End);
+        flags |= static_cast<uintptr_t>(std::to_underlying(Scintilla::WrapVisualFlag::End));
         break;
     default:
         break;
     }
     switch (wordWrapSymbols_ / 10) {
     case 1:
-        location |= static_cast<uintptr_t>(Scintilla::WrapVisualLocation::StartByText);
+        location |= static_cast<uintptr_t>(std::to_underlying(Scintilla::WrapVisualLocation::StartByText));
         [[fallthrough]];
     case 2:
-        flags |= static_cast<uintptr_t>(Scintilla::WrapVisualFlag::Start);
+        flags |= static_cast<uintptr_t>(std::to_underlying(Scintilla::WrapVisualFlag::Start));
         break;
     case 3:
-        flags |= static_cast<uintptr_t>(Scintilla::WrapVisualFlag::Margin);
+        flags |= static_cast<uintptr_t>(std::to_underlying(Scintilla::WrapVisualFlag::Margin));
         if (!editor_->LineNumbersVisible()) editor_->SetLineNumbersVisible(true);
         break;
     default:
@@ -1143,9 +1145,10 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
             },
             id);
     };
-    addFoldCommand(_("&Collapse All"), static_cast<uintptr_t>(Scintilla::FoldAction::Contract) |
-                                           static_cast<uintptr_t>(Scintilla::FoldAction::ContractEveryLevel));
-    addFoldCommand(_("&Expand All"), static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
+    addFoldCommand(_("&Collapse All"),
+                   static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Contract)) |
+                       static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::ContractEveryLevel)));
+    addFoldCommand(_("&Expand All"), static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Expand)));
     view->AppendSubMenu(folds, _("&Toggle Folds"));
 }
 
@@ -1386,10 +1389,10 @@ void EditorFrame::CopyFileName(FileNamePart part) {
 }
 
 void EditorFrame::AppendFileNameCopyCommands(wxMenu* copy) {
-    for (const auto& [label, part] :
-         {std::pair{wxTRANSLATE("&File Name"), FileNamePart::BaseName},
-          std::pair{wxTRANSLATE("File Name and &Ext.\tShift+F9"), FileNamePart::FileName},
-          std::pair{wxTRANSLATE("Full &Path Name\tAlt+Shift+F9"), FileNamePart::FullPath}}) {
+    using enum FileNamePart;
+    for (const auto& [label, part] : {std::pair{wxTRANSLATE("&File Name"), BaseName},
+                                      std::pair{wxTRANSLATE("File Name and &Ext.\tShift+F9"), FileName},
+                                      std::pair{wxTRANSLATE("Full &Path Name\tAlt+Shift+F9"), FullPath}}) {
         const int id = wxWindow::NewControlId();
         copy->Append(id, wxGetTranslation(label));
         Bind(wxEVT_MENU, [this, part](wxCommandEvent&) { CopyFileName(part); }, id);
@@ -1547,17 +1550,17 @@ bool EditorFrame::HandleBlockNavigationKey(const wxKeyEvent& event) {
 }
 
 void EditorFrame::HandleAltBlockNavigationKey(const wxKeyEvent& event, int key) {
+    using enum BlockNavigation;
     if (key == '[' && !event.ControlDown() && !event.ShiftDown())
-        editor_->GoToBlock(BlockNavigation::Start);
+        editor_->GoToBlock(Start);
     else if (key == ']' && !event.ControlDown()) {
         if (event.ShiftDown())
             editor_->SelectCurrentBlockLines();
         else
-            editor_->GoToBlock(BlockNavigation::End);
+            editor_->GoToBlock(End);
     } else if ((key == ',' || key == '.') && !event.ShiftDown()) {
-        const auto command = key == ','
-                                 ? (event.ControlDown() ? BlockNavigation::PreviousSibling : BlockNavigation::Previous)
-                                 : (event.ControlDown() ? BlockNavigation::NextSibling : BlockNavigation::Next);
+        const auto command = key == ',' ? (event.ControlDown() ? PreviousSibling : Previous)
+                                        : (event.ControlDown() ? NextSibling : Next);
         editor_->GoToBlock(command);
     }
 }
@@ -1752,10 +1755,12 @@ void EditorFrame::AppendSelectionOptions(wxMenu* view) {
                 if (bit == SelectOption_EnableMultipleSelection) {
                     editor_->Send(Scintilla::Message::SetMultipleSelection, enabled);
                 } else if (bit == SelectOption_UndoRedoRememberSelection) {
-                    const auto history = enabled
-                                             ? static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Enabled) |
-                                                   static_cast<uintptr_t>(Scintilla::UndoSelectionHistoryOption::Scroll)
-                                             : 0;
+                    const auto history =
+                        enabled ? static_cast<uintptr_t>(
+                                      std::to_underlying(Scintilla::UndoSelectionHistoryOption::Enabled)) |
+                                      static_cast<uintptr_t>(
+                                          std::to_underlying(Scintilla::UndoSelectionHistoryOption::Scroll))
+                                : 0;
                     editor_->Send(Scintilla::Message::SetUndoSelectionHistory, history);
                 }
             },
@@ -1781,14 +1786,15 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
+            using enum Scintilla::Message;
             auto& preferences = settings_ ? settings_->values : defaults_;
-            int limit = static_cast<int>(editor_->Send(Scintilla::Message::GetEdgeColumn));
+            int limit = static_cast<int>(editor_->Send(GetEdgeColumn));
             int mode = preferences.longLineMode;
             if (ShowLongLineSettingsDialog(this, limit, mode)) {
                 preferences.longLinesLimit = limit;
                 preferences.longLineMode = mode;
-                editor_->Send(Scintilla::Message::SetEdgeColumn, limit);
-                editor_->Send(Scintilla::Message::SetEdgeMode, mode);
+                editor_->Send(SetEdgeColumn, limit);
+                editor_->Send(SetEdgeMode, mode);
                 ApplyLongLineColour(*editor_);
             }
         },
@@ -1857,13 +1863,15 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         Bind(
             wxEVT_MENU,
             [this, technology](wxCommandEvent&) {
-                editor_->Send(Scintilla::Message::SetTechnology, static_cast<uintptr_t>(technology));
+                editor_->Send(Scintilla::Message::SetTechnology,
+                              static_cast<uintptr_t>(std::to_underlying(technology)));
             },
             id);
         Bind(
             wxEVT_UPDATE_UI,
             [this, technology](wxUpdateUIEvent& event) {
-                event.Check(editor_->Send(Scintilla::Message::GetTechnology) == static_cast<intptr_t>(technology));
+                event.Check(editor_->Send(Scintilla::Message::GetTechnology) ==
+                            static_cast<intptr_t>(std::to_underlying(technology)));
             },
             id);
     }

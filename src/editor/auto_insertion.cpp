@@ -26,17 +26,17 @@ bool CanCloseSingleQuote(EditorControl& editor, const CompletionStyles& styles, 
            CompletionStyleContains(styles.characterPrefixes, previous2);
 }
 bool IsEscapedInsertion(EditorControl& editor, const CompletionStyles& styles, intptr_t position) {
-    using Scintilla::Message;
-    const int previous = static_cast<int>(editor.Send(Message::GetCharAt, position - 2));
-    const int previousStyle = static_cast<int>(editor.Send(Message::GetStyleIndexAt, position - 2));
+    using enum Scintilla::Message;
+    const int previous = static_cast<int>(editor.Send(GetCharAt, position - 2));
+    const int previousStyle = static_cast<int>(editor.Send(GetStyleIndexAt, position - 2));
     if (!previousStyle || !previous || previous != styles.escapeCharacterStart) return false;
-    const int style = static_cast<int>(editor.Send(Message::GetStyleIndexAt, position - 1));
+    const int style = static_cast<int>(editor.Send(GetStyleIndexAt, position - 1));
     // Original IsEscapeCharOrFormatSpecifier(..., punctuation=true).
     if ((style != 0 && styles.escapeCharacterStyle && previousStyle != styles.escapeCharacterStyle) ||
         CompletionStyleContains(styles.rawStrings, previousStyle))
         return false;
-    const auto before2 = editor.Send(Message::PositionBefore, position - 2);
-    const int previous2 = before2 + 1 == position - 2 ? static_cast<int>(editor.Send(Message::GetCharAt, before2)) : 0;
+    const auto before2 = editor.Send(PositionBefore, position - 2);
+    const int previous2 = before2 + 1 == position - 2 ? static_cast<int>(editor.Send(GetCharAt, before2)) : 0;
     return previous != previous2;
 }
 bool InCharacterLiteral(const CompletionStyles& styles, int previousStyle, int nextStyle) {

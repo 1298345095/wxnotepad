@@ -1,11 +1,12 @@
 #include "editor/editor_control.h"
+#include <utility>
 #include <ScintillaTypes.h>
 #include <ScintillaStructures.h>
 
 namespace {
 using Scintilla::Message;
-constexpr auto FoldHeader = static_cast<intptr_t>(Scintilla::FoldLevel::HeaderFlag);
-constexpr auto FoldNumber = static_cast<intptr_t>(Scintilla::FoldLevel::NumberMask);
+constexpr auto FoldHeader = static_cast<intptr_t>(std::to_underlying(Scintilla::FoldLevel::HeaderFlag));
+constexpr auto FoldNumber = static_cast<intptr_t>(std::to_underlying(Scintilla::FoldLevel::NumberMask));
 
 intptr_t PreviousBlock(EditorControl& editor, intptr_t current, intptr_t line, intptr_t level, bool sibling) {
     auto candidate = current - 1;
@@ -25,21 +26,22 @@ intptr_t PreviousBlock(EditorControl& editor, intptr_t current, intptr_t line, i
 }
 
 intptr_t NextBlock(EditorControl& editor, intptr_t current, intptr_t line, intptr_t level, bool sibling) {
-    const auto count = editor.Send(Message::GetLineCount);
-    if (line >= 0) line = editor.Send(Message::GetLastChild, line, -1);
+    using enum Scintilla::Message;
+    const auto count = editor.Send(GetLineCount);
+    if (line >= 0) line = editor.Send(GetLastChild, line, -1);
     auto candidate = current + 1;
     intptr_t first = -1;
     if (sibling && line > 0 && (level & FoldHeader)) candidate = line + 1;
     level &= FoldNumber;
     while (candidate < count) {
-        const auto candidateLevel = editor.Send(Message::GetFoldLevel, candidate);
+        const auto candidateLevel = editor.Send(GetFoldLevel, candidate);
         if (!(candidateLevel & FoldHeader)) {
             ++candidate;
             continue;
         }
         if (!sibling || level >= (candidateLevel & FoldNumber)) return candidate;
         if (first < 0) first = candidate;
-        candidate = editor.Send(Message::GetLastChild, candidate, candidateLevel) + 1;
+        candidate = editor.Send(GetLastChild, candidate, candidateLevel) + 1;
     }
     return sibling && first >= 0 ? first : line;
 }
@@ -66,25 +68,27 @@ void EditorControl::GoToBlock(BlockNavigation command) {
     const auto level = Send(Message::GetFoldLevel, line);
     if (!(level & FoldHeader)) line = Send(Message::GetFoldParent, line);
     switch (command) {
-    case BlockNavigation::Start:
+        using enum BlockNavigation;
+    case Start:
         break;
-    case BlockNavigation::End:
+    case End:
         if (line >= 0) line = Send(Message::GetLastChild, line, -1);
         break;
-    case BlockNavigation::Previous:
-    case BlockNavigation::PreviousSibling: {
-        line = PreviousBlock(*this, current, line, level, command == BlockNavigation::PreviousSibling);
+    case Previous:
+    case PreviousSibling: {
+        line = PreviousBlock(*this, current, line, level, command == PreviousSibling);
         break;
     }
-    case BlockNavigation::Next:
-    case BlockNavigation::NextSibling: {
-        line = NextBlock(*this, current, line, level, command == BlockNavigation::NextSibling);
+    case Next:
+    case NextSibling: {
+        line = NextBlock(*this, current, line, level, command == NextSibling);
         break;
     }
     }
     if (line >= 0 && line != current) {
         const Scintilla::CharacterRangeFull range{line, Send(Message::GetColumn, position, current)};
-        JumpToPosition(Send(Message::FindColumnEx, static_cast<uintptr_t>(Scintilla::ColumnType::Default),
+        JumpToPosition(Send(Message::FindColumnEx,
+                            static_cast<uintptr_t>(std::to_underlying(Scintilla::ColumnType::Default)),
                             reinterpret_cast<intptr_t>(&range)));
     }
 }
@@ -105,11 +109,12 @@ void EditorControl::SelectCurrentBlockLines() {
     }
     const auto end = Send(Message::GetLastChild, start, -1);
     const bool backward = caret < anchor || (caret == anchor && end - current > current - start);
-    const bool lineSelection = (static_cast<unsigned>(GetLineSelectionMode()) & 1U) != 0;
+    const bool lineSelection = (static_cast<unsigned>(std::to_underlying(GetLineSelectionMode())) & 1U) != 0;
     const auto offset = lineSelection ? 0 : 1;
     const auto anchorLine = backward ? end + offset : start;
     const auto caretLine = backward ? start : end + offset;
     Send(Message::SetSel, Send(Message::PositionFromLine, anchorLine), Send(Message::PositionFromLine, caretLine));
-    if (lineSelection) Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Lines));
+    if (lineSelection)
+        Send(Message::SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Lines)));
     Send(Message::ChooseCaretX);
 }
