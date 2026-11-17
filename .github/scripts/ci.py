@@ -345,34 +345,53 @@ def split_linux_symbols(binary, symbols):
     subprocess.run(['objcopy', f'--add-gnu-debuglink={debug_file}', binary], check=True)
 
 
-def bundle_linux_runtime(executable, destination, symbols):
+def bundle_linux_runtime(executable, destination, symbols, installed, reports):
     split_linux_symbols(destination / executable.name, symbols)
     dependencies = subprocess.check_output(['ldd', str(executable)], text=True)
-    (REPORTS / 'runtime-libraries.txt').write_text(dependencies, encoding='utf-8')
+    (reports / 'runtime-libraries.txt').write_text(dependencies, encoding='utf-8')
     libraries = destination / 'lib'
     libraries.mkdir(exist_ok=True)
     for line in dependencies.splitlines():
         if '=> ' not in line:
             continue
         name = Path(line.split('=> ', 1)[1].split(' (', 1)[0].strip())
-        if name.is_absolute() and name.is_relative_to(VCPKG / 'installed'):
+        if name.is_absolute() and name.resolve().is_relative_to(installed):
             shutil.copy2(name, libraries / name.name)
             split_linux_symbols(libraries / name.name, symbols / 'lib')
 
 
-def bundle():
-    directory = BUILD / 'cmake'
-    executable = directory / ('wxnotepad.exe' if WINDOWS else 'wxnotepad')
-    destination = WORK / 'artifact'
+def _cmake_cache(directory):
+    values = {}
+    for line in (directory / 'CMakeCache.txt').read_text(encoding='utf-8').splitlines():
+        entry = re.match(r'([^#/][^:]*):[^=]+=(.*)', line)
+        if entry:
+            values[entry[1]] = entry[2]
+    return values
+
+
+def bundle(cmake_dir, executable, output_root, *, report_dir=None):
+    """Collect a configured wxnotepad build and return its distributed executable."""
+    cache = _cmake_cache(cmake_dir)
+    source_root = Path(cache['CMAKE_HOME_DIRECTORY'])
+    installed = Path(cache['VCPKG_INSTALLED_DIR']).resolve()
+    triplet = cache['VCPKG_TARGET_TRIPLET']
+    source_record = Path(cache['NOTEPAD4_SOURCE']) / 'wxnotepad-source.json'
+    executable = executable.absolute()
+    output_root = output_root.resolve()
+    directory = executable.parent
+    windows = executable.suffix.lower() == '.exe'
+    reports = report_dir.resolve() if report_dir is not None else output_root / 'reports'
+    reports.mkdir(parents=True, exist_ok=True)
+    destination = output_root / 'artifact'
     destination.mkdir(parents=True, exist_ok=True)
     shutil.copy2(executable, destination / executable.name)
-    symbols = WORK / 'symbols'
-    if WINDOWS:
+    symbols = output_root / 'symbols'
+    if windows:
         for library in directory.glob('*.dll'):
             shutil.copy2(library, destination / library.name)
     else:
-        bundle_linux_runtime(executable, destination, symbols)
-    languages = json.loads((ROOT / 'po/languages.json').read_text(encoding='utf-8'))
+        bundle_linux_runtime(executable, destination, symbols, installed, reports)
+    languages = json.loads((source_root / 'po/languages.json').read_text(encoding='utf-8'))
     for language in languages['languages']:
         if language['code'] == languages['source_language']:
             continue
@@ -381,19 +400,19 @@ def bundle():
             target = destination / 'locale' / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(directory / 'locale' / relative, target)
-    shutil.copytree(ROOT / 'licenses', destination / 'licenses', dirs_exist_ok=True)
-    for notice in (VCPKG / 'installed' / TRIPLET / 'share').glob('*/copyright'):
+    shutil.copytree(source_root / 'licenses', destination / 'licenses', dirs_exist_ok=True)
+    for notice in (installed / triplet / 'share').glob('*/copyright'):
         target = destination / 'licenses/vcpkg' / notice.parent.name
         target.mkdir(parents=True, exist_ok=True)
         shutil.copy2(notice, target / 'copyright')
-    source = json.loads((BUILD / 'original-core/wxnotepad-source.json').read_text(encoding='utf-8'))
-    source['application_commit'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
-    source['triplet'] = TRIPLET
+    source = json.loads(source_record.read_text(encoding='utf-8'))
+    source['application_commit'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=source_root, text=True).strip()
+    source['triplet'] = triplet
     source['executable_sha256'] = hashlib.sha256((destination / executable.name).read_bytes()).hexdigest()
-    if not WINDOWS:
+    if not windows:
         source['unstripped_executable_sha256'] = hashlib.sha256(executable.read_bytes()).hexdigest()
     (destination / BUILD_RECORD).write_text(json.dumps(source, indent=2) + '\n', encoding='utf-8')
-    if not WINDOWS:
+    if not windows:
         shutil.copy2(destination / BUILD_RECORD, symbols / BUILD_RECORD)
     (destination / 'README.txt').write_text(
         'Development build output, not a release/install package.\n'
@@ -401,16 +420,24 @@ def bundle():
         'Windows: keep the bundled DLLs beside wxnotepad.exe.\n'
         'Linux: Ubuntu 24.04 x64 desktop libraries are required; run from this directory with\n'
         'LD_LIBRARY_PATH="$PWD/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ./wxnotepad\n'
-        'Linux debug symbols are in .ci/symbols/ inside the matching evidence artifact.\n'
+        'The matching Linux symbols/ directory is retained with the build evidence.\n'
         'Copy its .debug/ and lib/.debug/ directories here for GDB.\n',
         encoding='utf-8')
+    return destination / executable.name
 
 
 def argument_parser():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
-    for name in ('metadata', 'dependencies', 'bundle'):
+    for name in ('metadata', 'dependencies'):
         commands.add_parser(name)
+    packaging = commands.add_parser('bundle', help='Collect development output from a configured wxnotepad build')
+    packaging.add_argument('--cmake-dir', type=Path, default=BUILD / 'cmake')
+    packaging.add_argument('--executable', type=Path,
+                           help='Actual built target; defaults to wxnotepad[.exe] in --cmake-dir')
+    packaging.add_argument('--output-dir', type=Path, default=WORK,
+                           help='Root for artifact/ and matching Linux symbols/')
+    packaging.add_argument('--report-dir', type=Path, help='Report directory; defaults to <output-dir>/reports')
     for name in ('configure', 'build'):
         command = commands.add_parser(name)
         command.add_argument('--app-only', action='store_true')
@@ -460,6 +487,9 @@ def main():
     elif arguments.command == 'test':
         test(arguments.backend, arguments.cmake_dir.resolve(), arguments.tests, arguments.jobs,
              report_directory=arguments.report_dir)
+    elif arguments.command == 'bundle':
+        executable = arguments.executable or arguments.cmake_dir / ('wxnotepad.exe' if WINDOWS else 'wxnotepad')
+        bundle(arguments.cmake_dir, executable, arguments.output_dir, report_dir=arguments.report_dir)
     elif arguments.command == 'diagnostic-build':
         diagnostic_build(arguments.jobs, compiler_cache=arguments.compiler_cache)
     elif arguments.command == 'coverage-build':

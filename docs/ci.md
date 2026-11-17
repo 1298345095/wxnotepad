@@ -346,6 +346,21 @@ The ordinary test binaries keep their debug information, and build.json records
 both the distributed and original executable checksums. These changes do not
 alter Linux dependency linkage, test assertions or coverage settings.
 
+CI and packaged-localization checks share
+`bundle(cmake_dir, executable, output_root, *, report_dir=None)` in `ci.py`.
+The operation returns the packaged executable's path. Its CMake cache selects
+the application checkout (`CMAKE_HOME_DIRECTORY`), original-core provenance
+(`NOTEPAD4_SOURCE`), dependency installation (`VCPKG_INSTALLED_DIR`) and triplet
+(`VCPKG_TARGET_TRIPLET`). The configured installation path is used directly,
+including installations whose directory is not named `installed`. DLLs and
+catalogs come from the actual executable's parent, supporting Windows `Release/`
+and custom runtime output directories. The existing `wxnotepad.exe` and
+`wxnotepad` target names select Windows DLL or Linux ELF handling independently
+of the triplet's spelling. The output root receives `artifact/` and
+Linux `symbols/`; reports use `report_dir` or default to `output_root/reports`.
+Packaging reads existing build and SDK inputs directly. Missing inputs and
+native-tool failures fail the bundling command and remain visible to its caller.
+
 Newer runs cancel older runs for the same workflow/ref. Open a draft pull request
 to validate an integration branch before merge. Branch pushes update the PR run;
 push validation runs on main, avoiding duplicate push/PR jobs for the same feature
@@ -368,6 +383,24 @@ The formatter command requires clang-format 23.1.2 on PATH. The analyzer default
 to clang-tidy-18; use `--executable` for another installed native analyzer. Keep
 source and compilation-database paths consistent. A local MSVC analysis needs its
 normal Visual Studio developer environment.
+
+To collect development build output from an existing configured native build,
+provide its CMake directory and actual executable, then choose output and report
+locations:
+
+```text
+python -X utf8 .github/scripts/ci.py bundle --cmake-dir "F:/native build/cmake" --executable "F:/native build/cmake/Release/wxnotepad.exe" --output-dir F:/native-package --report-dir F:/evidence/bundle-attempt-1
+```
+
+On Linux, use the native build's `wxnotepad` executable and Linux paths with the
+same flags. `--output-dir` owns `artifact/` and `symbols/`; `--report-dir` selects
+the packaging evidence directory, including Linux runtime-library listings.
+Omitting `--report-dir` uses `<output-dir>/reports`. The command creates the
+required output directories.
+With no options, `ci.py bundle` uses `.ci/build/cmake`, its native application
+executable, and the existing `.ci/artifact`, `.ci/symbols` and `.ci/reports` layout.
+With only `--cmake-dir`, the executable defaults to that directory's native
+`wxnotepad` target; pass `--executable` for configuration or custom output paths.
 
 To exercise the exact CI test wrapper against an existing native build:
 

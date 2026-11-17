@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('ci_bundle', ROOT / '.github/scripts/ci.py')
@@ -23,23 +22,27 @@ class LinuxBundle(unittest.TestCase):
         for executable in ('gcc', 'objcopy', 'strip', 'readelf', 'gdb'):
             self.assertIsNotNone(shutil.which(executable), executable)
         with tempfile.TemporaryDirectory(prefix='wxnotepad bundle ') as folder:
-            root = Path(folder)
+            root = Path(folder).resolve()
             work = root / '.ci'
-            build = work / 'build'
-            cmake = build / 'cmake'
+            cmake = root / 'configured build'
             cmake.mkdir(parents=True)
-            reports = work / 'reports'
-            reports.mkdir()
-            vcpkg = work / 'vcpkg'
-            libraries = vcpkg / 'installed/x64-linux-ci/lib'
+            runtime = root / 'runtime output/Release'
+            runtime.mkdir(parents=True)
+            installed = root / 'sdk packages'
+            libraries = installed / 'x64-linux-ci/lib'
             libraries.mkdir(parents=True)
-            original_core = build / 'original-core'
+            original_core = root / 'prepared original'
             original_core.mkdir()
             (original_core / 'wxnotepad-source.json').write_text('{"revision":"fixture"}\n', encoding='utf-8')
+            (cmake / 'CMakeCache.txt').write_text(
+                f'CMAKE_HOME_DIRECTORY:INTERNAL={root}\n'
+                f'NOTEPAD4_SOURCE:PATH={original_core}\n'
+                f'VCPKG_INSTALLED_DIR:PATH={installed}\n'
+                'VCPKG_TARGET_TRIPLET:STRING=x64-linux-ci\n', encoding='utf-8')
             licenses = root / 'licenses'
             licenses.mkdir()
             (licenses / 'fixture.txt').write_text('Fixture license\n', encoding='utf-8')
-            notice = vcpkg / 'installed/x64-linux-ci/share/probe/copyright'
+            notice = installed / 'x64-linux-ci/share/probe/copyright'
             notice.parent.mkdir(parents=True)
             notice.write_text('Library license\n', encoding='utf-8')
             (root / 'po').mkdir()
@@ -49,7 +52,7 @@ class LinuxBundle(unittest.TestCase):
             self.assertIsNotNone(msgfmt, 'Real host msgfmt is required for the bundle check')
             for code in ('zh_CN', 'zh_TW'):
                 for domain in ('wxnotepad', 'wxstd'):
-                    catalog = cmake / 'locale' / code / 'LC_MESSAGES' / (domain + '.mo')
+                    catalog = runtime / 'locale' / code / 'LC_MESSAGES' / (domain + '.mo')
                     catalog.parent.mkdir(parents=True, exist_ok=True)
                     subprocess.run([msgfmt, '--check', '-o', catalog,
                                     ROOT / 'po/wxstd' / (code + '.po')], check=True)
@@ -65,17 +68,16 @@ class LinuxBundle(unittest.TestCase):
             source = root / 'bundle-probe.c'
             source.write_text('extern int library_answer(void);\n'
                               'int main(void) { return library_answer() == 42 ? 0 : 1; }\n', encoding='utf-8')
-            executable = cmake / 'wxnotepad'
+            executable = runtime / 'wxnotepad'
             subprocess.run(['gcc', '-g', source, f'-L{libraries}', '-lbundle_probe',
                             f'-Wl,-rpath,{libraries}', '-o', executable], check=True)
             original_bytes = executable.read_bytes()
             original_library_bytes = library.read_bytes()
 
-            with patch.multiple(CI, ROOT=root, WORK=work, BUILD=build, REPORTS=reports, VCPKG=vcpkg):
-                CI.bundle()
-
+            distributed = CI.bundle(cmake, executable, work)
             artifact = work / 'artifact'
-            distributed = artifact / 'wxnotepad'
+            self.assertEqual(distributed, artifact / 'wxnotepad')
+            self.assertTrue((work / 'reports/runtime-libraries.txt').is_file())
             self.assertEqual(executable.read_bytes(), original_bytes)
             self.assertEqual(library.read_bytes(), original_library_bytes)
             self.assertLess(distributed.stat().st_size, len(original_bytes))
@@ -100,7 +102,7 @@ class LinuxBundle(unittest.TestCase):
             for code in ('zh_CN', 'zh_TW'):
                 for domain in ('wxnotepad', 'wxstd'):
                     relative = Path('locale') / code / 'LC_MESSAGES' / (domain + '.mo')
-                    self.assertEqual((artifact / relative).read_bytes(), (cmake / relative).read_bytes())
+                    self.assertEqual((artifact / relative).read_bytes(), (runtime / relative).read_bytes())
                     with (artifact / relative).open('rb') as stream:
                         self.assertTrue(gettext.GNUTranslations(stream).info()['language'].startswith('zh'))
 
