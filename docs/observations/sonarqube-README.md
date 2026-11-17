@@ -8,10 +8,10 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [2026-11-16 array follow-up](#2026-11-16-array-follow-up),
-on [`codex/sonarcloud-small-fixes-2026-11-16`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-small-fixes-2026-11-16).
-[PR #221](https://github.com/1298345095/wxnotepad/pull/221) was merged into main
-at `c3d98ca4d270f2367b85ec9a96e0a14e582830ad` before this review.
+Latest review: [2026-11-17 small continuation after PR #222](#2026-11-17-small-continuation-after-pr-222),
+on [`codex/sonarcloud-small-followup-2026-11-17`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-small-followup-2026-11-17).
+[PR #222](https://github.com/1298345095/wxnotepad/pull/222) was merged into main
+at `e45dfe4ec6fd32f7622cd5647df2b7e7d3b5c825` before this review.
 
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
@@ -259,7 +259,7 @@ FALSE_POSITIVE filter in the same PR context. Their separate
 [PR disposition ledger](sonarqube-2026-11-16-pr219-dispositions.json) records
 all six verified entries.
 
-| Rule | Count | Evidence supporting the PR disposition |
+| Rule | PR count | Evidence supporting the PR disposition |
 | --- | --- | --- |
 | S1231 | 1 | The test executable's replacement allocation functions use `malloc` for raw storage and matching `free` calls in their delete replacements. Object construction and destruction remain with the new/delete expressions. Replacing that storage call with `new` would recurse into the replacement allocator. |
 | S5025 | 1 | The allocation fixture's `EditorFrame` follows the same wxWidgets top-level ownership and deferred `Destroy()` contract reviewed above. |
@@ -689,7 +689,7 @@ compiled both supported platforms. Each ordinary and coverage Linux backend
 reported one failure in the new surface fixture's paint-injection assertion;
 the preceding initialization, factory and clipping checks passed, as did the
 production parallel-task fixture. X11 recorded 202 passes, two existing skips
-and one failure; Wayland recorded 204 passes and one failure. Coverage analysis
+and one failure; Wayland recorded 204 passes, one failure. Coverage analysis
 stopped at its existing requirement that both backend test jobs pass.
 Windows recorded the same single paint-injection failure, 215 passes and one
 existing IME skip; its parallel-task regression and both diagnostics passed.
@@ -1466,3 +1466,81 @@ contains exact main/PR issue mappings, before/after source hashes, complete
 consumer review and the completed `85f296e` check/measure snapshot. The generated
 NLS table and other separately documented boundary/precision reviews retain
 their existing status.
+
+## 2026-11-17 small continuation after PR #222
+
+PR #222 merged at 2026-11-17 05:08:15 UTC as
+`e45dfe4ec6fd32f7622cd5647df2b7e7d3b5c825`. This batch starts from that
+merged revision on `codex/sonarcloud-small-followup-2026-11-17`.
+Fresh main-context MCP queries after the disposition below return **2,841**
+OPEN/CONFIRMED findings and **zero** security/reliability findings. The earlier
+3,745 count above is the historical, pre-merge snapshot.
+
+The [issue-by-issue record](sonarqube-2026-11-17-small-followup-review.json)
+records **13 code-fix keys and one verified false positive**, with source blob
+hashes and validation scope. Main still reports the 13 code-fix keys OPEN;
+merge and main analysis determine their subsequent server resolution.
+
+### Reviewed changes
+
+| Rule | Main keys | Change and preserved contract |
+| --- | ---: | --- |
+| S5945 | 2 | Store the private GB18030 and Big5 compatibility tables in fixed `std::array` objects. All 22 records, ordering and range-for consumers retain their values. |
+| S1659 | 2 | Separate the Big5 range fields and the six fixture-row strings into individual declarations, retaining types, order, initialization and scope. |
+| S6004 | 2 | Limit the byte `lead` and `optional<wchar_t>` compatibility result to their existing conditions/branches. Evaluation order and fallbacks are retained. |
+| S3562 | 1 | Make the CP950 switch's existing fallthrough explicit with `default: break`, continuing into the same single-byte/private-use mapping code. |
+| S7034 | 4 | Use `contains` for three file-variable character-membership checks and one fixture substring check. Preserve delimiter bytes, guards and the NUL-terminated needle contract. |
+| S7035 | 2 | Extract enum underlying values before the existing `uintptr_t`/`unsigned` casts in the language helper, retaining message widths and fold masks. |
+
+The application changes are in `1b3282b4`; the shared language-helper changes
+are in `70624df3`. The helper retains all native actions, fixture bytes,
+font/highlighting checks, fold assertions and Undo checks. Code and observation
+commits are prepared together before one branch publication. This batch adds
+no persistent test targets and leaves the workflows and analysis scope unchanged.
+
+### Verified cross-platform false positive
+
+S6004 key `AaHEzXZMhpq0YxBZ9SBn` recommends moving `EncodeChinese`'s `text`
+into its empty-check initializer. Complete source shows that the `__WXMSW__`
+branch subsequently reads `text->size()` and supplies `text->data()` to both
+`WideCharToMultiByte` calls. The common declaration keeps that conversion
+storage alive and in scope. Linux-only analysis omits these Windows consumers.
+
+The declaration is retained. Its issue-specific SonarCloud MCP transition
+succeeded with the platform-use explanation. Exact-key queries return one
+FALSE_POSITIVE match and zero OPEN/CONFIRMED matches; the legacy status field
+is RESOLVED. The ledger records the receipt and source evidence.
+
+### Local validation and hosted scope
+
+All three complete baseline files match their Git blob hashes. Reversing the
+explicit edits restores those baseline bytes. Clang 17 compiles the extracted
+compatibility helpers and complete file-variable parser in before/after
+namespaces with C++23 and `-O2 -Wall -Wextra -Werror -pedantic-errors`.
+The comparison exits zero and reports:
+
+- 22 identical table records, with matching structure sizes, alignments and
+  Big5 field offsets.
+- 2,228,228 encoding comparisons, 3,624,382 decoding comparisons and
+  3,624,380 sequence-width comparisons, covering both encoding choices,
+  all one/two-byte inputs and every GB18030-shaped four-byte sequence.
+- 554,344 file-variable parser comparisons covering option flags, quotes,
+  embedded NULs, BOMs, every byte delimiter and the 512-byte windows.
+- 873 standard-library membership comparisons and compile-time enum-cast
+  equivalence controls.
+
+Clangd 17's formatter reports zero edits for the three changed files with the
+repository's `.clang-format`. Canonical clang-format 23.1.2 and the complete
+native builds run in the existing hosted workflows; this local workspace has
+no wxWidgets SDK and the connected Windows runner is offline. The continuation
+PR records the exact published head and its resulting checks. At publication,
+those hosted results are pending; earlier revisions' successful checks remain
+attributed to their own revisions above.
+
+### Retained recommendations
+
+The generated NLS payload's S7040 issue keeps its coordinated generator/data
+review. Coordinate rounding and clipping, dynamic polyline count bounds,
+occurrence-marking time precision and the documented exception/inheritance
+recommendations retain their existing statuses. These behavior-sensitive items
+remain separate from this batch's declaration and membership changes.

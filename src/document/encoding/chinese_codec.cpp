@@ -3,6 +3,7 @@
 #include "document/encoding/chinese_codec.h"
 #include "UniConversion.h"
 #include <algorithm>
+#include <array>
 #include <wx/strconv.h>
 #ifdef __WXMSW__
 #include <windows.h>
@@ -39,7 +40,7 @@ struct GbMapping {
     wchar_t revised;
     unsigned four;
 };
-constexpr GbMapping gbMappings[] = {
+constexpr std::array<GbMapping, 19> gbMappings = {{
     {0xa6d9, 0xe78d, 0xfe10, 0x84318236}, {0xa6da, 0xe78e, 0xfe12, 0x84318238}, {0xa6db, 0xe78f, 0xfe11, 0x84318237},
     {0xa6dc, 0xe790, 0xfe13, 0x84318239}, {0xa6dd, 0xe791, 0xfe14, 0x84318330}, {0xa6de, 0xe792, 0xfe15, 0x84318331},
     {0xa6df, 0xe793, 0xfe16, 0x84318332}, {0xa6ec, 0xe794, 0xfe17, 0x84318333}, {0xa6ed, 0xe795, 0xfe18, 0x84318334},
@@ -47,11 +48,14 @@ constexpr GbMapping gbMappings[] = {
     {0xfe61, 0xe826, 0x9fb5, 0x82359038}, {0xfe66, 0xe82b, 0x9fb6, 0x82359039}, {0xfe67, 0xe82c, 0x9fb7, 0x82359130},
     {0xfe6d, 0xe832, 0x9fb8, 0x82359131}, {0xfe7e, 0xe843, 0x9fb9, 0x82359132}, {0xfe90, 0xe854, 0x9fba, 0x82359133},
     {0xfea0, 0xe864, 0x9fbb, 0x82359134},
-};
+}};
 struct Big5PuaRange {
-    unsigned firstLead, lastLead, unicode;
+    unsigned firstLead;
+    unsigned lastLead;
+    unsigned unicode;
 };
-constexpr Big5PuaRange big5PuaRanges[] = {{0x81, 0x8d, 0xeeb8}, {0x8e, 0xa0, 0xe311}, {0xfa, 0xfe, 0xe000}};
+constexpr std::array<Big5PuaRange, 3> big5PuaRanges = {
+    {{0x81, 0x8d, 0xeeb8}, {0x8e, 0xa0, 0xe311}, {0xfa, 0xfe, 0xe000}}};
 constexpr unsigned Big5TrailsPerLead = 157;
 constexpr unsigned Big5LowTrailCount = 0x7e - 0x40 + 1;
 bool Big5Trail(unsigned trail) {
@@ -83,8 +87,7 @@ std::optional<wchar_t> CompatibilityDecode(std::string_view bytes, FileEncoding 
 }
 
 size_t ChineseSequenceWidth(std::string_view bytes, FileEncoding encoding) {
-    const auto lead = static_cast<unsigned char>(bytes[0]);
-    if (lead < 0x81 || lead > 0xfe) return 1;
+    if (const auto lead = static_cast<unsigned char>(bytes[0]); lead < 0x81 || lead > 0xfe) return 1;
     if (encoding == FileEncoding::Big5) {
         // CP950 consumes malformed pairs together except for NUL:
         // the original Windows conversion retains that code unit.
@@ -126,6 +129,8 @@ std::optional<std::string> CompatibilityEncode(unsigned scalar, FileEncoding enc
             return PackedBytes(0xf9eb);
         case 0x256a:
             return PackedBytes(0xf9ea);
+        default:
+            break;
         }
         if (scalar == 0x80) return std::string(1, '\x{80}');
         if (scalar == 0xf8f8) return std::string(1, '\x{ff}');
@@ -161,8 +166,8 @@ std::optional<std::string> DecodeChinese(std::string_view bytes, FileEncoding en
         const auto lead = static_cast<unsigned char>(bytes[offset]);
         const auto width = ChineseSequenceWidth(bytes.substr(offset), encoding);
         const auto piece = bytes.substr(offset, width);
-        const auto compatible = CompatibilityDecode(piece, encoding);
-        if (compatible.has_value() && !(strict && lead == 0xff))
+        if (const auto compatible = CompatibilityDecode(piece, encoding);
+            compatible.has_value() && !(strict && lead == 0xff))
             text += *compatible;
         else if (const auto converted = Wide(converter, piece))
             text += *converted;

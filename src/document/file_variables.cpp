@@ -32,7 +32,7 @@ std::optional<std::string_view> FindVariable(std::string_view text, std::string_
 std::optional<int> IntegerVariable(std::string_view text, std::string_view name) {
     auto value = FindVariable(text, name);
     if (!value) return std::nullopt;
-    while (!value->empty() && std::string_view(":=\"' \t").find(value->front()) != std::string_view::npos)
+    while (!value->empty() && std::string_view(":=\"' \t").contains(value->front()))
         value->remove_prefix(1);
     const std::string numberText(*value);
     char* end = nullptr;
@@ -50,14 +50,13 @@ std::optional<std::string> StringVariable(std::string_view text, std::string_vie
     auto value = FindVariable(text, name);
     if (!value) return std::nullopt;
     bool quoted = false;
-    while (!value->empty() && std::string_view(":=\"' \t").find(value->front()) != std::string_view::npos) {
+    while (!value->empty() && std::string_view(":=\"' \t").contains(value->front())) {
         quoted |= value->front() == '\'' || value->front() == '"';
         value->remove_prefix(1);
     }
     std::string result;
     for (const unsigned char ch : value->substr(0, 31)) {
-        if (!(AlphaNumeric(ch) || std::string_view("+-/_#").find(static_cast<char>(ch)) != std::string_view::npos ||
-              (quoted && ch == ' ')))
+        if (!(AlphaNumeric(ch) || std::string_view("+-/_#").contains(static_cast<char>(ch)) || (quoted && ch == ' ')))
             break;
         result += static_cast<char>(ch);
     }
