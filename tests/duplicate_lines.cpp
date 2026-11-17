@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "file_helpers.h"
 #include "native_search_helpers.h"
 #include "settings/settings_store.h"
@@ -63,7 +64,7 @@ void StreamFixtures(EditorFrame* frame) {
         Scintilla::EndOfLine mode = Scintilla::EndOfLine::Lf;
     };
     // Literal results from EditSortLines(DontSort | MergeDuplicate/RemoveDuplicate), 89b8b36.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 22> fixtures = {{
         {true, "A\nB\nA\nC\nA", 0, 9, "A\nB\nC", 0, 5},
         {false, "A\nB\nA\nC\nA", 9, 0, "B\nC", 3, 0},
         {true, "PRE\nA\nB\nA\nTAIL", 5, 10, "PRE\nA\nB\nTAIL", 4, 8},
@@ -86,7 +87,7 @@ void StreamFixtures(EditorFrame* frame) {
         {true, "é\né\né\nX", 0, 12, "é\né\nX", 0, 8},
         {true, "A\nB", 1, 3, "A\nB", 0, 3},
         {false, "A\nB", 3, 1, "A\nB", 3, 0},
-    };
+    }};
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {
         Reset(editor, fixture.before, fixture.anchor, fixture.caret, fixture.mode);
@@ -221,7 +222,7 @@ void SavedBytes(EditorFrame* frame) {
         std::string merged;
         std::string removed;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8-bom", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\r\nB\n中\rC", "\x{ef}\x{bb}\x{bf}中\r\nB\r\nC",
          "\x{ef}\x{bb}\x{bf}"
          "B\r\nC"},
@@ -232,7 +233,7 @@ void SavedBytes(EditorFrame* frame) {
                      18),
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0d}\0\x{0a}\0\x{42}\0\x{0d}\0\x{0a}\0\x{43}\0", 16),
          std::string("\x{ff}\x{fe}\x{42}\0\x{0d}\0\x{0a}\0\x{43}\0", 10)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         for (const bool merge : {true, false}) {
             using enum Scintilla::Message;

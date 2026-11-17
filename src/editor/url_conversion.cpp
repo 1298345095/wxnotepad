@@ -94,7 +94,7 @@ std::string Escape(std::string_view text, bool component, bool slash = false, bo
         const bool unreserved = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') ||
                                 std::string_view("-._~").find(static_cast<char>(ch)) != std::string_view::npos;
         const bool unsafe = ch <= ' ' || ch >= 127 ||
-                            std::string_view("\"<>&\\^`{}|[]").find(static_cast<char>(ch)) != std::string_view::npos;
+                            std::string_view(R"("<>&\^`{}|[])").find(static_cast<char>(ch)) != std::string_view::npos;
         if (component ? !unreserved : unsafe || (slash && ch == '/') || (extras && (ch == '?' || ch == '#'))) {
             result += '%';
             result += hex[ch >> 4];

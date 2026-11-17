@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <array>
 #include "native_fold_helpers.h"
 #include "native_key_helpers.h"
 #include "file_helpers.h"
@@ -125,13 +126,13 @@ void Files(EditorFrame* frame, const std::filesystem::path& directory) {
         std::string expected;
         std::optional<FileEncoding> encoding = std::nullopt;
     };
-    const Sample samples[] = {
+    const std::array<Sample, 5> samples = {{
         {"utf8", "中文\r\nnext\rlast", "中文\nnext\nlast"},
         {"utf8-bom", "\x{ef}\x{bb}\x{bf}中文\r\nnext\rlast", "\x{ef}\x{bb}\x{bf}中文\nnext\nlast"},
         {"utf16-bom", "\x{ff}\x{fe}\x{2d}\x{4e}\r\0\n\0n\0\r\0z\0"s, "\x{ff}\x{fe}\x{2d}\x{4e}\n\0n\0\n\0z\0"s},
         {"utf16-no-bom", "\x{2d}\x{4e}\r\0\n\0n\0\r\0z\0"s, "\x{2d}\x{4e}\n\0n\0\n\0z\0"s, FileEncoding::Utf16Le},
         {"gbk", "\x{d6}\x{d0}\r\nnext\rlast", "\x{d6}\x{d0}\nnext\nlast", FileEncoding::Gbk},
-    };
+    }};
     std::filesystem::create_directory(directory);
     for (const auto& sample : samples) {
         using enum Scintilla::Message;
@@ -227,9 +228,10 @@ public:
                     const char* expected;
                     Scintilla::EndOfLine mode;
                 };
-                const Mode modes[] = {{"CRLF", "中文\r\nsecond\r\nthird\r\nlast", Scintilla::EndOfLine::CrLf},
-                                      {"LF", "中文\nsecond\nthird\nlast", Scintilla::EndOfLine::Lf},
-                                      {"CR", "中文\rsecond\rthird\rlast", Scintilla::EndOfLine::Cr}};
+                const std::array<Mode, 3> modes = {
+                    {{"CRLF", "中文\r\nsecond\r\nthird\r\nlast", Scintilla::EndOfLine::CrLf},
+                     {"LF", "中文\nsecond\nthird\nlast", Scintilla::EndOfLine::Lf},
+                     {"CR", "中文\rsecond\rthird\rlast", Scintilla::EndOfLine::Cr}}};
                 for (const auto& mode : modes) {
                     using enum Scintilla::Message;
                     editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中文\r\nsecond\nthird\rlast"));

@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <array>
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
@@ -58,7 +59,7 @@ void StreamFixtures(EditorFrame* frame) {
         Scintilla::EndOfLine mode = Scintilla::EndOfLine::Lf;
     };
     // Literal outcomes from Editor::Duplicate/LineTranspose in pinned 89b8b36.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 22> fixtures = {{
         {"Duplicate", "", 0, 0, "\n", 0, 0},
         {"Duplicate", "AB", 1, 1, "AB\nAB", 1, 1},
         {"Duplicate", "AB\nC", 1, 0, "AAB\nC", 1, 0},
@@ -81,7 +82,7 @@ void StreamFixtures(EditorFrame* frame) {
         {"Transpose", "A\r\n", 3, 3, "\r\nA", 2, 2, Scintilla::EndOfLine::CrLf},
         {"Transpose", "中😀\r\n尾", 9, 12, "尾\r\n中😀", 5, 5, Scintilla::EndOfLine::CrLf},
         {"Transpose", "same\nsame", 6, 6, "same\nsame", 5, 5},
-    };
+    }};
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret, fixture.mode);
@@ -101,8 +102,8 @@ void StreamFixtures(EditorFrame* frame) {
 void AvailabilityAndNoChange(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    const std::pair<const char*, const char*> commands[] = {
-        {"Duplicate", "Alt+D"}, {"Duplicate Line", "Ctrl+D"}, {"Transpose", "Alt+S"}};
+    const std::array<std::pair<const char*, const char*>, 3> commands = {
+        {{"Duplicate", "Alt+D"}, {"Duplicate Line", "Ctrl+D"}, {"Transpose", "Alt+S"}}};
     for (const auto& [label, shortcut] : commands) {
         const int id = CommandId(frame, label);
         Require(frame->GetMenuBar()->FindItem(id)->GetItemLabel().AfterFirst('\t') == shortcut,
@@ -306,7 +307,7 @@ void SavedBytes(EditorFrame* frame) {
         std::string before;
         std::array<std::string, 3> after;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8-bom",
          FileEncoding::Utf8,
          "\x{ef}\x{bb}\x{bf}中\r\nB",
@@ -325,7 +326,7 @@ void SavedBytes(EditorFrame* frame) {
           std::string("\x{ff}\x{fe}"
                       "B\0\r\0\n\0\x{2d}\x{4e}",
                       10)}},
-    };
+    }};
     const std::array<const char*, 3> commands = {"Duplicate", "Duplicate Line", "Transpose"};
     const std::array<const char*, 3> text = {"中中\r\nB", "中\r\n中\r\nB", "B\r\n中"};
     const auto directory = TestFiles::TemporaryDirectory("duplicate-transpose");

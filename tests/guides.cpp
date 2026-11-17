@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor_test_helpers.h"
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
@@ -331,12 +332,12 @@ void DisplayInvariant(EditorFrame* frame) {
 }
 void SavedHistoryAndViews(EditorFrame* frame) {
     auto* editor = frame->Editor();
-    const TestFiles::EncodedFixture fixtures[] = {
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\r\n", "\x{ef}\x{bb}\x{bf}中\r\n!"},
         {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\r", "\x{d6}\x{d0}\r!"},
         {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0a}\x{00}", 6),
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0a}\x{00}\x{21}\x{00}", 8)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         const auto path = TestFiles::TemporaryDirectory() / std::filesystem::path(u8"显示状态-") / fixture.name;

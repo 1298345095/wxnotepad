@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "file_command_driver.h"
@@ -96,13 +97,13 @@ void EncodedRevert(EditorFrame* frame, const std::filesystem::path& path) {
         std::string expected;
         bool bom;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {FileEncoding::Utf8, "before \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}",
          "after \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}", "after \x{e4}\x{b8}\x{ad}\x{e6}\x{96}\x{87}", false},
         {FileEncoding::Gbk, "\x{d6}\x{d0}\x{ce}\x{c4}", "plain\r\nsecond\nthird\r", "plain\r\nsecond\nthird\r", false},
         {FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}", 6),
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}", 4), "\x{e4}\x{b8}\x{ad}", true},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         TestFiles::WriteBytes(path, fixture.before);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,

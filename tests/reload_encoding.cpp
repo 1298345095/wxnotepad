@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
@@ -192,16 +193,16 @@ void DeliveredCodecs(EditorFrame* frame) {
         bool bom;
         std::string text;
     };
-    const Fixture fixtures[] = {
-        {"\x{e4}\x{b8}\x{ad}", Utf8, 0, "UTF-8", false, "中"},
-        {"\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}", Utf8, 0, "UTF-8", true, "中"},
-        {"\x{2d}\x{4e}", Utf16Le, 1, "UTF-16LE", false, "中"},
-        {"\x{ff}\x{fe}\x{2d}\x{4e}", Utf16Le, 1, "UTF-16LE", true, "中"},
-        {"\x{d6}\x{d0}", Gbk, 2, "GBK (CP936)", false, "中"},
-        {"# coding: utf-8\n\x{d6}\x{d0}", Gbk, 2, "GBK (CP936)", false, "# coding: utf-8\n中"},
-        {"a\r\nb\nc\r", Utf8, 0, "UTF-8", false, "a\r\nb\nc\r"},
-        {std::string("\x{fe}\x{ff}\x{4e}\x{2d}", 4), Utf16Be, 3, "UTF-16BE", true, "中"},
-        {std::string("\0a\0\r\0\n\0b\0\n\0c\0\r", 14), Utf16Be, 3, "UTF-16BE", false, "a\r\nb\nc\r"}};
+    const std::array<Fixture, 9> fixtures = {
+        {{"\x{e4}\x{b8}\x{ad}", Utf8, 0, "UTF-8", false, "中"},
+         {"\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}", Utf8, 0, "UTF-8", true, "中"},
+         {"\x{2d}\x{4e}", Utf16Le, 1, "UTF-16LE", false, "中"},
+         {"\x{ff}\x{fe}\x{2d}\x{4e}", Utf16Le, 1, "UTF-16LE", true, "中"},
+         {"\x{d6}\x{d0}", Gbk, 2, "GBK (CP936)", false, "中"},
+         {"# coding: utf-8\n\x{d6}\x{d0}", Gbk, 2, "GBK (CP936)", false, "# coding: utf-8\n中"},
+         {"a\r\nb\nc\r", Utf8, 0, "UTF-8", false, "a\r\nb\nc\r"},
+         {std::string("\x{fe}\x{ff}\x{4e}\x{2d}", 4), Utf16Be, 3, "UTF-16BE", true, "中"},
+         {std::string("\0a\0\r\0\n\0b\0\n\0c\0\r", 14), Utf16Be, 3, "UTF-16BE", false, "a\r\nb\nc\r"}}};
     const auto path = TestFiles::TemporaryDirectory("codecs.txt");
     for (const auto& fixture : fixtures) {
         TestFiles::WriteBytes(path, "initial");

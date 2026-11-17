@@ -105,18 +105,19 @@ def capture_rectangle_notification(user, process, callback, frame, send, state, 
 def write_reference_header(path, results):
     def literal(value):
         return json.dumps(value, ensure_ascii=False).replace("\\u0000", "\\0")
+    count = sum(1 for result in results if "command" in result and not result["reverse"])
     rows = ["// Captured from Notepad4 89b8b36 by tools/capture_number_radix.py.",
             "// Original Windows process, WM_COMMAND and Scintilla public messages.",
-            "#pragma once", "#include <string_view>", "namespace NumberRadixReference {",
+            "#pragma once", "#include <array>", "#include <string_view>", "namespace NumberRadixReference {",
             "struct Fixture { const char* command; std::string_view before; std::string_view after; };",
-            "inline constexpr Fixture fixtures[] = {"]
+            f"inline constexpr std::array<Fixture, {count}> fixtures = {{{{"]
     for result in results:
         if "command" in result and not result["reverse"]:
             before, after = result["before"], result["after"]["text"]
             rows.append(f'    {{{literal(result["command"])}, '
                         f'{{{literal(before)}, {len(before.encode("utf-8"))}}}, '
                         f'{{{literal(after)}, {len(after.encode("utf-8"))}}}}},')
-    rows.extend(["};", "}", ""])
+    rows.extend(["}};", "}", ""])
     Path(path).write_text("\n".join(rows), encoding="utf-8")
 
 

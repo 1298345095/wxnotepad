@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include <utility>
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -68,7 +69,7 @@ void Fixtures(EditorFrame* frame) {
     };
     // Literal outcomes follow Notepad4 89b8b36 Edit.cpp:3548-3617 and its
     // PositionAfter/PositionBefore operations, including independent combining marks.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 24> fixtures = {{
         {"first caret uses current line", "abc\ndef", 2, 2, true, "bc\ndef", 1, 1},
         {"last caret uses current line", "abc\ndef", 1, 1, false, "ab\ndef", 1, 1},
         {"first single-line reversed selection", "abc\ndef", 3, 1, true, "bc\ndef", 2, 0},
@@ -93,7 +94,7 @@ void Fixtures(EditorFrame* frame) {
         {"last removes independent combining mark", "xe\u{0301}\n", 0, 5, false, "xe\n", 0, 3},
         {"first current line with supplementary caret", "😀x", 4, 4, true, "x", 0, 0},
         {"last current line with supplementary caret", "x😀", 5, 5, false, "x", 1, 1},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
@@ -198,7 +199,7 @@ void SavedBytes(EditorFrame* frame) {
         std::string first;
         std::string last;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中A\r\n😀B\nxe\u{0301}",
          "\x{ef}\x{bb}\x{bf}"
          "A\r\nB\ne\u{0301}",
@@ -220,7 +221,7 @@ void SavedBytes(EditorFrame* frame) {
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0d}\0\x{0a}\0\x{3d}\x{d8}\0\x{de}\x{0a}\0\x{78}\0"
                      "\x{65}\0",
                      18)},
-    };
+    }};
     for (const auto& fixture : fixtures)
         for (const bool first : {true, false}) {
             using enum Scintilla::Message;

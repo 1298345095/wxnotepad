@@ -55,22 +55,23 @@ struct StartupOptions {
     }
 
     bool Parse(int argc, const wxCmdLineArgsArray& argv) {
-        for (int i = 1; i < argc; ++i) {
-            const wxString argument(argv[i]);
-            if (argument == "--observe" && i + 1 < argc)
-                observation = argv[++i];
-            else if (argument == "--startup-file" && i + 1 < argc)
-                startup = argv[++i];
-            else if (argument == "--window-position" && i + 1 < argc)
-                windowPosition = argv[++i];
+        int i = 1;
+        while (i < argc) {
+            const wxString argument(argv[i++]);
+            if (argument == "--observe" && i < argc)
+                observation = argv[i++];
+            else if (argument == "--startup-file" && i < argc)
+                startup = argv[i++];
+            else if (argument == "--window-position" && i < argc)
+                windowPosition = argv[i++];
             else if (argument == "--read-only")
                 readOnly = true;
-            else if (argument == "--startup-encoding" && i + 1 < argc) {
-                if (!ParseEncoding(argv[++i])) return false;
-            } else if (argument == "--startup-scheme" && i + 1 < argc) {
-                if (!ParseScheme(argv[++i])) return false;
-            } else if (argument == "--startup-caret" && i + 1 < argc) {
-                if (!ParseCaret(argv[++i])) return false;
+            else if (argument == "--startup-encoding" && i < argc) {
+                if (!ParseEncoding(argv[i++])) return false;
+            } else if (argument == "--startup-scheme" && i < argc) {
+                if (!ParseScheme(argv[i++])) return false;
+            } else if (argument == "--startup-caret" && i < argc) {
+                if (!ParseCaret(argv[i++])) return false;
             } else
                 return false;
         }
@@ -100,9 +101,9 @@ public:
         frame->Editor()->SetFocus();
         // An external acceptance fixture can observe independently relaunched
         // processes through the same opt-in shown-application seam.
-        wxString observationRoot;
-        if (options.observation.empty() && wxGetEnv("WXNOTEPAD_OBSERVE_ROOT", &observationRoot) &&
-            !observationRoot.empty()) {
+        if (wxString observationRoot; options.observation.empty() &&
+                                      wxGetEnv("WXNOTEPAD_OBSERVE_ROOT", &observationRoot) &&
+                                      !observationRoot.empty()) {
             options.observation = wxFileName(observationRoot, wxString::Format("%lu", wxGetProcessId())).GetFullPath();
             if (!wxFileName::Mkdir(options.observation, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) return false;
         }

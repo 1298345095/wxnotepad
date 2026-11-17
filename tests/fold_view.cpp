@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include "native_fold_helpers.h"
 #include "native_paint_helpers.h"
 #include <wx/menu.h>
@@ -68,12 +69,12 @@ void ReadOnlyLanguageFolds(EditorFrame* frame, int show) {
         const char* text;
         bool header;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 4> fixtures = {{
         {"C/C++", "void outer() {\n  if (true) {\n    call();\n  }\n}\nafter();\n", true},
         {"Python", "class Outer:\n    def inner(self):\n        call()\n    tail()\nafter()\n", true},
         {"JSON", "{\n  \"items\": [\n    1,\n    2\n  ]\n}\n", true},
         {"Plain Text", "plain\nlast", false},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         editor->Send(SetText, 0, reinterpret_cast<intptr_t>(fixture.text));

@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <array>
 #include "app/editor_frame.h"
 #include "file_helpers.h"
 #include "native_search_helpers.h"
@@ -136,11 +137,12 @@ public:
                 std::puts("PASS: zero matches, byte-identical matches, empty query and New preserve editing history");
                 const auto path = TestFiles::TemporaryDirectory() /
                                   ("wxnotepad-replace-all-" + std::to_string(wxGetProcessId()) + ".txt");
-                const unsigned char before[] = {0xff, 0xfe, 'o',  0, 'n', 0, 'e', 0, '\r', 0, '\n', 0, 'o',  0, 'n', 0,
-                                                'e',  0,    '\n', 0, 'l', 0, 'a', 0, 's',  0, 't',  0, '\r', 0};
+                const std::array<unsigned char, 30> before = {{0xff, 0xfe, 'o', 0, 'n', 0, 'e', 0, '\r', 0,
+                                                               '\n', 0,    'o', 0, 'n', 0, 'e', 0, '\n', 0,
+                                                               'l',  0,    'a', 0, 's', 0, 't', 0, '\r', 0}};
                 {
                     std::ofstream file(path, std::ios::binary);
-                    file.write(reinterpret_cast<const char*>(before), sizeof before);
+                    file.write(reinterpret_cast<const char*>(before.data()), before.size());
                 }
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "UTF-16LE fixture must open");
                 query->SetValue("one");
@@ -149,13 +151,14 @@ public:
                 Require(Text(editor) == "好\r\n好\nlast\r" && result->GetLabel() == "2 replacements",
                         "Replace All must preserve untouched mixed newline bytes");
                 Command(frame, wxID_SAVE);
-                const unsigned char expected[] = {0xff, 0xfe, 0x7d, 0x59, '\r', 0,   '\n', 0,   0x7d, 0x59, '\n',
-                                                  0,    'l',  0,    'a',  0,    's', 0,    't', 0,    '\r', 0};
+                const std::array<unsigned char, 22> expected = {{0xff, 0xfe, 0x7d, 0x59, '\r', 0, '\n', 0,
+                                                                 0x7d, 0x59, '\n', 0,    'l',  0, 'a',  0,
+                                                                 's',  0,    't',  0,    '\r', 0}};
                 const std::string bytes = [&] {
                     std::ifstream file(path, std::ios::binary);
                     return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
                 }();
-                Require(bytes == std::string(reinterpret_cast<const char*>(expected), sizeof expected) &&
+                Require(bytes == std::string(reinterpret_cast<const char*>(expected.data()), expected.size()) &&
                             frame->DocumentEncoding() == FileEncoding::Utf16Le && frame->DocumentHasBom() &&
                             !editor->Send(Message::GetModify),
                         "Save must preserve UTF-16LE, BOM, mixed EOL and exact replaced bytes");

@@ -49,12 +49,12 @@ void OriginalShell(EditorFrame* frame, const std::filesystem::path& directory) {
     // the external acceptance evidence. End offsets cover every fixture byte.
     const std::string bash = "#!/bin/bash\n# comment\nif true; then\n\techo \"hello $HOME ${name:-world} $(date)\"\n"
                              "\techo 'single' `pwd`\n\tcat <<'EOF'\nheredoc $literal\nEOF\nfi\n";
-    constexpr StyleRun bashRuns[] = {{11, 1},  {12, 0},  {21, 1},  {22, 0},  {24, 5},  {25, 0},  {29, 5},  {30, 2},
-                                     {31, 0},  {35, 5},  {37, 0},  {41, 5},  {42, 0},  {49, 10}, {54, 6},  {55, 10},
-                                     {69, 11}, {70, 10}, {72, 2},  {76, 5},  {77, 2},  {78, 10}, {80, 0},  {84, 5},
-                                     {85, 0},  {93, 9},  {94, 0},  {99, 12}, {101, 0}, {104, 5}, {105, 0}, {112, 7},
-                                     {130, 8}, {133, 7}, {134, 0}, {136, 5}, {137, 0}};
-    constexpr int bashFolds[] = {9216, 1025, 9216, 1025, 1025, 9217, 1026, 1026, 1025, 1024};
+    constexpr std::array<StyleRun, 37> bashRuns = {
+        {{11, 1},  {12, 0},  {21, 1},  {22, 0},  {24, 5},  {25, 0},  {29, 5},  {30, 2},  {31, 0},  {35, 5},
+         {37, 0},  {41, 5},  {42, 0},  {49, 10}, {54, 6},  {55, 10}, {69, 11}, {70, 10}, {72, 2},  {76, 5},
+         {77, 2},  {78, 10}, {80, 0},  {84, 5},  {85, 0},  {93, 9},  {94, 0},  {99, 12}, {101, 0}, {104, 5},
+         {105, 0}, {112, 7}, {130, 8}, {133, 7}, {134, 0}, {136, 5}, {137, 0}}};
+    constexpr std::array<int, 10> bashFolds = {{9216, 1025, 9216, 1025, 1025, 9217, 1026, 1026, 1025, 1024}};
     const auto path = directory / "original.sh";
     std::ofstream(path, std::ios::binary) << bash;
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "original fixture must open");
@@ -92,18 +92,32 @@ void OriginalShell(EditorFrame* frame, const std::filesystem::path& directory) {
     std::ofstream(cshPath, std::ios::binary) << "#!/bin/csh\nforeach item (a b)\n\techo \"$item\"\nend\n";
     Require(frame->Open(TestFiles::Filename(cshPath)).status == OpenStatus::Opened, "C Shell fixture must open");
     Paint(frame);
-    constexpr StyleRun cshRuns[] = {{10, 1},  {11, 0}, {18, 5},  {19, 0}, {23, 14}, {24, 0}, {25, 2},
-                                    {26, 4},  {27, 0}, {28, 4},  {29, 2}, {31, 0},  {35, 5}, {36, 0},
-                                    {37, 10}, {42, 6}, {43, 10}, {44, 0}, {47, 5},  {48, 0}};
-    constexpr int cshFolds[] = {1024, 9216, 1025, 1025, 1024};
+    constexpr std::array<StyleRun, 20> cshRuns = {{{10, 1},  {11, 0}, {18, 5},  {19, 0}, {23, 14}, {24, 0}, {25, 2},
+                                                   {26, 4},  {27, 0}, {28, 4},  {29, 2}, {31, 0},  {35, 5}, {36, 0},
+                                                   {37, 10}, {42, 6}, {43, 10}, {44, 0}, {47, 5},  {48, 0}}};
+    constexpr std::array<int, 5> cshFolds = {{1024, 9216, 1025, 1025, 1024}};
     OriginalRuns(editor, cshRuns, cshFolds);
     const auto m4Path = directory / "original.m4";
     std::ofstream(m4Path, std::ios::binary) << "dnl comment\ndefine(`name', `value')\nifdef(`name', `yes', `no')\n";
     Require(frame->Open(TestFiles::Filename(m4Path)).status == OpenStatus::Opened, "m4 fixture must open");
     Paint(frame);
-    constexpr StyleRun m4Runs[] = {{11, 1}, {12, 0},  {18, 14}, {19, 2}, {25, 12}, {26, 2}, {27, 0},  {33, 12},
-                                   {48, 9}, {51, 12}, {54, 4},  {55, 0}, {56, 2},  {57, 0}, {60, 12}, {63, 9}};
-    constexpr int m4Folds[] = {1024, 1024, 1024, 1024};
+    constexpr std::array<StyleRun, 16> m4Runs = {{{11, 1},
+                                                  {12, 0},
+                                                  {18, 14},
+                                                  {19, 2},
+                                                  {25, 12},
+                                                  {26, 2},
+                                                  {27, 0},
+                                                  {33, 12},
+                                                  {48, 9},
+                                                  {51, 12},
+                                                  {54, 4},
+                                                  {55, 0},
+                                                  {56, 2},
+                                                  {57, 0},
+                                                  {60, 12},
+                                                  {63, 9}}};
+    constexpr std::array<int, 4> m4Folds = {{1024, 1024, 1024, 1024}};
     OriginalRuns(editor, m4Runs, m4Folds);
     std::puts(
         "PASS: all original shell style runs/fold levels, incremental Undo/Redo, fold commands and folded search");

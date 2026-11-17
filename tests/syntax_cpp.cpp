@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <array>
 #include "app/editor_frame.h"
 #include "syntax_test_helpers.h"
 #include "file_helpers.h"
@@ -38,9 +39,9 @@ void Delete(EditorControl* editor) {
 using TestEditor::Text;
 using TestSyntax::Style;
 std::string Font(EditorControl* editor, int style) {
-    char font[256]{};
-    editor->Send(Message::StyleGetFont, style, reinterpret_cast<intptr_t>(font));
-    return font;
+    std::array<char, 256> font{};
+    editor->Send(Message::StyleGetFont, style, reinterpret_cast<intptr_t>(font.data()));
+    return font.data();
 }
 class SyntaxApp final : public wxApp {
 public:

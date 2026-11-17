@@ -4,7 +4,7 @@
 // Copyright and BSD 3-Clause license: licenses/Notepad4.txt.
 // Full original groups and attributes, including completion-only lists.
 // clang-format off
-constexpr const char* cppKeywords[] = {
+constexpr auto cppKeywords = std::to_array<const char*>({
 "break case const continue default do else enum extern for "
 "goto if inline register restrict return sizeof static struct "
 "switch typedef union volatile while "
@@ -864,8 +864,8 @@ constexpr const char* cppKeywords[] = {
 // <thread> <mutex>
 "defer_lock try_to_lock adopt_lock nostopstate "
 "launch async deferred ready timeout "
-};
-constexpr SyntaxKeywords cppLists[] = {
+});
+constexpr auto cppLists = std::to_array<SyntaxKeywords>({
     {cppKeywords[0] ? cppKeywords[0] : "", 0U << 8U},
     {cppKeywords[1] ? cppKeywords[1] : "", 0U << 8U},
     {cppKeywords[2] ? cppKeywords[2] : "", 8U << 8U},
@@ -882,8 +882,8 @@ constexpr SyntaxKeywords cppLists[] = {
     {cppKeywords[13] ? cppKeywords[13] : "", 4U << 8U},
     {cppKeywords[14] ? cppKeywords[14] : "", 4U << 8U},
     {cppKeywords[15] ? cppKeywords[15] : "", 4U << 8U},
-};
-constexpr SyntaxStyle cppStyles[] = {
+});
+constexpr auto cppStyles = std::to_array<SyntaxStyle>({
     {SCE_C_WORD, 0x0000FF, 0xFFFFFF, false, false, false},
     {SCE_C_2NDWORD, 0x0000FF, 0xFFFFFF, false, false, false},
     {SCE_C_WORD2, 0x0000FF, 0xFFFFFF, false, false, false},
@@ -916,7 +916,7 @@ constexpr SyntaxStyle cppStyles[] = {
     {SCE_C_OPERATOR, 0xB000B0, 0xFFFFFF, false, false, false},
     {SCE_C_ASM_INSTRUCTION, 0x0080FF, 0xFFFFFF, false, false, false},
     {SCE_C_ASM_REGISTER, 0xFF8000, 0xFFFFFF, false, false, false},
-};
+});
 constexpr SyntaxOriginalMetadata cppOriginal = {960, 4, 4, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3), 0, '\\', SCE_C_ESCAPECHAR, 0, 0, SCE_C_CHARACTER, SCE_C_NUMBER, SCE_C_OPERATOR, 0, SCE_C_COMMENTDOC_TAG_XML, SCE_C_CHARACTER, SCE_C_ESCAPECHAR};
 constexpr const char* cppSettingsSection = "C/C++ Source";
 // clang-format on

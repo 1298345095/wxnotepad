@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <array>
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
 #include "settings/settings_store.h"
@@ -119,10 +120,10 @@ public:
                     Require(!entry.path().filename().u8string().contains(u8".wxnotepad-"),
                             "failed saves must clean temporary siblings");
                 std::puts("PASS: Save As cancellation and creation/replacement failures preserve session and disk");
-                const std::string samples[] = {"", "\x{ef}\x{bb}\x{bf}", "ASCII\r\n",
-                                               "\x{ef}\x{bb}\x{bf}"
-                                               "中文😀\n",
-                                               "one\r\ntwo\nthree\r"};
+                const std::array<std::string, 5> samples = {{"", "\x{ef}\x{bb}\x{bf}", "ASCII\r\n",
+                                                             "\x{ef}\x{bb}\x{bf}"
+                                                             "中文😀\n",
+                                                             "one\r\ntwo\nthree\r"}};
                 for (size_t index = 0; index < std::size(samples); ++index) {
                     const auto input = directory / ("input-" + std::to_string(index) + ".txt");
                     const auto output = directory / ("output-" + std::to_string(index) + ".txt");

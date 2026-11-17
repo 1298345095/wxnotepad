@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
@@ -43,11 +44,11 @@ struct DropObservation {
     }
 };
 void PeerWrite(const std::filesystem::path& path, const wxString& text) {
-    const wxString arguments[] = {wxStandardPaths::Get().GetExecutablePath(), "--write-file", TestFiles::Filename(path),
-                                  text};
-    const wchar_t* argv[] = {arguments[0].wc_str(), arguments[1].wc_str(), arguments[2].wc_str(), arguments[3].wc_str(),
-                             nullptr};
-    Require(wxExecute(argv, wxEXEC_SYNC) == 0, "independent writer must finish changing the dropped file");
+    const std::array<wxString, 4> arguments = {
+        {wxStandardPaths::Get().GetExecutablePath(), "--write-file", TestFiles::Filename(path), text}};
+    std::array<const wchar_t*, 5> argv = {
+        {arguments[0].wc_str(), arguments[1].wc_str(), arguments[2].wc_str(), arguments[3].wc_str(), nullptr}};
+    Require(wxExecute(argv.data(), wxEXEC_SYNC) == 0, "independent writer must finish changing the dropped file");
 }
 class FileDropApp final : public wxApp {
 public:

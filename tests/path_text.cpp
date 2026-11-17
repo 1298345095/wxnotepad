@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include <utility>
 #include "encoded_file_helpers.h"
 #include "file_command_driver.h"
@@ -44,15 +45,15 @@ void CheckInsertion(EditorFrame* frame, const char* label, const std::string& va
 }
 void NameCases(EditorFrame* frame, const std::filesystem::path& directory) {
     // Literals observed from actual Notepad4 89b8b36 commands; see #142 evidence.
-    const std::pair<const char*, const char*> names[] = {{"report.txt", "report"},
-                                                         {"archive.part.txt", "archive.part"},
-                                                         {"README", "README"},
-                                                         {".env", ""},
-                                                         {".config.json", ".config"},
-                                                         {"file name.txt", "file name"},
-                                                         {"dot.before space", "dot.before space"},
-                                                         {"no.ext space.txt", "no.ext space"},
-                                                         {"é中文😀.txt", "é中文😀"}};
+    const std::array<std::pair<const char*, const char*>, 9> names = {{{"report.txt", "report"},
+                                                                       {"archive.part.txt", "archive.part"},
+                                                                       {"README", "README"},
+                                                                       {".env", ""},
+                                                                       {".config.json", ".config"},
+                                                                       {"file name.txt", "file name"},
+                                                                       {"dot.before space", "dot.before space"},
+                                                                       {"no.ext space.txt", "no.ext space"},
+                                                                       {"é中文😀.txt", "é中文😀"}}};
     for (const auto& [name, base] : names) {
         const auto path = directory / TestFiles::Utf8Path(name);
         TestFiles::WriteBytes(path, "AoldZ");
@@ -173,11 +174,11 @@ void IdentityCases(EditorFrame* frame, const std::filesystem::path& directory) {
     std::puts("PASS: Untitled, first save, native Save As success/cancel, failure and insertion shortcuts");
 }
 void EncodedCases(EditorFrame* frame, const std::filesystem::path& directory) {
-    const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "AoldZ\r\n", "A时刻Z\r\n"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{41}\0o\0l\0d\0Z\0\r\0\n\0", 16),
-         std::string("\x{ff}\x{fe}\x{41}\0\x{f6}\x{65}\x{3b}\x{52}Z\0\r\0\n\0", 14)},
-        {"gbk", FileEncoding::Gbk, "AoldZ\r\n", "A\x{ca}\x{b1}\x{bf}\x{cc}Z\r\n"}};
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {
+        {{"utf8", FileEncoding::Utf8, "AoldZ\r\n", "A时刻Z\r\n"},
+         {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{41}\0o\0l\0d\0Z\0\r\0\n\0", 16),
+          std::string("\x{ff}\x{fe}\x{41}\0\x{f6}\x{65}\x{3b}\x{52}Z\0\r\0\n\0", 14)},
+         {"gbk", FileEncoding::Gbk, "AoldZ\r\n", "A\x{ca}\x{b1}\x{bf}\x{cc}Z\r\n"}}};
     for (const auto& fixture : fixtures) {
         const auto folder = directory / fixture.name;
         std::filesystem::create_directory(folder);

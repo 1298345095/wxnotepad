@@ -12,6 +12,7 @@
 #include <wx/app.h>
 #include <wx/menu.h>
 #include <wx/statusbr.h>
+#include <array>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -69,18 +70,20 @@ void ManualCanonicalMarkup(EditorFrame* frame) {
     Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
             "manual markup fixture opens as plain text");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Web Source Code"));
-    char property[8]{};
-    editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
+    std::array<char, 8> property{};
+    editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
+                 reinterpret_cast<intptr_t>(property.data()));
     // Pinned Styles.cpp::Style_SelectLexer sniffs the canonical Web choice;
     // its independently specified HtmlOption_HtmlVBScript bytes are 0e20.
-    Require(std::string(property) == "\x{0e}\x{20}" &&
+    Require(std::string(property.data()) == "\x{0e}\x{20}" &&
                 frame->GetStatusBar()->GetStatusText().Contains("ASP VBScript (override)") &&
                 TestEditor::Text(editor) == text && !frame->DocumentIsModified() && !editor->Send(Message::CanUndo) &&
                 TestFiles::Bytes(path) == text,
             "canonical Web menu choice sniffs VBScript without changing clean text, history or disk");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "ASP JavaScript"));
-    editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
-    Require(std::string(property) == "\x{0e}\x{10}" &&
+    editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
+                 reinterpret_cast<intptr_t>(property.data()));
+    Require(std::string(property.data()) == "\x{0e}\x{10}" &&
                 frame->GetStatusBar()->GetStatusText().Contains("ASP JavaScript (override)"),
             "explicit dialect choice overrides the conflicting document directive");
     const auto xml = TestFiles::TemporaryDirectory("manual-schema.txt");
@@ -88,8 +91,9 @@ void ManualCanonicalMarkup(EditorFrame* frame) {
     Require(frame->Open(TestFiles::Filename(xml), FileEncoding::Utf8).status == OpenStatus::Opened,
             "manual XML fixture opens as plain text");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "XML Document"));
-    editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
-    Require(std::string(property) == "\x{01}\x{10}" &&
+    editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
+                 reinterpret_cast<intptr_t>(property.data()));
+    Require(std::string(property.data()) == "\x{01}\x{10}" &&
                 frame->GetStatusBar()->GetStatusText().Contains("XML Schema (override)") &&
                 !frame->DocumentIsModified() && !editor->Send(Message::CanUndo),
             "canonical XML menu choice sniffs schema while retaining original XML options and clean state");
@@ -115,17 +119,17 @@ void ManualMarkupFamilies(EditorFrame* frame) {
                 "cross-family manual fixture opens");
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", fixture.choice));
         auto* editor = frame->Editor();
-        char property[8]{};
+        std::array<char, 8> property{};
         editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
-                     reinterpret_cast<intptr_t>(property));
-        if (std::string(property) != fixture.options ||
+                     reinterpret_cast<intptr_t>(property.data()));
+        if (std::string(property.data()) != fixture.options ||
             !frame->GetStatusBar()->GetStatusText().Contains(wxString(fixture.dialect) + " (override)") ||
             editor->Send(Message::GetTabWidth) != fixture.tabWidth)
             std::fprintf(stderr, "Markup family: file=%s choice=%s property=%02x%02x tabs=%zd status='%s'\n",
                          fixture.name, fixture.choice, static_cast<unsigned char>(property[0]),
                          static_cast<unsigned char>(property[1]), editor->Send(Message::GetTabWidth),
                          frame->GetStatusBar()->GetStatusText().utf8_str().data());
-        Require(editor->Send(Message::GetLexer) == SCLEX_HTML && std::string(property) == fixture.options &&
+        Require(editor->Send(Message::GetLexer) == SCLEX_HTML && std::string(property.data()) == fixture.options &&
                     frame->GetStatusBar()->GetStatusText().Contains(wxString(fixture.dialect) + " (override)") &&
                     editor->Send(Message::GetTabWidth) == fixture.tabWidth,
                 "canonical markup retains chosen lexer family/settings while displaying sniffed dialect");
@@ -160,12 +164,12 @@ void AutomaticMarkupFamilies(EditorFrame* frame) {
         TestFiles::WriteBytes(path, "<%@ Language=\"VBScript\" %>");
         Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
                 "automatic markup family fixture opens");
-        char property[8]{};
+        std::array<char, 8> property{};
         frame->Editor()->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
-                              reinterpret_cast<intptr_t>(property));
+                              reinterpret_cast<intptr_t>(property.data()));
         const bool isXml = path == xml;
         const wxString family = isXml ? "XML Document" : "Web Source Code";
-        Require(std::string(property) == (isXml ? "\x{01}\x{10}" : "\x{0e}\x{10}") &&
+        Require(std::string(property.data()) == (isXml ? "\x{01}\x{10}" : "\x{0e}\x{10}") &&
                     frame->GetStatusBar()->GetStatusText().Contains(isXml ? "ASP VBScript" : "Web Source Code") &&
                     !frame->GetStatusBar()->GetStatusText().Contains("override") &&
                     frame->Editor()->Send(Message::GetTabWidth) == (isXml ? 4 : 2),
@@ -189,10 +193,10 @@ void AutomaticSniffedFamilies(EditorFrame* frame) {
     // Pinned Styles.cpp keeps the prefix/filename-selected pLex while storing
     // Style_GetDocTypeLanguage in np2LexLangIndex. Only WEB promotes XML to HTML.
     for (const auto& fixture :
-         {Fixture{"sample.cfg", "<?xml version=\"1.0\"?><root><!-- <%@ Language=\"VBScript\" %> --></root>",
+         {Fixture{"sample.cfg", R"(<?xml version="1.0"?><root><!-- <%@ Language="VBScript" %> --></root>)",
                   "XML Document", "ASP VBScript", "\x{01}\x{10}", 4},
-          {"unknown-markup", "<?xml version=\"1.0\"?><root><!-- <%@ Language=\"VBScript\" %> --></root>",
-           "XML Document", "ASP VBScript", "\x{01}\x{10}", 4},
+          {"unknown-markup", R"(<?xml version="1.0"?><root><!-- <%@ Language="VBScript" %> --></root>)", "XML Document",
+           "ASP VBScript", "\x{01}\x{10}", 4},
           {"page.asp", "<!DOCTYPE schema><schema/>", "Web Source Code", "XML Schema", "\x{0e}\x{10}", 2},
           {"page.aspx", "<!DOCTYPE schema><schema/>", "Web Source Code", "XML Schema", "\x{0e}\x{10}", 2},
           {"web-promotion.cfg", "<?xml version=\"1.0\"?><!DOCTYPE html><html/>", "Web Source Code", "Web Source Code",
@@ -202,14 +206,15 @@ void AutomaticSniffedFamilies(EditorFrame* frame) {
         Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
                 "automatic document-type fixture opens");
         auto* editor = frame->Editor();
-        char property[8]{};
+        std::array<char, 8> property{};
         editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
-                     reinterpret_cast<intptr_t>(property));
-        if (std::string(property) != fixture.options || editor->Send(Message::GetTabWidth) != fixture.tabWidth)
+                     reinterpret_cast<intptr_t>(property.data()));
+        if (std::string(property.data()) != fixture.options || editor->Send(Message::GetTabWidth) != fixture.tabWidth)
             std::fprintf(stderr, "Automatic markup: file=%s property=%02x%02x tabs=%zd status='%s'\n", fixture.name,
                          static_cast<unsigned char>(property[0]), static_cast<unsigned char>(property[1]),
                          editor->Send(Message::GetTabWidth), frame->GetStatusBar()->GetStatusText().utf8_str().data());
-        Require(std::string(property) == fixture.options && editor->Send(Message::GetTabWidth) == fixture.tabWidth &&
+        Require(std::string(property.data()) == fixture.options &&
+                    editor->Send(Message::GetTabWidth) == fixture.tabWidth &&
                     frame->GetStatusBar()->GetStatusText().Contains(fixture.dialect) &&
                     !frame->GetStatusBar()->GetStatusText().Contains("override"),
                 "automatic header sniff preserves selected family/options/settings and effective dialect");
@@ -233,9 +238,9 @@ void AutomaticSniffedFamilies(EditorFrame* frame) {
                          TestFiles::Filename(saved).utf8_str().data(), frame->DocumentPath().utf8_str().data(),
                          save.initialType.utf8_str().data());
         editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
-                     reinterpret_cast<intptr_t>(property));
+                     reinterpret_cast<intptr_t>(property.data()));
         Require(save.choosers == 1 && save.initialType.StartsWith(wxString(fixture.family) + " (") &&
-                    std::string(property) == fixture.options &&
+                    std::string(property.data()) == fixture.options &&
                     editor->Send(Message::GetTabWidth) == fixture.tabWidth &&
                     frame->GetStatusBar()->GetStatusText().Contains(fixture.dialect) &&
                     frame->DocumentPath() == TestFiles::Filename(saved) && TestFiles::Bytes(saved) == fixture.text &&

@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "syntax_language_test_helpers.h"
 #include "file_helpers.h"
@@ -31,14 +32,14 @@ void PaintDocument(EditorFrame* frame) {
 }
 using TestLanguages::Choose;
 using TestLanguages::SchemeFixture;
-constexpr SchemeFixture schemes[] = {
+constexpr std::array<SchemeFixture, 3> schemes = {{
     {"TOML", SyntaxLanguage::Toml, SCLEX_TOML, "toml",
      "[package]\nname = \"sample\"\n[package.build]\nenabled = true\n", "#", nullptr, nullptr, "TOML File"},
     {"YAML", SyntaxLanguage::Yaml, SCLEX_YAML, "yaml", "root:\n  child:\n    value: true\n", "#", nullptr, nullptr,
      "YAML Document"},
     {"CMake", SyntaxLanguage::CMake, SCLEX_CMAKE, "cmake", "function(build)\n  message(\"sample\")\nendfunction()\n",
      "#", "#[[", "]]", "CMake Script"},
-};
+}};
 
 void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFixture& fixture, intptr_t fontSize) {
     auto* editor = frame->Editor();
@@ -117,7 +118,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
     const auto fontSize = editor->Send(Message::StyleGetSizeFractional, defaultStyle);
     for (const auto& fixture : schemes)
         SchemeWorkflow(frame, settings, fixture, fontSize);
-    const std::pair<const char*, int> recognized[] = {
+    const std::array<std::pair<const char*, int>, 20> recognized = {{
         {"Cargo.ToMl", SCLEX_TOML},
         {".pylintrc", SCLEX_TOML},
         {".clang-format", SCLEX_YAML},
@@ -138,7 +139,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         {".clang-format.in", SCLEX_YAML},
         {"Cargo.toml.in", SCLEX_TOML},
         {"ordinary.txt", SCLEX_NULL},
-    };
+    }};
     for (const auto& [name, lexer] : recognized) {
         const auto path = TestFiles::TemporaryDirectory(name);
         // An associated configuration filename takes precedence over shebang/markup guesses.
@@ -167,19 +168,15 @@ void CheckHistory(EditorFrame* frame, wxStandardID command, const std::string& s
 void OriginalOperations(EditorFrame* frame) {
     std::ifstream input(std::filesystem::path(CONFIG_OPERATIONS_REFERENCE));
     Require(input.is_open(), "original navigation/character fixture must open");
-    constexpr const char* navigation[] = {"Goto Block Start",
-                                          "Goto Block End",
-                                          "Goto Previous Block",
-                                          "Goto Next Block",
-                                          "Goto Previous Sibling Block",
-                                          "Goto Next Sibling Block",
-                                          "Select Lines in Current Block"};
+    constexpr std::array<const char*, 7> navigation = {{"Goto Block Start", "Goto Block End", "Goto Previous Block",
+                                                        "Goto Next Block", "Goto Previous Sibling Block",
+                                                        "Goto Next Sibling Block", "Select Lines in Current Block"}};
     std::string line;
     size_t rows = 0;
     while (std::getline(input, line)) {
         if (line.empty() || line.front() == '#') continue;
         std::istringstream row(line);
-        std::string fields[10];
+        std::array<std::string, 10> fields;
         for (auto& field : fields)
             std::getline(row, field, '\t');
         const auto path = TestFiles::TemporaryDirectory(fields[0]);

@@ -1,5 +1,6 @@
 // Captured from original Notepad4 89b8b36; see capture_auto_close_tags.py.
 #pragma once
+#include <array>
 namespace AutoCloseTagsReference {
 struct Selection {
     intptr_t anchor, caret;
@@ -22,7 +23,7 @@ struct Case {
     State after;
     std::initializer_list<State> undo, redo;
 };
-inline const Case cases[] = {
+inline const std::array<Case, 400> cases = {{
     {SyntaxLanguage::PlainText,
      "<div",
      4,
@@ -6372,5 +6373,5 @@ inline const Case cases[] = {
      {"<div>\n<span>", 12, 12, true, true, false, {{5, 5}, {12, 12}}},
      {{"<div\n<span", 10, 10, false, false, true, {{4, 4}, {10, 10}}}},
      {{"<div>\n<span>", 12, 12, true, true, false, {{5, 5}, {12, 12}}}}},
-};
+}};
 } // namespace AutoCloseTagsReference

@@ -1,5 +1,6 @@
 #include "editor/platform/escape_text.h"
 #include "editor/platform/custom_case.h"
+#include <array>
 
 // Adapted from Notepad4 89b8b36 Edit.cpp::EditEscapeChars.
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
@@ -30,7 +31,7 @@ char EntityCharacter(std::string_view name) {
 char UnescapeAmpersand(std::string_view text, size_t& index) {
     const char next = index + 1 < text.size() ? text[index + 1] : '\0';
     if (next < 'a' || next > 'z') return '&';
-    char entity[6]{};
+    std::array<char, 6> entity{};
     entity[0] = next;
     size_t length = 1;
     size_t offset = index + 2;
@@ -42,9 +43,9 @@ char UnescapeAmpersand(std::string_view text, size_t& index) {
             entity[length++] = following;
         else
             break;
-    } while (length < sizeof(entity) - 1 && offset < text.size());
+    } while (length < entity.size() - 1 && offset < text.size());
     if (following != ';') return '&';
-    following = EntityCharacter(entity);
+    following = EntityCharacter(entity.data());
     if (following == ';') return '&';
     index += length + 1;
     return following;

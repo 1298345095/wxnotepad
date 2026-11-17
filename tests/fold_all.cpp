@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <array>
 #include <wx/menu.h>
 #include <utility>
 
@@ -89,11 +90,11 @@ void LanguageFoldCommands(EditorFrame* frame, int collapse, int expand) {
         const char* name;
         const char* source;
     };
-    const LanguageFixture languages[] = {
+    const std::array<LanguageFixture, 3> languages = {{
         {"C/C++", "void outer() {\n  if (true) {\n    call();\n  }\n}\n"},
         {"Python", "class Outer:\n    def inner(self):\n        call()\n    tail()\nafter()\n"},
         {"JSON", "{\n  \"items\": [\n    1,\n    2\n  ]\n}\n"},
-    };
+    }};
     for (const auto& language : languages) {
         using enum Scintilla::Message;
         editor->Send(SetText, 0, reinterpret_cast<intptr_t>(language.source));

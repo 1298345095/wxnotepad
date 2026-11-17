@@ -8,6 +8,7 @@
 #include <ScintillaStructures.h>
 #include <VectorISA.h>
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstring>
 
@@ -75,16 +76,16 @@ constexpr unsigned NP2_AUTOC_WORD_BUFFER_SIZE = 128;
 // optimization for small string
 template <size_t StackSize = 32> class CharBuffer {
     char* ptr;
-    char buffer[StackSize]{};
-    std::unique_ptr<char[]> heap;
+    std::array<char, StackSize> buffer{};
+    std::vector<char> heap;
 
 public:
     explicit CharBuffer(size_t size) {
         if (size <= StackSize) {
-            ptr = buffer;
+            ptr = buffer.data();
         } else {
-            heap = std::make_unique<char[]>(size);
-            ptr = heap.get();
+            heap.resize(size);
+            ptr = heap.data();
         }
     }
     CharBuffer(const CharBuffer&) = delete;
@@ -114,7 +115,7 @@ struct WordList {
     unsigned offset;
     unsigned capacity;
     std::byte* buffer = nullptr;
-    std::vector<std::unique_ptr<std::byte[]>> buffers;
+    std::vector<std::vector<std::byte>> buffers;
     std::vector<WordNode*> insertionPath;
 
     WordList() = default;
@@ -200,13 +201,7 @@ uint32_t WordList_SortKeyCase(const char* pWord, uint32_t len) noexcept {
 
 // Tree
 struct WordNode {
-    union {
-        WordNode* link[2];
-        struct {
-            WordNode* left;
-            WordNode* right;
-        };
-    };
+    std::array<WordNode*, 2> link;
 #if NP2_AUTOC_USE_WORD_POINTER
     char* word;
 #endif
@@ -226,19 +221,19 @@ constexpr size_t InitialTreePathCapacity = 32;
 // Andersson Tree, source from https://www.eternallyconfuzzled.com/tuts/datastructures/jsw_tut_andersson.aspx
 // see also https://en.wikipedia.org/wiki/AA_tree
 WordNode* SkewTree(WordNode* node) noexcept {
-    if (node->level && node->left && node->level == node->left->level) {
-        WordNode* save = node->left;
-        node->left = save->right;
-        save->right = node;
+    if (node->level && node->link[0] && node->level == node->link[0]->level) {
+        WordNode* save = node->link[0];
+        node->link[0] = save->link[1];
+        save->link[1] = node;
         return save;
     }
     return node;
 }
 WordNode* SplitTree(WordNode* node) noexcept {
-    if (node->level && node->right && node->right->right && node->level == node->right->right->level) {
-        WordNode* save = node->right;
-        node->right = save->left;
-        save->left = node;
+    if (node->level && node->link[1] && node->link[1]->link[1] && node->level == node->link[1]->link[1]->level) {
+        WordNode* save = node->link[1];
+        node->link[1] = save->link[0];
+        save->link[0] = node;
         ++save->level;
         return save;
     }
@@ -247,10 +242,10 @@ WordNode* SplitTree(WordNode* node) noexcept {
 
 #define WordList_AddNode() (reinterpret_cast<WordNode*>(reinterpret_cast<char*>(buffer) + offset))
 void WordList::AddBuffer(unsigned newCapacity) {
-    buffers.push_back(std::make_unique<std::byte[]>(newCapacity));
+    buffers.emplace_back(newCapacity);
     capacity = newCapacity;
     offset = 0;
-    buffer = buffers.back().get();
+    buffer = buffers.back().data();
 }
 
 int WordList::CompareNode(const WordNode& node, const char* word, unsigned length, unsigned sortKey) const noexcept {
@@ -324,7 +319,7 @@ void WordList::AddWord(const char* pWord, unsigned len) {
             --top;
             // which child?
             if (top != 0) {
-                dir = path[top - 1]->right == path[top];
+                dir = path[top - 1]->link[1] == path[top];
             }
             path[top] = SplitTree(SkewTree(path[top]));
             // fix the parent
@@ -353,14 +348,14 @@ std::unique_ptr<char[]> WordList::GetList() const {
     while (root || !path.empty()) {
         if (root) {
             path.push_back(root);
-            root = root->left;
+            root = root->link[0];
         } else {
             root = path.back();
             path.pop_back();
             memcpy(buf, WordNode_GetWord(root), root->len);
             buf += root->len;
             *buf++ = '\n'; // the separator char
-            root = root->right;
+            root = root->link[1];
         }
     }
     // trim last separator char
@@ -447,7 +442,7 @@ static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
 }
 
 void WordList::AddListEx(const char* pList) {
-    char word[NP2_AUTOC_WORD_BUFFER_SIZE];
+    std::array<char, NP2_AUTOC_WORD_BUFFER_SIZE> word;
     const unsigned iRootLen = iStartLen;
     unsigned len = 0;
     bool ok = false;
@@ -463,7 +458,7 @@ void WordList::AddListEx(const char* pList) {
         // before subtracting, copying another segment, or appending "()".
         len = std::min<unsigned>(len, NP2_AUTOC_MAX_WORD_LENGTH);
         lenSub = std::min<unsigned>(NP2_AUTOC_MAX_WORD_LENGTH - len, lenSub);
-        memcpy(word + len, pList, lenSub);
+        memcpy(word.data() + len, pList, lenSub);
         len += lenSub;
         pList = sub;
         if (len >= iRootLen) {
@@ -472,8 +467,8 @@ void WordList::AddListEx(const char* pList) {
                 word[len++] = ')';
             }
             word[len] = '\0';
-            if (ok || StartsWith(word)) {
-                AddWord(word, len);
+            if (ok || StartsWith(word.data())) {
+                AddWord(word.data(), len);
                 ok = ch == '.';
             }
         }
@@ -510,15 +505,15 @@ void WordList::AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) {
     2. second hyphen: 'bugprone-branch-clone' => 'bugprone-branch'; 'branch-clone' => 'branch'.
     */
 
-    const char* words[8];
-    unsigned starts[8];
+    std::array<const char*, 8> words;
+    std::array<unsigned, 8> starts;
     unsigned count = 0;
 
     for (unsigned i = 0; i < wordLength - 1; i++) {
         const char ch = pWord[i];
         if (ch != '.' && ch != '-' && ch != ':') continue;
         if (i >= iRootLen) {
-            AddWordPrefixes(pWord, i, iRootLen, {words, count}, {starts, count});
+            AddWordPrefixes(pWord, i, iRootLen, {words.data(), count}, {starts.data(), count});
         }
         if (ch != '.' && (pWord[i + 1] == '>' || pWord[i + 1] == ':')) {
             ++i;
@@ -594,9 +589,9 @@ class Collector final {
     }
     bool IsDocWordChar(unsigned ch) const { return CompletionStyleContains(styles_.wordCharacters, ch); }
     static bool IsDefaultWordChar(unsigned ch) {
-        static constexpr uint32_t mask[8] = {0,           0x03ff0000U, 0x87fffffeU, 0x07fffffeU,
-                                             0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU};
-        return BitTestEx(mask, ch);
+        static constexpr std::array<uint32_t, 8> mask = {0,           0x03ff0000U, 0x87fffffeU, 0x07fffffeU,
+                                                         0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU};
+        return BitTestEx(mask.data(), ch);
     }
     bool IsRawStringStyle(unsigned style) const { return CompletionStyleContains(styles_.rawStrings, style); }
     bool IsCommentStyle(unsigned style) const { return CompletionStyleContains(styles_.comments, style); }
@@ -787,8 +782,8 @@ class Collector final {
                              bool bSubWord) {
         const int iRootLen = pWList.iStartLen;
         if (wordEnd - iPosFind < iRootLen) return;
-        char wordBuf[NP2_AUTOC_WORD_BUFFER_SIZE];
-        char* pWord = wordBuf;
+        std::array<char, NP2_AUTOC_WORD_BUFFER_SIZE> wordBuf;
+        char* pWord = wordBuf.data();
         const Sci_TextRangeFull tr = {{iPosFind, std::min(iPosFind + NP2_AUTOC_MAX_WORD_LENGTH, wordEnd)}, pWord};
         int wordLength = static_cast<int>(Call(Message::GetTextRangeFull, 0, &tr));
 

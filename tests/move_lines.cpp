@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <array>
 #include "file_helpers.h"
 #include <wx/ffile.h>
 #include "steady_stopwatch.h"
@@ -82,7 +83,7 @@ void Fixtures(EditorFrame* frame) {
     };
     // Literal outcomes follow pinned EditMoveUp/EditMoveDown and the pinned
     // core's LineTranspose/MoveSelectedLines, including their EOL placement.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 12> fixtures = {{
         {"caret up from unterminated last line", "A\nlast", 4, 4, true, "last\nA", 2, 2},
         {"same-line down into unterminated last line", "AA\nlast", 2, 1, false, "last\nAA", 7, 6},
         {"CRLF same-line offsets", "A\r\n\t中文\r\nZ", 4, 10, true, "\t中文\r\nA\r\nZ", 1, 7},
@@ -95,7 +96,7 @@ void Fixtures(EditorFrame* frame) {
         {"CRLF multiline down", "A\r\nB\r\nC\r\nD", 3, 6, false, "A\r\nC\r\nB\r\nD", 6, 9},
         {"CR multiline up", "A\rB\rC\rD", 2, 4, true, "B\rA\rC\rD", 0, 2},
         {"unterminated multiline up uses current EOL", "A\nbb\nlast", 3, 7, true, "bb\nlast\r\nA", 0, 9},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         Reset(editor, fixture.before, fixture.anchor, fixture.caret);
@@ -159,7 +160,7 @@ void SavedBytes(EditorFrame* frame) {
         std::string before;
         std::string after;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8-bom", FileEncoding::Utf8,
          "\x{ef}\x{bb}\x{bf}"
          "A\r\n中文",
@@ -169,7 +170,7 @@ void SavedBytes(EditorFrame* frame) {
         {"utf16-bom", FileEncoding::Utf16Le,
          std::string("\x{ff}\x{fe}\x{41}\0\x{0d}\0\x{0a}\0\x{2d}\x{4e}\x{87}\x{65}", 12),
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0\x{41}\0", 12)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         {

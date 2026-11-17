@@ -27,7 +27,7 @@ void Load(EditorControl* editor, const std::string& bytes) {
     editor->Send(SetSavePoint);
     NativePaint::Complete(editor);
 }
-void SlicedFindAll(EditorControl* editor, wxTextCtrl* query, wxButton* action, wxStaticText* result) {
+void SlicedFindAll(EditorControl* editor, wxTextCtrl* query, const wxButton* action, const wxStaticText* result) {
     // The first search slice covers at most its initial 1 MiB
     // window plus a line. Short lines keep the trailing matches
     // outside that window without relying on elapsed search time.
@@ -75,12 +75,12 @@ public:
                 NativePaint::Complete(editor);
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
-                auto* action = wxDynamicCast(wxWindow::FindWindowByName("Find All", frame), wxButton);
+                const auto* action = wxDynamicCast(wxWindow::FindWindowByName("Find All", frame), wxButton);
                 Require(query && action, "native Find exposes Find All");
                 query->SetValue("one");
                 Click(query->GetParent(), action->GetId());
                 NativePaint::Complete(editor);
-                auto* result = wxDynamicCast(wxWindow::FindWindowByName("Find All result", frame), wxStaticText);
+                const auto* result = wxDynamicCast(wxWindow::FindWindowByName("Find All result", frame), wxStaticText);
                 Require(result && result->GetLabel() == "3 matches", "Find All reports whole-document count");
                 Require(editor->Send(Message::IndicatorValueAt, 8, 0) &&
                             editor->Send(Message::IndicatorValueAt, 8, 4) &&

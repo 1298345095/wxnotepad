@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <array>
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
@@ -47,13 +48,8 @@ void MalformedAndNulStreams(EditorFrame* frame, SettingsStore* settings, const s
     Append(frame, "pending");
     const auto pending = Text(frame);
     const auto identity = frame->DocumentPath();
-    const std::string malformed[] = {"\x{81}",
-                                     "\x{ff}",
-                                     "\x{81}\x{30}",
-                                     "\x{81}\x{7f}",
-                                     "\x{81}\x{ff}",
-                                     std::string("A\0\x{81}", 3),
-                                     "\x{ef}\x{bb}\x{bf}"};
+    const std::array<std::string, 7> malformed = {{"\x{81}", "\x{ff}", "\x{81}\x{30}", "\x{81}\x{7f}", "\x{81}\x{ff}",
+                                                   std::string("A\0\x{81}", 3), "\x{ef}\x{bb}\x{bf}"}};
     for (const auto& bytes : malformed) {
         const auto invalid = directory / "invalid.txt";
         Write(invalid, bytes);

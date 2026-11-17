@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -83,10 +84,10 @@ struct ChineseFixture {
     const char* sourceLabel;
     const char* identifier;
 };
-constexpr ChineseFixture codecs[] = {
+constexpr std::array<ChineseFixture, 2> codecs = {{
     {FileEncoding::Gb18030, "Simplified Chinese (GB18030)", "GB18030 (CP54936)", "GB18030"},
     {FileEncoding::Big5, "Traditional Chinese (Big5, Big5-HKSCS)", "Big5 (CP950)", "BIG5"},
-};
+}};
 class ReloadPicker final : public wxTimer {
 public:
     wxString selected;
@@ -125,7 +126,7 @@ void Fixtures(EditorFrame* frame) {
         FileEncoding encoding;
         std::string input, text, saved;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 8> fixtures = {{
         {FileEncoding::Gb18030, std::string("A\x{d6}\x{d0}\x{81}\x{30}\x{81}\x{30}\x{94}\x{39}\x{fc}\x{36}\0B\r\n", 15),
          std::string("A中\x{c2}\x{80}😀\0B\r\n", 14),
          std::string("A\x{d6}\x{d0}\x{81}\x{30}\x{81}\x{30}\x{94}\x{39}\x{fc}\x{36}\0B\r\n", 15)},
@@ -149,7 +150,7 @@ void Fixtures(EditorFrame* frame) {
          "\x{37}\x{82}\x{35}\x{90}\x{37}"},
         {FileEncoding::Big5, "\x{8d}\x{fe}\x{8e}\x{40}\x{a0}\x{fe}\x{fe}\x{fe}", "\u{F6B0}\u{E311}\u{EEB7}\u{E310}",
          "\x{8d}\x{fe}\x{8e}\x{40}\x{a0}\x{fe}\x{fe}\x{fe}"},
-    };
+    }};
     const auto path = TestFiles::TemporaryDirectory("chinese-literal.bin");
     for (const auto& fixture : fixtures) {
         TestFiles::WriteBytes(path, fixture.input);

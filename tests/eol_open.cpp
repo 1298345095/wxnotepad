@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -87,9 +88,9 @@ void CountAndDefault(const std::filesystem::path& directory, SettingsStore& sett
     struct Sample {
         const char* name;
         const char* bytes;
-        EndOfLine expected[3];
+        std::array<EndOfLine, 3> expected;
     };
-    const Sample samples[] = {
+    const std::array<Sample, 13> samples = {{
         {"empty", "", {CrLf, Lf, Cr}},
         {"single", "last", {CrLf, Lf, Cr}},
         {"uniform-crlf", "one\r\ntwo\r\nlast", {CrLf, CrLf, CrLf}},
@@ -103,7 +104,7 @@ void CountAndDefault(const std::filesystem::path& directory, SettingsStore& sett
         {"predominant-lf", "one\r\ntwo\nthree\nfour\rlast", {Lf, Lf, Lf}},
         {"predominant-cr", "one\r\ntwo\nthree\rfour\rlast", {Cr, Cr, Cr}},
         {"adjacent-trailing", "\r\r\n\n", {CrLf, Lf, Cr}},
-    };
+    }};
     for (int configured = 0; configured < 3; ++configured) {
         using enum Scintilla::Message;
         settings.values.defaultEOLMode = configured;
@@ -154,7 +155,8 @@ void WarningChoices(const std::filesystem::path& directory, SettingsStore& setti
     const auto input = directory / "mixed.txt";
     const auto output = directory / "normalized.txt";
     const std::string mixed = "one\r\ntwo\nthree\rlast";
-    const char* normalized[] = {"one\r\ntwo\r\nthree\r\nlast", "one\ntwo\nthree\nlast", "one\rtwo\rthree\rlast"};
+    std::array<const char*, 3> normalized = {
+        {"one\r\ntwo\r\nthree\r\nlast", "one\ntwo\nthree\nlast", "one\rtwo\rthree\rlast"}};
     for (int selected = 0; selected < 3; ++selected) {
         using enum Scintilla::Message;
         settings.values.defaultEOLMode = selected;

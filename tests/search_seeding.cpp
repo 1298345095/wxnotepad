@@ -163,7 +163,7 @@ public:
                 NativeSearch::Command(frame, wxID_REPLACE);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
-                Require(query && query->GetValue() == wxString::FromUTF8("中文\\\\path\\r\\nnext"),
+                Require(query && query->GetValue() == wxString::FromUTF8(R"(中文\\path\r\nnext)"),
                         "Replace must seed and escape the actual Unicode multiline selection");
                 Require(Focused(replacement), "initial Replace with selected text must focus replacement");
                 NativeSearch::Selection(editor, 0, 17, "seeding must retain the original selected UTF-8 range");
@@ -215,7 +215,7 @@ public:
                         wxMilliSleep(10);
                     }
                     NativeSearch::Command(frame, wxID_FIND);
-                    Require(query->GetValue() == wxString::FromUTF8("剪贴\\\\path\\ntext") && Focused(query),
+                    Require(query->GetValue() == wxString::FromUTF8(R"(剪贴\\path\ntext)") && Focused(query),
                             "a newly opened Find must seed clipboard controls and focus query");
                 } else {
                     editor->Send(Message::SetSel, 0, 6);
@@ -240,7 +240,7 @@ public:
                 NativeSearch::Click(dialog, wxID_CANCEL);
                 editor->Send(Message::SetSel, 0, editor->Send(Message::GetLength));
                 NativeSearch::Command(frame, wxID_REPLACE);
-                Require(query->GetValue() == wxString::FromUTF8("中文\\\\path\\r\\nnext") && regex->GetValue() &&
+                Require(query->GetValue() == wxString::FromUTF8(R"(中文\\path\r\nnext)") && regex->GetValue() &&
                             !transform->GetValue(),
                         "regex seeding must retain regex punctuation and escaping without enabling transform");
                 std::puts("PASS: clipboard, existing-dialog reopen, Ctrl+H switch and regex seeding rules");

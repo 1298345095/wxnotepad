@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <array>
 #include "app/editor_frame.h"
 #include <wx/wx.h>
 #include <wx/checkbox.h>
@@ -107,13 +108,13 @@ public:
                     const char* pattern;
                     std::vector<std::pair<intptr_t, intptr_t>> ranges;
                 };
-                const Case cases[] = {
+                const std::array<Case, 5> cases = {{
                     {"lookbehind", "中文 英文", "(?<=中)文", {{3, 6}}},
                     {"unicode-word", "中文 abc_12", "\\w+", {{0, 6}, {7, 13}}},
                     {"unicode-dot", "中😀文", ".", {{0, 3}, {3, 7}, {7, 10}}},
                     {"pattern-backreference", "中中 中文 文文", "(中)\\1", {{0, 6}}},
                     {"alternation", "中文 测试 其他", "中文|测试", {{0, 6}, {7, 13}}},
-                };
+                }};
                 for (const auto& example : cases) {
                     editor->Send(SetText, 0, reinterpret_cast<intptr_t>(example.text));
                     editor->Send(EmptyUndoBuffer);

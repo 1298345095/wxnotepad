@@ -4,6 +4,7 @@
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include "syntax/syntax_catalog.h"
+#include <array>
 #include <wx/wx.h>
 
 namespace {
@@ -17,11 +18,11 @@ void EscapeC(EditorFrame* frame) {
     Require(id != wxNOT_FOUND, "native Convert menu exposes Escape C Chars");
     TestEditor::ResetStream(editor, "a\t\"'\\\r\nb", 0, 9);
     NativeSearch::Command(frame, id);
-    Require(TestEditor::Text(editor) == "a\\t\\\"\\'\\\\\\r\\nb", "C escaping preserves original byte rules");
+    Require(TestEditor::Text(editor) == R"(a\t\"\'\\\r\nb)", "C escaping preserves original byte rules");
 }
 const char* Label(int mapping) {
-    constexpr const char* labels[]{"Escape C Chars", "Unescape C Chars", "Escape HTML/XML Chars",
-                                   "Unescape HTML/XML Chars"};
+    constexpr std::array labels{"Escape C Chars", "Unescape C Chars", "Escape HTML/XML Chars",
+                                "Unescape HTML/XML Chars"};
     return labels[mapping - 40204];
 }
 void ResetBytes(EditorControl* editor, std::string_view before) {
@@ -172,10 +173,10 @@ void ShortcutsAndLanguages(EditorFrame* frame) {
         const char* after;
         const char* label;
     };
-    const Shortcut shortcuts[]{{'E', true, false, "\"", "\\\"", "Esca&pe C Chars\tCtrl+Alt+E"},
-                               {'R', true, false, "\\t", "\t", "&Unescape C Chars\tCtrl+Alt+R"},
-                               {'X', false, true, "<", "&lt;", "Escape HT&ML/XML Chars\tAlt+Shift+X"},
-                               {'H', false, true, "&lt;", "<", "Unescape HTML/&XML Chars\tAlt+Shift+H"}};
+    const std::array<Shortcut, 4> shortcuts{{{'E', true, false, "\"", R"(\")", "Esca&pe C Chars\tCtrl+Alt+E"},
+                                             {'R', true, false, "\\t", "\t", "&Unescape C Chars\tCtrl+Alt+R"},
+                                             {'X', false, true, "<", "&lt;", "Escape HT&ML/XML Chars\tAlt+Shift+X"},
+                                             {'H', false, true, "&lt;", "<", "Unescape HTML/&XML Chars\tAlt+Shift+H"}}};
     for (int index = 0; index < 4; ++index) {
         const auto& shortcut = shortcuts[index];
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", Label(40204 + index));

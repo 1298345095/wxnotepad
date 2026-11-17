@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor_test_helpers.h"
 #include "encoded_file_helpers.h"
 #include "native_key_helpers.h"
@@ -160,7 +161,7 @@ void SavedBytes(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory() / std::filesystem::path(u8"wxnotepad-number-radix-中文");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中12\r\n", "\x{ef}\x{bb}\x{bf}中0xc\r\n"},
         {"gbk", FileEncoding::Gbk,
          "\x{d6}\x{d0}"
@@ -175,7 +176,7 @@ void SavedBytes(EditorFrame* frame) {
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}"
                      "0\0x\0c\0\r\0\n\0",
                      14)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".txt");

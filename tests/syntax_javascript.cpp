@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "syntax_test_helpers.h"
 #include "file_helpers.h"
@@ -50,12 +51,12 @@ struct Fixture {
     std::span<const int> editedFolds;
 };
 using namespace JavaScriptReference;
-const Fixture fixtures[] = {
+const std::array<Fixture, 4> fixtures = {{
     {"js", "JavaScript", js_before_styles, js_before_folds, js_edited_styles, js_edited_folds},
     {"jsx", "JSX", jsx_before_styles, jsx_before_folds, jsx_edited_styles, jsx_edited_folds},
     {"ts", "TypeScript", ts_before_styles, ts_before_folds, ts_edited_styles, ts_edited_folds},
     {"tsx", "TSX", tsx_before_styles, tsx_before_folds, tsx_edited_styles, tsx_edited_folds},
-};
+}};
 void Workflows(EditorFrame* frame, const std::filesystem::path& directory) {
     auto* editor = frame->Editor();
     for (const auto* extension : {"js", "jse", "jsm", "cjs", "mjs", "qs", "JS", "mJs", "jsx", "JsX", "ts", "cts", "mts",

@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "native_search_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -43,7 +44,7 @@ void Fixtures(EditorFrame* frame) {
         bool modified = true;
         Scintilla::EndOfLine mode = Scintilla::EndOfLine::Lf;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 23> fixtures = {{
         {false, "a\r\n  b\nc", 1, 8, "a   b c", 2, 7},
         {false, "ab\ncd\nef", 1, 4, "ab cd\nef", 1, 4},
         {false, "ab\ncd\nef", 4, 1, "ab cd\nef", 4, 1},
@@ -67,7 +68,7 @@ void Fixtures(EditorFrame* frame) {
         {true, "A\n\nB\r\nC", 0, 7, "A\r\rB C", 0, 6, true, Scintilla::EndOfLine::Cr},
         {true, "A\nB", 0, 3, "A B", 0, 3},
         {true, "A\nB", 1, 1, "A\nB", 1, 1, false},
-    };
+    }};
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
@@ -235,7 +236,7 @@ void SavedBytes(EditorFrame* frame) {
         std::string lines;
         std::string paragraphs;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\r\n\n尾", "\x{ef}\x{bb}\x{bf}中 尾",
          "\x{ef}\x{bb}\x{bf}中\n\n尾"},
         {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\r\n\x{ce}\x{c4}", "\x{d6}\x{d0} \x{ce}\x{c4}",
@@ -250,7 +251,7 @@ void SavedBytes(EditorFrame* frame) {
          std::string("\x{ff}\x{fe}"
                      "A\0\n\0\n\0B\0",
                      10)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         for (bool paragraphs : {false, true}) {
             using enum Scintilla::Message;

@@ -15,6 +15,7 @@
 #include <wx/statusbr.h>
 #include <wx/filename.h>
 #include <wx/translation.h>
+#include <array>
 
 namespace {
 wxString EncodingName(FileEncoding encoding) {
@@ -319,9 +320,9 @@ void EditorFrame::UpdatePositionStatus() {
     auto* status = GetStatusBar();
     const int metadataWidth = status->GetTextExtent(status->GetStatusText()).x + FromDIP(20);
     const int positionWidth = status->GetTextExtent(position).x + FromDIP(20);
-    const int widths[] = {metadataWidth, positionWidth, -1};
+    const std::array widths{metadataWidth, positionWidth, -1};
     if (status->GetStatusWidth(0) != metadataWidth || status->GetStatusWidth(1) != positionWidth)
-        status->SetStatusWidths(3, widths);
+        status->SetStatusWidths(static_cast<int>(widths.size()), widths.data());
 }
 
 void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {

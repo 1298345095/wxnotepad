@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <array>
 #include "app/editor_frame.h"
 #include "file_helpers.h"
 #include "native_search_helpers.h"
@@ -50,7 +51,7 @@ void PythonNativeFolds(EditorFrame* frame, const std::string& source) {
     editor->Send(GotoPos, 0);
     // Literal levels follow the pinned FoldPyDoc: blank lines adopt
     // the next nonempty indentation; consecutive comments form a fold.
-    const int levels[] = {0, 4, 5, 4, 4, 8, 12, 8, 8, 8, 4, 0, 0};
+    const std::array<int, 13> levels = {{0, 4, 5, 4, 4, 8, 12, 8, 8, 8, 4, 0, 0}};
     for (size_t line = 0; line < std::size(levels); ++line) {
         Require(Level(editor, line) == 0x400 + levels[line],
                 "Python suite, blank and comment levels must match the pinned lexer");

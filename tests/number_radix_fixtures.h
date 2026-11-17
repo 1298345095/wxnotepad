@@ -1,6 +1,7 @@
 // Captured from Notepad4 89b8b36 by tools/capture_number_radix.py.
 // Original Windows process, WM_COMMAND and Scintilla public messages.
 #pragma once
+#include <array>
 #include <string_view>
 namespace NumberRadixReference {
 struct Fixture {
@@ -8,7 +9,7 @@ struct Fixture {
     std::string_view before;
     std::string_view after;
 };
-inline constexpr Fixture fixtures[] = {
+inline constexpr std::array<Fixture, 40> fixtures = {{
     {"To Hexadecimal",
      {"0 1 255 256 65535 18446744073709551615 18446744073709551616 18446744073709551617", 80},
      {"0 0x1 0xff 0x100 0xffff 0xffffffffffffffff 0x0 0x1", 50}},
@@ -96,5 +97,5 @@ inline constexpr Fixture fixtures[] = {
     {"To Octet", {"0", 1}, {"0", 1}},
     {"To Octet", {"plain text", 10}, {"plain text", 10}},
     {"To Octet", {"12\0 34", 6}, {"0O14  0O42", 10}},
-};
+}};
 } // namespace NumberRadixReference

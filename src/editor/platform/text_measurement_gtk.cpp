@@ -7,6 +7,7 @@
 #include <gtk/gtk.h>
 #include <pango/pangocairo.h>
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -135,9 +136,9 @@ Characters Decode(std::string_view text, bool utf8) {
         characters.count = text.size();
         characters.text.reserve(text.size());
         for (const unsigned char character : text) {
-            char encoded[Utf8MaximumBytes];
-            const auto length = g_unichar_to_utf8(character, encoded);
-            characters.text.append(encoded, static_cast<size_t>(length));
+            std::array<char, Utf8MaximumBytes> encoded;
+            const auto length = g_unichar_to_utf8(character, encoded.data());
+            characters.text.append(encoded.data(), static_cast<size_t>(length));
         }
     }
     if (characters.text.size() > static_cast<size_t>(std::numeric_limits<int>::max()))

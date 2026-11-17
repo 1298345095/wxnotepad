@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <array>
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
@@ -537,7 +538,7 @@ void LineCommandSelections(EditorControl* editor, Peer& peer) {
         Scintilla::EndOfLine eol = Scintilla::EndOfLine::Lf;
     };
     // Editor::WndProc includes the physical line containing either endpoint.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 8> fixtures = {{
         {"aa\nbb\ncc\ndd", 1, 4, "aa\nbb\n", "cc\ndd", 0},
         {"aa\nbb\ncc\ndd", 4, 1, "aa\nbb\n", "cc\ndd", 0},
         {"aa\nbb\ncc\ndd", 1, 3, "aa\nbb\n", "cc\ndd", 0},
@@ -546,7 +547,7 @@ void LineCommandSelections(EditorControl* editor, Peer& peer) {
         {"aa\r\nbb\r\ncc", 1, 5, "aa\r\nbb\r\n", "cc", 0, Scintilla::EndOfLine::CrLf},
         {"aa\rbb\rcc", 1, 4, "aa\rbb\r", "cc", 0, Scintilla::EndOfLine::Cr},
         {"tail", 2, 2, "tail", "", 0},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret, fixture.eol);
@@ -1037,7 +1038,7 @@ void UtilityTextBoundaries(EditorFrame* frame, EditorControl* editor, Peer& peer
         std::string old, added, expected;
         bool whole = false;
     };
-    const AppendCase cases[] = {
+    const std::array<AppendCase, 8> cases = {{
         {"", "alpha", "\r\n\r\nalpha"},
         {"X\nY\rZ", "中文😀\r\nB\nC\r", "X\nY\rZ\r\n\r\n中文😀\r\nB\nC\r"},
         {std::string("old\0suffix", 10), "new", "old\r\n\r\nnew"},
@@ -1046,7 +1047,7 @@ void UtilityTextBoundaries(EditorFrame* frame, EditorControl* editor, Peer& peer
         {"old", std::string("A\0B", 3), "old\r\n\r\nA", true},
         {"old", std::string("\0B", 2), "old", true},
         {"old", "", "old"},
-    };
+    }};
     for (const auto& fixture : cases) {
         UtilityBytes(editor, fixture.added, 0, fixture.whole ? 0 : static_cast<intptr_t>(fixture.added.size()));
         peer.OfferText(fixture.old);
@@ -1205,7 +1206,7 @@ void UtilitySavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
     const auto directory = TestFiles::TemporaryDirectory("clipboard-utilities-中文");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8,
          "\x{ef}\x{bb}\x{bf}"
          "A B\r\n",
@@ -1219,7 +1220,7 @@ void UtilitySavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
          std::string("\x{ff}\x{fe}"
                      "A\0 \0B\0\r\0\n\0!\0",
                      14)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".txt");
@@ -1385,14 +1386,14 @@ void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         check(label, "Untitled");
     const auto directory = TestFiles::TemporaryDirectory("path-text-copy") / std::filesystem::path(u8"目录😀");
     std::filesystem::create_directories(directory);
-    const std::pair<const char*, const char*> names[] = {{"report.txt", "report"},
-                                                         {"archive.part.txt", "archive.part"},
-                                                         {"README", "README"},
-                                                         {".env", ""},
-                                                         {".config.json", ".config"},
-                                                         {"dot.before space", "dot.before space"},
-                                                         {"no.ext space.txt", "no.ext space"},
-                                                         {"é中文😀.txt", "é中文😀"}};
+    const std::array<std::pair<const char*, const char*>, 8> names = {{{"report.txt", "report"},
+                                                                       {"archive.part.txt", "archive.part"},
+                                                                       {"README", "README"},
+                                                                       {".env", ""},
+                                                                       {".config.json", ".config"},
+                                                                       {"dot.before space", "dot.before space"},
+                                                                       {"no.ext space.txt", "no.ext space"},
+                                                                       {"é中文😀.txt", "é中文😀"}}};
     for (const auto& [name, base] : names) {
         const auto path = directory / TestFiles::Utf8Path(name);
         TestFiles::WriteBytes(path, "AoldZ");
@@ -1533,11 +1534,11 @@ void SwapBoundaries(EditorControl* editor, Peer& peer) {
         const char* pasted;
         intptr_t pastedEnd;
     };
-    const EolCase endings[] = {
+    const std::array<EolCase, 3> endings = {{
         {Scintilla::EndOfLine::CrLf, "AX\r\nY\r\nZ\r\nQZ", 11, "AoX\r\nY\r\nZ\r\nQldZ", 12},
         {Scintilla::EndOfLine::Cr, "AX\rY\rZ\rQZ", 8, "AoX\rY\rZ\rQldZ", 9},
         {Scintilla::EndOfLine::Lf, "AX\nY\nZ\nQZ", 8, "AoX\nY\nZ\nQldZ", 9},
-    };
+    }};
     for (const auto& fixture : endings) {
         for (const bool convert : {false, true}) {
             TestEditor::ResetStream(editor, "AoldZ", 1, 4, fixture.mode);
@@ -1661,9 +1662,9 @@ void SwapAvailability(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 
 void RequireRectangleRanges(EditorControl* editor, bool reverse) {
     using Scintilla::Message;
-    const intptr_t ranges[3][2] = {{1, 2}, {7, 8}, {13, 14}};
+    const std::array<std::array<intptr_t, 2>, 3> ranges = {{{1, 2}, {7, 8}, {13, 14}}};
     for (int index = 0; index < 3; ++index) {
-        const auto* range = ranges[reverse ? 2 - index : index];
+        const auto& range = ranges[reverse ? 2 - index : index];
         Require(editor->Send(Message::GetSelectionNAnchor, index) == range[reverse ? 1 : 0] &&
                     editor->Send(Message::GetSelectionNCaret, index) == range[reverse ? 0 : 1],
                 "native rectangular ranges match independent original byte positions");
@@ -1811,7 +1812,7 @@ void SwapSavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
     const auto directory = TestFiles::TemporaryDirectory("clipboard-swap-中文");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {
+    const std::array<TestFiles::EncodedFixture, 4> fixtures = {{
         {"utf8", FileEncoding::Utf8, "AoldZ", "AXZ"},
         {"utf8-bom", FileEncoding::Utf8,
          "\x{ef}\x{bb}\x{bf}"
@@ -1832,7 +1833,7 @@ void SwapSavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
          std::string("\x{ff}\x{fe}"
                      "A\0X\0Z\0",
                      8)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".txt");

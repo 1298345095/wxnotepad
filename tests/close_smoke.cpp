@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <array>
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
@@ -106,7 +107,7 @@ void CheckWhitespaceTransition(const std::filesystem::path& directory, const std
 void CheckWhitespacePrompts(const std::filesystem::path& directory) {
     const auto source = directory / "open-whitespace.txt";
     std::ofstream(source, std::ios::binary) << "opened";
-    const Sample samples[] = {
+    const std::array<Sample, 13> samples = {{
         {"2047 spaces", std::string(2047, ' '), false},
         {"2048 spaces", std::string(2048, ' '), true},
         {"tabs", "\t\t", false},
@@ -120,7 +121,7 @@ void CheckWhitespacePrompts(const std::filesystem::path& directory) {
         {"Unicode em space", "\x{e2}\x{80}\x{83}", true},
         {"named whitespace", " \t\r\n", true, true},
         {"named empty after editing", "", true, true},
-    };
+    }};
     for (const auto& sample : samples) {
         for (const auto* action : {"New", "Open", "Close"}) {
             CheckWhitespaceTransition(directory, source, sample, action);

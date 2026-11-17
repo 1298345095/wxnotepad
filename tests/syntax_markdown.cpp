@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "syntax_language_test_helpers.h"
 #include "file_helpers.h"
@@ -29,11 +30,11 @@ struct Dialect {
     SyntaxLanguage language;
     const char* property;
 };
-constexpr Dialect dialects[] = {
+constexpr std::array<Dialect, 3> dialects = {{
     {"GitHub GFM", SyntaxLanguage::MarkdownGitHub, "0"},
     {"GitLab GLFM", SyntaxLanguage::MarkdownGitLab, "1"},
     {"Pandoc", SyntaxLanguage::MarkdownPandoc, "2"},
-};
+}};
 void Workflows(EditorFrame* frame, SettingsStore& settings) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
@@ -46,9 +47,10 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         TestFiles::WriteBytes(path, text);
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "Markdown workflow must Open");
         Choose(frame, dialect.name);
-        char property[8]{};
-        editor->Send(GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
-        Require(editor->Send(GetLexer) == SCLEX_MARKDOWN && std::string(property) == dialect.property,
+        std::array<char, 8> property{};
+        editor->Send(GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
+                     reinterpret_cast<intptr_t>(property.data()));
+        Require(editor->Send(GetLexer) == SCLEX_MARKDOWN && std::string(property.data()) == dialect.property,
                 "native Markdown choice must install the original lexer and dialect property");
         Require(editor->Send(GetTabWidth) == 7 && editor->Send(GetIndent) == 3 && !editor->Send(GetUseTabs),
                 "Markdown dialects inherit the selected global indentation defaults");

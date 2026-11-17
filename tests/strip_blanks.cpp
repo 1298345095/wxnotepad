@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "native_search_helpers.h"
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
@@ -45,14 +46,14 @@ void Selections(EditorFrame* frame) {
         intptr_t afterCaret;
     };
     // Literal results from the pinned regex-based selection command.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 6> fixtures = {{
         {false, "A  \r\nB\t \nC \t", 11, 2, "A \r\nB\nC \t", 8, 2},
         {true, "  A\n\t B\n  C", 10, 1, "  A\nB\nC", 6, 1},
         {false, "A  \nB  ", 0, 2, "A  \nB  ", 0, 2},
         {true, "  A\n B", 0, 1, "  A\n B", 0, 1},
         {true, "  A\r\n \t\rB\n\t ", 0, 12, "A\r\n\rB\n", 0, 6},
         {false, "A \t\r\n \t\rB\n\t ", 0, 12, "A\r\n\rB\n", 0, 6},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         Set(editor, fixture.before, fixture.anchor, fixture.caret);
@@ -183,12 +184,12 @@ void SearchState(EditorFrame* frame) {
 void SavedBytes(EditorFrame* frame) {
     using namespace std::string_literals;
     using Fixture = TestFiles::EncodedFixture;
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf} \t中 \t\r\n \tx \t\n \ty\t", "\x{ef}\x{bb}\x{bf}中\r\nx\ny"},
         {"gbk", FileEncoding::Gbk, " \t\x{d6}\x{d0} \t\r\n \tx \t\n \ty\t", "\x{d6}\x{d0}\r\nx\ny"},
         {"utf16", FileEncoding::Utf16Le, "\x{ff}\x{fe} \0\t\0\x{2d}\x{4e} \0\t\0\r\0\n\0 \0x\0 \0\n\0 \0y\0\t\0"s,
          "\x{ff}\x{fe}\x{2d}\x{4e}\r\0\n\0x\0\n\0y\0"s},
-    };
+    }};
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;

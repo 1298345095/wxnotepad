@@ -142,7 +142,8 @@ void EscapePrefixCompletion(EditorFrame* frame) {
         Fixture{"JavaScript", SyntaxLanguage::JavaScript, "const name = 'alpha'; const suffix = '\\nal';",
                 SCE_JS_ESCAPECHAR, true},
         Fixture{"Web Source Code", SyntaxLanguage::Html,
-                "<script>const name = 'alpha'; const suffix = '\\\\nal';</script>", js_style(SCE_JS_ESCAPECHAR), false},
+                R"(<script>const name = 'alpha'; const suffix = '\\nal';</script>)", js_style(SCE_JS_ESCAPECHAR),
+                false},
     };
     WordCompletionSettings settings;
     settings.completeOption = WordCompletionOption::CompleteWord | WordCompletionOption::ScanWordsInDocument |
@@ -269,7 +270,7 @@ public:
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 const std::string longestKeyword(124, 'x');
                 const auto keywordList = longestKeyword + "^y(z";
-                const SyntaxKeywords keywords[] = {{keywordList.c_str(), 0}};
+                const std::array keywords = {SyntaxKeywords{keywordList.c_str(), 0}};
                 auto definition = SyntaxFor(SyntaxLanguage::Cpp);
                 definition.keywords = keywords;
                 WordCompletionSettings boundarySettings;

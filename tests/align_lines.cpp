@@ -411,13 +411,13 @@ void SavedBytes(EditorFrame* frame) {
     using namespace std::string_literals;
     const auto directory = TestFiles::TemporaryDirectory("align-lines");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}  中   文\r\n    x\n", "\x{ef}\x{bb}\x{bf}  中 文\r\n  x\n"},
         {"gbk", FileEncoding::Gbk, "  \x{d6}\x{d0}   \x{ce}\x{c4}\r\n    x\n", "  \x{d6}\x{d0} \x{ce}\x{c4}\r\n  x\n"},
         {"utf16", FileEncoding::Utf16Le,
          "\x{ff}\x{fe} \0 \0\x{2d}\x{4e} \0 \0 \0\x{87}\x{65}\r\0\n\0 \0 \0 \0 \0x\0\n\0"s,
          "\x{ff}\x{fe} \0 \0\x{2d}\x{4e} \0\x{87}\x{65}\r\0\n\0 \0 \0x\0\n\0"s},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);

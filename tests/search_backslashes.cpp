@@ -93,8 +93,7 @@ public:
                         "Find All shares transformed bytes and bookmarks multiline matches");
                 std::puts("PASS: transformed multiline Find Next/Previous and UTF-8 positions");
                 Load(*editor, "中\r\n\t文 中\r\n\t文");
-                search.Configure(
-                    {"\\u4E2D\\r\\n\\t\\u6587", "\\u6587\\n$1\\1\\\\", {false, false, false, true}, false});
+                search.Configure({R"(\u4E2D\r\n\t\u6587)", R"(\u6587\n$1\1\\)", {false, false, false, true}, false});
                 const auto all = search.ReplaceAll();
                 Require(all.count == 2 && all.changed && Text(*editor) == "文\n$1\\1\\ 文\n$1\\1\\",
                         "literal transforms preserve capture spellings as literal bytes");
