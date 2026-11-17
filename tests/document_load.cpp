@@ -1,10 +1,9 @@
+#include "document_load.h"
 #include "document/document_session.h"
 #include "editor/editor_control.h"
 #include "file_helpers.h"
-#include <wx/wx.h>
 #include <array>
 #include <cstdio>
-#include <iostream>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -103,7 +102,7 @@ void SourceIdentity(EditorControl& editor) {
                 Text(editor) == bytes && document.Save().status == SaveStatus::Saved &&
                 TestFiles::Bytes(source) == bytes,
             "the full native OEM source retains its identity and exact saved bytes");
-    const std::string signedUtf8 = "\xef\xbb\xbf" + bytes;
+    const std::string signedUtf8 = "\x{ef}\x{bb}\x{bf}" + bytes;
     TestFiles::WriteBytes(source, signedUtf8);
     Require(document.Load(DocumentLoad::Open{path, EncodingChoice(FileEncoding::Utf8)}).status == OpenStatus::Opened &&
                 document.CurrentEncoding() == EncodingChoice(FileEncoding::Utf8, true) && Text(editor) == bytes &&
@@ -133,7 +132,7 @@ void DecisionOrder(EditorControl& editor) {
                 configurations == 0 && State(document, editor) == before,
             "Open read failure precedes its decision and retains live state");
     const auto invalid = TestFiles::TemporaryDirectory("load-invalid.txt");
-    TestFiles::WriteBytes(invalid, "\xff");
+    TestFiles::WriteBytes(invalid, "\x{ff}");
     const auto undecodable =
         document.Load(DocumentLoad::Open{TestFiles::Filename(invalid), FileEncoding::Utf8, decide}, configure);
     Require(undecodable.status == OpenStatus::Failed && !undecodable.error.empty() && decisions == 0 &&
@@ -259,62 +258,39 @@ void Utf8CapturesBeforeDecision(EditorControl& editor) {
 }
 
 void ConfigureBeforeRestore(EditorControl& editor) {
+    using enum Scintilla::Message;
     DocumentSession document(editor);
     const auto source = TestFiles::TemporaryDirectory("load-configure.txt");
     OpenFixture(document, source, "# tab-width: 8; indent-tabs-mode: true\nold\n");
-    editor.Send(Message::SetSel, 2, 7);
-    editor.Send(Message::SetReadOnly, 1);
+    editor.Send(SetSel, 2, 7);
+    editor.Send(SetReadOnly, 1);
     const std::string replacement = "# tab-width: 3; indent-tabs-mode: false\nloaded\n";
     TestFiles::WriteBytes(source, replacement);
     int configurations = 0;
     const auto result = document.Load(DocumentLoad::Reload{}, [&document, &editor, &replacement, &configurations] {
         ++configurations;
         Require(document.FileVariables().tabWidth == 3 && document.FileVariables().tabsAsSpaces == true &&
-                    Text(editor) == replacement && editor.Send(Message::GetAnchor) == 0 &&
-                    editor.Send(Message::GetCurrentPos) == 0 && !editor.Send(Message::GetReadOnly),
+                    Text(editor) == replacement && editor.Send(GetAnchor) == 0 && editor.Send(GetCurrentPos) == 0 &&
+                    !editor.Send(GetReadOnly),
                 "loaded configuration observes committed file variables and text before view/protection restore");
-        editor.Send(Message::SetTabWidth, static_cast<uintptr_t>(*document.FileVariables().tabWidth));
+        editor.Send(SetTabWidth, static_cast<uintptr_t>(*document.FileVariables().tabWidth));
     });
-    Require(result.status == OpenStatus::Opened && configurations == 1 && editor.Send(Message::GetTabWidth) == 3 &&
-                editor.Send(Message::GetAnchor) == 2 && editor.Send(Message::GetCurrentPos) == 7 &&
-                editor.Send(Message::GetReadOnly) && !document.IsModified(),
+    Require(result.status == OpenStatus::Opened && configurations == 1 && editor.Send(GetTabWidth) == 3 &&
+                editor.Send(GetAnchor) == 2 && editor.Send(GetCurrentPos) == 7 && editor.Send(GetReadOnly) &&
+                !document.IsModified(),
             "successful reload configures once before restoring the captured view and protection");
     std::puts("PASS: document-load configuration runs once after file variables and before view/read-only restore");
 }
 
-class DocumentLoadApp final : public wxApp {
-public:
-    bool OnInit() override {
-        auto* frame = new wxFrame(nullptr, wxID_ANY, "wxnotepad document load intents");
-        auto* editor = new EditorControl(frame);
-        frame->Show();
-        CallAfter([this, frame, editor] {
-            try {
-                PathlessIntents(*editor);
-                SourceIdentity(*editor);
-                DecisionOrder(*editor);
-                RetainCandidate(*editor);
-                RereadWithLiveOptions(*editor);
-                RereadFailureRetainsSaveAs(*editor);
-                Utf8CapturesBeforeDecision(*editor);
-                ConfigureBeforeRestore(*editor);
-                result_ = 0;
-            } catch (const std::exception& error) {
-                std::cerr << "FAIL: " << error.what() << '\n';
-            }
-            frame->Destroy();
-            ExitMainLoop();
-        });
-        return true;
-    }
-    int OnRun() override {
-        wxApp::OnRun();
-        return result_;
-    }
-
-private:
-    int result_ = 1;
-};
 } // namespace
 
-wxIMPLEMENT_APP(DocumentLoadApp);
+void CheckDocumentLoadIntents(EditorControl& editor) {
+    PathlessIntents(editor);
+    SourceIdentity(editor);
+    DecisionOrder(editor);
+    RetainCandidate(editor);
+    RereadWithLiveOptions(editor);
+    RereadFailureRetainsSaveAs(editor);
+    Utf8CapturesBeforeDecision(editor);
+    ConfigureBeforeRestore(editor);
+}

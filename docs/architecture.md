@@ -286,8 +286,9 @@ files, mixed-EOL confirmation and UI updates. Restart continues to apply any
 post-load current-encoding selection after this frame work; its source-decoding
 choice is part of the Open intent.
 
-`document_load_intents` tests this interface with a real editor and temporary
-files, independently of the application shell. The existing reopen, recoding,
+The document-load contracts in `feature_session_contracts` test this interface
+with a real editor and temporary files, using the existing session-test host
+independently of the application shell. The existing reopen, recoding,
 watcher and restart fixtures retain coverage of native adapters and their ordering.
 
 The document-local language choice belongs to the session. It exposes a

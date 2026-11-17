@@ -1,4 +1,5 @@
 #include "document/document_session.h"
+#include "document_load.h"
 #include "editor/editor_control.h"
 #include "search/search_session.h"
 #include <wx/wx.h>
@@ -377,6 +378,7 @@ public:
                         "New resets document identity/language while retaining search preferences");
                 std::puts("PASS: independent DocumentSession language transitions and saved bytes");
                 EncodingSelection(*editor);
+                CheckDocumentLoadIntents(*editor);
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

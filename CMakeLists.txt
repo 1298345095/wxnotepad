@@ -393,11 +393,9 @@ if(BUILD_TESTING)
 
     # This test reaches feature interfaces without linking the frame or its dialogs.
     add_gui_program(feature_sessions tests/feature_sessions.cpp editor_features)
+    target_sources(feature_sessions PRIVATE tests/document_load.cpp)
     add_test(NAME feature_session_contracts COMMAND feature_sessions)
     set_tests_properties(feature_session_contracts PROPERTIES TIMEOUT 30)
-    add_gui_program(document_load tests/document_load.cpp editor_features)
-    add_test(NAME document_load_intents COMMAND document_load)
-    set_tests_properties(document_load_intents PROPERTIES TIMEOUT 30)
 
     add_gui_program(reopen_document tests/reopen_document.cpp app_shell)
     add_test(NAME reopen_current_document COMMAND reopen_document)

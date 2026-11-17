@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdio>
 #include <stdexcept>
+#include <string_view>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
@@ -54,8 +55,8 @@ public:
     }
 
 private:
-    void Check(const char* name, DocumentSession& opened, const OpenResult& result, const std::string& input,
-               const std::string& text, FileEncoding encoding, bool bom) const {
+    void Check(const char* name, DocumentSession& opened, const OpenResult& result, std::string_view input,
+               std::string_view text, FileEncoding encoding, bool bom) const {
         if (result.status != OpenStatus::Opened) std::fprintf(stderr, "%s: %s\n", name, result.error.utf8_str().data());
         Require(result.status == OpenStatus::Opened, name);
         Require(Text(*editor_) == text && opened.Encoding() == encoding && opened.HasBom() == bom, name);
@@ -68,6 +69,7 @@ void CheckWeakNativeAnsi(EditorControl* editor, const std::filesystem::path& dir
 void CheckConfiguredDetection(EditorControl* editor, const std::filesystem::path& directory,
                               const AutomaticFixture& check);
 void CheckAutomaticDetection(EditorControl* editor, const std::filesystem::path& directory) {
+    using enum FileEncoding;
     DocumentSession document(*editor);
     const auto western = directory / "western.vhdl";
     TestFiles::WriteBytes(western, "-- \x{80}\x{a0}\r\n");
@@ -97,22 +99,20 @@ void CheckAutomaticDetection(EditorControl* editor, const std::filesystem::path&
     std::ofstream(path, std::ios::binary) << bytes;
     Require(document.Load(DocumentLoad::Open{TestFiles::Filename(path)}).status == OpenStatus::Opened,
             "automatic Open must recognize a CP936 declaration");
-    Require(Text(*editor) == "# coding: gb2312\n中文\n" && document.Encoding() == FileEncoding::Gbk,
+    Require(Text(*editor) == "# coding: gb2312\n中文\n" && document.Encoding() == Gbk,
             "declaration selects the supported CP936 codec");
     Require(document.Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == bytes,
             "Save must retain the chosen encoding and exact source bytes");
     std::puts("PASS: declared CP936 automatic Open and exact Save");
     std::ofstream(path, std::ios::binary) << "# coding: gbk\nplain\n";
     Require(document.Load(DocumentLoad::Open{TestFiles::Filename(path)}).status == OpenStatus::Opened &&
-                document.Encoding() == FileEncoding::Gbk,
+                document.Encoding() == Gbk,
             "ASCII declarations precede the ASCII-as-UTF8 default");
     const AutomaticFixture check(editor, directory);
-    check("latin-utf16.txt", std::string("H\0e\0l\0l\0o\0\n\0", 12), "Hello\n", FileEncoding::Utf16Le, false);
-    check("bom-utf16.txt", std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\x{0a}\0", 8), "中文\n",
-          FileEncoding::Utf16Le, true);
-    check("latin-utf16be.txt", std::string("\0H\0e\0l\0l\0o\0\n", 12), "Hello\n", FileEncoding::Utf16Be, false);
-    check.Reload("weak-utf16be-ascii.txt", EncodingChoice(FileEncoding::Utf16Be, true), "plain", "plain",
-                 FileEncoding::Utf8, false);
+    check("latin-utf16.txt", std::string("H\0e\0l\0l\0o\0\n\0", 12), "Hello\n", Utf16Le, false);
+    check("bom-utf16.txt", std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\x{0a}\0", 8), "中文\n", Utf16Le, true);
+    check("latin-utf16be.txt", std::string("\0H\0e\0l\0l\0o\0\n", 12), "Hello\n", Utf16Be, false);
+    check.Reload("weak-utf16be-ascii.txt", EncodingChoice(Utf16Be, true), "plain", "plain", Utf8, false);
     const auto explicitReloadPath = directory / "strong-utf16be.txt";
     const std::string explicitReloadBytes("\x{fe}\x{ff}\x{4e}\x{2d}", 4);
     TestFiles::WriteBytes(explicitReloadPath, "");
@@ -120,32 +120,32 @@ void CheckAutomaticDetection(EditorControl* editor, const std::filesystem::path&
     Require(explicitReload.Load(DocumentLoad::Open{TestFiles::Filename(explicitReloadPath)}).status ==
                 OpenStatus::Opened,
             "explicit reload fixture first acquires its named document identity");
-    explicitReload.SelectEncoding(EncodingChoice(FileEncoding::Utf16Le));
-    Require(explicitReload.CurrentEncoding() == EncodingChoice(FileEncoding::Utf16Le),
+    explicitReload.SelectEncoding(EncodingChoice(Utf16Le));
+    Require(explicitReload.CurrentEncoding() == EncodingChoice(Utf16Le),
             "explicit reload fixture begins with the conflicting current encoding");
     TestFiles::WriteBytes(explicitReloadPath, explicitReloadBytes);
-    Require(explicitReload.Load(DocumentLoad::ReloadWithEncoding{FileEncoding::Utf16Be}).status == OpenStatus::Opened &&
-                Text(*editor) == "中" && explicitReload.Encoding() == FileEncoding::Utf16Be &&
-                explicitReload.HasBom() && explicitReload.Save().status == SaveStatus::Saved &&
+    Require(explicitReload.Load(DocumentLoad::ReloadWithEncoding{Utf16Be}).status == OpenStatus::Opened &&
+                Text(*editor) == "中" && explicitReload.Encoding() == Utf16Be && explicitReload.HasBom() &&
+                explicitReload.Save().status == SaveStatus::Saved &&
                 TestFiles::Bytes(explicitReloadPath) == explicitReloadBytes,
             "explicit UTF-16BE reload overrides the current UTF-16LE choice and retains exact saved bytes");
-    check.OpenAs("strong-utf16le-over-be.txt", FileEncoding::Utf16Le, std::string("\x{fe}\x{ff}\0A", 4),
-                 "\x{ef}\x{bf}\x{be}\x{e4}\x{84}\x{80}", FileEncoding::Utf16Le, false);
+    check.OpenAs("strong-utf16le-over-be.txt", Utf16Le, std::string("\x{fe}\x{ff}\0A", 4),
+                 "\x{ef}\x{bf}\x{be}\x{e4}\x{84}\x{80}", Utf16Le, false);
     EncodingOptions bigEndianDefault;
     bigEndianDefault.loadASCIIasUTF8 = false;
     bigEndianDefault.defaultEncoding = 7; // Original BOM-less UTF-16BE persisted identity.
-    check("default-utf16be-empty.txt", "", "", FileEncoding::Utf16Be, false, bigEndianDefault);
+    check("default-utf16be-empty.txt", "", "", Utf16Be, false, bigEndianDefault);
     bigEndianDefault.defaultEncoding = 2; // Original UTF-16BE BOM persisted identity.
     const auto defaultEmpty = directory / "default-empty.txt";
     TestFiles::WriteBytes(defaultEmpty, "");
     DocumentSession defaultDocument(*editor, bigEndianDefault);
     Require(defaultDocument.Load(DocumentLoad::Open{TestFiles::Filename(defaultEmpty)}).status == OpenStatus::Opened &&
-                defaultDocument.Encoding() == FileEncoding::Utf16Be && defaultDocument.HasBom() &&
+                defaultDocument.Encoding() == Utf16Be && defaultDocument.HasBom() &&
                 defaultDocument.Save().status == SaveStatus::Saved && TestFiles::Bytes(defaultEmpty) == "\x{fe}\x{ff}",
             "existing DefaultEncoding UTF-16BE BOM identity is consumed for an empty Open");
     TestFiles::WriteBytes(defaultEmpty, "");
     Require(defaultDocument.Load(DocumentLoad::Reload{}).status == OpenStatus::Opened && defaultDocument.HasBom() &&
-                defaultDocument.Encoding() == FileEncoding::Utf16Be,
+                defaultDocument.Encoding() == Utf16Be,
             "empty weak reload retains UTF-16BE and its BOM identity");
     // Literal observations from the independent original executable capture
     // (encoding-languages-2026-11-08/reference/original-observations.json).
@@ -169,54 +169,52 @@ void CheckAutomaticDetection(EditorControl* editor, const std::filesystem::path&
          {std::string("\x{fe}\x{ff}\0A\0\0\0B\0\r\0\n\0C\0\n\0D\0\r", 20), std::string("A\0B\r\nC\nD\r", 9), true}}};
     const auto boundaryPath = directory / "boundary.txt";
     for (const auto& boundary : boundaries) {
+        using enum Scintilla::Message;
         TestFiles::WriteBytes(boundaryPath, boundary.bytes);
         DocumentSession boundaryDocument(*editor);
-        Require(boundaryDocument.Load(DocumentLoad::Open{TestFiles::Filename(boundaryPath), FileEncoding::Utf16Be})
-                            .status == OpenStatus::Opened &&
-                    Text(*editor) == boundary.text && boundaryDocument.Encoding() == FileEncoding::Utf16Be &&
+        Require(boundaryDocument.Load(DocumentLoad::Open{TestFiles::Filename(boundaryPath), Utf16Be}).status ==
+                        OpenStatus::Opened &&
+                    Text(*editor) == boundary.text && boundaryDocument.Encoding() == Utf16Be &&
                     boundaryDocument.HasBom() == boundary.bom && !boundaryDocument.IsModified() &&
-                    !editor->Send(Scintilla::Message::CanUndo),
+                    !editor->Send(CanUndo),
                 "UTF-16BE boundary bytes and identity match independently captured original results");
-        editor->Send(Scintilla::Message::AppendText, 1, reinterpret_cast<intptr_t>("x"));
-        editor->Send(Scintilla::Message::Undo);
-        Require(Text(*editor) == boundary.text && editor->Send(Scintilla::Message::CanRedo),
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("x"));
+        editor->Send(Undo);
+        Require(Text(*editor) == boundary.text && editor->Send(CanRedo),
                 "Undo after UTF-16BE load preserves replacement/NUL bytes and supports Redo");
-        editor->Send(Scintilla::Message::Redo);
+        editor->Send(Redo);
         Require(Text(*editor) == boundary.text + "x", "Redo after UTF-16BE load restores the edit");
     }
     std::puts("PASS: UTF-16BE original boundary captures, defaults, strong/weak precedence and history");
-    check("declared-utf8.txt", "# coding: gbk\n中文\n", "# coding: gbk\n中文\n", FileEncoding::Utf8, false);
-    check("bom-utf8.txt", "\x{ef}\x{bb}\x{bf}# coding: gbk\n中文\n", "# coding: gbk\n中文\n", FileEncoding::Utf8, true);
-    check.Reload("weak-ascii.txt", EncodingChoice(FileEncoding::Gbk), "# coding: utf8\nplain\n",
-                 "# coding: utf8\nplain\n", FileEncoding::Gbk, false);
-    check.Reload("weak-utf8.txt", EncodingChoice(FileEncoding::Gbk), "中文\n", "中文\n", FileEncoding::Utf8, false);
-    check.Reload("weak-utf16.txt", EncodingChoice(FileEncoding::Utf16Le), "plain", "plain", FileEncoding::Utf8, false);
+    check("declared-utf8.txt", "# coding: gbk\n中文\n", "# coding: gbk\n中文\n", Utf8, false);
+    check("bom-utf8.txt", "\x{ef}\x{bb}\x{bf}# coding: gbk\n中文\n", "# coding: gbk\n中文\n", Utf8, true);
+    check.Reload("weak-ascii.txt", EncodingChoice(Gbk), "# coding: utf8\nplain\n", "# coding: utf8\nplain\n", Gbk,
+                 false);
+    check.Reload("weak-utf8.txt", EncodingChoice(Gbk), "中文\n", "中文\n", Utf8, false);
+    check.Reload("weak-utf16.txt", EncodingChoice(Utf16Le), "plain", "plain", Utf8, false);
     const auto empty = directory / "empty-reload.txt";
     std::ofstream(empty, std::ios::binary).close();
     DocumentSession emptyReload(*editor);
     Require(emptyReload.Load(DocumentLoad::Open{TestFiles::Filename(empty)}).status == OpenStatus::Opened,
             "empty reload fixture first acquires its named document identity");
-    emptyReload.SelectEncoding(EncodingChoice(FileEncoding::Utf16Le, true));
+    emptyReload.SelectEncoding(EncodingChoice(Utf16Le, true));
     Require(emptyReload.Load(DocumentLoad::Reload{}).status == OpenStatus::Opened &&
-                emptyReload.Encoding() == FileEncoding::Utf16Le && emptyReload.HasBom(),
+                emptyReload.Encoding() == Utf16Le && emptyReload.HasBom(),
             "an empty reload keeps the weak UTF-16 BOM choice");
     Require(emptyReload.Save().status == SaveStatus::Saved && TestFiles::Bytes(empty) == "\x{ff}\x{fe}",
             "Save writes the BOM selected for the empty reload");
-    check.Reload("weak-utf16-bom-ascii.txt", EncodingChoice(FileEncoding::Utf16Le, true), "plain", "plain",
-                 FileEncoding::Utf8, false);
-    check.Reload("weak-utf8-bom-ascii.txt", EncodingChoice(FileEncoding::Utf8, true), "plain", "plain",
-                 FileEncoding::Utf8, false);
+    check.Reload("weak-utf16-bom-ascii.txt", EncodingChoice(Utf16Le, true), "plain", "plain", Utf8, false);
+    check.Reload("weak-utf8-bom-ascii.txt", EncodingChoice(Utf8, true), "plain", "plain", Utf8, false);
     std::ofstream(empty, std::ios::binary).close();
-    emptyReload.SelectEncoding(EncodingChoice(FileEncoding::Utf8, true));
-    Require(emptyReload.Load(DocumentLoad::Reload{}).status == OpenStatus::Opened &&
-                emptyReload.Encoding() == FileEncoding::Utf8 && emptyReload.HasBom(),
+    emptyReload.SelectEncoding(EncodingChoice(Utf8, true));
+    Require(emptyReload.Load(DocumentLoad::Reload{}).status == OpenStatus::Opened && emptyReload.Encoding() == Utf8 &&
+                emptyReload.HasBom(),
             "an empty reload keeps the weak UTF-8 BOM choice");
     Require(emptyReload.Save().status == SaveStatus::Saved && TestFiles::Bytes(empty) == "\x{ef}\x{bb}\x{bf}",
             "Save writes the UTF-8 BOM selected for the empty reload");
     CheckWeakNativeAnsi(editor, directory);
-    check.OpenAs("strong.txt", FileEncoding::Utf8, "# coding: gbk\nplain", "# coding: gbk\nplain", FileEncoding::Utf8,
-                 false);
-    check.OpenAs("strong-legacy.txt", FileEncoding::Gbk, "\x{c3}\x{a9}", "茅", FileEncoding::Gbk, false);
+    check.OpenAs("strong.txt", Utf8, "# coding: gbk\nplain", "# coding: gbk\nplain", Utf8, false);
+    check.OpenAs("strong-legacy.txt", Gbk, "\x{c3}\x{a9}", "茅", Gbk, false);
     std::puts("PASS: original BOM, Latin UTF-16, UTF-8 validation, explicit and weak precedence");
     CheckConfiguredDetection(editor, directory, check);
 }
