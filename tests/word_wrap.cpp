@@ -80,7 +80,7 @@ void AutomaticScrollWidth(EditorFrame* frame) {
     Require(editor->Send(GetScrollWidth) < widest * 3 / 4,
             "deleting the widest line shrinks to the remaining visible long line");
     const auto frameSize = frame->GetSize();
-    const int lineHeight = static_cast<int>(editor->Send(TextHeight, 0));
+    const auto lineHeight = static_cast<int>(editor->Send(TextHeight, 0));
     const int adjustment = lineHeight - 2 - editor->GetClientSize().y % lineHeight;
     frame->SetSize(frameSize + wxSize(0, adjustment));
     Layout(frame);

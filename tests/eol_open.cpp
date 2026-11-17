@@ -127,16 +127,23 @@ void CountAndDefault(const std::filesystem::path& directory, SettingsStore& sett
                     "configured tie preference and original counting must choose insertion mode");
             editor->Send(GotoPos, editor->Send(GetLength));
             editor->Send(NewLine);
-            const char* ending = mode == CrLf ? "\r\n" : mode == Lf ? "\n" : "\r";
+            const char* ending = "\r";
+            if (mode == CrLf)
+                ending = "\r\n";
+            else if (mode == Lf)
+                ending = "\n";
             Require(frame->SaveAs(Filename(output)).status == SaveStatus::Saved &&
                         Bytes(output) == std::string(sample.bytes) + ending && Bytes(input) == sample.bytes &&
                         !editor->Send(GetModify),
                     "Save As must preserve bytes and append the chosen ending");
         }
+        auto configuredMode = Cr;
+        if (configured == 0)
+            configuredMode = CrLf;
+        else if (configured == 1)
+            configuredMode = Lf;
         Require(frame->NewDocument() &&
-                    editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(configured == 0   ? CrLf
-                                                                                         : configured == 1 ? Lf
-                                                                                                           : Cr)),
+                    editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(configuredMode)),
                 "New must restore the configured insertion default");
         frame->Destroy();
         wxYield();

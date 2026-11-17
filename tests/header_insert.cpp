@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <array>
 #include <utility>
 
 namespace {
@@ -64,7 +65,7 @@ void State(EditorControl* editor, const std::vector<std::string>& fields, size_t
     using enum Scintilla::Message;
     Require(TestEditor::Text(editor) == Unhex(fields[start]),
             "header text matches independently captured original bytes");
-    const Message messages[] = {GetAnchor, GetCurrentPos, GetModify, CanUndo, CanRedo};
+    constexpr std::array messages{GetAnchor, GetCurrentPos, GetModify, CanUndo, CanRedo};
     for (size_t index = 0; index < std::size(messages); ++index)
         Require(editor->Send(messages[index]) == std::stoll(fields[start + index + 1]),
                 "header selection, save point and history match the original capture");
@@ -95,8 +96,8 @@ void RejectedAnsiOpen(EditorFrame* frame, const std::filesystem::path& path, con
     const auto codec = frame->DocumentEncoding();
     const bool bom = frame->DocumentHasBom();
     const auto oldPath = frame->DocumentPath();
-    const Message messages[] = {GetAnchor,   GetCurrentPos,    GetModify,     CanUndo,    CanRedo,
-                                GetReadOnly, GetSelectionMode, GetSelections, GetEOLMode, GetLexer};
+    constexpr std::array messages{GetAnchor,   GetCurrentPos,    GetModify,     CanUndo,    CanRedo,
+                                  GetReadOnly, GetSelectionMode, GetSelections, GetEOLMode, GetLexer};
     std::vector<intptr_t> before;
     for (const auto message : messages)
         before.push_back(editor->Send(message));

@@ -9,6 +9,7 @@
 #include <wx/timer.h>
 #include "native_dialog_helpers.h"
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -107,9 +108,15 @@ private:
 wxString SaveCommand(EditorFrame* frame, int id, const wxString& path = {}, const wxString& type = {}) {
     using enum SyntaxLanguage;
     const auto lexer = frame->Editor()->Send(Message::GetLexer);
-    auto current = lexer == SCLEX_CPP ? Cpp : lexer == SCLEX_PYTHON ? Python : lexer == SCLEX_JSON ? Json : PlainText;
+    auto current = PlainText;
+    if (lexer == SCLEX_CPP)
+        current = Cpp;
+    else if (lexer == SCLEX_PYTHON)
+        current = Python;
+    else if (lexer == SCLEX_JSON)
+        current = Json;
     if (lexer == SCLEX_JAVASCRIPT) {
-        const SyntaxLanguage dialects[] = {JavaScript, Jsx, TypeScript, Tsx};
+        constexpr std::array dialects{JavaScript, Jsx, TypeScript, Tsx};
         const auto dialect = frame->Editor()->Send(Message::GetPropertyInt, reinterpret_cast<uintptr_t>("lexer.lang"));
         Require(dialect >= 0 && dialect < 4, "native Save chooser must retain JS dialect");
         current = dialects[dialect];

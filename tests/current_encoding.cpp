@@ -262,8 +262,8 @@ void AnsiTransition(EditorFrame* frame) {
                                      : native->encoding == FileEncoding::Utf8 ? "a中😀\r\n"
                                                                               : "a???\r\n";
         const bool converted = native->encoding != FileEncoding::Utf8;
-        const auto actualText = TestEditor::Text(frame);
-        if (driver.shown != 1 || actualText != expected || bool(editor->Send(GetReadOnly)) != !converted ||
+        if (const auto actualText = TestEditor::Text(frame);
+            driver.shown != 1 || actualText != expected || bool(editor->Send(GetReadOnly)) != !converted ||
             bool(editor->Send(GetUndoActions)) != !converted || bool(editor->Send(MarkerGet, 0)) != !converted ||
             !frame->GetTitle().StartsWith("*")) {
             const auto hex = [](const std::string& text) {

@@ -136,8 +136,8 @@ void History(EditorFrame* frame) {
 void MarginClick(EditorControl* editor, int line) {
     using enum Scintilla::Message;
     const int x = static_cast<int>(editor->Send(GetMarginWidthN, 0) + editor->Send(GetMarginWidthN, 1) / 2);
-    const int y = static_cast<int>(editor->Send(PointYFromPosition, 0, editor->Send(PositionFromLine, line)) +
-                                   editor->Send(TextHeight, line) / 2);
+    const auto y = static_cast<int>(editor->Send(PointYFromPosition, 0, editor->Send(PositionFromLine, line)) +
+                                    editor->Send(TextHeight, line) / 2);
 #ifdef __WXMSW__
     const auto window = static_cast<HWND>(editor->GetHandle());
     SendMessageW(window, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(x, y));
@@ -173,7 +173,7 @@ void Geometry(EditorFrame* frame) {
     Menu(frame, "Bookmark Margin");
     const auto bookmarkCount = [&] {
         using enum Scintilla::Message;
-        const int height = static_cast<int>(editor->Send(TextHeight, 0));
+        const auto height = static_cast<int>(editor->Send(TextHeight, 0));
         const int width = static_cast<int>(editor->Send(GetMarginWidthN, 1));
         const int left = static_cast<int>(editor->Send(GetMarginWidthN, 0));
         const auto pixels = NativePaint::Read(editor, wxRect(left, height, width, height));

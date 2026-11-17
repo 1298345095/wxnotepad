@@ -165,7 +165,7 @@ void WrapAndLifecycle(EditorFrame* frame, PixelReader& pixels) {
     Paint(editor);
     Require(editor->Send(WrapCount, 0) > 2, "fixture has multiple native wrapped display rows");
     Menu(frame, "Background Color");
-    const int height = static_cast<int>(editor->Send(TextHeight, 0));
+    const auto height = static_cast<int>(editor->Send(TextHeight, 0));
     Require(Yellow(pixels.Read(200, height / 2)) && !Yellow(pixels.Read(200, height + height / 2)),
             "subline mode paints only the active wrapped display row");
     Menu(frame, "Highlight Subline");

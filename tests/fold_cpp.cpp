@@ -62,7 +62,7 @@ void MarginBackground(EditorControl* editor) {
     using enum Scintilla::Message;
     const auto read = PixelReader(editor);
     const int left = static_cast<int>(editor->Send(GetMarginWidthN, 0) + editor->Send(GetMarginWidthN, 1));
-    const int width = static_cast<int>(editor->Send(GetMarginWidthN, 2));
+    const auto width = static_cast<int>(editor->Send(GetMarginWidthN, 2));
     for (const int y : {150, editor->GetClientSize().y - 20}) {
         for (const int x : {left + 1, left + width - 2}) {
             const auto pixel = read(x, y);
@@ -76,10 +76,10 @@ std::vector<unsigned int> MarkerPixels(EditorControl* editor, int line) {
     using enum Scintilla::Message;
     const auto read = PixelReader(editor);
     const int left = static_cast<int>(editor->Send(GetMarginWidthN, 0) + editor->Send(GetMarginWidthN, 1));
-    const int width = static_cast<int>(editor->Send(GetMarginWidthN, 2));
+    const auto width = static_cast<int>(editor->Send(GetMarginWidthN, 2));
     const auto position = editor->Send(PositionFromLine, line);
     const int top = static_cast<int>(editor->Send(PointYFromPosition, 0, position));
-    const int height = static_cast<int>(editor->Send(TextHeight, line));
+    const auto height = static_cast<int>(editor->Send(TextHeight, line));
     std::vector<unsigned int> pixels;
     for (int y = top + 1; y < top + height - 1; ++y) {
         for (int x = left + 2; x < left + width - 2; ++x) {

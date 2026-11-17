@@ -13,10 +13,10 @@ void Require(bool condition, const char* message) {
 std::vector<wxColour> MarkerPixels(EditorControl* editor, int line) {
     using enum Scintilla::Message;
     const int left = static_cast<int>(editor->Send(GetMarginWidthN, 0) + editor->Send(GetMarginWidthN, 1));
-    const int width = static_cast<int>(editor->Send(GetMarginWidthN, 2));
+    const auto width = static_cast<int>(editor->Send(GetMarginWidthN, 2));
     const auto position = editor->Send(PositionFromLine, line);
     const int top = static_cast<int>(editor->Send(PointYFromPosition, 0, position));
-    const int height = static_cast<int>(editor->Send(TextHeight, line));
+    const auto height = static_cast<int>(editor->Send(TextHeight, line));
     return NativePaint::Read(editor, wxRect(left + 2, top + 1, width - 4, height - 2));
 }
 void BlockHighlightPaint(EditorFrame* frame, int highlight) {

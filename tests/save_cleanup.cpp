@@ -75,14 +75,14 @@ void Defaults(EditorFrame* frame) {
     using enum Scintilla::EndOfLine;
     auto* editor = frame->Editor();
     const std::string source = "keep\r\ncurrent";
-    for (const auto& mode : {std::pair{1, Lf}, std::pair{2, Cr}, std::pair{0, CrLf}}) {
+    for (const auto& [defaultMode, endOfLine] : {std::pair{1, Lf}, std::pair{2, Cr}, std::pair{0, CrLf}}) {
         Load(editor, source);
-        Options(frame, false, false, true, mode.first);
+        Options(frame, false, false, true, defaultMode);
         Require(NativeSearch::Text(editor) == source &&
                     editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(std::to_underlying(Lf)),
                 "changing the original default mode must retain current document text and insertion mode");
         Require(frame->NewDocument() &&
-                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode.second)),
+                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(std::to_underlying(endOfLine)),
                 "the default line ending selector must apply to the next New document in original order");
     }
     Options(frame, false, false, false, 1);
