@@ -8,10 +8,10 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [2026-11-17 small continuation after PR #222](#2026-11-17-small-continuation-after-pr-222),
-on [`codex/sonarcloud-small-followup-2026-11-17`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-small-followup-2026-11-17).
-[PR #222](https://github.com/1298345095/wxnotepad/pull/222) was merged into main
-at `e45dfe4ec6fd32f7622cd5647df2b7e7d3b5c825` before this review.
+Latest review: [Enum cleanup after PR #223](#enum-cleanup-after-pr-223),
+on [`codex/sonarcloud-enum-cleanup`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-enum-cleanup).
+[PR #223](https://github.com/1298345095/wxnotepad/pull/223) was merged into main
+at `395ad59521dff2e7a5fb1c660188d73ea2269726` before this review.
 
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
@@ -1478,8 +1478,9 @@ OPEN/CONFIRMED findings and **zero** security/reliability findings. The earlier
 
 The [issue-by-issue record](sonarqube-2026-11-17-small-followup-review.json)
 records **13 code-fix keys and one verified false positive**, with source blob
-hashes and validation scope. Main still reports the 13 code-fix keys OPEN;
-merge and main analysis determine their subsequent server resolution.
+hashes and validation scope. At publication, main reported the 13 code-fix keys
+OPEN. The [subsequent enum review](#enum-cleanup-after-pr-223) confirms all 13
+FIXED after merge and main analysis.
 
 ### Reviewed changes
 
@@ -1544,3 +1545,114 @@ review. Coordinate rounding and clipping, dynamic polyline count bounds,
 occurrence-marking time precision and the documented exception/inheritance
 recommendations retain their existing statuses. These behavior-sensitive items
 remain separate from this batch's declaration and membership changes.
+
+## Enum cleanup after PR #223
+
+This batch starts from merged PR #223 at
+`395ad59521dff2e7a5fb1c660188d73ea2269726`. Exact-key SonarCloud MCP queries
+confirm all **13** preceding code-fix keys as FIXED (legacy status CLOSED).
+The merged revision's [CI](https://github.com/1298345095/wxnotepad/actions/runs/44037068945),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/44037069139),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/44037069117), and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/44037069080)
+workflows all completed successfully.
+
+The fresh main baseline contains **2,828** OPEN/CONFIRMED findings, including
+**463 S6177** and **381 S7035**, with zero security/reliability findings.
+The [issue-by-issue record](sonarqube-enum-cleanup-review.json) maps every
+priority-rule key to a disposition: **843 code fixes and one verified false
+positive**. Four additional occurrence-marking fixes and three shared-helper
+fixes bring this batch to **850 code-fix keys** across **155 source and test
+files**. After the false-positive
+transition, main has **2,827** OPEN/CONFIRMED findings; this count includes the
+code fixes awaiting merge and main analysis.
+
+### Reviewed code changes
+
+| Rule | Main keys | Change and preserved contract |
+| --- | ---: | --- |
+| S6177 | 462 | Import each enum in its reported existing local scope and use its unqualified constants there. Full enum member sets and platform branches were checked for name collisions. |
+| S7035 | 381 | Extract enum values with `std::to_underlying`. Retain an explicit destination cast where its width or signedness differs from the underlying type. |
+| S5945 | 2 | Store occurrence-marking lookup tables in `constexpr std::array<uint8_t, 304>` and `constexpr std::array<uint32_t, 89>`, preserving every value and indexed consumer. |
+| S6009 | 2 | Pass read-only input to `CaseSensitiveSelection` and the shared language helper's `Unhex` as `std::string_view`. Callers retain their owning strings; `Unhex` still materializes the same small `std::stoi` arguments. |
+| S5276 | 1 | Make the occurrence-marking rate denominator's existing integer-to-double conversion explicit. Search offsets, calculation order, rounding and the 100 ms budget retain their behavior. |
+| S112 | 2 | Throw the existing `TestEditor::Failure` for original style/fold oracle mismatches, matching `Require`. Existing diagnostics, messages and `std::exception` result boundaries are retained. |
+
+The enum changes preserve native message parameter types, pointer-sized integer
+destinations, bit masks, array indices and fixture assertions. Direct `<utility>`
+includes provide `std::to_underlying` on both native platforms. Two additional
+Windows-only `Technology` conversions in `editor_frame_commands.cpp` follow
+the same reviewed conversion contract. Source reading and repository searches
+establish declarations, callers and consumers; CodeGraph was not used.
+
+Application changes cover 39 files and fixtures cover 116 files. Existing
+string/character literals, fixture data and command order pass complete-file
+token/transform checks. An independent review covers all application diffs and
+the second fixture group, including enum-name sets, integer destinations and
+the four occurrence-marking consumers.
+
+The three shared-helper changes address the remaining `Unhex`/generic-exception
+items recorded in PR #223. Complete helper and caller review covers
+`syntax_config_languages.cpp`, `syntax_native_languages.cpp` and
+`syntax_markdown.cpp`; those three translation units were recompiled after the
+header changes. The `Unhex` parser keeps its substring contents, numeric parsing
+and exception behavior, and each fixture's existing catch boundary handles the
+dedicated failure type through its `std::runtime_error` base.
+
+### Verified Win32 name collision
+
+S6177 key `AaG7NUVWkxw1cHak342E` reports `SelfDrags` in
+`tests/stream_drag.cpp`. `DragApp::InitMainDrags` reaches that function, whose
+Windows branch calls unqualified `GetFocus()` to verify the activated editor's
+native input focus. The pinned `Scintilla::Message` enum also declares
+`GetFocus = 2381`. Importing that enum into the function hides the Win32 function
+and makes the call ill-formed. S6177 explicitly excludes name collisions and
+shadowing; the Linux analysis omits the Windows call.
+
+The qualified enum uses are retained in this scope. The SonarCloud MCP
+false-positive transition succeeded with this exact source/platform explanation.
+Exact-key queries return one FALSE_POSITIVE match and zero OPEN/CONFIRMED
+matches (legacy status RESOLVED). A C++23 compiler control uses the actual
+prepared `ScintillaMessages.h` and a global function declaration: it compiles
+without the import and rejects the imported version because
+`Scintilla::Message::GetFocus` cannot be called as a function.
+
+### Local validation and combined publication
+
+GCC 14.2 performs C++23 syntax compilation of all **151 changed translation
+units**: 38 application and 113 test files. Their dependency files also reach
+all **four changed headers**. The check uses official wxWidgets 3.3.3 public
+headers, real GTK 3 development headers and the pinned prepared Scintilla core.
+Its wx header configuration combines upstream GTK defaults with host platform
+definitions produced by wx configure. Application and test `char8_t` settings
+match their CMake targets. The ledger records each successful file and its
+checked source hash; hosted native builds supply linking and GUI execution.
+
+Compiled controls additionally check 133 enum import combinations and 16 enum
+conversion types at underlying minimum/zero/one/maximum values. The occurrence
+comparison checks all **393** table elements and **54** floating-rate cases,
+including counts around `2^53` and the pointer-sized integer maximum. Results
+match by complete floating-point bit representation. Both control executables
+exit zero through the documented `ci.py probe` entry point.
+
+Canonical clang-format **23.1.2** passes all **374** tracked C/C++ files, and
+`git diff --check` passes. Application code, fixture code and this review record
+are grouped into three commits before one branch publication. The existing
+Windows, Linux X11/Wayland, coverage, clang-tidy, fuzz, CodeQL and SonarCloud
+workflows validate that combined head. Hosted results are pending at publication
+and are recorded on the continuation PR. This batch adds no persistent test
+targets.
+
+### Retained recommendations
+
+The previously documented occurrence-marking precision finding is addressed by
+the explicit rate conversion above. The remaining tracked recommendations keep
+their OPEN status and individual source-contract review:
+
+| Area | Rule / keys | Remaining decision |
+| --- | --- | --- |
+| Drawing/window coordinates in `wx_platform.cpp` | S5276, 20 keys listed in the ledger | Choose consistent range, rounding and clipping behavior and verify native rendering. |
+| `PolyLine` point count | S5276, `AaG1r0ztyu4V9oip4YJD` | Establish bounds for dynamic `Indicator` callers. The separately reviewed fixed `Polygon` limit does not bound these inputs. |
+| Generated NLS stream | S7040, `AaG1r0uxyu4V9oip4YId` | Coordinate the generator and frozen 497,834-byte compressed payload representation. Expanding every escape adds 995,668 source bytes and changes 15,558 data lines. |
+| Recovery and test-result boundaries | S1181, three keys listed in the ledger | Retain the reviewed exception contract while considering the rule's design recommendation. |
+| Framework inheritance | S110, `AaHlwkx59oTYNiRoCpVy` | Review the existing framework-derived type hierarchy as a design change. |
