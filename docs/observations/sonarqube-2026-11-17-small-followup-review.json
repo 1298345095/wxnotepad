@@ -1,0 +1,189 @@
+{
+  "review": "2026-11-17 small continuation after merged PR #222",
+  "project": "1298345095_wxnotepad",
+  "organization": "1298345095",
+  "analysis_context": "main",
+  "base_revision": "e45dfe4ec6fd32f7622cd5647df2b7e7d3b5c825",
+  "base_tree": "50d5cc5d7b34d52d9a8d6c574059760c4f8da83d",
+  "predecessor_pr": 222,
+  "predecessor_merged_at_utc": "2026-11-17T05:08:15Z",
+  "branch": "codex/sonarcloud-small-followup-2026-11-17",
+  "code_commits": [
+    "1b3282b4ad39dba93fee4137f225685fb7f5ac1e",
+    "70624df3899549d7e840fb14143b74151b83e56e"
+  ],
+  "summary": {
+    "implemented_main_issue_keys": 13,
+    "verified_false_positives": 1,
+    "observed_main_open_confirmed_after_disposition": 2841,
+    "observed_main_open_confirmed_security_reliability": 0,
+    "persistent_test_targets_added": 0,
+    "publication": "Prepare code and documentation commits before one branch publication and one pull request."
+  },
+  "code_fix_status": "Implemented on the continuation branch. Exact-key main queries still report these 13 keys OPEN before publication; merge and main analysis determine their subsequent server resolution.",
+  "code_fixes": [
+    {
+      "key": "AaHEzXZMhpq0YxBZ9SBc",
+      "rule": "cpp:S5945",
+      "file": "src/document/encoding/chinese_codec.cpp",
+      "main_line": 42,
+      "change": "Store gbMappings in constexpr std::array<GbMapping, 19>.",
+      "evidence": "All 19 records retain their field values and order. CompatibilityDecode and CompatibilityEncode traverse the same const elements; the table stays private to this translation unit."
+    },
+    {
+      "key": "AaHEzXZMhpq0YxBZ9SBd",
+      "rule": "cpp:S1659",
+      "file": "src/document/encoding/chinese_codec.cpp",
+      "main_line": 52,
+      "change": "Declare firstLead, lastLead and unicode separately.",
+      "evidence": "All three remain unsigned fields in the same order. Compile-time checks compare size, alignment and every field offset."
+    },
+    {
+      "key": "AaHEzXZMhpq0YxBZ9SBe",
+      "rule": "cpp:S5945",
+      "file": "src/document/encoding/chinese_codec.cpp",
+      "main_line": 54,
+      "change": "Store big5PuaRanges in constexpr std::array<Big5PuaRange, 3>.",
+      "evidence": "The three private-use range records and both range-for consumers retain their values and order."
+    },
+    {
+      "key": "AaHHH4XV1qsESOEEk9lF",
+      "rule": "cpp:S6004",
+      "file": "src/document/encoding/chinese_codec.cpp",
+      "main_line": 87,
+      "change": "Declare lead in the existing if initializer in ChineseSequenceWidth.",
+      "evidence": "The unsigned-byte scalar is used only by that condition. The caller supplies a nonempty suffix. Evaluation count and the return/fallback paths are unchanged."
+    },
+    {
+      "key": "AaHHH4XV1qsESOEEk9lH",
+      "rule": "cpp:S6004",
+      "file": "src/document/encoding/chinese_codec.cpp",
+      "main_line": 165,
+      "change": "Declare compatible in the existing if initializer in DecodeChinese.",
+      "evidence": "The optional<wchar_t> result is consumed only by the if/else chain and is trivially destructible. The strict-mode predicate, conversion fallback and offset progression retain their original order."
+    },
+    {
+      "key": "AaHEzXZMhpq0YxBZ9SBg",
+      "rule": "cpp:S3562",
+      "file": "src/document/encoding/chinese_codec.cpp",
+      "main_line": 120,
+      "change": "Add default: break to the four-codepoint CP950 compatibility switch.",
+      "evidence": "Unmatched scalars continue into the existing single-byte and private-use range handling. No new early return changes the fallback."
+    },
+    {
+      "key": "AaGpuAPyUHShZWS1j0ao",
+      "rule": "cpp:S7034",
+      "file": "src/document/file_variables.cpp",
+      "main_line": 35,
+      "change": "Use string_view::contains for the IntegerVariable delimiter membership test.",
+      "evidence": "The existing nonempty guard and delimiter bytes are retained. The find result was used only as a boolean membership test."
+    },
+    {
+      "key": "AaGpuAPyUHShZWS1j0ap",
+      "rule": "cpp:S7034",
+      "file": "src/document/file_variables.cpp",
+      "main_line": 53,
+      "change": "Use string_view::contains for the StringVariable delimiter membership test.",
+      "evidence": "The nonempty guard, quote-state update and prefix advancement remain unchanged."
+    },
+    {
+      "key": "AaGpuAPyUHShZWS1j0aq",
+      "rule": "cpp:S7034",
+      "file": "src/document/file_variables.cpp",
+      "main_line": 59,
+      "change": "Use string_view::contains for the accepted punctuation membership test.",
+      "evidence": "The char cast, punctuation set, alphanumeric short circuit and quoted-space handling are preserved."
+    },
+    {
+      "key": "AaHaPju5SajQlY95HQo6",
+      "rule": "cpp:S7035",
+      "file": "tests/syntax_language_test_helpers.h",
+      "main_line": 38,
+      "change": "Use std::to_underlying before the existing uintptr_t cast of StylesCommon::Default.",
+      "evidence": "The outer message-width conversion and every font/highlighting assertion remain. An explicit utility include supplies the declaration."
+    },
+    {
+      "key": "AaHaPju5SajQlY95HQo8",
+      "rule": "cpp:S7035",
+      "file": "tests/syntax_language_test_helpers.h",
+      "main_line": 60,
+      "change": "Use std::to_underlying before the existing unsigned cast of FoldLevel::HeaderFlag.",
+      "evidence": "The fold flag mask, line traversal and native Collapse All/Expand All actions remain unchanged."
+    },
+    {
+      "key": "AaHaPju5SajQlY95HQo9",
+      "rule": "cpp:S7034",
+      "file": "tests/syntax_language_test_helpers.h",
+      "main_line": 85,
+      "change": "Use string::contains for the closing block-comment delimiter assertion.",
+      "evidence": "Both old and new expressions consume the same NUL-terminated const char* needle. The opening-delimiter condition and original Undo assertions remain."
+    },
+    {
+      "key": "AaHaPju5SajQlY95HQpA",
+      "rule": "cpp:S1659",
+      "file": "tests/syntax_language_test_helpers.h",
+      "main_line": 156,
+      "change": "Separate the six parsed-row string declarations.",
+      "evidence": "Their types, default initialization, declaration order, scope, row parsing and subsequent fixture processing are unchanged."
+    }
+  ],
+  "false_positives": [
+    {
+      "key": "AaHEzXZMhpq0YxBZ9SBn",
+      "rule": "cpp:S6004",
+      "file": "src/document/encoding/chinese_codec.cpp",
+      "main_line": 181,
+      "symbol": "EncodeChinese::text",
+      "reason": "The common declaration const auto text = Wide(wxMBConvUTF8(), utf8) supplies storage used after the empty check in the __WXMSW__ branch. That branch reads text->size() and passes text->data() to both WideCharToMultiByte calls. Moving text into the if initializer would end its scope before these supported Windows uses. The Linux analysis omits the conditional consumers. Preserve the declaration and native conversion buffer lifetime.",
+      "mcp_transition_receipt": {
+        "success": true,
+        "issueKey": "AaHEzXZMhpq0YxBZ9SBn",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "context": "main",
+        "exact_key_FALSE_POSITIVE_matches": 1,
+        "exact_key_OPEN_CONFIRMED_matches": 0,
+        "legacy_status_field": "RESOLVED",
+        "note": "The FALSE_POSITIVE filter and mutation receipt establish the disposition; RESOLVED is the API's legacy status field."
+      }
+    }
+  ],
+  "source_blobs": [
+    {
+      "path": "src/document/encoding/chinese_codec.cpp",
+      "before": "0058a60d1ba89f555905642b8db9055a8c370ba9",
+      "after": "f248e631b8c3bd36b6b13808b193492d1ca3f130"
+    },
+    {
+      "path": "src/document/file_variables.cpp",
+      "before": "03a84d2181de7ee43eccd8196a6ac6214c282029",
+      "after": "98546a78944f08780182fba5459526d41096474c"
+    },
+    {
+      "path": "tests/syntax_language_test_helpers.h",
+      "before": "ad7ed83c5c589dd1bfc143ef3ed09590f2f9a9b4",
+      "after": "a20ff673156814fdc4d6bc207047f9965c289132"
+    }
+  ],
+  "validation": {
+    "baseline_integrity": "All three complete baseline files match their Git blob hashes. Reversing the explicit replacements restores the exact baseline bytes.",
+    "compiler": "clang 17.0.0, llvm-project revision 10999b6d034fe318f3d56c83bddb6572593a8bb0",
+    "compiler_flags": "-std=c++23 -O2 -Wall -Wextra -Werror -pedantic-errors",
+    "probe_scope": "Source-extracted complete compatibility helper block and complete file-variable parser, compiled in before/after namespaces with the public result shape and setting constants. Standard-library membership and enum-cast controls are also checked.",
+    "probe_result": "PASS: 22 table entries and layouts; 2228228 encodes; 3624382 decodes; 3624380 widths; 554344 file-variable comparisons; 873 membership comparisons; enum casts.",
+    "probe_exit": 0,
+    "encoding_inputs": "Both GB18030 and Big5: every code-point integer 0 through 0x110000 plus UINT_MAX; every one- and two-byte sequence; every GB18030-shaped three-byte prefix and four-byte sequence; all mapped pair/four-byte records. Empty input is compared only for the decoder helper whose contract accepts it.",
+    "parser_inputs": "Nineteen value strings, fourteen variable names, all option-flag combinations, all 256 byte delimiters, quotes, embedded NULs, BOMs, and placements around the 512-byte header/tail windows.",
+    "formatting": "clangd 17 formatting with the repository .clang-format reports zero edits for all three changed C++ files. Canonical clang-format 23.1.2 is not installed locally; the existing Quality workflow performs that check.",
+    "full_native_build": "Not run locally: this workspace has no wxWidgets SDK and the connected Windows runner is offline. Existing hosted Windows/X11/Wayland and analysis workflows validate the published combined head.",
+    "hosted_status_at_publication": "Pending; no preceding revision's successful checks are attributed to this continuation."
+  },
+  "retained_work": [
+    "Generated sort_nls_data.h S7040 key AaG1r0uxyu4V9oip4YId: coordinate a generator/payload representation review rather than rewriting the frozen stream for one style finding.",
+    "Coordinate rounding/clipping and out-of-range conversion semantics remain a separate behavioral review.",
+    "Dynamic polyline point counts and occurrence-marking duration precision retain their existing individual findings.",
+    "The documented recovery/test-result exception boundaries and wxWidgets inheritance-depth recommendations retain their statuses.",
+    "Unhex string_view, generic exception types and using-enum suggestions in the shared language helper remain outside this batch."
+  ]
+}
