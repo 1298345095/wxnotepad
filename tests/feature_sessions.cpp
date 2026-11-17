@@ -219,9 +219,13 @@ void EncodingIdentityAfterDecision(EditorControl& editor, EncodingChoice native)
         return true;
     });
     Require(recrossed && decisions == 1 && document.CurrentEncoding() == EncodingChoice(FileEncoding::Utf16Le) &&
-                Text(editor) == "latest crossing" && editor.Send(CanRedo) && editor.Send(GetReadOnly) &&
+                Text(editor) == "latest crossing" && editor.Send(GetUndoActions) && editor.Send(GetReadOnly) &&
                 editor.Send(MarkerGet, 0) && editor.Send(GetAnchor) == 1 && editor.Send(GetCurrentPos) == 4,
             "the final selection recomputes ANSI crossing and preserves the new non-ANSI history and protection");
+    editor.Send(SetReadOnly, 0);
+    Require(editor.Send(CanRedo), "the retained Redo is available after lifting read-only protection");
+    editor.Send(Redo);
+    Require(Text(editor) == "latest crossing!", "the decision's non-ANSI edit remains replayable after selection");
 }
 
 void RejectedEncodingDecisionEdits(EditorControl& editor, EncodingChoice native) {
