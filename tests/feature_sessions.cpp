@@ -156,7 +156,7 @@ void EncodingTextAfterDecision(EditorControl& editor, EncodingChoice native) {
     document.New();
     Load(editor, "old");
     int decisions = 0;
-    const bool replaced = document.SelectEncoding(native, [&](EncodingChangeWarning warning) {
+    const bool replaced = document.SelectEncoding(native, [&decisions, &editor](EncodingChangeWarning warning) {
         ++decisions;
         Require(warning == EncodingChangeWarning::AnsiConversion, "the original nonempty text requires confirmation");
         Load(editor, "replacement with a different length\r\n");
@@ -169,7 +169,7 @@ void EncodingTextAfterDecision(EditorControl& editor, EncodingChoice native) {
     document.New();
     Load(editor, "text cleared during confirmation");
     decisions = 0;
-    const bool cleared = document.SelectEncoding(native, [&](EncodingChangeWarning) {
+    const bool cleared = document.SelectEncoding(native, [&decisions, &editor](EncodingChangeWarning) {
         ++decisions;
         Load(editor, "");
         return true;
@@ -186,17 +186,18 @@ void EncodingIdentityAfterDecision(EditorControl& editor, EncodingChoice native)
     Load(editor, "changed while deciding");
     int decisions = 0;
     std::optional<EncodingState> afterDecision;
-    const bool changed = document.SelectEncoding(native, [&](EncodingChangeWarning) {
-        ++decisions;
-        Require(document.SelectEncoding(native), "the decision can select the requested encoding noninteractively");
-        editor.Send(InsertText, editor.Send(GetLength), reinterpret_cast<intptr_t>("!"));
-        editor.Send(Undo);
-        editor.Send(MarkerAdd, 0, 0);
-        editor.Send(SetSel, 1, 4);
-        editor.Send(SetReadOnly, 1);
-        afterDecision.emplace(document, editor);
-        return true;
-    });
+    const bool changed = document.SelectEncoding(
+        native, [&decisions, &document, &editor, &afterDecision, &native](EncodingChangeWarning) {
+            ++decisions;
+            Require(document.SelectEncoding(native), "the decision can select the requested encoding noninteractively");
+            editor.Send(InsertText, editor.Send(GetLength), reinterpret_cast<intptr_t>("!"));
+            editor.Send(Undo);
+            editor.Send(MarkerAdd, 0, 0);
+            editor.Send(SetSel, 1, 4);
+            editor.Send(SetReadOnly, 1);
+            afterDecision.emplace(document, editor);
+            return true;
+        });
     Require(!changed && decisions == 1 && afterDecision && EncodingState(document, editor) == *afterDecision,
             "an accepted decision that already selected the target preserves its latest state and returns unchanged");
     editor.Send(SetReadOnly, 0);
@@ -207,17 +208,18 @@ void EncodingIdentityAfterDecision(EditorControl& editor, EncodingChoice native)
     Require(document.SelectEncoding(native), "the crossing fixture starts in native ANSI");
     Load(editor, "latest crossing");
     decisions = 0;
-    const bool recrossed = document.SelectEncoding(EncodingChoice(FileEncoding::Utf16Le), [&](EncodingChangeWarning) {
-        ++decisions;
-        Require(document.SelectEncoding(EncodingChoice(FileEncoding::Utf8)),
-                "the decision can move to a different non-ANSI encoding");
-        editor.Send(InsertText, editor.Send(GetLength), reinterpret_cast<intptr_t>("!"));
-        editor.Send(Undo);
-        editor.Send(MarkerAdd, 0, 0);
-        editor.Send(SetSel, 1, 4);
-        editor.Send(SetReadOnly, 1);
-        return true;
-    });
+    const bool recrossed = document.SelectEncoding(
+        EncodingChoice(FileEncoding::Utf16Le), [&decisions, &document, &editor](EncodingChangeWarning) {
+            ++decisions;
+            Require(document.SelectEncoding(EncodingChoice(FileEncoding::Utf8)),
+                    "the decision can move to a different non-ANSI encoding");
+            editor.Send(InsertText, editor.Send(GetLength), reinterpret_cast<intptr_t>("!"));
+            editor.Send(Undo);
+            editor.Send(MarkerAdd, 0, 0);
+            editor.Send(SetSel, 1, 4);
+            editor.Send(SetReadOnly, 1);
+            return true;
+        });
     Require(recrossed && decisions == 1 && document.CurrentEncoding() == EncodingChoice(FileEncoding::Utf16Le) &&
                 Text(editor) == "latest crossing" && editor.Send(GetUndoActions) && editor.Send(GetReadOnly) &&
                 editor.Send(MarkerGet, 0) && editor.Send(GetAnchor) == 1 && editor.Send(GetCurrentPos) == 4,
@@ -235,7 +237,7 @@ void RejectedEncodingDecisionEdits(EditorControl& editor, EncodingChoice native)
     Load(editor, "old");
     const auto originalEncoding = document.CurrentEncoding();
     int decisions = 0;
-    const bool changed = document.SelectEncoding(native, [&](EncodingChangeWarning) {
+    const bool changed = document.SelectEncoding(native, [&decisions, &editor](EncodingChangeWarning) {
         ++decisions;
         editor.Send(InsertText, 3, reinterpret_cast<intptr_t>(" changed"));
         return false;
