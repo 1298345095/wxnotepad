@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <optional>
 #include <stdexcept>
 
 namespace {
@@ -46,6 +47,217 @@ void Load(EditorControl& editor, const char* text) {
     editor.Send(SetSavePoint);
     editor.Send(SetSel, 0, 0);
 }
+
+struct EncodingState {
+    std::string text;
+    EncodingChoice encoding;
+    intptr_t anchor;
+    intptr_t caret;
+    intptr_t readOnly;
+    intptr_t undoActions;
+    intptr_t canUndo;
+    intptr_t canRedo;
+    intptr_t markers;
+    intptr_t textModified;
+    bool modified;
+
+    EncodingState(const DocumentSession& document, EditorControl& editor)
+        : text(Text(editor)), encoding(document.CurrentEncoding()), anchor(editor.Send(Message::GetAnchor)),
+          caret(editor.Send(Message::GetCurrentPos)), readOnly(editor.Send(Message::GetReadOnly)),
+          undoActions(editor.Send(Message::GetUndoActions)), canUndo(editor.Send(Message::CanUndo)),
+          canRedo(editor.Send(Message::CanRedo)), markers(editor.Send(Message::MarkerGet, 0)),
+          textModified(editor.Send(Message::GetModify)), modified(document.IsModified()) {}
+    bool operator==(const EncodingState&) const = default;
+};
+
+void EncodingWithoutConfirmation(EditorControl& editor, EncodingChoice native) {
+    using enum Scintilla::Message;
+    DocumentSession document(editor);
+    document.New();
+    int decisions = 0;
+    const auto decline = [&decisions](EncodingChangeWarning) {
+        ++decisions;
+        return false;
+    };
+    Require(!document.SelectEncoding(document.CurrentEncoding(), decline) && decisions == 0,
+            "same encoding selection returns unchanged without asking for a decision");
+    Load(editor, "kept text");
+    editor.Send(InsertText, 9, reinterpret_cast<intptr_t>("!"));
+    editor.Send(Undo);
+    editor.Send(SetSel, 1, 4);
+    Require(document.SelectEncoding(EncodingChoice(FileEncoding::Utf16Le, true), decline) && decisions == 0 &&
+                document.CurrentEncoding() == EncodingChoice(FileEncoding::Utf16Le, true) && document.IsModified() &&
+                Text(editor) == "kept text" && editor.Send(CanRedo) && !editor.Send(GetModify) &&
+                editor.Send(GetAnchor) == 1 && editor.Send(GetCurrentPos) == 4,
+            "non-ANSI selection changes format without a decision and preserves selection and Redo");
+
+    document.New();
+    Require(document.SelectEncoding(native, decline) && decisions == 0 && document.CurrentEncoding() == native &&
+                Text(editor).empty() && !document.IsModified() && !editor.Send(GetUndoActions),
+            "a fresh empty document adopts native ANSI without confirmation or modification");
+
+    document.New();
+    Load(editor, "noninteractive");
+    Require(document.SelectEncoding(native) && document.CurrentEncoding() == native && Text(editor) == "noninteractive",
+            "omitting the decision retains noninteractive encoding selection");
+}
+
+void RejectedEncodingSelection(EditorControl& editor, EncodingChoice native) {
+    using enum Scintilla::Message;
+    DocumentSession document(editor);
+    document.New();
+    Load(editor, "kept text");
+    editor.Send(InsertText, 9, reinterpret_cast<intptr_t>("!"));
+    editor.Send(Undo);
+    editor.Send(MarkerAdd, 0, 0);
+    editor.Send(SetSel, 1, 4);
+    editor.Send(SetReadOnly, 1);
+    const EncodingState before(document, editor);
+    int decisions = 0;
+    const bool changed = document.SelectEncoding(native, [&decisions](EncodingChangeWarning warning) {
+        ++decisions;
+        Require(warning == EncodingChangeWarning::AnsiConversion, "nonempty ANSI selection requests its text warning");
+        return false;
+    });
+    Require(!changed && decisions == 1 && EncodingState(document, editor) == before,
+            "rejected ANSI selection retains text, encoding, selection, protection, markers and history");
+    editor.Send(SetReadOnly, 0);
+    editor.Send(Redo);
+    Require(Text(editor) == "kept text!", "the retained Redo still restores the pending edit after rejection");
+}
+
+void EmptyEncodingHistory(EditorControl& editor, EncodingChoice native) {
+    using enum Scintilla::Message;
+    DocumentSession document(editor);
+    document.New();
+    Require(document.SelectEncoding(native), "the empty history fixture starts in native ANSI");
+    editor.Send(InsertText, 0, reinterpret_cast<intptr_t>("x"));
+    editor.Send(Undo);
+    Require(Text(editor).empty() && !editor.Send(CanUndo) && editor.Send(CanRedo) && editor.Send(GetUndoActions),
+            "the empty encoding fixture has only pending Redo history");
+    const EncodingState before(document, editor);
+    int decisions = 0;
+    const bool changed =
+        document.SelectEncoding(EncodingChoice(FileEncoding::Utf8), [&decisions](EncodingChangeWarning warning) {
+            ++decisions;
+            Require(warning == EncodingChangeWarning::EmptyAnsiHistory,
+                    "an empty buffer with Redo requests its distinct warning");
+            return false;
+        });
+    Require(!changed && decisions == 1 && EncodingState(document, editor) == before,
+            "rejecting empty ANSI history conversion retains the format and Redo");
+    editor.Send(Redo);
+    Require(Text(editor) == "x", "the empty buffer can still Redo its original insertion");
+}
+
+void EncodingTextAfterDecision(EditorControl& editor, EncodingChoice native) {
+    using enum Scintilla::Message;
+    DocumentSession document(editor);
+    document.New();
+    Load(editor, "old");
+    int decisions = 0;
+    const bool replaced = document.SelectEncoding(native, [&](EncodingChangeWarning warning) {
+        ++decisions;
+        Require(warning == EncodingChangeWarning::AnsiConversion, "the original nonempty text requires confirmation");
+        Load(editor, "replacement with a different length\r\n");
+        return true;
+    });
+    Require(replaced && decisions == 1 && document.CurrentEncoding() == native &&
+                Text(editor) == "replacement with a different length\r\n" && document.IsModified(),
+            "accepted conversion reads the replacement text and its current length after the decision");
+
+    document.New();
+    Load(editor, "text cleared during confirmation");
+    decisions = 0;
+    const bool cleared = document.SelectEncoding(native, [&](EncodingChangeWarning) {
+        ++decisions;
+        Load(editor, "");
+        return true;
+    });
+    Require(cleared && decisions == 1 && document.CurrentEncoding() == native && Text(editor).empty() &&
+                !document.IsModified() && !editor.Send(GetUndoActions),
+            "accepted conversion adopts a newly empty Untitled document without stale nonempty modification");
+}
+
+void EncodingIdentityAfterDecision(EditorControl& editor, EncodingChoice native) {
+    using enum Scintilla::Message;
+    DocumentSession document(editor);
+    document.New();
+    Load(editor, "changed while deciding");
+    int decisions = 0;
+    std::optional<EncodingState> afterDecision;
+    const bool changed = document.SelectEncoding(native, [&](EncodingChangeWarning) {
+        ++decisions;
+        Require(document.SelectEncoding(native), "the decision can select the requested encoding noninteractively");
+        editor.Send(InsertText, editor.Send(GetLength), reinterpret_cast<intptr_t>("!"));
+        editor.Send(Undo);
+        editor.Send(MarkerAdd, 0, 0);
+        editor.Send(SetSel, 1, 4);
+        editor.Send(SetReadOnly, 1);
+        afterDecision.emplace(document, editor);
+        return true;
+    });
+    Require(!changed && decisions == 1 && afterDecision && EncodingState(document, editor) == *afterDecision,
+            "an accepted decision that already selected the target preserves its latest state and returns unchanged");
+    editor.Send(SetReadOnly, 0);
+    editor.Send(Redo);
+    Require(Text(editor) == "changed while deciding!", "the outer selection preserves history created by the decision");
+
+    document.New();
+    Require(document.SelectEncoding(native), "the crossing fixture starts in native ANSI");
+    Load(editor, "latest crossing");
+    decisions = 0;
+    const bool recrossed = document.SelectEncoding(EncodingChoice(FileEncoding::Utf16Le), [&](EncodingChangeWarning) {
+        ++decisions;
+        Require(document.SelectEncoding(EncodingChoice(FileEncoding::Utf8)),
+                "the decision can move to a different non-ANSI encoding");
+        editor.Send(InsertText, editor.Send(GetLength), reinterpret_cast<intptr_t>("!"));
+        editor.Send(Undo);
+        editor.Send(MarkerAdd, 0, 0);
+        editor.Send(SetSel, 1, 4);
+        editor.Send(SetReadOnly, 1);
+        return true;
+    });
+    Require(recrossed && decisions == 1 && document.CurrentEncoding() == EncodingChoice(FileEncoding::Utf16Le) &&
+                Text(editor) == "latest crossing" && editor.Send(CanRedo) && editor.Send(GetReadOnly) &&
+                editor.Send(MarkerGet, 0) && editor.Send(GetAnchor) == 1 && editor.Send(GetCurrentPos) == 4,
+            "the final selection recomputes ANSI crossing and preserves the new non-ANSI history and protection");
+}
+
+void RejectedEncodingDecisionEdits(EditorControl& editor, EncodingChoice native) {
+    using enum Scintilla::Message;
+    DocumentSession document(editor);
+    document.New();
+    Load(editor, "old");
+    const auto originalEncoding = document.CurrentEncoding();
+    int decisions = 0;
+    const bool changed = document.SelectEncoding(native, [&](EncodingChangeWarning) {
+        ++decisions;
+        editor.Send(InsertText, 3, reinterpret_cast<intptr_t>(" changed"));
+        return false;
+    });
+    Require(!changed && decisions == 1 && document.CurrentEncoding() == originalEncoding &&
+                Text(editor) == "old changed" && document.IsModified() && editor.Send(CanUndo),
+            "a rejected encoding decision retains edits performed during confirmation");
+    editor.Send(Undo);
+    Require(Text(editor) == "old" && !document.IsModified(), "the decision's edit retains its original Undo step");
+}
+
+void EncodingSelection(EditorControl& editor) {
+    const auto native = NativeEncodingChoice();
+    if (!native) {
+        std::puts("SKIP: native ANSI encoding selection requires a delivered host codec");
+        return;
+    }
+    EncodingWithoutConfirmation(editor, *native);
+    RejectedEncodingSelection(editor, *native);
+    EmptyEncodingHistory(editor, *native);
+    EncodingTextAfterDecision(editor, *native);
+    EncodingIdentityAfterDecision(editor, *native);
+    RejectedEncodingDecisionEdits(editor, *native);
+    std::puts("PASS: session encoding confirmation, retained history and live state after decisions");
+}
+
 class SessionApp final : public wxApp {
 public:
     bool OnInit() override {
@@ -158,6 +370,7 @@ public:
                             Text(*editor).empty() && search.Request().query == "(",
                         "New resets document identity/language while retaining search preferences");
                 std::puts("PASS: independent DocumentSession language transitions and saved bytes");
+                EncodingSelection(*editor);
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

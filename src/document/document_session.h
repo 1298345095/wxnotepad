@@ -14,6 +14,8 @@
 class EditorControl;
 enum class EncodingLossChoice { Cancel, Replace };
 using EncodingLossDecision = std::function<EncodingLossChoice()>;
+enum class EncodingChangeWarning { AnsiConversion, EmptyAnsiHistory };
+using EncodingChangeDecision = std::function<bool(EncodingChangeWarning)>;
 // The dialog adapter translates its native filter index into this semantic choice.
 enum class SaveType : uint8_t { CurrentScheme, AllFiles };
 using SaveFileType = std::variant<SaveType, SyntaxLanguage>;
@@ -83,7 +85,9 @@ public:
         return EncodingChoice(encoding_, hasBom_, systemDefaultEncoding_, systemOemEncoding_);
     }
     bool IsModified() const;
-    bool SelectEncoding(EncodingChoice choice);
+    // An omitted decision retains noninteractive selection. At most one decision
+    // is requested; acceptance is followed by a fresh state read.
+    bool SelectEncoding(EncodingChoice choice, const EncodingChangeDecision& decide = {});
     const OriginalFileVariables& FileVariables() const { return fileVariables_; }
     // The selected scheme supplies styles, settings and file-filter identity.
     SyntaxLanguage Language() const { return languageOverride_.value_or(automaticLanguage_); }

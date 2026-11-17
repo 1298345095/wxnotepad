@@ -12,6 +12,7 @@
 #include "file_command_driver.h"
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <functional>
 #include <stdexcept>
 #include <utility>
 
@@ -193,12 +194,13 @@ public:
     int shown = 0;
     bool accept = false;
     wxString title = "Encoding Conversion";
+    std::function<void()> onPrompt;
     ConversionPrompt() { Start(40); }
     void Notify() override {
         for (auto* window : wxTopLevelWindows) {
             auto* dialog = wxDynamicCast(window, wxDialog);
             if (!dialog || !dialog->IsModal() || dialog->GetTitle() != title) continue;
-            ++shown;
+            PrepareResponse();
             NativeSearch::Click(dialog, accept ? wxID_YES : wxID_NO);
             return;
         }
@@ -210,7 +212,7 @@ public:
                 wchar_t title[128]{};
                 GetWindowTextW(window, title, static_cast<int>(std::size(title)));
                 if (IsWindowVisible(window) && wxString(title) == driver.title) {
-                    ++driver.shown;
+                    driver.PrepareResponse();
                     SendMessageW(window, TDM_CLICK_BUTTON, driver.accept ? IDYES : IDNO, 0);
                 }
                 return TRUE;
@@ -222,12 +224,22 @@ public:
             auto* widget = GTK_WIDGET(item->data);
             if (GTK_IS_MESSAGE_DIALOG(widget) && gtk_widget_get_visible(widget) &&
                 wxString::FromUTF8(gtk_window_get_title(GTK_WINDOW(widget))) == title) {
-                ++shown;
+                PrepareResponse();
                 NativeDialogs::Respond(widget, accept ? GTK_RESPONSE_YES : GTK_RESPONSE_NO);
             }
         }
         g_list_free(windows);
 #endif
+    }
+
+private:
+    void PrepareResponse() {
+        ++shown;
+        if (auto callback = std::exchange(onPrompt, {})) {
+            // Consume the callback before native response handling can dispatch more events.
+            Stop();
+            callback();
+        }
     }
 };
 void AnsiTransition(EditorFrame* frame) {
@@ -299,6 +311,48 @@ void AnsiTransition(EditorFrame* frame) {
     }
     Require(frame->Save().status == SaveStatus::Saved, "ANSI transition fixture saves before the next scenario");
     std::puts("PASS: ANSI confirmation, native conversion and original history reset");
+}
+void AnsiTransitionAfterModalEdit(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    const auto native = NativeEncodingChoice();
+    if (!native) return;
+    const auto path = TestFiles::TemporaryDirectory("ansi-modal-edit.txt");
+    auto* editor = frame->Editor();
+    struct Edit {
+        const char* before;
+        const char* after;
+    };
+    for (const auto& edit : {Edit{"old", "replacement ASCII text\n"}, Edit{"original ASCII text\n", ""}}) {
+        TestFiles::WriteBytes(path, edit.before);
+        Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+                "modal encoding edit fixture opens");
+        ConversionPrompt driver;
+        driver.accept = true;
+        driver.onPrompt = [frame, editor, after = edit.after] {
+            TestEditor::ResetStream(editor, after);
+            TestEditor::Append(frame, "x");
+            editor->Send(Undo);
+            editor->Send(SetReadOnly, 1);
+        };
+        const bool changed = frame->SelectEncoding(*native);
+        driver.Stop();
+        const bool modified = edit.after[0] != '\0';
+        const bool retained = native->encoding == FileEncoding::Utf8;
+        Require(changed && driver.shown == 1 && TestEditor::Text(frame) == edit.after &&
+                    frame->DocumentEncoding() == native->encoding && !frame->DocumentHasBom() &&
+                    frame->GetStatusBar()->GetStatusText().Contains("ANSI") &&
+                    frame->DocumentIsModified() == modified && frame->GetTitle().StartsWith("*") == modified &&
+                    frame->GetMenuBar()->IsEnabled(wxID_SAVE) == modified,
+                "accepted modal encoding choice uses replacement text length and refreshes encoding and dirty UI");
+        Require(bool(editor->Send(GetUndoActions)) == retained && bool(editor->Send(GetReadOnly)) == retained &&
+                    frame->DocumentPath() == TestFiles::Filename(path) && TestFiles::Bytes(path) == edit.before,
+                "modal encoding choice applies native history rules to replacement state without saving it");
+        editor->Send(SetReadOnly, 0);
+        Require(bool(editor->Send(CanRedo)) == retained, "modal replacement redo follows native conversion rules");
+        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == edit.after,
+                "modal replacement saves independently specified ASCII bytes without truncation or padding");
+    }
+    std::puts("PASS: real modal encoding confirmation applies the replacement text and current document state");
 }
 void SaveVariants(EditorFrame* frame) {
     const auto source = TestFiles::TemporaryDirectory("save-source.txt");
@@ -457,6 +511,7 @@ public:
                 Picker(frame, native);
                 BigEndian(frame, native);
                 AnsiTransition(frame);
+                AnsiTransitionAfterModalEdit(frame);
                 SaveVariants(frame);
                 EmptyRules(frame);
                 FormatOnlyDecisions(frame);

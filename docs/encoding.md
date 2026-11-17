@@ -27,6 +27,15 @@ system codec instead of changing the core code page. UTF-8 native locales
 retain the original same-code-page early return. Unsupported native codecs
 remain unavailable until their codec tickets are delivered.
 
+`DocumentSession::SelectEncoding` owns the confirmation condition and the ensuing
+transition. Its optional decision callback receives either a nonempty ANSI
+conversion warning or an empty-document history warning. The frame supplies the
+native dialog and original MsgConv1/2 suppression behavior. Acceptance rechecks
+the current identity and reads live conversion state after the callback, preserving
+changes made during the modal event loop. A rejected decision leaves those changes
+in place without applying the requested selection. Calls without a decision keep
+the existing noninteractive behavior used when restoring a restarted document.
+
 File > Encoding > Default opens the original default-format options. Its
 nested picker uses the same delivered catalog as More/F9, with the configured
 default selected. Accepting that picker changes the default immediately, even

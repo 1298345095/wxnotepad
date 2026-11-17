@@ -608,23 +608,22 @@ bool EditorFrame::ConfirmDiscardChanges(const wxString& prompt) {
 }
 
 bool EditorFrame::SelectEncoding(EncodingChoice choice) {
-    const auto current = document_.CurrentEncoding();
-    if (choice == current) return false;
-    if (choice.systemDefault != current.systemDefault &&
-        (editor_->Send(Scintilla::Message::GetLength) || editor_->Send(Scintilla::Message::GetUndoActions))) {
-        const bool empty = editor_->Send(Scintilla::Message::GetLength) == 0;
+    bool accepted = false;
+    const bool changed = document_.SelectEncoding(choice, [this, &accepted](EncodingChangeWarning warning) {
+        const bool empty = warning == EncodingChangeWarning::EmptyAnsiHistory;
         const wxString message =
             empty
                 ? _("You are about to change the encoding of an empty file from ANSI to non-ANSI. Note that this will "
                     "clear the undo history, as it can't be synchronized with the new encoding. Continue?")
                 : _("Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text "
                     "with default characters, and the undo history will be cleared. Continue?");
-        if (!ShowEncodingWarning(empty ? EncodingWarning::EmptyAnsi : EncodingWarning::Ansi, message, true))
-            return false;
+        accepted = ShowEncodingWarning(empty ? EncodingWarning::EmptyAnsi : EncodingWarning::Ansi, message, true);
+        return accepted;
+    });
+    if (changed || accepted) {
+        UpdateDocumentState();
+        UpdateWindowUI(wxUPDATE_UI_RECURSE);
     }
-    const bool changed = document_.SelectEncoding(choice);
-    UpdateDocumentState();
-    UpdateWindowUI(wxUPDATE_UI_RECURSE);
     return changed;
 }
 

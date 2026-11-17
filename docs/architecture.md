@@ -14,7 +14,7 @@ search algorithm or own the document's language choice.
 | Location | Current responsibility | Assessment |
 | --- | --- | --- |
 | `src/app/main.cpp`, `process_observer.*` | Startup/options and the opt-in process observation protocol | Observation uses the actual application's commands and exists only when requested. |
-| `src/app/editor_frame.*`, `editor_frame_commands.cpp` | Menus, file-command coordination, title/status and dialog decisions | The frame coordinates sessions and settings; native dialog construction lives under `app/dialogs`. |
+| `src/app/editor_frame.*`, `editor_frame_commands.cpp` | Menus, file-command coordination, title/status and native dialogs | The frame coordinates sessions and settings; native dialog construction lives under `app/dialogs`. |
 | `src/app/dialogs/*` | Native file choices, settings prompts, search feedback and modeless search UI | Dialogs collect choices; the frame commits document/settings decisions at the existing points. |
 | `src/document/document_session.*` | Path, encoding/BOM, file transactions, save point and language choice | File metadata and language transitions commit after successful operations. File I/O mechanics remain private to this module. |
 | `src/document/encoding/*` | Encoding conversions, including CP936 compatibility | Tested conversions and provenance are retained; the implementations use wx conversion facilities. |
@@ -282,6 +282,23 @@ The resulting operation sequence is explicit:
    write failure commits neither path nor type and cannot leak a pending selection.
 3. **Choose language:** update the document choice and install its effective
    scheme; preserve bytes, selection, encoding and edit history.
+4. **Choose encoding:** the session decides whether an ANSI identity change
+   needs confirmation from live text and Undo/Redo history, invokes the supplied
+   decision at most once, then applies the choice using the current document.
+   The frame presents the semantic warning and retains the original MsgConv1/2
+   suppression behavior. An omitted decision retains noninteractive selection
+   for restart restoration and existing direct session callers.
+
+`SelectEncoding` returns whether this invocation changes the current encoding.
+Its decision callback can run a modal event loop. After acceptance the session
+checks the current identity again and re-reads conversion state, including the
+text length; callback changes remain in place on cancellation. It continues
+with the requested choice after document changes, preserving the existing modal
+ordering. The frame refreshes its UI after a changed selection or an accepted
+decision, including when the callback has already selected the requested identity.
+`feature_session_contracts` exercises these decisions and transitions through the
+same interface without linking the application shell. The existing current-encoding
+and suppression fixtures exercise the real native dialog adapter.
 
 Search commands read the current core document and selection on every request;
 Open/New need no application match-confirmation state. Search algorithms and

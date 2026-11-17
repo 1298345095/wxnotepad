@@ -607,9 +607,18 @@ bool DocumentSession::IsModified() const {
     return editor_.Send(Scintilla::Message::GetModify) || originalEncoding_ != CurrentEncoding();
 }
 
-bool DocumentSession::SelectEncoding(EncodingChoice choice) {
+bool DocumentSession::SelectEncoding(EncodingChoice choice, const EncodingChangeDecision& decide) {
     using enum Scintilla::Message;
     // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
+    if (choice == CurrentEncoding()) return false;
+    if (decide && choice.systemDefault != systemDefaultEncoding_) {
+        const auto length = editor_.Send(GetLength);
+        if ((length || editor_.Send(GetUndoActions)) &&
+            !decide(length ? EncodingChangeWarning::AnsiConversion : EncodingChangeWarning::EmptyAnsiHistory))
+            return false;
+    }
+    // Confirmation can run a modal event loop. Apply the choice to the live
+    // document, including changes to its encoding, text or history while waiting.
     if (choice == CurrentEncoding()) return false;
     const bool crossesAnsi = choice.systemDefault != systemDefaultEncoding_;
     const auto length = editor_.Send(GetLength);
