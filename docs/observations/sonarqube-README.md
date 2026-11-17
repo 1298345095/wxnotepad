@@ -8,7 +8,7 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [Enum cleanup after PR #223](#enum-cleanup-after-pr-223),
+Latest review: [PR #224 analysis follow-up](#pr-224-analysis-follow-up),
 on [`codex/sonarcloud-enum-cleanup`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-enum-cleanup).
 [PR #223](https://github.com/1298345095/wxnotepad/pull/223) was merged into main
 at `395ad59521dff2e7a5fb1c660188d73ea2269726` before this review.
@@ -1656,3 +1656,91 @@ their OPEN status and individual source-contract review:
 | Generated NLS stream | S7040, `AaG1r0uxyu4V9oip4YId` | Coordinate the generator and frozen 497,834-byte compressed payload representation. Expanding every escape adds 995,668 source bytes and changes 15,558 data lines. |
 | Recovery and test-result boundaries | S1181, three keys listed in the ledger | Retain the reviewed exception contract while considering the rule's design recommendation. |
 | Framework inheritance | S110, `AaHlwkx59oTYNiRoCpVy` | Review the existing framework-derived type hierarchy as a design change. |
+
+## PR #224 analysis follow-up
+
+The first combined head of [PR #224](https://github.com/1298345095/wxnotepad/pull/224),
+`226c9bec0d17d6416157d02de816a44bc35ba747`, passed all **12 checks** and all
+four hosted workflows on their first attempt:
+[CI](https://github.com/1298345095/wxnotepad/actions/runs/44044479796),
+[Quality](https://github.com/1298345095/wxnotepad/actions/runs/44044479641),
+[Fuzz](https://github.com/1298345095/wxnotepad/actions/runs/44044479595), and
+[CodeQL](https://github.com/1298345095/wxnotepad/actions/runs/44044479591).
+These results include Windows native tests, Linux X11/Wayland tests and coverage,
+clang-tidy, canonical formatting, fuzz sanitizers and both CodeQL languages.
+The SonarCloud PR quality gate passed with **90.8% new-code coverage** and
+**1.2% new-code duplication**. The PR analysis reports zero S6177, S7035,
+security or reliability findings.
+
+That analysis surfaced **50 other findings** on changed lines. Exact-key,
+source and rule review maps all 50 to existing main findings: **38** are small
+code changes completed in this follow-up, **11** repeat existing verified false
+positives, and **one** remains an open control-flow recommendation. The
+[follow-up evidence record](sonarqube-enum-followup-review.json) contains the
+complete mapping, submitted MCP comments, source hashes and validation results.
+The two pairs of nested-conditional issues that share a source line are mapped
+as exact two-key sets; the available issue ranges do not distinguish their
+individual columns.
+
+### Additional code changes
+
+These **38 additional main keys** are disjoint from the first batch's 850,
+bringing this PR to **888 main code-fix keys**. They affect 11 application files
+and 11 fixture files already included in the first batch.
+
+| Rule | Additional main keys | Change and preserved contract |
+| --- | ---: | --- |
+| S3358 | 15 | Expand nested conditional expressions into ordered branches while retaining default values, lazy native calls and evaluation order. |
+| S5827 | 11 | Use `auto` for initialized locals with explicit type expressions. Retain destination casts and the mutable `int` required by the `int&` search interface. |
+| S6004 | 6 | Move values used by a single condition into its `if` initializer, retaining diagnostic availability and reference lifetimes. |
+| S5945 | 4 | Use `std::array` for the seven folding markers, two fixture message tables of five and ten entries, and four JavaScript dialects; preserve every entry and its order. |
+| S7034 | 1 | Express the existing literal substring-presence check with `contains`. |
+| S6005 | 1 | Bind the fixture's structured pair by `const` reference to its live range element. |
+
+Complete-source and caller review verifies native message widths, enum defaults,
+string ownership, fixture bytes, marker order and command order. Separate reviews
+of both the application and fixture diffs found no blockers. The shared folding
+header's complete set of **13 direct test consumers** was also checked.
+
+### Reapplied PR false-positive dispositions
+
+SonarCloud assigned new PR issue keys to 11 previously reviewed main false
+positives. Their main dispositions were confirmed with exact-key MCP queries.
+Each PR key was independently checked against the current source and marked
+FALSE_POSITIVE through MCP with its own explanation. The final query returns
+**11 FALSE_POSITIVE matches and zero OPEN/CONFIRMED matches** for these keys.
+
+| Rule | PR keys | Verified source contract |
+| --- | ---: | --- |
+| S6022 | 2 | The character pointers represent document text and flow into character/string consumers. |
+| S3630 | 2 | The pinned core returns the original `const char*` through pointer-sized `sptr_t`; dispatch preserves the value, the receiver restores the same pointer type, and consumers finish before document edits. |
+| S5276 | 3 | Native character messages return `unsigned char` or `int`; restoring the transported value to `int` preserves its source range. Document positions and widths retain their separate native types. |
+| S6494 | 3 | The supported Linux CI compiler uses GCC/libstdc++ 13. The required `<print>` support starts in GCC 14.1; existing fixed-format calls and arguments were checked. |
+| S5813 | 1 | The fixture's immutable token points to one of three terminated string literals, each present in its paired input, before the checked `strlen` call. |
+
+The first batch's separate Win32 `GetFocus` collision remains the one newly
+classified main false positive. The 11 transitions above apply to the PR's
+repeated findings. The evidence record retains both sets of keys and the
+successful MCP responses.
+
+### Follow-up validation and remaining work
+
+C++23 syntax compilation passes **31 translation units**: all 11 changed
+application units and 20 fixture units, including every direct consumer of
+`native_fold_helpers.h`. The compiler configuration matches the first batch,
+including each target's `char8_t` setting. Canonical clang-format **23.1.2**
+passes all **374** tracked C/C++ files, and `git diff --check` passes.
+
+Application code, fixture code and this evidence update form three further
+commits, published together through one update of the existing PR branch.
+The full PR therefore contains six commits in two CI batches. The follow-up
+head's hosted results are pending at publication and are recorded in the PR
+description when available.
+
+S924 remains OPEN for PR key `AaHopBwfcf_I1OScw0J3`, corresponding to main key
+`AaGwmVUYEeGJK6USKRqT` in `StripSelectedBlanks`. Its three loop exits enforce the
+selection endpoint, terminal replacement and terminal leading-line advance.
+Changing them requires a separate control-flow review that preserves
+`FindTextFull` call order, undo grouping and selection repair. The previously
+recorded coordinate, dynamic point-count, NLS generator, exception-boundary and
+inheritance recommendations remain listed in the first batch's evidence record.

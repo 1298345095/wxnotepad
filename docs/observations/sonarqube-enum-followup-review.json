@@ -1,0 +1,2355 @@
+{
+  "review": "PR #224 analysis follow-up",
+  "reviewed_at_utc": "2026-11-17T08:52:22.651537+00:00",
+  "project": "1298345095_wxnotepad",
+  "organization": "1298345095",
+  "pull_request": 224,
+  "main_base": "395ad59521dff2e7a5fb1c660188d73ea2269726",
+  "previous_head": "226c9bec0d17d6416157d02de816a44bc35ba747",
+  "first_analysis": {
+    "quality_gate": {
+      "status": "OK",
+      "conditions": [
+        {
+          "metricKey": "new_reliability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_security_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_maintainability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_coverage",
+          "status": "OK",
+          "errorThreshold": "80",
+          "actualValue": "90.8"
+        },
+        {
+          "metricKey": "new_duplicated_lines_density",
+          "status": "OK",
+          "errorThreshold": "3",
+          "actualValue": "1.2"
+        },
+        {
+          "metricKey": "new_security_hotspots_reviewed",
+          "status": "OK",
+          "errorThreshold": "100",
+          "actualValue": "100.0"
+        }
+      ]
+    },
+    "measures": {
+      "coverage": "87.0",
+      "duplicated_lines_density": "1.2",
+      "duplicated_lines": "1343",
+      "new_lines": "5181",
+      "new_vulnerabilities": "0",
+      "new_coverage": "90.8433734939759",
+      "new_branch_coverage": "87.63440860215054",
+      "new_uncovered_conditions": "115",
+      "new_duplicated_blocks": "18",
+      "new_bugs": "0",
+      "new_duplicated_lines": "64",
+      "new_code_smells": "50",
+      "new_line_coverage": "94.93150684931507",
+      "branch_coverage": "85.1",
+      "new_violations": "50",
+      "duplicated_blocks": "87",
+      "new_conditions_to_cover": "930",
+      "new_uncovered_lines": "37",
+      "line_coverage": "89.5",
+      "new_lines_to_cover": "730",
+      "new_duplicated_lines_density": "1.2352827639451844"
+    },
+    "issues": {
+      "new": 50,
+      "open": 50,
+      "confirmed": 0,
+      "S6177": 0,
+      "S7035": 0,
+      "bugs": 0,
+      "vulnerabilities": 0
+    },
+    "hosted_results": {
+      "head": "226c9bec0d17d6416157d02de816a44bc35ba747",
+      "runs": [
+        {
+          "id": 44044479595,
+          "name": "Fuzz",
+          "status": "completed",
+          "conclusion": "success",
+          "attempt": 1,
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479595",
+          "created_at": "2026-11-17T08:10:28Z",
+          "updated_at": "2026-11-17T08:15:43Z"
+        },
+        {
+          "id": 44044479591,
+          "name": "CodeQL",
+          "status": "completed",
+          "conclusion": "success",
+          "attempt": 1,
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479591",
+          "created_at": "2026-11-17T08:10:28Z",
+          "updated_at": "2026-11-17T08:16:31Z"
+        },
+        {
+          "id": 44044479641,
+          "name": "Quality",
+          "status": "completed",
+          "conclusion": "success",
+          "attempt": 1,
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479641",
+          "created_at": "2026-11-17T08:10:28Z",
+          "updated_at": "2026-11-17T08:26:33Z"
+        },
+        {
+          "id": 44044479796,
+          "name": "CI",
+          "status": "completed",
+          "conclusion": "success",
+          "attempt": 1,
+          "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479796",
+          "created_at": "2026-11-17T08:10:28Z",
+          "updated_at": "2026-11-17T08:36:13Z"
+        }
+      ],
+      "checks": [
+        {
+          "id": 133917815087,
+          "name": "SonarCloud Code Analysis",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://sonarcloud.io/dashboard?id=1298345095_wxnotepad&pullRequest=224",
+          "completed_at": "2026-11-17T08:33:56Z"
+        },
+        {
+          "id": 133913085936,
+          "name": "Linux coverage / SonarCloud",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479796/job/133913085936",
+          "completed_at": "2026-11-17T08:33:55Z"
+        },
+        {
+          "id": 133906870722,
+          "name": "CodeQL",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/runs/133906870722",
+          "completed_at": "2026-11-17T08:10:59Z"
+        },
+        {
+          "id": 133906852384,
+          "name": "Native clang-tidy",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479641/job/133906852384",
+          "completed_at": "2026-11-17T08:26:32Z"
+        },
+        {
+          "id": 133906665249,
+          "name": "Linux coverage / wayland",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479796/job/133906665249",
+          "completed_at": "2026-11-17T08:24:07Z"
+        },
+        {
+          "id": 133906665228,
+          "name": "Linux coverage / x11",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479796/job/133906665228",
+          "completed_at": "2026-11-17T08:21:57Z"
+        },
+        {
+          "id": 133906665215,
+          "name": "Windows MSVC",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479796/job/133906665215",
+          "completed_at": "2026-11-17T08:36:13Z"
+        },
+        {
+          "id": 133906664867,
+          "name": "Linux GCC 13 / X11 + Wayland",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479796/job/133906664867",
+          "completed_at": "2026-11-17T08:30:50Z"
+        },
+        {
+          "id": 133906664139,
+          "name": "CodeQL / cpp",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479591/job/133906664139",
+          "completed_at": "2026-11-17T08:16:31Z"
+        },
+        {
+          "id": 133906664009,
+          "name": "Format and workflow syntax",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479641/job/133906664009",
+          "completed_at": "2026-11-17T08:10:51Z"
+        },
+        {
+          "id": 133906663936,
+          "name": "Linux Clang 18 / libFuzzer + ASan + UBSan",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479595/job/133906663936",
+          "completed_at": "2026-11-17T08:15:42Z"
+        },
+        {
+          "id": 133906663796,
+          "name": "CodeQL / actions",
+          "head_sha": "226c9bec0d17d6416157d02de816a44bc35ba747",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44044479591/job/133906663796",
+          "completed_at": "2026-11-17T08:11:07Z"
+        }
+      ]
+    }
+  },
+  "summary": {
+    "reviewed_pr_issues": 50,
+    "additional_main_code_fix_keys": 38,
+    "cumulative_main_code_fix_keys": 888,
+    "new_main_false_positive_dispositions": 1,
+    "reapplied_existing_false_positives_in_pr": 11,
+    "remaining_reviewed_pr_issues": 1,
+    "changed_source_files_in_followup": 22,
+    "by_rule": {
+      "cpp:S3358": 15,
+      "cpp:S5827": 11,
+      "cpp:S5945": 4,
+      "cpp:S6004": 6,
+      "cpp:S6005": 1,
+      "cpp:S7034": 1
+    }
+  },
+  "main_code_fix_keys": [
+    "AaG1B5eDYqINDK50-vV0",
+    "AaG1B5pnYqINDK50-vZG",
+    "AaG1r02ryu4V9oip4YLR",
+    "AaG1r044yu4V9oip4YMh",
+    "AaG1r04Pyu4V9oip4YL9",
+    "AaG1r04byu4V9oip4YMM",
+    "AaG1r04byu4V9oip4YMN",
+    "AaG1r082yu4V9oip4YPf",
+    "AaG1r082yu4V9oip4YPg",
+    "AaG1r09Iyu4V9oip4YPy",
+    "AaG1r0jAyu4V9oip4YGN",
+    "AaG1r0lEyu4V9oip4YIB",
+    "AaG1r0ztyu4V9oip4YJ3",
+    "AaG1r0ztyu4V9oip4YJ4",
+    "AaG1r1OHyu4V9oip4Ybj",
+    "AaG1r1OHyu4V9oip4Ybl",
+    "AaG7NT-5kxw1cHak34us",
+    "AaG7NT-5kxw1cHak34ut",
+    "AaG7NULYkxw1cHak34wQ",
+    "AaG7NULYkxw1cHak34wS",
+    "AaG7NUOQkxw1cHak34xc",
+    "AaG7NUOQkxw1cHak34xi",
+    "AaG7NUOrkxw1cHak34x-",
+    "AaG7NUOrkxw1cHak34yD",
+    "AaG7NUTMkxw1cHak340t",
+    "AaG7NUTnkxw1cHak3402",
+    "AaG7NUVGkxw1cHak341t",
+    "AaG7NUVGkxw1cHak341v",
+    "AaG7NUVnkxw1cHak342M",
+    "AaG7NUVnkxw1cHak342O",
+    "AaGRP45KXbG6mhdFE6lA",
+    "AaGRP46wXbG6mhdFE6mU",
+    "AaHEzXaLhpq0YxBZ9SBu",
+    "AaHEzXdKhpq0YxBZ9SC0",
+    "AaHEzXdKhpq0YxBZ9SC1",
+    "AaHEzXgZhpq0YxBZ9SDr",
+    "AaHHH4Yp1qsESOEEk9lM",
+    "AaHjdO4736FRZpqmyqBo"
+  ],
+  "mapping_note": "All 50 findings correlate to existing main findings: 39 valid maintainability issues and 11 previously reviewed false positives. Two pairs of nested-conditional issues share a line without offsets; correspondence is recorded as exact two-to-two groups without asserting individual order.",
+  "code_commits": [
+    {
+      "group": "src",
+      "sha": "e2f1b6223e65a1c222006db6d79be5eb93a02cae",
+      "tree": "b3f6f3a5ab3bc7078b47637935c9235abcfa2bb0"
+    },
+    {
+      "group": "tests",
+      "sha": "9245b3466051919495b3e3c33bcafa0e80e15f11",
+      "tree": "9fa1201e2e138dc0c48b6c6a4018a749f5ff64f3"
+    }
+  ],
+  "code_fixes": [
+    {
+      "pr_issue_key": "AaHopBcDcf_I1OScw0Jr",
+      "main_issue_keys": [
+        "AaG1r0jAyu4V9oip4YGN"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "main_lines": [
+        327
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Replace the existing nested conditional with selection branches/switch; preserve 0->CrLf, 1->Lf, other->Cr and read selection after ShowModal."
+    },
+    {
+      "pr_issue_key": "AaHopBs_cf_I1OScw0Jv",
+      "main_issue_keys": [
+        "AaG1r0lEyu4V9oip4YIB"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/app/editor_frame.cpp",
+      "main_lines": [
+        202
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Use explicit branches for defaultEolMode_: 0->CrLf, 1->Lf, other->Cr. Preserve the choice cancellation and document preference updates."
+    },
+    {
+      "pr_issue_key": "AaHopBrEcf_I1OScw0Js",
+      "main_issue_keys": [
+        "AaG7NT-5kxw1cHak34us"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/app/editor_frame_commands.cpp",
+      "main_lines": [
+        1559
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Split previous versus next selection into explicit branches; retain ControlDown sibling choice and the existing ShiftDown guard."
+    },
+    {
+      "pr_issue_key": "AaHopBrEcf_I1OScw0Jt",
+      "main_issue_keys": [
+        "AaG7NT-5kxw1cHak34ut"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/app/editor_frame_commands.cpp",
+      "main_lines": [
+        1560
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Same combined edit as the companion issue: split previous/next branches and retain sibling selection."
+    },
+    {
+      "pr_issue_key": "AaHopBrEcf_I1OScw0Ju",
+      "main_issue_keys": [
+        "AaG1B5eDYqINDK50-vV0"
+      ],
+      "rule": "cpp:S5827",
+      "file": "src/app/editor_frame_commands.cpp",
+      "main_lines": [
+        1785
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Use auto limit = static_cast<int>(editor_->Send(GetEdgeColumn)); retain the cast and mutable int type required by ShowLongLineSettingsDialog(int&, int&)."
+    },
+    {
+      "pr_issue_key": "AaHopB2Rcf_I1OScw0J-",
+      "main_issue_keys": [
+        "AaG1r04Pyu4V9oip4YL9"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/document/document_session.cpp",
+      "main_lines": [
+        86
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Select the preferred count with explicit branches; preserve configured-mode tie priority and CRLF then LF fallback."
+    },
+    {
+      "pr_issue_key": "AaHopB1tcf_I1OScw0J9",
+      "main_issue_keys": [
+        "AaHEzXaLhpq0YxBZ9SBu"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/document/encoding/encoding_detection.cpp",
+      "main_lines": [
+        386
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Compute the existing BOM flag in explicit encoding branches before constructing DetectedEncoding; preserve the maxConvertedSize check and Utf16Le/Utf16Be/Utf8 signatures."
+    },
+    {
+      "pr_issue_key": "AaHopByjcf_I1OScw0J7",
+      "main_issue_keys": [
+        "AaG7NULYkxw1cHak34wQ"
+      ],
+      "rule": "cpp:S6004",
+      "file": "src/editor/editor_control.cpp",
+      "main_lines": [
+        24
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Move const auto caret into the if initializer; its uses are confined to the if and else bodies and its lifetime has no resource effect."
+    },
+    {
+      "pr_issue_key": "AaHopByjcf_I1OScw0J8",
+      "main_issue_keys": [
+        "AaG7NULYkxw1cHak34wS"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/editor/editor_control.cpp",
+      "main_lines": [
+        31
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Use ordered branches for DeleteBack, DelLineLeft and DelWordLeft. Preserve the lazy GetLineIndentPosition call when caret != start."
+    },
+    {
+      "pr_issue_key": "AaHopBu5cf_I1OScw0Jw",
+      "main_issue_keys": [
+        "AaG1r0ztyu4V9oip4YJ3"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "main_lines": [
+        374
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Select wxCURSOR_IBEAM/HAND/WAIT/ARROW with explicit branches, still inside the wid guard; use the correct wx enum type."
+    },
+    {
+      "pr_issue_key": "AaHopBu5cf_I1OScw0Jx",
+      "main_issue_keys": [
+        "AaG1r0ztyu4V9oip4YJ4"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/editor/platform/wx_platform.cpp",
+      "main_lines": [
+        375
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Same combined cursor selection edit as the companion issue."
+    },
+    {
+      "pr_issue_key": "AaHopBwfcf_I1OScw0J2",
+      "main_issue_keys": [
+        "AaG1r02ryu4V9oip4YLR"
+      ],
+      "rule": "cpp:S6004",
+      "file": "src/editor/strip_blanks.cpp",
+      "main_lines": [
+        44
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Move const auto line into the if initializer; it is unused in the next endpoint test or after the if."
+    },
+    {
+      "pr_issue_key": "AaHopB4Icf_I1OScw0KF",
+      "main_issue_keys": [
+        "AaG1r044yu4V9oip4YMh"
+      ],
+      "rule": "cpp:S6004",
+      "file": "src/search/search_session.cpp",
+      "main_lines": [
+        142
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Move const auto line into the if initializer; preserve the subsequent cursor.position == cursor.limit check."
+    },
+    {
+      "pr_issue_key": "AaHopB3Rcf_I1OScw0J_",
+      "main_issue_keys": [
+        "AaHHH4Yp1qsESOEEk9lM"
+      ],
+      "rule": "cpp:S7034",
+      "file": "src/syntax/syntax_catalog.cpp",
+      "main_lines": [
+        448
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Replace lower.find(\"<html\") != std::string::npos with lower.contains(\"<html\"). The code uses C++23 and the find result is used only as a Boolean."
+    },
+    {
+      "pr_issue_key": "AaHopB3Rcf_I1OScw0KA",
+      "main_issue_keys": [
+        "AaHEzXdKhpq0YxBZ9SC0"
+      ],
+      "rule": "cpp:S6004",
+      "file": "src/syntax/syntax_catalog.cpp",
+      "main_lines": [
+        526
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Move const auto originalExtension into the following if initializer; it is not used in subsequent extension matching. Keep the original case-sensitive dotfile check."
+    },
+    {
+      "pr_issue_key": "AaHopB3Rcf_I1OScw0KB",
+      "main_issue_keys": [
+        "AaHEzXdKhpq0YxBZ9SC1"
+      ],
+      "rule": "cpp:S6004",
+      "file": "src/syntax/syntax_catalog.cpp",
+      "main_lines": [
+        559
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Move const auto language into the following if initializer. The later language declaration is distinct; preserve templateConfig handling and the underlying path lifetime."
+    },
+    {
+      "pr_issue_key": "AaHopB3scf_I1OScw0KC",
+      "main_issue_keys": [
+        "AaGRP45KXbG6mhdFE6lA"
+      ],
+      "rule": "cpp:S5945",
+      "file": "src/syntax/syntax_scheme.cpp",
+      "main_lines": [
+        41
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Use std::array<Scintilla::MarkerSymbol, 7> with the same seven values and order. Only std::size and operator[] are used; no external array-decay ABI."
+    },
+    {
+      "pr_issue_key": "AaHopB3scf_I1OScw0KD",
+      "main_issue_keys": [
+        "AaG1r04byu4V9oip4YMM",
+        "AaG1r04byu4V9oip4YMN"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/syntax/syntax_scheme.cpp",
+      "main_lines": [
+        66,
+        67
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Select the same IndentView with ordered branches: !show->None, simple->Real, otherwise SyntaxFor(language).indentLookForward->LookForward/LookBoth. Preserve lazy SyntaxFor evaluation.",
+      "mapping_precision": {
+        "pr_issue_keys": [
+          "AaHopB3scf_I1OScw0KD",
+          "AaHopB3scf_I1OScw0KE"
+        ],
+        "main_issue_keys": [
+          "AaG1r04byu4V9oip4YMM",
+          "AaG1r04byu4V9oip4YMN"
+        ],
+        "precision": "Exact two-to-two group; both PR issues share line 64 with no column offsets. No individual ordering is asserted. The same edit resolves both."
+      }
+    },
+    {
+      "pr_issue_key": "AaHopB3scf_I1OScw0KE",
+      "main_issue_keys": [
+        "AaG1r04byu4V9oip4YMM",
+        "AaG1r04byu4V9oip4YMN"
+      ],
+      "rule": "cpp:S3358",
+      "file": "src/syntax/syntax_scheme.cpp",
+      "main_lines": [
+        66,
+        67
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Same combined branch rewrite as the companion issue; preserve the order and enum result type.",
+      "mapping_precision": {
+        "pr_issue_keys": [
+          "AaHopB3scf_I1OScw0KD",
+          "AaHopB3scf_I1OScw0KE"
+        ],
+        "main_issue_keys": [
+          "AaG1r04byu4V9oip4YMM",
+          "AaG1r04byu4V9oip4YMN"
+        ],
+        "precision": "Exact two-to-two group; both PR issues share line 64 with no column offsets. No individual ordering is asserted. The same edit resolves both."
+      }
+    },
+    {
+      "pr_issue_key": "AaHopB9tcf_I1OScw0KL",
+      "main_issue_keys": [
+        "AaG7NUOQkxw1cHak34xc"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/bookmark_history.cpp",
+      "main_lines": [
+        140
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "MarginClick(): y is sent to Win32 MAKELPARAM or the GTK mouse event y field. Its static_cast<int> is preserved, so const auto remains const int on both platforms."
+    },
+    {
+      "pr_issue_key": "AaHopB9tcf_I1OScw0KM",
+      "main_issue_keys": [
+        "AaG7NUOQkxw1cHak34xi"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/bookmark_history.cpp",
+      "main_lines": [
+        177
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Geometry() bookmarkCount lambda: height supplies both the top and height of wxRect. Its static_cast<int> is preserved; no coordinate, arithmetic, pixel read, or assertion changes."
+    },
+    {
+      "pr_issue_key": "AaHopCeJcf_I1OScw0KU",
+      "main_issue_keys": [
+        "AaHjdO4736FRZpqmyqBo"
+      ],
+      "rule": "cpp:S6004",
+      "file": "tests/current_encoding.cpp",
+      "main_lines": [
+        267
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "AnsiTransition(): actualText is an owned std::string returned by TestEditor::Text(frame). It is used only by this if condition and immediate hex diagnostic. No reference/pointer/capture escapes, and the next Require intentionally obtains its own fresh Text(frame). Moving the declaration into the if initializer keeps its evaluation before the condition; destruction moves to the end of the if, after its final use."
+    },
+    {
+      "pr_issue_key": "AaHopChZcf_I1OScw0Ka",
+      "main_issue_keys": [
+        "AaG1B5pnYqINDK50-vZG"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/current_line.cpp",
+      "main_lines": [
+        169
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "WrapAndLifecycle(): height feeds pixel sampling, caret hit testing and display-row positions. Its static_cast<int> remains, so every argument/arithmetic expression keeps its original type."
+    },
+    {
+      "pr_issue_key": "AaHopCh1cf_I1OScw0Kb",
+      "main_issue_keys": [
+        "AaG1r1OHyu4V9oip4Ybj"
+      ],
+      "rule": "cpp:S3358",
+      "file": "tests/eol_open.cpp",
+      "main_lines": [
+        127
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "CountAndDefault(): replace the nested mode-to-EOL-bytes selection with the same priority branches: CrLf -> CRLF, Lf -> LF, all other values -> CR. The pointer is only read to append expected bytes; no address or pointer identity comparison occurs."
+    },
+    {
+      "pr_issue_key": "AaHopCh1cf_I1OScw0Kc",
+      "main_issue_keys": [
+        "AaG1r1OHyu4V9oip4Ybl"
+      ],
+      "rule": "cpp:S3358",
+      "file": "tests/eol_open.cpp",
+      "main_lines": [
+        135
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "CountAndDefault(): configured is the local 0..2 loop variable. Choose CrLf for 0, Lf for 1, otherwise Cr, then retain the std::to_underlying + intptr_t cast inside the unchanged NewDocument/GetEOLMode assertion. Computing this pure local value earlier does not move any editor call."
+    },
+    {
+      "pr_issue_key": "AaHopCgUcf_I1OScw0KX",
+      "main_issue_keys": [
+        "AaG7NUVnkxw1cHak342M"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/fold_cpp.cpp",
+      "main_lines": [
+        64
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "MarginBackground(): width bounds native margin pixel reads; const auto deduces int from the unchanged explicit cast."
+    },
+    {
+      "pr_issue_key": "AaHopCgUcf_I1OScw0KY",
+      "main_issue_keys": [
+        "AaG7NUVnkxw1cHak342O"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/fold_cpp.cpp",
+      "main_lines": [
+        78
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "MarkerPixels(): width bounds the x pixel loop; this is the width declaration, not the nearby left declaration. The explicit int cast and loop bounds remain."
+    },
+    {
+      "pr_issue_key": "AaHopCgUcf_I1OScw0KZ",
+      "main_issue_keys": [
+        "AaGRP46wXbG6mhdFE6mU"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/fold_cpp.cpp",
+      "main_lines": [
+        81
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "MarkerPixels(): height bounds the y pixel loop; this corresponds to original line 81 (AaGRP46wXbG6mhdFE6mU), not original width/left findings. The explicit int cast remains."
+    },
+    {
+      "pr_issue_key": "AaHopCfUcf_I1OScw0KV",
+      "main_issue_keys": [
+        "AaG7NUVGkxw1cHak341t"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/fold_view.cpp",
+      "main_lines": [
+        15
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "MarkerPixels(): width is passed to wxRect after subtracting four pixels. The explicit int cast remains, preserving type, signed arithmetic and geometry."
+    },
+    {
+      "pr_issue_key": "AaHopCfUcf_I1OScw0KW",
+      "main_issue_keys": [
+        "AaG7NUVGkxw1cHak341v"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/fold_view.cpp",
+      "main_lines": [
+        18
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "MarkerPixels(): height is passed to wxRect after subtracting two pixels. The explicit int cast remains, preserving type, signed arithmetic and geometry."
+    },
+    {
+      "pr_issue_key": "AaHopB-6cf_I1OScw0KO",
+      "main_issue_keys": [
+        "AaG7NUOrkxw1cHak34x-"
+      ],
+      "rule": "cpp:S5945",
+      "file": "tests/header_insert.cpp",
+      "main_lines": [
+        64
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "State(): five message constants form a fixed read-only table used by std::size and indexed Send calls. constexpr std::array preserves count/order/type and fields[start+index+1] correspondence; no array-to-pointer decay or ABI consumer exists."
+    },
+    {
+      "pr_issue_key": "AaHopB-6cf_I1OScw0KP",
+      "main_issue_keys": [
+        "AaG7NUOrkxw1cHak34yD"
+      ],
+      "rule": "cpp:S5945",
+      "file": "tests/header_insert.cpp",
+      "main_lines": [
+        94
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "RejectedAnsiOpen(): ten message constants are iterated to snapshot intptr_t results, then indexed in the identical order after the rejected Open. constexpr std::array preserves the snapshot/verification pairing and local constant storage; no pointer consumer exists."
+    },
+    {
+      "pr_issue_key": "AaHopCZUcf_I1OScw0KS",
+      "main_issue_keys": [
+        "AaG7NUTMkxw1cHak340t"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/native_fold_helpers.h",
+      "main_lines": [
+        17
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "NativeFold::MarginClick(): x is computed from two margins plus half the fold margin, then used by both Win32 MAKELPARAM and GTK pointer-event coordinates. Its static_cast<int> and all inputs remain."
+    },
+    {
+      "pr_issue_key": "AaHopB-Zcf_I1OScw0KN",
+      "main_issue_keys": [
+        "AaG1r09Iyu4V9oip4YPy"
+      ],
+      "rule": "cpp:S6005",
+      "file": "tests/save_cleanup.cpp",
+      "main_lines": [
+        75
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "Defaults(): the initializer_list of three pair<int,EndOfLine> values is unchanged in order (1,Lf), (2,Cr), (0,CrLf). const auto& structured binding keeps references into the same range-for lifetime, passes defaultMode by value to Options, and passes endOfLine to the unchanged enum conversion. Nothing escapes the loop."
+    },
+    {
+      "pr_issue_key": "AaHopB9Acf_I1OScw0KI",
+      "main_issue_keys": [
+        "AaG1r082yu4V9oip4YPf",
+        "AaG1r082yu4V9oip4YPg"
+      ],
+      "rule": "cpp:S3358",
+      "file": "tests/syntax_save.cpp",
+      "main_lines": [
+        111,
+        112
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "SaveCommand(): current remains a SyntaxLanguage value initialized to PlainText and overwritten by an ordered if/else-if for CPP, PYTHON, JSON. The separate JAVASCRIPT property-based dialect override remains after this selection. This addresses both nested conditionals together without changing the lexer query count or chooser construction.",
+      "mapping_precision": "Exact two-issue group correspondence for the same two nested conditional operators. Both PR issues are reported at line 110 without offsets in the MCP response, so an individual KI-vs-KJ to YPf-vs-YPg ordering cannot be established from the available evidence. The single branch expansion fixes both PR and both main findings."
+    },
+    {
+      "pr_issue_key": "AaHopB9Acf_I1OScw0KJ",
+      "main_issue_keys": [
+        "AaG1r082yu4V9oip4YPf",
+        "AaG1r082yu4V9oip4YPg"
+      ],
+      "rule": "cpp:S3358",
+      "file": "tests/syntax_save.cpp",
+      "main_lines": [
+        111,
+        112
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "SaveCommand(): same ordered branch expansion as AaHopB9Acf_I1OScw0KI; preserve CPP/PYTHON/JSON choices, PlainText fallback, and subsequent JavaScript/JSX/TypeScript/TSX override.",
+      "mapping_precision": "Exact two-issue group correspondence for the same two nested conditional operators. Both PR issues are reported at line 110 without offsets in the MCP response, so an individual KI-vs-KJ to YPf-vs-YPg ordering cannot be established from the available evidence. The single branch expansion fixes both PR and both main findings."
+    },
+    {
+      "pr_issue_key": "AaHopB9Acf_I1OScw0KK",
+      "main_issue_keys": [
+        "AaHEzXgZhpq0YxBZ9SDr"
+      ],
+      "rule": "cpp:S5945",
+      "file": "tests/syntax_save.cpp",
+      "main_lines": [
+        115
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "SaveCommand(): the four SyntaxLanguage dialects remain JavaScript, Jsx, TypeScript, Tsx. The existing Require(dialect >= 0 && dialect < 4) still guards the indexed access. constexpr std::array retains element type, size and order; add direct <array>."
+    },
+    {
+      "pr_issue_key": "AaHopCa0cf_I1OScw0KT",
+      "main_issue_keys": [
+        "AaG7NUTnkxw1cHak3402"
+      ],
+      "rule": "cpp:S5827",
+      "file": "tests/word_wrap.cpp",
+      "main_lines": [
+        82
+      ],
+      "disposition": "code_fix",
+      "change_and_contract": "AutomaticScrollWidth(): lineHeight controls the frame adjustment and visible-row calculation. Keeping static_cast<int> preserves division/modulo and overload types."
+    }
+  ],
+  "false_positives": [
+    {
+      "pr_issue_key": "AaHopBwPcf_I1OScw0J0",
+      "main_issue_keys": [
+        "AaG7NULBkxw1cHak34wL"
+      ],
+      "rule": "cpp:S6022",
+      "file": "src/editor/align_lines.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed PR #224 at 226c9bec0d17d6416157d02de816a44bc35ba747, src/editor/align_lines.cpp:103, and the pinned Notepad4 core 89b8b36e0ee2c23f73be922315f17261ccfbbe1a. GetRangePointer transports an existing const char* document-character range through intptr_t. AlignLine obtains PositionFromLine and LineLength for the selected logical line, immediately copies the returned character range into its owning std::string, then performs UTF16Length and textual word splitting before later document edits. These are textual character consumers, so const char* is the appropriate interface and the std::byte recommendation does not apply. The corresponding main issue AaG7NULBkxw1cHak34wL remains FALSE_POSITIVE; the current expression differs from the reviewed base only by removal of the Message:: qualifier.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopBwPcf_I1OScw0J0",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-surface-dispositions.json",
+      "call_path": "EditorFrame menu -> EditorControl::AlignLines -> AlignLine",
+      "source_contract": "S6022 targets byte-oriented access to object representation. Here the core owns char storage and the application consumes textual characters through string/UTF conversion or comment-prefix comparison. Retaining const char* expresses the actual data contract; std::byte would require conversion back to characters at these consumers.",
+      "source_evidence": [
+        {
+          "file": "src/editor/editor_control.h",
+          "lines": [
+            38
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "The message transport returns intptr_t and accepts uintptr_t/intptr_t parameters."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "lines": [
+            345,
+            354,
+            376
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "Returns the Core::WndProc result unchanged; ancillary margin/selection updates do not change the character result or its pointer representation."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "lines": [
+            207,
+            235,
+            238
+          ],
+          "symbol": "EditorControl::Core::WndProc",
+          "contract": "These read messages pass to ScintillaBase::WndProc; the resulting intptr_t is returned unchanged."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/ScintillaBase.cxx",
+          "lines": [
+            906,
+            1238,
+            1239
+          ],
+          "symbol": "ScintillaBase::WndProc",
+          "contract": "GetRangePointer, GetCharAt and GetCharacterAndWidth use the default forwarding path to Editor::WndProc."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/ScintillaTypes.h",
+          "lines": [
+            736,
+            894,
+            902
+          ],
+          "symbol": "sptr_t / AsPointer / AsInteger",
+          "contract": "sptr_t aliases intptr_t. The upstream ABI helpers themselves perform pointer/integer reinterpret_cast conversions."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/Scintilla.iface",
+          "lines": [
+            2822,
+            2825
+          ],
+          "symbol": "GetRangePointer",
+          "contract": "The API specifies a read-only pointer to a contiguous range of document characters."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Editor.cxx",
+          "lines": [
+            8771,
+            8772
+          ],
+          "symbol": "Editor::WndProc/GetRangePointer",
+          "contract": "Returns AsInteger<sptr_t>(pdoc->RangePointer(PositionFromUPtr(wParam), lParam))."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.h",
+          "lines": [
+            582,
+            583
+          ],
+          "symbol": "Document::RangePointer",
+          "contract": "Returns the original const char* supplied by CellBuffer::RangePointer."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.h",
+          "lines": [
+            97
+          ],
+          "symbol": "CellBuffer::substance",
+          "contract": "Document character storage is SplitVector<char>."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.cxx",
+          "lines": [
+            396,
+            397
+          ],
+          "symbol": "CellBuffer::RangePointer",
+          "contract": "Returns substance.RangePointer(position, rangeLength)."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/SplitVector.h",
+          "lines": [
+            72,
+            416,
+            427
+          ],
+          "symbol": "SplitVector<char>::GapTo / RangePointer",
+          "contract": "Rearranges the existing gap when needed and returns the selected contiguous char range. The application casts back to exactly the original const char* type."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/call/ScintillaCall.cxx",
+          "lines": [
+            2689,
+            2690
+          ],
+          "symbol": "ScintillaCall::RangePointer",
+          "contract": "The upstream typed wrapper also restores a pointer from the same message return via AsPointer."
+        },
+        {
+          "file": "src/editor/align_lines.cpp",
+          "lines": [
+            94,
+            103,
+            104,
+            107,
+            109,
+            118,
+            122
+          ],
+          "symbol": "AlignLine",
+          "contract": "AlignLine obtains PositionFromLine and LineLength for the selected logical line, immediately copies the returned character range into its owning std::string, then performs UTF16Length and textual word splitting before later document edits."
+        }
+      ]
+    },
+    {
+      "pr_issue_key": "AaHopBwPcf_I1OScw0J1",
+      "main_issue_keys": [
+        "AaG7NULBkxw1cHak34wM"
+      ],
+      "rule": "cpp:S3630",
+      "file": "src/editor/align_lines.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed PR #224 at 226c9bec0d17d6416157d02de816a44bc35ba747, src/editor/align_lines.cpp:103, and the pinned Notepad4 core 89b8b36e0ee2c23f73be922315f17261ccfbbe1a. Editor::WndProc(GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. EditorControl::Send and Core::WndProc preserve that result, so this cast restores the same const char* through the pointer-sized message ABI. C++23 [expr.reinterpret.cast]/5 preserves this round trip. AlignLine obtains PositionFromLine and LineLength for the selected logical line, immediately copies the returned character range into its owning std::string, then performs UTF16Length and textual word splitting before later document edits. The source and destination pointer types match and the pointee remains alive for consumption, making this API restoration well-defined. The corresponding main issue AaG7NULBkxw1cHak34wM remains FALSE_POSITIVE; the current expression differs from the reviewed base only by removal of the Message:: qualifier.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopBwPcf_I1OScw0J1",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-followup-dispositions.json",
+      "call_path": "EditorFrame menu -> EditorControl::AlignLines -> AlignLine",
+      "source_contract": "The returned integer originates from the exact const char* that the application recovers, with no intermediate integer arithmetic or narrowing. This is the C++23 pointer-to-sufficient-integer-to-original-pointer round trip. The complete consumer finishes before document edits. static_cast does not provide an integral-to-object-pointer conversion; bit_cast would switch to representation copying, and calling AsPointer would relocate the same reinterpret_cast. The existing cast is the correct operation for this ABI.",
+      "source_evidence": [
+        {
+          "file": "src/editor/editor_control.h",
+          "lines": [
+            38
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "The message transport returns intptr_t and accepts uintptr_t/intptr_t parameters."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "lines": [
+            345,
+            354,
+            376
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "Returns the Core::WndProc result unchanged; ancillary margin/selection updates do not change the character result or its pointer representation."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "lines": [
+            207,
+            235,
+            238
+          ],
+          "symbol": "EditorControl::Core::WndProc",
+          "contract": "These read messages pass to ScintillaBase::WndProc; the resulting intptr_t is returned unchanged."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/ScintillaBase.cxx",
+          "lines": [
+            906,
+            1238,
+            1239
+          ],
+          "symbol": "ScintillaBase::WndProc",
+          "contract": "GetRangePointer, GetCharAt and GetCharacterAndWidth use the default forwarding path to Editor::WndProc."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/ScintillaTypes.h",
+          "lines": [
+            736,
+            894,
+            902
+          ],
+          "symbol": "sptr_t / AsPointer / AsInteger",
+          "contract": "sptr_t aliases intptr_t. The upstream ABI helpers themselves perform pointer/integer reinterpret_cast conversions."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/Scintilla.iface",
+          "lines": [
+            2822,
+            2825
+          ],
+          "symbol": "GetRangePointer",
+          "contract": "The API specifies a read-only pointer to a contiguous range of document characters."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Editor.cxx",
+          "lines": [
+            8771,
+            8772
+          ],
+          "symbol": "Editor::WndProc/GetRangePointer",
+          "contract": "Returns AsInteger<sptr_t>(pdoc->RangePointer(PositionFromUPtr(wParam), lParam))."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.h",
+          "lines": [
+            582,
+            583
+          ],
+          "symbol": "Document::RangePointer",
+          "contract": "Returns the original const char* supplied by CellBuffer::RangePointer."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.h",
+          "lines": [
+            97
+          ],
+          "symbol": "CellBuffer::substance",
+          "contract": "Document character storage is SplitVector<char>."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.cxx",
+          "lines": [
+            396,
+            397
+          ],
+          "symbol": "CellBuffer::RangePointer",
+          "contract": "Returns substance.RangePointer(position, rangeLength)."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/SplitVector.h",
+          "lines": [
+            72,
+            416,
+            427
+          ],
+          "symbol": "SplitVector<char>::GapTo / RangePointer",
+          "contract": "Rearranges the existing gap when needed and returns the selected contiguous char range. The application casts back to exactly the original const char* type."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/call/ScintillaCall.cxx",
+          "lines": [
+            2689,
+            2690
+          ],
+          "symbol": "ScintillaCall::RangePointer",
+          "contract": "The upstream typed wrapper also restores a pointer from the same message return via AsPointer."
+        },
+        {
+          "file": "src/editor/align_lines.cpp",
+          "lines": [
+            94,
+            103,
+            104,
+            107,
+            109,
+            118,
+            122
+          ],
+          "symbol": "AlignLine",
+          "contract": "AlignLine obtains PositionFromLine and LineLength for the selected logical line, immediately copies the returned character range into its owning std::string, then performs UTF16Length and textual word splitting before later document edits."
+        }
+      ]
+    },
+    {
+      "pr_issue_key": "AaHopBvWcf_I1OScw0Jy",
+      "main_issue_keys": [
+        "AaGre78Glg4saI6oll0-"
+      ],
+      "rule": "cpp:S6022",
+      "file": "src/editor/line_comments.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed PR #224 at 226c9bec0d17d6416157d02de816a44bc35ba747, src/editor/line_comments.cpp:39, and the pinned Notepad4 core 89b8b36e0ee2c23f73be922315f17261ccfbbe1a. GetRangePointer transports an existing const char* document-character range through intptr_t. ToggleLineComment bounds the borrowed range by min(prefixLength + 1, lineEnd - indent), compares it with the syntax comment-prefix string and checks the optional ASCII space. All reads finish before InsertText/DeleteRange, and the pointer is not used after the edit. These are textual character consumers, so const char* is the appropriate interface and the std::byte recommendation does not apply. The corresponding main issue AaGre78Glg4saI6oll0- remains FALSE_POSITIVE; the current expression differs from the reviewed base only by removal of the Message:: qualifier.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopBvWcf_I1OScw0Jy",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-surface-dispositions.json",
+      "call_path": "EditorFrame::AppendCommentCommands -> EditorControl::ToggleLineComments -> ToggleLineComment",
+      "source_contract": "S6022 targets byte-oriented access to object representation. Here the core owns char storage and the application consumes textual characters through string/UTF conversion or comment-prefix comparison. Retaining const char* expresses the actual data contract; std::byte would require conversion back to characters at these consumers.",
+      "source_evidence": [
+        {
+          "file": "src/editor/editor_control.h",
+          "lines": [
+            38
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "The message transport returns intptr_t and accepts uintptr_t/intptr_t parameters."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "lines": [
+            345,
+            354,
+            376
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "Returns the Core::WndProc result unchanged; ancillary margin/selection updates do not change the character result or its pointer representation."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "lines": [
+            207,
+            235,
+            238
+          ],
+          "symbol": "EditorControl::Core::WndProc",
+          "contract": "These read messages pass to ScintillaBase::WndProc; the resulting intptr_t is returned unchanged."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/ScintillaBase.cxx",
+          "lines": [
+            906,
+            1238,
+            1239
+          ],
+          "symbol": "ScintillaBase::WndProc",
+          "contract": "GetRangePointer, GetCharAt and GetCharacterAndWidth use the default forwarding path to Editor::WndProc."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/ScintillaTypes.h",
+          "lines": [
+            736,
+            894,
+            902
+          ],
+          "symbol": "sptr_t / AsPointer / AsInteger",
+          "contract": "sptr_t aliases intptr_t. The upstream ABI helpers themselves perform pointer/integer reinterpret_cast conversions."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/Scintilla.iface",
+          "lines": [
+            2822,
+            2825
+          ],
+          "symbol": "GetRangePointer",
+          "contract": "The API specifies a read-only pointer to a contiguous range of document characters."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Editor.cxx",
+          "lines": [
+            8771,
+            8772
+          ],
+          "symbol": "Editor::WndProc/GetRangePointer",
+          "contract": "Returns AsInteger<sptr_t>(pdoc->RangePointer(PositionFromUPtr(wParam), lParam))."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.h",
+          "lines": [
+            582,
+            583
+          ],
+          "symbol": "Document::RangePointer",
+          "contract": "Returns the original const char* supplied by CellBuffer::RangePointer."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.h",
+          "lines": [
+            97
+          ],
+          "symbol": "CellBuffer::substance",
+          "contract": "Document character storage is SplitVector<char>."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.cxx",
+          "lines": [
+            396,
+            397
+          ],
+          "symbol": "CellBuffer::RangePointer",
+          "contract": "Returns substance.RangePointer(position, rangeLength)."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/SplitVector.h",
+          "lines": [
+            72,
+            416,
+            427
+          ],
+          "symbol": "SplitVector<char>::GapTo / RangePointer",
+          "contract": "Rearranges the existing gap when needed and returns the selected contiguous char range. The application casts back to exactly the original const char* type."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/call/ScintillaCall.cxx",
+          "lines": [
+            2689,
+            2690
+          ],
+          "symbol": "ScintillaCall::RangePointer",
+          "contract": "The upstream typed wrapper also restores a pointer from the same message return via AsPointer."
+        },
+        {
+          "file": "src/editor/line_comments.cpp",
+          "lines": [
+            31,
+            38,
+            39,
+            40,
+            49,
+            51,
+            55
+          ],
+          "symbol": "ToggleLineComment",
+          "contract": "ToggleLineComment bounds the borrowed range by min(prefixLength + 1, lineEnd - indent), compares it with the syntax comment-prefix string and checks the optional ASCII space. All reads finish before InsertText/DeleteRange, and the pointer is not used after the edit."
+        }
+      ]
+    },
+    {
+      "pr_issue_key": "AaHopBvWcf_I1OScw0Jz",
+      "main_issue_keys": [
+        "AaG1r01Nyu4V9oip4YLE"
+      ],
+      "rule": "cpp:S3630",
+      "file": "src/editor/line_comments.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed PR #224 at 226c9bec0d17d6416157d02de816a44bc35ba747, src/editor/line_comments.cpp:39, and the pinned Notepad4 core 89b8b36e0ee2c23f73be922315f17261ccfbbe1a. Editor::WndProc(GetRangePointer) returns AsInteger<sptr_t>(pdoc->RangePointer(...)); Document::RangePointer returns const char*, and sptr_t is intptr_t. EditorControl::Send and Core::WndProc preserve that result, so this cast restores the same const char* through the pointer-sized message ABI. C++23 [expr.reinterpret.cast]/5 preserves this round trip. ToggleLineComment bounds the borrowed range by min(prefixLength + 1, lineEnd - indent), compares it with the syntax comment-prefix string and checks the optional ASCII space. All reads finish before InsertText/DeleteRange, and the pointer is not used after the edit. The source and destination pointer types match and the pointee remains alive for consumption, making this API restoration well-defined. The corresponding main issue AaG1r01Nyu4V9oip4YLE remains FALSE_POSITIVE; the current expression differs from the reviewed base only by removal of the Message:: qualifier.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopBvWcf_I1OScw0Jz",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-followup-dispositions.json",
+      "call_path": "EditorFrame::AppendCommentCommands -> EditorControl::ToggleLineComments -> ToggleLineComment",
+      "source_contract": "The returned integer originates from the exact const char* that the application recovers, with no intermediate integer arithmetic or narrowing. This is the C++23 pointer-to-sufficient-integer-to-original-pointer round trip. The complete consumer finishes before document edits. static_cast does not provide an integral-to-object-pointer conversion; bit_cast would switch to representation copying, and calling AsPointer would relocate the same reinterpret_cast. The existing cast is the correct operation for this ABI.",
+      "source_evidence": [
+        {
+          "file": "src/editor/editor_control.h",
+          "lines": [
+            38
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "The message transport returns intptr_t and accepts uintptr_t/intptr_t parameters."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "lines": [
+            345,
+            354,
+            376
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "Returns the Core::WndProc result unchanged; ancillary margin/selection updates do not change the character result or its pointer representation."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "lines": [
+            207,
+            235,
+            238
+          ],
+          "symbol": "EditorControl::Core::WndProc",
+          "contract": "These read messages pass to ScintillaBase::WndProc; the resulting intptr_t is returned unchanged."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/ScintillaBase.cxx",
+          "lines": [
+            906,
+            1238,
+            1239
+          ],
+          "symbol": "ScintillaBase::WndProc",
+          "contract": "GetRangePointer, GetCharAt and GetCharacterAndWidth use the default forwarding path to Editor::WndProc."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/ScintillaTypes.h",
+          "lines": [
+            736,
+            894,
+            902
+          ],
+          "symbol": "sptr_t / AsPointer / AsInteger",
+          "contract": "sptr_t aliases intptr_t. The upstream ABI helpers themselves perform pointer/integer reinterpret_cast conversions."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/Scintilla.iface",
+          "lines": [
+            2822,
+            2825
+          ],
+          "symbol": "GetRangePointer",
+          "contract": "The API specifies a read-only pointer to a contiguous range of document characters."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Editor.cxx",
+          "lines": [
+            8771,
+            8772
+          ],
+          "symbol": "Editor::WndProc/GetRangePointer",
+          "contract": "Returns AsInteger<sptr_t>(pdoc->RangePointer(PositionFromUPtr(wParam), lParam))."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.h",
+          "lines": [
+            582,
+            583
+          ],
+          "symbol": "Document::RangePointer",
+          "contract": "Returns the original const char* supplied by CellBuffer::RangePointer."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.h",
+          "lines": [
+            97
+          ],
+          "symbol": "CellBuffer::substance",
+          "contract": "Document character storage is SplitVector<char>."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.cxx",
+          "lines": [
+            396,
+            397
+          ],
+          "symbol": "CellBuffer::RangePointer",
+          "contract": "Returns substance.RangePointer(position, rangeLength)."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/SplitVector.h",
+          "lines": [
+            72,
+            416,
+            427
+          ],
+          "symbol": "SplitVector<char>::GapTo / RangePointer",
+          "contract": "Rearranges the existing gap when needed and returns the selected contiguous char range. The application casts back to exactly the original const char* type."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/call/ScintillaCall.cxx",
+          "lines": [
+            2689,
+            2690
+          ],
+          "symbol": "ScintillaCall::RangePointer",
+          "contract": "The upstream typed wrapper also restores a pointer from the same message return via AsPointer."
+        },
+        {
+          "file": "src/editor/line_comments.cpp",
+          "lines": [
+            31,
+            38,
+            39,
+            40,
+            49,
+            51,
+            55
+          ],
+          "symbol": "ToggleLineComment",
+          "contract": "ToggleLineComment bounds the borrowed range by min(prefixLength + 1, lineEnd - indent), compares it with the syntax comment-prefix string and checks the optional ASCII space. All reads finish before InsertText/DeleteRange, and the pointer is not used after the edit."
+        }
+      ]
+    },
+    {
+      "pr_issue_key": "AaHopBx6cf_I1OScw0J4",
+      "main_issue_keys": [
+        "AaHaPjLPSajQlY95HQdS"
+      ],
+      "rule": "cpp:S5276",
+      "file": "src/editor/word_completion.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed PR #224 at 226c9bec0d17d6416157d02de816a44bc35ba747, src/editor/word_completion.cpp:687, and the complete Collector::Call/EditorControl::Send/Core::WndProc path to the pinned Notepad4 core 89b8b36e0ee2c23f73be922315f17261ccfbbe1a. GetCharAt originates as unsigned char (0..255). Message dispatch widens it to intptr_t; assigning to int preserves every possible value, including the zero returned outside the document. The width/position variables retain Sci_Position. This statement consumes a character value, and the pointer-sized ABI return type does not widen the actual value range. The corresponding main issue AaHaPjLPSajQlY95HQdS is verified FALSE_POSITIVE; the expression already exists at base 395ad59521dff2e7a5fb1c660188d73ea2269726:685 and this PR only removes the Message:: qualifier.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopBx6cf_I1OScw0J4",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-dispositions.json",
+      "call_path": "CompleteWord -> Collector::Run -> CollectCandidates -> AutoC_AddDocWord -> ExtendDocumentWord -> MemberWordEnd",
+      "source_contract": "GetCharAt originates as unsigned char (0..255). Message dispatch widens it to intptr_t; assigning to int preserves every possible value, including the zero returned outside the document. The width/position variables retain Sci_Position.",
+      "source_evidence": [
+        {
+          "file": "src/editor/editor_control.h",
+          "lines": [
+            38
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "The message transport returns intptr_t and accepts uintptr_t/intptr_t parameters."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "lines": [
+            345,
+            354,
+            376
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "Returns the Core::WndProc result unchanged; ancillary margin/selection updates do not change the character result or its pointer representation."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "lines": [
+            207,
+            235,
+            238
+          ],
+          "symbol": "EditorControl::Core::WndProc",
+          "contract": "These read messages pass to ScintillaBase::WndProc; the resulting intptr_t is returned unchanged."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/ScintillaBase.cxx",
+          "lines": [
+            906,
+            1238,
+            1239
+          ],
+          "symbol": "ScintillaBase::WndProc",
+          "contract": "GetRangePointer, GetCharAt and GetCharacterAndWidth use the default forwarding path to Editor::WndProc."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/ScintillaTypes.h",
+          "lines": [
+            736,
+            894,
+            902
+          ],
+          "symbol": "sptr_t / AsPointer / AsInteger",
+          "contract": "sptr_t aliases intptr_t. The upstream ABI helpers themselves perform pointer/integer reinterpret_cast conversions."
+        },
+        {
+          "file": "src/editor/word_completion.cpp",
+          "lines": [
+            577,
+            582,
+            586
+          ],
+          "symbol": "Collector::Parameter / Call / CharacterAt",
+          "contract": "Call forwards the pointer-sized transport without scaling. CharacterAt already documents and recovers the unsigned-byte message contract."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Editor.cxx",
+          "lines": [
+            7077,
+            7078,
+            7080,
+            7081
+          ],
+          "symbol": "Editor::WndProc character messages",
+          "contract": "GetCharAt returns pdoc->UCharAt; GetCharacterAndWidth returns pdoc->GetCharacterAndWidth and passes a separate Sci_Position* width output."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.h",
+          "lines": [
+            618,
+            619
+          ],
+          "symbol": "Document::UCharAt",
+          "contract": "Returns unsigned char, hence every result fits int."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.h",
+          "lines": [
+            125,
+            127,
+            128
+          ],
+          "symbol": "CellBuffer::UCharAt",
+          "contract": "Returns CharAt through unsigned char; out-of-range character reads yield zero."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.cxx",
+          "lines": [
+            1105,
+            1141
+          ],
+          "symbol": "Document::GetCharacterAndWidth",
+          "contract": "The complete implementation computes and returns int character; UTF-8, invalid UTF-8 surrogate values and DBCS paths all use that same int result. Only pWidth is written as Sci_Position."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/call/ScintillaCall.cxx",
+          "lines": [
+            181,
+            186
+          ],
+          "symbol": "ScintillaCall::CharAt / CharacterAndWidth",
+          "contract": "The upstream typed API explicitly converts these same message results to int."
+        },
+        {
+          "file": "src/editor/word_completion.cpp",
+          "lines": [
+            684,
+            687,
+            689,
+            691,
+            704,
+            710,
+            714,
+            728
+          ],
+          "symbol": "Collector::MemberWordEnd / ExtendDocumentWord",
+          "contract": "CompleteWord -> Collector::Run -> CollectCandidates -> AutoC_AddDocWord -> ExtendDocumentWord -> MemberWordEnd"
+        }
+      ]
+    },
+    {
+      "pr_issue_key": "AaHopBx6cf_I1OScw0J5",
+      "main_issue_keys": [
+        "AaHaPjLPSajQlY95HQdU"
+      ],
+      "rule": "cpp:S5276",
+      "file": "src/editor/word_completion.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed PR #224 at 226c9bec0d17d6416157d02de816a44bc35ba747, src/editor/word_completion.cpp:691, and the complete Collector::Call/EditorControl::Send/Core::WndProc path to the pinned Notepad4 core 89b8b36e0ee2c23f73be922315f17261ccfbbe1a. GetCharacterAndWidth originates as an int in Document::GetCharacterAndWidth. The message ABI widens this int to intptr_t and the application recovers int without losing information. UTF-8, malformed UTF-8 surrogate fallback and DBCS branches all return the same int type. The separate width output remains Sci_Position. This statement consumes a character value, and the pointer-sized ABI return type does not widen the actual value range. The corresponding main issue AaHaPjLPSajQlY95HQdU is verified FALSE_POSITIVE; the expression already exists at base 395ad59521dff2e7a5fb1c660188d73ea2269726:689 and this PR only removes the Message:: qualifier.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopBx6cf_I1OScw0J5",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-dispositions.json",
+      "call_path": "CompleteWord -> Collector::Run -> CollectCandidates -> AutoC_AddDocWord -> ExtendDocumentWord -> MemberWordEnd",
+      "source_contract": "GetCharacterAndWidth originates as an int in Document::GetCharacterAndWidth. The message ABI widens this int to intptr_t and the application recovers int without losing information. UTF-8, malformed UTF-8 surrogate fallback and DBCS branches all return the same int type. The separate width output remains Sci_Position.",
+      "source_evidence": [
+        {
+          "file": "src/editor/editor_control.h",
+          "lines": [
+            38
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "The message transport returns intptr_t and accepts uintptr_t/intptr_t parameters."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "lines": [
+            345,
+            354,
+            376
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "Returns the Core::WndProc result unchanged; ancillary margin/selection updates do not change the character result or its pointer representation."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "lines": [
+            207,
+            235,
+            238
+          ],
+          "symbol": "EditorControl::Core::WndProc",
+          "contract": "These read messages pass to ScintillaBase::WndProc; the resulting intptr_t is returned unchanged."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/ScintillaBase.cxx",
+          "lines": [
+            906,
+            1238,
+            1239
+          ],
+          "symbol": "ScintillaBase::WndProc",
+          "contract": "GetRangePointer, GetCharAt and GetCharacterAndWidth use the default forwarding path to Editor::WndProc."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/ScintillaTypes.h",
+          "lines": [
+            736,
+            894,
+            902
+          ],
+          "symbol": "sptr_t / AsPointer / AsInteger",
+          "contract": "sptr_t aliases intptr_t. The upstream ABI helpers themselves perform pointer/integer reinterpret_cast conversions."
+        },
+        {
+          "file": "src/editor/word_completion.cpp",
+          "lines": [
+            577,
+            582,
+            586
+          ],
+          "symbol": "Collector::Parameter / Call / CharacterAt",
+          "contract": "Call forwards the pointer-sized transport without scaling. CharacterAt already documents and recovers the unsigned-byte message contract."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Editor.cxx",
+          "lines": [
+            7077,
+            7078,
+            7080,
+            7081
+          ],
+          "symbol": "Editor::WndProc character messages",
+          "contract": "GetCharAt returns pdoc->UCharAt; GetCharacterAndWidth returns pdoc->GetCharacterAndWidth and passes a separate Sci_Position* width output."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.h",
+          "lines": [
+            618,
+            619
+          ],
+          "symbol": "Document::UCharAt",
+          "contract": "Returns unsigned char, hence every result fits int."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.h",
+          "lines": [
+            125,
+            127,
+            128
+          ],
+          "symbol": "CellBuffer::UCharAt",
+          "contract": "Returns CharAt through unsigned char; out-of-range character reads yield zero."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.cxx",
+          "lines": [
+            1105,
+            1141
+          ],
+          "symbol": "Document::GetCharacterAndWidth",
+          "contract": "The complete implementation computes and returns int character; UTF-8, invalid UTF-8 surrogate values and DBCS paths all use that same int result. Only pWidth is written as Sci_Position."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/call/ScintillaCall.cxx",
+          "lines": [
+            181,
+            186
+          ],
+          "symbol": "ScintillaCall::CharAt / CharacterAndWidth",
+          "contract": "The upstream typed API explicitly converts these same message results to int."
+        },
+        {
+          "file": "src/editor/word_completion.cpp",
+          "lines": [
+            684,
+            687,
+            689,
+            691,
+            704,
+            710,
+            714,
+            728
+          ],
+          "symbol": "Collector::MemberWordEnd / ExtendDocumentWord",
+          "contract": "CompleteWord -> Collector::Run -> CollectCandidates -> AutoC_AddDocWord -> ExtendDocumentWord -> MemberWordEnd"
+        }
+      ]
+    },
+    {
+      "pr_issue_key": "AaHopBx6cf_I1OScw0J6",
+      "main_issue_keys": [
+        "AaHaPjLPSajQlY95HQdV"
+      ],
+      "rule": "cpp:S5276",
+      "file": "src/editor/word_completion.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed PR #224 at 226c9bec0d17d6416157d02de816a44bc35ba747, src/editor/word_completion.cpp:704, and the complete Collector::Call/EditorControl::Send/Core::WndProc path to the pinned Notepad4 core 89b8b36e0ee2c23f73be922315f17261ccfbbe1a. GetCharacterAndWidth originates as an int in Document::GetCharacterAndWidth. The message ABI widens this int to intptr_t and the application recovers int without losing information. UTF-8, malformed UTF-8 surrogate fallback and DBCS branches all return the same int type. The separate width output remains Sci_Position. This statement consumes a character value, and the pointer-sized ABI return type does not widen the actual value range. The corresponding main issue AaHaPjLPSajQlY95HQdV is verified FALSE_POSITIVE; the expression already exists at base 395ad59521dff2e7a5fb1c660188d73ea2269726:702 and this PR only removes the Message:: qualifier.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopBx6cf_I1OScw0J6",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-dispositions.json",
+      "call_path": "CompleteWord -> Collector::Run -> CollectCandidates -> AutoC_AddDocWord -> ExtendDocumentWord -> MemberWordEnd",
+      "source_contract": "GetCharacterAndWidth originates as an int in Document::GetCharacterAndWidth. The message ABI widens this int to intptr_t and the application recovers int without losing information. UTF-8, malformed UTF-8 surrogate fallback and DBCS branches all return the same int type. The separate width output remains Sci_Position.",
+      "source_evidence": [
+        {
+          "file": "src/editor/editor_control.h",
+          "lines": [
+            38
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "The message transport returns intptr_t and accepts uintptr_t/intptr_t parameters."
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "lines": [
+            345,
+            354,
+            376
+          ],
+          "symbol": "EditorControl::Send",
+          "contract": "Returns the Core::WndProc result unchanged; ancillary margin/selection updates do not change the character result or its pointer representation."
+        },
+        {
+          "file": "src/editor/editor_core.cpp",
+          "lines": [
+            207,
+            235,
+            238
+          ],
+          "symbol": "EditorControl::Core::WndProc",
+          "contract": "These read messages pass to ScintillaBase::WndProc; the resulting intptr_t is returned unchanged."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/ScintillaBase.cxx",
+          "lines": [
+            906,
+            1238,
+            1239
+          ],
+          "symbol": "ScintillaBase::WndProc",
+          "contract": "GetRangePointer, GetCharAt and GetCharacterAndWidth use the default forwarding path to Editor::WndProc."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/include/ScintillaTypes.h",
+          "lines": [
+            736,
+            894,
+            902
+          ],
+          "symbol": "sptr_t / AsPointer / AsInteger",
+          "contract": "sptr_t aliases intptr_t. The upstream ABI helpers themselves perform pointer/integer reinterpret_cast conversions."
+        },
+        {
+          "file": "src/editor/word_completion.cpp",
+          "lines": [
+            577,
+            582,
+            586
+          ],
+          "symbol": "Collector::Parameter / Call / CharacterAt",
+          "contract": "Call forwards the pointer-sized transport without scaling. CharacterAt already documents and recovers the unsigned-byte message contract."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Editor.cxx",
+          "lines": [
+            7077,
+            7078,
+            7080,
+            7081
+          ],
+          "symbol": "Editor::WndProc character messages",
+          "contract": "GetCharAt returns pdoc->UCharAt; GetCharacterAndWidth returns pdoc->GetCharacterAndWidth and passes a separate Sci_Position* width output."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.h",
+          "lines": [
+            618,
+            619
+          ],
+          "symbol": "Document::UCharAt",
+          "contract": "Returns unsigned char, hence every result fits int."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/CellBuffer.h",
+          "lines": [
+            125,
+            127,
+            128
+          ],
+          "symbol": "CellBuffer::UCharAt",
+          "contract": "Returns CharAt through unsigned char; out-of-range character reads yield zero."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/src/Document.cxx",
+          "lines": [
+            1105,
+            1141
+          ],
+          "symbol": "Document::GetCharacterAndWidth",
+          "contract": "The complete implementation computes and returns int character; UTF-8, invalid UTF-8 surrogate values and DBCS paths all use that same int result. Only pWidth is written as Sci_Position."
+        },
+        {
+          "file": ".ci/build/original-core/scintilla/call/ScintillaCall.cxx",
+          "lines": [
+            181,
+            186
+          ],
+          "symbol": "ScintillaCall::CharAt / CharacterAndWidth",
+          "contract": "The upstream typed API explicitly converts these same message results to int."
+        },
+        {
+          "file": "src/editor/word_completion.cpp",
+          "lines": [
+            684,
+            687,
+            689,
+            691,
+            704,
+            710,
+            714,
+            728
+          ],
+          "symbol": "Collector::MemberWordEnd / ExtendDocumentWord",
+          "contract": "CompleteWord -> Collector::Run -> CollectCandidates -> AutoC_AddDocWord -> ExtendDocumentWord -> MemberWordEnd"
+        }
+      ]
+    },
+    {
+      "pr_issue_key": "AaHopCFscf_I1OScw0KQ",
+      "main_issue_keys": [
+        "AaHaPjgoSajQlY95HQkw"
+      ],
+      "rule": "cpp:S6494",
+      "file": "tests/auto_close_tags.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed tests/auto_close_tags.cpp:86 in PR224 at 226c9bec0d17d6416157d02de816a44bc35ba747. This Linux-compiled diagnostic must support the repository CI baseline: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CC=gcc-13/CXX=g++-13. GCC documents P2093R14/std::print as available from libstdc++ 14.1 (https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html; https://gcc.gnu.org/gcc-14/changes.html). The supported GCC 13 library lacks <print>, as also recorded by the prior compiler check in docs/observations/sonarqube-README.md. The fixed format and its argument types are valid; the enum cleanup retains the original explicit int conversion. This is the same unchanged diagnostic previously verified FALSE_POSITIVE on main as AaHaPjgoSajQlY95HQkw. Retain the existing printf/fprintf for the supported toolchain; the proposed std::print replacement is inapplicable here.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopCFscf_I1OScw0KQ",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-dispositions.json",
+      "source_contract": "OriginalCases() is compiled on Linux. The unchanged fixed format has matching unsigned index, an explicit int from SyntaxLanguage : uint8_t, and int character. Enum cleanup inserted std::to_underlying inside the original int conversion, preserving the argument type and output. This exact diagnostic had an individually verified main portability disposition.",
+      "toolchain_evidence": {
+        "dependency_source": ".github/actions/dependencies/action.yml:54 installs gcc-13/g++-13; line 83 exports CC=gcc-13 and CXX=g++-13.",
+        "supported_contract": "docs/ci.md workflow matrix: Ubuntu 24.04/GCC 13.",
+        "official_implementation_table": "https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+        "implementation_entry": "P2093R14 formatted output first supported in 14.1 (__cpp_lib_print >= 202207L).",
+        "official_release_notes": "https://gcc.gnu.org/gcc-14/changes.html",
+        "release_evidence": "Runtime Library section lists std::print and std::println in GCC 14 C++23 additions.",
+        "retrieval": "Official pages independently opened on 2026-11-17; implementation entry verified with a gcc.gnu.org-restricted primary-source search.",
+        "historical_compiler_record": "docs/observations/sonarqube-README.md records the previous direct GCC 13 C++23 missing-<print>-header compilation.",
+        "local_compiler_probe": "Not rerun: this prepared workspace has GCC 14, not GCC 13. No GCC 14 result is claimed as GCC 13 evidence.",
+        "sdk_change": false
+      }
+    },
+    {
+      "pr_issue_key": "AaHopCSncf_I1OScw0KR",
+      "main_issue_keys": [
+        "AaHaPjnGSajQlY95HQmu"
+      ],
+      "rule": "cpp:S6494",
+      "file": "tests/auto_insertion.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed tests/auto_insertion.cpp:53 in PR224 at 226c9bec0d17d6416157d02de816a44bc35ba747. This Linux-compiled diagnostic must support the repository CI baseline: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CC=gcc-13/CXX=g++-13. GCC documents P2093R14/std::print as available from libstdc++ 14.1 (https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html; https://gcc.gnu.org/gcc-14/changes.html). The supported GCC 13 library lacks <print>, as also recorded by the prior compiler check in docs/observations/sonarqube-README.md. The fixed format and its argument types are valid; the enum cleanup retains the original explicit int conversion. This is the same unchanged diagnostic previously verified FALSE_POSITIVE on main as AaHaPjnGSajQlY95HQmu. Retain the existing printf/fprintf for the supported toolchain; the proposed std::print replacement is inapplicable here.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopCSncf_I1OScw0KR",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-dispositions.json",
+      "source_contract": "AutoInsertionApp::OnInit() callback is compiled on Linux. The unchanged fixed format has matching unsigned index, an explicit int from SyntaxLanguage : uint8_t, and int character. Enum cleanup inserted std::to_underlying inside the original int conversion, preserving the argument type and output. This exact diagnostic had an individually verified main portability disposition.",
+      "toolchain_evidence": {
+        "dependency_source": ".github/actions/dependencies/action.yml:54 installs gcc-13/g++-13; line 83 exports CC=gcc-13 and CXX=g++-13.",
+        "supported_contract": "docs/ci.md workflow matrix: Ubuntu 24.04/GCC 13.",
+        "official_implementation_table": "https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+        "implementation_entry": "P2093R14 formatted output first supported in 14.1 (__cpp_lib_print >= 202207L).",
+        "official_release_notes": "https://gcc.gnu.org/gcc-14/changes.html",
+        "release_evidence": "Runtime Library section lists std::print and std::println in GCC 14 C++23 additions.",
+        "retrieval": "Official pages independently opened on 2026-11-17; implementation entry verified with a gcc.gnu.org-restricted primary-source search.",
+        "historical_compiler_record": "docs/observations/sonarqube-README.md records the previous direct GCC 13 C++23 missing-<print>-header compilation.",
+        "local_compiler_probe": "Not rerun: this prepared workspace has GCC 14, not GCC 13. No GCC 14 result is claimed as GCC 13 evidence.",
+        "sdk_change": false
+      }
+    },
+    {
+      "pr_issue_key": "AaHopB8Hcf_I1OScw0KH",
+      "main_issue_keys": [
+        "AaGyLICmLjZQeDKjw6dP"
+      ],
+      "rule": "cpp:S6494",
+      "file": "tests/line_wrap.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed tests/line_wrap.cpp:119 in PR224 at 226c9bec0d17d6416157d02de816a44bc35ba747. This Linux-compiled diagnostic must support the repository CI baseline: .github/actions/dependencies/action.yml installs gcc-13/g++-13 and exports CC=gcc-13/CXX=g++-13. GCC documents P2093R14/std::print as available from libstdc++ 14.1 (https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html; https://gcc.gnu.org/gcc-14/changes.html). The supported GCC 13 library lacks <print>, as also recorded by the prior compiler check in docs/observations/sonarqube-README.md. The fixed format and its argument types are valid; the enum cleanup retains the original explicit int conversion. This is the same unchanged diagnostic previously verified FALSE_POSITIVE on main as AaGyLICmLjZQeDKjw6dP. Retain the existing printf/fprintf for the supported toolchain; the proposed std::print replacement is inapplicable here.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopB8Hcf_I1OScw0KH",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-dispositions.json",
+      "source_contract": "WrapDriver timer callback is compiled on Linux. The unchanged fixed format has matching failure.c_str() from the owned live std::string and an explicit int from DialogAction : uint8_t. Enum cleanup inserted std::to_underlying inside the original int conversion, preserving the argument type and output. This exact diagnostic had an individually verified main portability disposition.",
+      "toolchain_evidence": {
+        "dependency_source": ".github/actions/dependencies/action.yml:54 installs gcc-13/g++-13; line 83 exports CC=gcc-13 and CXX=g++-13.",
+        "supported_contract": "docs/ci.md workflow matrix: Ubuntu 24.04/GCC 13.",
+        "official_implementation_table": "https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html",
+        "implementation_entry": "P2093R14 formatted output first supported in 14.1 (__cpp_lib_print >= 202207L).",
+        "official_release_notes": "https://gcc.gnu.org/gcc-14/changes.html",
+        "release_evidence": "Runtime Library section lists std::print and std::println in GCC 14 C++23 additions.",
+        "retrieval": "Official pages independently opened on 2026-11-17; implementation entry verified with a gcc.gnu.org-restricted primary-source search.",
+        "historical_compiler_record": "docs/observations/sonarqube-README.md records the previous direct GCC 13 C++23 missing-<print>-header compilation.",
+        "local_compiler_probe": "Not rerun: this prepared workspace has GCC 14, not GCC 13. No GCC 14 result is claimed as GCC 13 evidence.",
+        "sdk_change": false
+      }
+    },
+    {
+      "pr_issue_key": "AaHopB7Vcf_I1OScw0KG",
+      "main_issue_keys": [
+        "AaHEzXezhpq0YxBZ9SDb"
+      ],
+      "rule": "cpp:S5813",
+      "file": "tests/syntax_markup.cpp",
+      "disposition": "FALSE_POSITIVE",
+      "submitted_comment": "Reviewed the complete tests/syntax_markup.cpp Commands() fixture and call context at 226c9bec0d17d6416157d02de816a44bc35ba747. fixture.token is initialized only from the three local literals \"value\", \"const\", and \"color\"; iteration is const auto&, and no code mutates/rebinds those token pointers. Each literal has static storage and an implicit trailing NUL, so std::strlen(fixture.token) reads a valid terminated array. The resulting lengths select tokens present in each fixed paired before literal. There is no external-input or unterminated-buffer path to this call. PR224 only changed Message::SetSel to the equivalent locally imported enumerator. The identical call was individually verified FALSE_POSITIVE on main as AaHEzXezhpq0YxBZ9SDb.",
+      "mcp_response": {
+        "success": true,
+        "message": "The issue status was successfully changed.",
+        "issueKey": "AaHopB7Vcf_I1OScw0KG",
+        "newStatus": "falsepositive"
+      },
+      "verification": {
+        "FALSE_POSITIVE": 1,
+        "OPEN_CONFIRMED": 0
+      },
+      "existing_main_disposition": "FALSE_POSITIVE",
+      "existing_main_record": "docs/observations/sonarqube-2026-11-16-dispositions.json",
+      "source_contract": "Commands() creates a local Fixture initializer_list whose token members are exactly \"value\", \"const\", and \"color\" string literals. const auto& fixture never writes or rebinds them. All three pointers address compiler-provided trailing NUL characters and static storage. std::strlen consumes that direct literal pointer before passing the length to SetSel; no file, document text, external input, or mutable buffer can supply token. Each literal occurs in its paired before literal, so the independently reviewed selection is bounded by the matching fixture text. PR224 only unqualified Message::SetSel and did not alter either strlen or its operands."
+    }
+  ],
+  "retained_pr_work": [
+    {
+      "pr_issue_key": "AaHopBwfcf_I1OScw0J3",
+      "main_issue_keys": [
+        "AaGwmVUYEeGJK6USKRqT"
+      ],
+      "rule": "cpp:S924",
+      "file": "src/editor/strip_blanks.cpp",
+      "disposition": "OPEN",
+      "reason": "Retain as a separate control-flow review item: the three exits enforce selection endpoint, terminal replacement and terminal leading-line advancement. Any refactor must preserve FindTextFull call order and the surrounding undo/selection repair; not a false positive."
+    }
+  ],
+  "retained_main_work_record": "sonarqube-enum-cleanup-review.json#retained_work",
+  "source_review": {
+    "complete_source_and_consumers": true,
+    "codegraph_used": false,
+    "independent_application_diff_review": "19 findings in 11 files; no blockers.",
+    "independent_test_diff_review": "19 findings in 11 files; no blockers.",
+    "contracts": "Preserve integer destinations, enum defaults, conditional call order, lazy native calls, string lifetimes, fixture bytes, marker order and native command order.",
+    "arrays": {
+      "folding_marker_entries": 7,
+      "fixture_message_entries": [
+        5,
+        10
+      ],
+      "javascript_dialects": 4
+    },
+    "new_persistent_tests": false
+  },
+  "validation": {
+    "canonical_clang_format": {
+      "version": "23.1.2",
+      "tracked_files": 374,
+      "result": "passed"
+    },
+    "git_diff_check": "passed",
+    "syntax_compilation": {
+      "compiler": "GCC 14.2.0",
+      "language": "C++23",
+      "mode": "-fsyntax-only",
+      "application_translation_units": 11,
+      "test_translation_units": 20,
+      "header_consumers": [
+        "tests/fold_cpp.cpp",
+        "tests/fold_view.cpp",
+        "tests/block_navigation.cpp",
+        "tests/line_symbols.cpp",
+        "tests/matching_brace.cpp",
+        "tests/eol_conversion.cpp",
+        "tests/fold_python.cpp",
+        "tests/fold_json.cpp",
+        "tests/bookmarks.cpp",
+        "tests/whitespace_view.cpp",
+        "tests/goto_line.cpp",
+        "tests/position_status.cpp",
+        "tests/word_wrap.cpp"
+      ],
+      "header_sha256": "bf38bcc56bb8d1036ef21348fe69a0c3d9dc75d4cb62351eab860fe270cce626",
+      "configuration": "wx GTK default public-header settings combined with host platform definitions generated by wx configure. CMake char8_t settings are respected: disabled for application/core targets and enabled for test targets.",
+      "records": [
+        {
+          "file": "src/app/dialogs/document_dialogs.cpp",
+          "exit_code": 0,
+          "source_sha256": "21aa5b08a0c6c0800c67bc7c359514c285dce7213ff3139bcdb0116b9eacfa6d"
+        },
+        {
+          "file": "src/app/editor_frame.cpp",
+          "exit_code": 0,
+          "source_sha256": "98dcdcf34fcbdbc0fa9a9f2bc2b489d33c6806d8f7ee15d21c934cc033e9cd95"
+        },
+        {
+          "file": "src/app/editor_frame_commands.cpp",
+          "exit_code": 0,
+          "source_sha256": "c4d72105e92c075cb1fa0bdb08a093e2e4a85b5b1a091cf990ac5853298716dd"
+        },
+        {
+          "file": "src/document/document_session.cpp",
+          "exit_code": 0,
+          "source_sha256": "fd1616650f18fd0c7bbac3dc45f3110c8ebe0f1ee853fa1ec70d5c2b11bf35ce"
+        },
+        {
+          "file": "src/document/encoding/encoding_detection.cpp",
+          "exit_code": 0,
+          "source_sha256": "401c9f1114e06943a0dab1b664435e66c3456d9dc48f828e199392a9b8494b66"
+        },
+        {
+          "file": "src/editor/editor_control.cpp",
+          "exit_code": 0,
+          "source_sha256": "295623973102eb381d3792a561c7fb383c214d00757476b95787ab6b9032f0f6"
+        },
+        {
+          "file": "src/editor/platform/wx_platform.cpp",
+          "exit_code": 0,
+          "source_sha256": "95dd727e36b128cdd9642dea1eb069961f7c72f57d5d964deb81917794a4cdd7"
+        },
+        {
+          "file": "src/editor/strip_blanks.cpp",
+          "exit_code": 0,
+          "source_sha256": "9068b87b9622f5821b83f14a52da2a8ed406171d051d4bfd0e83861fbb25d103"
+        },
+        {
+          "file": "src/search/search_session.cpp",
+          "exit_code": 0,
+          "source_sha256": "84a7f0896b6291b8d4a8a39a604b953e5e550ead758de22490bfc0c09b82f74d"
+        },
+        {
+          "file": "src/syntax/syntax_catalog.cpp",
+          "exit_code": 0,
+          "source_sha256": "e49d530ff09eec7fae433d9c5118464e4bab712148e1c8e4c4defc3dce059e8f"
+        },
+        {
+          "file": "src/syntax/syntax_scheme.cpp",
+          "exit_code": 0,
+          "source_sha256": "a02f6778abc37734e82c574e31060e53336450df298de0de1174ac729b8f4e6e"
+        },
+        {
+          "file": "tests/block_navigation.cpp",
+          "exit_code": 0,
+          "source_sha256": "03ade35ecd9b11c784d2768a54191954b31aa0a2326e294e44140c5888169bb2"
+        },
+        {
+          "file": "tests/bookmark_history.cpp",
+          "exit_code": 0,
+          "source_sha256": "09c5aa11961205a21b68b1fdc3f611b6b5fcff2fa3953d1b2c03a17aa6880c6a"
+        },
+        {
+          "file": "tests/bookmarks.cpp",
+          "exit_code": 0,
+          "source_sha256": "b5b518cd1c9d0dfc2c4aaf7dc0714cc0c3c4d8ebac56363c5974e04194e4ec70"
+        },
+        {
+          "file": "tests/current_encoding.cpp",
+          "exit_code": 0,
+          "source_sha256": "7c3829e32b4bd0d92139d5934960094d48902a92256cd45556bb30cc7baa5138"
+        },
+        {
+          "file": "tests/current_line.cpp",
+          "exit_code": 0,
+          "source_sha256": "4292dac6051dda165fb13e6b87644f1ecc2bd0a9df3242c588bd1601d749597a"
+        },
+        {
+          "file": "tests/eol_conversion.cpp",
+          "exit_code": 0,
+          "source_sha256": "82a6cad73623176144a8416e67f3aeb49820a12dac9c1526ec50ca5807fd6511"
+        },
+        {
+          "file": "tests/eol_open.cpp",
+          "exit_code": 0,
+          "source_sha256": "96fcc81a2b7b7d838893597b095deef41b63ef4dd37719df96fe2b7b80fc0aaf"
+        },
+        {
+          "file": "tests/fold_cpp.cpp",
+          "exit_code": 0,
+          "source_sha256": "744187fc504f06df9b80e32c006e1951a1548c7696d73738bc76348e5373d371"
+        },
+        {
+          "file": "tests/fold_json.cpp",
+          "exit_code": 0,
+          "source_sha256": "c919e5e5083f4c7e7057dfadc95cc4fe839af11e070475e3c4bfcacf5f1436e6"
+        },
+        {
+          "file": "tests/fold_python.cpp",
+          "exit_code": 0,
+          "source_sha256": "71afdfae4f37f262c4a27434278e45b84fbdc15a00ad9211fad3c2eeefe4dbc0"
+        },
+        {
+          "file": "tests/fold_view.cpp",
+          "exit_code": 0,
+          "source_sha256": "f5ec4cbd14ef9e479d529c746d5e84d45f8c7bb6ff8ee10141246b9f9fda09c1"
+        },
+        {
+          "file": "tests/goto_line.cpp",
+          "exit_code": 0,
+          "source_sha256": "8666cf8a1bfc8a27a2ae864e355fa12553741ec47d0712cd244d255317e80403"
+        },
+        {
+          "file": "tests/header_insert.cpp",
+          "exit_code": 0,
+          "source_sha256": "e95e21b2ee96db1bcdd033ca01896bc3cca73816b6c2f6e1c31fdb9b65cc4713"
+        },
+        {
+          "file": "tests/line_symbols.cpp",
+          "exit_code": 0,
+          "source_sha256": "d34d1ca19ea4016d5f204a575725f00b19c3aeb7815dda58180db0b944fe0a70"
+        },
+        {
+          "file": "tests/matching_brace.cpp",
+          "exit_code": 0,
+          "source_sha256": "19b5e47969610af95a174d267d2dc08ff92b644e34ef017e3e3788612ce4987e"
+        },
+        {
+          "file": "tests/position_status.cpp",
+          "exit_code": 0,
+          "source_sha256": "8c7a9edee815c850741bc4a0210e2a91bad998373ab3bb731df1fedc1b3c6189"
+        },
+        {
+          "file": "tests/save_cleanup.cpp",
+          "exit_code": 0,
+          "source_sha256": "6ca6c48207eb204b7b70215bc81f555423c889869d71ac1f0798678fc21a4880"
+        },
+        {
+          "file": "tests/syntax_save.cpp",
+          "exit_code": 0,
+          "source_sha256": "7456b7851d1e29baa31ef81c1071ebf49b97dbf12f964a57d6b71ea9444dd44c"
+        },
+        {
+          "file": "tests/whitespace_view.cpp",
+          "exit_code": 0,
+          "source_sha256": "6fdedb5922f659024cff61654e964f404dd5859d8e2e254a10efcaa8f8868682"
+        },
+        {
+          "file": "tests/word_wrap.cpp",
+          "exit_code": 0,
+          "source_sha256": "32cb92882ab67486dfd100847e10604ea879b2ee5fd285376ac324d52cc188af"
+        }
+      ]
+    },
+    "pr_false_positive_verification": {
+      "FALSE_POSITIVE_filter_matches": 11,
+      "OPEN_CONFIRMED_filter_matches": 0,
+      "PR_OPEN_CONFIRMED_before_code_push": 39
+    },
+    "hosted_followup": {
+      "status_at_publication": "pending",
+      "results_location": "https://github.com/1298345095/wxnotepad/pull/224"
+    }
+  },
+  "source_hashes": [
+    {
+      "file": "src/app/dialogs/document_dialogs.cpp",
+      "before_sha256": "725a1a86830674eb51a9cb504b0ddf8397a31e1272615f20a5facfdb4e6def61",
+      "after_sha256": "21aa5b08a0c6c0800c67bc7c359514c285dce7213ff3139bcdb0116b9eacfa6d"
+    },
+    {
+      "file": "src/app/editor_frame.cpp",
+      "before_sha256": "5060a1b0ff7bfb3b7563402d24f74d6b1275997b3f9912a2c0dcbb807e38c810",
+      "after_sha256": "98dcdcf34fcbdbc0fa9a9f2bc2b489d33c6806d8f7ee15d21c934cc033e9cd95"
+    },
+    {
+      "file": "src/app/editor_frame_commands.cpp",
+      "before_sha256": "a0b9647ba956dc87cd8009659672117e6f87422a31bc57addd40d63bd4ead3d7",
+      "after_sha256": "c4d72105e92c075cb1fa0bdb08a093e2e4a85b5b1a091cf990ac5853298716dd"
+    },
+    {
+      "file": "src/document/document_session.cpp",
+      "before_sha256": "d99e98764ebd31014f661eae89161cab3cb5f1a28478bad7e368de53864a2c70",
+      "after_sha256": "fd1616650f18fd0c7bbac3dc45f3110c8ebe0f1ee853fa1ec70d5c2b11bf35ce"
+    },
+    {
+      "file": "src/document/encoding/encoding_detection.cpp",
+      "before_sha256": "c2053fb3700a97916235ac51a0db6853da1d2e9677b05dd23e908001fb7f3964",
+      "after_sha256": "401c9f1114e06943a0dab1b664435e66c3456d9dc48f828e199392a9b8494b66"
+    },
+    {
+      "file": "src/editor/editor_control.cpp",
+      "before_sha256": "2edcb63e7269c8bba907d72680ce7d36b0161c67319f0c1b838251e5ca1447a9",
+      "after_sha256": "295623973102eb381d3792a561c7fb383c214d00757476b95787ab6b9032f0f6"
+    },
+    {
+      "file": "src/editor/platform/wx_platform.cpp",
+      "before_sha256": "7d4b59cb5195da259c303ee572f51b49665283c8875246efa6e5a375145678e6",
+      "after_sha256": "95dd727e36b128cdd9642dea1eb069961f7c72f57d5d964deb81917794a4cdd7"
+    },
+    {
+      "file": "src/editor/strip_blanks.cpp",
+      "before_sha256": "8b8953878c343a16c084f784d049db23135b44e047f464c84cd39d0b548731d9",
+      "after_sha256": "9068b87b9622f5821b83f14a52da2a8ed406171d051d4bfd0e83861fbb25d103"
+    },
+    {
+      "file": "src/search/search_session.cpp",
+      "before_sha256": "e047da9929a28c5951160927c703b799a4b365a41d2f247fe080834e533dcc3a",
+      "after_sha256": "84a7f0896b6291b8d4a8a39a604b953e5e550ead758de22490bfc0c09b82f74d"
+    },
+    {
+      "file": "src/syntax/syntax_catalog.cpp",
+      "before_sha256": "431377e6dfa7d6a004e6a31b243db2a0d75a75bca8247c6ff3f2aabea7bd79d7",
+      "after_sha256": "e49d530ff09eec7fae433d9c5118464e4bab712148e1c8e4c4defc3dce059e8f"
+    },
+    {
+      "file": "src/syntax/syntax_scheme.cpp",
+      "before_sha256": "ab74a62864bcfebe2e4726680b7215cc62bf7177544fff19457f34b34f6e53ef",
+      "after_sha256": "a02f6778abc37734e82c574e31060e53336450df298de0de1174ac729b8f4e6e"
+    },
+    {
+      "file": "tests/bookmark_history.cpp",
+      "before_sha256": "389b3999bc62f9ee027573138f03c65b2bcc58229173127a573e2a337e08c8c3",
+      "after_sha256": "09c5aa11961205a21b68b1fdc3f611b6b5fcff2fa3953d1b2c03a17aa6880c6a"
+    },
+    {
+      "file": "tests/current_encoding.cpp",
+      "before_sha256": "3378b607fe6e5cb71cf0f6679dd0319b557711d684099b70965dee477a22ba4d",
+      "after_sha256": "7c3829e32b4bd0d92139d5934960094d48902a92256cd45556bb30cc7baa5138"
+    },
+    {
+      "file": "tests/current_line.cpp",
+      "before_sha256": "87bf085363c12682ee10262818d1b670f9989b8403b21d82300f9a33ce4211b7",
+      "after_sha256": "4292dac6051dda165fb13e6b87644f1ecc2bd0a9df3242c588bd1601d749597a"
+    },
+    {
+      "file": "tests/eol_open.cpp",
+      "before_sha256": "32f334e2188dad029a0360466bb9653336623f78d764454b0d71d2eaa831b860",
+      "after_sha256": "96fcc81a2b7b7d838893597b095deef41b63ef4dd37719df96fe2b7b80fc0aaf"
+    },
+    {
+      "file": "tests/fold_cpp.cpp",
+      "before_sha256": "36589e2e991ae013df8471452649506ae4b26019c6bdba495926b87b7fb40e2b",
+      "after_sha256": "744187fc504f06df9b80e32c006e1951a1548c7696d73738bc76348e5373d371"
+    },
+    {
+      "file": "tests/fold_view.cpp",
+      "before_sha256": "17b63dc385b66c81c0979397b3f82cd17647de0331ee9139d9cc8be0a26bd95e",
+      "after_sha256": "f5ec4cbd14ef9e479d529c746d5e84d45f8c7bb6ff8ee10141246b9f9fda09c1"
+    },
+    {
+      "file": "tests/header_insert.cpp",
+      "before_sha256": "ed99e846b2bb7cbe003b8e65a10980f6bf62f1543d50c74b08d822b55eab8c6a",
+      "after_sha256": "e95e21b2ee96db1bcdd033ca01896bc3cca73816b6c2f6e1c31fdb9b65cc4713"
+    },
+    {
+      "file": "tests/native_fold_helpers.h",
+      "before_sha256": "29f6c24554ffacd519d5259f52770e1ad70ac4695423ffd7ad732ff001809a18",
+      "after_sha256": "bf38bcc56bb8d1036ef21348fe69a0c3d9dc75d4cb62351eab860fe270cce626"
+    },
+    {
+      "file": "tests/save_cleanup.cpp",
+      "before_sha256": "b76a85292c468ee76703be46eb98f0cc032a9912edb201998b00865e2b8da1c4",
+      "after_sha256": "6ca6c48207eb204b7b70215bc81f555423c889869d71ac1f0798678fc21a4880"
+    },
+    {
+      "file": "tests/syntax_save.cpp",
+      "before_sha256": "66bad84b55ec829f4bf764668ffe83504f52f44a3bfddb7a5451a0f3ef3bb1af",
+      "after_sha256": "7456b7851d1e29baa31ef81c1071ebf49b97dbf12f964a57d6b71ea9444dd44c"
+    },
+    {
+      "file": "tests/word_wrap.cpp",
+      "before_sha256": "b21d16865051fc4d7301125beaf65e23c5fb74ceb44a385fb927ca570085d6d7",
+      "after_sha256": "32cb92882ab67486dfd100847e10604ea879b2ee5fd285376ac324d52cc188af"
+    }
+  ],
+  "publication": {
+    "strategy": "Prepare application, fixture and evidence commits, then update the existing PR branch once.",
+    "code_fix_status": "Implemented; subsequent PR analysis verifies closure, and main updates after merge and main analysis."
+  }
+}
