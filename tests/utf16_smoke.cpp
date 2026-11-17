@@ -3,6 +3,7 @@
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include <wx/wx.h>
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include "settings/settings_store.h"
@@ -46,7 +47,7 @@ public:
                         "unchanged UTF-16LE Save must retain exact bytes");
                 std::puts("PASS: UTF-16LE BOM detection and exact Unicode/EOL Save");
                 const auto bad = directory / "bad.txt";
-                const std::string invalid[] = {
+                const std::array<std::string, 5> invalid = {
                     std::string("\x{ff}\x{fe}\0\x{dc}", 4), std::string("\x{ff}\x{fe}\0\x{d8}", 4),
                     std::string("\x{ff}\x{fe}\0\x{d8}\x{41}\0", 6), std::string("\x{ff}\x{fe}\x{41}", 3),
                     std::string("\x{ff}\x{fe}\x{41}\0\0\0\0\x{dc}", 8)};
@@ -59,7 +60,7 @@ public:
                             "malformed UTF-16LE must retain document and identity");
                 }
                 std::puts("PASS: incomplete bytes and unpaired surrogates rejected before replacement");
-                const std::string payloads[] = {
+                const std::array<std::string, 3> payloads = {
                     "", std::string("\x{41}\0\x{2d}\x{4e}\0\0\x{3d}\x{d8}\0\x{de}\r\0\n\0\x{42}\0\n\0\x{43}\0\r\0", 22),
                     std::string("\n\0", 2)};
                 for (bool bom : {false, true})

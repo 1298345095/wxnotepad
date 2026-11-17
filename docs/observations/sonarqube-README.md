@@ -8,7 +8,7 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [2026-11-16 byte-literal continuation](#2026-11-16-byte-literal-continuation),
+Latest review: [2026-11-16 array follow-up](#2026-11-16-array-follow-up),
 on [`codex/sonarcloud-small-fixes-2026-11-16`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-small-fixes-2026-11-16).
 [PR #221](https://github.com/1298345095/wxnotepad/pull/221) was merged into main
 at `c3d98ca4d270f2367b85ec9a96e0a14e582830ad` before this review.
@@ -1414,3 +1414,55 @@ Coordinate rounding/clipping, dynamic polyline bounds, occurrence-marking time
 precision and the documented exception/inheritance recommendations keep their
 existing individual review status. Their exact keys and source-contract evidence
 remain in the preceding review records.
+
+## 2026-11-16 array follow-up
+
+The byte-literal head `85f296e8e1e05da2c57362807e75ecb583aeb0df` completed all
+12 GitHub checks and all four workflows successfully. Its SonarCloud gate was
+OK: new-code coverage **95.2%** (37/38 executable lines and 82/87 conditions),
+duplicated-lines density **0.9671%** (shown as 1.0% in the gate), and all three
+new-code quality ratings A. The gate's coverage and duplication limits remain
+80% and 3% respectively.
+
+That completed analysis reported two OPEN S5945 findings in the PR: `invalid`
+in `utf16_smoke.cpp` and `fixtures` in `visual_brace.cpp`. Their existing array
+declarations entered the new-code range after literal formatting. Complete
+source and rule review confirms that both are fixed object arrays to which the
+std::array recommendation applies. This follow-up also handles the two other
+already-open S5945 findings in those same files.
+
+| File / object | Main issue key | Change |
+| --- | --- | --- |
+| `utf16_smoke.cpp` / `invalid` | `AaGQhgSWusAIaC0DBL7m` | `const std::array<std::string, 5>`; same malformed-byte cases and index-zero access. |
+| `utf16_smoke.cpp` / `payloads` | `AaGQhgSWusAIaC0DBL7s` | `const std::array<std::string, 3>`; same empty, 22-byte and 2-byte payloads. |
+| `visual_brace.cpp` / `fixtures` | `AaG7NURwkxw1cHak340H` | `const std::array<EncodedFixture, 3>`; same UTF-8 / UTF-16LE / GBK records. |
+| `visual_brace.cpp` / `font` | `AaG7NURwkxw1cHak340F` | Zero-initialized `std::array<char, 256>` with `.data()` at all four pointer consumers. |
+
+The PR keys `AaHmz451xHJDvo969oYO` and `AaHmz5NnxHJDvo969oYP` correspond
+to the first and third rows. The other two rows were verified in the main-context
+MCP query. All four are code fixes.
+
+The object arrays are only traversed by const-reference range-for loops, with
+one existing `invalid[0]` access. The `EncodedFixture` consumer receives one
+element at a time. The font buffer retains its capacity and local lifetime;
+the fixed upstream core's `StyleGetFont` path writes through `char*`, including
+the terminating NUL. Its two native sends, string construction and comparison
+all receive `.data()`.
+
+These four additional, non-overlapping main keys bring PR #222 to **901** code
+fixes and **22** verified false positives. The continuation from `ac7fab6`
+accounts for **651** code fixes and **10** false positives. Main's review-time
+OPEN/CONFIRMED count remains 3,745 while the code changes await merge and main
+analysis.
+
+The canonical clang-format 23.1.2 check passes all 374 tracked C/C++ files, and
+`git diff --check` passes. This follow-up adds no persistent tests. The four
+changes and completed preceding-run evidence are grouped into one additional
+commit; its existing native/coverage/quality/fuzz/CodeQL workflows verify that
+head. Follow-up results are recorded on [PR #222](https://github.com/1298345095/wxnotepad/pull/222).
+
+The [array follow-up record](sonarqube-2026-11-16-array-followup-review.json)
+contains exact main/PR issue mappings, before/after source hashes, complete
+consumer review and the completed `85f296e` check/measure snapshot. The generated
+NLS table and other separately documented boundary/precision reviews retain
+their existing status.

@@ -3,6 +3,7 @@
 #include "native_paint_helpers.h"
 #include "visual_brace_fixtures.h"
 #include "encoded_file_helpers.h"
+#include <array>
 #include <fstream>
 #include <wx/dcclient.h>
 #include <functional>
@@ -170,16 +171,16 @@ void Lifecycle(EditorFrame* frame, int toggle) {
     editor->Send(Message::SetSavePoint);
     editor->Send(Message::StyleSetSizeFractional, 0, 1450);
     editor->Send(Message::SetZoom, 150);
-    char font[256]{};
-    editor->Send(Message::StyleGetFont, 0, reinterpret_cast<intptr_t>(font));
-    const std::string originalFont(font);
+    std::array<char, 256> font{};
+    editor->Send(Message::StyleGetFont, 0, reinterpret_cast<intptr_t>(font.data()));
+    const std::string originalFont(font.data());
     const auto dpi = editor->GetDPI();
     for (const auto* language : {"C/C++", "Plain Text", "Python", "JSON", "Plain Text"}) {
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
         Expect(editor, 0, std::string_view(language) == "Plain Text" ? 2 : 4, 34, 0);
-        editor->Send(Message::StyleGetFont, 0, reinterpret_cast<intptr_t>(font));
+        editor->Send(Message::StyleGetFont, 0, reinterpret_cast<intptr_t>(font.data()));
         Require(editor->Send(Message::StyleGetSizeFractional, 0) == 1450 && editor->Send(Message::GetZoom) == 150 &&
-                    originalFont == font && editor->GetDPI() == dpi && editor->Send(Message::GetAnchor) == 0 &&
+                    originalFont == font.data() && editor->GetDPI() == dpi && editor->Send(Message::GetAnchor) == 0 &&
                     editor->Send(Message::GetCurrentPos) == 0 && !editor->Send(Message::GetModify) &&
                     !editor->Send(Message::CanUndo),
                 "syntax/highlighting changes refresh stationary context and preserve font/zoom/selection/history");
@@ -194,11 +195,11 @@ void SavedState(EditorFrame* frame, int toggle) {
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-visual-brace");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {{"utf8", FileEncoding::Utf8, "(x)", "(x)!"},
-                                                  {"utf16", FileEncoding::Utf16Le,
-                                                   std::string("\x{FF}\x{FE}(\0x\0)\0", 8),
-                                                   std::string("\x{FF}\x{FE}(\0x\0)\0!\0", 10)},
-                                                  {"gbk", FileEncoding::Gbk, "(\x{D6}\x{D0})", "(\x{D6}\x{D0})!"}};
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {
+        {{"utf8", FileEncoding::Utf8, "(x)", "(x)!"},
+         {"utf16", FileEncoding::Utf16Le, std::string("\x{FF}\x{FE}(\0x\0)\0", 8),
+          std::string("\x{FF}\x{FE}(\0x\0)\0!\0", 10)},
+         {"gbk", FileEncoding::Gbk, "(\x{D6}\x{D0})", "(\x{D6}\x{D0})!"}}};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         std::ofstream(path, std::ios::binary) << fixture.before;
