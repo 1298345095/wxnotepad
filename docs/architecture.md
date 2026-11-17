@@ -14,7 +14,7 @@ search algorithm or own the document's language choice.
 | Location | Current responsibility | Assessment |
 | --- | --- | --- |
 | `src/app/main.cpp`, `process_observer.*` | Startup/options and the opt-in process observation protocol | Observation uses the actual application's commands and exists only when requested. |
-| `src/app/editor_frame.*`, `editor_frame_commands.cpp` | Menus, file-command coordination, title/status and dialog decisions | The frame coordinates sessions and settings; native dialog construction lives under `app/dialogs`. |
+| `src/app/editor_frame.*`, `editor_frame_commands.cpp` | Menus, file-command coordination, title/status and native dialogs | The frame coordinates sessions and settings; native dialog construction lives under `app/dialogs`. |
 | `src/app/dialogs/*` | Native file choices, settings prompts, search feedback and modeless search UI | Dialogs collect choices; the frame commits document/settings decisions at the existing points. |
 | `src/document/document_session.*` | Path, encoding/BOM, file transactions, save point and language choice | File metadata and language transitions commit after successful operations. File I/O mechanics remain private to this module. |
 | `src/document/encoding/*` | Encoding conversions, including CP936 compatibility | Tested conversions and provenance are retained; the implementations use wx conversion facilities. |
@@ -22,6 +22,7 @@ search algorithm or own the document's language choice.
 | `src/search/search_session.*` | Find/replace, match validity, zero-width progress, fold reveal and history grouping | The interface takes requests and returns structured outcomes; it creates no widgets. |
 | `src/syntax/*`, `src/syntax/generated/*` | Static catalog, extension detection, lexer/style installation and generated data | Menus and installation read the same catalog. Compiled lexer sources/registration remain explicit build inputs. |
 | `src/editor/editor_control.*`, `editor_core.*` | wx window lifetime/event binding and its private original-core adapter | The private nested core owns input, selection/scrolling, IME, notifications and fold repair; editing-command implementations remain separate. |
+| `src/editor/word_completion.cpp`, `completion_candidates.*` | Language/document candidate collection and the completion candidate set | The collector reads live editor state; the candidate module owns matching, deduplication, ordering, prefix fallback and serialization behind the same interface used by its contract tests. |
 | `src/editor/go_to_location.*` | Original line, column and byte-position parsing and navigation | Separate from the host's keyboard-navigation mapping. |
 | `src/editor/tab_conversion.cpp`, `strip_blanks.cpp`, `compress_whitespace.cpp`, `blank_lines.cpp`, `strip_characters.cpp`, `join_lines.cpp`, `pad_spaces.cpp`, `duplicate_lines.cpp`, `enclose_selection.cpp`, `line_comments.cpp`, `block_comments.cpp`, `align_lines.cpp` | Original text transformations behind public editor commands | Algorithms share the live core's text, column and history operations across languages. Each preserves its own original scope, rectangle and replacement rules. |
 | `src/editor/platform/*` | Original platform interface, rendering/fonts/windows and portability primitives | Tightly coupled to the pinned core, behind the editor host. |
@@ -245,13 +246,50 @@ this makes the transaction easier to read; real temporary files remain suitable
 test dependencies.
 
 The private `ReadDocument` operation returns a complete decoded candidate or a
-read/decode error. `Open` owns the discard/save decision, any necessary re-read,
-document replacement and loaded-settings callback. A separate reload-view value
+read/decode error. `DocumentSession::Load` accepts a `DocumentLoad::Intent` and
+owns the discard/save decision, any necessary re-read, document replacement and
+loaded-settings callback. The four intents expose the actual loading operations:
+
+| Intent | Session-owned loading rules |
+| --- | --- |
+| `Open` | Read the chosen source, then ask the replacement decision. Re-read the same captured source if the document was modified before the decision and is clean afterwards. |
+| `Reload` | Capture the current path and use the full current encoding as a weak detection hint. |
+| `ReloadWithEncoding` | Capture the current path and decode using the selected source codec. The app has already completed its discard warning and picker. |
+| `ReloadAsUtf8` | Capture the current path and view, ask the save/discard decision, then read using UTF-8. |
+
+An omitted decision means replacement is already approved. A cancelled source
+selection or a reload of an untitled document returns `Cancelled` without asking
+for a decision. `Open` source decoding is a choice between automatic detection,
+an explicit codec and a codec with native ANSI/OEM identity. The latter preserves
+its native identity; the file's detection result supplies the BOM. Ordinary
+explicit codecs continue to retain the detector's native flags, including its
+large-file fallback. Callers cannot combine strong and weak choices or select an
+independent decision timing. The private loading plan resolves those details once.
+
+The supplied path is compared before normalization to decide whether to retain
+the current language, view and read-only state. A modal decision can change the
+live document: the target path and view remain the captured values, the language
+remains live, and a repeated read uses the current detection preferences. Failed
+or cancelled loading keeps changes already made by the decision callback.
+A separate reload-view value
 captures and restores the original selection/scroll protocol after indentation
 has been applied. Re-reading releases the first candidate's text before another
 whole-file read. Encoding preference, empty-file, ASCII and legacy-candidate
 selection are named private operations; their original priority remains explicit
 in `DetectEncoding`.
+
+The frame passes the same intent into the session and derives successful
+reset-on-new-file monitoring from the `Open` alternative. This keeps a same-path
+Open distinct from Reload: both can preserve the document view, while only Open
+resets monitoring when configured. The frame still owns native dialogs, recent
+files, mixed-EOL confirmation and UI updates. Restart continues to apply any
+post-load current-encoding selection after this frame work; its source-decoding
+choice is part of the Open intent.
+
+The document-load contracts in `feature_session_contracts` test this interface
+with a real editor and temporary files, using the existing session-test host
+independently of the application shell. The existing reopen, recoding,
+watcher and restart fixtures retain coverage of native adapters and their ordering.
 
 The document-local language choice belongs to the session. It exposes a
 language selection operation and read-only effective-language/override state.
@@ -281,6 +319,23 @@ The resulting operation sequence is explicit:
    write failure commits neither path nor type and cannot leak a pending selection.
 3. **Choose language:** update the document choice and install its effective
    scheme; preserve bytes, selection, encoding and edit history.
+4. **Choose encoding:** the session decides whether an ANSI identity change
+   needs confirmation from live text and Undo/Redo history, invokes the supplied
+   decision at most once, then applies the choice using the current document.
+   The frame presents the semantic warning and retains the original MsgConv1/2
+   suppression behavior. An omitted decision retains noninteractive selection
+   for restart restoration and existing direct session callers.
+
+`SelectEncoding` returns whether this invocation changes the current encoding.
+Its decision callback can run a modal event loop. After acceptance the session
+checks the current identity again and re-reads conversion state, including the
+text length; callback changes remain in place on cancellation. It continues
+with the requested choice after document changes, preserving the existing modal
+ordering. The frame refreshes its UI after a changed selection or an accepted
+decision, including when the callback has already selected the requested identity.
+`feature_session_contracts` exercises these decisions and transitions through the
+same interface without linking the application shell. The existing current-encoding
+and suppression fixtures exercise the real native dialog adapter.
 
 Search commands read the current core document and selection on every request;
 Open/New need no application match-confirmation state. Search algorithms and
@@ -314,6 +369,34 @@ The build still needs an explicit delivered-lexer source list and upstream lexer
 registration. Document those together and verify agreement when adding a language;
 runtime metadata alone cannot change what is compiled. A plugin loader or a new
 code-generation framework is not needed for this catalog.
+
+### Completion candidates
+
+`CompletionCandidates` is an in-process module behind the word-completion
+collector. Construction establishes its root and case policy. Keyword lists and
+document words enter through semantic operations; the collector reads the root,
+candidate count and whether a completion is useful, then serializes the ordered
+list for the existing native popup.
+
+The AA tree, cached sort keys, insertion path, arena growth and serialized byte
+count remain private implementation details. Prefix fallback is an operation on
+an empty candidate set, so the caller cannot change the ordering context of an
+existing tree. The root borrows the collector's live text buffer; that buffer
+outlives the candidate set. Short prefix matching reads only the supplied bytes
+and requires no extra padding from callers.
+
+This seam uses one concrete implementation and needs no adapter. Its locality
+keeps keyword tokenization, qualified subwords, case-sensitive deduplication and
+the original candidate order together. Its leverage is shared by the collector
+and direct contract tests: both cross the same interface, without including a
+production `.cpp` file or inspecting tree/storage fields.
+
+The direct candidate contract checks exact serialized candidates and recovery
+after allocation failure. The existing native completion fixture retains its
+seven targeted failure points, typed-character/Undo/Redo assertions and popup
+recovery. Native failures are targeted before popup construction; a general
+allocation sweep through toolkit callbacks would exercise unrelated `noexcept`
+code. Candidate-only allocation sweeps stay within the in-process module.
 
 ## Where later features belong
 

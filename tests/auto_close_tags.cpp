@@ -10,7 +10,6 @@
 #include <stdexcept>
 #include <utility>
 namespace {
-using Scintilla::Message;
 void Character(EditorFrame* frame, int ch, bool native) {
     auto* editor = frame->Editor();
 #ifdef __WXMSW__
@@ -57,6 +56,7 @@ std::string BytesFromHex(std::string_view hex) {
     return bytes;
 }
 void EncodedFiles(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const auto& item : AutoCloseTagsEncodingReference::cases) {
         const auto path =
@@ -64,15 +64,15 @@ void EncodedFiles(EditorFrame* frame) {
         const auto before = BytesFromHex(item.beforeBytes);
         TestFiles::WriteBytes(path, before);
         DocumentSession document(*editor);
-        if (document.Open(TestFiles::Filename(path), [] { return true; }, item.encoding).status != OpenStatus::Opened)
+        if (document.Load(DocumentLoad::Open{TestFiles::Filename(path), item.encoding}).status != OpenStatus::Opened)
             throw std::runtime_error("encoded tag fixture opens");
         ApplySyntaxLanguage(*editor, item.language);
-        editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
-        editor->Send(Message::Colourise, 0, -1);
+        editor->Send(GotoPos, editor->Send(GetLength));
+        editor->Send(Colourise, 0, -1);
         Character(frame, '>', false);
         State(editor, item.after);
         if (document.Encoding() != item.encoding || document.HasBom() != item.bom ||
-            editor->Send(Message::GetEOLMode) != item.eol)
+            editor->Send(GetEOLMode) != item.eol)
             throw std::runtime_error("tag closure preserves encoding, BOM and EOL metadata");
         if (document.Save().status != SaveStatus::Saved || TestFiles::Bytes(path) != BytesFromHex(item.saved))
             throw std::runtime_error("tag closure saves exact original encoded bytes");

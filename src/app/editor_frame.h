@@ -160,11 +160,7 @@ private:
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
     void OnDropFiles(wxDropFilesEvent& event);
-    OpenResult LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                        std::optional<FileEncoding> encoding = std::nullopt,
-                        std::optional<EncodingChoice> weakEncoding = std::nullopt,
-                        OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead, bool reload = false,
-                        std::optional<EncodingChoice> sourceEncoding = std::nullopt);
+    OpenResult LoadFile(const DocumentLoad::Intent& intent);
     bool CanDiscardUntitledWhitespace() const;
     EncodingLossChoice ConfirmEncodingLoss();
     void ConfirmLineEndingConversion(const LineEndingCounts& counts, bool defaultNo);

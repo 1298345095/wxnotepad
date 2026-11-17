@@ -133,7 +133,7 @@ public:
                     file.write(original.data(), static_cast<std::streamsize>(original.size()));
                 }
                 DocumentSession document(*editor);
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
+                Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened,
                         "open independent UTF-16LE fixture");
                 search.Configure({"\\u4E2D\\r\\n\\u6587", "\\u6587\\t\\u4E2D", {false, false, false, true}, false});
                 const auto encodedMatch = search.Find(SearchDirection::Forward);

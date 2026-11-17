@@ -1,15 +1,14 @@
-// Adapted from Notepad4 89b8b36 EditAutoC.cpp: WordList and EditCompleteWordCore.
+// Adapted from Notepad4 89b8b36 EditAutoC.cpp: EditCompleteWordCore.
 // Copyright and BSD 3-Clause license: licenses/Notepad4.txt.
 #include "editor/word_completion.h"
+#include "editor/completion_candidates.h"
 #include "editor/editor_control.h"
 #include "editor/completion_styles.h"
 #include <ScintillaTypes.h>
 #include <ILexer.h>
 #include <ScintillaStructures.h>
-#include <VectorISA.h>
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <cstring>
 
 #include "syntax/syntax_catalog.h"
@@ -32,20 +31,6 @@ using Sci_Line = intptr_t;
 using Sci_TextRangeFull = Scintilla::TextRangeFull;
 using Sci_TextToFindFull = Scintilla::TextToFindFull;
 using Scintilla::CharacterClass;
-int LowerAscii(unsigned char ch) {
-    return ch >= 'A' && ch <= 'Z' ? ch + 'a' - 'A' : ch;
-}
-int CompareNoCase(const char* left, const char* right, size_t count) {
-    for (size_t i = 0; i < count; ++i) {
-        const auto a = static_cast<unsigned char>(left[i]), b = static_cast<unsigned char>(right[i]);
-        const int difference = LowerAscii(a) - LowerAscii(b);
-        if (difference || !a || !b) return difference;
-    }
-    return 0;
-}
-bool StrNotEmpty(const char* text) {
-    return text && *text;
-}
 bool IsASpaceOrTab(int ch) {
     return ch == ' ' || ch == '\t';
 }
@@ -67,12 +52,6 @@ constexpr int AutoCompletionOption_OnlyWordsInDocument = 8;
 constexpr int AutoCompleteScope_Commont = 1;
 constexpr int AutoCompleteScope_String = 2;
 constexpr int AutoCompleteScope_PlainText = 4;
-#define NP2_AUTOC_CACHE_SORT_KEY 1
-#define NP2_AUTOC_USE_WORD_POINTER 0            // used for debug
-#define NP2_AUTOC_MAX_WORD_LENGTH (128 - 3 - 1) // SP + '(' + ')' + '\0'
-constexpr unsigned NP2_AUTOC_WORD_BUFFER_SIZE = 128;
-#define NP2_AUTOC_INIT_BUFFER_SIZE (4096)
-
 // optimization for small string
 template <size_t StackSize = 32> class CharBuffer {
     char* ptr;
@@ -94,452 +73,9 @@ public:
     char& operator[](size_t index) noexcept { return ptr[index]; }
 };
 
-struct WordNode;
-struct WordList {
-    int (*WL_strcmp)(const char*, const char*);
-    int (*WL_strncmp)(const char*, const char*, size_t);
-#if NP2_AUTOC_CACHE_SORT_KEY
-    uint32_t (*WL_SortKeyFunc)(const char*, uint32_t);
-#endif
-
-    WordNode* pListHead;
-    const char* pWordStart;
-    unsigned iStartLen;
-#if NP2_AUTOC_CACHE_SORT_KEY
-    unsigned startSortKey;
-    bool bIgnoreCase;
-#endif
-    unsigned nWordCount;
-    unsigned nTotalLen;
-
-    unsigned offset;
-    unsigned capacity;
-    std::byte* buffer = nullptr;
-    std::vector<std::vector<std::byte>> buffers;
-    std::vector<WordNode*> insertionPath;
-
-    WordList() = default;
-    WordList(const WordList&) = delete;
-    WordList& operator=(const WordList&) = delete;
-
-    void Init(const char* pRoot, unsigned iRootLen, bool ignoreCase);
-    std::unique_ptr<char[]> GetList() const;
-    void AddBuffer(unsigned newCapacity);
-    void AddWord(const char* pWord, unsigned len);
-    int CompareNode(const WordNode& node, const char* word, unsigned length, unsigned sortKey) const noexcept;
-    void UpdateRoot(const char* pRoot, unsigned iRootLen) noexcept;
-    bool StartsWith(const char* pWord) const noexcept;
-    void AddListEx(const char* pList);
-    void AddList(const char* pList) {
-        if (StrNotEmpty(pList)) {
-            AddListEx(pList);
-        }
-    }
-    void AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen);
-    void AddWordPrefixes(char* word, unsigned end, unsigned rootLength, std::span<const char* const> words,
-                         std::span<const unsigned> starts);
-};
-
-// TODO: replace _stricmp() and CompareNoCase() with other functions
-// which correctly case insensitively compares UTF-8 string and ANSI/DBCS string.
-
-#if NP2_AUTOC_CACHE_SORT_KEY
-constexpr unsigned NP2_AUTOC_SORT_KEY_LENGTH = 4;
-
-uint32_t WordList_SortKey(const char* pWord, uint32_t len) noexcept {
-#if 0
-	uint32_t high = 0;
-	const uint8_t *ptr = static_cast<const uint8_t *>(pWord);
-	len = std::min<uint32_t>(len, NP2_AUTOC_SORT_KEY_LENGTH);
-	for (uint32_t i = 0; i < len; i++) {
-		high = (high << 8) | *ptr++;
-	}
-	if (len < NP2_AUTOC_SORT_KEY_LENGTH) {
-		assert(len != 0); // suppress [clang-analyzer-core.uninitialized.Assign]
-		high <<= (NP2_AUTOC_SORT_KEY_LENGTH - len)*8;
-	}
-
-#else
-    uint32_t high = loadle_u32(pWord);
-    if (len < NP2_AUTOC_SORT_KEY_LENGTH) {
-        high = bit_zero_high_u32(high, len * 8);
-    }
-    high = bswap32(high);
-#endif
-    return high;
-}
-
-uint32_t WordList_SortKeyCase(const char* pWord, uint32_t len) noexcept {
-#if 1
-    uint32_t high = 0;
-    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(pWord);
-    len = std::min<uint32_t>(len, NP2_AUTOC_SORT_KEY_LENGTH);
-    for (uint32_t i = 0; i < len; i++) {
-        const uint8_t ch = *ptr++;
-        high = (high << 8) | ch;
-        // convert to lower case to match _stricmp() / strcasecmp().
-        if (ch >= 'A' && ch <= 'Z') {
-            high += 'a' - 'A';
-        }
-    }
-    if (len < NP2_AUTOC_SORT_KEY_LENGTH) {
-        assert(len != 0); // suppress [clang-analyzer-core.uninitialized.Assign]
-        high <<= (NP2_AUTOC_SORT_KEY_LENGTH - len) * 8;
-    }
-
-#else
-    uint32_t high = loadle_u32(pWord);
-    high |= 0x20202020U; // only works for ASCII letters
-    if (len < NP2_AUTOC_SORT_KEY_LENGTH) {
-        high = bit_zero_high_u32(high, len * 8);
-    }
-    high = bswap32(high);
-#endif
-    return high;
-}
-#endif
-
-// Tree
-struct WordNode {
-    std::array<WordNode*, 2> link;
-#if NP2_AUTOC_USE_WORD_POINTER
-    char* word;
-#endif
-#if NP2_AUTOC_CACHE_SORT_KEY
-    unsigned sortKey;
-#endif
-    unsigned len;
-    unsigned level;
-};
-
-constexpr size_t InitialTreePathCapacity = 32;
-// store word right after the node as most word are short.
-#define WordNode_GetWord(node) (reinterpret_cast<char*>(node) + sizeof(WordNode))
-// TODO: since the tree is sorted, nodes greater than some level can be deleted to reduce total words.
-// or only limit word count in WordList::GetList().
-
-// Andersson Tree, source from https://www.eternallyconfuzzled.com/tuts/datastructures/jsw_tut_andersson.aspx
-// see also https://en.wikipedia.org/wiki/AA_tree
-WordNode* SkewTree(WordNode* node) noexcept {
-    if (node->level && node->link[0] && node->level == node->link[0]->level) {
-        WordNode* save = node->link[0];
-        node->link[0] = save->link[1];
-        save->link[1] = node;
-        return save;
-    }
-    return node;
-}
-WordNode* SplitTree(WordNode* node) noexcept {
-    if (node->level && node->link[1] && node->link[1]->link[1] && node->level == node->link[1]->link[1]->level) {
-        WordNode* save = node->link[1];
-        node->link[1] = save->link[0];
-        save->link[0] = node;
-        ++save->level;
-        return save;
-    }
-    return node;
-}
-
-#define WordList_AddNode() (reinterpret_cast<WordNode*>(reinterpret_cast<char*>(buffer) + offset))
-void WordList::AddBuffer(unsigned newCapacity) {
-    buffers.emplace_back(newCapacity);
-    capacity = newCapacity;
-    offset = 0;
-    buffer = buffers.back().data();
-}
-
-int WordList::CompareNode(const WordNode& node, const char* word, unsigned length, unsigned sortKey) const noexcept {
-    int difference = static_cast<int>(node.sortKey - sortKey);
-    if (difference == 0 && (length > NP2_AUTOC_SORT_KEY_LENGTH || node.len > NP2_AUTOC_SORT_KEY_LENGTH || bIgnoreCase))
-        difference = WL_strcmp(reinterpret_cast<const char*>(&node) + sizeof(WordNode), word);
-    return difference;
-}
-
-void WordList::AddWord(const char* pWord, unsigned len) {
-    WordNode* root = pListHead;
-#if NP2_AUTOC_CACHE_SORT_KEY
-    const unsigned sortKey = (iStartLen > NP2_AUTOC_SORT_KEY_LENGTH) ? 0 : WL_SortKeyFunc(pWord, len);
-#endif
-    if (root == nullptr) {
-        WordNode* node = WordList_AddNode();
-        char* word = WordNode_GetWord(node);
-        memcpy(word, pWord, len);
-#if NP2_AUTOC_USE_WORD_POINTER
-        node->word = word;
-#endif
-#if NP2_AUTOC_CACHE_SORT_KEY
-        node->sortKey = sortKey;
-#endif
-        node->len = len;
-        node->level = 1;
-        root = node;
-    } else {
-        WordNode* iter = root;
-        auto& path = insertionPath;
-        path.clear();
-        int dir;
-
-        // find a spot and save the path
-        for (;;) {
-            path.push_back(iter);
-#if NP2_AUTOC_CACHE_SORT_KEY
-            dir = CompareNode(*iter, pWord, len, sortKey);
-#else
-            dir = WL_strcmp(WordNode_GetWord(iter), pWord);
-#endif
-            if (dir == 0) {
-                return;
-            }
-            dir = dir < 0;
-            if (iter->link[dir] == nullptr) {
-                break;
-            }
-            iter = iter->link[dir];
-        }
-
-        if (capacity < offset + len + 1 + sizeof(WordNode)) {
-            AddBuffer(capacity << 1);
-        }
-
-        WordNode* node = WordList_AddNode();
-        char* word = WordNode_GetWord(node);
-        memcpy(word, pWord, len);
-#if NP2_AUTOC_USE_WORD_POINTER
-        node->word = word;
-#endif
-#if NP2_AUTOC_CACHE_SORT_KEY
-        node->sortKey = sortKey;
-#endif
-        node->len = len;
-        node->level = 1;
-        iter->link[dir] = node;
-
-        // walk back and rebalance
-        for (auto top = path.size(); top != 0;) {
-            --top;
-            // which child?
-            if (top != 0) {
-                dir = path[top - 1]->link[1] == path[top];
-            }
-            path[top] = SplitTree(SkewTree(path[top]));
-            // fix the parent
-            if (top != 0) {
-                path[top - 1]->link[dir] = path[top];
-            } else {
-                root = path[top];
-            }
-        }
-    }
-
-    pListHead = root;
-    nWordCount++;
-    nTotalLen += len + 1;
-    offset += NP2_align_up(len + 1 + sizeof(WordNode), alignof(WordNode));
-}
-
-std::unique_ptr<char[]> WordList::GetList() const {
-    WordNode* root = pListHead;
-    std::vector<WordNode*> path;
-    path.reserve(InitialTreePathCapacity);
-    auto list = std::make_unique<char[]>(nTotalLen + 1); // additional separator
-    char* buf = list.get();
-    char* const pList = buf;
-
-    while (root || !path.empty()) {
-        if (root) {
-            path.push_back(root);
-            root = root->link[0];
-        } else {
-            root = path.back();
-            path.pop_back();
-            memcpy(buf, WordNode_GetWord(root), root->len);
-            buf += root->len;
-            *buf++ = '\n'; // the separator char
-            root = root->link[1];
-        }
-    }
-    // trim last separator char
-    if (buf != pList) {
-        *(--buf) = '\0';
-    }
-    return list;
-}
-
-void WordList::Init(const char* pRoot, unsigned iRootLen, bool ignoreCase) {
-    pListHead = nullptr;
-    nWordCount = 0;
-    nTotalLen = 0;
-    offset = 0;
-    capacity = 0;
-    pWordStart = pRoot;
-    iStartLen = iRootLen;
-
-    if (ignoreCase) {
-        // use strcmp() instead of _stricmp() to keep all matched string instead of just first one
-        WL_strcmp = strcmp;
-        WL_strncmp = CompareNoCase;
-#if NP2_AUTOC_CACHE_SORT_KEY
-        WL_SortKeyFunc = WordList_SortKeyCase;
-#endif
-    } else {
-        WL_strcmp = strcmp;
-        WL_strncmp = strncmp;
-#if NP2_AUTOC_CACHE_SORT_KEY
-        WL_SortKeyFunc = WordList_SortKey;
-#endif
-    }
-#if NP2_AUTOC_CACHE_SORT_KEY
-    startSortKey = WL_SortKeyFunc(pRoot, iRootLen);
-    bIgnoreCase = ignoreCase;
-#endif
-
-    insertionPath.reserve(InitialTreePathCapacity);
-    AddBuffer(NP2_AUTOC_INIT_BUFFER_SIZE);
-}
-
-void WordList::UpdateRoot(const char* pRoot, unsigned iRootLen) noexcept {
-    pWordStart = pRoot;
-    iStartLen = iRootLen;
-#if NP2_AUTOC_CACHE_SORT_KEY
-    startSortKey = WL_SortKeyFunc(pRoot, iRootLen);
-#endif
-}
-
-bool WordList::StartsWith(const char* pWord) const noexcept {
-#if NP2_AUTOC_CACHE_SORT_KEY
-    if (iStartLen <= NP2_AUTOC_SORT_KEY_LENGTH) {
-        return startSortKey == WL_SortKeyFunc(pWord, iStartLen);
-    }
-#endif
-    return WL_strncmp(pWordStart, pWord, iStartLen) == 0;
-}
-
-static constexpr bool WordList_IsSeparator(uint8_t ch) noexcept {
-#if defined(_WIN64)
-    // directly complied into bit test
-#if defined(__clang__) || defined(__GNUC__)
-    if (ch > ';') {
-        return ch == '^';
-    }
-    const uint64_t mask = UINT32_MAX | (UINT64_C(1) << ' ') | (UINT64_C(1) << '(') | (UINT64_C(1) << ')') |
-                          (UINT64_C(1) << ',') | (UINT64_C(1) << '.') | (UINT64_C(1) << ';');
-    return ((mask >> ch) & 1U) != 0;
-#else
-    return ch <= ' ' || ch == '(' || ch == ')' || ch == ',' || ch == '.' || ch == ';' || ch == '^';
-#endif
-#else
-    if (ch <= ' ') {
-        return true;
-    }
-    ch -= '(';
-    if (ch > ';' - '(') {
-        return ch == '^' - '(';
-    }
-    // Bit zero is '(' after rebasing the character above. Colons remain part of qualified words.
-    const uint32_t mask = 1U | (1U << (')' - '(')) | (1U << (',' - '(')) | (1U << ('.' - '(')) | (1U << (';' - '('));
-    return ((mask >> ch) & 1U) != 0;
-#endif
-}
-
-void WordList::AddListEx(const char* pList) {
-    std::array<char, NP2_AUTOC_WORD_BUFFER_SIZE> word;
-    const unsigned iRootLen = iStartLen;
-    unsigned len = 0;
-    bool ok = false;
-    while (true) {
-        uint8_t ch;
-        const char* sub = pList;
-        do {
-            ch = *sub++;
-        } while (!WordList_IsSeparator(ch));
-
-        unsigned lenSub = static_cast<unsigned>(sub - pList - 1);
-        // Prefix markers can use the suffix reserve. Restore the word limit
-        // before subtracting, copying another segment, or appending "()".
-        len = std::min<unsigned>(len, NP2_AUTOC_MAX_WORD_LENGTH);
-        lenSub = std::min<unsigned>(NP2_AUTOC_MAX_WORD_LENGTH - len, lenSub);
-        memcpy(word.data() + len, pList, lenSub);
-        len += lenSub;
-        pList = sub;
-        if (len >= iRootLen) {
-            if (ch == '(') {
-                word[len++] = '(';
-                word[len++] = ')';
-            }
-            word[len] = '\0';
-            if (ok || StartsWith(word.data())) {
-                AddWord(word.data(), len);
-                ok = ch == '.';
-            }
-        }
-        if (ch == '\0') {
-            break;
-        }
-        if (ch == '^') {
-            // ^ is used for prefix match in lexer (see scintilla/lexlib/WordList.cxx)
-            word[len++] = ' ';
-        } else if (!ok && ch != '.') {
-            len = 0;
-        } else {
-            word[len++] = '.';
-        }
-    }
-}
-
-void WordList::AddWordPrefixes(char* word, unsigned end, unsigned rootLength, std::span<const char* const> words,
-                               std::span<const unsigned> starts) {
-    const char separator = word[end];
-    word[end] = '\0';
-    AddWord(word, end);
-    for (size_t index = 0; index < words.size(); ++index) {
-        const unsigned length = end - starts[index];
-        if (length >= rootLength) AddWord(words[index], length);
-    }
-    word[end] = separator;
-}
-
-void WordList::AddSubWord(char* pWord, unsigned wordLength, unsigned iRootLen) {
-    /*
-    when pRoot is 'b', split 'bugprone-branch-clone' as following:
-    1. first hyphen: 'bugprone-branch-clone' => 'bugprone', 'branch-clone'.
-    2. second hyphen: 'bugprone-branch-clone' => 'bugprone-branch'; 'branch-clone' => 'branch'.
-    */
-
-    std::array<const char*, 8> words;
-    std::array<unsigned, 8> starts;
-    unsigned count = 0;
-
-    for (unsigned i = 0; i < wordLength - 1; i++) {
-        const char ch = pWord[i];
-        if (ch != '.' && ch != '-' && ch != ':') continue;
-        if (i >= iRootLen) {
-            AddWordPrefixes(pWord, i, iRootLen, {words.data(), count}, {starts.data(), count});
-        }
-        if (ch != '.' && (pWord[i + 1] == '>' || pWord[i + 1] == ':')) {
-            ++i;
-        }
-
-        const unsigned subLen = wordLength - (i + 1);
-        const char* pSubRoot = pWord + i + 1;
-        if (subLen >= iRootLen && StartsWith(pSubRoot)) {
-            AddWord(pSubRoot, subLen);
-            if (count < std::size(words)) {
-                words[count] = pSubRoot;
-                starts[count] = i + 1;
-                ++count;
-            }
-        }
-    }
-}
-
 static constexpr bool IsCppCommentStyle(int style) noexcept {
     return style == SCE_C_COMMENT || style == SCE_C_COMMENTLINE || style == SCE_C_COMMENTDOC ||
            style == SCE_C_COMMENTLINEDOC || style == SCE_C_COMMENTDOC_TAG || style == SCE_C_COMMENTDOC_TAG_XML;
-}
-
-static constexpr bool IsSpecialStart(int ch) noexcept {
-    return ch == ':' || ch == '.' || ch == '#' || ch == '@' || ch == '<' || ch == '\\' || ch == '/' || ch == '-' ||
-           ch == '>' || ch == '$' || ch == '%';
 }
 
 static constexpr bool IsSpecialStartChar(int ch, int chPrev) noexcept {
@@ -599,8 +135,8 @@ class Collector final {
         return ch < 0x80 ? IsDocWordChar(ch)
                          : Call(Message::GetCharacterClass, ch) == std::to_underlying(CharacterClass::word);
     }
-    void AddList(WordList& words, const SyntaxDefinition& syntax, size_t index) {
-        if (index < syntax.keywords.size()) words.AddList(syntax.keywords[index].text);
+    void AddList(CompletionCandidates& words, const SyntaxDefinition& syntax, size_t index) {
+        if (index < syntax.keywords.size()) words.AddKeywords(syntax.keywords[index].text);
     }
     const NP2_KEYWORDS* ExtraWords() const {
         using enum SyntaxLanguage;
@@ -722,7 +258,7 @@ class Collector final {
             const auto before = wordEnd;
             wordEnd = MemberWordEnd(wordEnd, iDocLen, style);
             if (wordEnd == before) break;
-            if (wordEnd - iPosFind > NP2_AUTOC_MAX_WORD_LENGTH) {
+            if (wordEnd - iPosFind > CompletionWordLimit) {
                 wordEnd = before;
                 break;
             }
@@ -778,13 +314,13 @@ class Collector final {
         }
     }
 
-    void CollectDocumentWord(WordList& pWList, Sci_Position iPosFind, Sci_Position& wordEnd, int style, char prefix,
-                             bool bSubWord) {
-        const int iRootLen = pWList.iStartLen;
+    void CollectDocumentWord(CompletionCandidates& pWList, Sci_Position iPosFind, Sci_Position& wordEnd, int style,
+                             char prefix, bool bSubWord) {
+        const int iRootLen = static_cast<int>(pWList.Root().size());
         if (wordEnd - iPosFind < iRootLen) return;
-        std::array<char, NP2_AUTOC_WORD_BUFFER_SIZE> wordBuf;
+        std::array<char, CompletionWordBufferSize> wordBuf;
         char* pWord = wordBuf.data();
-        const Sci_TextRangeFull tr = {{iPosFind, std::min(iPosFind + NP2_AUTOC_MAX_WORD_LENGTH, wordEnd)}, pWord};
+        const Sci_TextRangeFull tr = {{iPosFind, std::min(iPosFind + CompletionWordLimit, wordEnd)}, pWord};
         int wordLength = static_cast<int>(Call(Message::GetTextRangeFull, 0, &tr));
 
         SkipDocumentPrefix(pWord, wordLength, iPosFind, style, prefix);
@@ -794,23 +330,21 @@ class Collector final {
             pWord[wordLength] = '\0';
         }
 
-        if (wordLength >= iRootLen && (pWord[0] != ':' || pWord[1] == ':') && pWList.StartsWith(pWord)) {
+        if (wordLength >= iRootLen && (pWord[0] != ':' || pWord[1] == ':') &&
+            pWList.MatchesPrefix({pWord, static_cast<size_t>(wordLength)})) {
             AppendDocumentSuffix(pWord, wordLength, wordEnd, style);
 
             if (wordLength >= iRootLen) {
                 pWord[wordLength] = '\0';
-                pWList.AddWord(pWord, wordLength);
-                if (bSubWord) {
-                    pWList.AddSubWord(pWord, wordLength, iRootLen);
-                }
+                pWList.AddDocumentWord({pWord, static_cast<size_t>(wordLength)}, bSubWord);
             }
         }
     }
 
-    void AutoC_AddDocWord(WordList& pWList, const std::array<uint32_t, 8>& ignoredStyleMask, bool bIgnoreCase,
-                          char prefix) {
-        const char* const pRoot = pWList.pWordStart;
-        const int iRootLen = pWList.iStartLen;
+    void AutoC_AddDocWord(CompletionCandidates& pWList, const std::array<uint32_t, 8>& ignoredStyleMask,
+                          bool bIgnoreCase, char prefix) {
+        const char* const pRoot = pWList.Root().data();
+        const int iRootLen = static_cast<int>(pWList.Root().size());
 
         CharBuffer<> pFind(iRootLen + 2);
         pFind[0] = prefix;
@@ -843,16 +377,16 @@ class Collector final {
         }
     }
 
-    void AutoC_AddKeyword(WordList& words, int currentStyle) {
+    void AutoC_AddKeyword(CompletionCandidates& words, int currentStyle) {
         auto add = [&](std::span<const SyntaxKeywords> groups) {
             for (const auto& group : groups)
-                if (!(group.attributes & SyntaxKeywordAttribute::NoAutoComp)) words.AddList(group.text);
+                if (!(group.attributes & SyntaxKeywordAttribute::NoAutoComp)) words.AddKeywords(group.text);
         };
         add(definition_.keywords);
         if (const auto* extra = ExtraWords();
             extra && !(definition_.lexer == SCLEX_CPP && !IsCppCommentStyle(currentStyle)))
             for (const char* group : *extra)
-                words.AddList(group);
+                words.AddKeywords(group);
         if (SyntaxSettingsLanguage(definition_.language) == SyntaxLanguage::TypeScript)
             add(SyntaxFor(SyntaxLanguage::JavaScript).keywords);
         if (definition_.lexer == SCLEX_HTML) {
@@ -873,27 +407,28 @@ class Collector final {
     }
     enum AddWordResult { AddWordResult_None, AddWordResult_Finish, AddWordResult_IgnoreLexer };
 
-    AddWordResult AddCssSpecialWord(WordList& words, int currentStyle, int previousStyle, int ch, int previous) {
+    AddWordResult AddCssSpecialWord(CompletionCandidates& words, int currentStyle, int previousStyle, int ch,
+                                    int previous) {
         currentStyle -= css_style(SCE_CSS_DEFAULT);
         previousStyle -= css_style(SCE_CSS_DEFAULT);
         if (ch == '@' && currentStyle == SCE_CSS_DEFAULT) {
-            words.AddList(cssKeywords[1]);
+            words.AddKeywords(cssKeywords[1]);
             return AddWordResult_IgnoreLexer;
         }
         if (ch == ':' && (currentStyle == SCE_CSS_DEFAULT || currentStyle == SCE_CSS_OPERATOR)) {
             if (previous == ':') {
-                words.AddList(cssKeywords[3]);
+                words.AddKeywords(cssKeywords[3]);
                 return AddWordResult_IgnoreLexer;
             }
             if (previousStyle != SCE_CSS_PROPERTY && previousStyle != SCE_CSS_UNKNOWN_PROPERTY) {
-                words.AddList(cssKeywords[2]);
+                words.AddKeywords(cssKeywords[2]);
                 return AddWordResult_IgnoreLexer;
             }
         }
         if ((ch == '$' || ch == '@' || ch == '#') && IsDocWordChar(ch)) return AddWordResult_IgnoreLexer;
         return AddWordResult_None;
     }
-    AddWordResult AddJavaScriptSpecialWord(WordList& words, int currentStyle, int ch) {
+    AddWordResult AddJavaScriptSpecialWord(CompletionCandidates& words, int currentStyle, int ch) {
         currentStyle -= js_style(SCE_JS_DEFAULT);
         if (ch == '@' && currentStyle >= SCE_JS_COMMENTLINE && currentStyle <= SCE_JS_TASKMARKER) {
             AddList(words, SyntaxFor(SyntaxLanguage::JavaScript), 10);
@@ -902,10 +437,10 @@ class Collector final {
         if ((ch == '$' || ch == '@' || ch == '#') && IsDocWordChar(ch)) return AddWordResult_IgnoreLexer;
         return AddWordResult_None;
     }
-    AddWordResult AddCppSpecialWord(WordList& words, int currentStyle, int ch) {
+    AddWordResult AddCppSpecialWord(CompletionCandidates& words, int currentStyle, int ch) {
         if (IsCppCommentStyle(currentStyle) && (ch == '@' || ch == '\\')) {
             for (const char* group : kwDoxyDoc)
-                words.AddList(group);
+                words.AddKeywords(group);
             return AddWordResult_Finish;
         }
         if (currentStyle == SCE_C_DEFAULT) {
@@ -921,7 +456,7 @@ class Collector final {
         return AddWordResult_None;
     }
 
-    AddWordResult AddJavaScriptCommentWord(WordList& words, int currentStyle, int ch) {
+    AddWordResult AddJavaScriptCommentWord(CompletionCandidates& words, int currentStyle, int ch) {
         using enum SyntaxLanguage;
         if (const auto scheme = SyntaxSettingsLanguage(definition_.language);
             (ch == '@' || (ch == '<' && scheme == TypeScript)) && currentStyle >= SCE_JS_COMMENTLINE &&
@@ -932,17 +467,17 @@ class Collector final {
         }
         return AddWordResult_None;
     }
-    AddWordResult AddMarkupTagWords(WordList& words, int ch, int previous) {
+    AddWordResult AddMarkupTagWords(CompletionCandidates& words, int ch, int previous) {
         if (ch != '<' && !(previous == '<' && ch == '/')) return AddWordResult_None;
         if (definition_.lexer == SCLEX_MARKDOWN) {
             AddList(words, SyntaxFor(SyntaxLanguage::Html), 0);
         } else {
             AddList(words, definition_, 0);
-            if (const auto* extra = ExtraWords()) words.AddList((*extra)[0]);
+            if (const auto* extra = ExtraWords()) words.AddKeywords((*extra)[0]);
         }
         return AddWordResult_IgnoreLexer;
     }
-    AddWordResult AddSchemeSpecialWord(WordList& words, int currentStyle, int ch, int previous) {
+    AddWordResult AddSchemeSpecialWord(CompletionCandidates& words, int currentStyle, int ch, int previous) {
         switch (definition_.lexer) {
         case SCLEX_BASH:
             if (ch == '$') {
@@ -968,9 +503,10 @@ class Collector final {
         }
         return AddWordResult_None;
     }
-    AddWordResult AutoC_AddSpecWord(WordList& words, int currentStyle, int previousStyle, int ch, int previous) {
+    AddWordResult AutoC_AddSpecWord(CompletionCandidates& words, int currentStyle, int previousStyle, int ch,
+                                    int previous) {
         if ((ch == '\\' || (previous == '\\' && (ch == '^' || ch == ':'))) && settings_.latexInputMethod)
-            words.AddList(ch == ':' ? EmojiInputSequenceString : LaTeXInputSequenceString);
+            words.AddKeywords(ch == ':' ? EmojiInputSequenceString : LaTeXInputSequenceString);
         if (definition_.lexer == SCLEX_HTML && currentStyle >= css_style(SCE_CSS_DEFAULT) &&
             currentStyle < SCE_PHP_DEFAULT)
             return AddCssSpecialWord(words, currentStyle, previousStyle, ch, previous);
@@ -1131,20 +667,10 @@ class Collector final {
         return ignoredStyleMask;
     }
 
-    bool RetrySubRoot(WordList& words) {
-        if (words.iStartLen == 0) return false;
-        const char* root = strpbrk(words.pWordStart, ":.#@<\\/->$%");
-        if (!root) return false;
-        while (IsSpecialStart(*root))
-            ++root;
-        if (!*root) return false;
-        words.UpdateRoot(root, static_cast<unsigned>(strlen(root)));
-        return true;
-    }
-
-    void CollectCandidates(WordList& pWList, int iCurrentStyle, bool bIgnoreLexer, bool bIgnoreDoc, char prefix) {
+    void CollectCandidates(CompletionCandidates& pWList, int iCurrentStyle, bool bIgnoreLexer, bool bIgnoreDoc,
+                           char prefix) {
         const bool bScanWordsInDocument = (settings_.completeOption & AutoCompletionOption_ScanWordsInDocument) != 0;
-        const bool bIgnoreCase = pWList.bIgnoreCase;
+        const bool bIgnoreCase = pWList.IgnoreCase();
         bool retry = CompletionScopeEnabled(iCurrentStyle, bScanWordsInDocument);
         const auto ignoredStyleMask =
             definition_.lexer == SCLEX_NULL || (definition_.original.lexerAttributes & LexerAttr_PlainTextFile)
@@ -1157,17 +683,17 @@ class Collector final {
                 AutoC_AddKeyword(pWList, iCurrentStyle);
             }
             if (bScanWordsInDocument) {
-                if (!bIgnoreDoc || pWList.nWordCount == 0) {
+                if (!bIgnoreDoc || pWList.Count() == 0) {
                     AutoC_AddDocWord(pWList, ignoredStyleMask, bIgnoreCase, prefix);
                 }
-                if (prefix && pWList.nWordCount == 0) {
+                if (prefix && pWList.Count() == 0) {
                     prefix = '\0';
                     AutoC_AddDocWord(pWList, ignoredStyleMask, bIgnoreCase, prefix);
                 }
             }
 
             retry = false;
-            if (pWList.nWordCount == 0 && RetrySubRoot(pWList)) {
+            if (pWList.RetrySubRoot()) {
                 retry = true;
                 bIgnoreLexer = false;
                 bIgnoreDoc = false;
@@ -1176,20 +702,20 @@ class Collector final {
         }
     }
 
-    void ShowCandidates(const WordList& pWList, bool bIgnoreCase, bool autoInsert) {
+    void ShowCandidates(const CompletionCandidates& pWList, bool bIgnoreCase, bool autoInsert) {
         using enum Scintilla::Message;
-        const auto pList = pWList.GetList();
+        const auto pList = pWList.Serialize();
         const auto fillUps = FillUps();
         Call(AutoCSetOptions, SC_AUTOCOMPLETE_FIXED_SIZE);
         Call(AutoCSetIgnoreCase, bIgnoreCase); // case sensitivity
         Call(AutoCSetCaseInsensitiveBehaviour, bIgnoreCase);
         Call(AutoCSetFillUps, 0, fillUps.c_str());
         Call(AutoCSetMaxHeight,
-             std::min(pWList.nWordCount, static_cast<unsigned>(settings_.visibleItemCount))); // visible rows
+             std::min(pWList.Count(), static_cast<unsigned>(settings_.visibleItemCount))); // visible rows
         Call(AutoCSetCancelAtStart, false); // don't cancel the list when deleting character
         Call(AutoCSetChooseSingle, autoInsert);
         Call(AutoCSetSeparator, '\n');
-        Call(AutoCShow, pWList.iStartLen, pList.get());
+        Call(AutoCShow, pWList.Root().size(), pList.get());
     }
 
     struct SpecialSources {
@@ -1197,8 +723,8 @@ class Collector final {
         bool ignoreDocument = false;
         char prefix = 0;
     };
-    SpecialSources PrepareSpecialSources(WordList& pWList, int iCurrentStyle, Sci_Position iStartWordPos, int ch,
-                                         int chPrev, bool ignoreLexer) {
+    SpecialSources PrepareSpecialSources(CompletionCandidates& pWList, int iCurrentStyle, Sci_Position iStartWordPos,
+                                         int ch, int chPrev, bool ignoreLexer) {
         SpecialSources sources{ignoreLexer};
 
         if (!sources.ignoreLexer && IsSpecialStartChar(ch, chPrev)) {
@@ -1267,16 +793,10 @@ public:
         Call(Message::GetTextRangeFull, 0, &tr);
         iRootLen = static_cast<int>(strlen(pRoot.data()));
 
-#if 0
-	StopWatch watch;
-	watch.Start();
-#endif
-
         bool bIgnoreLexer = (settings_.completeOption & AutoCompletionOption_OnlyWordsInDocument) != 0 ||
                             (pRoot[0] >= '0' && pRoot[0] <= '9'); // number
         const bool bIgnoreCase = bIgnoreLexer || settings_.ignoreCase;
-        WordList pWList;
-        pWList.Init(pRoot.data(), iRootLen, bIgnoreCase);
+        CompletionCandidates pWList({pRoot.data(), static_cast<size_t>(iRootLen)}, bIgnoreCase);
 
         int iCurrentStyle = Call(Message::GetStyleIndexAt, iCurrentPos);
         const auto sources = PrepareSpecialSources(pWList, iCurrentStyle, iStartWordPos, ch, chPrev, bIgnoreLexer);
@@ -1287,24 +807,16 @@ public:
         }
 
         CollectCandidates(pWList, iCurrentStyle, sources.ignoreLexer, sources.ignoreDocument, sources.prefix);
-        iRootLen = static_cast<int>(pWList.iStartLen);
 
-#if 0
-	watch.Stop();
-	const double elapsed = watch.Get();
-	printf("Notepad4 AddDocWord(%u, %u): %.6f\n", pWList.nWordCount, pWList.nTotalLen, elapsed);
-#endif
-
-        const bool bShow = pWList.nWordCount > 0 &&
-                           !(pWList.nWordCount == 1 && pWList.nTotalLen == static_cast<unsigned>(iRootLen + 1));
+        const bool bShow = pWList.HasCompletion();
 
         if (const bool updated =
                 state.previousItemCount == 0 ||
                 (condition == WordCompletionCondition::CharacterAdded &&
-                 state.previousItemCount - pWList.nWordCount > static_cast<unsigned>(settings_.visibleItemCount)) ||
-                (condition == WordCompletionCondition::CharacterDeleted && state.previousItemCount < pWList.nWordCount);
+                 state.previousItemCount - pWList.Count() > static_cast<unsigned>(settings_.visibleItemCount)) ||
+                (condition == WordCompletionCondition::CharacterDeleted && state.previousItemCount < pWList.Count());
             bShow && updated) {
-            state.previousItemCount = pWList.nWordCount;
+            state.previousItemCount = pWList.Count();
             ShowCandidates(pWList, bIgnoreCase, autoInsert);
         }
 
