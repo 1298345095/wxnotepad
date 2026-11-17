@@ -129,7 +129,7 @@ void NativeOem(EditorFrame* frame) {
     options.defaultEncoding = 5;
     options.loadASCIIasUTF8 = false;
     DocumentSession document(*frame->Editor(), options);
-    Require(document.Open(TestFiles::Filename(path), [] { return true; }).status == OpenStatus::Opened,
+    Require(document.Load(DocumentLoad::Open{TestFiles::Filename(path)}).status == OpenStatus::Opened,
             "delivered host-native OEM default opens");
     const auto choice = document.CurrentEncoding();
     Require(OriginalEncodingIdentifier(choice) == "OEM" && !document.IsDefaultEncoding() &&
@@ -137,9 +137,7 @@ void NativeOem(EditorFrame* frame) {
             "OEM is a separate original semantic identity");
     TestEditor::Append(frame, "x");
     frame->Editor()->Send(Scintilla::Message::Undo);
-    Require(document.Open(
-                        TestFiles::Filename(path), [] { return true; }, {}, choice)
-                        .status == OpenStatus::Opened &&
+    Require(document.Load(DocumentLoad::Reload{}).status == OpenStatus::Opened &&
                 document.CurrentEncoding() == choice && document.Save().status == SaveStatus::Saved &&
                 TestFiles::Bytes(path) == "plain",
             "weak reload and Save preserve native OEM identity and bytes");

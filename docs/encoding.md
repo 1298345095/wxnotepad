@@ -58,15 +58,22 @@ take effect on the next Open/reload through the decision order below.
 
 The migrated codecs include UTF-8, UTF-16LE, UTF-16BE, Windows CP936 (GBK),
 CP54936 (GB18030), CP950 (Big5), Windows-1252 and DOS-437, with
-UTF-8/UTF-16 BOM metadata retained by Save. `DocumentSession::Open` applies
+UTF-8/UTF-16 BOM metadata retained by Save. `DocumentSession::Load` applies
 Notepad4 `89b8b36e0ee2c23f73be922315f17261ccfbbe1a`'s
 `EditDetermineEncoding` decision order. Explicit Open As is authoritative.
-An optional weak choice is available to reload callers; ordinary same-path Open
-does not invent a weak choice. It carries the loaded codec, BOM and native-ANSI
+The `DocumentLoad::Reload` intent takes its weak choice from the current session;
+ordinary same-path Open does not invent a weak choice. It carries the loaded codec, BOM and native-ANSI
 and native-OEM identities, so an empty reload retains the original BOM choice,
 a weak native ANSI choice retains the original conversion gate, and OEM stays
 distinct from its resolved codec and explicit DOS-437. OEM uses the native OEM
 input on Windows and the documented native locale mapping on Linux.
+
+Open intents distinguish an explicit source codec from a full native source
+identity. The explicit codec keeps the detector's native flags, including the
+existing large-file fallback; the full identity retains its ANSI/OEM flags for
+restart decoding. Both use the file's detected BOM rather than the requested
+identity's BOM. Startup Unicode/ANSI choices that select the current encoding
+after loading retain that separate, later step.
 
 For nonempty files below the original conversion-size limit, automatic Open
 checks even-sized UTF-16 BOMs, UTF-8 BOMs and Latin UTF-16 without a BOM before

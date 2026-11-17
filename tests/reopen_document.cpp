@@ -33,43 +33,43 @@ void ReopenDisplacement(DocumentSession& document, EditorControl* editor, const 
     for (int line = 0; line < 100; ++line)
         wider += std::string(2000, 'y') + "\n";
     Write(path, wider);
-    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+    Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened &&
                 editor->Send(Message::GetCurrentPos) == 60040 && editor->Send(Message::GetAnchor) == 60040,
             "large line displacement must use the original saved line/column jump, clearing selection");
     const auto caretY = editor->Send(Message::PointYFromPosition, 0, 60040);
     Require(caretY >= 0 && caretY < editor->GetClientSize().y,
             "the fallback jump must keep the restored caret visible");
     Write(path, "short");
-    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+    Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened &&
                 editor->Send(Message::GetCurrentPos) == 5 && editor->Send(Message::GetAnchor) == 5 &&
                 !editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
             "a deleted saved line jumps to EOF and successful load clears history at its save point");
     std::puts("PASS: changed disk content uses original fallback and EOF clipping");
     Write(path, bytes);
-    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
+    Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened,
             "the displacement boundary fixture must load");
     editor->Send(Message::SetSel, 6020, 6040);
     std::string fewerLines = bytes;
     for (size_t index = 0; index < 4; ++index)
         fewerLines[index * 201 + 200] = 'x';
     Write(path, fewerLines);
-    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+    Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened &&
                 editor->Send(Message::GetAnchor) == 6020 && editor->Send(Message::GetCurrentPos) == 6040,
             "a displacement of exactly five in the original mixed line bases retains byte positions");
     Write(path, bytes);
-    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened, "the five-line fixture must reload");
+    Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened, "the five-line fixture must reload");
     editor->Send(Message::SetSel, 6020, 6040);
     fewerLines[4 * 201 + 200] = 'x';
     Write(path, fewerLines);
-    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+    Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened &&
                 editor->Send(Message::GetAnchor) == 7045 && editor->Send(Message::GetCurrentPos) == 7045,
             "removing five preceding newlines crosses the original fallback threshold");
     Write(path, "abcdefghij");
-    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
+    Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened,
             "the short single-line fixture must load");
     editor->Send(Message::SetSel, 2, 9);
     Write(path, "tiny");
-    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+    Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened &&
                 editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 4,
             "small line displacement lets the core clip each selection endpoint independently");
     std::puts("PASS: exact displacement boundary and raw endpoint clipping");
@@ -80,35 +80,34 @@ void ReopenDecisions(DocumentSession& document, EditorControl* editor, const wxS
     editor->Send(Message::SetSel, 2, 7);
     Write(path, "external\n");
     const auto revision = editor->DocumentRevision();
-    Require(document.Open(path, [] { return false; }).status == OpenStatus::Cancelled &&
+    Require(document.Load(DocumentLoad::Open{path, {}, [] { return false; }}).status == OpenStatus::Cancelled &&
                 Text(*editor) == "dirty tiny" && editor->DocumentRevision() == revision &&
                 editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
                 editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 7 &&
                 document.Language() == SyntaxLanguage::Python,
             "Cancel retains edited bytes, view, scheme and undo history");
-    Require(document.Open(std::nullopt, [] { return true; }).status == OpenStatus::Cancelled &&
-                document.Open(path + ".missing", [] { return true; }).status == OpenStatus::Failed &&
+    Require(document.Load(DocumentLoad::Open{std::nullopt}).status == OpenStatus::Cancelled &&
+                document.Load(DocumentLoad::Open{path + ".missing"}).status == OpenStatus::Failed &&
                 editor->DocumentRevision() == revision && editor->Send(Message::GetModify),
             "a cancelled chooser or failed load retains the existing document");
     Write(path, std::string(1, '\x{ff}'));
-    Require(document.Open(
-                        path, [] { return true; }, FileEncoding::Utf8)
-                        .status == OpenStatus::Failed &&
+    Require(document.Load(DocumentLoad::Open{path, FileEncoding::Utf8}).status == OpenStatus::Failed &&
                 Text(*editor) == "dirty tiny" && editor->Send(Message::CanUndo),
             "failed decoding retains edited bytes and history");
     Write(path, "external\n");
-    Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened && Text(*editor) == "external\n" &&
+    Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened && Text(*editor) == "external\n" &&
                 !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
             "Discard reloads disk bytes and clears the previous edit history");
     editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("saved "));
     editor->Send(Message::SetSel, 2, 7);
     Write(path, "external replacement\n");
-    Require(document.Open(path, [&document] { return document.Save().status == SaveStatus::Saved; }).status ==
-                    OpenStatus::Opened &&
-                Text(*editor) == "saved external\n" && editor->Send(Message::GetAnchor) == 2 &&
-                editor->Send(Message::GetCurrentPos) == 7 && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo),
-            "Save reloads the newly saved bytes rather than the stale pre-prompt read");
+    Require(
+        document.Load(DocumentLoad::Open{path, {}, [&document] { return document.Save().status == SaveStatus::Saved; }})
+                    .status == OpenStatus::Opened &&
+            Text(*editor) == "saved external\n" && editor->Send(Message::GetAnchor) == 2 &&
+            editor->Send(Message::GetCurrentPos) == 7 && !editor->Send(Message::GetModify) &&
+            !editor->Send(Message::CanUndo),
+        "Save reloads the newly saved bytes rather than the stale pre-prompt read");
     wxFile saved(path, wxFile::read);
     std::string disk(static_cast<size_t>(saved.Length()), '\0');
     Require(saved.Read(disk.data(), disk.size()) == disk.size() && saved.Close() && disk == "saved external\n",
@@ -133,7 +132,7 @@ public:
                     bytes += std::string(200, 'x') + "\n";
                 Write(path, bytes);
                 DocumentSession document(*editor);
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened,
+                Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened,
                         "initial Open must succeed");
                 document.SelectLanguage(SyntaxLanguage::Python);
                 Require(NativeScroll::WaitForHorizontalRange(editor, true, 120),
@@ -141,7 +140,7 @@ public:
                 editor->Send(Message::SetSel, 6020, 6040);
                 editor->Send(Message::SetFirstVisibleLine, 25);
                 editor->Send(Message::SetXOffset, 120);
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+                Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened &&
                             document.Language() == SyntaxLanguage::Python &&
                             document.LanguageOverride() == SyntaxLanguage::Python &&
                             editor->Send(Message::GetAnchor) == 6020 && editor->Send(Message::GetCurrentPos) == 6040 &&
@@ -154,13 +153,13 @@ public:
                 ReopenDecisions(document, editor, path);
 
 #ifdef __WXMSW__
-                Require(document.Open(path.Upper(), [] { return true; }).status == OpenStatus::Opened &&
+                Require(document.Load(DocumentLoad::Open{path.Upper()}).status == OpenStatus::Opened &&
                             document.Language() == SyntaxLanguage::Python && editor->Send(Message::GetAnchor) == 2 &&
                             editor->Send(Message::GetCurrentPos) == 7,
                         "Windows ordinal case-equivalent path spelling must retain the current view and scheme");
 #endif
                 document.SelectLanguage(std::nullopt);
-                Require(document.Open(path, [] { return true; }).status == OpenStatus::Opened &&
+                Require(document.Load(DocumentLoad::Open{path}).status == OpenStatus::Opened &&
                             document.Language() == SyntaxLanguage::Cpp && !document.LanguageOverride() &&
                             editor->Send(Message::GetAnchor) == 2 && editor->Send(Message::GetCurrentPos) == 7,
                         "automatic language choice remains automatic on same-path reopen");
@@ -168,7 +167,7 @@ public:
                 const wxString dotted =
                     alternate.GetPath() + wxFILE_SEP_PATH + "." + wxFILE_SEP_PATH + alternate.GetFullName();
                 document.SelectLanguage(SyntaxLanguage::Python);
-                Require(document.Open(dotted, [] { return true; }).status == OpenStatus::Opened &&
+                Require(document.Load(DocumentLoad::Open{dotted}).status == OpenStatus::Opened &&
                             document.Language() == SyntaxLanguage::Cpp && !document.LanguageOverride() &&
                             document.Path() == path && editor->Send(Message::GetCurrentPos) == 0 &&
                             editor->Send(Message::GetAnchor) == 0,
@@ -176,7 +175,7 @@ public:
                 const wxString other = path.BeforeLast('.');
                 Write(other, "different file\n");
                 document.SelectLanguage(SyntaxLanguage::Python);
-                Require(document.Open(other, [] { return true; }).status == OpenStatus::Opened &&
+                Require(document.Load(DocumentLoad::Open{other}).status == OpenStatus::Opened &&
                             document.Language() == SyntaxLanguage::PlainText && !document.LanguageOverride() &&
                             Text(*editor) == "different file\n" && editor->Send(Message::GetCurrentPos) == 0 &&
                             editor->Send(Message::GetXOffset) == 0,

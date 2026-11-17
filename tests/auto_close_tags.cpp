@@ -64,7 +64,7 @@ void EncodedFiles(EditorFrame* frame) {
         const auto before = BytesFromHex(item.beforeBytes);
         TestFiles::WriteBytes(path, before);
         DocumentSession document(*editor);
-        if (document.Open(TestFiles::Filename(path), [] { return true; }, item.encoding).status != OpenStatus::Opened)
+        if (document.Load(DocumentLoad::Open{TestFiles::Filename(path), item.encoding}).status != OpenStatus::Opened)
             throw std::runtime_error("encoded tag fixture opens");
         ApplySyntaxLanguage(*editor, item.language);
         editor->Send(Message::GotoPos, editor->Send(Message::GetLength));

@@ -68,9 +68,9 @@ OpenResult EditorFrame::OpenRestartDocument(const wxString& path, std::optional<
         encoding && !encoding->systemOem &&
         (encoding->systemDefault || encoding->encoding == FileEncoding::Utf8 ||
          encoding->encoding == FileEncoding::Utf16Le || encoding->encoding == FileEncoding::Utf16Be);
-    const auto result = LoadFile(
-        path, [] { return true; }, std::nullopt, std::nullopt, OpenDecisionTiming::AfterRead, false,
-        selectAfterLoad ? std::nullopt : encoding);
+    const DocumentLoad::SourceDecoding decoding =
+        !selectAfterLoad && encoding ? DocumentLoad::SourceDecoding(*encoding) : DocumentLoad::SourceDecoding{};
+    const auto result = LoadFile(DocumentLoad::Open{path, decoding});
     if (result.status != OpenStatus::Opened) return result;
     if (selectAfterLoad) document_.SelectEncoding(*encoding);
     if (language) ChooseLanguage(*language);

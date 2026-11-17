@@ -246,13 +246,49 @@ this makes the transaction easier to read; real temporary files remain suitable
 test dependencies.
 
 The private `ReadDocument` operation returns a complete decoded candidate or a
-read/decode error. `Open` owns the discard/save decision, any necessary re-read,
-document replacement and loaded-settings callback. A separate reload-view value
+read/decode error. `DocumentSession::Load` accepts a `DocumentLoad::Intent` and
+owns the discard/save decision, any necessary re-read, document replacement and
+loaded-settings callback. The four intents expose the actual loading operations:
+
+| Intent | Session-owned loading rules |
+| --- | --- |
+| `Open` | Read the chosen source, then ask the replacement decision. Re-read the same captured source if the document was modified before the decision and is clean afterwards. |
+| `Reload` | Capture the current path and use the full current encoding as a weak detection hint. |
+| `ReloadWithEncoding` | Capture the current path and decode using the selected source codec. The app has already completed its discard warning and picker. |
+| `ReloadAsUtf8` | Capture the current path and view, ask the save/discard decision, then read using UTF-8. |
+
+An omitted decision means replacement is already approved. A cancelled source
+selection or a reload of an untitled document returns `Cancelled` without asking
+for a decision. `Open` source decoding is a choice between automatic detection,
+an explicit codec and a codec with native ANSI/OEM identity. The latter preserves
+its native identity; the file's detection result supplies the BOM. Ordinary
+explicit codecs continue to retain the detector's native flags, including its
+large-file fallback. Callers cannot combine strong and weak choices or select an
+independent decision timing. The private loading plan resolves those details once.
+
+The supplied path is compared before normalization to decide whether to retain
+the current language, view and read-only state. A modal decision can change the
+live document: the target path and view remain the captured values, the language
+remains live, and a repeated read uses the current detection preferences. Failed
+or cancelled loading keeps changes already made by the decision callback.
+A separate reload-view value
 captures and restores the original selection/scroll protocol after indentation
 has been applied. Re-reading releases the first candidate's text before another
 whole-file read. Encoding preference, empty-file, ASCII and legacy-candidate
 selection are named private operations; their original priority remains explicit
 in `DetectEncoding`.
+
+The frame passes the same intent into the session and derives successful
+reset-on-new-file monitoring from the `Open` alternative. This keeps a same-path
+Open distinct from Reload: both can preserve the document view, while only Open
+resets monitoring when configured. The frame still owns native dialogs, recent
+files, mixed-EOL confirmation and UI updates. Restart continues to apply any
+post-load current-encoding selection after this frame work; its source-decoding
+choice is part of the Open intent.
+
+`document_load_intents` tests this interface with a real editor and temporary
+files, independently of the application shell. The existing reopen, recoding,
+watcher and restart fixtures retain coverage of native adapters and their ordering.
 
 The document-local language choice belongs to the session. It exposes a
 language selection operation and read-only effective-language/override state.

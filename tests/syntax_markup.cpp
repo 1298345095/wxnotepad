@@ -53,7 +53,7 @@ void Detection(EditorFrame* frame) {
         const auto path = TestFiles::TemporaryDirectory(fixture.name);
         TestFiles::WriteBytes(path, fixture.text);
         DocumentSession document(*frame->Editor());
-        Require(document.Open(TestFiles::Filename(path), [] { return true; }).status == OpenStatus::Opened,
+        Require(document.Load(DocumentLoad::Open{TestFiles::Filename(path)}).status == OpenStatus::Opened,
                 "prefix fixture Open must succeed");
         if (document.EffectiveLanguage() != fixture.language) {
             std::fprintf(stderr, "fixture=%s expected=%s actual=%s\n", fixture.name, SyntaxFor(fixture.language).name,
@@ -579,7 +579,7 @@ public:
                 const auto path = TestFiles::TemporaryDirectory("sample.html");
                 TestFiles::WriteBytes(path, "<html>\n<body id=\"page\">&amp;</body>\n</html>\n");
                 DocumentSession document(*frame->Editor());
-                Require(document.Open(TestFiles::Filename(path), [] { return true; }).status == OpenStatus::Opened,
+                Require(document.Load(DocumentLoad::Open{TestFiles::Filename(path)}).status == OpenStatus::Opened,
                         "HTML Open must succeed");
                 Require(LanguageName(document.Language()) == "Web Source Code",
                         "HTML Open must automatically choose the original Web Source Code scheme");

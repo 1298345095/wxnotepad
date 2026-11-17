@@ -354,7 +354,7 @@ public:
                     Require(output.good(), "fixture write must succeed");
                 }
                 DocumentSession document(*editor);
-                Require(document.Open(files.cpp, [] { return true; }).status == OpenStatus::Opened &&
+                Require(document.Load(DocumentLoad::Open{files.cpp}).status == OpenStatus::Opened &&
                             document.Language() == SyntaxLanguage::Cpp && !document.LanguageOverride(),
                         "document Open owns automatic classification without a frame");
                 document.SelectLanguage(SyntaxLanguage::Python);

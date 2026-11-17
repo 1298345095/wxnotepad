@@ -429,26 +429,24 @@ SaveResult EditorFrame::SaveCopy() {
 }
 
 OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optional<FileEncoding> encoding) {
-    return LoadFile(
-        source, [this] { return ConfirmDiscardChanges(_("Save changes to %s before opening another file?")); },
-        encoding);
+    const DocumentLoad::SourceDecoding decoding =
+        encoding ? DocumentLoad::SourceDecoding(*encoding) : DocumentLoad::SourceDecoding{};
+    return LoadFile(DocumentLoad::Open{source, decoding, [this] {
+                                           return ConfirmDiscardChanges(
+                                               _("Save changes to %s before opening another file?"));
+                                       }});
 }
 
-OpenResult EditorFrame::LoadFile(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                                 std::optional<FileEncoding> encoding, std::optional<EncodingChoice> weakEncoding,
-                                 OpenDecisionTiming decisionTiming, bool reload,
-                                 std::optional<EncodingChoice> sourceEncoding) {
-    const auto result = document_.Open(
-        source, beforeReplace, encoding, weakEncoding,
-        [this] {
-            indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
-            const auto& preferences = settings_ ? settings_->values : defaults_;
-            editor_->Send(Scintilla::Message::SetEdgeColumn,
-                          document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
-        },
-        decisionTiming, sourceEncoding);
+OpenResult EditorFrame::LoadFile(const DocumentLoad::Intent& intent) {
+    const auto result = document_.Load(intent, [this] {
+        indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+        const auto& preferences = settings_ ? settings_->values : defaults_;
+        editor_->Send(Scintilla::Message::SetEdgeColumn,
+                      document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
+    });
     if (result.status == OpenStatus::Opened) {
-        if (!reload && fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
+        if (std::holds_alternative<DocumentLoad::Open>(intent) && fileWatchingOptions_.resetOnNewFile)
+            fileWatchingOptions_.mode = FileWatchingMode::None;
         RefreshFileWatching();
         RecordRecentFile();
         wrapColumn_ = 0;
@@ -489,7 +487,7 @@ void EditorFrame::ShowRecentFiles() {
         });
     const auto selected = dialog.Choose();
     if (selected) {
-        const auto result = LoadFile(selected, [] { return true; });
+        const auto result = LoadFile(DocumentLoad::Open{selected});
         if (result.status == OpenStatus::Failed)
             wxMessageBox(result.error, _("Could not open file"), wxOK | wxICON_ERROR, this);
     }
@@ -498,9 +496,7 @@ void EditorFrame::ShowRecentFiles() {
 
 OpenResult EditorFrame::ReloadCurrentFile(bool followEnd) {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
-    const auto result = LoadFile(
-        document_.Path(), [] { return true; }, std::nullopt, document_.CurrentEncoding(), OpenDecisionTiming::AfterRead,
-        true);
+    const auto result = LoadFile(DocumentLoad::Reload{});
     if (result.status == OpenStatus::Opened && followEnd) editor_->Send(Scintilla::Message::DocumentEnd);
     return result;
 }
@@ -527,16 +523,15 @@ OpenResult EditorFrame::ReloadWithEncoding() {
                                                          ? std::nullopt
                                                          : std::optional<FileEncoding>(document_.Encoding()));
     if (!encoding) return {Cancelled, {}};
-    return LoadFile(document_.Path(), [] { return true; }, encoding, std::nullopt, OpenDecisionTiming::AfterRead, true);
+    return LoadFile(DocumentLoad::ReloadWithEncoding{*encoding});
 }
 
 OpenResult EditorFrame::ReloadAsUtf8() {
     if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
     // Original CMD_RELOADUTF8 uses FileLoad(Reload), including FileSave(Ask)
     // before file I/O, with the view captured before Save cleanup can move it.
-    return LoadFile(
-        document_.Path(), [this] { return ConfirmDiscardChanges(_("Save changes to %s before reloading?")); },
-        FileEncoding::Utf8, std::nullopt, OpenDecisionTiming::BeforeRead, true);
+    return LoadFile(DocumentLoad::ReloadAsUtf8{
+        [this] { return ConfirmDiscardChanges(_("Save changes to %s before reloading?")); }});
 }
 
 OpenResult EditorFrame::Open() {

@@ -32,7 +32,26 @@ struct SaveResult {
     wxString error;
 };
 enum class OpenStatus { Opened, Cancelled, Failed };
-enum class OpenDecisionTiming { AfterRead, BeforeRead };
+namespace DocumentLoad {
+// Automatic detection, an explicit codec, or a source codec with native ANSI/OEM
+// identity. Detection supplies the BOM in all three cases.
+using SourceDecoding = std::variant<std::monostate, FileEncoding, EncodingChoice>;
+struct Open {
+    std::optional<wxString> source;
+    SourceDecoding decoding{};
+    // Asked after a successful read. Omission means replacement is already approved.
+    std::function<bool()> beforeReplace{};
+};
+struct Reload {};
+struct ReloadWithEncoding {
+    FileEncoding encoding;
+};
+struct ReloadAsUtf8 {
+    // Asked before reading, after the current path and view have been captured.
+    std::function<bool()> beforeReplace{};
+};
+using Intent = std::variant<Open, Reload, ReloadWithEncoding, ReloadAsUtf8>;
+} // namespace DocumentLoad
 struct LineEndingCounts {
     size_t crlf = 0;
     size_t cr = 0;
@@ -64,13 +83,9 @@ public:
                       SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {});
     bool UpdateFileTime();
-    // sourceEncoding retains a full native OEM identity for explicit relaunch decoding.
-    OpenResult Open(const std::optional<wxString>& source, const std::function<bool()>& beforeReplace,
-                    std::optional<FileEncoding> encoding = std::nullopt,
-                    std::optional<EncodingChoice> weakEncoding = std::nullopt,
-                    const std::function<void()>& configureLoadedDocument = {},
-                    OpenDecisionTiming decisionTiming = OpenDecisionTiming::AfterRead,
-                    std::optional<EncodingChoice> sourceEncoding = std::nullopt);
+    // Reload intents obtain their path and any current-encoding hint from this
+    // session. Loaded settings are applied before restoring the same-path view.
+    OpenResult Load(const DocumentLoad::Intent& intent, const std::function<void()>& configureLoadedDocument = {});
     void New();
     void SetEncodingOptions(EncodingOptions options) { encodingOptions_ = options; }
     SaveCleanupOptions SaveCleanup() const { return saveCleanup_; }
