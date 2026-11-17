@@ -41,8 +41,8 @@ void StripSelectedBlanks(EditorControl& editor, bool leading) {
         find.chrg.cpMax += find.chrg.cpMin - find.chrgText.cpMax;
         if (find.chrg.cpMin == find.chrg.cpMax) break;
         if (leading) {
-            const auto line = editor.Send(LineFromPosition, find.chrg.cpMin);
-            if (editor.Send(PositionFromLine, line) == find.chrg.cpMin)
+            if (const auto line = editor.Send(LineFromPosition, find.chrg.cpMin);
+                editor.Send(PositionFromLine, line) == find.chrg.cpMin)
                 find.chrg.cpMin = editor.Send(PositionFromLine, line + 1);
             if (find.chrg.cpMin == find.chrg.cpMax) break;
         }

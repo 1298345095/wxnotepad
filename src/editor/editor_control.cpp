@@ -21,17 +21,19 @@ bool HandleControlDelete(EditorControl& editor, const wxKeyEvent& event) {
         (event.GetKeyCode() != WXK_BACK && event.GetKeyCode() != WXK_DELETE))
         return false;
     // Notepad4 CMD_CTRLBACK/CMD_CTRLDEL precede the core key map.
-    const auto caret = editor.Send(GetCurrentPos);
-    if (caret != editor.Send(GetAnchor)) {
+    if (const auto caret = editor.Send(GetCurrentPos); caret != editor.Send(GetAnchor)) {
         editor.Send(SetSel, caret, caret);
     } else {
         const auto line = editor.Send(LineFromPosition, caret);
         const auto start = editor.Send(PositionFromLine, line);
-        if (event.GetKeyCode() == WXK_BACK)
-            editor.Send(caret == start                                      ? DeleteBack
-                        : caret <= editor.Send(GetLineIndentPosition, line) ? DelLineLeft
-                                                                            : DelWordLeft);
-        else
+        if (event.GetKeyCode() == WXK_BACK) {
+            auto message = DelWordLeft;
+            if (caret == start)
+                message = DeleteBack;
+            else if (caret <= editor.Send(GetLineIndentPosition, line))
+                message = DelLineLeft;
+            editor.Send(message);
+        } else
             editor.Send(start == editor.Send(GetLineEndPosition, line) ? LineDelete : DelWordRight);
     }
     return true;

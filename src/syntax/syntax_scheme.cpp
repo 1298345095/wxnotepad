@@ -2,6 +2,7 @@
 #include "editor/editor_ids.h"
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
+#include <array>
 #include <span>
 #include <SciLexer.h>
 #include <utility>
@@ -40,8 +41,8 @@ void InstallFolding(EditorControl& editor, bool fold) {
     editor.Send(SetAutomaticFold, fold ? automatic : 0);
     editor.Send(SetFoldMarginColour, 1, Colour(0xFFFFFF));
     editor.Send(SetFoldMarginHiColour, 1, Colour(0xFFFFFF));
-    const Scintilla::MarkerSymbol folders[] = {BoxPlusConnected, BoxMinusConnected, TCorner, LCorner, VLine,
-                                               BoxPlus,          BoxMinus};
+    const std::array<Scintilla::MarkerSymbol, 7> folders = {
+        BoxPlusConnected, BoxMinusConnected, TCorner, LCorner, VLine, BoxPlus, BoxMinus};
     for (size_t index = 0; index < std::size(folders); ++index) {
         using enum Scintilla::MarkerOutline;
         const size_t marker = static_cast<size_t>(std::to_underlying(FolderEnd)) + index;
@@ -61,7 +62,13 @@ void InstallFolding(EditorControl& editor, bool fold) {
 void ApplyIndentationGuides(EditorControl& editor, SyntaxLanguage language, bool show, bool simple) {
     using enum Scintilla::IndentView;
     // Notepad4 89b8b36 Styles.cpp::Style_SetIndentGuides.
-    const auto mode = !show ? None : simple ? Real : SyntaxFor(language).indentLookForward ? LookForward : LookBoth;
+    auto mode = None;
+    if (show) {
+        if (simple)
+            mode = Real;
+        else
+            mode = SyntaxFor(language).indentLookForward ? LookForward : LookBoth;
+    }
     editor.Send(Scintilla::Message::SetIndentationGuides, static_cast<uintptr_t>(std::to_underlying(mode)));
 }
 

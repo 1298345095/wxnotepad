@@ -384,12 +384,14 @@ std::optional<DetectedEncoding> DetectSignatureEncoding(std::string_view bytes,
     using enum FileEncoding;
     constexpr size_t maxConvertedSize = (1U << 30) - 16;
     if (explicitEncoding && (bytes.size() < maxConvertedSize || *explicitEncoding == Utf8)) {
-        return DetectedEncoding{explicitEncoding,
-                                *explicitEncoding == Utf16Le ? bytes.starts_with("\x{ff}\x{fe}")
-                                : *explicitEncoding == Utf16Be
-                                    ? bytes.starts_with("\x{fe}\x{ff}")
-                                    : *explicitEncoding == Utf8 && bytes.starts_with("\x{ef}\x{bb}\x{bf}"),
-                                {}};
+        bool bom = false;
+        if (*explicitEncoding == Utf16Le)
+            bom = bytes.starts_with("\x{ff}\x{fe}");
+        else if (*explicitEncoding == Utf16Be)
+            bom = bytes.starts_with("\x{fe}\x{ff}");
+        else if (*explicitEncoding == Utf8)
+            bom = bytes.starts_with("\x{ef}\x{bb}\x{bf}");
+        return DetectedEncoding{explicitEncoding, bom, {}};
     }
     if (bytes.size() < maxConvertedSize && bytes.size() % 2 == 0) {
         if (bytes.starts_with("\x{ff}\x{fe}")) return Choice(CPI_UNICODEBOM, legacy, oem);

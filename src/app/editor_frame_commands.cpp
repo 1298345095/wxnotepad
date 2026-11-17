@@ -1559,9 +1559,10 @@ void EditorFrame::HandleAltBlockNavigationKey(const wxKeyEvent& event, int key) 
         else
             editor_->GoToBlock(End);
     } else if ((key == ',' || key == '.') && !event.ShiftDown()) {
-        const auto command = key == ',' ? (event.ControlDown() ? PreviousSibling : Previous)
-                                        : (event.ControlDown() ? NextSibling : Next);
-        editor_->GoToBlock(command);
+        if (key == ',')
+            editor_->GoToBlock(event.ControlDown() ? PreviousSibling : Previous);
+        else
+            editor_->GoToBlock(event.ControlDown() ? NextSibling : Next);
     }
 }
 
@@ -1788,7 +1789,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
         [this](wxCommandEvent&) {
             using enum Scintilla::Message;
             auto& preferences = settings_ ? settings_->values : defaults_;
-            int limit = static_cast<int>(editor_->Send(GetEdgeColumn));
+            auto limit = static_cast<int>(editor_->Send(GetEdgeColumn));
             int mode = preferences.longLineMode;
             if (ShowLongLineSettingsDialog(this, limit, mode)) {
                 preferences.longLinesLimit = limit;

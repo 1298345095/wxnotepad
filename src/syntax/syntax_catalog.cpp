@@ -449,7 +449,7 @@ std::optional<SyntaxLanguage> SniffMarkupFamily(std::string_view prefix, Filenam
     if (lower.starts_with("<!doctype")) return Xml;
     if (lower.starts_with("<html")) return Html;
     if (noHtmlGuess || head.size() <= 1) return std::nullopt;
-    if (lower.find("<html") != std::string::npos) return Html;
+    if (lower.contains("<html")) return Html;
     if (MarkupNameStart(static_cast<unsigned char>(head[1]))) return Xml;
     return std::nullopt;
 }
@@ -529,8 +529,9 @@ SyntaxLanguage LanguageForPath(const wxString& path) {
     const auto name = wxFileName(path).GetFullName();
     // Pinned Styles.cpp::Style_GetLexerFromFile checks these .txt names first.
     if (name.CmpNoCase("CMakeLists.txt") == 0 || name.CmpNoCase("CMakeCache.txt") == 0) return CMake;
-    const auto originalExtension = FileExtension(path);
-    if (name.StartsWith(".") && (originalExtension.StartsWith("bash") || originalExtension == "profile")) return Bash;
+    if (const auto originalExtension = FileExtension(path);
+        name.StartsWith(".") && (originalExtension.StartsWith("bash") || originalExtension == "profile"))
+        return Bash;
     wxString extension = FileExtension(path);
     for (size_t index = 0; index < extension.length(); ++index) {
         const auto ch = extension[index].GetValue();
@@ -562,8 +563,7 @@ std::optional<DetectedSyntax> DetectLanguage(const wxString& path, std::string_v
     // filename. An unmatched template keeps the Shell Script association.
     if (extension == "in") {
         const auto underlying = path.BeforeLast('.');
-        const auto language = LanguageForPath(underlying);
-        if (language != PlainText) return DetectedSyntax{language};
+        if (const auto language = LanguageForPath(underlying); language != PlainText) return DetectedSyntax{language};
         if (OriginalFilenameMatch(underlying) == FilenameMatch::Associated) return DetectedSyntax{PlainText};
         templateConfig = OriginalFilenameMatch(underlying) == FilenameMatch::Config;
     }

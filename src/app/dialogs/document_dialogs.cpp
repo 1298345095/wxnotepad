@@ -326,6 +326,10 @@ LineEndingConversionDialog::LineEndingConversionDialog(wxWindow* parent, const L
 LineEndingConversionChoice LineEndingConversionDialog::Choose() {
     using enum Scintilla::EndOfLine;
     const bool convert = ShowModal() == wxID_OK;
-    const auto selected = mode_->GetSelection() == 0 ? CrLf : mode_->GetSelection() == 1 ? Lf : Cr;
+    auto selected = Cr;
+    if (mode_->GetSelection() == 0)
+        selected = CrLf;
+    else if (mode_->GetSelection() == 1)
+        selected = Lf;
     return {convert, always_->GetValue(), selected};
 }

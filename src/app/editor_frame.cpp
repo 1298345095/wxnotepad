@@ -203,7 +203,11 @@ void EditorFrame::ShowLineEndingOptions() {
     const auto choice = dialog.Choose();
     if (!choice) return;
     defaultEolMode_ = choice->defaultMode;
-    const auto defaultMode = defaultEolMode_ == 0 ? CrLf : defaultEolMode_ == 1 ? Lf : Cr;
+    auto defaultMode = Cr;
+    if (defaultEolMode_ == 0)
+        defaultMode = CrLf;
+    else if (defaultEolMode_ == 1)
+        defaultMode = Lf;
     document_.SetDefaultEolMode(defaultMode);
     warnLineEndings_ = choice->warn;
     document_.SetSaveCleanup(choice->cleanup);

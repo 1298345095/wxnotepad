@@ -371,11 +371,16 @@ void SCICALL Window::InvalidateRectangle(PRectangle r) noexcept {
 }
 void Window::SetCursor(Cursor c) const noexcept {
     using enum Scintilla::Internal::Window::Cursor;
-    if (wid)
-        Host(wid)->SetCursor(wxCursor(c == text   ? wxCURSOR_IBEAM
-                                      : c == hand ? wxCURSOR_HAND
-                                      : c == wait ? wxCURSOR_WAIT
-                                                  : wxCURSOR_ARROW));
+    if (wid) {
+        auto cursor = wxCURSOR_ARROW;
+        if (c == text)
+            cursor = wxCURSOR_IBEAM;
+        else if (c == hand)
+            cursor = wxCURSOR_HAND;
+        else if (c == wait)
+            cursor = wxCURSOR_WAIT;
+        Host(wid)->SetCursor(wxCursor(cursor));
+    }
 }
 PRectangle SCICALL Window::GetMonitorRect(Point point) const noexcept {
     const auto screen = Host(wid)->ClientToScreen(wxPoint(point.x, point.y));

@@ -84,7 +84,11 @@ Scintilla::EndOfLine SelectEol(const LineEndingCounts& counts, Scintilla::EndOfL
     // Notepad4 89b8b36 EditDetectEOLMode: retain the configured mode when tied,
     // otherwise choose the largest count, preferring CRLF and then LF.
     const size_t maximum = std::max({counts.crlf, counts.cr, counts.lf});
-    const size_t preferred = configured == CrLf ? counts.crlf : configured == Lf ? counts.lf : counts.cr;
+    auto preferred = counts.cr;
+    if (configured == CrLf)
+        preferred = counts.crlf;
+    else if (configured == Lf)
+        preferred = counts.lf;
     if (preferred == maximum) return configured;
     if (counts.crlf == maximum) return CrLf;
     return counts.lf == maximum ? Lf : Cr;

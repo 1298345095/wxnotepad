@@ -137,8 +137,8 @@ bool AdvanceReplacement(EditorControl& editor, ReplacementCursor& cursor, MatchR
     if (match.start == match.end && !regexStartOfLine) cursor.position = editor.Send(PositionAfter, cursor.position);
     // Keep the original special handling for patterns whose first byte is '^'.
     if (regexStartOfLine) {
-        const auto line = editor.Send(LineFromPosition, cursor.position);
-        if (editor.Send(PositionFromLine, line) == cursor.position)
+        if (const auto line = editor.Send(LineFromPosition, cursor.position);
+            editor.Send(PositionFromLine, line) == cursor.position)
             cursor.position = editor.Send(PositionFromLine, line + 1);
         if (cursor.position == cursor.limit) return false;
     }
