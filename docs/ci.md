@@ -301,15 +301,18 @@ References: [SonarCloud GitHub Actions setup](https://docs.sonarsource.com/sonar
 
 ## Evidence and build output
 
-Windows configures WER full dumps specifically for `visual_brace.exe` under
-`.ci/reports/windows-dumps` to investigate the observed `0xc0000374` heap failure.
-The existing evidence upload includes that directory, its WER configuration,
-the exact test executable and any generated PDB. After the complete Windows
-suite, the same owned test runs up to 20 times serially through `ci.py probe`,
-with its original 90-second deadline and build working directory. Each run's
-unbuffered output and process result remain in `.ci/reports/visual-brace-repeat`;
-the sequence stops and fails on its first abnormal exit. The complete suite's
-JUnit and logs remain separate.
+Windows configures WER full dumps for `visual_brace.exe` and `eol_open.exe`
+under `.ci/reports/windows-dumps`. These targets have produced an observed
+`0xc0000374` heap failure and a `mixed_line_ending_open` process crash,
+respectively. The evidence upload includes that directory, the per-target WER
+configuration, the exact test executables and any generated PDBs.
+After the complete Windows suite, `ci.py probe` runs the visual brace test up to
+20 times with its original 90-second deadline, and the mixed-EOL test up to
+three times with its original 30-second deadline. Both use the build working
+directory. Each run's combined output and process result remain in
+`.ci/reports/visual-brace-repeat` or `.ci/reports/eol-open-repeat`; each sequence
+stops and fails on its first abnormal exit. The complete suite's JUnit and
+logs remain separate.
 
 The JSON native fixture waits for GTK's initial folder load before selecting a
 file, so that load cannot replace the requested selection. On Linux with CMake
