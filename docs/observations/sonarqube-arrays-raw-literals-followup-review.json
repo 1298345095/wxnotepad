@@ -1,0 +1,562 @@
+{
+  "project": "1298345095_wxnotepad",
+  "pull_request": 225,
+  "baseline_main": "ecf7c0849da662f8428383a30b375c5bddbd9562",
+  "first_published_head": "b15abf41c03d16fab8345a4e49865d5ba692eb23",
+  "first_pr_analysis": {
+    "head": "b15abf41c03d16fab8345a4e49865d5ba692eb23",
+    "issues": {
+      "issues": [
+        {
+          "key": "AaHpzhXClE-6OJasLHsU",
+          "rule": "cpp:S6022",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:src/editor/completion_selection.cpp",
+          "severity": "MAJOR",
+          "status": "OPEN",
+          "message": "Use \"std::byte\" for byte-oriented memory access.",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-17T13:38:09+0000",
+          "textRange": {
+            "startLine": 34,
+            "endLine": 34
+          }
+        },
+        {
+          "key": "AaHpzhqUlE-6OJasLHsV",
+          "rule": "cpp:S5350",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/find_all.cpp",
+          "severity": "MINOR",
+          "status": "OPEN",
+          "message": "Make the type of this variable a pointer-to-const. The current type of \"action\" is \"class wxButton *\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-01T01:15:35+0000",
+          "textRange": {
+            "startLine": 78,
+            "endLine": 78
+          }
+        },
+        {
+          "key": "AaHpzhqUlE-6OJasLHsW",
+          "rule": "cpp:S5350",
+          "project": "1298345095_wxnotepad",
+          "component": "1298345095_wxnotepad:tests/find_all.cpp",
+          "severity": "MINOR",
+          "status": "OPEN",
+          "message": "Make the type of this variable a pointer-to-const. The current type of \"result\" is \"class wxStaticText *\".",
+          "cleanCodeAttribute": "CLEAR",
+          "cleanCodeAttributeCategory": "INTENTIONAL",
+          "author": "30920958+1298345095@users.noreply.github.com",
+          "creationDate": "2026-11-01T01:15:35+0000",
+          "textRange": {
+            "startLine": 83,
+            "endLine": 83
+          }
+        }
+      ],
+      "paging": {
+        "pageIndex": 1,
+        "pageSize": 500,
+        "total": 3
+      }
+    },
+    "gate": {
+      "status": "OK",
+      "conditions": [
+        {
+          "metricKey": "new_reliability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_security_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_maintainability_rating",
+          "status": "OK",
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "metricKey": "new_coverage",
+          "status": "OK",
+          "errorThreshold": "80",
+          "actualValue": "90.4"
+        },
+        {
+          "metricKey": "new_duplicated_lines_density",
+          "status": "OK",
+          "errorThreshold": "3",
+          "actualValue": "0.8"
+        },
+        {
+          "metricKey": "new_security_hotspots_reviewed",
+          "status": "OK",
+          "errorThreshold": "100",
+          "actualValue": "100.0"
+        }
+      ]
+    },
+    "measures": {
+      "component": {
+        "key": "1298345095_wxnotepad",
+        "name": "wxnotepad",
+        "qualifier": "TRK"
+      },
+      "measures": [
+        {
+          "metric": "new_violations",
+          "value": "3",
+          "period": 1,
+          "bestValue": false
+        },
+        {
+          "metric": "new_reliability_rating",
+          "value": "1.0",
+          "period": 1,
+          "bestValue": true
+        },
+        {
+          "metric": "new_coverage",
+          "value": "90.39301310043668",
+          "period": 1,
+          "bestValue": false
+        },
+        {
+          "metric": "new_security_rating",
+          "value": "1.0",
+          "period": 1,
+          "bestValue": true
+        },
+        {
+          "metric": "new_maintainability_rating",
+          "value": "1.0",
+          "period": 1,
+          "bestValue": true
+        },
+        {
+          "metric": "new_security_hotspots_reviewed",
+          "value": "100.0",
+          "period": 1,
+          "bestValue": true
+        },
+        {
+          "metric": "new_duplicated_lines_density",
+          "value": "0.7905138339920948",
+          "period": 1,
+          "bestValue": false
+        }
+      ],
+      "metrics": [
+        {
+          "key": "new_duplicated_lines_density",
+          "name": "Duplicated Lines (%) on New Code",
+          "description": "Duplicated lines (%) on new code balanced by statements",
+          "domain": "Duplications",
+          "type": "PERCENT",
+          "hidden": false,
+          "custom": false
+        },
+        {
+          "key": "new_reliability_rating",
+          "name": "Reliability Rating on New Code",
+          "description": "Reliability rating on new code",
+          "domain": "Reliability",
+          "type": "RATING",
+          "hidden": false,
+          "custom": false
+        },
+        {
+          "key": "new_security_hotspots_reviewed",
+          "name": "Security Hotspots Reviewed on New Code",
+          "description": "Percentage of Security Hotspots Reviewed on New Code",
+          "domain": "SecurityReview",
+          "type": "PERCENT",
+          "hidden": false,
+          "custom": false
+        },
+        {
+          "key": "new_coverage",
+          "name": "Coverage on New Code",
+          "description": "Coverage of new/changed code",
+          "domain": "Coverage",
+          "type": "PERCENT",
+          "hidden": false,
+          "custom": false
+        },
+        {
+          "key": "new_violations",
+          "name": "New Issues",
+          "description": "New issues",
+          "domain": "Issues",
+          "type": "INT",
+          "hidden": false,
+          "custom": false
+        },
+        {
+          "key": "new_maintainability_rating",
+          "name": "Maintainability Rating on New Code",
+          "description": "Maintainability rating on new code",
+          "domain": "Maintainability",
+          "type": "RATING",
+          "hidden": false,
+          "custom": false
+        },
+        {
+          "key": "new_security_rating",
+          "name": "Security Rating on New Code",
+          "description": "Security rating on new code",
+          "domain": "Security",
+          "type": "RATING",
+          "hidden": false,
+          "custom": false
+        }
+      ]
+    }
+  },
+  "first_head_check_results": [
+    {
+      "name": "SonarCloud Code Analysis",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://sonarcloud.io/dashboard?id=1298345095_wxnotepad&pullRequest=225",
+      "html_url": "https://github.com/1298345095/wxnotepad/runs/134091073221",
+      "started_at": "2026-11-17T13:54:18Z",
+      "completed_at": "2026-11-17T13:59:24Z"
+    },
+    {
+      "name": "Linux coverage / SonarCloud",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134086691994",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134086691994",
+      "started_at": "2026-11-17T13:52:03Z",
+      "completed_at": "2026-11-17T13:59:30Z"
+    },
+    {
+      "name": "CodeQL",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/runs/134079437077",
+      "html_url": "https://github.com/1298345095/wxnotepad/runs/134079437077",
+      "started_at": "2026-11-17T13:39:33Z",
+      "completed_at": "2026-11-17T13:39:36Z"
+    },
+    {
+      "name": "Native clang-tidy",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821963/job/134079292019",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821963/job/134079292019",
+      "started_at": "2026-11-17T13:39:20Z",
+      "completed_at": "2026-11-17T13:52:53Z"
+    },
+    {
+      "name": "Windows MSVC",
+      "status": "completed",
+      "conclusion": "failure",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058904",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058904",
+      "started_at": "2026-11-17T13:38:57Z",
+      "completed_at": "2026-11-17T14:01:02Z"
+    },
+    {
+      "name": "Linux coverage / x11",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058868",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058868",
+      "started_at": "2026-11-17T13:38:56Z",
+      "completed_at": "2026-11-17T13:51:35Z"
+    },
+    {
+      "name": "CodeQL / cpp",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821993/job/134079058861",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821993/job/134079058861",
+      "started_at": "2026-11-17T13:38:56Z",
+      "completed_at": "2026-11-17T13:44:43Z"
+    },
+    {
+      "name": "Linux GCC 13 / X11 + Wayland",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058559",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058559",
+      "started_at": "2026-11-17T13:38:56Z",
+      "completed_at": "2026-11-17T13:56:07Z"
+    },
+    {
+      "name": "Format and workflow syntax",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821963/job/134079058409",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821963/job/134079058409",
+      "started_at": "2026-11-17T13:38:56Z",
+      "completed_at": "2026-11-17T13:39:18Z"
+    },
+    {
+      "name": "Linux coverage / wayland",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058247",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058247",
+      "started_at": "2026-11-17T13:38:56Z",
+      "completed_at": "2026-11-17T13:52:00Z"
+    },
+    {
+      "name": "CodeQL / actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821993/job/134079058180",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821993/job/134079058180",
+      "started_at": "2026-11-17T13:38:57Z",
+      "completed_at": "2026-11-17T13:39:45Z"
+    },
+    {
+      "name": "Linux Clang 18 / libFuzzer + ASan + UBSan",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821943/job/134079057825",
+      "html_url": "https://github.com/1298345095/wxnotepad/actions/runs/44094821943/job/134079057825",
+      "started_at": "2026-11-17T13:38:56Z",
+      "completed_at": "2026-11-17T13:42:57Z"
+    }
+  ],
+  "code_fix_counts": {
+    "initial_main_keys": 555,
+    "additional_main_keys": 1,
+    "total_main_keys": 556,
+    "additional_pr_only_keys": 2,
+    "main_false_positives": 7,
+    "remaining_reviewed_open_S6022": 10
+  },
+  "utf16_conversion": {
+    "rule": "cpp:S6022",
+    "pr_issue": "AaHpzhXClE-6OJasLHsU",
+    "main_issue": "AaHaPjD5SajQlY95HQcC",
+    "baseline": "ecf7c0849da662f8428383a30b375c5bddbd9562",
+    "classification": "Existing encoded representation access on main was re-reported on changed array line. Fixed rather than marked false positive.",
+    "change": "Use existing pinned Scintilla UTF8Length/UTF8FromUTF16 on explicit numeric UTF-16 code units in std::array<wchar_t,2>, eliminating char pointer reinterpretation and endian-dependent object representation.",
+    "coverage": {
+      "32": {
+        "queries_compared": 5372,
+        "distinct_packed_results": 3823,
+        "categories": {
+          "single_bmp": 1845,
+          "double_bmp": 23,
+          "surrogate_pair": 3504
+        },
+        "examples": {
+          "sum": "e28891",
+          "bbi": "f09d959a",
+          "gvertneqq": "e289a9efb880",
+          ":smile:": "f09f9884",
+          ":smile": "f09f9884"
+        },
+        "sha256_of_rows": "43d4c896e645d97bcdb0e052127b71d82cb89fe053628f74bbaf48eb6b906e4a"
+      },
+      "16": {
+        "queries_compared": 5372,
+        "distinct_packed_results": 3823,
+        "categories": {
+          "single_bmp": 1845,
+          "double_bmp": 23,
+          "surrogate_pair": 3504
+        },
+        "examples": {
+          "sum": "e28891",
+          "bbi": "f09d959a",
+          "gvertneqq": "e289a9efb880",
+          ":smile:": "f09f9884",
+          ":smile": "f09f9884"
+        },
+        "sha256_of_rows": "43d4c896e645d97bcdb0e052127b71d82cb89fe053628f74bbaf48eb6b906e4a"
+      }
+    },
+    "validation": [
+      "Actual wxWidgets 3.3.3/GTK SDK C++23 translation-unit syntax compilation passed",
+      "Compiled actual pinned LaTeXInput.cxx and UniConversion.cxx with exact conversion statements extracted from production at -O2 -Wall -Wextra -Werror -pedantic-errors",
+      "Both standalone executables passed project ci.py probe",
+      "Every valid LaTeX sequence and both Emoji suffix forms compared to independent strict Python UTF-16LE to UTF-8 codec",
+      "Second executable uses compiler -fshort-wchar to validate numeric code-unit algorithm with 16-bit wchar_t; this does not represent Windows GUI runtime execution"
+    ],
+    "prior_retained_S6022_count": 11,
+    "remaining_retained_S6022_count": 10,
+    "modified_files": [
+      "src/editor/completion_selection.cpp"
+    ],
+    "source_sha256": "3ebce8885a550d772d68afe3bdd103460c00964ca4a41dc3c2bb35b054796273",
+    "source_scope": "Read whole completion_selection.cpp, unique caller EditorControl::Core::NotifyParent, declaration word_completion.h, existing SupplementaryLatex test and original HandleLaTeXTabCompletion/lookup implementation; no other source file edits."
+  },
+  "pointer_const": {
+    "file": "tests/find_all.cpp",
+    "rule": "cpp:S5350",
+    "pr_keys": [
+      "AaHpzhqUlE-6OJasLHsV",
+      "AaHpzhqUlE-6OJasLHsW"
+    ],
+    "baseline_main_keys": [],
+    "baseline_main_lookup": "No cpp:S5350 entries for tests/find_all.cpp in sonar-open-all.json",
+    "exit_code": 0,
+    "sha256": "7f00977d00a89b86744dd87b2362e4a6045d169e2fa277c83d2ecf578fec21c1",
+    "log": "/workspace/scratch/a436f0d30032/find-all-s5350-syntax.log",
+    "validation": "GCC 14.2 C++23 syntax-only compilation against the existing real wxWidgets 3.3.3/GTK headers and pinned Scintilla core; clang-format 23.1.2 dry-run and git diff --check passed."
+  },
+  "native_allocation_fault": {
+    "base_head": "b15abf41c03d16fab8345a4e49865d5ba692eb23",
+    "ci_failure": {
+      "run_id": 44094822052,
+      "job_id": 134079058904,
+      "url": "https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058904",
+      "test": "native_completion_allocation_failures",
+      "test_number": 212,
+      "direct_evidence": "FAIL: candidate storage propagates its injected allocation failure",
+      "summary": "217 registered: 215 Passed, 1 Skipped, 1 Failed",
+      "compiler": "MSVC 19.51.36260.0",
+      "limitation": "The original shared message does not identify which RequireAllocationFailure call failed."
+    },
+    "root_cause_analysis": {
+      "source": "https://github.com/microsoft/STL/blob/165a67afdde92bf3e5248be35b6f9240b3d1efb5/stl/inc/xmemory",
+      "facts": [
+        "On x86/x64 the big allocation threshold is 4096 bytes and alignment is 32 bytes.",
+        "Release _Non_user_size is sizeof(void*) + _Big_allocation_alignment - 1.",
+        "_Allocate_manually_vector_aligned calls the allocation traits with _Non_user_size + _Bytes.",
+        "Production WordList::AddBuffer now constructs vector<byte> instead of make_unique<byte[]>.",
+        "ScopedFailure compares the global operator new argument to targetSize exactly."
+      ],
+      "inference": "The 4096-byte arena payload maps to an enlarged global-new request under MSVC, so the old exact 4096 injection cannot reach that allocation; the initial-arena shared assertion is the expected failure location, pending follow-up Windows execution.",
+      "derived_release_x64_requests": {
+        "4096": 4135,
+        "8192": 8231
+      },
+      "windows_measured_requests": null
+    },
+    "implementation": {
+      "files": [
+        {
+          "file": "tests/completion_allocation.cpp",
+          "sha256": "3eb3ea4f3c7d5d710ac688bcc76d62b6a1b544e3f156720fff1125a15de96cf3",
+          "lines": {
+            "ByteVectorAllocationSize": 35,
+            "CandidateBufferAllocationSize": 34,
+            "ScopedAllocationObservation": null,
+            "observedSize": null,
+            "size={}, injected={}, caught={}": 30
+          }
+        },
+        {
+          "file": "tests/completion_allocation_fault.cpp",
+          "sha256": "b4302dc39eb3624a66e637db2813b39cc069d4402947c4217a231f6453118cf0",
+          "lines": {
+            "ByteVectorAllocationSize": 38,
+            "CandidateBufferAllocationSize": null,
+            "ScopedAllocationObservation": 21,
+            "observedSize": 13,
+            "size={}, injected={}, caught={}": null
+          }
+        },
+        {
+          "file": "tests/completion_allocation_fault.h",
+          "sha256": "c4f2ef77bc99e05333b1a9e856426822232c56632264bda69cd2eaaf8b2dab41",
+          "lines": {
+            "ByteVectorAllocationSize": 5,
+            "CandidateBufferAllocationSize": null,
+            "ScopedAllocationObservation": null,
+            "observedSize": null,
+            "size={}, injected={}, caught={}": null
+          }
+        }
+      ],
+      "changes": [
+        "Measure maximum observed global-new request while constructing the same vector<byte> representation.",
+        "A non-const RAII observation object restores the previous thread-local observation pointer on normal and exceptional exits.",
+        "Validate observed request >= logical payload before using it, preventing zero from becoming wildcard injection.",
+        "Map only initial candidate arena and grown candidate arena fault targets.",
+        "Keep root, insertion path, document-search and serialized new[] targets exact; preserve injected/caught and buffer retry/Undo/Redo assertions.",
+        "Include target size, injected and caught values in the shared failure diagnostic."
+      ],
+      "production_modified": false
+    },
+    "validation": {
+      "syntax": [
+        {
+          "file": "tests/completion_allocation.cpp",
+          "exit_code": 0,
+          "log": "/workspace/scratch/a436f0d30032/completion-allocation-followup-validation/completion_allocation.cpp.syntax.log"
+        },
+        {
+          "file": "tests/completion_allocation_fault.cpp",
+          "exit_code": 0,
+          "log": "/workspace/scratch/a436f0d30032/completion-allocation-followup-validation/completion_allocation_fault.cpp.syntax.log"
+        }
+      ],
+      "storage_probe": {
+        "command": [
+          "/workspace/scratch/a436f0d30032/completion-allocation-followup-validation/completion_storage_followup"
+        ],
+        "cwd": "/workspace/scratch/a436f0d30032/wxnotepad",
+        "timeout_seconds": 30.0,
+        "requested_runs": 1,
+        "completed_runs": 1,
+        "success": true,
+        "results": [
+          {
+            "command": [
+              "/workspace/scratch/a436f0d30032/completion-allocation-followup-validation/completion_storage_followup"
+            ],
+            "status": "completed",
+            "exit_code": 0,
+            "log": "/workspace/scratch/a436f0d30032/completion-allocation-followup-validation/storage-report/run-001.log",
+            "seconds": 0.004
+          }
+        ]
+      },
+      "storage_log": "PASS: completion allocation failures unwind and retain reusable candidate buffers\nPASS: vector request sizes initial=4096 growth=8192; observation unwind and exact new[] failure retained\n",
+      "compile": {
+        "compiler": "g++ 14.2",
+        "language": "C++23",
+        "optimization": "-O2",
+        "exit_code": 0,
+        "source": "/workspace/scratch/a436f0d30032/completion-allocation-followup-validation/completion_storage_followup.cpp",
+        "fault_source": "tests/completion_allocation_fault.cpp",
+        "production_segment": "current WordList/CharBuffer definitions",
+        "fixture": "current CandidateAllocationFailures body",
+        "additional_checks": [
+          "measured 8192-byte vector target",
+          "RAII observation restoration after injected vector-construction bad_alloc",
+          "exact 7801-byte serialized new[] allocation failure"
+        ]
+      },
+      "format": "canonical clang-format --dry-run --Werror passed",
+      "diff_check": "git diff --check passed",
+      "windows_followup": "pending hosted CI"
+    },
+    "review": {
+      "independent_reviewer": "/root/raw_literals",
+      "found_and_fixed": "const observation local could modify a const subobject through the escaped member pointer; local changed to non-const before validation."
+    }
+  },
+  "source_sha256": {
+    "src/editor/completion_selection.cpp": "3ebce8885a550d772d68afe3bdd103460c00964ca4a41dc3c2bb35b054796273",
+    "tests/find_all.cpp": "7f00977d00a89b86744dd87b2362e4a6045d169e2fa277c83d2ecf578fec21c1",
+    "tests/completion_allocation.cpp": "3eb3ea4f3c7d5d710ac688bcc76d62b6a1b544e3f156720fff1125a15de96cf3",
+    "tests/completion_allocation_fault.cpp": "b4302dc39eb3624a66e637db2813b39cc069d4402947c4217a231f6453118cf0",
+    "tests/completion_allocation_fault.h": "c4f2ef77bc99e05333b1a9e856426822232c56632264bda69cd2eaaf8b2dab41"
+  },
+  "hosted_validation": {
+    "status": "Pending publication of follow-up commit",
+    "final_results_location": "https://github.com/1298345095/wxnotepad/pull/225",
+    "initial_head_results_remain_attributed_to": "b15abf41c03d16fab8345a4e49865d5ba692eb23"
+  }
+}

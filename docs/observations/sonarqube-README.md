@@ -8,7 +8,8 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [Array and raw-literal cleanup](#array-and-raw-literal-cleanup),
+Latest review: [PR #225 analysis follow-up](#pr-225-analysis-follow-up), following
+[Array and raw-literal cleanup](#array-and-raw-literal-cleanup),
 on [`codex/sonar-arrays-raw-literals`](https://github.com/1298345095/wxnotepad/tree/codex/sonar-arrays-raw-literals).
 [PR #224](https://github.com/1298345095/wxnotepad/pull/224) was merged into main
 at `ecf7c0849da662f8428383a30b375c5bddbd9562` before this review.
@@ -1756,7 +1757,7 @@ source hashes, validation and retained work.
 
 ### Code changes
 
-This batch addresses **555 main code-fix keys**:
+The initial batch addresses **555 main code-fix keys**:
 
 | Rule | Main keys | Change and preserved contract |
 | --- | ---: | --- |
@@ -1866,6 +1867,76 @@ explanation. Exact-key queries return **seven FALSE_POSITIVE matches and zero
 OPEN/CONFIRMED matches**; comments and successful mutation responses are retained
 in the ledger.
 
-The other eleven S6022 findings examine UTF-16/CP936 representations, URL-escape
-bytes or UTF-8/UTF-16 validation structure. They retain OPEN status and individual
-review notes. All S5945/S3628 findings in this batch receive code fixes.
+The follow-up below fixes the UTF-16 conversion among the other eleven S6022
+findings. The remaining ten examine CP936 representations, URL-escape bytes or
+UTF-8/UTF-16 validation structure and retain OPEN status with individual review
+notes. All S5945/S3628 findings in this batch receive code fixes.
+
+## PR #225 analysis follow-up
+
+The first published head of [PR #225](https://github.com/1298345095/wxnotepad/pull/225),
+`b15abf41c03d16fab8345a4e49865d5ba692eb23`, passed its SonarCloud quality gate:
+new-code reliability, security and maintainability ratings were A/A/A, coverage
+was **90.4%**, duplicated lines were **0.8%**, and reviewed security hotspots were
+**100%**. The complete OPEN/CONFIRMED PR query contained **three findings**, with
+zero S5945 and zero S3628 matches.
+
+### Remaining PR findings
+
+| Rule | PR keys | Change |
+| --- | --- | --- |
+| S6022 | `AaHpzhXClE-6OJasLHsU` | Convert the packed LaTeX/Emoji result through the existing core's `UTF8Length` and `UTF8FromUTF16`, using explicit UTF-16 code-unit values. |
+| S5350 | `AaHpzhqUlE-6OJasLHsV`, `AaHpzhqUlE-6OJasLHsW` | Make the Find All fixture's `action` and `result` local variables pointers to const, matching their read-only uses and the updated helper parameters. |
+
+The S6022 issue corresponds to main key `AaHaPjD5SajQlY95HQcC`; moving its array
+access onto a changed line exposed the existing representation conversion in
+the PR analysis. The replacement preserves both surrogate pairs and two-BMP
+combinations. Executables using the actual pinned conversion and lookup code
+checked all **5,372 valid queries / 3,823 distinct packed values** against an
+independent strict UTF-16LE-to-UTF-8 codec. The **1,845 single-BMP, 23 double-BMP
+and 3,504 surrogate-pair queries** agree under both 32-bit and 16-bit `wchar_t`
+compilation. Actual wxWidgets/GTK translation-unit syntax compilation also
+passes.
+
+The two S5350 suggestions arise after making the helper parameters const; they
+have no matching main keys in the collected baseline. Full fixture and native
+getter declarations confirm that the variables are used for const access. This
+follow-up therefore brings the total to **556 addressed main code-fix keys**,
+plus **two PR-only pointer-const suggestions**. The seven verified main false
+positives retain their individual MCP dispositions.
+
+The [follow-up ledger](sonarqube-arrays-raw-literals-followup-review.json)
+records the exact PR/main mapping, source hashes and validation evidence.
+
+### Native allocation-failure follow-up
+
+The initial [Windows job](https://github.com/1298345095/wxnotepad/actions/runs/44094822052/job/134079058904)
+completed 217 registered tests with 215 passed, one platform skip and one
+failure in `native_completion_allocation_failures`. Its shared assertion
+reported that candidate storage had not both injected and propagated the
+selected allocation failure. Linux X11/Wayland, both coverage jobs, clang-tidy,
+Fuzz and CodeQL passed at that head.
+
+The [Microsoft STL allocation implementation](https://github.com/microsoft/STL/blob/165a67afdde92bf3e5248be35b6f9240b3d1efb5/stl/inc/xmemory)
+adds alignment storage to large x86/x64 vector allocations. The test's 4096-byte
+and 8192-byte logical arena sizes therefore require different global-allocation
+request sizes after the production buffers become vectors. The original shared
+message does not identify the individual failing call; source review identifies
+the unchanged exact-size injection as the mismatch addressed here.
+
+The fault-injection fixture now measures the actual global allocation request
+while constructing the same `std::vector<std::byte>`. A scoped thread-local
+observer restores its prior pointer on normal and exceptional exit. Only the
+two arena targets use this measured size; other allocation targets retain their
+exact sizes. The fixture still requires injection and `std::bad_alloc`, verifies
+the original candidate tree and buffer bounds, retries insertion and
+serialization, and checks native error state, popup cancellation and Undo/Redo.
+Failure diagnostics now identify the target size and both assertion operands.
+
+Current production storage, the current private fixture and the actual injector
+pass an independent executable check. Additional checks cover the grown arena,
+observer restoration after an injected construction failure and the exact
+serialized `new[]` target. The two changed test translation units also pass
+actual wxWidgets/GTK C++23 syntax compilation. Independent review caught and
+removed a const-qualified observer before validation. Final-head hosted results
+are recorded in the PR description when available.

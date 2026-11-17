@@ -29,10 +29,11 @@ bool CompleteLatex(EditorControl& editor) {
     const auto length = buffer.data() + buffer.size() - 1 - ptr;
     const uint32_t character = GetLaTeXInputUnicodeCharacter(ptr, length);
     if (!character) return false;
-    const std::array<char16_t, 3> utf16{static_cast<char16_t>(character & 0xffff),
-                                        static_cast<char16_t>(character >> 16), 0};
-    const auto text = wxString(reinterpret_cast<const char*>(utf16.data()), wxMBConvUTF16LE(), utf16[1] != 0 ? 4 : 2)
-                          .ToStdString(wxConvUTF8);
+    // The lookup can return a surrogate pair or two separate BMP characters.
+    const std::array<wchar_t, 2> utf16{static_cast<wchar_t>(character & 0xffff), static_cast<wchar_t>(character >> 16)};
+    const std::wstring_view characters(utf16.data(), utf16[1] != 0 ? 2 : 1);
+    std::string text(Scintilla::Internal::UTF8Length(characters), '\0');
+    Scintilla::Internal::UTF8FromUTF16(characters, text.data(), text.size());
     editor.Send(SetTargetStart, position);
     editor.Send(SetTargetEnd, caret);
     editor.Send(ReplaceTarget, text.size(), reinterpret_cast<intptr_t>(text.c_str()));

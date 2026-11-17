@@ -75,12 +75,12 @@ public:
                 NativePaint::Complete(editor);
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
-                auto* action = wxDynamicCast(wxWindow::FindWindowByName("Find All", frame), wxButton);
+                const auto* action = wxDynamicCast(wxWindow::FindWindowByName("Find All", frame), wxButton);
                 Require(query && action, "native Find exposes Find All");
                 query->SetValue("one");
                 Click(query->GetParent(), action->GetId());
                 NativePaint::Complete(editor);
-                auto* result = wxDynamicCast(wxWindow::FindWindowByName("Find All result", frame), wxStaticText);
+                const auto* result = wxDynamicCast(wxWindow::FindWindowByName("Find All result", frame), wxStaticText);
                 Require(result && result->GetLabel() == "3 matches", "Find All reports whole-document count");
                 Require(editor->Send(Message::IndicatorValueAt, 8, 0) &&
                             editor->Send(Message::IndicatorValueAt, 8, 4) &&

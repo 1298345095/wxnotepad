@@ -25,7 +25,16 @@ template <class Action> void RequireAllocationFailure(size_t size, Action action
         }
         injected = failure.Injected();
     }
-    Require(injected && caught, "candidate storage propagates its injected allocation failure");
+    if (!injected || !caught)
+        throw TestEditor::Failure(std::format(
+            "candidate storage propagates its injected allocation failure (size={}, injected={}, caught={})", size,
+            injected, caught));
+}
+
+size_t CandidateBufferAllocationSize(size_t size) {
+    const auto requested = CompletionAllocationFault::ByteVectorAllocationSize(size);
+    Require(requested >= size, "candidate buffer probe observes the allocator's complete backing-storage request");
+    return requested;
 }
 
 void CandidateAllocationFailures() {
@@ -36,7 +45,7 @@ void CandidateAllocationFailures() {
         WordList words;
         words.Init(root.data(), 1, false);
     });
-    RequireAllocationFailure(NP2_AUTOC_INIT_BUFFER_SIZE, [&root] {
+    RequireAllocationFailure(CandidateBufferAllocationSize(NP2_AUTOC_INIT_BUFFER_SIZE), [&root] {
         WordList words;
         words.Init(root.data(), 1, false);
     });
@@ -167,11 +176,11 @@ void CheckAllocationFailures(EditorFrame* frame, bool presented) {
     Require(presented, "native compositor presents the completion allocation fixture");
     CandidateAllocationFailures();
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
-    constexpr std::array points{
+    const std::array points{
         FailurePoint{"root buffer", RootLength + 1},
         FailurePoint{"insertion path", InitialTreePathCapacity * sizeof(WordNode*)},
-        FailurePoint{"initial candidate buffer", NP2_AUTOC_INIT_BUFFER_SIZE},
-        FailurePoint{"candidate buffer growth", 2 * NP2_AUTOC_INIT_BUFFER_SIZE},
+        FailurePoint{"initial candidate buffer", CandidateBufferAllocationSize(NP2_AUTOC_INIT_BUFFER_SIZE)},
+        FailurePoint{"candidate buffer growth", CandidateBufferAllocationSize(2 * NP2_AUTOC_INIT_BUFFER_SIZE)},
         FailurePoint{"serialized candidates", CandidateCount * (CandidateLength + 1) + 1},
         FailurePoint{"document search buffer", RootLength + 2, true},
         FailurePoint{"active popup root buffer", RootLength + 1, false, true},
