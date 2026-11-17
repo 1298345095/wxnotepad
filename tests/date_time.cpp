@@ -4,6 +4,7 @@
 #include <wx/datetime.h>
 #include <ctime>
 #include <cstring>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -16,15 +17,17 @@ void Menu(EditorFrame* frame, const char* label) {
     NativeSearch::Command(frame, id);
 }
 void History(EditorControl* editor, const char* before, const char* after) {
-    Require(TestEditor::Text(editor) == after && editor->Send(Message::GetModify), "insertion replaces selected bytes");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+    using enum Scintilla::Message;
+    Require(TestEditor::Text(editor) == after && editor->Send(GetModify), "insertion replaces selected bytes");
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == before && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                editor->Send(CanRedo),
             "one Undo restores original bytes and save point");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == after, "one Redo restores inserted bytes");
 }
 void SelectionCases(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto text = wxString::FromUTF8("时刻😀");
     for (const auto& range : {std::pair{1, 3}, std::pair{3, 1}, std::pair{1, 1}}) {
@@ -35,30 +38,30 @@ void SelectionCases(EditorFrame* frame) {
         History(editor, "abcd", expected);
     }
     TestEditor::ResetStream(editor, "abcd\nefgh", 1, 2);
-    editor->Send(Message::AddSelection, 7, 6);
+    editor->Send(AddSelection, 7, 6);
     editor->InsertDateTime(DateTimeInsertion::Short, text);
-    Require(editor->Send(Message::GetSelections) == 1, "ReplaceSel collapses multiple ranges to one caret");
+    Require(editor->Send(GetSelections) == 1, "ReplaceSel collapses multiple ranges to one caret");
     History(editor, "abcd\nefgh", "acd\ne时刻😀gh");
     TestEditor::ResetStream(editor, "abcd\nefgh");
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 7);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 7);
     editor->InsertDateTime(DateTimeInsertion::Short, text);
     History(editor, "abcd\nefgh", "acd\ne时刻😀gh");
     TestEditor::ResetStream(editor, "abcd", 3, 1);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 3, 1);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 3, 1);
+    editor->Send(SetReadOnly, 1);
     Menu(frame, "Time/Date (Short Form)");
-    Require(TestEditor::Text(editor) == "abcd" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+    Require(TestEditor::Text(editor) == "abcd" && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "native read-only invocation retains original bytes and history");
     TestEditor::RequireSelection(editor, 1, 1, "read-only ReplaceSel retains original selection-collapse behavior");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", "Time/Date (Short Form)")),
             "original insertion menu remains enabled on read-only text");
-    editor->Send(Message::SetReadOnly, 0);
-    Require(editor->Send(Message::CanRedo), "releasing read-only mode restores pending redo availability");
+    editor->Send(SetReadOnly, 0);
+    Require(editor->Send(CanRedo), "releasing read-only mode restores pending redo availability");
     std::puts("PASS: empty/reversed/multiple/rectangular selections, Unicode, read-only and grouped history");
 }
 uint64_t NanosecondsNow() {

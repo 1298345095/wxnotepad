@@ -13,6 +13,7 @@
 #include <wx/statusbr.h>
 #include <cstdio>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 void Require(bool value, const char* message) {
@@ -26,21 +27,20 @@ void Command(EditorFrame* frame, const char* label) {
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
 void FormatOnly(EditorFrame* frame) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     const auto path = TestFiles::TemporaryDirectory("current-encoding.txt");
     TestFiles::WriteBytes(path, "a\r\nb\n");
     Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
             "format fixture opens");
     auto* editor = frame->Editor();
     TestEditor::Append(frame, "x");
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 3, 1);
+    editor->Send(Undo);
+    editor->Send(SetSel, 3, 1);
     Command(frame, "UTF-8 BOM");
     Require(frame->DocumentHasBom() && frame->GetTitle().StartsWith("*") && frame->GetMenuBar()->IsEnabled(wxID_SAVE) &&
-                frame->GetStatusBar()->GetStatusText().Contains("UTF-8 (BOM)") && !editor->Send(Message::GetModify) &&
-                editor->Send(Message::CanRedo) && editor->Send(Message::GetAnchor) == 3 &&
-                editor->Send(Message::GetCurrentPos) == 1 && TestEditor::Text(frame) == "a\r\nb\n" &&
-                TestFiles::Bytes(path) == "a\r\nb\n",
+                frame->GetStatusBar()->GetStatusText().Contains("UTF-8 (BOM)") && !editor->Send(GetModify) &&
+                editor->Send(CanRedo) && editor->Send(GetAnchor) == 3 && editor->Send(GetCurrentPos) == 1 &&
+                TestEditor::Text(frame) == "a\r\nb\n" && TestFiles::Bytes(path) == "a\r\nb\n",
             "encoding-only change must enable Save and retain live text, selection, redo and disk");
     Command(frame, "UTF-8");
     Require(!frame->GetTitle().StartsWith("*") && !frame->GetMenuBar()->IsEnabled(wxID_SAVE),
@@ -49,7 +49,7 @@ void FormatOnly(EditorFrame* frame) {
     Require(frame->Save().status == SaveStatus::Saved &&
                 TestFiles::Bytes(path) == "\x{ef}\x{bb}\x{bf}"
                                           "a\r\nb\n" &&
-                !frame->GetTitle().StartsWith("*") && editor->Send(Message::CanRedo),
+                !frame->GetTitle().StartsWith("*") && editor->Send(CanRedo),
             "Save writes the selected BOM and commits identity while retaining redo");
     std::puts("PASS: destination format changes preserve history and commit independent exact bytes");
 }
@@ -231,7 +231,7 @@ public:
     }
 };
 void AnsiTransition(EditorFrame* frame) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     const auto native = NativeEncodingChoice();
     if (!native) return;
     const auto path = TestFiles::TemporaryDirectory("ansi-transition.txt");
@@ -240,18 +240,17 @@ void AnsiTransition(EditorFrame* frame) {
             "ANSI fixture opens");
     auto* editor = frame->Editor();
     TestEditor::Append(frame, "x");
-    editor->Send(Message::Undo);
-    editor->Send(Message::MarkerAdd, 0, 0);
-    editor->Send(Message::SetSel, 1, 4);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(Undo);
+    editor->Send(MarkerAdd, 0, 0);
+    editor->Send(SetSel, 1, 4);
+    editor->Send(SetReadOnly, 1);
     {
         ConversionPrompt driver;
         const bool changed = frame->SelectEncoding(*native);
         driver.Stop();
-        Require(!changed && driver.shown == 1 && TestEditor::Text(frame) == "a中😀\r\n" &&
-                    editor->Send(Message::GetReadOnly) && editor->Send(Message::GetUndoActions) &&
-                    editor->Send(Message::MarkerGet, 0) && editor->Send(Message::GetAnchor) == 1 &&
-                    editor->Send(Message::GetCurrentPos) == 4 && !frame->GetTitle().StartsWith("*"),
+        Require(!changed && driver.shown == 1 && TestEditor::Text(frame) == "a中😀\r\n" && editor->Send(GetReadOnly) &&
+                    editor->Send(GetUndoActions) && editor->Send(MarkerGet, 0) && editor->Send(GetAnchor) == 1 &&
+                    editor->Send(GetCurrentPos) == 4 && !frame->GetTitle().StartsWith("*"),
                 "cancelled ANSI confirmation retains text, identity, selection, read-only, markers and history");
     }
     {
@@ -264,9 +263,9 @@ void AnsiTransition(EditorFrame* frame) {
                                                                               : "a???\r\n";
         const bool converted = native->encoding != FileEncoding::Utf8;
         const auto actualText = TestEditor::Text(frame);
-        if (driver.shown != 1 || actualText != expected || bool(editor->Send(Message::GetReadOnly)) != !converted ||
-            bool(editor->Send(Message::GetUndoActions)) != !converted ||
-            bool(editor->Send(Message::MarkerGet, 0)) != !converted || !frame->GetTitle().StartsWith("*")) {
+        if (driver.shown != 1 || actualText != expected || bool(editor->Send(GetReadOnly)) != !converted ||
+            bool(editor->Send(GetUndoActions)) != !converted || bool(editor->Send(MarkerGet, 0)) != !converted ||
+            !frame->GetTitle().StartsWith("*")) {
             const auto hex = [](const std::string& text) {
                 constexpr char digits[] = "0123456789abcdef";
                 std::string result;
@@ -279,16 +278,15 @@ void AnsiTransition(EditorFrame* frame) {
             std::fprintf(stderr,
                          "ANSI conversion diagnostic: shown=%d native_encoding=%d converted=%d read_only=%lld "
                          "undo_actions=%lld markers=%lld title=%s expected_utf8_hex=%s actual_utf8_hex=%s\n",
-                         driver.shown, static_cast<int>(native->encoding), converted,
-                         static_cast<long long>(editor->Send(Message::GetReadOnly)),
-                         static_cast<long long>(editor->Send(Message::GetUndoActions)),
-                         static_cast<long long>(editor->Send(Message::MarkerGet, 0)),
-                         frame->GetTitle().utf8_str().data(), hex(expected).c_str(), hex(actualText).c_str());
+                         driver.shown, std::to_underlying(native->encoding), converted,
+                         static_cast<long long>(editor->Send(GetReadOnly)),
+                         static_cast<long long>(editor->Send(GetUndoActions)),
+                         static_cast<long long>(editor->Send(MarkerGet, 0)), frame->GetTitle().utf8_str().data(),
+                         hex(expected).c_str(), hex(actualText).c_str());
         }
         Require(driver.shown == 1 && TestEditor::Text(frame) == expected &&
-                    bool(editor->Send(Message::GetReadOnly)) == !converted &&
-                    bool(editor->Send(Message::GetUndoActions)) == !converted &&
-                    bool(editor->Send(Message::MarkerGet, 0)) == !converted && frame->GetTitle().StartsWith("*"),
+                    bool(editor->Send(GetReadOnly)) == !converted && bool(editor->Send(GetUndoActions)) == !converted &&
+                    bool(editor->Send(MarkerGet, 0)) == !converted && frame->GetTitle().StartsWith("*"),
                 "accepted ANSI conversion follows native loss and clears protection, markers and history");
     }
     {

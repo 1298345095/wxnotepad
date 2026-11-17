@@ -5,6 +5,7 @@
 #include <wx/dialog.h>
 #include <wx/timer.h>
 #include <filesystem>
+#include <utility>
 #include <fstream>
 
 namespace {
@@ -15,10 +16,11 @@ void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
 void Load(EditorControl* editor, const std::string& text) {
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
+    using enum Scintilla::Message;
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
+    editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
 }
 class LineEndingOptionsDriver final : public wxTimer {
 public:
@@ -70,21 +72,22 @@ void Options(EditorFrame* frame, bool fix, bool strip, bool accept = true, int d
     Require(observed, "original line-ending selector and three original checkboxes must be exposed");
 }
 void Defaults(EditorFrame* frame) {
+    using enum Scintilla::EndOfLine;
     auto* editor = frame->Editor();
     const std::string source = "keep\r\ncurrent";
-    for (const auto& mode : {std::pair{1, Scintilla::EndOfLine::Lf}, std::pair{2, Scintilla::EndOfLine::Cr},
-                             std::pair{0, Scintilla::EndOfLine::CrLf}}) {
+    for (const auto& mode : {std::pair{1, Lf}, std::pair{2, Cr}, std::pair{0, CrLf}}) {
         Load(editor, source);
         Options(frame, false, false, true, mode.first);
         Require(NativeSearch::Text(editor) == source &&
-                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf),
+                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(std::to_underlying(Lf)),
                 "changing the original default mode must retain current document text and insertion mode");
-        Require(frame->NewDocument() && editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode.second),
+        Require(frame->NewDocument() &&
+                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode.second)),
                 "the default line ending selector must apply to the next New document in original order");
     }
     Options(frame, false, false, false, 1);
     Require(frame->NewDocument() &&
-                editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf),
+                editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(std::to_underlying(CrLf)),
             "Cancel must retain the configured default mode");
     std::puts("PASS: default EOL selector order, current document retention, next-New application and Cancel");
 }
@@ -96,46 +99,47 @@ struct Policy {
 
 void CheckPolicy(EditorFrame* frame, const std::filesystem::path& directory, const std::string& source,
                  const Policy& policy) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Options(frame, policy.fix, policy.strip);
     Load(editor, source);
-    editor->Send(Message::SetSel, source.size(), 1);
+    editor->Send(SetSel, source.size(), 1);
     const auto output = directory / "policy.txt";
     const auto result = frame->SaveAs(Filename(output));
     if (result.status != SaveStatus::Saved || NativeSearch::Text(editor) != policy.expected ||
         Bytes(output) != policy.expected)
         std::fprintf(stderr, "Policy fix=%d strip=%d status=%d length=%zu expected=%zu error=%s\n", policy.fix,
-                     policy.strip, static_cast<int>(result.status), NativeSearch::Text(editor).size(),
+                     policy.strip, std::to_underlying(result.status), NativeSearch::Text(editor).size(),
                      std::string(policy.expected).size(), result.error.utf8_str().data());
     Require(result.status == SaveStatus::Saved && Bytes(output) == policy.expected &&
                 NativeSearch::Text(editor) == policy.expected,
             "each cleanup policy must independently change buffer and disk only as originally configured");
-    Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
-                editor->Send(Message::GetAnchor) == static_cast<intptr_t>(std::string(policy.expected).size()) &&
-                editor->Send(Message::GetCurrentPos) == 1 && !editor->Send(Message::GetModify),
+    Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)) &&
+                editor->Send(GetAnchor) == static_cast<intptr_t>(std::string(policy.expected).size()) &&
+                editor->Send(GetCurrentPos) == 1 && !editor->Send(GetModify),
             "cleanup must retain EOL mode, reversed selection and establish the final save point");
-    Require(frame->Save().status == SaveStatus::Saved && !editor->Send(Message::GetModify),
-            "repeat Save must remain clean");
+    Require(frame->Save().status == SaveStatus::Saved && !editor->Send(GetModify), "repeat Save must remain clean");
     if (policy.strip) {
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         Require(NativeSearch::Text(editor) == (policy.fix ? "a \t\nb \t\nc \t" : source),
                 "first Undo must restore the independent trailing-blank cleanup");
     }
     if (policy.fix) {
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         Require(NativeSearch::Text(editor) == source, "second Undo must restore the independent EOL cleanup");
     }
-    Require(!editor->Send(Message::CanUndo), "repeat Save must not add undo actions");
+    Require(!editor->Send(CanUndo), "repeat Save must not add undo actions");
     if (policy.fix || policy.strip) {
-        Require(editor->Send(Message::GetModify), "Undo away from the successful cleanup save point must be dirty");
-        if (policy.fix) editor->Send(Message::Redo);
-        if (policy.strip) editor->Send(Message::Redo);
-        Require(!editor->Send(Message::GetModify) && NativeSearch::Text(editor) == policy.expected,
+        Require(editor->Send(GetModify), "Undo away from the successful cleanup save point must be dirty");
+        if (policy.fix) editor->Send(Redo);
+        if (policy.strip) editor->Send(Redo);
+        Require(!editor->Send(GetModify) && NativeSearch::Text(editor) == policy.expected,
                 "Redo to the cleanup save point must restore clean final text");
     }
 }
 
 void Policies(EditorFrame* frame, const std::filesystem::path& directory) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const std::string source = "a \t\r\nb \t\nc \t";
     const Policy policies[] = {{false, false, "a \t\r\nb \t\nc \t"},
@@ -155,15 +159,15 @@ void Policies(EditorFrame* frame, const std::filesystem::path& directory) {
          {std::pair{Scintilla::EndOfLine::CrLf, "a\r\nb\r\nc\r\n"}, std::pair{Scintilla::EndOfLine::Lf, "a\nb\nc\n"},
           std::pair{Scintilla::EndOfLine::Cr, "a\rb\rc\r"}}) {
         Load(editor, "a \nb\t\r\nc \r");
-        editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(mode.first));
+        editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(mode.first)));
         Require(frame->Save().status == SaveStatus::Saved && NativeSearch::Text(editor) == mode.second &&
-                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode.first),
+                    editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode.first)),
                 "pre-save cleanup must normalize to each current EOL mode and retain that mode");
     }
     Load(editor, "中 \r\nx \t");
-    editor->Send(Message::SetSel, 1, 2);
+    editor->Send(SetSel, 1, 2);
     Require(frame->Save().status == SaveStatus::Saved && NativeSearch::Text(editor) == "中\nx" &&
-                editor->Send(Message::GetAnchor) == 3 && editor->Send(Message::GetCurrentPos) == 3,
+                editor->Send(GetAnchor) == 3 && editor->Send(GetCurrentPos) == 3,
             "original EOL cleanup must fix split Unicode selection positions before stripping blanks");
     for (const auto& sample : {std::pair{" \ta\t \r\n \tb \t", " \ta\n \tb"}, std::pair{"a \r\n\t\r\n\r\n", "a\n\n\n"},
                                std::pair{"\t  ", ""}, std::pair{"", ""}}) {
@@ -173,19 +177,18 @@ void Policies(EditorFrame* frame, const std::filesystem::path& directory) {
                 "cleanup must retain indentation, final empty lines and absence of a final newline");
     }
     Load(editor, "a\nb");
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    Require(frame->Save().status == SaveStatus::Saved && editor->Send(Message::CanRedo) &&
-                !editor->Send(Message::CanUndo),
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    Require(frame->Save().status == SaveStatus::Saved && editor->Send(CanRedo) && !editor->Send(CanUndo),
             "no-op cleanup must retain the pending redo history");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(NativeSearch::Text(editor) == "a\nb!", "no-op Save must retain redo bytes");
     Load(editor, source);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetReadOnly, 1);
     Require(frame->Save().status == SaveStatus::Saved && NativeSearch::Text(editor) == source &&
-                Bytes(directory / "policy.txt") == source && !editor->Send(Message::CanUndo),
+                Bytes(directory / "policy.txt") == source && !editor->Send(CanUndo),
             "original read-only save must bypass both cleanup policies");
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     std::puts("PASS: native original options; independent/together policies, selection, undo order, final lines, no-op "
               "and read-only");
 }
@@ -212,7 +215,8 @@ void Encodings(EditorFrame* frame, const std::filesystem::path& directory) {
         Require(frame->SaveAs(Filename(output)).status == SaveStatus::Saved && Bytes(output) == sample.source,
                 "disabled cleanup must preserve exact UTF-8, UTF-16LE and GBK bytes");
         Options(frame, true, true);
-        frame->Editor()->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
+        frame->Editor()->Send(Message::SetEOLMode,
+                              static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
         Require(frame->Save().status == SaveStatus::Saved && Bytes(output) == sample.expected &&
                     Bytes(input) == sample.source,
                 "cleanup must save independent UTF-8, UTF-16LE and GBK literals without changing the original file");

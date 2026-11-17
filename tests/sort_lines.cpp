@@ -247,9 +247,10 @@ void Fixtures(EditorControl* editor) {
          "b.ext\nfile..ext\ndir.ext/file\n.gitignore\na.tar.gz\nb.txt\na.txt:stream"},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         if (fixture.requiresCapturedLocale && !capturedLocale) continue;
         TestEditor::ResetStream(editor, fixture.before, 0, 0, Scintilla::EndOfLine::Lf);
-        editor->Send(Scintilla::Message::SetSel, 0, editor->Send(Scintilla::Message::GetLength));
+        editor->Send(SetSel, 0, editor->Send(GetLength));
         editor->SortLines(fixture.options);
         if (TestEditor::Text(editor) != fixture.after)
             std::fprintf(stderr, "options=%u actual=<%s> expected=<%s>\n", fixture.options,
@@ -257,16 +258,16 @@ void Fixtures(EditorControl* editor) {
         Require(TestEditor::Text(editor) == fixture.after, "literal original sorting/filtering fixture");
         TestEditor::RequireSelection(editor, 0, static_cast<intptr_t>(std::strlen(fixture.after)),
                                      "sort selects full replacement");
-        editor->Send(Scintilla::Message::Undo);
-        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Scintilla::Message::CanUndo),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(CanUndo),
                 "one Undo restores pre-sort bytes");
-        editor->Send(Scintilla::Message::Redo);
+        editor->Send(Redo);
         Require(TestEditor::Text(editor) == fixture.after, "one Redo restores sorted bytes");
     }
     std::puts("PASS: original literal ordering, filtering, UTF-16, linguistic/numeric ties and file-type precedence");
 }
 void SelectionAndHistory(EditorFrame* frame) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (bool reverse : {false, true}) {
         TestEditor::ResetStream(editor, "PRE\nb\na\nTAIL", reverse ? 8 : 5, reverse ? 5 : 8, Scintilla::EndOfLine::Lf);
@@ -280,34 +281,33 @@ void SelectionAndHistory(EditorFrame* frame) {
         for (intptr_t caret : {0, 1, 2}) {
             TestEditor::ResetStream(editor, "b\na", 0, caret, Scintilla::EndOfLine::Lf);
             editor->SortLines(flags);
-            Require(TestEditor::Text(editor) == "b\na" && !editor->Send(Message::CanUndo),
+            Require(TestEditor::Text(editor) == "b\na" && !editor->Send(CanUndo),
                     "empty or effective single-line selection does not edit or create history");
             TestEditor::RequireSelection(editor, 0, caret, "early return preserves endpoints");
         }
         TestEditor::ResetStream(editor, "b\na", 1, 3, Scintilla::EndOfLine::Lf);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         const auto revision = editor->DocumentRevision();
         editor->SortLines(flags);
-        Require(TestEditor::Text(editor) == "b\na" && !editor->Send(Message::CanUndo) &&
-                    editor->DocumentRevision() == revision,
+        Require(TestEditor::Text(editor) == "b\na" && !editor->Send(CanUndo) && editor->DocumentRevision() == revision,
                 "read-only core preserves bytes, history and revision for all modes");
         TestEditor::RequireSelection(editor, 0, flags == SortOption::RemoveUnique ? 0 : 3,
                                      "read-only original caller still repairs the computed selection");
-        editor->Send(Message::SetReadOnly, 0);
+        editor->Send(SetReadOnly, 0);
     }
     TestEditor::ResetStream(editor, "a\nb", 0, 3, Scintilla::EndOfLine::Lf);
     editor->SortLines();
-    Require(editor->Send(Message::CanUndo) && editor->Send(Message::GetModify),
+    Require(editor->Send(CanUndo) && editor->Send(GetModify),
             "unchanged multiline sort keeps original replacement history");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "a\nb" && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "a\nb" && !editor->Send(GetModify),
             "Undo identical replacement restores save point");
-    editor->Send(Message::SetSel, 0, 2);
+    editor->Send(SetSel, 0, 2);
     editor->SortLines();
-    Require(editor->Send(Message::CanRedo), "effective single-line no-op keeps pending Redo");
-    editor->Send(Message::SetSel, 0, 3);
+    Require(editor->Send(CanRedo), "effective single-line no-op keeps pending Redo");
+    editor->Send(SetSel, 0, 3);
     editor->SortLines();
-    Require(!editor->Send(Message::CanRedo), "identical multiline sort consumes pending Redo");
+    Require(!editor->Send(CanRedo), "identical multiline sort consumes pending Redo");
     TestEditor::ResetStream(editor, "b\na\nb\n", 0, 6, Scintilla::EndOfLine::Lf);
     editor->SortLines(SortOption::Shuffle | SortOption::RemoveDuplicate | SortOption::RemoveUnique);
     const auto shuffled = TestEditor::Text(editor);
@@ -315,19 +315,19 @@ void SelectionAndHistory(EditorFrame* frame) {
                 std::count(shuffled.begin(), shuffled.end(), 'a') == 1 && shuffled.back() == '\n',
             "original shuffle preserves multiplicities and ignores filtering flags");
     TestEditor::RequireSelection(editor, 0, 6, "shuffle selects complete output");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     Require(TestEditor::Text(editor) == "b\na\nb\n", "one Undo restores shuffled input");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == shuffled, "Redo restores the actual random permutation");
     TestEditor::ResetStream(editor, "", 0, 0, Scintilla::EndOfLine::Lf);
     const std::string embedded("b\0x\na\0y\nb\0z", 11);
-    editor->Send(Message::AddText, embedded.size(), reinterpret_cast<intptr_t>(embedded.data()));
-    editor->Send(Message::SetSel, 0, static_cast<intptr_t>(embedded.size()));
-    editor->Send(Message::EmptyUndoBuffer);
+    editor->Send(AddText, embedded.size(), reinterpret_cast<intptr_t>(embedded.data()));
+    editor->Send(SetSel, 0, static_cast<intptr_t>(embedded.size()));
+    editor->Send(EmptyUndoBuffer);
     editor->SortLines(SortOption::MergeDuplicate);
     Require(TestEditor::Text(editor) == "a\nb",
             "original NUL-terminated conversions truncate every line before comparison and output");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     Require(TestEditor::Text(editor) == embedded, "Undo restores embedded NUL bytes");
     TestEditor::ResetStream(editor, "b\r\na\nb\rC", 0, 8, Scintilla::EndOfLine::CrLf);
     editor->SortLines();
@@ -337,53 +337,52 @@ void SelectionAndHistory(EditorFrame* frame) {
         "PASS: stream bounds/direction, empty and single lines, read-only, unchanged history, NUL, EOL and shuffle");
 }
 void Rectangles(EditorFrame* frame) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     editor->SetIndentationWidths(4, 4);
     for (bool reverse : {false, true}) {
         TestEditor::ResetStream(editor, "b2\na1\nc0\nTAIL", 0, 0, Scintilla::EndOfLine::Lf);
-        editor->Send(Message::SetRectangularSelectionAnchor, reverse ? 8 : 1);
-        editor->Send(Message::SetRectangularSelectionCaret, reverse ? 1 : 8);
+        editor->Send(SetRectangularSelectionAnchor, reverse ? 8 : 1);
+        editor->Send(SetRectangularSelectionCaret, reverse ? 1 : 8);
         editor->SortLines(SortOption::Column);
         Require(TestEditor::Text(editor) == "c0\na1\nb2\nTAIL",
                 "rectangle sorts full padded lines at the left selected column");
-        Require(editor->Send(Message::SelectionIsRectangle) &&
-                    editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 8 : 1) &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 1 : 8),
+        Require(editor->Send(SelectionIsRectangle) &&
+                    editor->Send(GetRectangularSelectionAnchor) == (reverse ? 8 : 1) &&
+                    editor->Send(GetRectangularSelectionCaret) == (reverse ? 1 : 8),
                 "rectangle keeps horizontal columns and vertical direction");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == "b2\na1\nc0\nTAIL" && !editor->Send(Message::CanUndo),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == "b2\na1\nc0\nTAIL" && !editor->Send(CanUndo),
                 "one Undo restores full rectangle operation");
     }
     TestEditor::ResetStream(editor, "b\n\na\nTAIL", 0, 0, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 4);
-    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 2);
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 4);
+    editor->Send(SetRectangularSelectionCaretVirtualSpace, 2);
     editor->SortLines(SortOption::Column);
     Require(TestEditor::Text(editor) == "\na\nb\nTAIL", "ordinary rectangle sort skips empty-line padding");
-    Require(editor->Send(Message::GetRectangularSelectionCaretVirtualSpace) == 0,
-            "restored rectangle clears virtual columns");
+    Require(editor->Send(GetRectangularSelectionCaretVirtualSpace) == 0, "restored rectangle clears virtual columns");
     TestEditor::ResetStream(editor, "x\n\nTAIL", 0, 0, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 2);
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 2);
     editor->SortLines(SortOption::Shuffle);
     const auto shuffled = TestEditor::Text(editor);
     Require(shuffled.size() == 8 && shuffled.ends_with("TAIL") &&
                 std::count(shuffled.begin(), shuffled.end(), ' ') == 1 &&
                 std::count(shuffled.begin(), shuffled.end(), 'x') == 1,
             "rectangular shuffle pads empty lines while preserving complete-line multiplicities");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "x\n\nTAIL" && !editor->Send(Message::CanUndo),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "x\n\nTAIL" && !editor->Send(CanUndo),
             "one Undo restores empty-line padding and shuffle together");
     TestEditor::ResetStream(editor, "bX\naX\ncA\nTAIL", 0, 0, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 8);
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 8);
     editor->SortLines(SortOption::Column);
     Require(TestEditor::Text(editor) == "cA\naX\nbX\nTAIL",
             "equal column entries use the complete transformed line before original-index ties");
     TestEditor::ResetStream(editor, "x\t2\ny\t1\nz\t0\nTAIL", 0, 0, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::SetRectangularSelectionAnchor, 2);
-    editor->Send(Message::SetRectangularSelectionCaret, 10);
+    editor->Send(SetRectangularSelectionAnchor, 2);
+    editor->Send(SetRectangularSelectionCaret, 10);
     editor->SortLines(SortOption::Column | SortOption::FileType);
     Require(TestEditor::Text(editor) == "z\t0\ny\t1\nx\t2\nTAIL",
             "column comparison takes precedence over file-type grouping and expands tab columns");
@@ -415,21 +414,23 @@ void SavedBytes(EditorFrame* frame) {
                      16)},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
+        using enum SaveStatus;
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);
-        frame->Editor()->Send(Message::SetSavePoint);
+        frame->Editor()->Send(SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "encoded sort fixture opens");
         auto* editor = frame->Editor();
-        editor->Send(Message::SetSel, 0, editor->Send(Message::GetLength));
+        editor->Send(SetSel, 0, editor->Send(GetLength));
         editor->SortLines();
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
+        Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.after,
                 "independently reopened bytes retain encoding/BOM and original EOL reconstruction");
-        editor->Send(Message::Undo);
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
+        editor->Send(Undo);
+        Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.before,
                 "Undo and Save restore independent original encoded bytes");
-        editor->Send(Message::Redo);
-        Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
+        editor->Send(Redo);
+        Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.after,
                 "Redo and Save restore independent sorted encoded bytes");
     }
     Require(frame->NewDocument(), "release the saved fixture and its directory watch before cleanup");

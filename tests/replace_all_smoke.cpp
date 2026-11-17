@@ -80,21 +80,21 @@ public:
                 std::puts("PASS: native full-document Replace All, exact count and grouped Undo/Redo");
                 const auto replace = [&](const char* before, const char* find, const char* with, const char* expected,
                                          const char* count) {
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(before));
-                    editor->Send(Message::EmptyUndoBuffer);
-                    editor->Send(Message::SetSavePoint);
-                    editor->Send(Message::SetSel, editor->Send(Message::GetLength), 0);
+                    using enum Scintilla::Message;
+                    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(before));
+                    editor->Send(EmptyUndoBuffer);
+                    editor->Send(SetSavePoint);
+                    editor->Send(SetSel, editor->Send(GetLength), 0);
                     query->SetValue(wxString::FromUTF8(find));
                     replacement->SetValue(wxString::FromUTF8(with));
                     Click(dialog, wxID_REPLACE_ALL);
                     Require(Text(editor) == expected, "Replace All must produce the explicit literal result");
                     Require(result->GetLabel() == count, "Replace All must count original non-overlapping matches");
                     Command(frame, wxID_UNDO);
-                    Require(Text(editor) == before && !editor->Send(Message::GetModify) &&
-                                !editor->Send(Message::CanUndo),
+                    Require(Text(editor) == before && !editor->Send(GetModify) && !editor->Send(CanUndo),
                             "one Undo must restore this full replacement");
                     Command(frame, wxID_REDO);
-                    Require(Text(editor) == expected && editor->Send(Message::GetModify),
+                    Require(Text(editor) == expected && editor->Send(GetModify),
                             "one Redo must restore this full replacement");
                 };
                 replace("aaaaa", "aa", "X", "XXa", "2 replacements");
@@ -113,13 +113,14 @@ public:
                 Command(frame, wxID_UNDO);
                 editor->Send(Message::SetSel, 11, 8);
                 const auto unchanged = [&](const char* find, const char* with, const char* count) {
+                    using enum Scintilla::Message;
                     query->SetValue(find);
                     replacement->SetValue(with);
                     Click(dialog, wxID_REPLACE_ALL);
-                    Require(Text(editor) == "one one one" && !editor->Send(Message::GetModify) &&
-                                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                    Require(Text(editor) == "one one one" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                                editor->Send(CanRedo),
                             "no-op Replace All must preserve savepoint, undo and redo history");
-                    Require(editor->Send(Message::GetAnchor) == 11 && editor->Send(Message::GetCurrentPos) == 8,
+                    Require(editor->Send(GetAnchor) == 11 && editor->Send(GetCurrentPos) == 8,
                             "no-op Replace All must preserve selection direction and byte range");
                     Require(result->GetLabel() == count, "no-op Replace All must report its exact count");
                 };

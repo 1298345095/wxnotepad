@@ -23,13 +23,14 @@ void Toggle(wxCheckBox* option, bool checked) {
     Require(option->GetValue() == checked, "native checkbox must show its new value");
 }
 void Selection(EditorControl* editor, intptr_t start, intptr_t end, const char* message) {
-    const auto actualStart = editor->Send(Scintilla::Message::GetSelectionStart);
-    const auto actualEnd = editor->Send(Scintilla::Message::GetSelectionEnd);
+    using enum Scintilla::Message;
+    const auto actualStart = editor->Send(GetSelectionStart);
+    const auto actualEnd = editor->Send(GetSelectionEnd);
     if (actualStart != start || actualEnd != end)
         std::fprintf(stderr, "Range: %lld..%lld; expected %lld..%lld; flags: %lld\n",
                      static_cast<long long>(actualStart), static_cast<long long>(actualEnd),
                      static_cast<long long>(start), static_cast<long long>(end),
-                     static_cast<long long>(editor->Send(Scintilla::Message::GetSearchFlags)));
+                     static_cast<long long>(editor->Send(GetSearchFlags)));
     NativeSearch::Selection(editor, start, end, message);
 }
 class SearchOptionsApp final : public wxApp {
@@ -39,8 +40,8 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 NativeSearch::AcceptFeedback feedback;
-                using Scintilla::Message;
                 auto* editor = frame->Editor();
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
@@ -48,8 +49,8 @@ public:
                 Require(query && matchCase, "Find must expose the native Match case checkbox");
                 auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
                 Require(!matchCase->GetValue(), "Match case must initially be off");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("ONE One one"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("ONE One one"));
+                editor->Send(GotoPos, 0);
                 query->SetValue("one");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 3, "default search must ignore case");
@@ -60,8 +61,8 @@ public:
                 auto* wholeWord = wxDynamicCast(wxWindow::FindWindowByName("Whole word", frame), wxCheckBox);
                 Require(wholeWord, "Find must expose the native Whole word checkbox");
                 Require(!wholeWord->GetValue(), "Whole word must initially be off independently of Match case");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one_one one1 1one one one-one"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one_one one1 1one one one-one"));
+                editor->Send(GotoPos, 0);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 3, "Whole word off must allow a substring in an underscore word");
                 Toggle(wholeWord, true);
@@ -77,8 +78,8 @@ public:
                 Selection(editor, 26, 29, "native dialog F3 must apply both options");
                 Toggle(matchCase, false);
                 Require(wholeWord->GetValue(), "changing Match case must retain Whole word independently");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("éCOLE école école2 _école école."));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("éCOLE école école2 _école école."));
+                editor->Send(GotoPos, 0);
                 query->SetValue(wxString::FromUTF8("ÉCOLE"));
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 6, "accented Unicode case folding must match an exact six-byte word");
@@ -88,15 +89,14 @@ public:
                 Selection(editor, 30, 36, "whole accented words must exclude adjacent digits and underscores");
                 Toggle(matchCase, true);
                 query->SetValue(wxString::FromUTF8("école"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(GotoPos, 0);
                 wxCommandEvent enter(wxEVT_TEXT_ENTER, query->GetId());
                 enter.SetEventObject(query);
                 query->GetEventHandler()->ProcessEvent(enter);
                 Selection(editor, 7, 13, "Enter must use current case and word options for accented text");
                 std::puts("PASS: accented literal ranges, independent options and native dialog/F3/Enter paths");
-                editor->Send(Message::SetText, 0,
-                             reinterpret_cast<intptr_t>("中文中文 A中文B 中文_ 中文1 中文。 中文"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中文中文 A中文B 中文_ 中文1 中文。 中文"));
+                editor->Send(GotoPos, 0);
                 query->SetValue(wxString::FromUTF8("中文"));
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 14, 20,
@@ -110,8 +110,8 @@ public:
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 48, 54, "standalone Chinese word must retain complete UTF-8 characters");
                 std::puts("PASS: explicit original-core CJK class boundaries");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("Straße STRASSE Straße2"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("Straße STRASSE Straße2"));
+                editor->Send(GotoPos, 0);
                 query->SetValue("STRASSE");
                 Toggle(matchCase, false);
                 Click(dialog, wxID_FORWARD);
@@ -126,18 +126,18 @@ public:
                 Selection(editor, 16, 23, "disabling Whole word must immediately allow a digit-suffixed substring");
                 Toggle(wholeWord, true);
                 Toggle(wrap, false);
-                editor->Send(Message::SetSel, 23, 16);
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::GotoPos, 24);
-                editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
-                editor->Send(Message::Undo);
-                editor->Send(Message::SetSel, 23, 16);
+                editor->Send(SetSel, 23, 16);
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(GotoPos, 24);
+                editor->Send(AddText, 1, reinterpret_cast<intptr_t>("!"));
+                editor->Send(Undo);
+                editor->Send(SetSel, 23, 16);
                 Click(dialog, wxID_FORWARD);
-                Require(Text(editor) == "Straße STRASSE Straße2" && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                Require(Text(editor) == "Straße STRASSE Straße2" && !editor->Send(GetModify) &&
+                            !editor->Send(CanUndo) && editor->Send(CanRedo),
                         "option changes and no-match searches must preserve text, save point and redo history");
-                Require(editor->Send(Message::GetAnchor) == 23 && editor->Send(Message::GetCurrentPos) == 16,
+                Require(editor->Send(GetAnchor) == 23 && editor->Send(GetCurrentPos) == 16,
                         "option-sensitive no match must retain reversed selection");
                 Click(dialog, wxID_CANCEL);
                 Command(frame, wxID_FIND);
@@ -146,8 +146,8 @@ public:
                         "reopening Find must retain independent session options and query");
                 Require(frame->NewDocument(), "clean New must succeed with search options active");
                 Require(matchCase->GetValue() && wholeWord->GetValue(), "New must retain session search options");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("Straße2 Straße"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("Straße2 Straße"));
+                editor->Send(GotoPos, 0);
                 Click(dialog, wxID_CANCEL);
                 wxKeyEvent f3(wxEVT_CHAR_HOOK);
                 f3.m_keyCode = WXK_F3;
@@ -163,25 +163,25 @@ public:
                         "Replace must share the query and visible session option controls");
                 replacement->SetValue("X");
                 query->SetValue("one");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("ONE one one_one one"));
-                editor->Send(Message::SetSel, 0, 3);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("ONE one one_one one"));
+                editor->Send(SetSel, 0, 3);
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "ONE one one_one one",
                         "Replace must reject a selection invalid under Match case");
                 Selection(editor, 4, 7, "Replace must find the next match using the current case and word options");
-                editor->Send(Message::SetSel, 8, 11);
+                editor->Send(SetSel, 8, 11);
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "ONE one one_one one",
                         "Replace must reject a selection invalid under Whole word");
                 Selection(editor, 16, 19, "Replace must find the next whole word after an invalid substring selection");
                 Toggle(wholeWord, false);
-                editor->Send(Message::SetSel, 8, 11);
+                editor->Send(SetSel, 8, 11);
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "ONE one X_one one",
                         "Replace must immediately apply a changed Whole word option");
                 std::puts("PASS: Replace shares query/options and revalidates selection after option changes");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("ONE one one_one one"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("ONE one one_one one"));
+                editor->Send(GotoPos, 0);
                 Toggle(wholeWord, true);
                 Toggle(wrap, true);
                 Click(dialog, wxID_BACKWARD);

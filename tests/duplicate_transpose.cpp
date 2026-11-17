@@ -4,6 +4,7 @@
 #include "settings/settings_store.h"
 #include <wx/app.h>
 #include <memory>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -36,12 +37,13 @@ void LineCommands(EditorFrame* frame) {
     TestEditor::RequireSelection(editor, 2, 2, "Transpose collapses selection at current line start");
 }
 void History(EditorControl* editor, const std::string& before, const std::string& after) {
-    Require(editor->Send(Message::CanUndo) && editor->Send(Message::GetModify), "command records original history");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == before && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+    using enum Scintilla::Message;
+    Require(editor->Send(CanUndo) && editor->Send(GetModify), "command records original history");
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == before && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "single Undo restores complete operation and save point");
-    editor->Send(Message::Redo);
-    Require(TestEditor::Text(editor) == after && !editor->Send(Message::CanRedo) && editor->Send(Message::GetModify),
+    editor->Send(Redo);
+    Require(TestEditor::Text(editor) == after && !editor->Send(CanRedo) && editor->Send(GetModify),
             "single Redo restores complete operation");
 }
 void StreamFixtures(EditorFrame* frame) {
@@ -90,13 +92,14 @@ void StreamFixtures(EditorFrame* frame) {
         Require(TestEditor::Text(frame) == fixture.after, "literal original stream result");
         TestEditor::RequireSelection(editor, fixture.resultAnchor, fixture.resultCaret,
                                      "original stream selection endpoints");
-        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(fixture.mode),
+        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(std::to_underlying(fixture.mode)),
                 "EOL insertion mode survives");
         History(editor, fixture.before, fixture.after);
     }
     std::puts("PASS: stream/caret/empty/reversed/Unicode/EOL/unterminated fixtures and single-action Undo/Redo");
 }
 void AvailabilityAndNoChange(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const std::pair<const char*, const char*> commands[] = {
         {"Duplicate", "Alt+D"}, {"Duplicate Line", "Ctrl+D"}, {"Transpose", "Alt+S"}};
@@ -110,13 +113,13 @@ void AvailabilityAndNoChange(EditorFrame* frame) {
             Require(frame->GetMenuBar()->IsEnabled(id), "original commands stay enabled for empty document/caret");
         }
         TestEditor::ResetStream(editor, "AB\nCD", 1, 4);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         const auto revision = editor->DocumentRevision();
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(id), "original menus remain enabled on read-only documents");
         Menu(frame, label);
         Require(TestEditor::Text(editor) == "AB\nCD" && editor->DocumentRevision() == revision &&
-                    !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+                    !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "read-only core rejects text edits and history");
         const bool transpose = std::string(label) == "Transpose";
         TestEditor::RequireSelection(editor, 1, transpose ? 1 : 4,
@@ -124,23 +127,23 @@ void AvailabilityAndNoChange(EditorFrame* frame) {
     }
     for (const char* text : {"", "AB\nCD", "\n\n"}) {
         TestEditor::ResetStream(editor, text);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
         const bool emptyLines = std::string(text) == "\n\n";
-        editor->Send(Message::SetSel, emptyLines ? 1 : 0, emptyLines ? 1 : 0);
+        editor->Send(SetSel, emptyLines ? 1 : 0, emptyLines ? 1 : 0);
         Menu(frame, "Transpose");
-        Require(TestEditor::Text(editor) == text && editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == text && editor->Send(CanRedo) && !editor->Send(CanUndo) &&
+                    !editor->Send(GetModify),
                 "first-line and empty-line transpose preserve pending Redo and save point");
     }
     TestEditor::ResetStream(editor, "A\nB", 0, 0);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
     Menu(frame, "Duplicate Line");
-    Require(!editor->Send(Message::CanRedo), "text-changing duplication replaces pending Redo");
+    Require(!editor->Send(CanRedo), "text-changing duplication replaces pending Redo");
     TestEditor::ResetStream(editor, "AB\nCD", 4, 1);
     Menu(frame, "Transpose");
-    Require(TestEditor::Text(editor) == "AB\nCD" && !editor->Send(Message::CanUndo),
+    Require(TestEditor::Text(editor) == "AB\nCD" && !editor->Send(CanUndo),
             "reversed selection with caret on first logical line does not transpose its final line");
     TestEditor::RequireSelection(editor, 4, 1, "first-line transpose preserves reversed selection");
     std::puts("PASS: original availability, read-only caret repair, unchanged history and pending Redo");
@@ -150,106 +153,108 @@ void Rectangle(EditorControl* editor, intptr_t anchor, intptr_t caret) {
     editor->Send(Message::SetRectangularSelectionCaret, caret);
 }
 void RectangleDuplication(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const bool reverse : {false, true}) {
         TestEditor::ResetStream(editor, "ABC\nDEF", 0, 0, Scintilla::EndOfLine::Lf);
         Rectangle(editor, reverse ? 7 : 1, reverse ? 1 : 7);
         Menu(frame, "Duplicate");
-        Require(TestEditor::Text(editor) == "ABCBC\nDEFEF" && editor->Send(Message::SelectionIsRectangle),
+        Require(TestEditor::Text(editor) == "ABCBC\nDEFEF" && editor->Send(SelectionIsRectangle),
                 "rectangle duplicates selected columns on each physical line");
-        Require(editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 9 : 1) &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 1 : 9),
+        Require(editor->Send(GetRectangularSelectionAnchor) == (reverse ? 9 : 1) &&
+                    editor->Send(GetRectangularSelectionCaret) == (reverse ? 1 : 9),
                 "rectangle restores original column span and vertical direction");
         History(editor, "ABC\nDEF", "ABCBC\nDEFEF");
         TestEditor::ResetStream(editor, "ABC\nDEF", 0, 0, Scintilla::EndOfLine::Lf);
         Rectangle(editor, reverse ? 7 : 1, reverse ? 1 : 7);
         Menu(frame, "Duplicate Line");
-        Require(TestEditor::Text(editor) == "ABC\nABC\nDEF\nDEF" && editor->Send(Message::SelectionIsRectangle),
+        Require(TestEditor::Text(editor) == "ABC\nABC\nDEF\nDEF" && editor->Send(SelectionIsRectangle),
                 "rectangle line duplication copies each caret's complete logical line");
-        Require(editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 15 : 1) &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 1 : 15),
+        Require(editor->Send(GetRectangularSelectionAnchor) == (reverse ? 15 : 1) &&
+                    editor->Send(GetRectangularSelectionCaret) == (reverse ? 1 : 15),
                 "line duplication extends original rectangle over inserted lines");
         History(editor, "ABC\nDEF", "ABC\nABC\nDEF\nDEF");
     }
     TestEditor::ResetStream(editor, "ABC\nDEF", 0, 0);
     Rectangle(editor, 1, 7);
     Menu(frame, "Transpose");
-    Require(TestEditor::Text(editor) == "DEF\nABC" && !editor->Send(Message::SelectionIsRectangle),
+    Require(TestEditor::Text(editor) == "DEF\nABC" && !editor->Send(SelectionIsRectangle),
             "transpose uses main rectangle caret line and collapses shape");
     TestEditor::RequireSelection(editor, 4, 4, "transpose rectangle ends at logical line start");
     History(editor, "ABC\nDEF", "DEF\nABC");
 }
 void MultipleSelectionDuplication(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const bool line : {false, true}) {
         TestEditor::ResetStream(editor, "AB\nCD", 0, 1, Scintilla::EndOfLine::Lf);
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::AddSelection, 4, 3);
+        editor->Send(SetMultipleSelection, 1);
+        editor->Send(AddSelection, 4, 3);
         Menu(frame, line ? "Duplicate Line" : "Duplicate");
         const char* after = line ? "AB\nAB\nCD\nCD" : "AAB\nCCD";
-        Require(TestEditor::Text(editor) == after && editor->Send(Message::GetSelections) == 2,
+        Require(TestEditor::Text(editor) == after && editor->Send(GetSelections) == 2,
                 "duplication processes all independent selections");
-        Require(editor->Send(Message::GetSelectionNAnchor, 0) == 0 &&
-                    editor->Send(Message::GetSelectionNCaret, 0) == 1 &&
-                    editor->Send(Message::GetSelectionNAnchor, 1) == (line ? 6 : 4) &&
-                    editor->Send(Message::GetSelectionNCaret, 1) == (line ? 7 : 5),
+        Require(editor->Send(GetSelectionNAnchor, 0) == 0 && editor->Send(GetSelectionNCaret, 0) == 1 &&
+                    editor->Send(GetSelectionNAnchor, 1) == (line ? 6 : 4) &&
+                    editor->Send(GetSelectionNCaret, 1) == (line ? 7 : 5),
                 "all selection endpoints track original inserted bytes");
         History(editor, "AB\nCD", after);
     }
     TestEditor::ResetStream(editor, "AB\nCD", 0, 1);
-    editor->Send(Message::AddSelection, 4, 3);
+    editor->Send(AddSelection, 4, 3);
     Menu(frame, "Transpose");
-    Require(TestEditor::Text(editor) == "CD\nAB" && editor->Send(Message::GetSelections) == 1,
+    Require(TestEditor::Text(editor) == "CD\nAB" && editor->Send(GetSelections) == 1,
             "transpose uses only the main caret and clears additional ranges");
     TestEditor::RequireSelection(editor, 3, 3, "multiple-selection transpose collapses at original computed start");
     History(editor, "AB\nCD", "CD\nAB");
-    editor->Send(Message::SetMultipleSelection, 0);
+    editor->Send(SetMultipleSelection, 0);
 }
 void VirtualSpaceDuplication(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const char* label : {"Duplicate", "Duplicate Line"}) {
         TestEditor::ResetStream(editor, "AB\nCD", 2, 2, Scintilla::EndOfLine::Lf);
-        editor->Send(Message::SetVirtualSpaceOptions, static_cast<uintptr_t>(Scintilla::VirtualSpace::UserAccessible));
-        editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 3);
-        editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 3);
+        editor->Send(SetVirtualSpaceOptions,
+                     static_cast<uintptr_t>(std::to_underlying(Scintilla::VirtualSpace::UserAccessible)));
+        editor->Send(SetSelectionNAnchorVirtualSpace, 0, 3);
+        editor->Send(SetSelectionNCaretVirtualSpace, 0, 3);
         Menu(frame, label);
         Require(TestEditor::Text(editor) == "AB\nAB\nCD", "empty virtual-space range duplicates line without padding");
         // SelectionPosition::MoveForInsertDelete consumes three virtual columns
         // across the inserted LF and AB, without adding padding bytes.
         TestEditor::RequireSelection(editor, 5, 5, "original insert notifications consume virtual columns");
-        Require(editor->Send(Message::GetSelectionNAnchorVirtualSpace, 0) == 0 &&
-                    editor->Send(Message::GetSelectionNCaretVirtualSpace, 0) == 0,
+        Require(editor->Send(GetSelectionNAnchorVirtualSpace, 0) == 0 &&
+                    editor->Send(GetSelectionNCaretVirtualSpace, 0) == 0,
                 "original virtual columns become positions within inserted text");
         History(editor, "AB\nCD", "AB\nAB\nCD");
     }
     TestEditor::ResetStream(editor, "AB\nCD", 2, 2);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 2);
-    editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 4);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSelectionNAnchorVirtualSpace, 0, 2);
+    editor->Send(SetSelectionNCaretVirtualSpace, 0, 4);
     Menu(frame, "Duplicate");
-    Require(TestEditor::Text(editor) == "AB\nCD" && editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    Require(TestEditor::Text(editor) == "AB\nCD" && editor->Send(CanRedo) && !editor->Send(CanUndo) &&
+                !editor->Send(GetModify),
             "nonempty virtual-only selection duplicates zero bytes and retains pending Redo");
     TestEditor::RequireSelection(editor, 2, 2, "virtual-only byte endpoints survive unchanged duplication");
-    Require(editor->Send(Message::GetSelectionNAnchorVirtualSpace, 0) == 2 &&
-                editor->Send(Message::GetSelectionNCaretVirtualSpace, 0) == 4,
+    Require(editor->Send(GetSelectionNAnchorVirtualSpace, 0) == 2 &&
+                editor->Send(GetSelectionNCaretVirtualSpace, 0) == 4,
             "unchanged virtual-only duplication retains distinct virtual endpoints");
     TestEditor::ResetStream(editor, "AB\nCD", 5, 5);
-    editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 2);
-    editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 2);
+    editor->Send(SetSelectionNAnchorVirtualSpace, 0, 2);
+    editor->Send(SetSelectionNCaretVirtualSpace, 0, 2);
     Menu(frame, "Transpose");
     Require(TestEditor::Text(editor) == "CD\nAB", "transpose ignores virtual columns when choosing logical line");
     TestEditor::RequireSelection(editor, 3, 3, "transpose resets caret to logical line start");
-    Require(editor->Send(Message::GetSelectionNCaretVirtualSpace, 0) == 0, "transpose clears virtual caret columns");
-    editor->Send(Message::SetVirtualSpaceOptions, 0);
+    Require(editor->Send(GetSelectionNCaretVirtualSpace, 0) == 0, "transpose clears virtual caret columns");
+    editor->Send(SetVirtualSpaceOptions, 0);
     TestEditor::ResetStream(editor, "AB\nCD", 0, 0, Scintilla::EndOfLine::Lf);
     Rectangle(editor, 1, 4);
     Menu(frame, "Duplicate");
-    Require(TestEditor::Text(editor) == "AB\nAB\nCD\nCD" && editor->Send(Message::SelectionIsRectangle),
+    Require(TestEditor::Text(editor) == "AB\nAB\nCD\nCD" && editor->Send(SelectionIsRectangle),
             "empty rectangle forces complete-line duplication for all ranges");
-    Require(editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
-                editor->Send(Message::GetRectangularSelectionCaret) == 10,
+    Require(editor->Send(GetRectangularSelectionAnchor) == 1 && editor->Send(GetRectangularSelectionCaret) == 10,
             "empty rectangle extends over inserted physical lines at original column");
 }
 void ShapedSelections(EditorFrame* frame) {
@@ -264,7 +269,7 @@ void WrappedLines(EditorFrame* frame) {
     TestEditor::ResetStream(editor,
                             "one two three four five six seven eight nine ten eleven twelve thirteen fourteen\nZ", 0,
                             30, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::Word));
+    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::Wrap::Word)));
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
     while (editor->Send(Message::WrapCount, 0) <= 1 && std::chrono::steady_clock::now() < deadline) {
         wxYield();
@@ -291,7 +296,7 @@ void WrappedLines(EditorFrame* frame) {
                 "oneone two three four five six seven eight nine ten eleven twelve thirteen fourteen\nZ",
             "selection duplication under wrapping retains exact selected-byte scope");
     TestEditor::RequireSelection(editor, 0, 3, "wrapped selection duplication retains endpoints");
-    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::None));
+    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::Wrap::None)));
     std::puts("PASS: wrapping retains logical-line scope and first-line boundary");
 }
 void SavedBytes(EditorFrame* frame) {
@@ -404,12 +409,13 @@ void Shortcuts(EditorFrame* frame) {
     History(editor, "AB\nCD", "AB\nCD");
     for (const auto& [key, gesture] :
          {std::pair{'D', "alt+shift+d"}, std::pair{'S', "alt+shift+s"}, std::pair{'D', "ctrl+alt+shift+d"}}) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "AB\nCD", 0, 4);
         NativeKey(frame, key, std::string(gesture) == "ctrl+alt+shift+d", true, true);
-        if (TestEditor::Text(editor) != "AB\nCD" || editor->Send(Message::CanUndo))
+        if (TestEditor::Text(editor) != "AB\nCD" || editor->Send(CanUndo))
             std::fprintf(stderr, "Native %s produced <%s>; CanUndo=%lld\n", gesture, TestEditor::Text(editor).c_str(),
-                         static_cast<long long>(editor->Send(Message::CanUndo)));
-        Require(TestEditor::Text(editor) == "AB\nCD" && !editor->Send(Message::CanUndo),
+                         static_cast<long long>(editor->Send(CanUndo)));
+        Require(TestEditor::Text(editor) == "AB\nCD" && !editor->Send(CanUndo),
                 "extra modifiers do not route duplication/transposition");
     }
     std::puts("PASS: native Alt+D/Ctrl+D/Alt+S, distinct Ctrl+Shift+D/Ctrl+Alt+D and exact extra-modifier routing");

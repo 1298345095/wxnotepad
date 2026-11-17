@@ -7,6 +7,7 @@
 #include "settings/settings_store.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <utility>
 #include <stdexcept>
 
 namespace {
@@ -19,6 +20,7 @@ void Command(EditorFrame* frame, int id) {
     frame->GetEventHandler()->ProcessEvent(command);
 }
 void ModifiedRevert(EditorFrame* frame, int revert, const std::filesystem::path& path) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     std::string before;
     for (int line = 0; line < 100; ++line)
@@ -27,21 +29,21 @@ void ModifiedRevert(EditorFrame* frame, int revert, const std::filesystem::path&
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "view fixture must open");
     const int python = frame->GetMenuBar()->FindMenuItem("Scheme", "Python");
     Command(frame, python);
-    editor->Send(Message::BeginUndoAction);
+    editor->Send(BeginUndoAction);
     TestEditor::Append(frame, "dirty");
-    editor->Send(Message::EndUndoAction);
-    editor->Send(Message::BeginUndoAction);
+    editor->Send(EndUndoAction);
+    editor->Send(BeginUndoAction);
     TestEditor::Append(frame, "redo");
-    editor->Send(Message::EndUndoAction);
-    editor->Send(Message::Undo);
-    Require(editor->Send(Message::GetModify) && editor->Send(Message::CanRedo),
+    editor->Send(EndUndoAction);
+    editor->Send(Undo);
+    Require(editor->Send(GetModify) && editor->Send(CanRedo),
             "cancel fixture has a modified document and a separate redo action");
     // Deliver the edits' queued UI state before taking the cancellation snapshot.
     wxTheApp->ProcessPendingEvents();
     Require(NativeScroll::WaitForHorizontalRange(editor, true, 120), "long lines provide a horizontal viewport");
-    editor->Send(Message::SetSel, 6040, 6020);
-    editor->Send(Message::SetFirstVisibleLine, 25);
-    editor->Send(Message::SetXOffset, 120);
+    editor->Send(SetSel, 6040, 6020);
+    editor->Send(SetFirstVisibleLine, 25);
+    editor->Send(SetXOffset, 120);
     const auto revision = editor->DocumentRevision();
     const auto title = frame->GetTitle();
     const std::string external = "disk!" + before.substr(5);
@@ -53,37 +55,35 @@ void ModifiedRevert(EditorFrame* frame, int revert, const std::filesystem::path&
                 "modified Revert uses one native OK/Cancel confirmation");
     }
     Require(TestEditor::Text(frame) == before + "dirty" && editor->DocumentRevision() == revision &&
-                editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
-                editor->Send(Message::GetAnchor) == 6040 && editor->Send(Message::GetCurrentPos) == 6020 &&
-                editor->Send(Message::GetFirstVisibleLine) == 25 && editor->Send(Message::GetXOffset) == 120 &&
+                editor->Send(GetModify) && editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                editor->Send(GetAnchor) == 6040 && editor->Send(GetCurrentPos) == 6020 &&
+                editor->Send(GetFirstVisibleLine) == 25 && editor->Send(GetXOffset) == 120 &&
                 frame->GetMenuBar()->IsChecked(python) && frame->GetTitle() == title &&
                 frame->DocumentPath() == TestFiles::Filename(path) && frame->DocumentEncoding() == FileEncoding::Utf8 &&
                 !frame->DocumentHasBom() && TestFiles::Bytes(path) == external,
             "Cancel retains live bytes, identity, encoding, save point, history, manual scheme and directed view");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(frame) == before + "dirtyredo", "cancelled Revert preserves the actual redo operation");
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 6040, 6020);
-    editor->Send(Message::SetFirstVisibleLine, 25);
-    editor->Send(Message::SetXOffset, 120);
+    editor->Send(Undo);
+    editor->Send(SetSel, 6040, 6020);
+    editor->Send(SetFirstVisibleLine, 25);
+    editor->Send(SetXOffset, 120);
     {
         NativeDialogs::FileCommandDriver driver(NativeDialogs::FileDialogProfile::Open, wxID_OK);
         Command(frame, revert);
         Require(driver.prompts == 1 && driver.choosers == 0 && driver.errors == 0,
                 "OK reloads after exactly one confirmation without an ordinary save decision");
     }
-    Require(TestEditor::Text(frame) == external && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo) &&
-                editor->Send(Message::GetAnchor) == 6040 && editor->Send(Message::GetCurrentPos) == 6020 &&
-                editor->Send(Message::GetFirstVisibleLine) == 25 && editor->Send(Message::GetXOffset) == 120 &&
+    Require(TestEditor::Text(frame) == external && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                !editor->Send(CanRedo) && editor->Send(GetAnchor) == 6040 && editor->Send(GetCurrentPos) == 6020 &&
+                editor->Send(GetFirstVisibleLine) == 25 && editor->Send(GetXOffset) == 120 &&
                 editor->GetScrollRange(wxHORIZONTAL) - editor->GetScrollThumb(wxHORIZONTAL) >= 120 &&
                 frame->GetMenuBar()->IsChecked(python) && TestFiles::Bytes(path) == external,
             "confirmed Revert restores original same-file view and scheme with clean undo state and unchanged disk");
     TestFiles::WriteBytes(path, "short");
     NativeKeys::Shortcut(frame, WXK_F5, false);
-    Require(TestEditor::Text(frame) == "short" && editor->Send(Message::GetCurrentPos) == 5 &&
-                editor->Send(Message::GetAnchor) == 5 && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && TestFiles::Bytes(path) == "short",
+    Require(TestEditor::Text(frame) == "short" && editor->Send(GetCurrentPos) == 5 && editor->Send(GetAnchor) == 5 &&
+                !editor->Send(GetModify) && !editor->Send(CanUndo) && TestFiles::Bytes(path) == "short",
             "native F5 invokes Revert and a deleted saved line uses original EOF fallback");
     std::puts("PASS: modified OK/Cancel, history, manual scheme, viewport and native F5 shortened-file fallback");
 }
@@ -115,7 +115,8 @@ void EncodedRevert(EditorFrame* frame, const std::filesystem::path& path) {
                 "Revert supports delivered codecs and retains a GBK weak hint for ASCII mixed EOL content");
         if (fixture.encoding == FileEncoding::Gbk)
             Require(result.lineEndings.crlf == 1 && result.lineEndings.cr == 1 && result.lineEndings.lf == 1 &&
-                        frame->Editor()->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf),
+                        frame->Editor()->Send(Message::GetEOLMode) ==
+                            static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::CrLf)),
                     "weak-encoding Revert retains original mixed-EOL counts and tie-breaking insertion mode");
     }
     const std::string utf8Bom = "\x{ef}\x{bb}\x{bf}UTF-8 wins";
@@ -172,6 +173,7 @@ public:
         frame->ShowWithoutActivating();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                using enum Scintilla::Message;
                 Require(presented, "native Revert frame is presented");
                 const int revert = frame->GetMenuBar()->FindMenuItem("File", "Revert");
                 Require(revert != wxNOT_FOUND, "File menu must expose Revert");
@@ -183,14 +185,12 @@ public:
                         "the named fixture must open");
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(frame->GetMenuBar()->IsEnabled(revert), "named documents enable Revert");
-                frame->Editor()->Send(Message::SetSel, 9, 2);
+                frame->Editor()->Send(SetSel, 9, 2);
                 TestFiles::WriteBytes(path, "disk!\nsecond\nthird\n");
                 Command(frame, revert);
-                Require(TestEditor::Text(frame) == "disk!\nsecond\nthird\n" &&
-                            frame->Editor()->Send(Message::GetAnchor) == 9 &&
-                            frame->Editor()->Send(Message::GetCurrentPos) == 2 &&
-                            !frame->Editor()->Send(Message::GetModify) && !frame->Editor()->Send(Message::CanUndo) &&
-                            TestFiles::Bytes(path) == "disk!\nsecond\nthird\n",
+                Require(TestEditor::Text(frame) == "disk!\nsecond\nthird\n" && frame->Editor()->Send(GetAnchor) == 9 &&
+                            frame->Editor()->Send(GetCurrentPos) == 2 && !frame->Editor()->Send(GetModify) &&
+                            !frame->Editor()->Send(CanUndo) && TestFiles::Bytes(path) == "disk!\nsecond\nthird\n",
                         "clean Revert reloads without prompting, preserves selection direction and never writes");
                 std::puts("PASS: native Revert entry, enablement and clean same-file reload");
                 ModifiedRevert(frame, revert, path);

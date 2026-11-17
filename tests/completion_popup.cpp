@@ -19,38 +19,39 @@ wxVListBox* CompletionList(wxWindow* parent) {
     return nullptr;
 }
 void CheckInitialPopup(EditorControl* editor) {
+    using enum Scintilla::Message;
     TestEditor::ResetStream(editor, "al", 2, 2);
-    editor->Send(Message::AutoCSetSeparator, 32);
-    editor->Send(Message::AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
+    editor->Send(AutoCSetSeparator, 32);
+    editor->Send(AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
     wxYield();
     auto* list = CompletionList(editor);
     Require(list && list->GetParent()->IsTopLevel(), "completion uses a native top-level popup");
     Require(!list->AcceptsFocus() && !list->GetParent()->AcceptsFocus(),
             "completion list and popup preserve editor focus");
     const auto popup = list->GetParent()->GetScreenRect();
-    const auto caret =
-        editor->ClientToScreen(wxPoint(static_cast<int>(editor->Send(Message::PointXFromPosition, 0, 2)),
-                                       static_cast<int>(editor->Send(Message::PointYFromPosition, 0, 2))));
+    const auto caret = editor->ClientToScreen(wxPoint(static_cast<int>(editor->Send(PointXFromPosition, 0, 2)),
+                                                      static_cast<int>(editor->Send(PointYFromPosition, 0, 2))));
     Require(popup.y >= caret.y && popup.x <= caret.x, "popup aligns below the completion root");
-    Require(popup.height > editor->Send(Message::TextHeight, 0), "popup sizes native item rows");
+    Require(popup.height > editor->Send(TextHeight, 0), "popup sizes native item rows");
     const auto focus = wxWindow::FindFocus();
     NativeCompletion::DoubleClick(list,
                                   list->GetItemRect(1).GetPosition() + wxPoint(8, list->GetItemRect(1).height / 2));
-    Require(TestEditor::Text(editor) == "alpine" && !editor->Send(Message::AutoCActive),
+    Require(TestEditor::Text(editor) == "alpine" && !editor->Send(AutoCActive),
             "native mouse double-click confirms selected candidate");
     Require(wxWindow::FindFocus() == focus, "mouse confirmation preserves keyboard focus");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     Require(TestEditor::Text(editor) == "al", "mouse completion is one Undo step");
-    editor->Send(Message::AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
+    editor->Send(AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
 #ifdef __WXMSW__
     NativeCompletion::Key(editor, VK_ESCAPE);
 #else
     NativeCompletion::Key(editor, GDK_KEY_Escape);
 #endif
-    Require(!editor->Send(Message::AutoCActive) && TestEditor::Text(editor) == "al",
+    Require(!editor->Send(AutoCActive) && TestEditor::Text(editor) == "al",
             "native Escape cancels without changing document");
 }
 void CheckPopupWorkArea(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto bounds = wxDisplay(frame).GetClientArea();
 #ifdef __WXGTK__
@@ -73,50 +74,50 @@ void CheckPopupWorkArea(EditorFrame* frame) {
         scrolled += std::string(80, 'x') + char(10);
     scrolled += std::string(180, 'x') + "al";
     TestEditor::ResetStream(editor, scrolled.c_str(), scrolled.size(), scrolled.size());
-    editor->Send(Message::GotoPos, scrolled.size());
+    editor->Send(GotoPos, scrolled.size());
     wxYield();
-    editor->Send(Message::AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine alphabetically_long_candidate"));
+    editor->Send(AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine alphabetically_long_candidate"));
     wxYield();
     auto* list = CompletionList(editor);
     const auto scrolledPopup = list ? list->GetParent()->GetScreenRect() : wxRect();
     if (!list || !bounds.Contains(scrolledPopup)) {
         const auto frameRect = frame->GetScreenRect();
         const auto editorRect = editor->GetScreenRect();
-        const auto position = editor->Send(Message::GetCurrentPos);
+        const auto position = editor->Send(GetCurrentPos);
         const auto caret =
-            editor->ClientToScreen(wxPoint(static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position)),
-                                           static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position))));
+            editor->ClientToScreen(wxPoint(static_cast<int>(editor->Send(PointXFromPosition, 0, position)),
+                                           static_cast<int>(editor->Send(PointYFromPosition, 0, position))));
         std::fprintf(stderr,
                      "completion boundary: bounds=%d,%d,%d,%d popup=%d,%d,%d,%d list=%p active=%zd "
                      "frame=%d,%d,%d,%d editor=%d,%d,%d,%d caret=%d,%d DPI=%d,%d scale=%g "
                      "first=%zd xOffset=%zd\n",
                      bounds.x, bounds.y, bounds.width, bounds.height, scrolledPopup.x, scrolledPopup.y,
-                     scrolledPopup.width, scrolledPopup.height, static_cast<void*>(list),
-                     editor->Send(Message::AutoCActive), frameRect.x, frameRect.y, frameRect.width, frameRect.height,
-                     editorRect.x, editorRect.y, editorRect.width, editorRect.height, caret.x, caret.y,
-                     editor->GetDPI().x, editor->GetDPI().y, editor->GetContentScaleFactor(),
-                     editor->Send(Message::GetFirstVisibleLine), editor->Send(Message::GetXOffset));
+                     scrolledPopup.width, scrolledPopup.height, static_cast<void*>(list), editor->Send(AutoCActive),
+                     frameRect.x, frameRect.y, frameRect.width, frameRect.height, editorRect.x, editorRect.y,
+                     editorRect.width, editorRect.height, caret.x, caret.y, editor->GetDPI().x, editor->GetDPI().y,
+                     editor->GetContentScaleFactor(), editor->Send(GetFirstVisibleLine), editor->Send(GetXOffset));
     }
     Require(list && bounds.Contains(scrolledPopup), "scrolled popup fits monitor work area at bottom-right edge");
-    const auto current = editor->Send(Message::GetCurrentPos);
+    const auto current = editor->Send(GetCurrentPos);
     const auto caretY =
-        editor->ClientToScreen(wxPoint(0, static_cast<int>(editor->Send(Message::PointYFromPosition, 0, current)))).y;
+        editor->ClientToScreen(wxPoint(0, static_cast<int>(editor->Send(PointYFromPosition, 0, current)))).y;
     Require(list->GetParent()->GetScreenRect().GetBottom() <= caretY, "popup opens above caret near monitor bottom");
-    editor->Send(Message::AutoCCancel);
-    Require(!editor->Send(Message::AutoCActive), "cancel ends completion lifetime");
+    editor->Send(AutoCCancel);
+    Require(!editor->Send(AutoCActive), "cancel ends completion lifetime");
 }
 void CheckPopupWheelAndFocus(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
 #ifdef __WXGTK__
     // Finish native allocation and clamp before saving the wheel baseline;
     // the core's deferred widening timer also performs this clamp.
     editor->SendSizeEvent();
     NativePaint::Complete(editor);
-    editor->Send(Message::LineScroll, 0, 0);
+    editor->Send(LineScroll, 0, 0);
 #endif
-    const auto firstLine = editor->Send(Message::GetFirstVisibleLine);
-    editor->Send(Message::AutoCSetMaxHeight, 4);
-    editor->Send(Message::AutoCShow, 2,
+    const auto firstLine = editor->Send(GetFirstVisibleLine);
+    editor->Send(AutoCSetMaxHeight, 4);
+    editor->Send(AutoCShow, 2,
                  reinterpret_cast<intptr_t>("alpha alpine amber amble ample anchor ancient angel anger "
                                             "angle animal annual answer antenna antique"));
     auto* list = CompletionList(editor);
@@ -126,13 +127,13 @@ void CheckPopupWheelAndFocus(EditorFrame* frame) {
     NativeCompletion::Key(editor, GDK_KEY_Down);
 #endif
     Require(list && list->IsRowVisible(0), "native Down keeps earlier visible rows while the new selection fits");
-    editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>("antique"));
-    const auto lineBeforeWheel = editor->Send(Message::GetFirstVisibleLine);
-    const auto activeBeforeWheel = editor->Send(Message::AutoCActive);
+    editor->Send(AutoCSelect, 0, reinterpret_cast<intptr_t>("antique"));
+    const auto lineBeforeWheel = editor->Send(GetFirstVisibleLine);
+    const auto activeBeforeWheel = editor->Send(AutoCActive);
     auto* focusBeforeWheel = wxWindow::FindFocus();
     NativeCompletion::Wheel(editor);
-    const auto lineAfterWheel = editor->Send(Message::GetFirstVisibleLine);
-    const auto activeAfterWheel = editor->Send(Message::AutoCActive);
+    const auto lineAfterWheel = editor->Send(GetFirstVisibleLine);
+    const auto activeAfterWheel = editor->Send(AutoCActive);
     if (lineAfterWheel != firstLine || !activeAfterWheel)
         std::fprintf(stderr,
                      "completion wheel: first=%zd before=%zd after=%zd active=%zd,%zd "
@@ -140,16 +141,16 @@ void CheckPopupWheelAndFocus(EditorFrame* frame) {
                      firstLine, lineBeforeWheel, lineAfterWheel, activeBeforeWheel, activeAfterWheel,
                      static_cast<void*>(focusBeforeWheel), static_cast<void*>(wxWindow::FindFocus()),
                      static_cast<void*>(editor), static_cast<void*>(list));
-    Require(editor->Send(Message::GetFirstVisibleLine) == firstLine && editor->Send(Message::AutoCActive),
+    Require(editor->Send(GetFirstVisibleLine) == firstLine && editor->Send(AutoCActive),
             "native wheel scrolls the active completion list while document stays fixed");
-    editor->Send(Message::AutoCCancel);
+    editor->Send(AutoCCancel);
     auto* focusTarget = new wxButton(frame, wxID_ANY, "Focus target");
     editor->SetFocus();
     wxYield();
-    editor->Send(Message::AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
+    editor->Send(AutoCShow, 2, reinterpret_cast<intptr_t>("alpha alpine"));
     focusTarget->SetFocus();
     wxYield();
-    Require(!editor->Send(Message::AutoCActive), "native focus loss ends popup lifetime");
+    Require(!editor->Send(AutoCActive), "native focus loss ends popup lifetime");
 }
 void CheckPopup(EditorFrame* frame) {
     auto* editor = frame->Editor();

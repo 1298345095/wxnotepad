@@ -41,6 +41,7 @@ public:
         CallAfter([this, frame] {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-syntax-large");
             try {
+                using enum Scintilla::Message;
                 std::filesystem::create_directory(directory);
                 const auto source = directory / "large.CPP";
                 const auto copy = directory / "copy.CPP";
@@ -52,34 +53,31 @@ public:
                 Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "large C++ document must open");
                 auto* editor = frame->Editor();
                 Paint(editor);
-                Require(editor->Send(Message::GetLength) == static_cast<intptr_t>(bytes.size()) &&
-                            editor->Send(Message::GetLexer) == SCLEX_CPP &&
-                            editor->Send(Message::GetStyleIndexAt, 0) == SCE_C_WORD2 &&
+                Require(editor->Send(GetLength) == static_cast<intptr_t>(bytes.size()) &&
+                            editor->Send(GetLexer) == SCLEX_CPP && editor->Send(GetStyleIndexAt, 0) == SCE_C_WORD2 &&
                             frame->GetStatusBar()->GetStatusText().Contains("C/C++"),
                         "a supported document above 32 MiB must retain its normal language, lexer and token styles");
                 const int plain = frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text");
                 wxCommandEvent choose(wxEVT_MENU, plain);
                 Require(frame->GetEventHandler()->ProcessEvent(choose), "real Plain Text menu must be handled");
                 Paint(editor);
-                Require(editor->Send(Message::GetLexer) == SCLEX_NULL &&
-                            editor->Send(Message::GetStyleIndexAt, 0) == 0 &&
-                            editor->Send(Message::GetMarginWidthN, 2) > 0 &&
+                Require(editor->Send(GetLexer) == SCLEX_NULL && editor->Send(GetStyleIndexAt, 0) == 0 &&
+                            editor->Send(GetMarginWidthN, 2) > 0 &&
                             frame->GetStatusBar()->GetStatusText().Contains("Plain Text (override)"),
                         "manual Plain Text above 32 MiB must use the existing no-lexer and cleared-style path");
                 Require(frame->Save().status == SaveStatus::Saved && Bytes(source) == bytes &&
-                            editor->Send(Message::GetLexer) == SCLEX_NULL && frame->GetMenuBar()->IsChecked(plain),
+                            editor->Send(GetLexer) == SCLEX_NULL && frame->GetMenuBar()->IsChecked(plain),
                         "ordinary large-file Save must retain manual Plain Text and independent exact bytes");
                 Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved && Bytes(copy) == bytes &&
-                            editor->Send(Message::GetLexer) == SCLEX_NULL,
+                            editor->Send(GetLexer) == SCLEX_NULL,
                         "default large-file Save As must retain the current Plain Text scheme and exact bytes");
                 Require(frame->SaveAs(Filename(copy), {}, SaveType::AllFiles).status == SaveStatus::Saved &&
                             Bytes(copy) == bytes,
                         "large-file Save As must retain exact bytes");
                 Paint(editor);
-                Require(editor->Send(Message::GetLexer) == SCLEX_CPP &&
-                            editor->Send(Message::GetStyleIndexAt, 0) == SCE_C_WORD2 &&
-                            !frame->GetStatusBar()->GetStatusText().Contains("override") &&
-                            !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+                Require(editor->Send(GetLexer) == SCLEX_CPP && editor->Send(GetStyleIndexAt, 0) == SCE_C_WORD2 &&
+                            !frame->GetStatusBar()->GetStatusText().Contains("override") && !editor->Send(GetModify) &&
+                            !editor->Send(CanUndo),
                         "large-file naming must restore filename-based lexer selection without adding edit history");
                 std::printf(
                     "PASS: %zu-byte C++ Open, manual Plain Text, ordinary Save and Save As with independent bytes\n",

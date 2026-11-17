@@ -183,6 +183,7 @@ void QuickReload(EditorFrame* frame) {
     std::puts("PASS: UTF-8 quick reload Save, Discard and Cancel retain their separate original prompt semantics");
 }
 void DeliveredCodecs(EditorFrame* frame) {
+    using enum FileEncoding;
     struct Fixture {
         std::string bytes;
         FileEncoding encoding;
@@ -192,19 +193,19 @@ void DeliveredCodecs(EditorFrame* frame) {
         std::string text;
     };
     const Fixture fixtures[] = {
-        {"\x{e4}\x{b8}\x{ad}", FileEncoding::Utf8, 0, "UTF-8", false, "中"},
-        {"\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}", FileEncoding::Utf8, 0, "UTF-8", true, "中"},
-        {"\x{2d}\x{4e}", FileEncoding::Utf16Le, 1, "UTF-16LE", false, "中"},
-        {"\x{ff}\x{fe}\x{2d}\x{4e}", FileEncoding::Utf16Le, 1, "UTF-16LE", true, "中"},
-        {"\x{d6}\x{d0}", FileEncoding::Gbk, 2, "GBK (CP936)", false, "中"},
-        {"# coding: utf-8\n\x{d6}\x{d0}", FileEncoding::Gbk, 2, "GBK (CP936)", false, "# coding: utf-8\n中"},
-        {"a\r\nb\nc\r", FileEncoding::Utf8, 0, "UTF-8", false, "a\r\nb\nc\r"},
-        {std::string("\x{fe}\x{ff}\x{4e}\x{2d}", 4), FileEncoding::Utf16Be, 3, "UTF-16BE", true, "中"},
-        {std::string("\0a\0\r\0\n\0b\0\n\0c\0\r", 14), FileEncoding::Utf16Be, 3, "UTF-16BE", false, "a\r\nb\nc\r"}};
+        {"\x{e4}\x{b8}\x{ad}", Utf8, 0, "UTF-8", false, "中"},
+        {"\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}", Utf8, 0, "UTF-8", true, "中"},
+        {"\x{2d}\x{4e}", Utf16Le, 1, "UTF-16LE", false, "中"},
+        {"\x{ff}\x{fe}\x{2d}\x{4e}", Utf16Le, 1, "UTF-16LE", true, "中"},
+        {"\x{d6}\x{d0}", Gbk, 2, "GBK (CP936)", false, "中"},
+        {"# coding: utf-8\n\x{d6}\x{d0}", Gbk, 2, "GBK (CP936)", false, "# coding: utf-8\n中"},
+        {"a\r\nb\nc\r", Utf8, 0, "UTF-8", false, "a\r\nb\nc\r"},
+        {std::string("\x{fe}\x{ff}\x{4e}\x{2d}", 4), Utf16Be, 3, "UTF-16BE", true, "中"},
+        {std::string("\0a\0\r\0\n\0b\0\n\0c\0\r", 14), Utf16Be, 3, "UTF-16BE", false, "a\r\nb\nc\r"}};
     const auto path = TestFiles::TemporaryDirectory("codecs.txt");
     for (const auto& fixture : fixtures) {
         TestFiles::WriteBytes(path, "initial");
-        Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+        Require(frame->Open(TestFiles::Filename(path), Utf8).status == OpenStatus::Opened,
                 "codec source fixture must open");
         TestFiles::WriteBytes(path, fixture.bytes);
         ReloadDialogs driver;
@@ -257,7 +258,7 @@ void FailedReload(EditorFrame* frame) {
     std::puts("PASS: decode/read failures preserve live state and report owned error dialogs");
 }
 void SameFileState(EditorFrame* frame) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     const auto path = TestFiles::TemporaryDirectory("same-file.txt");
     std::string text;
     for (int line = 0; line < 80; ++line)
@@ -268,22 +269,22 @@ void SameFileState(EditorFrame* frame) {
     wxCommandEvent cpp(wxEVT_MENU, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     frame->GetEventHandler()->ProcessEvent(cpp);
     auto* editor = frame->Editor();
-    editor->Send(Message::SetSel, 4232, 4374);
-    editor->Send(Message::SetFirstVisibleLine, 20);
-    editor->Send(Message::SetXOffset, 40);
-    editor->Send(Message::SetReadOnly, 1);
-    const auto first = editor->Send(Message::GetFirstVisibleLine);
-    const auto x = editor->Send(Message::GetXOffset);
+    editor->Send(SetSel, 4232, 4374);
+    editor->Send(SetFirstVisibleLine, 20);
+    editor->Send(SetXOffset, 40);
+    editor->Send(SetReadOnly, 1);
+    const auto first = editor->Send(GetFirstVisibleLine);
+    const auto x = editor->Send(GetXOffset);
     ReloadDialogs driver;
     driver.selected = 0;
     Require(frame->ReloadWithEncoding().status == OpenStatus::Opened, "same-file explicit reload must succeed");
     driver.Stop();
-    Require(frame->GetMenuBar()->IsChecked(cpp.GetId()) && editor->Send(Message::GetAnchor) == 4232 &&
-                editor->Send(Message::GetCurrentPos) == 4374 && editor->Send(Message::GetFirstVisibleLine) == first &&
-                editor->Send(Message::GetXOffset) == x && editor->Send(Message::GetReadOnly) &&
-                TestEditor::Text(frame) == text && TestFiles::Bytes(path) == text,
+    Require(frame->GetMenuBar()->IsChecked(cpp.GetId()) && editor->Send(GetAnchor) == 4232 &&
+                editor->Send(GetCurrentPos) == 4374 && editor->Send(GetFirstVisibleLine) == first &&
+                editor->Send(GetXOffset) == x && editor->Send(GetReadOnly) && TestEditor::Text(frame) == text &&
+                TestFiles::Bytes(path) == text,
             "encoding reload must retain same-file scheme, directional selection, viewport and read-only mode");
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     std::puts("PASS: encoding reload retains same-file scheme, selection, viewport and read-only mode");
 }
 void NativeShortcuts(EditorFrame* frame) {

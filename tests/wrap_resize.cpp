@@ -23,16 +23,17 @@ void Require(bool condition, const char* message) {
 }
 
 void Prepare(EditorFrame* frame, const std::filesystem::path& path) {
+    using enum Scintilla::Message;
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "open the TOML resize fixture");
     auto* editor = frame->Editor();
-    Require(editor->Send(Message::GetLexer) == SCLEX_TOML, "the real TOML lexer is active");
+    Require(editor->Send(GetLexer) == SCLEX_TOML, "the real TOML lexer is active");
     // Different native fonts make a shared measurement DC race observable in
     // layout results, as well as through the original heap-corruption crash.
-    editor->Send(Message::StyleSetSize, SCE_TOML_STRING_SQ, 12);
-    editor->Send(Message::StyleSetSize, SCE_TOML_STRING_DQ, 12);
-    editor->Send(Message::StyleSetSize, SCE_TOML_COMMENT, 8);
+    editor->Send(StyleSetSize, SCE_TOML_STRING_SQ, 12);
+    editor->Send(StyleSetSize, SCE_TOML_STRING_DQ, 12);
+    editor->Send(StyleSetSize, SCE_TOML_COMMENT, 8);
     editor->SetLineNumbersVisible(false);
-    editor->Send(Message::Colourise, 0, -1);
+    editor->Send(Colourise, 0, -1);
     NativePaint::Complete(editor);
 }
 
@@ -57,6 +58,7 @@ void Resize(EditorFrame* frame, int width) {
 }
 
 void RepeatedLineLayout(EditorFrame* frame, const std::filesystem::path& directory) {
+    using enum Scintilla::Message;
     const auto small = directory / "small.toml";
     const auto large = directory / "large.toml";
     std::string control;
@@ -78,33 +80,33 @@ void RepeatedLineLayout(EditorFrame* frame, const std::filesystem::path& directo
     Prepare(frame, small);
     for (size_t index = 0; index < Widths.size(); ++index) {
         Resize(frame, Widths[index]);
-        expected[index] = frame->Editor()->Send(Message::WrapCount, 0);
+        expected[index] = frame->Editor()->Send(WrapCount, 0);
     }
     Prepare(frame, large);
     auto* editor = frame->Editor();
-    editor->Send(Message::InsertText, text.size(), reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
+    editor->Send(InsertText, text.size(), reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
     for (int pass = 0; pass < ResizePasses; ++pass) {
         const auto index = static_cast<size_t>(pass) % Widths.size();
         Resize(frame, Widths[index]);
         for (const auto line : {0, RepeatedLines / 2, RepeatedLines - 1}) {
-            editor->Send(Message::GotoLine, line);
+            editor->Send(GotoLine, line);
             NativePaint::Complete(editor);
-            const auto actual = editor->Send(Message::WrapCount, line);
+            const auto actual = editor->Send(WrapCount, line);
             if (actual != expected[index])
                 std::fprintf(stderr, "pass=%d line=%d width=%d expected=%zd actual=%zd\n", pass, line, Widths[index],
                              expected[index], actual);
             if (actual != expected[index])
                 std::fprintf(stderr, "frame-client=%d,%d editor-client=%d,%d margins=%zd,%zd,%zd text=%zd\n",
                              frame->GetClientSize().x, frame->GetClientSize().y, editor->GetClientSize().x,
-                             editor->GetClientSize().y, editor->Send(Message::GetMarginWidthN, 0),
-                             editor->Send(Message::GetMarginWidthN, 1), editor->Send(Message::GetMarginWidthN, 2),
-                             editor->Send(Message::TextWidth, SCE_TOML_STRING_DQ,
+                             editor->GetClientSize().y, editor->Send(GetMarginWidthN, 0),
+                             editor->Send(GetMarginWidthN, 1), editor->Send(GetMarginWidthN, 2),
+                             editor->Send(TextWidth, SCE_TOML_STRING_DQ,
                                           reinterpret_cast<intptr_t>("words 中文😀 with spaces")));
             Require(actual == expected[index], "repeated styled lines wrap exactly like the small control");
         }
     }
-    Require(TestEditor::Text(editor) == text && !frame->DocumentIsModified() && editor->Send(Message::CanRedo),
+    Require(TestEditor::Text(editor) == text && !frame->DocumentIsModified() && editor->Send(CanRedo),
             "rapid wrapped resizing preserves text, the save point and redo");
     const auto saved = directory / "saved.toml";
     Require(frame->SaveAs(TestFiles::Filename(saved)).status == SaveStatus::Saved && TestFiles::Bytes(saved) == text,

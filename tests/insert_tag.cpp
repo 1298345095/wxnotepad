@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <map>
 #include <sstream>
+#include <utility>
 
 namespace {
 void Require(bool condition, const char* message) {
@@ -302,36 +303,36 @@ void CloseWindow(wxDialog* dialog) {
     wxYield();
 }
 void PrepareOriginalState(EditorControl* editor, const std::string& kind) {
-    using Scintilla::Message;
-    editor->Send(Message::SetMultipleSelection, 0);
+    using enum Scintilla::Message;
+    editor->Send(SetMultipleSelection, 0);
     TestEditor::ResetStream(editor, "A中😀B\nlast", kind == "reverse" ? 8 : 1,
                             kind == "reverse" || kind == "caret" ? 1 : 8);
-    if (kind == "multiline") editor->Send(Message::SetSel, 14, 0);
+    if (kind == "multiline") editor->Send(SetSel, 14, 0);
     if (kind == "multiple") {
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::AddSelection, 10, 14);
-        editor->Send(Message::SetMainSelection, 1);
+        editor->Send(SetMultipleSelection, 1);
+        editor->Send(AddSelection, 10, 14);
+        editor->Send(SetMainSelection, 1);
     }
     if (kind == "virtual") {
-        editor->Send(Message::SetSel, 14, 14);
-        editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 2);
-        editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 4);
+        editor->Send(SetSel, 14, 14);
+        editor->Send(SetSelectionNCaretVirtualSpace, 0, 2);
+        editor->Send(SetSelectionNAnchorVirtualSpace, 0, 4);
     }
     if (kind.starts_with("rectangle")) {
         TestEditor::ResetStream(editor, "xxx\nxxx", 1, 7);
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, kind == "rectangle-reverse" ? 7 : 1);
-        editor->Send(Message::SetRectangularSelectionCaret, kind == "rectangle-reverse" ? 1 : 7);
-        editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 2);
-        editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 4);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, kind == "rectangle-reverse" ? 7 : 1);
+        editor->Send(SetRectangularSelectionCaret, kind == "rectangle-reverse" ? 1 : 7);
+        editor->Send(SetRectangularSelectionAnchorVirtualSpace, 2);
+        editor->Send(SetRectangularSelectionCaretVirtualSpace, 4);
     }
     if (kind == "readonly" || kind == "cancel" || kind == "close" || kind == "empty") {
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::SetSel, 1, 8);
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 1, 8);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(SetSel, 1, 8);
+        editor->Send(Undo);
+        editor->Send(SetSel, 1, 8);
     }
-    if (kind == "readonly") editor->Send(Message::SetReadOnly, 1);
+    if (kind == "readonly") editor->Send(SetReadOnly, 1);
 }
 void OriginalStates(EditorFrame* frame, int id) {
     using Scintilla::Message;
@@ -395,16 +396,17 @@ void EmbeddedLineEndings(EditorFrame* frame) {
     };
     auto* editor = frame->Editor();
     for (const auto& capture : captures) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "x", 0, 1, capture.mode);
         Require(
             editor->EncloseSelection(wxString::FromUTF8("<a>\r\n前\r後\n😀"), wxString::FromUTF8("</a>\r\n末\r尾\n𐐀")),
             "public enclosure accepts original Unicode tag fields");
         Require(TestEditor::Text(editor) == capture.after,
                 "original embedded CRLF/lone CR/LF and supplementary bytes match");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == "x" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == "x" && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "one Undo restores original mixed-line-ending enclosure and save point");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(TestEditor::Text(editor) == capture.after, "one Redo restores original embedded line-ending bytes");
     }
     std::puts("PASS: independently captured Unicode, supplementary and embedded line-ending enclosure bytes");

@@ -121,6 +121,7 @@ public:
                          {"withinlimit", "#!" + std::string(251, ' ') + "py", python},
                          {"beyondlimit", "#!" + std::string(252, ' ') + "py", plain},
                      }) {
+                    using enum Scintilla::Message;
                     // A distinct directory keeps Open on its different-path branch.
                     const auto directory = folder / std::to_string(++sequence);
                     std::filesystem::create_directory(directory);
@@ -131,11 +132,11 @@ public:
                             "interpreter fixture must open");
                     Language(frame, fixture.language);
                     auto* editor = frame->Editor();
-                    Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                                !editor->Send(Message::CanRedo) && Text(editor) == content,
+                    Require(!editor->Send(GetModify) && !editor->Send(CanUndo) && !editor->Send(CanRedo) &&
+                                Text(editor) == content,
                             "automatic detection must retain loaded bytes and clean history");
                     if (fixture.language == python)
-                        Require(editor->Send(Message::GetStyleIndexAt, content.find("return")) == SCE_PY_WORD,
+                        Require(editor->Send(GetStyleIndexAt, content.find("return")) == SCE_PY_WORD,
                                 "Python fixtures must receive actual keyword styling");
                     Choose(frame, "Plain Text");
                     Choose(frame, "Automatic");

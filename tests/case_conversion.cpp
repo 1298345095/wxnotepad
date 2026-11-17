@@ -6,6 +6,7 @@
 #include <wx/wx.h>
 #include <memory>
 #include <tuple>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -51,113 +52,113 @@ void Shortcuts(EditorFrame* frame) {
     std::puts("PASS: native Ctrl+Shift+U, Ctrl+U and exact Ctrl+Alt+U routing");
 }
 void History(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const auto& [label, before, after] : {std::tuple{"Upper Case", "Straße ﬃ ΐ", "STRASSE FFI Ϊ́"},
                                                std::tuple{"Lower Case", "STRASSE FFI Ϊ́", "strasse ffi ΐ"}}) {
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
         TestEditor::ResetStream(editor, before);
-        editor->Send(Message::SelectAll);
-        const auto eol = editor->Send(Message::GetEOLMode);
+        editor->Send(SelectAll);
+        const auto eol = editor->Send(GetEOLMode);
         const auto encoding = frame->DocumentEncoding();
         NativeSearch::Command(frame, id);
-        Require(TestEditor::Text(editor) == after && editor->Send(Message::CanUndo) && editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == after && editor->Send(CanUndo) && editor->Send(GetModify),
                 "case change leaves save point with undo history");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == before && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "one Undo restores entire original case and save point");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == after && editor->Send(Message::GetModify) &&
-                    editor->Send(Message::GetEOLMode) == eol && frame->DocumentEncoding() == encoding,
+        editor->Send(Redo);
+        Require(TestEditor::Text(editor) == after && editor->Send(GetModify) && editor->Send(GetEOLMode) == eol &&
+                    frame->DocumentEncoding() == encoding,
                 "one Redo restores case change and preserves EOL and external encoding");
     }
     for (const int mapping : {1, 2}) {
         TestEditor::ResetStream(editor, "中😀\r\n", 0, 9);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 0, 9);
-        editor->Send(Message::CustomCaseMapping, mapping);
-        Require(TestEditor::Text(editor) == "中😀\r\n" && !editor->Send(Message::CanUndo) &&
-                    editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 0, 9);
+        editor->Send(CustomCaseMapping, mapping);
+        Require(TestEditor::Text(editor) == "中😀\r\n" && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                    !editor->Send(GetModify),
                 "uncased selection preserves clean history and pending redo");
         TestEditor::RequireSelection(editor, 0, 9, "unchanged mapping retains selection");
-        editor->Send(Message::SetSel, 3, 3);
+        editor->Send(SetSel, 3, 3);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(!frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", "Upper Case")) &&
                     !frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", "Lower Case")),
                 "original case menus require a nonempty selection");
-        editor->Send(Message::CustomCaseMapping, mapping);
+        editor->Send(CustomCaseMapping, mapping);
         TestEditor::RequireSelection(editor, 3, 3, "empty selection maps no text and keeps caret");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(TestEditor::Text(editor) == "中😀\r\n!", "unchanged and empty commands retain executable redo");
     }
     TestEditor::ResetStream(editor, "aB", 0, 2);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 0, 2);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 0, 2);
+    editor->Send(SetReadOnly, 1);
     const int upper = frame->GetMenuBar()->FindMenuItem("Edit", "Upper Case");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(upper), "original case menu remains enabled for read-only selection");
     NativeSearch::Command(frame, upper);
-    Require(TestEditor::Text(editor) == "aB" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+    Require(TestEditor::Text(editor) == "aB" && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "read-only core retains text, save point and undo availability");
     // The pinned core repairs the range using the rejected insertion's zero length.
     TestEditor::RequireSelection(editor, 0, 1, "read-only case retains original core selection repair");
-    editor->Send(Message::SetReadOnly, 0);
-    Require(editor->Send(Message::CanRedo), "read-only conversion retains pending redo");
-    editor->Send(Message::Redo);
+    editor->Send(SetReadOnly, 0);
+    Require(editor->Send(CanRedo), "read-only conversion retains pending redo");
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "aB!", "read-only conversion retains executable redo");
     std::puts("PASS: grouped Undo/Redo, save point, unchanged and empty selections, original read-only range repair");
 }
 void SelectionShapes(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int upper = frame->GetMenuBar()->FindMenuItem("Edit", "Upper Case");
     // CaseConvertString's pinned capacity check rejects a result exactly three times
     // the input size. The original host passes that empty result to the live core.
     TestEditor::ResetStream(editor, "ΐ", 0, 2);
     NativeSearch::Command(frame, upper);
-    Require(TestEditor::Text(editor).empty() && editor->Send(Message::GetModify),
+    Require(TestEditor::Text(editor).empty() && editor->Send(GetModify),
             "exact maximum-expansion span retains original empty conversion result");
     TestEditor::RequireSelection(editor, 0, 0, "empty maximum-expansion result repairs selection");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "ΐ" && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "ΐ" && !editor->Send(GetModify),
             "original maximum-expansion result is undoable");
     TestEditor::ResetStream(editor, "ΐa x ΐb", 0, 3);
-    editor->Send(Message::SetMultipleSelection, 1);
-    editor->Send(Message::AddSelection, 6, 9);
-    editor->Send(Message::AddSelection, 4, 4);
-    editor->Send(Message::SetMainSelection, 0);
+    editor->Send(SetMultipleSelection, 1);
+    editor->Send(AddSelection, 6, 9);
+    editor->Send(AddSelection, 4, 4);
+    editor->Send(SetMainSelection, 0);
     NativeSearch::Command(frame, upper);
-    Require(TestEditor::Text(editor) == "Ϊ́A x Ϊ́B" && editor->Send(Message::GetSelections) == 3 &&
-                editor->Send(Message::GetMainSelection) == 0,
+    Require(TestEditor::Text(editor) == "Ϊ́A x Ϊ́B" && editor->Send(GetSelections) == 3 &&
+                editor->Send(GetMainSelection) == 0,
             "multiple selections convert their own spans and retain empty range and main selection");
-    Require(editor->Send(Message::GetSelectionNAnchor, 0) == 0 && editor->Send(Message::GetSelectionNCaret, 0) == 7 &&
-                editor->Send(Message::GetSelectionNAnchor, 1) == 17 &&
-                editor->Send(Message::GetSelectionNCaret, 1) == 10 &&
-                editor->Send(Message::GetSelectionNAnchor, 2) == 8 && editor->Send(Message::GetSelectionNCaret, 2) == 8,
+    Require(editor->Send(GetSelectionNAnchor, 0) == 0 && editor->Send(GetSelectionNCaret, 0) == 7 &&
+                editor->Send(GetSelectionNAnchor, 1) == 17 && editor->Send(GetSelectionNCaret, 1) == 10 &&
+                editor->Send(GetSelectionNAnchor, 2) == 8 && editor->Send(GetSelectionNCaret, 2) == 8,
             "expansion moves forward, reversed and empty multiple-selection byte endpoints");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "ΐa x ΐb" && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "ΐa x ΐb" && !editor->Send(GetModify),
             "one Undo restores all multiple-selection case conversions");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "Ϊ́A x Ϊ́B", "one Redo restores all multiple selections");
     for (const bool reversed : {false, true}) {
         TestEditor::ResetStream(editor, "aß\nbé");
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, reversed ? 7 : 0);
-        editor->Send(Message::SetRectangularSelectionCaret, reversed ? 0 : 7);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, reversed ? 7 : 0);
+        editor->Send(SetRectangularSelectionCaret, reversed ? 0 : 7);
         NativeSearch::Command(frame, upper);
-        Require(TestEditor::Text(editor) == "ASS\nBÉ" && editor->Send(Message::GetSelections) == 2 &&
-                    editor->Send(Message::GetSelectionMode) ==
-                        static_cast<intptr_t>(Scintilla::SelectionMode::Rectangle),
+        Require(TestEditor::Text(editor) == "ASS\nBÉ" && editor->Send(GetSelections) == 2 &&
+                    editor->Send(GetSelectionMode) ==
+                        static_cast<intptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)),
                 "forward and reverse rectangles convert each row with original shape");
         // ChangeCaseOfSelection restores each row, while the rectangular endpoints
         // retain Selection::MovePositions' separate deletion/insertion movement.
         TestEditor::RequireSelection(editor, reversed ? 4 : 3, reversed ? 3 : 4,
                                      "rectangle keeps original automatic endpoint movement");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == "aß\nbé" && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == "aß\nbé" && !editor->Send(GetModify),
                 "rectangle conversion is one undo group");
     }
     TestEditor::RequireVirtualRectangleUnchanged(
@@ -200,14 +201,15 @@ void SavedBytes(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("case-conversion");
     std::filesystem::create_directory(directory);
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         const auto path = directory / fixture.file.name;
         TestFiles::WriteBytes(path, fixture.file.before);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), fixture.file.encoding).status == OpenStatus::Opened,
                 "open case fixture through application file operation");
         const auto bom = frame->DocumentHasBom();
-        const auto eol = editor->Send(Message::GetEOLMode);
-        editor->Send(Message::SelectAll);
+        const auto eol = editor->Send(GetEOLMode);
+        editor->Send(SelectAll);
         NativeSearch::Command(frame,
                               frame->GetMenuBar()->FindMenuItem("Edit", fixture.upper ? "Upper Case" : "Lower Case"));
         TestFiles::RequireSavedUndoRedo(frame, path, fixture.file,
@@ -215,7 +217,7 @@ void SavedBytes(EditorFrame* frame) {
                                          "one Undo restores independently reopened original bytes",
                                          "one Redo restores independently reopened converted bytes"});
         Require(frame->DocumentEncoding() == fixture.file.encoding && frame->DocumentHasBom() == bom &&
-                    editor->Send(Message::GetEOLMode) == eol && !editor->Send(Message::GetModify),
+                    editor->Send(GetEOLMode) == eol && !editor->Send(GetModify),
                 "case Save retains external encoding, BOM, EOL mode and final save point");
     }
     const auto path = directory / "gbk-unrepresentable";

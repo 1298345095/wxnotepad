@@ -9,6 +9,7 @@
 #include <wx/textctrl.h>
 #include <cstdio>
 #include <exception>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -262,28 +263,29 @@ void ColumnAndPositionNavigation(EditorFrame* frame) {
     std::puts("PASS: original validation priority, input focus and document-position limits");
 }
 void FoldedNavigationHistory(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int id = frame->GetMenuBar()->FindMenuItem("Search", "Goto Line...");
     const std::string folded =
         "void outer() {\n  if (true) {\n    call();\n  }\n}\nvoid other() {\n  untouched();\n}\n";
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(folded.c_str()));
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(folded.c_str()));
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     NativeFold::Paint(editor);
-    editor->Send(Message::GotoPos, 0);
+    editor->Send(GotoPos, 0);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
-    Require(!editor->Send(Message::GetLineVisible, 2) && !editor->Send(Message::GetLineVisible, 6),
+    Require(!editor->Send(GetLineVisible, 2) && !editor->Send(GetLineVisible, 6),
             "fixture must hide nested and unrelated target blocks");
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
     const auto revision = editor->DocumentRevision();
     const auto encoding = frame->DocumentEncoding();
     const auto bom = frame->DocumentHasBom();
-    const auto lexer = editor->Send(Message::GetLexer);
-    editor->Send(Message::SetSel, 5, 1);
-    const auto top = editor->Send(Message::GetFirstVisibleLine);
-    const auto horizontal = editor->Send(Message::GetXOffset);
+    const auto lexer = editor->Send(GetLexer);
+    editor->Send(SetSel, 5, 1);
+    const auto top = editor->Send(GetFirstVisibleLine);
+    const auto horizontal = editor->Send(GetXOffset);
     for (bool escape : {false, true}) {
         Dialog(frame, id, [escape](wxDialog* dialog, wxTextCtrl* input) {
             input->SetValue("3");
@@ -293,10 +295,10 @@ void FoldedNavigationHistory(EditorFrame* frame) {
             else
                 NativeSearch::Click(dialog, wxID_CANCEL);
         });
-        Require(editor->Send(Message::GetAnchor) == 5 && editor->Send(Message::GetCurrentPos) == 1 &&
-                    editor->Send(Message::GetFirstVisibleLine) == top &&
-                    editor->Send(Message::GetXOffset) == horizontal && !editor->Send(Message::GetFoldExpanded, 0) &&
-                    !editor->Send(Message::GetFoldExpanded, 1) && !editor->Send(Message::GetFoldExpanded, 5),
+        Require(editor->Send(GetAnchor) == 5 && editor->Send(GetCurrentPos) == 1 &&
+                    editor->Send(GetFirstVisibleLine) == top && editor->Send(GetXOffset) == horizontal &&
+                    !editor->Send(GetFoldExpanded, 0) && !editor->Send(GetFoldExpanded, 1) &&
+                    !editor->Send(GetFoldExpanded, 5),
                 "Cancel and Escape must preserve selection direction, viewport and all folds");
     }
     Dialog(frame, id, [](wxDialog* dialog, wxTextCtrl* input) {
@@ -304,9 +306,8 @@ void FoldedNavigationHistory(EditorFrame* frame) {
         NativeSearch::Click(dialog, wxID_OK);
     });
     NativeSearch::Selection(editor, 29, 29, "nested hidden target must become a collapsed caret at line start");
-    Require(editor->Send(Message::GetFoldExpanded, 0) && editor->Send(Message::GetFoldExpanded, 1) &&
-                editor->Send(Message::GetLineVisible, 2) && !editor->Send(Message::GetFoldExpanded, 5) &&
-                !editor->Send(Message::GetLineVisible, 6),
+    Require(editor->Send(GetFoldExpanded, 0) && editor->Send(GetFoldExpanded, 1) && editor->Send(GetLineVisible, 2) &&
+                !editor->Send(GetFoldExpanded, 5) && !editor->Send(GetLineVisible, 6),
             "navigation must reveal only the target's folded ancestors");
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
     Dialog(frame, id, [](wxDialog* dialog, wxTextCtrl* input) {
@@ -315,20 +316,19 @@ void FoldedNavigationHistory(EditorFrame* frame) {
         NativeSearch::Click(dialog, wxID_OK);
     });
     NativeSearch::Selection(editor, 29, 29, "position-only navigation must reveal its folded target");
-    Require(editor->Send(Message::GetFoldExpanded, 0) && editor->Send(Message::GetFoldExpanded, 1) &&
-                !editor->Send(Message::GetFoldExpanded, 5),
+    Require(editor->Send(GetFoldExpanded, 0) && editor->Send(GetFoldExpanded, 1) && !editor->Send(GetFoldExpanded, 5),
             "position-only navigation must preserve unrelated folded blocks");
-    const auto y = editor->Send(Message::PointYFromPosition, 0, 29);
+    const auto y = editor->Send(PointYFromPosition, 0, 29);
     Require(y >= 0 && y < editor->GetClientSize().y, "navigated caret must be in the viewport");
     Require(NativeSearch::Text(editor) == folded && editor->DocumentRevision() == revision &&
-                !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                editor->Send(Message::CanRedo) && frame->DocumentEncoding() == encoding &&
-                frame->DocumentHasBom() == bom && editor->Send(Message::GetLexer) == lexer,
+                !editor->Send(GetModify) && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                frame->DocumentEncoding() == encoding && frame->DocumentHasBom() == bom &&
+                editor->Send(GetLexer) == lexer,
             "navigation and cancellation must preserve bytes, metadata, syntax and save/redo state");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(NativeSearch::Text(editor) == folded + "!", "navigation must leave original redo action available");
-    editor->Send(Message::Undo);
-    Require(!editor->Send(Message::GetModify), "Undo must still reach the same save point");
+    editor->Send(Undo);
+    Require(!editor->Send(GetModify), "Undo must still reach the same save point");
     std::puts("PASS: cancellation/Escape, selective nested fold reveal and exact history/metadata preservation");
 }
 void ScrolledAndWrappedNavigation(EditorFrame* frame) {
@@ -365,7 +365,7 @@ void ScrolledAndWrappedNavigation(EditorFrame* frame) {
     const auto lastY = editor->Send(Message::PointYFromPosition, 0, 600);
     Require(lastY >= 0 && lastY < editor->GetClientSize().y, "off-screen destination must scroll into view");
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>((std::string(500, 'x') + "\nsecond\nthird").c_str()));
-    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(Scintilla::Wrap::Word));
+    editor->Send(Message::SetWrapMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::Wrap::Word)));
     NativeFold::Paint(editor);
     Require(editor->Send(Message::WrapCount, 0) > 1, "wrapping fixture must have continuation rows");
     Dialog(frame, id, [](wxDialog* dialog, wxTextCtrl* input) {

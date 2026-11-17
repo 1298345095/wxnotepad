@@ -8,6 +8,7 @@
 #include <fstream>
 #include <span>
 #include <sstream>
+#include <string_view>
 #include <utility>
 
 namespace TestLanguages {
@@ -35,16 +36,17 @@ struct SchemeFixture {
 
 inline std::string ResumeHighlighting(EditorFrame* frame, const SchemeFixture& fixture,
                                       const std::filesystem::path& path, intptr_t fontSize) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
-    Require(editor->Send(Message::StyleGetSizeFractional, defaultStyle) == fontSize,
+    Require(editor->Send(StyleGetSizeFractional, defaultStyle) == fontSize,
             "language installation must retain native font point size");
     const auto original = TestEditor::Text(editor);
     Choose(frame, "Plain Text");
-    Require(editor->Send(Message::GetLexer) == SCLEX_NULL && !editor->Send(Message::CanUndo),
+    Require(editor->Send(GetLexer) == SCLEX_NULL && !editor->Send(CanUndo),
             "Plain Text suspends highlighting without changing history");
     Choose(frame, fixture.name);
-    Require(editor->Send(Message::GetLexer) == fixture.lexer && TestEditor::Text(editor) == original &&
+    Require(editor->Send(GetLexer) == fixture.lexer && TestEditor::Text(editor) == original &&
                 !frame->DocumentIsModified(),
             "manual scheme restores highlighting without changing text or save point");
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
@@ -54,10 +56,11 @@ inline std::string ResumeHighlighting(EditorFrame* frame, const SchemeFixture& f
 }
 
 inline void FoldCommands(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     intptr_t header = -1;
-    for (intptr_t line = 0; line < editor->Send(Message::GetLineCount); ++line) {
-        if (static_cast<unsigned>(editor->Send(Message::GetFoldLevel, static_cast<uintptr_t>(line))) &
+    for (intptr_t line = 0; line < editor->Send(GetLineCount); ++line) {
+        if (static_cast<unsigned>(editor->Send(GetFoldLevel, static_cast<uintptr_t>(line))) &
             static_cast<unsigned>(std::to_underlying(Scintilla::FoldLevel::HeaderFlag))) {
             header = line;
             break;
@@ -65,10 +68,10 @@ inline void FoldCommands(EditorFrame* frame) {
     }
     Require(header >= 0, "fixture must expose an original fold header");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
-    Require(!editor->Send(Message::GetLineVisible, static_cast<uintptr_t>(header + 1)),
+    Require(!editor->Send(GetLineVisible, static_cast<uintptr_t>(header + 1)),
             "Collapse All hides each language's original fold body");
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
-    Require(editor->Send(Message::GetLineVisible, static_cast<uintptr_t>(header + 1)),
+    Require(editor->Send(GetLineVisible, static_cast<uintptr_t>(header + 1)),
             "Expand All restores each language's fold body");
 }
 
@@ -137,10 +140,10 @@ inline void NativeFiles(EditorFrame* frame, std::span<const SchemeFixture> schem
                 "native Save As offers current language filter and retains saved bytes");
     }
 }
-inline std::string Unhex(const std::string& hex) {
+inline std::string Unhex(std::string_view hex) {
     std::string bytes;
     for (size_t index = 0; index < hex.size(); index += 2)
-        bytes += static_cast<char>(std::stoi(hex.substr(index, 2), nullptr, 16));
+        bytes += static_cast<char>(std::stoi(std::string(hex.substr(index, 2)), nullptr, 16));
     return bytes;
 }
 template <class OpenFixture, class PaintDocument>
@@ -188,7 +191,7 @@ size_t OriginalStyleFoldStates(EditorFrame* frame, const std::filesystem::path& 
                 std::fprintf(stderr, "fixture=%s state=%s position=%zu expected=%u actual=%zd\n", name.c_str(),
                              state.c_str(), position, static_cast<unsigned char>(styles[position]),
                              editor->Send(Message::GetStyleIndexAt, position));
-                throw std::runtime_error(styleMessage);
+                throw TestEditor::Failure(styleMessage);
             }
         }
         std::istringstream folds(foldText);
@@ -197,7 +200,7 @@ size_t OriginalStyleFoldStates(EditorFrame* frame, const std::filesystem::path& 
             if (editor->Send(Message::GetFoldLevel, foldLine) != std::stoi(line)) {
                 std::fprintf(stderr, "fixture=%s state=%s line=%zu expected=%d actual=%zd\n", name.c_str(),
                              state.c_str(), foldLine, std::stoi(line), editor->Send(Message::GetFoldLevel, foldLine));
-                throw std::runtime_error(foldMessage);
+                throw TestEditor::Failure(foldMessage);
             }
             ++foldLine;
         }

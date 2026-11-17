@@ -17,14 +17,15 @@ void CheckUtf16(std::string_view text) {
                 "valid Unicode roundtrips through UTF-16 without changing scalars");
 }
 void CheckLegacy(std::string_view text) {
+    using enum FileEncoding;
     const auto gbk = EncodeGbk(text);
     if (!gbk.loss) Fuzz::Check(DecodeGbk(gbk.bytes) == text, "lossless GBK encoding preserves Unicode");
-    for (const auto encoding : {FileEncoding::Gb18030, FileEncoding::Big5}) {
+    for (const auto encoding : {Gb18030, Big5}) {
         const auto encoded = EncodeChinese(text, encoding);
         if (!encoded.loss)
             Fuzz::Check(DecodeChinese(encoded.bytes, encoding) == text, "lossless Chinese encoding preserves Unicode");
     }
-    for (const auto encoding : {FileEncoding::Windows1252, FileEncoding::Dos437}) {
+    for (const auto encoding : {Windows1252, Dos437}) {
         const auto encoded = EncodeSingleByte(text, encoding);
         if (!encoded.loss)
             Fuzz::Check(DecodeSingleByte(encoded.bytes, encoding) == text,
@@ -34,16 +35,17 @@ void CheckLegacy(std::string_view text) {
 } // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+    using enum FileEncoding;
     Fuzz::InitializeWx();
     const auto bytes = Fuzz::Bytes(data, size);
     CheckDecoded(DecodeUtf16Le(bytes));
     CheckDecoded(DecodeUtf16Be(bytes));
     CheckDecoded(DecodeGbk(bytes));
-    for (const auto encoding : {FileEncoding::Gb18030, FileEncoding::Big5}) {
+    for (const auto encoding : {Gb18030, Big5}) {
         CheckDecoded(DecodeChinese(bytes, encoding));
         CheckDecoded(DecodeChinese(bytes, encoding, true));
     }
-    for (const auto encoding : {FileEncoding::Windows1252, FileEncoding::Dos437}) {
+    for (const auto encoding : {Windows1252, Dos437}) {
         const auto decoded = DecodeSingleByte(bytes, encoding);
         Fuzz::Check(IsUtf8(decoded), "every single-byte value has a valid Unicode mapping");
         const auto encoded = EncodeSingleByte(decoded, encoding);

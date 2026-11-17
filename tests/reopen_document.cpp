@@ -8,6 +8,7 @@
 #include <wx/filename.h>
 #include <wx/file.h>
 #include <cstdio>
+#include <utility>
 #include <stdexcept>
 
 namespace {
@@ -204,7 +205,8 @@ public:
                             editor->Send(Message::GetFirstVisibleLine) == 25 &&
                             editor->Send(Message::GetXOffset) == 120 && frame->GetMenuBar()->IsChecked(python) &&
                             !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                            editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf),
+                            editor->Send(Message::GetEOLMode) ==
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)),
                         "frame reopen must preserve an offscreen selection and both viewport offsets");
                 std::puts("PASS: frame reopen preserves offscreen caret, anchor, view and document state");
                 const std::string header = "# tab-width: 8; indent-tabs-mode: true\n";

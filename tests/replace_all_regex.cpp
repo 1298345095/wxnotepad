@@ -75,10 +75,11 @@ public:
                 Require(result, "Replace All must expose its result count");
                 const auto example = [&](const char* before, const char* pattern, const char* with,
                                          const char* expected, const char* count) {
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(before));
-                    editor->Send(Message::EmptyUndoBuffer);
-                    editor->Send(Message::SetSavePoint);
-                    editor->Send(Message::SetSel, editor->Send(Message::GetLength), 0);
+                    using enum Scintilla::Message;
+                    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(before));
+                    editor->Send(EmptyUndoBuffer);
+                    editor->Send(SetSavePoint);
+                    editor->Send(SetSel, editor->Send(GetLength), 0);
                     query->SetValue(wxString::FromUTF8(pattern));
                     replacement->SetValue(wxString::FromUTF8(with));
                     Click(dialog, wxID_REPLACE_ALL);
@@ -88,11 +89,10 @@ public:
                     Require(Text(editor) == expected && result->GetLabel() == count,
                             "Replace All must produce the explicit regex bytes and count");
                     Command(frame, wxID_UNDO);
-                    Require(Text(editor) == before && !editor->Send(Message::GetModify) &&
-                                !editor->Send(Message::CanUndo),
+                    Require(Text(editor) == before && !editor->Send(GetModify) && !editor->Send(CanUndo),
                             "one Undo restores each complete replacement");
                     Command(frame, wxID_REDO);
-                    Require(Text(editor) == expected && editor->Send(Message::GetModify),
+                    Require(Text(editor) == expected && editor->Send(GetModify),
                             "one Redo restores each complete replacement");
                 };
                 example("a", "a*", "_", "_", "1 replacement");
@@ -145,13 +145,14 @@ public:
                 Command(frame, wxID_UNDO);
                 editor->Send(Message::SetSel, 8, 0);
                 const auto unchanged = [&](const char* pattern, const char* with, const char* label) {
+                    using enum Scintilla::Message;
                     query->SetValue(wxString::FromUTF8(pattern));
                     replacement->SetValue(wxString::FromUTF8(with));
                     Click(dialog, wxID_REPLACE_ALL);
-                    Require(Text(editor) == "中文 a" && !editor->Send(Message::GetModify) &&
-                                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                    Require(Text(editor) == "中文 a" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                                editor->Send(CanRedo),
                             "no-op/invalid regex must preserve text, savepoint, Undo and Redo");
-                    Require(editor->Send(Message::GetAnchor) == 8 && editor->Send(Message::GetCurrentPos) == 0,
+                    Require(editor->Send(GetAnchor) == 8 && editor->Send(GetCurrentPos) == 0,
                             "no-op/invalid regex must preserve selection direction");
                     Require(result->GetLabel() == label, "invalid regex and zero results must be distinct");
                 };

@@ -23,31 +23,32 @@ void Menu(EditorFrame* frame) {
     NativeSearch::Command(frame, id);
 }
 void Reset(EditorControl* editor, const char* text, intptr_t anchor, intptr_t caret) {
-    editor->Send(Message::SetSelectionMode, 0);
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    using enum Scintilla::Message;
+    editor->Send(SetSelectionMode, 0);
+    editor->Send(SetReadOnly, 0);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor->Send(SetSel, anchor, caret);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 }
 void Selection(EditorControl* editor, intptr_t anchor, intptr_t caret, const char* message) {
-    if (editor->Send(Message::GetAnchor) != anchor || editor->Send(Message::GetCurrentPos) != caret)
+    using enum Scintilla::Message;
+    if (editor->Send(GetAnchor) != anchor || editor->Send(GetCurrentPos) != caret)
         std::fprintf(stderr, "Selection: %lld/%lld; expected %lld/%lld\n",
-                     static_cast<long long>(editor->Send(Message::GetAnchor)),
-                     static_cast<long long>(editor->Send(Message::GetCurrentPos)), static_cast<long long>(anchor),
+                     static_cast<long long>(editor->Send(GetAnchor)),
+                     static_cast<long long>(editor->Send(GetCurrentPos)), static_cast<long long>(anchor),
                      static_cast<long long>(caret));
-    Require(editor->Send(Message::GetAnchor) == anchor && editor->Send(Message::GetCurrentPos) == caret, message);
+    Require(editor->Send(GetAnchor) == anchor && editor->Send(GetCurrentPos) == caret, message);
 }
 void History(EditorControl* editor, const char* before, const char* after, intptr_t anchor, intptr_t caret) {
-    Require(editor->Send(Message::CanUndo) && editor->Send(Message::GetModify),
-            "padding changes history and dirty state");
-    editor->Send(Message::Undo);
-    Require(NativeSearch::Text(editor) == before && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    using enum Scintilla::Message;
+    Require(editor->Send(CanUndo) && editor->Send(GetModify), "padding changes history and dirty state");
+    editor->Send(Undo);
+    Require(NativeSearch::Text(editor) == before && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "one Undo restores original bytes and save point");
     Selection(editor, anchor, caret, "original core selection history restores input anchor/caret");
-    editor->Send(Message::Redo);
-    Require(NativeSearch::Text(editor) == after && editor->Send(Message::GetModify), "one Redo restores padding");
+    editor->Send(Redo);
+    Require(NativeSearch::Text(editor) == after && editor->Send(GetModify), "one Redo restores padding");
 }
 void StreamFixtures(EditorFrame* frame) {
     auto* editor = frame->Editor();
@@ -94,38 +95,39 @@ void StreamFixtures(EditorFrame* frame) {
 }
 void Rectangle(EditorControl* editor, intptr_t anchor, intptr_t caret, intptr_t anchorVirtual = 0,
                intptr_t caretVirtual = 0) {
-    editor->Send(Message::SetRectangularSelectionAnchor, anchor);
-    editor->Send(Message::SetRectangularSelectionCaret, caret);
-    editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, anchorVirtual);
-    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, caretVirtual);
+    using enum Scintilla::Message;
+    editor->Send(SetRectangularSelectionAnchor, anchor);
+    editor->Send(SetRectangularSelectionCaret, caret);
+    editor->Send(SetRectangularSelectionAnchorVirtualSpace, anchorVirtual);
+    editor->Send(SetRectangularSelectionCaretVirtualSpace, caretVirtual);
 }
 void Rectangles(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const char* before = "LLLLLL\nabcd\nx\nabcde\nZ\nTAIL";
     const char* after = "LLLLLL\nabcd\nx   \nabcde\nZ   \nTAIL";
     for (const bool reverse : {false, true}) {
+        using enum Scintilla::Message;
         Reset(editor, before, 0, 0);
         Rectangle(editor, reverse ? 21 : 8, reverse ? 8 : 21, reverse ? 3 : 0, reverse ? 0 : 3);
         Menu(frame);
         Require(NativeSearch::Text(editor) == after,
                 "rectangle pads participating short lines, excludes outside and text after selected end");
-        Require(editor->Send(Message::SelectionIsRectangle) &&
-                    editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 24 : 8) &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 8 : 24) &&
-                    editor->Send(Message::GetRectangularSelectionAnchorVirtualSpace) == 0 &&
-                    editor->Send(Message::GetRectangularSelectionCaretVirtualSpace) == 0,
+        Require(editor->Send(SelectionIsRectangle) &&
+                    editor->Send(GetRectangularSelectionAnchor) == (reverse ? 24 : 8) &&
+                    editor->Send(GetRectangularSelectionCaret) == (reverse ? 8 : 24) &&
+                    editor->Send(GetRectangularSelectionAnchorVirtualSpace) == 0 &&
+                    editor->Send(GetRectangularSelectionCaretVirtualSpace) == 0,
                 "original FindColumn repair restores actual endpoint columns and clears virtual columns");
-        editor->Send(Message::Undo);
-        Require(NativeSearch::Text(editor) == before && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(NativeSearch::Text(editor) == before && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "rectangle padding has one Undo and restores save point");
-        Require(editor->Send(Message::SelectionIsRectangle) &&
-                    editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 21 : 8) &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 8 : 21) &&
-                    editor->Send(Message::GetRectangularSelectionAnchorVirtualSpace) == (reverse ? 3 : 0) &&
-                    editor->Send(Message::GetRectangularSelectionCaretVirtualSpace) == (reverse ? 0 : 3),
+        Require(editor->Send(SelectionIsRectangle) &&
+                    editor->Send(GetRectangularSelectionAnchor) == (reverse ? 21 : 8) &&
+                    editor->Send(GetRectangularSelectionCaret) == (reverse ? 8 : 21) &&
+                    editor->Send(GetRectangularSelectionAnchorVirtualSpace) == (reverse ? 3 : 0) &&
+                    editor->Send(GetRectangularSelectionCaretVirtualSpace) == (reverse ? 0 : 3),
                 "Undo restores original rectangle endpoints and virtual columns");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(NativeSearch::Text(editor) == after, "rectangle Redo restores literal padded text");
     }
     Reset(editor, "abcd\n\nx\n \nZ", 0, 0);
@@ -136,6 +138,7 @@ void Rectangles(EditorFrame* frame) {
     std::puts("PASS: forward/reverse rectangle participation, endpoint limits, virtual-column repair and history");
 }
 void Variants(EditorControl* editor) {
+    using enum Scintilla::Message;
     Reset(editor, "abcd\n\nx\n \nZ", 0, 0);
     editor->PadWithSpaces(true, false);
     Require(NativeSearch::Text(editor) == "abcd\n\nx   \n    \nZ   ",
@@ -144,56 +147,55 @@ void Variants(EditorControl* editor) {
     Reset(editor, "a\nbbbb\nx", 0, 0);
     editor->PadWithSpaces(false, true);
     Require(NativeSearch::Text(editor) == "a   \nbbbb\nx   ", "caller-owned variant still pads all lines");
-    editor->Send(Message::Undo);
-    Require(NativeSearch::Text(editor) == "a   \nbbbb\nx" && editor->Send(Message::CanUndo),
+    editor->Send(Undo);
+    Require(NativeSearch::Text(editor) == "a   \nbbbb\nx" && editor->Send(CanUndo),
             "noUndoGroup variant leaves individual target replacements separately undoable");
-    editor->Send(Message::Undo);
-    Require(NativeSearch::Text(editor) == "a\nbbbb\nx" && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(NativeSearch::Text(editor) == "a\nbbbb\nx" && !editor->Send(GetModify),
             "second Undo restores earlier independent padding");
     Reset(editor, "abcd\n\nx\n \nZ", 0, 0);
     Rectangle(editor, 0, 11, 0, 3);
-    editor->Send(Message::BeginUndoAction);
+    editor->Send(BeginUndoAction);
     editor->PadWithSpaces(true, true);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::EndUndoAction);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(EndUndoAction);
     Require(NativeSearch::Text(editor) == "abcd\n\nx   \n    \nZ   !",
             "duplicate-line caller variant pads rectangle and skips empty lines");
-    editor->Send(Message::Undo);
-    Require(NativeSearch::Text(editor) == "abcd\n\nx\n \nZ" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(NativeSearch::Text(editor) == "abcd\n\nx\n \nZ" && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "caller combines padding and subsequent edit into one Undo");
     std::puts("PASS: genuine skip-empty, caller-owned grouping and combined rectangle variants");
 }
 void NoChangeAndReadOnly(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const char* before : {"", "AA\nBB"}) {
         const bool empty = !*before;
         Reset(editor, before, empty ? 0 : 1, empty ? 0 : 4);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, empty ? 0 : 1, empty ? 0 : 4);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, empty ? 0 : 1, empty ? 0 : 4);
         const auto revision = editor->DocumentRevision();
         Menu(frame);
-        Require(NativeSearch::Text(editor) == before && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
-                    editor->DocumentRevision() == revision,
+        Require(NativeSearch::Text(editor) == before && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                    editor->Send(CanRedo) && editor->DocumentRevision() == revision,
                 "zero padding preserves bytes, dirty state, document revision and pending Redo");
         Selection(editor, 0, empty ? 0 : 5, "unchanged multiline input still receives original selection repair");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(NativeSearch::Text(editor) == std::string(before) + "!", "pending Redo survives padding no-op");
     }
     Reset(editor, "A\nlong\nz", 1, 7);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetReadOnly, 1);
     const auto revision = editor->DocumentRevision();
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", "Pad With Spaces")),
             "original Pad With Spaces menu remains enabled for read-only text");
     Menu(frame);
-    Require(NativeSearch::Text(editor) == "A\nlong\nz" && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && editor->DocumentRevision() == revision,
+    Require(NativeSearch::Text(editor) == "A\nlong\nz" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                editor->DocumentRevision() == revision,
             "read-only core refuses padding without changing history or revision");
     Selection(editor, 0, 7, "read-only command retains original multiline selection repair");
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     std::puts("PASS: empty/equal-column no-op, pending Redo and original read-only menu/selection behavior");
 }
 void NativeAltP(EditorFrame* frame, bool control, bool shift) {
@@ -245,6 +247,7 @@ void NativeAltP(EditorFrame* frame, bool control, bool shift) {
     wxYield();
 }
 void Shortcuts(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const bool control : {false, true}) {
         for (const bool shift : {false, true}) {
@@ -253,17 +256,17 @@ void Shortcuts(EditorFrame* frame) {
             Require(NativeSearch::Text(editor) == (control || shift ? "A\nlong" : "A   \nlong"),
                     "Alt+P requires exact modifiers");
             if (control || shift)
-                Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+                Require(!editor->Send(CanUndo) && !editor->Send(GetModify),
                         "extra shortcut modifiers preserve history and save point");
         }
     }
     Reset(editor, "A\nlong\nz", 1, 7);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetReadOnly, 1);
     NativeAltP(frame, false, false);
-    Require(NativeSearch::Text(editor) == "A\nlong\nz" && !editor->Send(Message::CanUndo),
+    Require(NativeSearch::Text(editor) == "A\nlong\nz" && !editor->Send(CanUndo),
             "native read-only Alt+P leaves text protected");
     Selection(editor, 0, 7, "native read-only shortcut executes original selection repair");
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     std::puts("PASS: actual native Alt+P, extra Ctrl/Shift exclusions and read-only routing");
 }
 void SavedBytes(EditorFrame* frame) {

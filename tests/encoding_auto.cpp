@@ -255,8 +255,9 @@ void CheckUnicodeLineEndings(const AutomaticFixture& check) {
 }
 void CheckConfiguredDetection(EditorControl* editor, const std::filesystem::path& directory,
                               const AutomaticFixture& check) {
+    using enum FileEncoding;
     check("nonlatin-utf16.txt", std::string("\x{2d}\x{4e}\x{87}\x{65} \0E\0n\0g\0l\0i\0s\0h\0\n\0", 22),
-          "中文 English\n", FileEncoding::Utf16Le, false);
+          "中文 English\n", Utf16Le, false);
     EncodingOptions unicodeStatistics;
     unicodeStatistics.skipUnicodeDetection = false;
     // Eight C0 bytes reach the original MaybeBinary gate even when
@@ -265,60 +266,58 @@ void CheckConfiguredDetection(EditorControl* editor, const std::filesystem::path
           std::string("\x{d0}\x{10}\x{d1}\x{10}\x{d2}\x{10}\x{d3}\x{10}\x{d4}\x{10}\x{d5}\x{10}\x{d6}"
                       "\x{10}\x{d7}\x{10}",
                       16),
-          "აბგდევზთ", FileEncoding::Utf16Le, false, unicodeStatistics);
+          "აბგდევზთ", Utf16Le, false, unicodeStatistics);
     CheckUnicodeLineEndings(check);
     const std::string masked = "# tab-width: 8\n" + std::string(600, 'x') + "\n# coding: windows1252\n";
-    check("first-window.txt", masked, masked, FileEncoding::Utf8, false);
+    check("first-window.txt", masked, masked, Utf8, false);
     const std::string footer = std::string(600, 'x') + "\n# coding: gbk\n\x{d6}\x{d0}\x{ce}\x{c4}";
-    check("last-window.txt", footer, std::string(600, 'x') + "\n# coding: gbk\n中文", FileEncoding::Gbk, false);
+    check("last-window.txt", footer, std::string(600, 'x') + "\n# coding: gbk\n中文", Gbk, false);
     EncodingOptions ignoreTags;
     ignoreTags.noEncodingTags = true;
-    check("disabled-tag.txt", "# coding: windows1252\nplain", "# coding: windows1252\nplain", FileEncoding::Utf8, false,
-          ignoreTags);
-    check("unicode-declaration.txt", "# coding: utf16le\nplain", "# coding: utf16le\nplain", FileEncoding::Utf8, false);
+    check("disabled-tag.txt", "# coding: windows1252\nplain", "# coding: windows1252\nplain", Utf8, false, ignoreTags);
+    check("unicode-declaration.txt", "# coding: utf16le\nplain", "# coding: utf16le\nplain", Utf8, false);
     for (const char* declaration : {"<?xml encoding='GB_2312'?>\n", "<meta charset=cp936>\n", "# fileencoding: ms936\n",
                                     "/*!40101 SET NAMES gbk */\n"}) {
         check("declarations.txt", std::string(declaration) + "\x{d6}\x{d0}\x{ce}\x{c4}",
-              std::string(declaration) + "中文", FileEncoding::Gbk, false);
+              std::string(declaration) + "中文", Gbk, false);
     }
-    check("css.txt", "@charset \"GBK\";\nplain", "@charset \"GBK\";\nplain", FileEncoding::Utf8, false);
-    check("case.txt", "# Coding: gbk\nplain", "# Coding: gbk\nplain", FileEncoding::Utf8, false);
+    check("css.txt", "@charset \"GBK\";\nplain", "@charset \"GBK\";\nplain", Utf8, false);
+    check("case.txt", "# Coding: gbk\nplain", "# Coding: gbk\nplain", Utf8, false);
     const std::string localDisabled = "# enable-local-variables: 0; coding: gbk\nplain";
-    check("local-variables.txt", localDisabled, localDisabled, FileEncoding::Utf8, false);
+    check("local-variables.txt", localDisabled, localDisabled, Utf8, false);
     EncodingOptions ignoreVariables;
     ignoreVariables.noFileVariables = true;
-    check("disabled-variables.txt", localDisabled, localDisabled, FileEncoding::Gbk, false, ignoreVariables);
+    check("disabled-variables.txt", localDisabled, localDisabled, Gbk, false, ignoreVariables);
     EncodingOptions legacy;
     legacy.defaultEncoding = 936;
     legacy.loadASCIIasUTF8 = false;
-    check("configured-ascii.txt", "plain", "plain", FileEncoding::Gbk, false, legacy);
-    check("configured-legacy.txt", "\x{d6}\x{d0}\x{ce}\x{c4}", "中文", FileEncoding::Gbk, false, legacy);
-    check("preferred.sh", "# coding: gbk\nplain", "# coding: gbk\nplain", FileEncoding::Utf8, false, legacy);
+    check("configured-ascii.txt", "plain", "plain", Gbk, false, legacy);
+    check("configured-legacy.txt", "\x{d6}\x{d0}\x{ce}\x{c4}", "中文", Gbk, false, legacy);
+    check("preferred.sh", "# coding: gbk\nplain", "# coding: gbk\nplain", Utf8, false, legacy);
     EncodingOptions art;
     art.loadNFOasOEM = false;
-    check("disabled.nfo", "plain", "plain", FileEncoding::Utf8, false, art);
+    check("disabled.nfo", "plain", "plain", Utf8, false, art);
     for (const char* name : {"preferred.vhd", "preferred.VHDL"})
-        check(name, "plain", "plain", FileEncoding::Windows1252, false);
+        check(name, "plain", "plain", Windows1252, false);
     for (const char* name : {"preferred.nfo", "preferred.DIZ"})
-        check(name, "plain", "plain", FileEncoding::Dos437, false);
+        check(name, "plain", "plain", Dos437, false);
     for (const char* alias : {"windows-1252", "xansi", "cp367", "ibm367", "us", "cp1252", "iso-8859-1"}) {
         const auto declaration = std::string("# coding: ") + alias + "\n";
-        check("western-alias.txt", declaration + "\x{80}\x{a0}", declaration + "€\u{00a0}", FileEncoding::Windows1252,
-              false);
+        check("western-alias.txt", declaration + "\x{80}\x{a0}", declaration + "€\u{00a0}", Windows1252, false);
     }
     for (const char* alias : {"ibm437", "437", "cp437", "cspc8", "codepage437"}) {
         const auto declaration = std::string("# coding: ") + alias + "\n";
-        check("oem-alias.txt", declaration + "\x{da}\x{c4}\x{bf}", declaration + "┌─┐", FileEncoding::Dos437, false);
+        check("oem-alias.txt", declaration + "\x{da}\x{c4}\x{bf}", declaration + "┌─┐", Dos437, false);
     }
-    check("explicit.nfo", "\x{80}", "€", FileEncoding::Windows1252, false, {}, FileEncoding::Windows1252);
-    check("explicit.vhdl", "\x{ec}", "∞", FileEncoding::Dos437, false, {}, FileEncoding::Dos437);
+    check("explicit.nfo", "\x{80}", "€", Windows1252, false, {}, Windows1252);
+    check("explicit.vhdl", "\x{ec}", "∞", Dos437, false, {}, Dos437);
     EncodingOptions westernDefault;
     westernDefault.defaultEncoding = 1252;
     westernDefault.loadASCIIasUTF8 = false;
-    check("default-western.txt", "\x{80}", "€", FileEncoding::Windows1252, false, westernDefault);
+    check("default-western.txt", "\x{80}", "€", Windows1252, false, westernDefault);
     westernDefault.defaultEncoding = 437;
-    check("default-oem.txt", "\x{ec}", "∞", FileEncoding::Dos437, false, westernDefault);
-    check("default-oem-ascii.txt", "plain", "plain", FileEncoding::Dos437, false, westernDefault);
+    check("default-oem.txt", "\x{ec}", "∞", Dos437, false, westernDefault);
+    check("default-oem-ascii.txt", "plain", "plain", Dos437, false, westernDefault);
 
     const auto retained = directory / "retained.txt";
     std::ofstream(retained, std::ios::binary) << "\x{ef}\x{bb}\x{bf}keep";
@@ -328,7 +327,7 @@ void CheckConfiguredDetection(EditorControl* editor, const std::filesystem::path
     editor->Send(Scintilla::Message::AddText, 5, reinterpret_cast<intptr_t>("dirty"));
     const auto unchanged = [&] {
         Require(Text(*editor) == "dirtykeep" && protectedDocument.Path() == TestFiles::Filename(retained) &&
-                    protectedDocument.Encoding() == FileEncoding::Utf8 && protectedDocument.HasBom() &&
+                    protectedDocument.Encoding() == Utf8 && protectedDocument.HasBom() &&
                     editor->Send(Scintilla::Message::GetModify) && editor->Send(Scintilla::Message::CanUndo),
                 "failed or cancelled automatic Open retains editor, history, path and encoding");
     };
@@ -346,7 +345,7 @@ void CheckConfiguredDetection(EditorControl* editor, const std::filesystem::path
     unchanged();
     std::ofstream(unsupported, std::ios::binary) << "\x{c0}\x{af}";
     Require(protectedDocument.Open(
-                                 TestFiles::Filename(unsupported), [] { return true; }, FileEncoding::Utf8)
+                                 TestFiles::Filename(unsupported), [] { return true; }, Utf8)
                     .status == OpenStatus::Failed,
             "explicit UTF-8 invalid data cannot fall back to CP936");
     unchanged();

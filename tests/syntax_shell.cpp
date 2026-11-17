@@ -10,6 +10,7 @@
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <fstream>
+#include <utility>
 #include <memory>
 #include <array>
 
@@ -134,7 +135,7 @@ void ShellOperations(EditorFrame* frame, SettingsStore& settings, const std::fil
         }
         Require(editor->Send(Message::BraceMatch, 4, -1) == 5, "shell operator braces must use native matching");
         TestEditor::ResetStream(editor, "", 0, 0);
-        editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
+        editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
         Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Script Shebang Line"));
         Require(Text(editor) == (m4                            ? "#!/usr/bin/env m4\n"
                                  : wxString(dialect) == "Bash" ? "#!/bin/bash\n"
@@ -158,7 +159,7 @@ void ShellOperations(EditorFrame* frame, SettingsStore& settings, const std::fil
                 "all shell dialects share the original Shell Script section");
     }
     SettingsStore reloaded(settings.Path());
-    const auto& saved = reloaded.values.schemeTabs[static_cast<size_t>(SyntaxLanguage::Bash)];
+    const auto& saved = reloaded.values.schemeTabs[static_cast<size_t>(std::to_underlying(SyntaxLanguage::Bash))];
     Require(saved.tabWidth == 7 && saved.indentWidth == 3 && saved.tabsAsSpaces && !saved.useGlobal,
             "accepting Tab Settings must immediately persist the canonical Shell Script section");
     wxFFile ini(settings.Path(), "rb");
@@ -205,8 +206,8 @@ void EmptyShellBoms(EditorFrame* frame, EditorControl* editor, const std::filesy
         const auto bomPath = directory / (bom.size() == 3 ? "bom.sh" : "utf16.sh");
         std::ofstream(bomPath, std::ios::binary) << bom;
         Require(frame->Open(TestFiles::Filename(bomPath)).status == OpenStatus::Opened, "BOM-only shell must open");
-        Require(frame->DocumentHasBom() &&
-                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf),
+        Require(frame->DocumentHasBom() && editor->Send(Message::GetEOLMode) ==
+                                               static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)),
                 "fresh shell must retain its encoding BOM while applying LF");
         Choose(frame, "m4");
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(bomPath) == bom,
@@ -322,11 +323,13 @@ public:
                 std::ofstream(emptyPath, std::ios::binary);
                 Require(frame->Open(TestFiles::Filename(emptyPath)).status == OpenStatus::Opened,
                         "fresh empty shell fixture must open");
-                Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
+                Require(editor->Send(Message::GetEOLMode) ==
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)) &&
                             frame->DocumentEncoding() == FileEncoding::Utf8,
                         "fresh empty shell must select original UTF-8/LF defaults");
                 Choose(frame, "Plain Text");
-                Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf),
+                Require(editor->Send(Message::GetEOLMode) ==
+                            static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::CrLf)),
                         "leaving a fresh shell scheme must restore the configured default EOL");
                 Choose(frame, "C Shell");
                 Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Script Shebang Line"));
@@ -336,7 +339,8 @@ public:
                 editor->Send(Message::Undo);
                 Choose(frame, "Plain Text");
                 Require(editor->Send(Message::CanRedo) &&
-                            editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf),
+                            editor->Send(Message::GetEOLMode) ==
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)),
                         "an empty document with edit history must retain EOL and pending redo on scheme changes");
                 editor->Send(Message::Redo);
                 Require(frame->Save().status == SaveStatus::Saved, "history fixture must save before loading BOMs");

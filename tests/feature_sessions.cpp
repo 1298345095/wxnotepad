@@ -40,10 +40,11 @@ std::string Text(EditorControl& editor) {
     return text;
 }
 void Load(EditorControl& editor, const char* text) {
-    editor.Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor.Send(Message::EmptyUndoBuffer);
-    editor.Send(Message::SetSavePoint);
-    editor.Send(Message::SetSel, 0, 0);
+    using enum Scintilla::Message;
+    editor.Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor.Send(EmptyUndoBuffer);
+    editor.Send(SetSavePoint);
+    editor.Send(SetSel, 0, 0);
 }
 class SessionApp final : public wxApp {
 public:

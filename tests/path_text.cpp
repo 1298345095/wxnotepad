@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <utility>
 #include "encoded_file_helpers.h"
 #include "file_command_driver.h"
 #include "settings/settings_store.h"
@@ -19,28 +20,27 @@ void Insert(EditorFrame* frame, const char* label) {
     NativeSearch::Command(frame, InsertId(frame, label));
 }
 void CheckInsertion(EditorFrame* frame, const char* label, const std::string& value) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "AoldZ", 1, 4);
-    const auto eol = editor->Send(Message::GetEOLMode);
+    const auto eol = editor->Send(GetEOLMode);
     const auto encoding = frame->DocumentEncoding();
     const bool bom = frame->DocumentHasBom();
     Insert(frame, label);
     const auto expected = "A" + value + "Z";
-    Require(TestEditor::Text(editor) == expected && editor->Send(Message::GetModify),
+    Require(TestEditor::Text(editor) == expected && editor->Send(GetModify),
             "native insertion matches independently captured literal name transformation");
     TestEditor::RequireSelection(editor, expected.size() - 1, expected.size() - 1,
                                  "insertion collapses to the UTF-8 byte endpoint");
-    Require(editor->Send(Message::GetEOLMode) == eol && frame->DocumentEncoding() == encoding &&
-                frame->DocumentHasBom() == bom,
+    Require(editor->Send(GetEOLMode) == eol && frame->DocumentEncoding() == encoding && frame->DocumentHasBom() == bom,
             "insertion preserves document encoding, BOM and EOL metadata");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                editor->Send(CanRedo),
             "one Undo restores original bytes and save point");
     TestEditor::RequireSelection(editor, 1, 4, "Undo restores original replacement endpoints");
-    editor->Send(Message::Redo);
-    Require(TestEditor::Text(editor) == expected && editor->Send(Message::GetModify),
-            "one Redo restores filename insertion");
+    editor->Send(Redo);
+    Require(TestEditor::Text(editor) == expected && editor->Send(GetModify), "one Redo restores filename insertion");
 }
 void NameCases(EditorFrame* frame, const std::filesystem::path& directory) {
     // Literals observed from actual Notepad4 89b8b36 commands; see #142 evidence.
@@ -70,10 +70,11 @@ void NameCases(EditorFrame* frame, const std::filesystem::path& directory) {
     std::puts("PASS: literal native names, multi-dot, dotfiles, spaces, Unicode and deleted-file identity");
 }
 void SelectionCases(EditorFrame* frame, const std::filesystem::path& directory) {
+    using enum Scintilla::Message;
     const auto path = directory / "report.txt";
     TestFiles::WriteBytes(path, "AoldZ");
     auto* editor = frame->Editor();
-    editor->Send(Message::SetSavePoint);
+    editor->Send(SetSavePoint);
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "open selection identity");
     for (const auto& range : {std::pair{1, 1}, std::pair{1, 4}, std::pair{4, 1}}) {
         TestEditor::ResetStream(editor, "AoldZ", range.first, range.second);
@@ -81,43 +82,44 @@ void SelectionCases(EditorFrame* frame, const std::filesystem::path& directory) 
         Require(TestEditor::Text(editor) == (range.first == range.second ? "Areport.txtoldZ" : "Areport.txtZ"),
                 "caret and forward/reversed replacements match original bytes");
         TestEditor::RequireSelection(editor, 11, 11, "stream replacement collapses to original byte endpoint");
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         TestEditor::RequireSelection(editor, range.first, range.second, "Undo restores directed stream selection");
     }
     for (const bool rectangle : {false, true}) {
         TestEditor::ResetStream(editor, "abcd\nefgh", 1, 2);
         if (rectangle) {
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, 1);
-            editor->Send(Message::SetRectangularSelectionCaret, 7);
+            editor->Send(SetSelectionMode,
+                         static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+            editor->Send(SetRectangularSelectionAnchor, 1);
+            editor->Send(SetRectangularSelectionCaret, 7);
         } else
-            editor->Send(Message::AddSelection, 7, 6);
+            editor->Send(AddSelection, 7, 6);
         Insert(frame, "File Name and Extension");
-        Require(TestEditor::Text(editor) == "acd\nereport.txtgh" && editor->Send(Message::GetSelections) == 1,
+        Require(TestEditor::Text(editor) == "acd\nereport.txtgh" && editor->Send(GetSelections) == 1,
                 "original boundary deletes selected ranges and inserts once at the surviving main caret");
         TestEditor::RequireSelection(editor, 15, 15, "multiple/rectangle insertion endpoint matches original");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == "abcd\nefgh" && editor->Send(Message::GetSelections) == 2 &&
-                    !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == "abcd\nefgh" && editor->Send(GetSelections) == 2 &&
+                    !editor->Send(GetModify),
                 "Undo restores original multiple/rectangular ranges and save point");
         TestEditor::RequireSelection(editor, rectangle ? 1 : 6, 7, "Undo restores captured main endpoints");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(TestEditor::Text(editor) == "acd\nereport.txtgh", "Redo restores the single replacement");
     }
     TestEditor::ResetStream(editor, "AoldZ", 4, 1);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 4, 1);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 4, 1);
+    editor->Send(SetReadOnly, 1);
     Insert(frame, "File Name and Extension");
-    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "read-only filename invocation preserves bytes and history");
     TestEditor::RequireSelection(editor, 1, 1, "read-only replacement retains original selection collapse");
     for (const char* label : {"File Name", "File Name and Extension", "Full Path Name"})
         Require(frame->GetMenuBar()->IsEnabled(InsertId(frame, label)),
                 "all original insertion commands remain available while read-only");
-    editor->Send(Message::SetReadOnly, 0);
-    Require(editor->Send(Message::CanRedo), "read-only invocation preserves pending Redo");
+    editor->Send(SetReadOnly, 0);
+    Require(editor->Send(CanRedo), "read-only invocation preserves pending Redo");
     std::puts("PASS: caret, directed/multiple/rectangular ranges, endpoints, read-only and history");
 }
 void IdentityCases(EditorFrame* frame, const std::filesystem::path& directory) {

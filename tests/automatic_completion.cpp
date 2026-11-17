@@ -39,15 +39,16 @@ void Key(EditorControl* editor, int key) {
 #endif
 }
 std::vector<std::string> Candidates(EditorControl* editor) {
+    using enum Scintilla::Message;
     std::vector<std::string> words;
     intptr_t previous = -1;
-    while (editor->Send(Message::AutoCActive)) {
-        const auto index = editor->Send(Message::AutoCGetCurrent);
+    while (editor->Send(AutoCActive)) {
+        const auto index = editor->Send(AutoCGetCurrent);
         if (index == previous) break;
         previous = index;
-        const auto length = editor->Send(Message::AutoCGetCurrentText);
+        const auto length = editor->Send(AutoCGetCurrentText);
         std::string text(length + 1, 0);
-        editor->Send(Message::AutoCGetCurrentText, 0, reinterpret_cast<intptr_t>(text.data()));
+        editor->Send(AutoCGetCurrentText, 0, reinterpret_cast<intptr_t>(text.data()));
         text.pop_back();
         words.push_back(text);
         Key(editor, 40);
@@ -57,6 +58,7 @@ std::vector<std::string> Candidates(EditorControl* editor) {
 void Frozen(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const auto& ref : automaticReference) {
+        using enum Scintilla::Message;
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", ref.scheme));
         WordCompletionSettings settings;
         settings.fillUpMask = ref.fill;
@@ -64,12 +66,12 @@ void Frozen(EditorFrame* frame) {
         editor->SetCompletionSettings(settings);
         const auto length = std::strlen(ref.before);
         TestEditor::ResetStream(editor, ref.before, length, length);
-        editor->Send(Message::Colourise, 0, -1);
-        if (ref.readOnly) editor->Send(Message::SetReadOnly, 1);
+        editor->Send(Colourise, 0, -1);
+        if (ref.readOnly) editor->Send(SetReadOnly, 1);
         if (*ref.popup) {
             constexpr int SuffixPrefixBytes = 2;
-            editor->Send(Message::SetSel, SuffixPrefixBytes, SuffixPrefixBytes);
-            editor->Send(Message::AutoCShow, SuffixPrefixBytes, reinterpret_cast<intptr_t>(ref.popup));
+            editor->Send(SetSel, SuffixPrefixBytes, SuffixPrefixBytes);
+            editor->Send(AutoCShow, SuffixPrefixBytes, reinterpret_cast<intptr_t>(ref.popup));
         }
         for (const auto& [key, ch] : ref.events) {
             if (key)
@@ -82,14 +84,13 @@ void Frozen(EditorFrame* frame) {
                          TestEditor::Text(editor).c_str());
         Require(TestEditor::Text(editor) == ref.after, "frozen original typing/confirmation bytes");
         TestEditor::RequireSelection(editor, ref.caret, ref.caret, "frozen original typing caret");
-        Require(static_cast<bool>(editor->Send(Message::AutoCActive)) == ref.active,
-                "frozen original popup visibility");
+        Require(static_cast<bool>(editor->Send(AutoCActive)) == ref.active, "frozen original popup visibility");
         Require(Candidates(editor) == ref.items, "frozen original native candidate order");
-        editor->Send(Message::AutoCCancel);
-        editor->Send(Message::Undo);
+        editor->Send(AutoCCancel);
+        editor->Send(Undo);
         Require(TestEditor::Text(editor) == ref.undo, "frozen original confirmation undo boundary");
         TestEditor::RequireSelection(editor, ref.undoAnchor, ref.undoCaret, "frozen original Undo selection");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         if (TestEditor::Text(editor) != ref.after)
             std::fprintf(stderr, "before=[%s] expected=[%s] actual=[%s]", ref.before, ref.after,
                          TestEditor::Text(editor).c_str());

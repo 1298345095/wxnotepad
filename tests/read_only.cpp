@@ -3,6 +3,7 @@
 #include "file_command_driver.h"
 #include <wx/wx.h>
 #include <fstream>
+#include <utility>
 #include <sstream>
 #include <vector>
 #include <tuple>
@@ -22,69 +23,69 @@ void Toggle(EditorFrame* frame) {
     NativeSearch::Command(frame, Mode(frame));
 }
 void TogglePreservesDocument(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "alpha\r\nbeta\r\n", 4, 1);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 4, 1);
-    const auto actions = editor->Send(Message::GetUndoActions);
-    const auto current = editor->Send(Message::GetUndoCurrent);
-    const auto savePoint = editor->Send(Message::GetUndoSavePoint);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 4, 1);
+    const auto actions = editor->Send(GetUndoActions);
+    const auto current = editor->Send(GetUndoCurrent);
+    const auto savePoint = editor->Send(GetUndoSavePoint);
     const auto revision = editor->DocumentRevision();
     Toggle(frame);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-    Require(editor->Send(Message::GetReadOnly) && frame->GetMenuBar()->IsChecked(Mode(frame)) &&
+    Require(editor->Send(GetReadOnly) && frame->GetMenuBar()->IsChecked(Mode(frame)) &&
                 frame->GetTitle() == "Untitled (Read Only Mode) - wxnotepad",
             "native command checks live protection and original title suffix");
-    Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n" && !editor->Send(Message::GetModify) &&
-                editor->DocumentRevision() == revision && editor->Send(Message::GetAnchor) == 4 &&
-                editor->Send(Message::GetCurrentPos) == 1 && editor->Send(Message::GetUndoActions) == actions &&
-                editor->Send(Message::GetUndoCurrent) == current &&
-                editor->Send(Message::GetUndoSavePoint) == savePoint,
+    Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n" && !editor->Send(GetModify) &&
+                editor->DocumentRevision() == revision && editor->Send(GetAnchor) == 4 &&
+                editor->Send(GetCurrentPos) == 1 && editor->Send(GetUndoActions) == actions &&
+                editor->Send(GetUndoCurrent) == current && editor->Send(GetUndoSavePoint) == savePoint,
             "toggling preserves bytes, selection, revision, save point and pre-existing history");
-    Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+    Require(!editor->Send(CanUndo) && !editor->Send(CanRedo),
             "original public Undo/Redo availability is disabled during protection");
-    editor->Send(Message::Undo);
-    editor->Send(Message::Redo);
-    Require(editor->Send(Message::GetUndoCurrent) == current, "protected Undo/Redo retain the history cursor");
+    editor->Send(Undo);
+    editor->Send(Redo);
+    Require(editor->Send(GetUndoCurrent) == current, "protected Undo/Redo retain the history cursor");
     NativeKeys::Shortcut(frame, WXK_F10, false);
-    Require(!editor->Send(Message::GetReadOnly) && editor->Send(Message::CanRedo) &&
-                frame->GetTitle() == "Untitled - wxnotepad",
+    Require(!editor->Send(GetReadOnly) && editor->Send(CanRedo) && frame->GetTitle() == "Untitled - wxnotepad",
             "native F10 releases protection with original history and title");
-    editor->Send(Message::Redo);
-    Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n!" && editor->Send(Message::GetModify),
+    editor->Send(Redo);
+    Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n!" && editor->Send(GetModify),
             "pending Redo remains executable after toggling off");
     Toggle(frame);
-    Require(editor->Send(Message::GetModify) && frame->GetTitle() == "*Untitled (Read Only Mode) - wxnotepad",
+    Require(editor->Send(GetModify) && frame->GetTitle() == "*Untitled (Read Only Mode) - wxnotepad",
             "dirty untitled mode preserves modification state and its title feedback");
     Toggle(frame);
     std::puts("PASS: native menu/F10, title and unchanged text, selection, save point and history");
 }
 void DocumentTransitions(EditorFrame* frame) {
+    using enum OpenStatus;
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "old", 2, 1);
-    editor->Send(Message::SetReadOnly, 1);
-    Require(frame->NewDocument() && !editor->Send(Message::GetReadOnly) && TestEditor::Text(editor).empty(),
+    editor->Send(SetReadOnly, 1);
+    Require(frame->NewDocument() && !editor->Send(GetReadOnly) && TestEditor::Text(editor).empty(),
             "New clears editor protection before replacing the previous document");
     const auto source = TestFiles::TemporaryDirectory() / "read-only-中文.cpp";
     const auto other = TestFiles::TemporaryDirectory() / "other-中文.txt";
     TestFiles::WriteBytes(source, "alpha\r\nbeta\r\n");
     TestFiles::WriteBytes(other, "other\n");
-    Require(frame->Open(TestFiles::Filename(source)).status == OpenStatus::Opened, "open the named original fixture");
-    editor->Send(Message::SetSel, 3, 9);
+    Require(frame->Open(TestFiles::Filename(source)).status == Opened, "open the named original fixture");
+    editor->Send(SetSel, 3, 9);
     Toggle(frame);
-    Require(frame->Open(TestFiles::Filename(source)).status == OpenStatus::Opened &&
-                editor->Send(Message::GetReadOnly) && TestEditor::Text(editor) == "alpha\r\nbeta\r\n" &&
-                editor->Send(Message::GetAnchor) == 3 && editor->Send(Message::GetCurrentPos) == 9 &&
-                !editor->Send(Message::GetModify) && editor->Send(Message::GetUndoActions) == 0,
+    Require(frame->Open(TestFiles::Filename(source)).status == Opened && editor->Send(GetReadOnly) &&
+                TestEditor::Text(editor) == "alpha\r\nbeta\r\n" && editor->Send(GetAnchor) == 3 &&
+                editor->Send(GetCurrentPos) == 9 && !editor->Send(GetModify) && editor->Send(GetUndoActions) == 0,
             "same-path reopen reapplies original protection after replacement and restores view");
-    Require(frame->Open(TestFiles::Filename(other)).status == OpenStatus::Opened &&
-                !editor->Send(Message::GetReadOnly) && TestEditor::Text(editor) == "other\n",
+    Require(frame->Open(TestFiles::Filename(other)).status == Opened && !editor->Send(GetReadOnly) &&
+                TestEditor::Text(editor) == "other\n",
             "a writable different file does not inherit manually enabled editor mode");
     Toggle(frame);
-    Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled && editor->Send(Message::GetReadOnly) &&
-                frame->Open(TestFiles::Filename(other) + ".missing").status == OpenStatus::Failed &&
-                editor->Send(Message::GetReadOnly) && TestEditor::Text(editor) == "other\n",
+    Require(frame->Open(std::nullopt).status == Cancelled && editor->Send(GetReadOnly) &&
+                frame->Open(TestFiles::Filename(other) + ".missing").status == Failed && editor->Send(GetReadOnly) &&
+                TestEditor::Text(editor) == "other\n",
             "cancelled and failed Open retain mode and original bytes");
     Toggle(frame);
     std::puts("PASS: New, same/different-path Open and failed/cancelled document transitions");
@@ -191,54 +192,57 @@ void CommandOutcomes(EditorFrame* frame) {
     std::puts("PASS: original native command availability and command-specific protected selection effects");
 }
 std::vector<intptr_t> Selections(EditorControl* editor) {
+    using enum Scintilla::Message;
     std::vector<intptr_t> state;
-    for (const auto message :
-         {Message::GetSelectionMode, Message::GetSelections, Message::GetMainSelection,
-          Message::GetRectangularSelectionAnchor, Message::GetRectangularSelectionCaret,
-          Message::GetRectangularSelectionAnchorVirtualSpace, Message::GetRectangularSelectionCaretVirtualSpace})
+    for (const auto message : {GetSelectionMode, GetSelections, GetMainSelection, GetRectangularSelectionAnchor,
+                               GetRectangularSelectionCaret, GetRectangularSelectionAnchorVirtualSpace,
+                               GetRectangularSelectionCaretVirtualSpace})
         state.push_back(editor->Send(message));
-    for (intptr_t index = 0; index < editor->Send(Message::GetSelections); ++index)
-        for (const auto message : {Message::GetSelectionNAnchor, Message::GetSelectionNCaret,
-                                   Message::GetSelectionNAnchorVirtualSpace, Message::GetSelectionNCaretVirtualSpace})
+    for (intptr_t index = 0; index < editor->Send(GetSelections); ++index)
+        for (const auto message :
+             {GetSelectionNAnchor, GetSelectionNCaret, GetSelectionNAnchorVirtualSpace, GetSelectionNCaretVirtualSpace})
             state.push_back(editor->Send(message, index));
     return state;
 }
 void SelectionShapes(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (bool rectangle : {true, false}) {
         TestEditor::ResetStream(editor, "alpha\r\nbeta\r\n", 4, 1);
         if (rectangle) {
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, 1);
-            editor->Send(Message::SetRectangularSelectionCaret, 9);
-            editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 1);
-            editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 3);
+            editor->Send(SetSelectionMode,
+                         static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+            editor->Send(SetRectangularSelectionAnchor, 1);
+            editor->Send(SetRectangularSelectionCaret, 9);
+            editor->Send(SetRectangularSelectionAnchorVirtualSpace, 1);
+            editor->Send(SetRectangularSelectionCaretVirtualSpace, 3);
         } else {
-            editor->Send(Message::SetMultipleSelection, 1);
-            editor->Send(Message::AddSelection, 10, 8);
+            editor->Send(SetMultipleSelection, 1);
+            editor->Send(AddSelection, 10, 8);
         }
         const auto before = Selections(editor);
         Toggle(frame);
         Require(Selections(editor) == before, "original mode-on preserves every rectangular/multiple selection field");
         Toggle(frame);
         Require(Selections(editor) == before, "original mode-off preserves every rectangular/multiple selection field");
-        editor->Send(Message::SetReadOnly, 1);
-        editor->Send(Message::Clear);
-        Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n" && !editor->Send(Message::GetModify) &&
-                    editor->Send(Message::GetUndoActions) == 0,
+        editor->Send(SetReadOnly, 1);
+        editor->Send(Clear);
+        Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n" && !editor->Send(GetModify) &&
+                    editor->Send(GetUndoActions) == 0,
                 "independent editor-message protection rejects rectangular/multiple selection deletion");
-        editor->Send(Message::SetReadOnly, 0);
+        editor->Send(SetReadOnly, 0);
     }
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::ClearSelections);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
+    editor->Send(ClearSelections);
     for (const int modifiers : std::array<int, 4>{wxMOD_CONTROL, wxMOD_ALT, wxMOD_SHIFT, wxMOD_CONTROL | wxMOD_SHIFT}) {
         NativeKeys::Shortcut(frame, WXK_F10, (modifiers & wxMOD_CONTROL) != 0, (modifiers & wxMOD_ALT) != 0,
                              (modifiers & wxMOD_SHIFT) != 0);
-        Require(!editor->Send(Message::GetReadOnly), "modified F10 does not alias the original unmodified accelerator");
+        Require(!editor->Send(GetReadOnly), "modified F10 does not alias the original unmodified accelerator");
     }
     std::puts("PASS: rectangle/multiple-selection mode transitions and exact F10 modifiers");
 }
 void SavedFormats(EditorFrame* frame) {
+    using enum Scintilla::Message;
     using namespace std::string_literals;
     const TestFiles::EncodedFixture fixtures[] = {
         {"utf8", FileEncoding::Utf8,
@@ -260,20 +264,20 @@ void SavedFormats(EditorFrame* frame) {
         TestFiles::WriteBytes(path, fixture.before);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "open explicitly encoded fixture through the delivered document flow");
-        Require(!editor->Send(Message::GetReadOnly), "different-path explicit decoding starts writable");
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        const auto eol = editor->Send(Message::GetEOLMode);
+        Require(!editor->Send(GetReadOnly), "different-path explicit decoding starts writable");
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        const auto eol = editor->Send(GetEOLMode);
         const auto bom = frame->DocumentHasBom();
         Toggle(frame);
-        Require(editor->Send(Message::GetModify) && frame->GetTitle().StartsWith("*") &&
+        Require(editor->Send(GetModify) && frame->GetTitle().StartsWith("*") &&
                     frame->DocumentEncoding() == fixture.encoding && frame->DocumentHasBom() == bom &&
-                    editor->Send(Message::GetEOLMode) == eol,
+                    editor->Send(GetEOLMode) == eol,
                 "dirty named mode transition preserves encoding/BOM/EOL and modification feedback");
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after &&
-                    editor->Send(Message::GetReadOnly),
+                    editor->Send(GetReadOnly),
                 "editor-only protection permits Save with independent encoded bytes and retains mode");
         Require(frame->SaveAs(TestFiles::Filename(saved)).status == SaveStatus::Saved &&
-                    TestFiles::Bytes(saved) == fixture.after && editor->Send(Message::GetReadOnly),
+                    TestFiles::Bytes(saved) == fixture.after && editor->Send(GetReadOnly),
                 "Save As changes identity and preserves editor protection and encoded disk bytes");
         Toggle(frame);
         TestFiles::RequireSavedUndoRedo(frame, saved, fixture,
@@ -281,12 +285,12 @@ void SavedFormats(EditorFrame* frame) {
                                          "Redo restores encoded edit after mode and Save As"});
         Toggle(frame);
         Require(frame->Open(TestFiles::Filename(saved), fixture.encoding).status == OpenStatus::Opened &&
-                    editor->Send(Message::GetReadOnly) && frame->DocumentEncoding() == fixture.encoding &&
-                    frame->DocumentHasBom() == bom && editor->Send(Message::GetUndoActions) == 0 &&
+                    editor->Send(GetReadOnly) && frame->DocumentEncoding() == fixture.encoding &&
+                    frame->DocumentHasBom() == bom && editor->Send(GetUndoActions) == 0 &&
                     TestFiles::Bytes(saved) == fixture.after,
                 "same-path explicit encoding reload reapplies protection and commits the original fresh history");
     }
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     std::puts("PASS: dirty named UTF-8/UTF-16LE/GBK Save, Save As and independently read Undo/Redo bytes");
 }
 void NativeEditingKey(EditorFrame* frame, int key, const char* name) {
@@ -317,15 +321,16 @@ void NativeEditingKey(EditorFrame* frame, int key, const char* name) {
     wxYield();
 }
 void NavigationAndEditing(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const std::tuple<int, const char*, int, int> keys[] = {
         {WXK_DELETE, "Delete", 1, 1}, {WXK_BACK, "BackSpace", 1, 1}, {'X', "x", 4, 1}, {WXK_RIGHT, "Right", 4, 4}};
     for (const auto& [key, name, anchor, caret] : keys) {
         TestEditor::ResetStream(editor, "alpha\r\nbeta\r\n", 4, 1);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         NativeEditingKey(frame, key, name);
-        Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n" && !editor->Send(Message::GetModify) &&
-                    editor->Send(Message::GetUndoActions) == 0,
+        Require(TestEditor::Text(editor) == "alpha\r\nbeta\r\n" && !editor->Send(GetModify) &&
+                    editor->Send(GetUndoActions) == 0,
                 "native typing, deletion and navigation preserve protected bytes/save point/history");
         TestEditor::RequireSelection(editor, anchor, caret, "original native protected editing/navigation selection");
     }
@@ -334,12 +339,12 @@ void NavigationAndEditing(EditorFrame* frame) {
     const auto found = search.Find(SearchDirection::Forward);
     Require(found.status == FindStatus::Found && found.start == 7 && found.end == 11,
             "read-only search still selects the real original-core match");
-    const auto wrap = editor->Send(Message::GetWrapMode);
+    const auto wrap = editor->Send(GetWrapMode);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Word Wrap"));
-    Require(editor->Send(Message::GetWrapMode) != wrap && editor->Send(Message::GetReadOnly),
+    Require(editor->Send(GetWrapMode) != wrap && editor->Send(GetReadOnly),
             "native view commands remain available during editor protection");
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Word Wrap"));
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     std::puts("PASS: actual native typing/Delete/Backspace, navigation, search and view during protection");
 }
 class AcceptTransformation final : public wxModalDialogHook {
@@ -380,6 +385,7 @@ private:
     bool* released_;
 };
 void TransformationDialogs(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const std::tuple<const char*, const char*, int, intptr_t> commands[] = {{"With...", "Enclose Selection", 'Q', 1},
                                                                             {"Modify Lines...", "Modify Lines", 'M', 0},
@@ -390,7 +396,7 @@ void TransformationDialogs(EditorFrame* frame) {
         for (bool keyboard : {false, true}) {
             if (keyboard && !key) continue;
             TestEditor::ResetStream(editor, "beta beta\r\nalpha alpha\r\n", 0, 23);
-            editor->Send(Message::SetReadOnly, 1);
+            editor->Send(SetReadOnly, 1);
             bool released = false;
             AcceptTransformation dialog(title, keyboard ? &released : nullptr);
             if (keyboard)
@@ -398,13 +404,12 @@ void TransformationDialogs(EditorFrame* frame) {
             else
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", label));
             Require(dialog.shown == 1 && TestEditor::Text(editor) == "beta beta\r\nalpha alpha\r\n" &&
-                        editor->Send(Message::GetReadOnly) && !editor->Send(Message::GetModify) &&
-                        editor->Send(Message::GetUndoActions) == 0,
+                        editor->Send(GetReadOnly) && !editor->Send(GetModify) && editor->Send(GetUndoActions) == 0,
                     "actual native transformation dialogs retain protected bytes and history after accepting input");
             TestEditor::RequireSelection(editor, anchor, 24, "original protected native dialog selection repair");
         }
     }
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     std::puts("PASS: protected native menu/shortcut enclosure, Modify Lines, alignment, sort and column-wrap dialogs");
 }
 class ReadOnlyApp final : public wxApp {

@@ -16,6 +16,7 @@
 #include <functional>
 #include <memory>
 #include <tuple>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -28,11 +29,12 @@ void Split(EditorFrame* frame) {
     NativeSearch::Command(frame, id);
 }
 void SplitFixture(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "one two three", 0, 13, Scintilla::EndOfLine::Lf);
     // A very wide view leaves this target unchanged, preserving history/endpoints.
     Split(frame);
-    Require(TestEditor::Text(editor) == "one two three" && !editor->Send(Message::CanUndo), "wide split is a no-op");
+    Require(TestEditor::Text(editor) == "one two three" && !editor->Send(CanUndo), "wide split is a no-op");
     TestEditor::RequireSelection(editor, 0, 13, "split retains selection");
     editor->SetLineNumbersVisible(false);
     // New/Open reapply retained preferences, so keep this measured text-only
@@ -40,9 +42,9 @@ void SplitFixture(EditorFrame* frame) {
     editor->SetBookmarkMarginVisible(false);
     editor->SetChangeHistoryOptions(0);
     editor->SetCodeFoldingVisible(false);
-    editor->Send(Message::SetMarginLeft, 0, 0);
-    editor->Send(Message::SetMarginRight, 0, 0);
-    const auto width = editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
+    editor->Send(SetMarginLeft, 0, 0);
+    editor->Send(SetMarginRight, 0, 0);
+    const auto width = editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
     editor->SetClientSize(static_cast<int>(width), 200);
     wxYield();
     Split(frame);
@@ -52,14 +54,14 @@ void SplitFixture(EditorFrame* frame) {
                      "Split fixture: requested_width=%lld actual_width=%d frame_width=%d wrap_flags=%lld "
                      "wrap_location=%lld zoom=%lld text='%s'\n",
                      static_cast<long long>(width), editor->GetClientSize().x, frame->GetClientSize().x,
-                     static_cast<long long>(editor->Send(Message::GetWrapVisualFlags)),
-                     static_cast<long long>(editor->Send(Message::GetWrapVisualFlagsLocation)),
-                     static_cast<long long>(editor->Send(Message::GetZoom)), splitText.c_str());
+                     static_cast<long long>(editor->Send(GetWrapVisualFlags)),
+                     static_cast<long long>(editor->Send(GetWrapVisualFlagsLocation)),
+                     static_cast<long long>(editor->Send(GetZoom)), splitText.c_str());
     Require(splitText == "one two \nthree", "split inserts current EOL at rendered word boundary");
     TestEditor::RequireSelection(editor, 0, 14, "split adjusts original caret for inserted EOL");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "one two three" && !editor->Send(Message::CanUndo), "split is one Undo action");
-    editor->Send(Message::Redo);
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "one two three" && !editor->Send(CanUndo), "split is one Undo action");
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "one two \nthree", "split Redo restores breaks");
     frame->SetClientSize(900, 600);
 }
@@ -114,7 +116,8 @@ public:
         : expected_(std::move(expected)), chosen_(std::move(chosen)), action_(action), deadline_(this) {
         Bind(wxEVT_TIMER, [this](wxTimerEvent&) {
             failure = "Column Wrap native modal deadline expired";
-            std::fprintf(stderr, "FAIL: %s action=%d\n", failure.c_str(), static_cast<int>(action_));
+            std::fprintf(stderr, "FAIL: %s action=%d\n", failure.c_str(),
+                         static_cast<int>(std::to_underlying(action_)));
             if (active_) NativeSearch::Click(active_, wxID_CANCEL);
         });
         Register();
@@ -160,20 +163,21 @@ private:
         NativeSearch::Click(dialog, wxID_CANCEL);
     }
     void ApplyAction(wxDialog* dialog, wxTextCtrl* input) {
-        if (action_ == DialogAction::Invalid) {
+        using enum DialogAction;
+        if (action_ == Invalid) {
             NativeSearch::Click(dialog, wxID_OK);
             Require(dialog->IsShown() && input->HasFocus(), "invalid input stays open and refocuses Boundary");
             NativeSearch::Click(dialog, wxID_CANCEL);
-        } else if (action_ == DialogAction::Return) {
+        } else if (action_ == Return) {
             input->SetFocus();
             DialogKey(dialog, WXK_RETURN, "Return");
-        } else if (action_ == DialogAction::Escape) {
+        } else if (action_ == Escape) {
             DialogKey(dialog, WXK_ESCAPE, "Escape");
-        } else if (action_ == DialogAction::Tab) {
+        } else if (action_ == Tab) {
             TraverseControls(dialog, input);
         } else {
-            NativeSearch::Click(dialog, action_ == DialogAction::Cancel ? wxID_CANCEL : wxID_OK);
-            if (action_ == DialogAction::Accept && dialog->IsShown()) {
+            NativeSearch::Click(dialog, action_ == Cancel ? wxID_CANCEL : wxID_OK);
+            if (action_ == Accept && dialog->IsShown()) {
                 NativeSearch::Click(dialog, wxID_CANCEL);
                 throw std::runtime_error(
                     ("original accepted boundary must close the native dialog: " + chosen_).ToStdString(wxConvUTF8));
@@ -187,8 +191,8 @@ private:
     wxDialog* active_ = nullptr;
 };
 void Dialog(EditorFrame* frame, const wxString& expected, const wxString& chosen, DialogAction action) {
-    if (action == DialogAction::Return || action == DialogAction::Escape || action == DialogAction::Tab)
-        NativeKeys::Shortcut(frame, 'I', true, true, true);
+    using enum DialogAction;
+    if (action == Return || action == Escape || action == Tab) NativeKeys::Shortcut(frame, 'I', true, true, true);
     WrapDriver driver(expected, chosen, action);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Column Wrap..."));
     if (!driver.failure.empty()) throw std::runtime_error(driver.failure);
@@ -206,6 +210,7 @@ void ColumnFixture(EditorFrame* frame) {
     TestEditor::RequireSelection(editor, 0, 7, "column wrap replacement endpoints");
 }
 void ColumnCases(EditorControl* editor) {
+    using enum Scintilla::Message;
     struct Fixture {
         const char* before;
         intptr_t anchor;
@@ -250,40 +255,38 @@ void ColumnCases(EditorControl* editor) {
                          fixture.after, TestEditor::Text(editor).c_str());
         Require(TestEditor::Text(editor) == fixture.after, "original literal column-wrap bytes");
         TestEditor::RequireSelection(editor, fixture.newAnchor, fixture.newCaret, "original wrap endpoints");
-        Require(!!editor->Send(Message::CanUndo) == fixture.modified &&
-                    !!editor->Send(Message::GetModify) == fixture.modified,
+        Require(!!editor->Send(CanUndo) == fixture.modified && !!editor->Send(GetModify) == fixture.modified,
                 "original replacement condition and save point");
-        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(fixture.mode),
+        Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(fixture.mode)),
                 "wrap retains insertion EOL mode");
         if (fixture.modified) {
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::GetModify),
+            editor->Send(Undo);
+            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(CanUndo) && !editor->Send(GetModify),
                     "one Undo restores original text and save point");
-            editor->Send(Message::Redo);
-            Require(TestEditor::Text(editor) == fixture.after && !editor->Send(Message::CanRedo),
-                    "one Redo restores wrap");
+            editor->Send(Redo);
+            Require(TestEditor::Text(editor) == fixture.after && !editor->Send(CanRedo), "one Redo restores wrap");
         }
     }
     std::puts(
         "PASS: literal Column Wrap Unicode/UTF-16, whitespace, long-word, EOL, partial/reversed and no-op fixtures");
     TestEditor::ResetStream(editor, "");
     const std::string nulText("a  \0b c", 7);
-    editor->Send(Message::AddText, nulText.size(), reinterpret_cast<intptr_t>(nulText.data()));
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-    editor->Send(Message::SetSel, 0, 7);
+    editor->Send(AddText, nulText.size(), reinterpret_cast<intptr_t>(nulText.data()));
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
+    editor->Send(SetSel, 0, 7);
     editor->WrapToColumn(80);
     Require(TestEditor::Text(editor) == std::string("a\0b c", 5),
             "explicit-length wrapping preserves embedded NUL and following text");
 }
 void DialogCases(EditorFrame* frame) {
+    using enum DialogAction;
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "a  b", 1, 4, Scintilla::EndOfLine::Lf);
     editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
     editor->Send(Message::Undo);
     editor->Send(Message::SetSel, 1, 4);
-    for (const auto action : {DialogAction::Cancel, DialogAction::Escape, DialogAction::Tab}) {
+    for (const auto action : {Cancel, Escape, Tab}) {
         Dialog(frame, "6", "2", action);
         Require(TestEditor::Text(editor) == "a  b" && editor->Send(Message::CanRedo) &&
                     !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
@@ -291,45 +294,45 @@ void DialogCases(EditorFrame* frame) {
         TestEditor::RequireSelection(editor, 1, 4, "cancel keeps partial endpoints");
     }
     for (const auto* invalid : {"", "abc", "-1", "+1", "12abc", "12 ", "4294967296", "\t12", "Ⅻ", "⑫", "½", "零"})
-        Dialog(frame, "6", wxString::FromUTF8(invalid), DialogAction::Invalid);
-    Dialog(frame, "6", "0", DialogAction::Return);
+        Dialog(frame, "6", wxString::FromUTF8(invalid), Invalid);
+    Dialog(frame, "6", "0", Return);
     Require(TestEditor::Text(editor) == "a\nb", "Return accepts and zero clamps to one");
-    Dialog(frame, "1", "513", DialogAction::Accept);
-    Dialog(frame, "512", "4294967295", DialogAction::Accept);
-    Dialog(frame, "1", " 12", DialogAction::Accept);
-    Dialog(frame, "12", "000000000000006", DialogAction::Accept);
-    Dialog(frame, "6", "42", DialogAction::Cancel);
-    Dialog(frame, "6", wxString::FromUTF8("１２"), DialogAction::Accept);
-    Dialog(frame, "12", wxString::FromUTF8("٢"), DialogAction::Accept);
-    Dialog(frame, "2", wxString::FromUTF8("²"), DialogAction::Accept);
-    Dialog(frame, "2", wxString::FromUTF8("𝟞"), DialogAction::Accept);
+    Dialog(frame, "1", "513", Accept);
+    Dialog(frame, "512", "4294967295", Accept);
+    Dialog(frame, "1", " 12", Accept);
+    Dialog(frame, "12", "000000000000006", Accept);
+    Dialog(frame, "6", "42", Cancel);
+    Dialog(frame, "6", wxString::FromUTF8("１２"), Accept);
+    Dialog(frame, "12", wxString::FromUTF8("٢"), Accept);
+    Dialog(frame, "2", wxString::FromUTF8("²"), Accept);
+    Dialog(frame, "2", wxString::FromUTF8("𝟞"), Accept);
     std::puts("PASS: native OK/Return/Cancel/Esc/Tab, invalid refocus, unsigned conversion, bounds and recall");
 }
 void ProtectedSelections(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (bool reverse : {false, true}) {
         TestEditor::ResetStream(editor, "a  b", reverse ? 4 : 1, reverse ? 1 : 4);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         Dialog(frame, reverse ? "2" : "6", "2", DialogAction::Accept);
-        Require(TestEditor::Text(editor) == "a  b" && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == "a  b" && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "read-only accepts boundary while core protects text and history");
         TestEditor::RequireSelection(editor, reverse ? 3 : 0, reverse ? 0 : 3,
                                      "read-only retains original replacement endpoint repair");
     }
     TestEditor::ResetStream(editor, "a\tb", 1, 3);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 1, 3);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 1, 3);
     editor->WrapToColumn(80);
-    Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+    Require(!editor->Send(CanUndo) && editor->Send(CanRedo) && !editor->Send(GetModify),
             "unmodified wrap preserves pending Redo");
     TestEditor::RequireSelection(editor, 1, 3, "unmodified wrap preserves partial selection");
     TestEditor::ResetStream(editor, "a  b\nc  d", 1, 4);
-    editor->Send(Message::AddSelection, 9, 6);
-    editor->Send(Message::SetMainSelection, 0);
+    editor->Send(AddSelection, 9, 6);
+    editor->Send(SetMainSelection, 0);
     editor->WrapToColumn(80);
-    Require(TestEditor::Text(editor) == "a b\nc  d" && editor->Send(Message::GetSelections) == 1,
+    Require(TestEditor::Text(editor) == "a b\nc  d" && editor->Send(GetSelections) == 1,
             "wrap uses main selection and repairs to one selection");
     TestEditor::RequireSelection(editor, 0, 3, "main wrap expands first line only");
 }
@@ -380,8 +383,9 @@ void SelectionAndProtection(EditorFrame* frame) {
         "PASS: read-only, rectangle warnings/order, multiple selections, empty selection, pending Redo and New recall");
 }
 void SplitCases(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    const auto width = editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
+    const auto width = editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
     editor->SetClientSize(static_cast<int>(width), 200);
     wxYield();
     TestEditor::ResetStream(editor, "one two three", 5, 1, Scintilla::EndOfLine::CrLf);
@@ -395,18 +399,18 @@ void SplitCases(EditorFrame* frame) {
             "split includes logical line at selected end-at-line-start");
     TestEditor::RequireSelection(editor, 0, 15, "only breaks preceding caret shift selection end");
     TestEditor::ResetStream(editor, "one two three\none two three", 1, 5, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::AddSelection, 27, 14);
-    editor->Send(Message::SetMainSelection, 0);
+    editor->Send(AddSelection, 27, 14);
+    editor->Send(SetMainSelection, 0);
     Split(frame);
-    Require(TestEditor::Text(editor) == "one two \nthree\none two three" && editor->Send(Message::GetSelections) == 2,
+    Require(TestEditor::Text(editor) == "one two \nthree\none two three" && editor->Send(GetSelections) == 2,
             "split uses only main target and keeps multiple selections");
     TestEditor::RequireSelection(editor, 1, 5, "split retains main partial endpoints");
-    Require(editor->Send(Message::GetSelectionNAnchor, 1) == 15 && editor->Send(Message::GetSelectionNCaret, 1) == 28,
+    Require(editor->Send(GetSelectionNAnchor, 1) == 15 && editor->Send(GetSelectionNCaret, 1) == 28,
             "split adjusts secondary selection for preceding insertion");
     TestEditor::ResetStream(editor, "one two three", 0, 13);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetReadOnly, 1);
     Split(frame);
-    Require(TestEditor::Text(editor) == "one two three" && !editor->Send(Message::CanUndo),
+    Require(TestEditor::Text(editor) == "one two three" && !editor->Send(CanUndo),
             "read-only core split protects text");
     TestEditor::RequireSelection(editor, 0, 13, "read-only split retains endpoints");
     TestEditor::ResetStream(editor, "one two three", 1, 1);
@@ -418,7 +422,7 @@ void SplitCases(EditorFrame* frame) {
     for (const auto modifiers : {std::pair{false, true}, std::pair{true, true}}) {
         TestEditor::ResetStream(editor, "one two three", 0, 13);
         NativeKeys::Shortcut(frame, 'I', true, modifiers.first, modifiers.second);
-        Require(TestEditor::Text(editor) == "one two three" && !editor->Send(Message::CanUndo),
+        Require(TestEditor::Text(editor) == "one two three" && !editor->Send(CanUndo),
                 "extra shortcut modifiers do not invoke Split Lines");
     }
     TestEditor::ResetStream(editor, "one two three", 0, 13);
@@ -428,15 +432,15 @@ void SplitCases(EditorFrame* frame) {
     editor->SetClientSize(static_cast<int>(width * 2), 200);
     Split(frame);
     Require(TestEditor::Text(editor) == "one two three", "resizing changes rendered split width");
-    editor->Send(Message::SetZoom, 200);
+    editor->Send(SetZoom, 200);
     editor->Refresh();
     editor->Update();
     wxYield();
-    Require(editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) > width,
+    Require(editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) > width,
             "zoom updates original core text measurement");
     Split(frame);
     Require(TestEditor::Text(editor) == "one two \nthree", "zoom changes core measurement for split");
-    editor->Send(Message::SetZoom, 100);
+    editor->Send(SetZoom, 100);
     editor->Refresh();
     editor->Update();
     for (const auto& [before, prefix, after] : {
@@ -445,7 +449,7 @@ void SplitCases(EditorFrame* frame) {
          }) {
         TestEditor::ResetStream(editor, before, 0, static_cast<intptr_t>(std::string_view(before).size()),
                                 Scintilla::EndOfLine::Lf);
-        const auto measured = editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>(prefix));
+        const auto measured = editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>(prefix));
         editor->SetClientSize(static_cast<int>(measured + 1), 200);
         wxYield();
         Split(frame);
@@ -456,13 +460,12 @@ void SplitCases(EditorFrame* frame) {
     }
     TestEditor::ResetStream(editor, "one two three\none two three", 0, 0);
     editor->SetClientSize(static_cast<int>(width), 200);
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 19);
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 19);
     Split(frame);
-    Require(TestEditor::Text(editor) == "one two three\none two \nthree" && editor->Send(Message::SelectionIsRectangle),
+    Require(TestEditor::Text(editor) == "one two three\none two \nthree" && editor->Send(SelectionIsRectangle),
             "rectangle split forwards main line target without warning");
-    Require(editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
-                editor->Send(Message::GetRectangularSelectionCaret) == 19,
+    Require(editor->Send(GetRectangularSelectionAnchor) == 1 && editor->Send(GetRectangularSelectionCaret) == 19,
             "rectangle split retains endpoints before inserted break");
     frame->SetClientSize(900, 600);
     std::puts("PASS: native Ctrl+I exact modifiers, rendered resizing/zoom, CRLF/CR, partial/end-at-line-start, "
@@ -497,15 +500,16 @@ void SavedBytes(EditorFrame* frame) {
     };
     for (const auto& fixture : fixtures) {
         for (bool split : {false, true}) {
+            using enum Scintilla::Message;
             const auto path = directory / (std::string(fixture.name) + (split ? "-split.txt" : "-wrap.txt"));
             TestFiles::WriteBytes(path, fixture.before);
-            editor->Send(Message::SetSavePoint);
+            editor->Send(SetSavePoint);
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                     "open encoded fixture via application");
-            editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
-            editor->Send(Message::SelectAll);
+            editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
+            editor->Send(SelectAll);
             if (split) {
-                const auto width = editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
+                const auto width = editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>("one two ")) + 1;
                 editor->SetClientSize(static_cast<int>(width), 200);
                 wxYield();
                 Split(frame);
@@ -514,10 +518,10 @@ void SavedBytes(EditorFrame* frame) {
             const auto& after = split ? fixture.split : fixture.wrap;
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == after,
                     "independent saved bytes retain original encoding/BOM and generated EOLs");
-            editor->Send(Message::Undo);
+            editor->Send(Undo);
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                     "saved Undo restores independent input bytes");
-            editor->Send(Message::Redo);
+            editor->Send(Redo);
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == after,
                     "saved Redo restores independent result bytes");
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,

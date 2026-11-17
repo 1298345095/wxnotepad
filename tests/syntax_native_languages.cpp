@@ -9,6 +9,7 @@
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <utility>
 #include <sstream>
 #include <fstream>
 #include <memory>
@@ -59,10 +60,10 @@ void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFix
     Require(editor->Send(Message::GetTabWidth) == 5 && editor->Send(Message::GetIndent) == 2,
             "native Tab Settings must apply the language's independent settings");
     SettingsStore reloaded(settings.Path());
-    const auto& saved = reloaded.values.schemeTabs[static_cast<size_t>(fixture.language)];
+    const auto& saved = reloaded.values.schemeTabs[static_cast<size_t>(std::to_underlying(fixture.language))];
     Require(saved.tabWidth == 5 && saved.indentWidth == 2 && !saved.useGlobal,
             "Tab Settings must persist to the original language section");
-    settings.values.schemeTabs[static_cast<size_t>(fixture.language)] = OriginalTabs{};
+    settings.values.schemeTabs[static_cast<size_t>(std::to_underlying(fixture.language))] = OriginalTabs{};
     Require(settings.SaveSchemeTabs(fixture.language), "fixture tab defaults must restore");
 
     TestLanguages::SaveNaming(frame, fixture, path);
@@ -70,7 +71,7 @@ void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFix
 void Workflows(EditorFrame* frame, SettingsStore& settings) {
     auto* editor = frame->Editor();
     editor->Send(Message::SetSavePoint);
-    constexpr auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+    constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
     const auto fontSize = editor->Send(Message::StyleGetSizeFractional, defaultStyle);
     for (const auto& fixture : schemes)
         SchemeWorkflow(frame, settings, fixture, fontSize);

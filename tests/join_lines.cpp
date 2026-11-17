@@ -11,6 +11,7 @@
 #include <memory>
 #include <fstream>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -69,6 +70,7 @@ void Fixtures(EditorFrame* frame) {
     };
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         Set(editor, fixture.before, fixture.anchor, fixture.caret, fixture.mode);
         if (fixture.anchor == fixture.caret) {
             if (fixture.paragraphs)
@@ -83,18 +85,16 @@ void Fixtures(EditorFrame* frame) {
                          fixture.before, TestEditor::Text(editor).c_str(), fixture.after);
         Require(TestEditor::Text(editor) == fixture.after, "original literal join bytes");
         Range(editor, fixture.afterAnchor, fixture.afterCaret);
-        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(fixture.mode), "join retains EOL mode");
-        Require(!!editor->Send(Message::CanUndo) == fixture.modified &&
-                    !!editor->Send(Message::GetModify) == fixture.modified,
+        Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(fixture.mode)),
+                "join retains EOL mode");
+        Require(!!editor->Send(CanUndo) == fixture.modified && !!editor->Send(GetModify) == fixture.modified,
                 "original unchanged-result history and save point");
         if (fixture.modified) {
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::GetModify),
+            editor->Send(Undo);
+            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(CanUndo) && !editor->Send(GetModify),
                     "one Undo restores bytes and save point");
-            editor->Send(Message::Redo);
-            Require(TestEditor::Text(editor) == fixture.after && !editor->Send(Message::CanRedo) &&
-                        editor->Send(Message::GetModify),
+            editor->Send(Redo);
+            Require(TestEditor::Text(editor) == fixture.after && !editor->Send(CanRedo) && editor->Send(GetModify),
                     "one Redo restores whole join");
         }
     }
@@ -158,12 +158,14 @@ public:
     int count = 0;
 };
 void PendingRedo(EditorControl* editor) {
-    editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+    using enum Scintilla::Message;
+    editor->Send(AddText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    Require(!editor->Send(CanUndo) && editor->Send(CanRedo) && !editor->Send(GetModify),
             "fixture has pending redo at original save point");
 }
 void Protection(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int lineId = frame->GetMenuBar()->FindMenuItem("Edit", "Join Lines");
     const int paragraphId = frame->GetMenuBar()->FindMenuItem("Edit", "Join Paragraphs");
@@ -174,52 +176,51 @@ void Protection(EditorFrame* frame) {
     for (bool paragraphs : {false, true}) {
         Set(editor, paragraphs ? "A\n" : "ABC", 0, 2);
         PendingRedo(editor);
-        editor->Send(Message::SetSel, 0, 2);
+        editor->Send(SetSel, 0, 2);
         const auto before = TestEditor::Text(editor);
         Join(frame, paragraphs);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::CanUndo) &&
-                    editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == before && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                    !editor->Send(GetModify),
                 "true no-op join preserves pending redo and save point");
         Range(editor, 0, 2);
     }
     for (bool backwards : {false, true}) {
         Set(editor, "aa\nbb\ncc", 0, 0);
         PendingRedo(editor);
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, backwards ? 8 : 0);
-        editor->Send(Message::SetRectangularSelectionCaret, backwards ? 0 : 8);
-        const auto anchor = editor->Send(Message::GetRectangularSelectionAnchor);
-        const auto caret = editor->Send(Message::GetRectangularSelectionCaret);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, backwards ? 8 : 0);
+        editor->Send(SetRectangularSelectionCaret, backwards ? 0 : 8);
+        const auto anchor = editor->Send(GetRectangularSelectionAnchor);
+        const auto caret = editor->Send(GetRectangularSelectionCaret);
         RectangleFeedback feedback;
         Join(frame, false);
         Require(feedback.count == 0 && TestEditor::Text(editor) == "aa\nbb\ncc" &&
-                    editor->Send(Message::GetTargetStart) == (backwards ? 0 : 6) &&
-                    editor->Send(Message::GetTargetEnd) == (backwards ? 2 : 8),
+                    editor->Send(GetTargetStart) == (backwards ? 0 : 6) &&
+                    editor->Send(GetTargetEnd) == (backwards ? 2 : 8),
                 "rectangular line join uses the main line range, without warning or whole-rectangle expansion");
         Join(frame, true);
-        Require(feedback.count == 1 && TestEditor::Text(editor) == "aa\nbb\ncc" && !editor->Send(Message::CanUndo) &&
-                    editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify) &&
-                    editor->Send(Message::GetRectangularSelectionAnchor) == anchor &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == caret,
+        Require(feedback.count == 1 && TestEditor::Text(editor) == "aa\nbb\ncc" && !editor->Send(CanUndo) &&
+                    editor->Send(CanRedo) && !editor->Send(GetModify) &&
+                    editor->Send(GetRectangularSelectionAnchor) == anchor &&
+                    editor->Send(GetRectangularSelectionCaret) == caret,
                 "paragraph rectangle warning preserves direction, text, save point and pending redo");
-        editor->Send(Message::SetRectangularSelectionAnchor, 0);
-        editor->Send(Message::SetRectangularSelectionCaret, 6);
+        editor->Send(SetRectangularSelectionAnchor, 0);
+        editor->Send(SetRectangularSelectionCaret, 6);
         Require(editor->JoinParagraphs() && feedback.count == 1,
                 "empty rectangular paragraph selection returns before unsupported-rectangle feedback");
     }
     for (bool paragraphs : {false, true}) {
         Set(editor, "  A\nB", 2, 5);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(lineId) && frame->GetMenuBar()->IsEnabled(paragraphId),
                 "original join menus retain selection-only availability on read-only text");
         Join(frame, paragraphs);
-        Require(TestEditor::Text(editor) == "  A\nB" && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == "  A\nB" && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "core protects read-only bytes and history");
         Range(editor, paragraphs ? 0 : 2, 5);
     }
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     std::puts("PASS: original selection-only availability, read-only protection/endpoint repair, main-range rectangle "
               "line join, paragraph warning ordering and pending redo");
 }
@@ -252,21 +253,22 @@ void SavedBytes(EditorFrame* frame) {
     };
     for (const auto& fixture : fixtures) {
         for (bool paragraphs : {false, true}) {
+            using enum Scintilla::Message;
             const auto path = directory / (std::string(fixture.name) + (paragraphs ? "-paragraphs.txt" : "-lines.txt"));
             TestFiles::WriteBytes(path, fixture.before);
-            editor->Send(Message::SetSavePoint);
+            editor->Send(SetSavePoint);
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                     "open encoded join fixture through application");
-            editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
-            editor->Send(Message::SelectAll);
+            editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
+            editor->Send(SelectAll);
             Join(frame, paragraphs);
             const auto& after = paragraphs ? fixture.paragraphs : fixture.lines;
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == after,
                     "independent saved join bytes retain encoding, BOM and exact generated EOLs");
-            editor->Send(Message::Undo);
+            editor->Send(Undo);
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                     "one Undo saves exact independent original bytes");
-            editor->Send(Message::Redo);
+            editor->Send(Redo);
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == after,
                     "one Redo saves exact independent joined bytes");
         }
@@ -282,16 +284,17 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         CallAfter([this, frame] {
+            using enum Scintilla::Message;
             try {
                 auto* editor = frame->Editor();
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("a\r\n  b\nc"));
-                editor->Send(Message::SetSel, 1, 8);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("a\r\n  b\nc"));
+                editor->Send(SetSel, 1, 8);
                 Join(frame, false);
                 Require(TestEditor::Text(editor) == "a   b c", "target-based join retains next-line indentation");
                 std::puts("PASS: original native Join Lines command");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("  a\r\n b\n\nc\r\r\nlast"));
-                editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
-                editor->Send(Message::SetSel, 2, 17);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("  a\r\n b\n\nc\r\r\nlast"));
+                editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
+                editor->Send(SetSel, 2, 17);
                 Join(frame, true);
                 Require(TestEditor::Text(editor) == "  a  b\n\nc\n\nlast",
                         "paragraph join expands first line and emits current-mode paragraph separators");
@@ -304,7 +307,7 @@ public:
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 result_ = 1;
             }
-            frame->Editor()->Send(Message::SetSavePoint);
+            frame->Editor()->Send(SetSavePoint);
             frame->Destroy();
             ExitMainLoop();
         });

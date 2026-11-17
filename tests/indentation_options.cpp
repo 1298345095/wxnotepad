@@ -8,33 +8,34 @@ void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
 void Check(EditorControl* editor, int tab, int indent, bool spaces) {
-    if (editor->Send(Message::GetTabWidth) != tab || editor->Send(Message::GetIndent) != indent ||
-        editor->Send(Message::GetUseTabs) != !spaces)
+    using enum Scintilla::Message;
+    if (editor->Send(GetTabWidth) != tab || editor->Send(GetIndent) != indent || editor->Send(GetUseTabs) != !spaces)
         std::fprintf(stderr, "Policy actual=%lld/%lld/%lld expected=%d/%d/%d\n",
-                     static_cast<long long>(editor->Send(Message::GetTabWidth)),
-                     static_cast<long long>(editor->Send(Message::GetIndent)),
-                     static_cast<long long>(editor->Send(Message::GetUseTabs)), tab, indent, !spaces);
-    Require(editor->Send(Message::GetTabWidth) == tab && editor->Send(Message::GetIndent) == indent &&
-                editor->Send(Message::GetUseTabs) == !spaces,
+                     static_cast<long long>(editor->Send(GetTabWidth)), static_cast<long long>(editor->Send(GetIndent)),
+                     static_cast<long long>(editor->Send(GetUseTabs)), tab, indent, !spaces);
+    Require(editor->Send(GetTabWidth) == tab && editor->Send(GetIndent) == indent &&
+                editor->Send(GetUseTabs) == !spaces,
             "effective independent widths and spaces policy must follow original precedence");
 }
 void Language(EditorFrame* frame, const char* name) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", name));
 }
 void Reset(EditorControl* editor, const char* text, intptr_t anchor, intptr_t caret) {
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-    editor->Send(Message::SetSel, anchor, caret);
+    using enum Scintilla::Message;
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
+    editor->Send(SetSel, anchor, caret);
 }
 void History(EditorControl* editor, const std::string& edited, const std::string& original) {
+    using enum Scintilla::Message;
     if (NativeSearch::Text(editor) != edited)
         std::fprintf(stderr, "Actual='%s', expected='%s'\n", NativeSearch::Text(editor).c_str(), edited.c_str());
     Require(NativeSearch::Text(editor) == edited, "indent command must produce exact expected bytes");
-    editor->Send(Message::Undo);
-    Require(NativeSearch::Text(editor) == original && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(NativeSearch::Text(editor) == original && !editor->Send(GetModify),
             "one Undo must restore original text and save point");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(NativeSearch::Text(editor) == edited, "one Redo must restore the indent edit");
 }
 class IndentationApp final : public wxApp {

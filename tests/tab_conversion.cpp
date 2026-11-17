@@ -7,6 +7,7 @@
 #include <wx/ffile.h>
 #include <wx/modalhook.h>
 #include <chrono>
+#include <utility>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -65,11 +66,12 @@ struct ConversionFixture {
 };
 
 void CheckConversion(EditorFrame* frame, const ConversionFixture& fixture, bool backwards) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto beforeLength = static_cast<intptr_t>(std::char_traits<char>::length(fixture.before));
     const auto afterLength = static_cast<intptr_t>(std::char_traits<char>::length(fixture.after));
     TestEditor::ResetStream(editor, fixture.before, backwards ? beforeLength : 0, backwards ? 0 : beforeLength);
-    editor->Send(Message::SetTabWidth, fixture.width);
+    editor->Send(SetTabWidth, fixture.width);
     Menu(frame, fixture.command);
     if (TestEditor::Text(editor) != fixture.after)
         std::fprintf(stderr, "%s width %d: expected <%s>, got <%s>\n", fixture.command, fixture.width, fixture.after,
@@ -77,16 +79,15 @@ void CheckConversion(EditorFrame* frame, const ConversionFixture& fixture, bool 
     Require(TestEditor::Text(editor) == fixture.after, "conversion matches literal original output");
     Range(editor, backwards ? afterLength : 0, backwards ? 0 : afterLength);
     if (std::string(fixture.before) != fixture.after) {
-        Require(editor->Send(Message::GetModify), "changed conversion leaves save point");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        Require(editor->Send(GetModify), "changed conversion leaves save point");
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "one Undo restores original bytes and save point");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+        editor->Send(Redo);
+        Require(TestEditor::Text(editor) == fixture.after && editor->Send(GetModify),
                 "one Redo restores the entire conversion");
     } else {
-        Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+        Require(!editor->Send(CanUndo) && !editor->Send(GetModify),
                 "unchanged conversion retains history and save point");
     }
 }
@@ -147,61 +148,60 @@ public:
     int count = 0;
 };
 void Protection(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    editor->Send(Message::SetTabWidth, 4);
+    editor->Send(SetTabWidth, 4);
     for (const char* command : {"Tabify Selection", "Untabify Selection", "Tabify Indent", "Untabify Indent"}) {
         TestEditor::ResetStream(editor, "abc d", 1, 4);
-        editor->Send(Message::InsertText, 5, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 4, 1);
+        editor->Send(InsertText, 5, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 4, 1);
         Menu(frame, command);
-        Require(TestEditor::Text(editor) == "abc d" && !editor->Send(Message::CanUndo) &&
-                    editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == "abc d" && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                    !editor->Send(GetModify),
                 "true no-change conversion retains pending redo and save point");
         Range(editor, 4, 1);
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", command);
-        editor->Send(Message::SetSel, 2, 2);
+        editor->Send(SetSel, 2, 2);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(!frame->GetMenuBar()->IsEnabled(id), "original empty-selection menu is disabled");
         wxCommandEvent empty(wxEVT_MENU, id);
         frame->GetEventHandler()->ProcessEvent(empty);
         Range(editor, 2, 2);
-        Require(TestEditor::Text(editor) == "abc d" && editor->Send(Message::CanRedo),
-                "empty command retains text and redo");
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 2);
-        editor->Send(Message::SetRectangularSelectionCaret, 2);
+        Require(TestEditor::Text(editor) == "abc d" && editor->Send(CanRedo), "empty command retains text and redo");
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, 2);
+        editor->Send(SetRectangularSelectionCaret, 2);
         RectangleFeedback feedback;
         frame->GetEventHandler()->ProcessEvent(empty);
         Require(feedback.count == 0, "empty rectangle returns before rectangular feedback");
         TestEditor::ResetStream(editor, "    A\n\tB", 0, 5);
-        editor->Send(Message::InsertText, 8, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 1);
-        editor->Send(Message::SetRectangularSelectionCaret, 8);
-        const auto anchor = editor->Send(Message::GetRectangularSelectionAnchor);
-        const auto caret = editor->Send(Message::GetRectangularSelectionCaret);
+        editor->Send(InsertText, 8, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, 1);
+        editor->Send(SetRectangularSelectionCaret, 8);
+        const auto anchor = editor->Send(GetRectangularSelectionAnchor);
+        const auto caret = editor->Send(GetRectangularSelectionCaret);
         Menu(frame, command);
         Require(feedback.count == 1 && TestEditor::Text(editor) == "    A\n\tB" &&
-                    editor->Send(Message::GetRectangularSelectionAnchor) == anchor &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == caret && !editor->Send(Message::CanUndo) &&
-                    editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+                    editor->Send(GetRectangularSelectionAnchor) == anchor &&
+                    editor->Send(GetRectangularSelectionCaret) == caret && !editor->Send(CanUndo) &&
+                    editor->Send(CanRedo) && !editor->Send(GetModify),
                 "nonempty rectangle warns and preserves bytes, endpoints, history and save point");
         const bool toTabs = std::string(command).starts_with("Tabify");
         TestEditor::ResetStream(editor, toTabs ? "    A\nlast" : "\tA\nlast", 1, toTabs ? 5 : 2);
         const auto original = TestEditor::Text(editor);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(id),
                 "original conversion menu remains enabled for a read-only selection");
         Menu(frame, command);
-        Require(TestEditor::Text(editor) == original && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == original && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "protected core preserves read-only text, history and save point");
         Range(editor, 0, toTabs ? 2 : 5);
     }
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     std::puts("PASS: no-change, empty/rectangular guard order, feedback, pending redo and literal read-only selection "
               "repair");
 }
@@ -230,24 +230,25 @@ void SavedBytes(EditorFrame* frame) {
         {"untabify-indent-utf8", "Untabify Indent", FileEncoding::Utf8, " \tA\tB\n\tC", "    A\tB\n    C"},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".cpp");
         TestFiles::WriteBytes(path, fixture.before);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
                 "open encoded file through application");
         TabDialog::File(frame, 4, 2, false);
-        Require(editor->Send(Message::GetTabWidth) == 4, "conversion uses effective document tab width");
-        editor->Send(Message::SelectAll);
+        Require(editor->Send(GetTabWidth) == 4, "conversion uses effective document tab width");
+        editor->Send(SelectAll);
         Menu(frame, fixture.command);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "Save preserves independent encoding/BOM bytes, mixed EOLs and final newline");
         Require(frame->DocumentEncoding() == fixture.encoding &&
                     frame->GetStatusBar()->GetStatusText().Contains("C/C++"),
                 "conversion preserves document encoding and language");
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                 "one Undo and Save restore independent original bytes");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "one Redo and Save restore independent converted bytes");
     }
@@ -264,21 +265,22 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 auto* editor = frame->Editor();
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("a   b"));
-                editor->Send(Message::SetTabWidth, 4);
-                editor->Send(Message::SelectAll);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("a   b"));
+                editor->Send(SetTabWidth, 4);
+                editor->Send(SelectAll);
                 Menu(frame, "Tabify Selection");
                 Require(TestEditor::Text(editor) == "a\tb", "Tabify Selection uses original tab stops");
                 std::puts("PASS: native Tabify Selection uses original tab stops");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("😀\tX\r\n \tY"));
-                editor->Send(Message::SelectAll);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("😀\tX\r\n \tY"));
+                editor->Send(SelectAll);
                 Menu(frame, "Untabify Selection");
                 Require(TestEditor::Text(editor) == "😀  X\r\n    Y",
                         "Untabify Selection counts original UTF-16 units and resets at each EOL");
                 std::puts("PASS: native Untabify Selection uses original UTF-16 tab stops");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("    A   B\r\n \tC\tD"));
-                editor->Send(Message::SelectAll);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("    A   B\r\n \tC\tD"));
+                editor->Send(SelectAll);
                 Menu(frame, "Tabify Indent");
                 Require(TestEditor::Text(editor) == "\tA   B\r\n\tC\tD", "Tabify Indent preserves interior blanks");
                 Menu(frame, "Untabify Indent");
@@ -287,8 +289,8 @@ public:
                 editor->SetFocus();
                 wxYield();
                 for (bool indent : {false, true}) {
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("    A   B"));
-                    editor->Send(Message::SelectAll);
+                    editor->Send(SetText, 0, reinterpret_cast<intptr_t>("    A   B"));
+                    editor->Send(SelectAll);
                     NativeKey(editor, 'T', !indent, indent);
                     Require(TestEditor::Text(editor) == (indent ? "\tA   B" : "\tA\tB"),
                             "original exact Tabify shortcut selects the correct variant");

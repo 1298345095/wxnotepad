@@ -9,6 +9,7 @@
 #include <SciLexer.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <utility>
 #include <stdexcept>
 #include <filesystem>
 #include <span>
@@ -25,16 +26,16 @@ void Choose(EditorFrame* frame, const char* name) {
     Require(frame->GetStatusBar()->GetStatusText().Contains(name), "status must identify the effective dialect");
 }
 void Compare(EditorFrame* frame, std::span<const int> styles, std::span<const int> folds) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     TestSyntax::Paint(frame);
-    Require(editor->Send(Message::GetLength) == static_cast<intptr_t>(styles.size()),
-            "fixture length must match original");
+    Require(editor->Send(GetLength) == static_cast<intptr_t>(styles.size()), "fixture length must match original");
     for (size_t index = 0; index < styles.size(); ++index)
         TestSyntax::Style(editor, index, styles[index]);
-    Require(editor->Send(Message::GetLineCount) == static_cast<intptr_t>(folds.size()),
+    Require(editor->Send(GetLineCount) == static_cast<intptr_t>(folds.size()),
             "fixture line count must match original");
     for (size_t line = 0; line < folds.size(); ++line) {
-        const auto actual = editor->Send(Message::GetFoldLevel, line);
+        const auto actual = editor->Send(GetFoldLevel, line);
         if (actual != folds[line])
             std::fprintf(stderr, "line=%zu expected_fold=%d actual_fold=%zd\n", line, folds[line], actual);
         Require(actual == folds[line], "every fold level must match original full application");
@@ -107,6 +108,7 @@ void Workflows(EditorFrame* frame, const std::filesystem::path& directory) {
 void SharedCommands(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const auto* dialect : {"JavaScript", "JSX", "TypeScript", "TSX"}) {
+        using enum Scintilla::Message;
         Choose(frame, dialect);
         TestEditor::ResetStream(editor, "value", 0, 5);
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
@@ -117,19 +119,18 @@ void SharedCommands(EditorFrame* frame) {
         TestSyntax::Command(frame, wxID_UNDO);
         TestEditor::ResetStream(editor, "function f() {\n  return 42;\n}\n");
         TestSyntax::Paint(frame);
-        editor->Send(Message::ToggleFold, 0);
-        Require(!editor->Send(Message::GetLineVisible, 1), "single-block folding hides nested JS lines");
+        editor->Send(ToggleFold, 0);
+        Require(!editor->Send(GetLineVisible, 1), "single-block folding hides nested JS lines");
         SearchSession search(*editor);
         search.Configure({.query = "return", .replacement = "yield"});
-        Require(search.Find(SearchDirection::Forward).status == FindStatus::Found &&
-                    editor->Send(Message::GetLineVisible, 1),
+        Require(search.Find(SearchDirection::Forward).status == FindStatus::Found && editor->Send(GetLineVisible, 1),
                 "shared Find reveals matched folded content");
-        editor->Send(Message::ToggleFold, 0);
+        editor->Send(ToggleFold, 0);
         const auto replaced = search.ReplaceAll();
         Require(replaced.count == 1 && TestEditor::Text(editor) == "function f() {\n  yield 42;\n}\n",
                 "shared Replace All edits folded content");
         TestSyntax::Command(frame, wxID_UNDO);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
     }
     std::puts("PASS: shared comments, single-fold and folded Find/Replace for all four dialects");
 }
@@ -159,8 +160,8 @@ void SchemeSettings(SettingsStore& settings) {
             "write independent original INI fixture");
     }
     SettingsStore loaded(settings.Path());
-    const auto js = static_cast<size_t>(SyntaxLanguage::JavaScript);
-    const auto ts = static_cast<size_t>(SyntaxLanguage::TypeScript);
+    const auto js = static_cast<size_t>(std::to_underlying(SyntaxLanguage::JavaScript));
+    const auto ts = static_cast<size_t>(std::to_underlying(SyntaxLanguage::TypeScript));
     Require(loaded.values.schemeTabs[js].tabWidth == 3 && loaded.values.schemeTabs[ts].tabWidth == 6,
             "original JS/TS sections load independently");
     loaded.values.schemeTabs[js].tabWidth = 7;
@@ -173,29 +174,30 @@ void SchemeSettings(SettingsStore& settings) {
     std::puts("PASS: original independent JavaScript/TypeScript settings load/save through JSX/TSX aliases");
 }
 void TabPrecedence(EditorFrame* frame, SettingsStore& settings, const std::filesystem::path& directory) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     TestSyntax::Command(frame, wxID_NEW);
     settings.values.globalTabs = {9, 9, false};
-    settings.values.schemeTabs[static_cast<size_t>(SyntaxLanguage::JavaScript)] = {3, 3, true, false};
-    settings.values.schemeTabs[static_cast<size_t>(SyntaxLanguage::TypeScript)] = {6, 6, false, false};
+    settings.values.schemeTabs[static_cast<size_t>(std::to_underlying(SyntaxLanguage::JavaScript))] = {3, 3, true,
+                                                                                                       false};
+    settings.values.schemeTabs[static_cast<size_t>(std::to_underlying(SyntaxLanguage::TypeScript))] = {6, 6, false,
+                                                                                                       false};
     Choose(frame, "JSX");
-    Require(editor->Send(Message::GetTabWidth) == 3 && !editor->Send(Message::GetUseTabs),
+    Require(editor->Send(GetTabWidth) == 3 && !editor->Send(GetUseTabs),
             "JSX inherits independent JavaScript settings");
     Choose(frame, "TSX");
-    Require(editor->Send(Message::GetTabWidth) == 6 && editor->Send(Message::GetUseTabs),
-            "TSX inherits independent TypeScript settings");
-    settings.values.schemeTabs[static_cast<size_t>(SyntaxLanguage::JavaScript)].useGlobal = true;
+    Require(editor->Send(GetTabWidth) == 6 && editor->Send(GetUseTabs), "TSX inherits independent TypeScript settings");
+    settings.values.schemeTabs[static_cast<size_t>(std::to_underlying(SyntaxLanguage::JavaScript))].useGlobal = true;
     Choose(frame, "JSX");
-    Require(editor->Send(Message::GetTabWidth) == 9 && editor->Send(Message::GetUseTabs),
+    Require(editor->Send(GetTabWidth) == 9 && editor->Send(GetUseTabs),
             "explicit scheme inheritance uses global settings");
     const auto path = directory / "file-tabs.js";
     TestFiles::WriteBytes(path, "// tab-width: 5; indent-width: 5; indent-tabs-mode: nil\nconst value = 1;\n");
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "file indentation fixture must Open");
-    Require(editor->Send(Message::GetTabWidth) == 5 && !editor->Send(Message::GetUseTabs),
+    Require(editor->Send(GetTabWidth) == 5 && !editor->Send(GetUseTabs),
             "file variables override inherited global settings");
     Choose(frame, "TSX");
-    Require(editor->Send(Message::GetTabWidth) == 5 && !editor->Send(Message::GetUseTabs),
-            "file overrides survive dialect changes");
+    Require(editor->Send(GetTabWidth) == 5 && !editor->Send(GetUseTabs), "file overrides survive dialect changes");
     std::puts("PASS: independent scheme, global inheritance and file indentation precedence");
 }
 class JavaScriptApp final : public wxApp {
@@ -211,19 +213,18 @@ public:
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 auto* editor = frame->Editor();
                 const char* source = "function outer() {\n  const value = `hello ${1 + 2}`;\n  return "
                                      "/hello/.test(value) ? value.length / 2 : 0;\n}\n";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source));
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>(source));
                 Choose(frame, "JavaScript");
-                Require(editor->Send(Message::GetLexer) == SCLEX_JAVASCRIPT,
-                        "JavaScript must use the original shared lexer");
+                Require(editor->Send(GetLexer) == SCLEX_JAVASCRIPT, "JavaScript must use the original shared lexer");
                 TestSyntax::Style(editor, 0, SCE_JS_WORD);
-                Require(editor->Send(Message::GetTabWidth) == 2 && editor->Send(Message::GetIndent) == 2 &&
-                            !editor->Send(Message::GetUseTabs),
+                Require(editor->Send(GetTabWidth) == 2 && editor->Send(GetIndent) == 2 && !editor->Send(GetUseTabs),
                         "JavaScript defaults to two-space indentation");
                 std::puts("PASS: JavaScript native choice, original lexer and indentation");
-                editor->Send(Message::SetSavePoint);
+                editor->Send(SetSavePoint);
                 const auto directory = TestFiles::TemporaryDirectory("javascript");
                 std::filesystem::create_directory(directory);
                 const auto fixtureRoot = std::filesystem::path(__FILE__).parent_path() / "fixtures/javascript";
@@ -236,14 +237,13 @@ public:
                     Require(frame->GetStatusBar()->GetStatusText().Contains(fixture.name),
                             "extension selects the original dialect");
                     Compare(frame, fixture.styles, fixture.folds);
-                    Require(editor->Send(Message::GetTabWidth) == 2 && editor->Send(Message::GetIndent) == 2 &&
-                                !editor->Send(Message::GetUseTabs),
+                    Require(editor->Send(GetTabWidth) == 2 && editor->Send(GetIndent) == 2 && !editor->Send(GetUseTabs),
                             "all JS/TS dialects default to two spaces");
-                    editor->Send(Message::DeleteRange, 0, 1);
+                    editor->Send(DeleteRange, 0, 1);
                     Compare(frame, fixture.editedStyles, fixture.editedFolds);
                     TestSyntax::Command(frame, wxID_UNDO);
                     Compare(frame, fixture.styles, fixture.folds);
-                    Require(!editor->Send(Message::GetModify), "Undo restores the original save point");
+                    Require(!editor->Send(GetModify), "Undo restores the original save point");
                     TestSyntax::Command(frame, wxID_REDO);
                     Compare(frame, fixture.editedStyles, fixture.editedFolds);
                     TestSyntax::Command(frame, wxID_UNDO);
@@ -252,23 +252,24 @@ public:
                     TestSyntax::Command(frame, collapse);
                     bool hidden = false;
                     for (size_t line = 0; line < fixture.folds.size(); ++line)
-                        hidden |= !editor->Send(Message::GetLineVisible, line);
+                        hidden |= !editor->Send(GetLineVisible, line);
                     Require(hidden, "Collapse All must hide an original JS/TS fold");
                     TestSyntax::Command(frame, expand);
                     for (size_t line = 0; line < fixture.folds.size(); ++line)
-                        Require(editor->Send(Message::GetLineVisible, line), "Expand All reveals every folded line");
-                    Require(TestEditor::Text(editor) == bytes && !editor->Send(Message::GetModify),
+                        Require(editor->Send(GetLineVisible, line), "Expand All reveals every folded line");
+                    Require(TestEditor::Text(editor) == bytes && !editor->Send(GetModify),
                             "folding preserves loaded bytes and save point");
-                    editor->Send(Message::SetZoom, 125);
-                    const auto pointSize = editor->Send(Message::StyleGetSizeFractional,
-                                                        static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
+                    editor->Send(SetZoom, 125);
+                    const auto pointSize =
+                        editor->Send(StyleGetSizeFractional,
+                                     static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)));
                     Choose(frame, "Plain Text");
                     Choose(frame, fixture.name);
                     Compare(frame, fixture.styles, fixture.folds);
-                    Require(editor->Send(Message::GetZoom) == 125 &&
-                                editor->Send(Message::StyleGetSizeFractional, SCE_JS_WORD) == pointSize,
+                    Require(editor->Send(GetZoom) == 125 &&
+                                editor->Send(StyleGetSizeFractional, SCE_JS_WORD) == pointSize,
                             "scheme switches preserve native point size and zoom");
-                    Require(editor->Send(Message::CanRedo), "non-editing scheme changes preserve redo");
+                    Require(editor->Send(CanRedo), "non-editing scheme changes preserve redo");
                     Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == bytes,
                             "Save preserves independent disk bytes");
                     std::printf("PASS: original %s styles/folds, edit/Undo/Redo, folding, switching and Save\n",

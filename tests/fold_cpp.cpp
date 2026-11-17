@@ -12,6 +12,7 @@
 #include <numeric>
 #include <stdexcept>
 #include <vector>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -58,10 +59,10 @@ std::function<wxColour(int, int)> PixelReader(EditorControl* editor) {
 #endif
 }
 void MarginBackground(EditorControl* editor) {
+    using enum Scintilla::Message;
     const auto read = PixelReader(editor);
-    const int left =
-        static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + editor->Send(Message::GetMarginWidthN, 1));
-    const int width = static_cast<int>(editor->Send(Message::GetMarginWidthN, 2));
+    const int left = static_cast<int>(editor->Send(GetMarginWidthN, 0) + editor->Send(GetMarginWidthN, 1));
+    const int width = static_cast<int>(editor->Send(GetMarginWidthN, 2));
     for (const int y : {150, editor->GetClientSize().y - 20}) {
         for (const int x : {left + 1, left + width - 2}) {
             const auto pixel = read(x, y);
@@ -72,13 +73,13 @@ void MarginBackground(EditorControl* editor) {
     }
 }
 std::vector<unsigned int> MarkerPixels(EditorControl* editor, int line) {
+    using enum Scintilla::Message;
     const auto read = PixelReader(editor);
-    const int left =
-        static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + editor->Send(Message::GetMarginWidthN, 1));
-    const int width = static_cast<int>(editor->Send(Message::GetMarginWidthN, 2));
-    const auto position = editor->Send(Message::PositionFromLine, line);
-    const int top = static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position));
-    const int height = static_cast<int>(editor->Send(Message::TextHeight, line));
+    const int left = static_cast<int>(editor->Send(GetMarginWidthN, 0) + editor->Send(GetMarginWidthN, 1));
+    const int width = static_cast<int>(editor->Send(GetMarginWidthN, 2));
+    const auto position = editor->Send(PositionFromLine, line);
+    const int top = static_cast<int>(editor->Send(PointYFromPosition, 0, position));
+    const int height = static_cast<int>(editor->Send(TextHeight, line));
     std::vector<unsigned int> pixels;
     for (int y = top + 1; y < top + height - 1; ++y) {
         for (int x = left + 2; x < left + width - 2; ++x) {
@@ -95,92 +96,89 @@ public:
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 auto* editor = frame->Editor();
                 const std::string source = "void outer() {\n  if (true) {\n    call();\n  }\n  tail();\n}\nafter();\n";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Paint(editor);
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(GotoPos, 0);
                 const auto openPixels = MarkerPixels(editor, 1);
                 MarginClick(editor, 1);
-                Require(!editor->Send(Message::GetFoldExpanded, 1) && !editor->Send(Message::GetLineVisible, 2) &&
-                            editor->Send(Message::GetLineVisible, 4),
+                Require(!editor->Send(GetFoldExpanded, 1) && !editor->Send(GetLineVisible, 2) &&
+                            editor->Send(GetLineVisible, 4),
                         "native header click must collapse only its lexer-defined block");
                 const auto closedPixels = MarkerPixels(editor, 1);
                 const auto differences = std::inner_product(openPixels.begin(), openPixels.end(), closedPixels.begin(),
                                                             size_t{0}, std::plus<>(), std::not_equal_to<>());
                 std::printf("native folder marker changed pixels: %zu\n", differences);
                 Require(differences > 0, "native folder marker must visibly change from minus to plus");
-                Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo),
+                Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) && !editor->Send(CanUndo),
                         "folding must preserve bytes, save point and history");
                 std::puts("PASS: native C++ margin click folds lexer-defined block without editing");
                 MarginClick(editor, 0);
-                Require(!editor->Send(Message::GetLineVisible, 1), "outer header must hide its descendants");
+                Require(!editor->Send(GetLineVisible, 1), "outer header must hide its descendants");
                 MarginClick(editor, 0);
-                Require(editor->Send(Message::GetLineVisible, 1) && !editor->Send(Message::GetLineVisible, 2) &&
-                            !editor->Send(Message::GetFoldExpanded, 1),
+                Require(editor->Send(GetLineVisible, 1) && !editor->Send(GetLineVisible, 2) &&
+                            !editor->Send(GetFoldExpanded, 1),
                         "reopening the parent must retain the collapsed nested block");
                 MarginClick(editor, 4);
-                Require(!editor->Send(Message::GetFoldExpanded, 1) && editor->Send(Message::GetFoldExpanded, 0),
+                Require(!editor->Send(GetFoldExpanded, 1) && editor->Send(GetFoldExpanded, 0),
                         "ordinary non-header margin click must leave related headers unchanged");
                 MarginClick(editor, 1);
-                const auto caret = editor->Send(Message::PositionFromLine, 2) + 4;
-                editor->Send(Message::SetSel, caret + 2, caret);
+                const auto caret = editor->Send(PositionFromLine, 2) + 4;
+                editor->Send(SetSel, caret + 2, caret);
                 MarginClick(editor, 0);
-                Require(editor->Send(Message::GetLineVisible,
-                                     editor->Send(Message::LineFromPosition, editor->Send(Message::GetCurrentPos))) &&
-                            editor->Send(Message::GetLineVisible,
-                                         editor->Send(Message::LineFromPosition, editor->Send(Message::GetAnchor))),
+                Require(editor->Send(GetLineVisible, editor->Send(LineFromPosition, editor->Send(GetCurrentPos))) &&
+                            editor->Send(GetLineVisible, editor->Send(LineFromPosition, editor->Send(GetAnchor))),
                         "collapsing a block containing the selection must leave caret and anchor visible");
-                Require(!editor->Send(Message::GetFoldExpanded, 0) && NativeSearch::Text(editor) == source &&
-                            !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+                Require(!editor->Send(GetFoldExpanded, 0) && NativeSearch::Text(editor) == source &&
+                            !editor->Send(GetModify) && !editor->Send(CanUndo),
                         "caret repair must retain collapsed visibility, bytes, save point and history");
                 std::puts(
                     "PASS: nested states and non-header clicks are stable; hidden selection moves to visible header");
                 MarginBackground(editor);
-                editor->Send(Message::SetBufferedDraw, 0);
+                editor->Send(SetBufferedDraw, 0);
                 Paint(editor);
                 MarginBackground(editor);
                 std::puts("PASS: buffered and unbuffered native margin backgrounds cover the full control height");
                 MarginClick(editor, 0);
                 MarginClick(editor, 0);
                 const auto brace = source.find('{');
-                editor->Send(Message::SetTargetStart, brace);
-                editor->Send(Message::SetTargetEnd, brace + 1);
-                editor->Send(Message::ReplaceTarget, 0, reinterpret_cast<intptr_t>(""));
+                editor->Send(SetTargetStart, brace);
+                editor->Send(SetTargetEnd, brace + 1);
+                editor->Send(ReplaceTarget, 0, reinterpret_cast<intptr_t>(""));
                 Paint(editor);
-                Require(editor->Send(Message::GetLineVisible, 1) &&
-                            !(static_cast<uintptr_t>(editor->Send(Message::GetFoldLevel, 0)) &
-                              static_cast<uintptr_t>(Scintilla::FoldLevel::HeaderFlag)),
+                Require(editor->Send(GetLineVisible, 1) &&
+                            !(static_cast<uintptr_t>(editor->Send(GetFoldLevel, 0)) &
+                              static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldLevel::HeaderFlag))),
                         "deleting a collapsed header must expose its former descendants and recalculate levels");
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
-                Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
-                            editor->Send(Message::GetLineVisible, 1) &&
-                            (static_cast<uintptr_t>(editor->Send(Message::GetFoldLevel, 0)) &
-                             static_cast<uintptr_t>(Scintilla::FoldLevel::HeaderFlag)),
+                Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) &&
+                            editor->Send(GetLineVisible, 1) &&
+                            (static_cast<uintptr_t>(editor->Send(GetFoldLevel, 0)) &
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldLevel::HeaderFlag))),
                         "Undo must restore the header and save point with reachable text");
                 NativeSearch::Command(frame, wxID_REDO);
                 Paint(editor);
-                Require(editor->Send(Message::GetLineVisible, 1), "Redo of header deletion must retain reachable text");
+                Require(editor->Send(GetLineVisible, 1), "Redo of header deletion must retain reachable text");
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
                 std::puts("PASS: header deletion, Undo and Redo repair fold levels and visibility");
                 MarginClick(editor, 0);
-                const auto hidden = editor->Send(Message::PositionFromLine, 2);
-                editor->Send(Message::SetTargetStart, hidden);
-                editor->Send(Message::SetTargetEnd, hidden);
-                editor->Send(Message::ReplaceTarget, 7, reinterpret_cast<intptr_t>("edit();"));
+                const auto hidden = editor->Send(PositionFromLine, 2);
+                editor->Send(SetTargetStart, hidden);
+                editor->Send(SetTargetEnd, hidden);
+                editor->Send(ReplaceTarget, 7, reinterpret_cast<intptr_t>("edit();"));
                 Paint(editor);
-                Require(editor->Send(Message::GetLineVisible, 2),
-                        "editing hidden text must reveal its containing fold");
+                Require(editor->Send(GetLineVisible, 2), "editing hidden text must reveal its containing fold");
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
-                Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
-                            editor->Send(Message::GetLineVisible, 2),
+                Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) &&
+                            editor->Send(GetLineVisible, 2),
                         "Undo of hidden-text edit must restore bytes and reachable state");
                 const auto directory = TestFiles::TemporaryDirectory("wxnotepad-fold");
                 std::filesystem::create_directory(directory);
@@ -188,34 +186,34 @@ public:
                 const auto filename = TestFiles::Filename(path);
                 Require(frame->SaveAs(filename).status == SaveStatus::Saved, "fold fixture must save");
                 MarginClick(editor, 0);
-                Require(frame->Save().status == SaveStatus::Saved && !editor->Send(Message::GetFoldExpanded, 0),
+                Require(frame->Save().status == SaveStatus::Saved && !editor->Send(GetFoldExpanded, 0),
                         "unchanged-language Save must preserve collapsed folds");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
-                Require(!editor->Send(Message::GetFoldExpanded, 0), "repeated language selection must preserve folds");
+                Require(!editor->Send(GetFoldExpanded, 0), "repeated language selection must preserve folds");
                 Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
                             frame->Open(filename + ".missing").status == OpenStatus::Failed &&
-                            !editor->Send(Message::GetFoldExpanded, 0),
+                            !editor->Send(GetFoldExpanded, 0),
                         "cancelled and failed Open must preserve folds");
                 std::ifstream saved(path, std::ios::binary);
                 Require(std::string(std::istreambuf_iterator<char>(saved), {}) == source,
                         "folding and Save must retain independent disk bytes");
                 saved.close();
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
-                Require(editor->Send(Message::GetMarginWidthN, 2) > 0 && editor->Send(Message::GetLineVisible, 2),
+                Require(editor->Send(GetMarginWidthN, 2) > 0 && editor->Send(GetLineVisible, 2),
                         "Plain Text must retain the original folding margin and reveal old contracted text");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 Paint(editor);
-                Require(editor->Send(Message::GetFoldExpanded, 0) && editor->Send(Message::GetLineVisible, 2),
+                Require(editor->Send(GetFoldExpanded, 0) && editor->Send(GetLineVisible, 2),
                         "changing back to C++ must start expanded");
                 MarginClick(editor, 0);
                 Require(frame->Open(filename).status == OpenStatus::Opened, "same-language Open must succeed");
                 Paint(editor);
-                Require(editor->Send(Message::GetFoldExpanded, 0) && editor->Send(Message::GetLineVisible, 2),
+                Require(editor->Send(GetFoldExpanded, 0) && editor->Send(GetLineVisible, 2),
                         "successful same-language Open must reset all contraction state");
                 MarginClick(editor, 0);
                 NativeSearch::Command(frame, wxID_NEW);
-                Require(editor->Send(Message::GetLength) == 0 && editor->Send(Message::GetMarginWidthN, 2) > 0 &&
-                            editor->Send(Message::GetLineVisible, 0),
+                Require(editor->Send(GetLength) == 0 && editor->Send(GetMarginWidthN, 2) > 0 &&
+                            editor->Send(GetLineVisible, 0),
                         "New must reset folding and return to unnamed Plain Text");
                 std::filesystem::remove_all(directory);
                 std::puts("PASS: language changes and New/Open reset folds; Save and failed operations preserve them");
@@ -225,23 +223,22 @@ public:
                 scrolled += source + source;
                 for (int line = 0; line < 40; ++line)
                     scrolled += "suffix();\n";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(scrolled.c_str()));
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>(scrolled.c_str()));
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
-                editor->Send(Message::SetFirstVisibleLine, 38);
+                editor->Send(SetFirstVisibleLine, 38);
                 Paint(editor);
                 MarginClick(editor, 41);
                 MarginClick(editor, 40);
-                Require(!editor->Send(Message::GetLineVisible, 41),
-                        "scrolled parent click must hide its mapped children");
+                Require(!editor->Send(GetLineVisible, 41), "scrolled parent click must hide its mapped children");
                 frame->SetClientSize(frame->FromDIP(wxSize(540, 300)));
                 Paint(editor);
                 MarginClick(editor, 47);
-                Require(!editor->Send(Message::GetFoldExpanded, 47) && !editor->Send(Message::GetLineVisible, 48) &&
-                            !editor->Send(Message::GetFoldExpanded, 40),
+                Require(!editor->Send(GetFoldExpanded, 47) && !editor->Send(GetLineVisible, 48) &&
+                            !editor->Send(GetFoldExpanded, 40),
                         "resized and scrolled native click must find the later header after hidden display lines");
                 MarginClick(editor, 40);
-                Require(editor->Send(Message::GetLineVisible, 41) && !editor->Send(Message::GetLineVisible, 42) &&
-                            !editor->Send(Message::GetLineVisible, 48),
+                Require(editor->Send(GetLineVisible, 41) && !editor->Send(GetLineVisible, 42) &&
+                            !editor->Send(GetLineVisible, 48),
                         "reopening scrolled parent must preserve its nested state and unrelated sibling fold");
                 std::puts("PASS: scrolling, contraction mapping and resizing preserve native margin hit positions");
                 result_ = 0;

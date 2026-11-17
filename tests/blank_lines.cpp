@@ -2,6 +2,7 @@
 #include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <fstream>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -49,23 +50,23 @@ void Fixtures(EditorFrame* frame) {
          "\v\n\f\n\x{c2}\x{a0}\nZ", 0, 0},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
-        const auto eol = editor->Send(Message::GetEOLMode);
+        const auto eol = editor->Send(GetEOLMode);
         const auto encoding = frame->DocumentEncoding();
         Menu(frame, fixture.merge);
         if (TestEditor::Text(editor) != fixture.after) std::fprintf(stderr, "Fixture: %s\n", fixture.name);
         Require(TestEditor::Text(editor) == fixture.after, fixture.name);
         Range(editor, fixture.resultAnchor, fixture.resultCaret);
-        Require(editor->Send(Message::CanUndo) && editor->Send(Message::GetModify),
+        Require(editor->Send(CanUndo) && editor->Send(GetModify),
                 "blank-line changes have undo history and leave save point");
-        Require(editor->Send(Message::GetEOLMode) == eol && frame->DocumentEncoding() == encoding,
+        Require(editor->Send(GetEOLMode) == eol && frame->DocumentEncoding() == encoding,
                 "blank-line edits preserve current EOL mode and encoding");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "one Undo restores all blank runs and the original save point");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+        editor->Send(Redo);
+        Require(TestEditor::Text(editor) == fixture.after && editor->Send(GetModify),
                 "one Redo restores the complete blank-line operation");
         std::printf("PASS: %s, selection, one-step Undo/Redo and save point\n", fixture.name);
     }
@@ -84,16 +85,17 @@ void NoChange(EditorFrame* frame) {
         {"\t \nA", false, 1, 2}, {"A\n \n\t\nZ", true, 2, 4},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, fixture.anchor, fixture.caret);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, fixture.anchor, fixture.caret);
         Menu(frame, fixture.merge);
-        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
-                    editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                    !editor->Send(GetModify),
                 "unchanged blank-line operations retain clean history and pending redo");
         Range(editor, fixture.anchor, fixture.caret);
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(TestEditor::Text(editor) == std::string(fixture.before) + "!", "no-change retains usable redo");
     }
     std::puts("PASS: empty document, singleton merge, final logical line and excluded selection preserve redo");
@@ -110,36 +112,37 @@ public:
 void Protection(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const bool merge : {true, false}) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "A\n\n\nB", 4, 1);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 4, 1);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 4, 1);
+        editor->Send(SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", merge ? "Merge Blank Lines" : "Remove Blank Lines");
         Require(frame->GetMenuBar()->IsEnabled(id), "original blank-line menu stays enabled for read-only text");
         Menu(frame, merge);
-        Require(TestEditor::Text(editor) == "A\n\n\nB" && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == "A\n\n\nB" && !editor->Send(CanUndo) && !editor->Send(CanRedo) &&
+                    !editor->Send(GetModify),
                 "core rejects read-only blank-line deletions without changing history");
         Range(editor, 4, 1);
         for (const bool empty : {false, true}) {
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, 0);
-            editor->Send(Message::SetRectangularSelectionCaret, empty ? 0 : 4);
+            editor->Send(SetSelectionMode,
+                         static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+            editor->Send(SetRectangularSelectionAnchor, 0);
+            editor->Send(SetRectangularSelectionCaret, empty ? 0 : 4);
             RectangleFeedback feedback;
             Menu(frame, merge);
             Require(feedback.count == 1, "rectangle feedback precedes empty-selection and read-only handling");
-            Require(TestEditor::Text(editor) == "A\n\n\nB" && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify) &&
-                        editor->Send(Message::GetRectangularSelectionAnchor) == 0 &&
-                        editor->Send(Message::GetRectangularSelectionCaret) == (empty ? 0 : 4),
+            Require(TestEditor::Text(editor) == "A\n\n\nB" && !editor->Send(CanUndo) && !editor->Send(CanRedo) &&
+                        !editor->Send(GetModify) && editor->Send(GetRectangularSelectionAnchor) == 0 &&
+                        editor->Send(GetRectangularSelectionCaret) == (empty ? 0 : 4),
                     "rectangle retains bytes, endpoints, history, redo and save point");
         }
         // Pinned CanRedo reports availability, which is false while read-only.
-        editor->Send(Message::SetReadOnly, 0);
-        Require(editor->Send(Message::CanRedo), "read-only command and rectangle feedback preserve pending redo");
-        editor->Send(Message::Redo);
+        editor->Send(SetReadOnly, 0);
+        Require(editor->Send(CanRedo), "read-only command and rectangle feedback preserve pending redo");
+        editor->Send(Redo);
         Require(TestEditor::Text(editor) == "A\n\n\nB!", "pending redo remains usable after read-only protection");
     }
     TestEditor::ResetStream(editor, "");
@@ -219,20 +222,22 @@ void SavedBytes(EditorFrame* frame) {
     };
     for (const auto& fixture : fixtures) {
         for (const bool merge : {true, false}) {
+            using enum SaveStatus;
+            using enum Scintilla::Message;
             const auto path = directory / (std::string(fixture.name) + (merge ? "-merge.txt" : "-remove.txt"));
             TestFiles::WriteBytes(path, fixture.before);
-            editor->Send(Message::SetSavePoint);
+            editor->Send(SetSavePoint);
             Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
                     "open independent blank-line encoding fixture through application");
             Menu(frame, merge);
             const auto& expected = merge ? fixture.merged : fixture.removed;
-            Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == expected,
+            Require(frame->Save().status == Saved && TestFiles::Bytes(path) == expected,
                     "blank-line Save preserves independent literal encoding, BOM and surviving EOL bytes");
-            editor->Send(Message::Undo);
-            Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
+            editor->Send(Undo);
+            Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.before,
                     "one Undo and Save restore all independent original bytes");
-            editor->Send(Message::Redo);
-            Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == expected,
+            editor->Send(Redo);
+            Require(frame->Save().status == Saved && TestFiles::Bytes(path) == expected,
                     "one Redo and Save restore all independent transformed bytes");
         }
     }

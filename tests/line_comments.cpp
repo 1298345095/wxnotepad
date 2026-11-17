@@ -12,6 +12,7 @@
 #include <fstream>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -75,6 +76,7 @@ public:
     int count = 0;
 };
 void Protection(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment");
     TestEditor::ResetStream(editor, "alpha\nbeta", 0, 5);
@@ -83,35 +85,33 @@ void Protection(EditorFrame* frame) {
     Require(!frame->GetMenuBar()->IsEnabled(id), "Plain Text has original no-line-comment capability");
     wxCommandEvent plainCommand(wxEVT_MENU, id);
     frame->GetEventHandler()->ProcessEvent(plainCommand);
-    Require(TestEditor::Text(editor) == "alpha\nbeta" && !editor->Send(Message::CanUndo),
+    Require(TestEditor::Text(editor) == "alpha\nbeta" && !editor->Send(CanUndo),
             "Plain Text command retains bytes and history");
     Choose(frame, "C/C++");
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetReadOnly, 1);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(id),
             "original read-only line-comment menu retains its lexer capability gate");
     wxCommandEvent readOnlyCommand(wxEVT_MENU, id);
     frame->GetEventHandler()->ProcessEvent(readOnlyCommand);
-    Require(TestEditor::Text(editor) == "alpha\nbeta" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    Require(TestEditor::Text(editor) == "alpha\nbeta" && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "read-only command retains bytes, save point and history");
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     Toggle(frame);
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 0);
-    editor->Send(Message::SetRectangularSelectionCaret, 7);
-    const auto anchor = editor->Send(Message::GetRectangularSelectionAnchor);
-    const auto caret = editor->Send(Message::GetRectangularSelectionCaret);
+    editor->Send(Undo);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+    editor->Send(SetRectangularSelectionAnchor, 0);
+    editor->Send(SetRectangularSelectionCaret, 7);
+    const auto anchor = editor->Send(GetRectangularSelectionAnchor);
+    const auto caret = editor->Send(GetRectangularSelectionCaret);
     RectangleFeedback feedback;
     Toggle(frame);
     Require(feedback.count == 1, "rectangular selection reports original unsupported operation");
-    Require(TestEditor::Text(editor) == "alpha\nbeta" && !editor->Send(Message::CanUndo) &&
-                editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify) &&
-                editor->Send(Message::GetRectangularSelectionAnchor) == anchor &&
-                editor->Send(Message::GetRectangularSelectionCaret) == caret,
+    Require(TestEditor::Text(editor) == "alpha\nbeta" && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                !editor->Send(GetModify) && editor->Send(GetRectangularSelectionAnchor) == anchor &&
+                editor->Send(GetRectangularSelectionCaret) == caret,
             "unsupported rectangle retains bytes, selection, save point, undo and pending redo");
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
     std::puts("PASS: Plain Text, read-only and original rectangular-selection warning preserve document/history");
 }
 void SavedBytes(EditorFrame* frame) {
@@ -133,23 +133,24 @@ void SavedBytes(EditorFrame* frame) {
          std::string("\x{ff}\x{fe}/\0/\0 \0\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0/\0/\0 \0\x{42}\0", 24)},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".cpp");
         {
             std::ofstream file(path, std::ios::binary);
             file.write(fixture.before.data(), static_cast<std::streamsize>(fixture.before.size()));
         }
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         Require(frame->Open(wxString::FromUTF8(path.string()), fixture.encoding).status == OpenStatus::Opened,
                 "open encoded fixture through application");
-        editor->Send(Message::SelectAll);
+        editor->Send(SelectAll);
         Toggle(frame);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "comment Save preserves exact encoding, BOM, EOL bytes and final newline");
         Require(frame->GetStatusBar()->GetStatusText().Contains("C/C++"), "comment retains document language");
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                 "one Undo restores independent original disk bytes");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
                 "one Redo restores independent commented disk bytes");
     }
@@ -158,38 +159,38 @@ void SavedBytes(EditorFrame* frame) {
         "PASS: independent UTF-8 BOM, GBK, UTF-16LE BOM disk bytes, mixed EOLs, final newline, language and Undo/Redo");
 }
 void Selections(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    editor->Send(Message::SetUseTabs, 0);
+    editor->Send(SetUseTabs, 0);
     const char* original = "    alpha\r\n  beta\n\n    // kept\rnext";
     const char* commented = "  //   alpha\r\n  // beta\n  //\n  //   // kept\rnext";
     TestEditor::ResetStream(editor, original);
-    editor->Send(Message::SetSel, 3, editor->Send(Message::PositionFromLine, 4));
+    editor->Send(SetSel, 3, editor->Send(PositionFromLine, 4));
     Toggle(frame);
     Require(TestEditor::Text(editor) == commented, "common column, blank line and deeper comment match original");
-    Range(editor, 0, editor->Send(Message::PositionFromLine, 4));
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == original && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    Range(editor, 0, editor->Send(PositionFromLine, 4));
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == original && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "one Undo restores exact mixed EOL bytes and save point");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == commented, "one Redo restores whole comment group");
-    editor->Send(Message::SetSel, editor->Send(Message::PositionFromLine, 4), 3);
+    editor->Send(SetSel, editor->Send(PositionFromLine, 4), 3);
     Toggle(frame);
     Require(TestEditor::Text(editor) == original, "uncomment reverses whole original multiline edit");
-    Range(editor, editor->Send(Message::PositionFromLine, 4), 0);
+    Range(editor, editor->Send(PositionFromLine, 4), 0);
     TestEditor::ResetStream(editor, "  // alpha\n  plain\n    //  deep\n  //\nend");
-    editor->Send(Message::SetSel, 0, editor->Send(Message::PositionFromLine, 4));
+    editor->Send(SetSel, 0, editor->Send(PositionFromLine, 4));
     Toggle(frame);
     Require(TestEditor::Text(editor) == "  alpha\n  plain\n     deep\n\nend",
             "first commented line deletes only comments and one pad");
     TestEditor::ResetStream(editor, "  plain\n  // existing\n");
-    editor->Send(Message::SelectAll);
+    editor->Send(SelectAll);
     Toggle(frame);
     Require(TestEditor::Text(editor) == "  // plain\n  // existing\n",
             "add action leaves already-commented line at common column alone");
     TestEditor::ResetStream(editor, "\talpha\n    beta\n");
-    editor->Send(Message::SetTabWidth, 4);
-    editor->Send(Message::SelectAll);
+    editor->Send(SetTabWidth, 4);
+    editor->Send(SelectAll);
     Toggle(frame);
     Require(TestEditor::Text(editor) == "\t// alpha\n    // beta\n", "common column uses visual tab indentation");
     TestEditor::ResetStream(editor, "   ", 3, 3);

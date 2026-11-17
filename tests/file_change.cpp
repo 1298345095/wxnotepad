@@ -79,10 +79,10 @@ private:
         wxRadioBox* choices = nullptr;
         for (auto* child : dialog->GetChildren())
             if (auto* radio = wxDynamicCast(child, wxRadioBox)) choices = radio;
-        Require(choices && choices->GetCount() == 3 && choices->GetSelection() == static_cast<int>(expected_.mode),
+        Require(choices && choices->GetCount() == 3 && choices->GetSelection() == std::to_underlying(expected_.mode),
                 "native settings dialog reflects all three original modes and the applied selection");
         ApplyCheckboxes(dialog);
-        choices->SetSelection(static_cast<int>(chosen_));
+        choices->SetSelection(std::to_underlying(chosen_));
         NativeSearch::Click(dialog, accept_ ? wxID_OK : wxID_CANCEL);
     }
     void ApplyCheckboxes(wxDialog* dialog) {

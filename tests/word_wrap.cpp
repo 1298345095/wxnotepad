@@ -8,6 +8,7 @@
 #include <wx/filename.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <utility>
 #include <stdexcept>
 
 namespace {
@@ -30,56 +31,56 @@ void HorizontalRange(EditorControl* editor, bool overflow, const char* message) 
     Require(NativeScroll::WaitForHorizontalRange(editor, overflow), message);
 }
 void AutomaticScrollWidth(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int command = frame->GetMenuBar()->FindMenuItem("Settings", "Auto-Shrink Horizontal Scrollbar");
     Require(command != wxNOT_FOUND && !frame->GetMenuBar()->IsChecked(command),
             "automatic horizontal shrinking is an opt-in native View command");
     const std::string wide(2000, 'x');
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(wide.c_str()));
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(wide.c_str()));
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
     Layout(frame);
     HorizontalRange(editor, true, "the long document grows the tracked scroll range");
-    const auto retained = editor->Send(Message::GetScrollWidth);
-    editor->Send(Message::SelectAll);
-    editor->Send(Message::Clear);
+    const auto retained = editor->Send(GetScrollWidth);
+    editor->Send(SelectAll);
+    editor->Send(Clear);
     Layout(frame);
-    Require(editor->Send(Message::GetScrollWidth) >= retained,
-            "default deletion preserves original growth-only scroll width");
+    Require(editor->Send(GetScrollWidth) >= retained, "default deletion preserves original growth-only scroll width");
     NativeSearch::Command(frame, command);
     Layout(frame);
     Require(frame->GetMenuBar()->IsChecked(command), "the native View command enables automatic shrinking");
     HorizontalRange(editor, false, "enabling shrinking removes the empty document range");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     Layout(frame);
     HorizontalRange(editor, true, "Undo restores the long document range");
-    Require(NativeSearch::Text(editor) == wide && !editor->Send(Message::GetModify),
+    Require(NativeSearch::Text(editor) == wide && !editor->Send(GetModify),
             "automatic shrinking preserves text and save-point history");
-    editor->Send(Message::SetXOffset, 400);
-    editor->Send(Message::SelectAll);
-    editor->Send(Message::Clear);
+    editor->Send(SetXOffset, 400);
+    editor->Send(SelectAll);
+    editor->Send(Clear);
     Layout(frame);
     HorizontalRange(editor, false, "deleting the long document automatically shrinks the scroll range");
-    Require(editor->Send(Message::GetXOffset) == 0 && editor->Send(Message::CanUndo),
+    Require(editor->Send(GetXOffset) == 0 && editor->Send(CanUndo),
             "shrinking repairs stale horizontal offset without clearing undo history");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     Layout(frame);
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Layout(frame);
     HorizontalRange(editor, false, "Redo repeats automatic shrinking after restoring a long line");
     const auto twoLines = wide + "\r\n" + std::string(1000, 'x');
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(twoLines.c_str()));
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(twoLines.c_str()));
     Layout(frame);
     HorizontalRange(editor, true, "multiple visible lines have a scroll range");
-    const auto widest = editor->Send(Message::GetScrollWidth);
-    editor->Send(Message::SetSel, 0, static_cast<intptr_t>(wide.size()));
-    editor->Send(Message::Clear);
+    const auto widest = editor->Send(GetScrollWidth);
+    editor->Send(SetSel, 0, static_cast<intptr_t>(wide.size()));
+    editor->Send(Clear);
     Layout(frame);
     HorizontalRange(editor, true, "a remaining long line retains horizontal scrolling");
-    Require(editor->Send(Message::GetScrollWidth) < widest * 3 / 4,
+    Require(editor->Send(GetScrollWidth) < widest * 3 / 4,
             "deleting the widest line shrinks to the remaining visible long line");
     const auto frameSize = frame->GetSize();
-    const int lineHeight = static_cast<int>(editor->Send(Message::TextHeight, 0));
+    const int lineHeight = static_cast<int>(editor->Send(TextHeight, 0));
     const int adjustment = lineHeight - 2 - editor->GetClientSize().y % lineHeight;
     frame->SetSize(frameSize + wxSize(0, adjustment));
     Layout(frame);
@@ -88,7 +89,7 @@ void AutomaticScrollWidth(EditorFrame* frame) {
     for (int row = 0; row < rows; ++row)
         bottom += "short\r\n";
     bottom += wide;
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bottom.c_str()));
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(bottom.c_str()));
     Layout(frame);
     const auto height = editor->GetClientSize().y;
     const auto range = editor->GetScrollRange(wxHORIZONTAL);
@@ -99,7 +100,7 @@ void AutomaticScrollWidth(EditorFrame* frame) {
         if (editor->GetClientSize().y != height || editor->GetScrollRange(wxHORIZONTAL) != range)
             std::fprintf(stderr, "bottom-edge paint=%d height=%d/%d range=%d/%d width=%lld\n", paint, height,
                          editor->GetClientSize().y, range, editor->GetScrollRange(wxHORIZONTAL),
-                         static_cast<long long>(editor->Send(Message::GetScrollWidth)));
+                         static_cast<long long>(editor->Send(GetScrollWidth)));
         Require(editor->GetClientSize().y == height && editor->GetScrollRange(wxHORIZONTAL) == range,
                 "a bottom-edge long line must not oscillate horizontal scrollbar visibility across paints");
     }
@@ -107,13 +108,13 @@ void AutomaticScrollWidth(EditorFrame* frame) {
     Layout(frame);
     NativeSearch::Command(frame, command);
     Layout(frame);
-    const auto disabledWidth = editor->Send(Message::GetScrollWidth);
-    editor->Send(Message::SelectAll);
-    editor->Send(Message::Clear);
+    const auto disabledWidth = editor->Send(GetScrollWidth);
+    editor->Send(SelectAll);
+    editor->Send(Clear);
     Layout(frame);
-    Require(!frame->GetMenuBar()->IsChecked(command) && editor->Send(Message::GetScrollWidth) >= disabledWidth,
+    Require(!frame->GetMenuBar()->IsChecked(command) && editor->Send(GetScrollWidth) >= disabledWidth,
             "turning shrinking off restores original deletion behavior");
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("short"));
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>("short"));
     Layout(frame);
     std::puts("PASS: native automatic-scroll-width toggle, deletion, remaining line, offset and Undo/Redo");
 }
@@ -238,27 +239,28 @@ public:
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                using enum Scintilla::Message;
                 Require(presented, "the native view is presented before layout-dependent scenarios");
                 auto* editor = frame->Editor();
                 Layout(frame);
                 std::printf("DPI=%d,%d client=%d,%d line=%lld\n", editor->GetDPI().x, editor->GetDPI().y,
                             editor->GetClientSize().x, editor->GetClientSize().y,
-                            static_cast<long long>(editor->Send(Message::TextHeight, 0)));
+                            static_cast<long long>(editor->Send(TextHeight, 0)));
                 std::printf("blank horizontal range=%d thumb=%d offset=%d\n", editor->GetScrollRange(wxHORIZONTAL),
                             editor->GetScrollThumb(wxHORIZONTAL), editor->GetScrollPos(wxHORIZONTAL));
                 Require(editor->GetScrollRange(wxHORIZONTAL) <= editor->GetScrollThumb(wxHORIZONTAL),
                         "a new empty document must not create a horizontal scrollable range");
-                editor->Send(Message::SetSel, 0, 0);
+                editor->Send(SetSel, 0, 0);
                 Layout(frame);
                 HorizontalRange(editor, false, "moving the empty document caret does not create a scroll range");
                 const std::string wide(2000, 'x');
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(wide.c_str()));
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>(wide.c_str()));
                 Layout(frame);
                 HorizontalRange(editor, true, "an unwrapped long line has a usable native horizontal scroll range");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("short"));
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("short"));
                 Layout(frame);
                 Require(editor->GetScrollRange(wxHORIZONTAL) <= editor->GetScrollThumb(wxHORIZONTAL) &&
-                            editor->Send(Message::GetXOffset) == 0,
+                            editor->Send(GetXOffset) == 0,
                         "replacing a wide document with short text resets its tracked scroll width");
                 AutomaticScrollWidth(frame);
 #ifdef __WXMSW__
@@ -266,94 +268,93 @@ public:
 #endif
                 const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
                 Require(wrap != wxNOT_FOUND, "View must expose Word Wrap");
-                Require(!frame->GetMenuBar()->IsChecked(wrap) && editor->Send(Message::GetWrapMode) == 0,
+                Require(!frame->GetMenuBar()->IsChecked(wrap) && editor->Send(GetWrapMode) == 0,
                         "a fresh window starts with wrapping off");
                 std::string text;
                 for (int i = 0; i < 50; ++i)
                     text += "words\t中文😀 ";
                 const auto textEnd = static_cast<intptr_t>(text.size());
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::InsertText, text.size(), reinterpret_cast<intptr_t>("!"));
-                editor->Send(Message::Undo);
-                editor->Send(Message::SetSel, 6, 18);
-                editor->Send(Message::SetXOffset, 200);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(InsertText, text.size(), reinterpret_cast<intptr_t>("!"));
+                editor->Send(Undo);
+                editor->Send(SetSel, 6, 18);
+                editor->Send(SetXOffset, 200);
                 NativeSearch::Command(frame, wrap);
                 Layout(frame);
                 Require(frame->GetMenuBar()->IsChecked(wrap) &&
-                            editor->Send(Message::GetWrapMode) == static_cast<intptr_t>(Scintilla::Wrap::Word),
+                            editor->Send(GetWrapMode) ==
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::Wrap::Word)),
                         "native menu enables core word wrapping");
-                Require(editor->Send(Message::WrapCount, 0) > 1 && editor->Send(Message::GetXOffset) == 0,
+                Require(editor->Send(WrapCount, 0) > 1 && editor->Send(GetXOffset) == 0,
                         "wrapped text uses continuation rows without stale horizontal offset");
                 Require(editor->GetScrollRange(wxHORIZONTAL) <= editor->GetScrollThumb(wxHORIZONTAL),
                         "wrapped text does not expose horizontal scrolling");
                 NativeSearch::Selection(editor, 6, 18, "wrapping retains selection byte positions");
-                Require(editor->Send(Message::GetLineCount) == 1 && NativeSearch::Text(editor) == text,
+                Require(editor->Send(GetLineCount) == 1 && NativeSearch::Text(editor) == text,
                         "wrapping preserves logical lines and bytes");
-                editor->Send(Message::SetSel, 6, textEnd);
-                editor->Send(Message::ScrollCaret);
+                editor->Send(SetSel, 6, textEnd);
+                editor->Send(ScrollCaret);
                 Layout(frame);
-                const auto rows = editor->Send(Message::WrapCount, 0);
+                const auto rows = editor->Send(WrapCount, 0);
 #ifdef __WXMSW__
-                const auto firstVisible = editor->Send(Message::GetFirstVisibleLine);
+                const auto firstVisible = editor->Send(GetFirstVisibleLine);
 #endif
                 frame->SetSize(280, 240);
                 Layout(frame);
-                Require(editor->Send(Message::WrapCount, 0) > rows, "resizing recomputes continuation rows");
+                Require(editor->Send(WrapCount, 0) > rows, "resizing recomputes continuation rows");
 #ifdef __WXMSW__
-                Require(editor->Send(Message::GetFirstVisibleLine) == firstVisible,
+                Require(editor->Send(GetFirstVisibleLine) == firstVisible,
                         "native resizing preserves the original physical viewport");
-                editor->Send(Message::ScrollCaret);
+                editor->Send(ScrollCaret);
                 Layout(frame);
 #endif
-                const auto caretY = editor->Send(Message::PointYFromPosition, 0, textEnd);
-                Require(caretY >= 0 && caretY + editor->Send(Message::TextHeight, 0) <= editor->GetClientSize().y,
+                const auto caretY = editor->Send(PointYFromPosition, 0, textEnd);
+                Require(caretY >= 0 && caretY + editor->Send(TextHeight, 0) <= editor->GetClientSize().y,
                         "caret reveal after resizing keeps the caret visible");
                 NativeSearch::Selection(editor, 6, textEnd, "resizing retains the selection byte range");
                 NativeSearch::Command(frame, wrap);
                 Layout(frame);
-                Require(!frame->GetMenuBar()->IsChecked(wrap) && editor->Send(Message::WrapCount, 0) == 1,
+                Require(!frame->GetMenuBar()->IsChecked(wrap) && editor->Send(WrapCount, 0) == 1,
                         "native menu disables wrapping");
-                const auto unwrappedX = editor->Send(Message::PointXFromPosition, 0, textEnd);
-                const auto unwrappedY = editor->Send(Message::PointYFromPosition, 0, textEnd);
+                const auto unwrappedX = editor->Send(PointXFromPosition, 0, textEnd);
+                const auto unwrappedY = editor->Send(PointYFromPosition, 0, textEnd);
                 Require(unwrappedX >= 0 && unwrappedX < editor->GetClientSize().x && unwrappedY >= 0 &&
                             unwrappedY < editor->GetClientSize().y,
                         "turning wrapping off keeps the selected caret visible");
-                editor->Send(Message::SetXOffset, 100);
-                Require(editor->Send(Message::GetXOffset) > 0, "unwrapped text restores horizontal scrolling");
-                Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                            editor->Send(Message::CanRedo),
+                editor->Send(SetXOffset, 100);
+                Require(editor->Send(GetXOffset) > 0, "unwrapped text restores horizontal scrolling");
+                Require(!editor->Send(GetModify) && !editor->Send(CanUndo) && editor->Send(CanRedo),
                         "view changes retain the save point and redo history");
-                editor->Send(Message::Redo);
+                editor->Send(Redo);
                 Require(NativeSearch::Text(editor) == text + "!", "view changes retain the original redo action");
-                editor->Send(Message::Undo);
+                editor->Send(Undo);
                 std::puts("PASS: native word-wrap toggle, continuation rows, selection and logical text");
 
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(std::string(400, 'x').c_str()));
-                editor->Send(Message::SetSel, 0, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>(std::string(400, 'x').c_str()));
+                editor->Send(SetSel, 0, 0);
                 Shortcut(frame);
-                Require(editor->Send(Message::GetWrapMode) == static_cast<intptr_t>(Scintilla::Wrap::Word) &&
-                            frame->GetMenuBar()->IsChecked(wrap) && editor->Send(Message::WrapCount, 0) > 1,
+                Require(editor->Send(GetWrapMode) == static_cast<intptr_t>(std::to_underlying(Scintilla::Wrap::Word)) &&
+                            frame->GetMenuBar()->IsChecked(wrap) && editor->Send(WrapCount, 0) > 1,
                         "native shortcut enables character fallback for an unbroken line");
-                const auto secondRow =
-                    editor->Send(Message::PositionFromPointClose, 70, editor->Send(Message::TextHeight, 0) + 2);
+                const auto secondRow = editor->Send(PositionFromPointClose, 70, editor->Send(TextHeight, 0) + 2);
                 Require(secondRow > 0 && secondRow < 400, "hit testing on a continuation row returns a byte position");
                 MouseSelect(editor, 0, false);
                 MouseSelect(editor, secondRow, true);
                 NativeSearch::Selection(editor, 0, secondRow, "selection spans continuation rows in core positions");
-                editor->Send(Message::SetSel, 0, 0);
-                editor->Send(Message::LineDown);
-                Require(editor->Send(Message::GetCurrentPos) > 0 &&
-                            editor->Send(Message::LineFromPosition, editor->Send(Message::GetCurrentPos)) == 0,
+                editor->Send(SetSel, 0, 0);
+                editor->Send(LineDown);
+                Require(editor->Send(GetCurrentPos) > 0 &&
+                            editor->Send(LineFromPosition, editor->Send(GetCurrentPos)) == 0,
                         "keyboard down navigates a display row within the same logical line");
                 SearchSession search(*editor);
                 search.Configure({wxString(std::string(20, 'x')), "", {}, false});
-                editor->Send(Message::GotoPos, 300);
+                editor->Send(GotoPos, 300);
                 const auto found = search.Find(SearchDirection::Forward);
                 Require(found.status == FindStatus::Found && found.start == 300 && found.end == 320,
                         "search reveal uses wrapped core byte positions");
-                const auto foundY = editor->Send(Message::PointYFromPosition, 0, found.end);
+                const auto foundY = editor->Send(PointYFromPosition, 0, found.end);
                 Require(foundY >= 0 && foundY < editor->GetClientSize().y,
                         "search results in continuation rows are visible");
                 Shortcut(frame);
@@ -367,23 +368,23 @@ public:
                     Require(output.IsOpened() && output.Write(disk.data(), disk.size()) == disk.size(),
                             "write the UTF-8 BOM/CRLF fixture");
                 }
-                editor->Send(Message::SetSavePoint);
+                editor->Send(SetSavePoint);
                 NativeSearch::Command(frame, wrap);
                 Require(frame->NewDocument(), "New succeeds for a clean document");
-                Require(editor->Send(Message::GetWrapMode) != 0, "New retains wrapping in this window");
+                Require(editor->Send(GetWrapMode) != 0, "New retains wrapping in this window");
                 Require(frame->Open(files.source).status == OpenStatus::Opened, "Open the Unicode fixture");
-                const auto eol = editor->Send(Message::GetEOLMode);
-                Require(editor->Send(Message::GetWrapMode) != 0 && frame->DocumentHasUtf8Bom(),
+                const auto eol = editor->Send(GetEOLMode);
+                Require(editor->Send(GetWrapMode) != 0 && frame->DocumentHasUtf8Bom(),
                         "Open retains wrapping and the document BOM");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
-                Require(editor->Send(Message::GetWrapMode) != 0, "language changes retain wrapping");
+                Require(editor->Send(GetWrapMode) != 0, "language changes retain wrapping");
                 Require(frame->SaveAs(files.saved).status == SaveStatus::Saved, "Save As succeeds while wrapping");
-                Require(Bytes(files.saved) == disk && editor->Send(Message::GetEOLMode) == eol &&
-                            editor->Send(Message::GetLineCount) == 3 && frame->DocumentHasUtf8Bom() &&
-                            !editor->Send(Message::GetModify) && editor->Send(Message::GetWrapMode) != 0,
+                Require(Bytes(files.saved) == disk && editor->Send(GetEOLMode) == eol &&
+                            editor->Send(GetLineCount) == 3 && frame->DocumentHasUtf8Bom() &&
+                            !editor->Send(GetModify) && editor->Send(GetWrapMode) != 0,
                         "wrapping preserves saved bytes, EOL mode, logical lines, BOM and save point");
                 auto* fresh = new EditorFrame;
-                Require(fresh->Editor()->Send(Message::GetWrapMode) == 0, "a separate window starts unwrapped");
+                Require(fresh->Editor()->Send(GetWrapMode) == 0, "a separate window starts unwrapped");
                 fresh->Destroy();
                 std::puts("PASS: per-window lifetime, language transitions and byte-identical BOM/CRLF saving");
                 Combined(frame);
@@ -418,6 +419,7 @@ public:
 private:
     int result_ = 1;
     void Combined(EditorFrame* frame) {
+        using enum Scintilla::Message;
         auto* editor = frame->Editor();
         Files files;
         std::string comment = "// ";
@@ -441,47 +443,46 @@ private:
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
         NativeFold::Paint(editor);
         Layout(frame);
-        editor->Send(Message::GotoPos, 0);
+        editor->Send(GotoPos, 0);
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
-        Require(!editor->Send(Message::GetLineVisible, 3) && !editor->Send(Message::GetLineVisible, 7),
+        Require(!editor->Send(GetLineVisible, 3) && !editor->Send(GetLineVisible, 7),
                 "the combined fixture hides nested and unrelated blocks");
         NativeSearch::Command(frame, whitespace);
         frame->SetSize(500, 400);
         Layout(frame);
-        const auto foldWidth = editor->Send(Message::GetMarginWidthN, 2);
-        editor->Send(Message::SetSel, 2, commentEnd);
-        editor->Send(Message::ScrollCaret);
+        const auto foldWidth = editor->Send(GetMarginWidthN, 2);
+        editor->Send(SetSel, 2, commentEnd);
+        editor->Send(ScrollCaret);
         NativeSearch::Command(frame, numbers);
         Layout(frame);
-        Require(editor->Send(Message::GetMarginWidthN, 0) == 0 &&
-                    editor->Send(Message::GetMarginWidthN, 2) == foldWidth,
+        Require(editor->Send(GetMarginWidthN, 0) == 0 && editor->Send(GetMarginWidthN, 2) == foldWidth,
                 "hiding numbers while wrapped preserves the fold margin");
         NativeSearch::Command(frame, numbers);
         Layout(frame);
         NativeSearch::Selection(editor, 2, commentEnd, "number visibility preserves wrapped selection bytes");
-        const auto marginCaretY = editor->Send(Message::PointYFromPosition, 0, commentEnd);
+        const auto marginCaretY = editor->Send(PointYFromPosition, 0, commentEnd);
         Require(marginCaretY >= 0 && marginCaretY < editor->GetClientSize().y,
                 "changing number margin width keeps the wrapped caret visible");
-        Require(editor->Send(Message::GetMarginWidthN, 0) > 0 && editor->Send(Message::GetViewWS) == 1,
+        Require(editor->Send(GetMarginWidthN, 0) > 0 && editor->Send(GetViewWS) == 1,
                 "numbers and whitespace remain enabled together");
-        editor->Send(Message::GotoPos, 0);
+        editor->Send(GotoPos, 0);
         NativeSearch::Command(frame, wrap);
         NativeSearch::Command(frame, wrap);
-        const auto wideRows = editor->Send(Message::WrapCount, 0);
+        const auto wideRows = editor->Send(WrapCount, 0);
         frame->SetSize(300, 280);
         Layout(frame);
-        Require(editor->Send(Message::WrapCount, 0) > wideRows && editor->Send(Message::GetLineCount) == 10 &&
-                    !editor->Send(Message::GetLineVisible, 3) && !editor->Send(Message::GetLineVisible, 7),
+        Require(editor->Send(WrapCount, 0) > wideRows && editor->Send(GetLineCount) == 10 &&
+                    !editor->Send(GetLineVisible, 3) && !editor->Send(GetLineVisible, 7),
                 "resize and view toggles retain logical numbering and existing folds");
-        editor->Send(Message::EmptyUndoBuffer);
-        editor->Send(Message::SetSavePoint);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
+        editor->Send(EmptyUndoBuffer);
+        editor->Send(SetSavePoint);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
         const auto encoding = frame->DocumentEncoding();
-        const auto eol = editor->Send(Message::GetEOLMode);
-        const auto lexer = editor->Send(Message::GetLexer);
-        const auto font =
-            editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
+        const auto eol = editor->Send(GetEOLMode);
+        const auto lexer = editor->Send(GetLexer);
+        const auto font = editor->Send(StyleGetSizeFractional,
+                                       static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)));
         class GoToLineResponder final : public wxModalDialogHook {
         public:
             explicit GoToLineResponder(EditorFrame* frame) : frame_(frame) { Register(); }
@@ -513,27 +514,26 @@ private:
         NativeSearch::Command(frame, goTo);
         if (responder.failure) std::rethrow_exception(responder.failure);
         Require(responder.observed, "native Go To Line opens in the combined view");
-        const auto target = editor->Send(Message::PositionFromLine, 3);
+        const auto target = editor->Send(PositionFromLine, 3);
         NativeSearch::Selection(editor, target, target, "Go To Line counts logical lines past wrapped rows");
-        Require(editor->Send(Message::GetFoldExpanded, 1) && editor->Send(Message::GetFoldExpanded, 2) &&
-                    editor->Send(Message::GetLineVisible, 3) && !editor->Send(Message::GetFoldExpanded, 6) &&
-                    !editor->Send(Message::GetLineVisible, 7),
+        Require(editor->Send(GetFoldExpanded, 1) && editor->Send(GetFoldExpanded, 2) &&
+                    editor->Send(GetLineVisible, 3) && !editor->Send(GetFoldExpanded, 6) &&
+                    !editor->Send(GetLineVisible, 7),
                 "Go To Line reveals only the requested nested ancestors with all view options active");
         SearchSession search(*editor);
         search.Configure({"target", "", {}, false});
         const auto found = search.Find(SearchDirection::Forward);
         Require(found.status == FindStatus::Found && found.start == target + 4 && found.end == target + 10,
                 "search reveals core byte positions in the combined view");
-        const auto y = editor->Send(Message::PointYFromPosition, 0, found.end);
-        Require(y >= 0 && y < editor->GetClientSize().y && editor->Send(Message::GetWrapMode) != 0 &&
-                    editor->Send(Message::GetViewWS) == 1 && editor->Send(Message::GetMarginWidthN, 0) > 0,
+        const auto y = editor->Send(PointYFromPosition, 0, found.end);
+        Require(y >= 0 && y < editor->GetClientSize().y && editor->Send(GetWrapMode) != 0 &&
+                    editor->Send(GetViewWS) == 1 && editor->Send(GetMarginWidthN, 0) > 0,
                 "all view options remain effective while navigation keeps the caret visible");
-        Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
-                    frame->DocumentEncoding() == encoding && editor->Send(Message::GetEOLMode) == eol &&
-                    editor->Send(Message::GetLexer) == lexer &&
-                    editor->Send(Message::StyleGetSizeFractional,
-                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == font,
+        Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                    editor->Send(CanRedo) && frame->DocumentEncoding() == encoding && editor->Send(GetEOLMode) == eol &&
+                    editor->Send(GetLexer) == lexer &&
+                    editor->Send(StyleGetSizeFractional,
+                                 static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default))) == font,
                 "combined presentation and navigation preserve bytes, history, encoding, EOL, syntax and font");
         Require(frame->SaveAs(files.saved).status == SaveStatus::Saved && Bytes(files.saved) == source,
                 "the combined view saves byte-identical text");

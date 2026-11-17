@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include <wx/wx.h>
 #include <cstdio>
+#include <utility>
 #include <stdexcept>
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
@@ -20,21 +21,22 @@ std::string Text(EditorControl* editor) {
     return text;
 }
 void Reset(EditorControl* editor, const char* text) {
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, 0, 0);
-    editor->Send(Message::ScrollToStart);
-    editor->Send(Message::SetXOffset, 0);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    using enum Scintilla::Message;
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor->Send(SetSel, 0, 0);
+    editor->Send(ScrollToStart);
+    editor->Send(SetXOffset, 0);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
     editor->Refresh(false);
     editor->Update();
     wxYield();
 }
 wxPoint Point(EditorControl* editor, intptr_t position, int virtualColumns = 0) {
-    const auto space = editor->Send(Message::TextWidth, 32, reinterpret_cast<intptr_t>(" "));
-    return {static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position) + space * virtualColumns),
-            static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position) +
-                             editor->Send(Message::TextHeight, 0) / 2)};
+    using enum Scintilla::Message;
+    const auto space = editor->Send(TextWidth, 32, reinterpret_cast<intptr_t>(" "));
+    return {static_cast<int>(editor->Send(PointXFromPosition, 0, position) + space * virtualColumns),
+            static_cast<int>(editor->Send(PointYFromPosition, 0, position) + editor->Send(TextHeight, 0) / 2)};
 }
 void Mouse(EditorControl* editor, wxEventType type, wxPoint point, bool control = false, bool shift = false,
            bool alt = false) {
@@ -92,15 +94,16 @@ public:
                 Require(editor->Send(Message::GetMultipleSelection) == 1, "original enables multiple selection");
                 Require(editor->Send(Message::GetAdditionalSelectionTyping) == 1,
                         "original types into additional selections");
-                Require(editor->Send(Message::GetMultiPaste) == static_cast<intptr_t>(Scintilla::MultiPaste::Each),
+                Require(editor->Send(Message::GetMultiPaste) ==
+                            static_cast<intptr_t>(std::to_underlying(Scintilla::MultiPaste::Each)),
                         "original pastes into each selection");
                 Require(editor->Send(Message::GetVirtualSpaceOptions) ==
-                            static_cast<intptr_t>(Scintilla::VirtualSpace::RectangularSelection),
+                            static_cast<intptr_t>(std::to_underlying(Scintilla::VirtualSpace::RectangularSelection)),
                         "original permits virtual space only for rectangles");
                 Reset(editor, "abcd\r\nefgh\r\nijkl");
                 Drag(editor, Point(editor, 1), Point(editor, 15), false, false, true);
                 Require(editor->Send(Message::GetSelectionMode) ==
-                                static_cast<intptr_t>(Scintilla::SelectionMode::Rectangle) &&
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)) &&
                             editor->Send(Message::GetSelections) == 3 &&
                             editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
                             editor->Send(Message::GetRectangularSelectionCaret) == 15,
@@ -144,7 +147,7 @@ public:
                 editor->IndentLines(true);
                 Require(editor->Send(Message::GetSelections) == 3 &&
                             editor->Send(Message::GetSelectionMode) !=
-                                static_cast<intptr_t>(Scintilla::SelectionMode::Stream),
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)),
                         "explicit Indent preserves a thin rectangle with virtual space");
                 Undo(editor, "\tabcd\r\nx\r\n\tqrst", "\t\tabcd\r\n\tx\r\n\t\tqrst");
                 std::puts("PASS: tabs, short-line virtual columns, rectangle typing/Delete/Indent and one-step undo");
@@ -153,7 +156,7 @@ public:
                 Drag(editor, Point(editor, 8), Point(editor, 8), false, true);
                 Require(editor->Send(Message::GetAnchor) == 1 && editor->Send(Message::GetCurrentPos) == 8 &&
                             editor->Send(Message::GetSelectionMode) ==
-                                static_cast<intptr_t>(Scintilla::SelectionMode::Stream),
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)),
                         "Shift click extends the ordinary stream anchor");
                 Character(editor, 'S');
                 Undo(editor, "abcd\r\nefgh\r\nijkl", "aSgh\r\nijkl");

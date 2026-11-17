@@ -11,6 +11,7 @@
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <cstdio>
+#include <utility>
 #include <sstream>
 #include <fstream>
 #include <memory>
@@ -34,10 +35,11 @@ constexpr Dialect dialects[] = {
     {"Pandoc", SyntaxLanguage::MarkdownPandoc, "2"},
 };
 void Workflows(EditorFrame* frame, SettingsStore& settings) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    editor->Send(Message::SetSavePoint);
-    constexpr auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
-    const auto fontSize = editor->Send(Message::StyleGetSizeFractional, defaultStyle);
+    editor->Send(SetSavePoint);
+    constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
+    const auto fontSize = editor->Send(StyleGetSizeFractional, defaultStyle);
     const char* text = "# First\nbody\n## Second\nneedle\n";
     for (const auto& dialect : dialects) {
         const auto path = TestFiles::TemporaryDirectory("workflow.md");
@@ -45,57 +47,54 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "Markdown workflow must Open");
         Choose(frame, dialect.name);
         char property[8]{};
-        editor->Send(Message::GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"),
-                     reinterpret_cast<intptr_t>(property));
-        Require(editor->Send(Message::GetLexer) == SCLEX_MARKDOWN && std::string(property) == dialect.property,
+        editor->Send(GetProperty, reinterpret_cast<uintptr_t>("lexer.lang"), reinterpret_cast<intptr_t>(property));
+        Require(editor->Send(GetLexer) == SCLEX_MARKDOWN && std::string(property) == dialect.property,
                 "native Markdown choice must install the original lexer and dialect property");
-        Require(editor->Send(Message::GetTabWidth) == 7 && editor->Send(Message::GetIndent) == 3 &&
-                    !editor->Send(Message::GetUseTabs),
+        Require(editor->Send(GetTabWidth) == 7 && editor->Send(GetIndent) == 3 && !editor->Send(GetUseTabs),
                 "Markdown dialects inherit the selected global indentation defaults");
-        Require(editor->Send(Message::StyleGetStrike, SCE_MARKDOWN_STRIKEOUT) &&
-                    editor->Send(Message::StyleGetUnderline, SCE_MARKDOWN_SUBSCRIPT) &&
-                    editor->Send(Message::StyleGetEOLFilled, SCE_MARKDOWN_BLOCKQUOTE) &&
-                    editor->Send(Message::StyleGetItalic, SCE_MARKDOWN_EM_ASTERISK) &&
-                    editor->Send(Message::StyleGetBold, SCE_MARKDOWN_HEADER1) &&
-                    editor->Send(Message::StyleGetFore, SCE_MARKDOWN_PLAIN_LINK) == 0x008064 &&
-                    editor->Send(Message::StyleGetFore, SCE_H_TAG) == 0x008064,
+        Require(editor->Send(StyleGetStrike, SCE_MARKDOWN_STRIKEOUT) &&
+                    editor->Send(StyleGetUnderline, SCE_MARKDOWN_SUBSCRIPT) &&
+                    editor->Send(StyleGetEOLFilled, SCE_MARKDOWN_BLOCKQUOTE) &&
+                    editor->Send(StyleGetItalic, SCE_MARKDOWN_EM_ASTERISK) &&
+                    editor->Send(StyleGetBold, SCE_MARKDOWN_HEADER1) &&
+                    editor->Send(StyleGetFore, SCE_MARKDOWN_PLAIN_LINK) == 0x008064 &&
+                    editor->Send(StyleGetFore, SCE_H_TAG) == 0x008064,
                 "Markdown installs original line flags, emphasis, headings, links and embedded HTML attributes");
         for (int style = 0; style <= SCE_MARKDOWN_HARD_LINE_BREAK; ++style)
-            Require(editor->Send(Message::StyleGetSizeFractional, style) == fontSize,
+            Require(editor->Send(StyleGetSizeFractional, style) == fontSize,
                     "all original Markdown styles inherit the native font point size");
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
                     frame->GetStatusBar()->GetStatusText().Contains(wxString(dialect.name) + " (override)"),
                 "same-path reopen retains the explicit Markdown dialect");
         Choose(frame, "Plain Text");
-        Require(editor->Send(Message::GetLexer) == SCLEX_NULL &&
-                    !editor->Send(Message::StyleGetStrike, SCE_MARKDOWN_STRIKEOUT) &&
-                    !editor->Send(Message::StyleGetUnderline, SCE_MARKDOWN_SUBSCRIPT) &&
-                    !editor->Send(Message::StyleGetEOLFilled, SCE_MARKDOWN_BLOCKQUOTE),
+        Require(editor->Send(GetLexer) == SCLEX_NULL && !editor->Send(StyleGetStrike, SCE_MARKDOWN_STRIKEOUT) &&
+                    !editor->Send(StyleGetUnderline, SCE_MARKDOWN_SUBSCRIPT) &&
+                    !editor->Send(StyleGetEOLFilled, SCE_MARKDOWN_BLOCKQUOTE),
                 "highlight suspension clears obsolete Markdown line flags and filled backgrounds");
         Choose(frame, dialect.name);
-        Require(TestEditor::Text(editor) == text && !editor->Send(Message::CanUndo) && !frame->DocumentIsModified(),
+        Require(TestEditor::Text(editor) == text && !editor->Send(CanUndo) && !frame->DocumentIsModified(),
                 "dialect changes and highlight resume preserve document bytes and history");
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
-        Require(!editor->Send(Message::GetLineVisible, 1), "Markdown heading collapse hides the body");
+        Require(!editor->Send(GetLineVisible, 1), "Markdown heading collapse hides the body");
         Choose(frame, "Plain Text");
-        Require(editor->Send(Message::GetLineVisible, 1) &&
-                    !(static_cast<unsigned>(editor->Send(Message::GetFoldLevel, 0)) &
-                      static_cast<unsigned>(Scintilla::FoldLevel::HeaderFlag)),
+        Require(editor->Send(GetLineVisible, 1) &&
+                    !(static_cast<unsigned>(editor->Send(GetFoldLevel, 0)) &
+                      static_cast<unsigned>(std::to_underlying(Scintilla::FoldLevel::HeaderFlag))),
                 "highlight suspension clears obsolete heading folds and reveals their hidden text");
         Choose(frame, dialect.name);
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Expand All"));
-        Require(editor->Send(Message::GetLineVisible, 1), "Markdown heading expand restores the body");
+        Require(editor->Send(GetLineVisible, 1), "Markdown heading expand restores the body");
         TestEditor::ResetStream(editor, "text\n");
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
-        Require(TestEditor::Text(editor) == "text\n" && !editor->Send(Message::CanUndo),
+        Require(TestEditor::Text(editor) == "text\n" && !editor->Send(CanUndo),
                 "Markdown has no original line-comment delimiter");
-        editor->Send(Message::SetSel, 0, 4);
+        editor->Send(SetSel, 0, 4);
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
         Require(TestEditor::Text(editor) == "<!--text-->\n", "Markdown block comments retain original HTML delimiters");
         TestSyntax::Command(frame, wxID_UNDO);
         Require(TestEditor::Text(editor) == "text\n", "Markdown comments remain undoable");
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         TabDialog::Show(frame, [](wxDialog* dialog) {
             TabDialog::Toggle(TabDialog::Option(dialog, "Use Global Tab Settings"), false);
             Require(TabDialog::Width(dialog, "Scheme Tab Width")->GetValue() == 4 &&
@@ -106,14 +105,16 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         });
         for (const auto& other : dialects) {
             Choose(frame, other.name);
-            Require(editor->Send(Message::GetTabWidth) == 5 && editor->Send(Message::GetIndent) == 2,
+            Require(editor->Send(GetTabWidth) == 5 && editor->Send(GetIndent) == 2,
                     "all Markdown dialects share the original Markdown tab settings");
         }
         SettingsStore reloaded(settings.Path());
-        const auto saved = reloaded.values.schemeTabs[static_cast<size_t>(SyntaxLanguage::MarkdownGitHub)];
+        const auto saved =
+            reloaded.values.schemeTabs[static_cast<size_t>(std::to_underlying(SyntaxLanguage::MarkdownGitHub))];
         Require(saved.tabWidth == 5 && saved.indentWidth == 2 && !saved.useGlobal,
                 "native Tab Settings persists to the shared original Markdown section");
-        settings.values.schemeTabs[static_cast<size_t>(SyntaxLanguage::MarkdownGitHub)] = OriginalTabs{};
+        settings.values.schemeTabs[static_cast<size_t>(std::to_underlying(SyntaxLanguage::MarkdownGitHub))] =
+            OriginalTabs{};
         Require(settings.SaveSchemeTabs(dialect.language), "Markdown tab defaults must restore through every dialect");
         const std::string bytes = std::string("\x{EF}\x{BB}\x{BF}") + "# UTF-8 \x{E7}\x{95}\x{8C}\r\n" + text;
         TestFiles::WriteBytes(path, bytes);
@@ -158,7 +159,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
                                               TestFiles::Filename(path));
         TestSyntax::Command(frame, wxID_OPEN);
         open.Stop();
-        Require(open.choosers == 1 && editor->Send(Message::GetLexer) == SCLEX_MARKDOWN &&
+        Require(open.choosers == 1 && editor->Send(GetLexer) == SCLEX_MARKDOWN &&
                     frame->GetStatusBar()->GetStatusText().Contains("GitHub GFM"),
                 "all original Markdown extensions take precedence over markup header sniffing in native Open");
     }
@@ -166,6 +167,7 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
         "PASS: Markdown recognition, dialect lifecycle, styles/fonts, folds, comments, shared tabs and saved bytes");
 }
 void NativeStylesAndFoldSearch(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Choose(frame, "Pandoc");
     const char* sample = "# Native Markdown\nH~2~O x^2^ ~~strike~~ *emphasis* **strong**\n\n> filled "
@@ -175,21 +177,22 @@ void NativeStylesAndFoldSearch(EditorFrame* frame) {
     NativePaint::Complete(editor);
     TestSyntax::Style(editor, std::string_view(sample).find("^2^"), SCE_MARKDOWN_SUPERSCRIPT);
     const auto position = std::string_view(sample).find("^2^");
-    const auto x = static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position));
-    const auto y = static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position));
-    const auto width = static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position + 3)) - x;
-    const wxRect area(x, y, width, static_cast<int>(editor->Send(Message::TextHeight, 1)));
+    const auto x = static_cast<int>(editor->Send(PointXFromPosition, 0, position));
+    const auto y = static_cast<int>(editor->Send(PointYFromPosition, 0, position));
+    const auto width = static_cast<int>(editor->Send(PointXFromPosition, 0, position + 3)) - x;
+    const wxRect area(x, y, width, static_cast<int>(editor->Send(TextHeight, 1)));
     const auto overlined = NativePaint::Read(editor, area);
-    editor->Send(Message::StyleSetOverline, SCE_MARKDOWN_SUPERSCRIPT, false);
+    editor->Send(StyleSetOverline, SCE_MARKDOWN_SUPERSCRIPT, false);
     NativePaint::Complete(editor);
     const auto plain = NativePaint::Read(editor, area);
     Require(overlined != plain, "original superscript overline must draw on the actual native editor surface");
-    editor->Send(Message::StyleSetOverline, SCE_MARKDOWN_SUPERSCRIPT, true);
+    editor->Send(StyleSetOverline, SCE_MARKDOWN_SUPERSCRIPT, true);
     NativePaint::Complete(editor);
     std::printf("Native Markdown dpi=%d scale=%.2f default-point-size=%zd text-height=%zd overline-pixels-observed=1\n",
                 editor->GetDPI().y, editor->GetContentScaleFactor(),
-                editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)),
-                editor->Send(Message::TextHeight, 1));
+                editor->Send(StyleGetSizeFractional,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default))),
+                editor->Send(TextHeight, 1));
     wxString samplePath;
     if (wxGetEnv("WXNOTEPAD_MARKDOWN_SAMPLE", &samplePath) && !samplePath.empty()) {
         const wxRect sampleArea(0, 0, std::min(editor->GetClientSize().x, 700),
@@ -204,8 +207,8 @@ void NativeStylesAndFoldSearch(EditorFrame* frame) {
         Require(image.SaveFile(samplePath, wxBITMAP_TYPE_PNG), "native Markdown style sample must save");
     }
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
-    Require(!editor->Send(Message::GetLineVisible, 8), "Markdown search target starts folded");
-    editor->Send(Message::GotoPos, 0);
+    Require(!editor->Send(GetLineVisible, 8), "Markdown search target starts folded");
+    editor->Send(GotoPos, 0);
     TestSyntax::Command(frame, wxID_FIND);
     auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
     Require(query, "native Find must expose its query");
@@ -214,14 +217,14 @@ void NativeStylesAndFoldSearch(EditorFrame* frame) {
     const auto found = std::string_view(sample).find("needle");
     NativeSearch::Selection(editor, static_cast<intptr_t>(found), static_cast<intptr_t>(found + 6),
                             "native Find selects the hidden Markdown match");
-    Require(editor->Send(Message::GetLineVisible, 8), "search unfolds the matched Markdown heading body");
+    Require(editor->Send(GetLineVisible, 8), "search unfolds the matched Markdown heading body");
     wxDynamicCast(query->GetParent(), wxDialog)->Hide();
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Search", "Goto Block Start"));
     // Independently observed for this sample with original command 40485.
     constexpr intptr_t originalBlockStartByte = 90;
     NativeSearch::Selection(editor, originalBlockStartByte, originalBlockStartByte,
                             "Markdown block navigation matches the original heading byte position");
-    Require(TestEditor::Text(editor) == sample && !editor->Send(Message::CanUndo) && !frame->DocumentIsModified(),
+    Require(TestEditor::Text(editor) == sample && !editor->Send(CanUndo) && !frame->DocumentIsModified(),
             "folding, native search, navigation and style rendering preserve bytes, history and save point");
     std::puts("PASS: actual native overline rendering, retained style sample, folding/search and navigation");
 }
@@ -236,14 +239,15 @@ void OriginalOracle(EditorFrame* frame) {
             Choose(frame, name.c_str());
         },
         [](EditorFrame* frame) {
+            using enum Scintilla::Message;
             auto* editor = frame->Editor();
             TestSyntax::Paint(frame);
             // Scroll through the actual viewport to complete styling below the
             // initial visible page; do not replace incremental styling with Colourise.
-            const auto firstVisible = editor->Send(Message::GetFirstVisibleLine);
-            editor->Send(Message::SetFirstVisibleLine, editor->Send(Message::GetLineCount));
+            const auto firstVisible = editor->Send(GetFirstVisibleLine);
+            editor->Send(SetFirstVisibleLine, editor->Send(GetLineCount));
             TestSyntax::Paint(frame);
-            editor->Send(Message::SetFirstVisibleLine, firstVisible);
+            editor->Send(SetFirstVisibleLine, firstVisible);
             TestSyntax::Paint(frame);
         },
         "Markdown styles must match independent original observations",

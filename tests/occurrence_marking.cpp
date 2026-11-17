@@ -14,9 +14,10 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 void SelectByMouse(EditorControl* editor, intptr_t start, intptr_t end) {
-    const auto x1 = editor->Send(Message::PointXFromPosition, 0, start);
-    const auto x2 = editor->Send(Message::PointXFromPosition, 0, end);
-    const auto y = editor->Send(Message::PointYFromPosition, 0, start) + editor->Send(Message::TextHeight, 0) / 2;
+    using enum Scintilla::Message;
+    const auto x1 = editor->Send(PointXFromPosition, 0, start);
+    const auto x2 = editor->Send(PointXFromPosition, 0, end);
+    const auto y = editor->Send(PointYFromPosition, 0, start) + editor->Send(TextHeight, 0) / 2;
 #ifdef __WXMSW__
     auto handle = static_cast<HWND>(editor->GetHandle());
     SendMessageW(handle, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(x1, y));
@@ -46,7 +47,7 @@ void SelectByMouse(EditorControl* editor, intptr_t start, intptr_t end) {
     }
 #endif
     NativePaint::Complete(editor);
-    Require(editor->Send(Message::GetSelectionStart) == start && editor->Send(Message::GetSelectionEnd) == end,
+    Require(editor->Send(GetSelectionStart) == start && editor->Send(GetSelectionEnd) == end,
             "native mouse drag changes the actual editor selection");
 }
 
@@ -130,11 +131,12 @@ public:
                 Command(frame, wholeWord);
                 Command(frame, bookmark);
                 const auto load = [&](const char* text, intptr_t anchor, intptr_t caret) {
-                    editor->Send(Message::SetSelectionMode, 0);
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-                    editor->Send(Message::EmptyUndoBuffer);
-                    editor->Send(Message::SetSavePoint);
-                    editor->Send(Message::SetSel, anchor, caret);
+                    using enum Scintilla::Message;
+                    editor->Send(SetSelectionMode, 0);
+                    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+                    editor->Send(EmptyUndoBuffer);
+                    editor->Send(SetSavePoint);
+                    editor->Send(SetSel, anchor, caret);
                     NativePaint::Complete(editor);
                 };
                 load("a  b  c", 1, 3);

@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -23,6 +24,7 @@ void Encoding(EditorFrame* frame) {
     NativeSearch::Command(frame, InsertId(frame, "Encoding Identifier"));
 }
 void BasicEncoding(EditorFrame* frame) {
+    using enum Scintilla::Message;
     frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "AoldZ", 1, 4);
@@ -30,12 +32,12 @@ void BasicEncoding(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "AUTF-8Z",
             "encoding insertion replaces selection with the original preferred name");
     TestEditor::RequireSelection(editor, 6, 6, "encoding insertion collapses to its UTF-8 endpoint");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                editor->Send(CanRedo),
             "one Undo restores input and save point");
     TestEditor::RequireSelection(editor, 1, 4, "Undo restores the directed selection");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "AUTF-8Z", "one Redo restores the header insertion");
 }
 void BasicShebang(EditorFrame* frame) {
@@ -59,42 +61,42 @@ std::vector<std::string> Fields(const std::string& row) {
     return fields;
 }
 void State(EditorControl* editor, const std::vector<std::string>& fields, size_t start) {
+    using enum Scintilla::Message;
     Require(TestEditor::Text(editor) == Unhex(fields[start]),
             "header text matches independently captured original bytes");
-    const Message messages[] = {Message::GetAnchor, Message::GetCurrentPos, Message::GetModify, Message::CanUndo,
-                                Message::CanRedo};
+    const Message messages[] = {GetAnchor, GetCurrentPos, GetModify, CanUndo, CanRedo};
     for (size_t index = 0; index < std::size(messages); ++index)
         Require(editor->Send(messages[index]) == std::stoll(fields[start + index + 1]),
                 "header selection, save point and history match the original capture");
 }
 void PrepareSelection(EditorControl* editor, const std::vector<std::string>& fields) {
+    using enum Scintilla::Message;
     const auto data = Unhex(fields[5]);
     TestEditor::ResetStream(editor, data.c_str(), std::stoll(fields[6]), std::stoll(fields[7]),
                             static_cast<Scintilla::EndOfLine>(std::stoi(fields[2])));
     if (fields[8] == "1") {
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, std::stoll(fields[6]));
-        editor->Send(Message::SetRectangularSelectionCaret, std::stoll(fields[7]));
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, std::stoll(fields[6]));
+        editor->Send(SetRectangularSelectionCaret, std::stoll(fields[7]));
     }
     if (fields[3] == "protected_redo") {
-        editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("redo"));
-        editor->Send(Message::Undo);
-        Require(editor->Send(Message::CanRedo), "protected reference scenario begins with a redo branch");
+        editor->Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("redo"));
+        editor->Send(Undo);
+        Require(editor->Send(CanRedo), "protected reference scenario begins with a redo branch");
     }
-    editor->Send(Message::SetReadOnly, fields[9] == "1");
+    editor->Send(SetReadOnly, fields[9] == "1");
 }
 void RejectedAnsiOpen(EditorFrame* frame, const std::filesystem::path& path, const std::vector<std::string>& fields,
                       unsigned nativePage) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     PrepareSelection(editor, fields);
     const auto text = TestEditor::Text(editor);
     const auto codec = frame->DocumentEncoding();
     const bool bom = frame->DocumentHasBom();
     const auto oldPath = frame->DocumentPath();
-    const Message messages[] = {Message::GetAnchor,        Message::GetCurrentPos, Message::GetModify,
-                                Message::CanUndo,          Message::CanRedo,       Message::GetReadOnly,
-                                Message::GetSelectionMode, Message::GetSelections, Message::GetEOLMode,
-                                Message::GetLexer};
+    const Message messages[] = {GetAnchor,   GetCurrentPos,    GetModify,     CanUndo,    CanRedo,
+                                GetReadOnly, GetSelectionMode, GetSelections, GetEOLMode, GetLexer};
     std::vector<intptr_t> before;
     for (const auto message : messages)
         before.push_back(editor->Send(message));
@@ -137,7 +139,7 @@ void OpenReferenceEncoding(EditorFrame* frame, const std::filesystem::path& dire
         std::fprintf(stderr, "Header host locale=%s\n", wxLocale::GetSystemEncodingName().utf8_string().c_str());
 #endif
         std::fprintf(stderr, "Header Open: %s/%s/%s/%s/%s status=%d error=%s\n", fields[0].c_str(), encoding.c_str(),
-                     fields[2].c_str(), fields[3].c_str(), fields[4].c_str(), static_cast<int>(opened.status),
+                     fields[2].c_str(), fields[3].c_str(), fields[4].c_str(), std::to_underlying(opened.status),
                      opened.error.utf8_string().c_str());
     }
     Require(opened.status == OpenStatus::Opened,
@@ -157,11 +159,12 @@ void SelectReferenceLanguage(EditorFrame* frame, const std::string& language) {
 }
 void ReferenceInsertion(EditorFrame* frame, const std::vector<std::string>& fields,
                         const std::vector<std::string>& expected) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     PrepareSelection(editor, fields);
-    const auto font =
-        editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
-    const auto zoom = editor->Send(Message::GetZoom);
+    const auto font = editor->Send(StyleGetSizeFractional,
+                                   static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)));
+    const auto zoom = editor->Send(GetZoom);
     const auto codec = frame->DocumentEncoding();
     const auto bom = frame->DocumentHasBom();
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -171,20 +174,20 @@ void ReferenceInsertion(EditorFrame* frame, const std::vector<std::string>& fiel
     NativeSearch::Command(frame, id);
     try {
         State(editor, expected, 10);
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         State(editor, expected, 16);
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         State(editor, expected, 22);
     } catch (...) {
         std::fprintf(stderr, "Header reference: %s/%s/%s/%s/%s\n", fields[0].c_str(), fields[1].c_str(),
                      fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
         throw;
     }
-    Require(editor->Send(Message::GetEOLMode) == std::stoi(fields[2]) && frame->DocumentEncoding() == codec &&
+    Require(editor->Send(GetEOLMode) == std::stoi(fields[2]) && frame->DocumentEncoding() == codec &&
                 frame->DocumentHasBom() == bom &&
-                editor->Send(Message::StyleGetSizeFractional,
-                             static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) == font &&
-                editor->Send(Message::GetZoom) == zoom,
+                editor->Send(StyleGetSizeFractional,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default))) == font &&
+                editor->Send(GetZoom) == zoom,
             "header insertion retains encoding, BOM, EOL, font and zoom metadata");
 }
 void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) {
@@ -257,29 +260,30 @@ void ReferenceCases(EditorFrame* frame, const std::filesystem::path& directory) 
                 count, rejected, nativePage);
 }
 void KeyCases(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSavePoint);
+    editor->Send(SetReadOnly, 0);
+    editor->Send(SetSavePoint);
     Require(frame->NewDocument(), "fresh UTF-8 document is available for the native Ctrl+F8 shortcut");
     frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8));
     TestEditor::ResetStream(editor, "AoldZ", 4, 1);
     NativeKeys::Shortcut(frame, WXK_F8, true);
     Require(TestEditor::Text(editor) == "AUTF-8Z", "native Ctrl+F8 invokes encoding insertion on the owned editor");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     TestEditor::RequireSelection(editor, 4, 1, "native Ctrl+F8 Undo restores the reversed selection");
     for (const auto modifiers :
          {std::array{false, false, false}, std::array{false, false, true}, std::array{false, true, false},
           std::array{true, false, true}, std::array{true, true, false}}) {
         NativeKeys::Shortcut(frame, WXK_F8, modifiers[0], modifiers[1], modifiers[2]);
-        Require(TestEditor::Text(editor) == "AoldZ" && editor->Send(Message::CanRedo),
+        Require(TestEditor::Text(editor) == "AoldZ" && editor->Send(CanRedo),
                 "F8 neighbors and extra modifiers preserve text and the existing redo branch");
     }
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetReadOnly, 1);
     NativeKeys::Shortcut(frame, WXK_F8, true);
-    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(Message::CanRedo),
+    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(CanRedo),
             "protected Ctrl+F8 retains text and clears redo like the original ReplaceSel command");
     TestEditor::RequireSelection(editor, 1, 1, "protected Ctrl+F8 collapses the selection like the original command");
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     TestEditor::ResetStream(editor, "");
     NativeKeys::Shortcut(frame, WXK_F8, true);
     Require(TestEditor::Text(editor) == "UTF-8", "native Ctrl+F8 is available in an empty document");

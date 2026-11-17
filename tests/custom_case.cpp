@@ -5,6 +5,7 @@
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/wx.h>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -14,8 +15,9 @@ void Require(bool condition, const char* message) {
 void ReferenceFixtures(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const auto& fixture : CustomCaseFixtures) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, fixture.before);
-        editor->Send(Message::SetSel, 0, editor->Send(Message::GetLength));
+        editor->Send(SetSel, 0, editor->Send(GetLength));
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", fixture.command);
         NativeSearch::Command(frame, id);
         if (TestEditor::Text(editor) != fixture.after) {
@@ -24,16 +26,16 @@ void ReferenceFixtures(EditorFrame* frame) {
             throw TestEditor::Failure("custom case matches original Windows fixture");
         }
         const bool changed = std::string_view(fixture.before) != fixture.after;
-        Require(bool(editor->Send(Message::GetModify)) == changed && bool(editor->Send(Message::CanUndo)) == changed,
+        Require(bool(editor->Send(GetModify)) == changed && bool(editor->Send(CanUndo)) == changed,
                 "original changed and unchanged results preserve history and save point");
         TestEditor::RequireSelection(editor, 0, static_cast<intptr_t>(std::string_view(fixture.after).size()),
                                      "original conversion updates UTF-8 selection endpoints");
         if (changed) {
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::GetModify),
+            editor->Send(Undo);
+            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(GetModify),
                     "one Undo restores original text and save point");
-            editor->Send(Message::Redo);
-            Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+            editor->Send(Redo);
+            Require(TestEditor::Text(editor) == fixture.after && editor->Send(GetModify),
                     "one Redo restores mapped text");
         }
     }
@@ -47,25 +49,26 @@ void EmbeddedNulHistory(EditorFrame* frame) {
          {std::pair{"Sentence Case", std::string("\0ABC", 4)}, std::pair{"Title Case", std::string("A\0b", 3)},
           std::pair{"Sentence Case", std::string("A\0b", 3)}, std::pair{"Title Case", std::string("\0ABC", 4)},
           std::pair{"Title Case", std::string("A\0B", 3)}}) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "");
-        editor->Send(Message::AddText, before.size(), reinterpret_cast<intptr_t>(before.data()));
-        editor->Send(Message::EmptyUndoBuffer);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(AddText, before.size(), reinterpret_cast<intptr_t>(before.data()));
+        editor->Send(EmptyUndoBuffer);
+        editor->Send(SetSavePoint);
         Require(TestEditor::Text(editor) == before, "length-aware setup retains literal embedded NUL bytes");
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, before.size(), 0);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, before.size(), 0);
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", label));
         Require(TestEditor::Text(editor) == before, "original NUL-sensitive no-change gate retains literal bytes");
         TestEditor::RequireSelection(editor, static_cast<intptr_t>(before.size()), 0,
                                      "NUL-sensitive no-change gate retains reversed endpoints");
-        Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+        Require(!editor->Send(GetModify) && !editor->Send(CanUndo) && editor->Send(CanRedo),
                 "NUL-sensitive no-change gate retains save point and pending redo");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == before + "!" && editor->Send(Message::GetModify),
+        editor->Send(Redo);
+        Require(TestEditor::Text(editor) == before + "!" && editor->Send(GetModify),
                 "pending redo executes after unchanged NUL-sensitive conversion");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == before && !editor->Send(GetModify),
                 "Undo restores original embedded NUL bytes and save point");
     }
     std::puts("PASS: embedded NUL Title/Sentence no-change bytes, reversed endpoints, save point and pending redo");
@@ -87,26 +90,27 @@ void EmbeddedNulChanges(EditorFrame* frame) {
                                 Fixture{"Title Case", std::string("a\0𐐀B", 7), std::string("A\0𐐀B", 7)},
                                 Fixture{"Sentence Case", std::string("a\0𐐀B", 7), std::string("A\0𐐨b", 7)},
                                 Fixture{"Invert Case", std::string("a\0𐐀B", 7), std::string("A\0𐐀b", 7)}}) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "");
-        editor->Send(Message::AddText, fixture.before.size(), reinterpret_cast<intptr_t>(fixture.before.data()));
-        editor->Send(Message::EmptyUndoBuffer);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(AddText, fixture.before.size(), reinterpret_cast<intptr_t>(fixture.before.data()));
+        editor->Send(EmptyUndoBuffer);
+        editor->Send(SetSavePoint);
         Require(TestEditor::Text(editor) == fixture.before, "length-aware setup retains NUL and supplementary bytes");
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 0, static_cast<intptr_t>(fixture.before.size()));
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 0, static_cast<intptr_t>(fixture.before.size()));
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", fixture.label));
         Require(TestEditor::Text(editor) == fixture.after, "embedded NUL mapping matches literal original bytes");
         TestEditor::RequireSelection(editor, 0, static_cast<intptr_t>(fixture.after.size()),
                                      "changed embedded NUL mapping retains full UTF-8 endpoints");
-        Require(editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+        Require(editor->Send(GetModify) && editor->Send(CanUndo) && !editor->Send(CanRedo),
                 "changed embedded NUL mapping replaces pending redo and leaves the save point");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                    editor->Send(CanRedo),
                 "one Undo restores original embedded NUL bytes and save point");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+        editor->Send(Redo);
+        Require(TestEditor::Text(editor) == fixture.after && editor->Send(GetModify),
                 "one Redo restores literal mapped embedded NUL bytes");
     }
     std::puts("PASS: embedded NUL word boundaries and per-command UTF-16 behavior, endpoints, save point, Undo/Redo");
@@ -128,50 +132,53 @@ void Shortcuts(EditorFrame* frame) {
     std::puts("PASS: native Ctrl+Alt+U/I/O and exact extra-Shift routing");
 }
 void UnchangedHistory(EditorFrame* frame, const char* label, int mapping) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
     TestEditor::ResetStream(editor, "中😀\r\n", 0, 9);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
     NativeSearch::Command(frame, id);
-    Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+    Require(!editor->Send(CanUndo) && editor->Send(CanRedo) && !editor->Send(GetModify),
             "unchanged custom mapping preserves clean pending redo");
     TestEditor::RequireSelection(editor, 0, 9, "unchanged custom mapping retains range");
-    editor->Send(Message::SetSel, 3, 3);
+    editor->Send(SetSel, 3, 3);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(!frame->GetMenuBar()->IsEnabled(id), "empty selection disables original custom menu");
-    editor->Send(Message::CustomCaseMapping, mapping);
+    editor->Send(CustomCaseMapping, mapping);
     TestEditor::RequireSelection(editor, 3, 3, "empty custom mapping retains caret");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "中😀\r\n!", "unchanged and empty mapping retain executable redo");
 }
 void ReadOnlyHistory(EditorFrame* frame, const char* label, int mapping) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
     TestEditor::ResetStream(editor, "aB", 0, 2);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 0, 2);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 0, 2);
+    editor->Send(SetReadOnly, 1);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(id), "read-only selection retains original menu enablement");
     NativeSearch::Command(frame, id);
-    Require(TestEditor::Text(editor) == "aB" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+    Require(TestEditor::Text(editor) == "aB" && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "read-only mapping retains text and save point");
     // Both bytes differ in aB -> Ab, so the original trimmed replacement
     // repairs the endpoint by -2 after the read-only insertion returns zero.
     TestEditor::RequireSelection(editor, 0, 0, "read-only mapping retains original rejected-insertion repair");
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::Redo);
+    editor->Send(SetReadOnly, 0);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "aB!", "read-only mapping retains pending redo");
     TestEditor::ResetStream(editor, "ab", 0, 2);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetReadOnly, 1);
     NativeSearch::Command(frame, id);
     TestEditor::RequireSelection(editor, 0, mapping == 40208 ? 0 : 1,
                                  "read-only endpoint follows each command's original trimmed replacement");
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
 }
 void MultipleSelections(EditorFrame* frame, const char* label, int mapping) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
     TestEditor::ResetStream(editor, "İA", 3, 0);
@@ -180,42 +187,43 @@ void MultipleSelections(EditorFrame* frame, const char* label, int mapping) {
             "reversed selection uses Windows custom mappings");
     TestEditor::RequireSelection(editor, mapping == 40208 ? 3 : 2, 0, "reversed range follows contraction");
     TestEditor::ResetStream(editor, "İA x İB", 0, 3);
-    editor->Send(Message::SetMultipleSelection, 1);
-    editor->Send(Message::AddSelection, 6, 9);
-    editor->Send(Message::AddSelection, 4, 4);
-    editor->Send(Message::SetMainSelection, 0);
+    editor->Send(SetMultipleSelection, 1);
+    editor->Send(AddSelection, 6, 9);
+    editor->Send(AddSelection, 4, 4);
+    editor->Send(SetMainSelection, 0);
     NativeSearch::Command(frame, id);
     Require(TestEditor::Text(editor) == (mapping == 40208 ? "İa x İb" : "Ia x Ib") &&
-                editor->Send(Message::GetSelections) == 3 && editor->Send(Message::GetMainSelection) == 0,
+                editor->Send(GetSelections) == 3 && editor->Send(GetMainSelection) == 0,
             "custom mapping preserves multiple forward reversed and empty ranges");
-    Require(editor->Send(Message::GetSelectionNAnchor, 0) == 0 &&
-                editor->Send(Message::GetSelectionNCaret, 0) == (mapping == 40208 ? 3 : 2) &&
-                editor->Send(Message::GetSelectionNAnchor, 1) == (mapping == 40208 ? 9 : 7) &&
-                editor->Send(Message::GetSelectionNCaret, 1) == (mapping == 40208 ? 6 : 5) &&
-                editor->Send(Message::GetSelectionNAnchor, 2) == (mapping == 40208 ? 4 : 3) &&
-                editor->Send(Message::GetSelectionNCaret, 2) == (mapping == 40208 ? 4 : 3),
+    Require(editor->Send(GetSelectionNAnchor, 0) == 0 &&
+                editor->Send(GetSelectionNCaret, 0) == (mapping == 40208 ? 3 : 2) &&
+                editor->Send(GetSelectionNAnchor, 1) == (mapping == 40208 ? 9 : 7) &&
+                editor->Send(GetSelectionNCaret, 1) == (mapping == 40208 ? 6 : 5) &&
+                editor->Send(GetSelectionNAnchor, 2) == (mapping == 40208 ? 4 : 3) &&
+                editor->Send(GetSelectionNCaret, 2) == (mapping == 40208 ? 4 : 3),
             "multiple-selection endpoints preserve original core repair after contraction");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "İA x İB" && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "İA x İB" && !editor->Send(GetModify),
             "multiple custom conversions share one Undo group");
 }
 void RectangularSelections(EditorFrame* frame, const char* label, int mapping) {
     auto* editor = frame->Editor();
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", label);
     for (const bool reversed : {false, true}) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "aß\nbé");
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, reversed ? 7 : 0);
-        editor->Send(Message::SetRectangularSelectionCaret, reversed ? 0 : 7);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, reversed ? 7 : 0);
+        editor->Send(SetRectangularSelectionCaret, reversed ? 0 : 7);
         NativeSearch::Command(frame, id);
         Require(TestEditor::Text(editor) == (mapping == 40208 ? "Aß\nBÉ" : "Aß\nBé") &&
-                    editor->Send(Message::GetSelections) == 2,
+                    editor->Send(GetSelections) == 2,
                 "custom case maps original rectangle rows independently");
         const int rectangleCaret = mapping == 40208 ? 4 : 7;
         TestEditor::RequireSelection(editor, reversed ? rectangleCaret : 1, reversed ? 1 : rectangleCaret,
                                      "rectangle retains original automatic endpoint movement");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == "aß\nbé" && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == "aß\nbé" && !editor->Send(GetModify),
                 "rectangle custom conversion shares one Undo group");
     }
     TestEditor::RequireVirtualRectangleUnchanged(
@@ -262,21 +270,22 @@ void SavedBytes(EditorFrame* frame) {
              utf16After},
         }};
         for (const auto& fixture : fixtures) {
+            using enum Scintilla::Message;
             const auto path = directory / fixture.name;
             TestFiles::WriteBytes(path, fixture.before);
-            editor->Send(Message::SetSavePoint);
+            editor->Send(SetSavePoint);
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                     "open custom-case fixture through application file command");
             const auto bom = frame->DocumentHasBom();
-            const auto eol = editor->Send(Message::GetEOLMode);
-            editor->Send(Message::SelectAll);
+            const auto eol = editor->Send(GetEOLMode);
+            editor->Send(SelectAll);
             NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", label));
             TestFiles::RequireSavedUndoRedo(frame, path, fixture,
                                             {"custom case saves independently reopened expected bytes",
                                              "Undo saves independently reopened original bytes",
                                              "Redo saves independently reopened mapped bytes"});
             Require(frame->DocumentEncoding() == fixture.encoding && frame->DocumentHasBom() == bom &&
-                        editor->Send(Message::GetEOLMode) == eol && !editor->Send(Message::GetModify),
+                        editor->Send(GetEOLMode) == eol && !editor->Send(GetModify),
                     "custom mapping retains encoding BOM EOL and saved state");
         }
         const auto path = directory / "unrepresentable";

@@ -121,7 +121,7 @@ void DelayedOpenAs(EditorFrame* frame, const std::filesystem::path& directory) {
     if (!selection.Held() || !selection.Restored() || result.status != OpenStatus::Opened ||
         frame->DocumentPath() != Filename(expected))
         std::fprintf(stderr, "Delayed native Open As status=%d held=%d restored=%d path='%s' error='%s'\n",
-                     static_cast<int>(result.status), selection.Held(), selection.Restored(),
+                     std::to_underlying(result.status), selection.Held(), selection.Restored(),
                      frame->DocumentPath().utf8_str().data(), result.error.utf8_str().data());
     Require(selection.Held() && selection.Restored() && result.status == OpenStatus::Opened &&
                 frame->DocumentPath() == Filename(expected) && Text(frame) == "中" &&
@@ -314,7 +314,7 @@ void NativeUtf16OpenAs(EditorFrame* frame, const std::filesystem::path& director
         frame->DocumentHasBom())
         std::fprintf(stderr, "Open As state: choosers=%d prompts=%d errors=%d path='%s' bytes=%zu encoding=%d bom=%d\n",
                      utf16Pick.choosers, utf16Pick.prompts, utf16Pick.errors, frame->DocumentPath().utf8_str().data(),
-                     Text(frame).size(), static_cast<int>(frame->DocumentEncoding()), frame->DocumentHasBom());
+                     Text(frame).size(), std::to_underlying(frame->DocumentEncoding()), frame->DocumentHasBom());
     Require(utf16Pick.choosers == 1 && Text(frame) == "A中😀\r\n" &&
                 frame->DocumentEncoding() == FileEncoding::Utf16Le && !frame->DocumentHasBom(),
             "native explicit Open As must decode no-BOM UTF-16LE");

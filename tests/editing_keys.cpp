@@ -22,9 +22,10 @@ std::string Text(EditorControl* editor) {
     return text;
 }
 void Reset(EditorControl* editor, const char* text, intptr_t caret) {
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::GotoPos, caret);
-    editor->Send(Message::EmptyUndoBuffer);
+    using enum Scintilla::Message;
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor->Send(GotoPos, caret);
+    editor->Send(EmptyUndoBuffer);
 }
 void Key(EditorControl* editor, int key, bool control = false, bool shift = false, bool alt = false) {
     wxKeyEvent event(wxEVT_KEY_DOWN);
@@ -92,11 +93,12 @@ void WordAndLineEditing(EditorFrame* frame) {
     Require(Text(editor) == "one two" && !editor->Send(Message::CanUndo), "one Ctrl+Delete is one undo action");
     std::puts("PASS: original word deletion and undo grouping");
     for (const int key : {WXK_BACK, WXK_DELETE}) {
+        using enum Scintilla::Message;
         Reset(editor, "one two", 7);
-        editor->Send(Message::SetSel, 0, 7);
+        editor->Send(SetSel, 0, 7);
         Key(editor, key, true);
-        Require(Text(editor) == "one two" && editor->Send(Message::GetSelectionEmpty) &&
-                    editor->Send(Message::GetCurrentPos) == 7 && !editor->Send(Message::CanUndo),
+        Require(Text(editor) == "one two" && editor->Send(GetSelectionEmpty) && editor->Send(GetCurrentPos) == 7 &&
+                    !editor->Send(CanUndo),
                 "original Ctrl deletion collapses a selection without editing or history");
     }
     Reset(editor, "  word\r\nnext", 2);
@@ -235,40 +237,39 @@ void NativeClipboardKeys(EditorFrame* frame) {
     std::puts("PASS: native clipboard alternatives, line accelerators and single dispatch");
 }
 void TabEscapeAndParagraphKeys(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Reset(editor, "  text", 2);
-    editor->Send(Message::SetUseTabs, 0);
-    editor->Send(Message::SetTabIndents, 1);
+    editor->Send(SetUseTabs, 0);
+    editor->Send(SetTabIndents, 1);
     Key(editor, WXK_TAB, true);
     Require(Text(editor) == "  \ttext", "Ctrl+Tab inserts a literal tab using original host override");
-    Require(!editor->Send(Message::GetUseTabs) && editor->Send(Message::GetTabIndents),
-            "Ctrl+Tab restores indentation options");
+    Require(!editor->Send(GetUseTabs) && editor->Send(GetTabIndents), "Ctrl+Tab restores indentation options");
     Key(editor, 'Z', true);
-    Require(Text(editor) == "  text" && !editor->Send(Message::CanUndo), "literal tab insertion is one undo action");
+    Require(Text(editor) == "  text" && !editor->Send(CanUndo), "literal tab insertion is one undo action");
     Reset(editor, "first\r\nsecond", 1);
-    editor->Send(Message::SetSelection, 1, 0);
-    editor->Send(Message::AddSelection, 8, 7);
+    editor->Send(SetSelection, 1, 0);
+    editor->Send(AddSelection, 8, 7);
     Key(editor, WXK_ESCAPE);
-    Require(editor->Send(Message::GetSelections) == 2 && !editor->Send(Message::CanUndo),
+    Require(editor->Send(GetSelections) == 2 && !editor->Send(CanUndo),
             "original Escape leaves selections intact when no completion popup is active");
-    editor->Send(Message::ClearSelections);
+    editor->Send(ClearSelections);
     std::puts("PASS: literal tab override and original Escape selection preservation");
     Reset(editor, "first\r\n\r\nsecond", 0);
     Key(editor, ']', true);
-    Require(editor->Send(Message::GetCurrentPos) == 9, "Ctrl+] reaches the next paragraph");
+    Require(editor->Send(GetCurrentPos) == 9, "Ctrl+] reaches the next paragraph");
     Key(editor, ']', true, true);
-    Require(editor->Send(Message::GetCurrentPos) == 15 && editor->Send(Message::GetAnchor) == 9,
-            "Ctrl+Shift+] extends to paragraph end");
+    Require(editor->Send(GetCurrentPos) == 15 && editor->Send(GetAnchor) == 9, "Ctrl+Shift+] extends to paragraph end");
     Key(editor, '[', true);
-    Require(editor->Send(Message::GetCurrentPos) == 9, "Ctrl+[ reaches current paragraph start");
+    Require(editor->Send(GetCurrentPos) == 9, "Ctrl+[ reaches current paragraph start");
     Key(editor, '[', true, true);
-    Require(editor->Send(Message::GetCurrentPos) == 0 && editor->Send(Message::GetAnchor) == 9 &&
-                Text(editor) == "first\r\n\r\nsecond" && !editor->Send(Message::CanUndo),
+    Require(editor->Send(GetCurrentPos) == 0 && editor->Send(GetAnchor) == 9 && Text(editor) == "first\r\n\r\nsecond" &&
+                !editor->Send(CanUndo),
             "Ctrl+Shift+[ extends to the previous paragraph without editing");
     Reset(editor, "keep", 2);
     for (const unsigned char key : {'A', 'C', 'V'}) {
         Key(editor, key, true, true);
-        Require(Text(editor) == "keep" && editor->Send(Message::GetSelectionEmpty) && !editor->Send(Message::CanUndo),
+        Require(Text(editor) == "keep" && editor->Send(GetSelectionEmpty) && !editor->Send(CanUndo),
                 "shifted application keys do not alias unrelated unshifted core edits");
     }
     std::puts("PASS: remaining unreserved core paragraph bindings and exact modifier matching");

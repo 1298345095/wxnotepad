@@ -9,6 +9,7 @@
 #include <array>
 #include <cstdio>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 void Require(bool value, const char* message) {
@@ -81,7 +82,7 @@ void ShowDefaults(EditorFrame* frame) {
     frame->GetEventHandler()->ProcessEvent(event);
 }
 void RunCommitCase(SettingsStore& settings, bool nested, bool outer) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     settings.values.encoding = {};
     settings.values.encoding.skipUnicodeDetection = false;
     settings.values.warnLineEndings = false;
@@ -93,12 +94,12 @@ void RunCommitCase(SettingsStore& settings, bool nested, bool outer) {
     Require(frame->Open(TestFiles::Filename(source), FileEncoding::Utf8).status == OpenStatus::Opened,
             "live fixture opens");
     TestEditor::Append(frame, "x");
-    frame->Editor()->Send(Message::Undo);
-    const auto actions = frame->Editor()->Send(Message::GetUndoActions);
-    const auto undoCurrent = frame->Editor()->Send(Message::GetUndoCurrent);
-    frame->Editor()->Send(Message::SetSel, 7, 2);
-    frame->Editor()->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
-    frame->Editor()->Send(Message::SetReadOnly, 1);
+    frame->Editor()->Send(Undo);
+    const auto actions = frame->Editor()->Send(GetUndoActions);
+    const auto undoCurrent = frame->Editor()->Send(GetUndoCurrent);
+    frame->Editor()->Send(SetSel, 7, 2);
+    frame->Editor()->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
+    frame->Editor()->Send(SetReadOnly, 1);
     DefaultsDriver driver(nested, outer);
     ShowDefaults(frame);
     driver.Stop();
@@ -112,17 +113,17 @@ void RunCommitCase(SettingsStore& settings, bool nested, bool outer) {
             "five options commit only on outer OK");
     Require(TestEditor::Text(frame) == "live text" && !frame->DocumentHasBom() &&
                 frame->DocumentEncoding() == FileEncoding::Utf8 && !frame->DocumentIsModified() &&
-                frame->Editor()->Send(Message::GetUndoActions) == actions &&
-                frame->Editor()->Send(Message::GetUndoCurrent) == undoCurrent &&
-                frame->Editor()->Send(Message::GetAnchor) == 7 && frame->Editor()->Send(Message::GetCurrentPos) == 2 &&
-                frame->Editor()->Send(Message::GetReadOnly) &&
-                frame->Editor()->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
+                frame->Editor()->Send(GetUndoActions) == actions &&
+                frame->Editor()->Send(GetUndoCurrent) == undoCurrent && frame->Editor()->Send(GetAnchor) == 7 &&
+                frame->Editor()->Send(GetCurrentPos) == 2 && frame->Editor()->Send(GetReadOnly) &&
+                frame->Editor()->Send(GetEOLMode) ==
+                    static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)) &&
                 TestFiles::Bytes(source) == "live text",
             "default changes preserve live encoding, text, selection, redo, save point and disk");
     Require(frame->NewDocument(), "New consumes accepted defaults");
     Require(frame->DocumentEncoding() == (nested ? FileEncoding::Utf16Be : FileEncoding::Utf8) &&
                 frame->DocumentHasBom() == nested && !frame->DocumentIsModified() &&
-                !frame->Editor()->Send(Message::GetUndoActions),
+                !frame->Editor()->Send(GetUndoActions),
             "New preserves the configured BOM and establishes a clean encoding identity without history");
     TestEditor::Append(frame, "中\r\n");
     const auto destination = TestFiles::TemporaryDirectory("defaults-new.txt");
@@ -135,7 +136,7 @@ void RunCommitCase(SettingsStore& settings, bool nested, bool outer) {
     Require(frame->Open(TestFiles::Filename(empty)).status == OpenStatus::Opened &&
                 frame->DocumentEncoding() == (nested && outer ? FileEncoding::Utf16Be : FileEncoding::Utf8) &&
                 frame->DocumentHasBom() == (nested && outer) && !frame->DocumentIsModified() &&
-                !frame->Editor()->Send(Message::GetUndoActions),
+                !frame->Editor()->Send(GetUndoActions),
             "later empty Open uses the separate ASCII-as-UTF8 gate and accepted default");
     const auto ascii = TestFiles::TemporaryDirectory("defaults-ascii.txt");
     TestFiles::WriteBytes(ascii, "plain");
@@ -217,11 +218,12 @@ void Transitions(SettingsStore& settings) {
     TestEditor::Append(frame, "x");
     frame->Editor()->Send(Message::Undo);
     frame->SelectEncoding(EncodingChoice(FileEncoding::Utf16Le));
-    frame->Editor()->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
+    frame->Editor()->Send(Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
     scheme("Python");
     Require(frame->DocumentEncoding() == FileEncoding::Utf16Le && !frame->DocumentHasBom() &&
                 frame->Editor()->Send(Message::CanRedo) &&
-                frame->Editor()->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf),
+                frame->Editor()->Send(Message::GetEOLMode) ==
+                    static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)),
             "empty-by-editing scheme changes retain encoding, insertion EOL and redo");
     Require(frame->NewDocument(), "fresh fixture resets retained history");
     const auto tagged = TestFiles::TemporaryDirectory("defaults-tag.txt");

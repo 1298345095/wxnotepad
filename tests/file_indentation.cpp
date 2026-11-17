@@ -9,12 +9,12 @@ void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
 void Check(EditorControl* editor, int tab, int indent, bool spaces) {
+    using enum Scintilla::Message;
     std::fprintf(stderr, "Indentation actual=%lld/%lld/%lld expected=%d/%d/%d\n",
-                 static_cast<long long>(editor->Send(Message::GetTabWidth)),
-                 static_cast<long long>(editor->Send(Message::GetIndent)),
-                 static_cast<long long>(editor->Send(Message::GetUseTabs)), tab, indent, !spaces);
-    Require(editor->Send(Message::GetTabWidth) == tab && editor->Send(Message::GetIndent) == indent &&
-                editor->Send(Message::GetUseTabs) == !spaces,
+                 static_cast<long long>(editor->Send(GetTabWidth)), static_cast<long long>(editor->Send(GetIndent)),
+                 static_cast<long long>(editor->Send(GetUseTabs)), tab, indent, !spaces);
+    Require(editor->Send(GetTabWidth) == tab && editor->Send(GetIndent) == indent &&
+                editor->Send(GetUseTabs) == !spaces,
             "opened indentation must match pinned original policy");
 }
 class FileIndentationApp final : public wxApp {

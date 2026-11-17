@@ -34,29 +34,29 @@ void CheckMenu(EditorFrame* frame, SettingsStore& settings, int option) {
     }
 }
 void Check(EditorControl& editor, int option) {
-    Require(editor.Send(Message::GetMultipleSelection) == ((option & 1) != 0),
+    using enum Scintilla::Message;
+    Require(editor.Send(GetMultipleSelection) == ((option & 1) != 0),
             "multiple selection must follow SelectOption bit 1");
-    Require(editor.Send(Message::GetUndoSelectionHistory) == ((option & 8) ? 3 : 0),
+    Require(editor.Send(GetUndoSelectionHistory) == ((option & 8) ? 3 : 0),
             "undo selection and scrolling must follow SelectOption bit 8");
-    editor.Send(Message::SetText, 0, reinterpret_cast<intptr_t>("01234567890123456789\n"));
-    editor.Send(Message::EmptyUndoBuffer);
-    editor.Send(Message::SetSel, 2, 5);
-    editor.Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
-    editor.Send(Message::SetSel, 10, 10);
-    editor.Send(Message::Undo);
-    Require(editor.Send(Message::GetLength) == 21, "Undo must restore edited bytes");
+    editor.Send(SetText, 0, reinterpret_cast<intptr_t>("01234567890123456789\n"));
+    editor.Send(EmptyUndoBuffer);
+    editor.Send(SetSel, 2, 5);
+    editor.Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
+    editor.Send(SetSel, 10, 10);
+    editor.Send(Undo);
+    Require(editor.Send(GetLength) == 21, "Undo must restore edited bytes");
     if (option & 8)
-        Require(editor.Send(Message::GetAnchor) == 2 && editor.Send(Message::GetCurrentPos) == 5,
+        Require(editor.Send(GetAnchor) == 2 && editor.Send(GetCurrentPos) == 5,
                 "enabled undo history must restore the replaced selection");
     else
-        Require(editor.Send(Message::GetSelectionEmpty), "disabled undo history must leave a single caret");
-    editor.Send(Message::SetSel, 2, 5);
+        Require(editor.Send(GetSelectionEmpty), "disabled undo history must leave a single caret");
+    editor.Send(SetSel, 2, 5);
     editor.Refresh(false);
     editor.Update();
     wxYield();
-    const wxPoint point(
-        static_cast<int>(editor.Send(Message::PointXFromPosition, 0, 10)),
-        static_cast<int>(editor.Send(Message::PointYFromPosition, 0, 10) + editor.Send(Message::TextHeight, 0) / 2));
+    const wxPoint point(static_cast<int>(editor.Send(PointXFromPosition, 0, 10)),
+                        static_cast<int>(editor.Send(PointYFromPosition, 0, 10) + editor.Send(TextHeight, 0) / 2));
     wxMilliSleep(550);
     for (auto type : {wxEVT_LEFT_DOWN, wxEVT_LEFT_UP}) {
         wxMouseEvent event(type);
@@ -65,9 +65,9 @@ void Check(EditorControl& editor, int option) {
         event.SetEventObject(&editor);
         editor.GetEventHandler()->ProcessEvent(event);
     }
-    Require(editor.Send(Message::GetSelections) == ((option & 1) ? 2 : 1),
+    Require(editor.Send(GetSelections) == ((option & 1) ? 2 : 1),
             "Ctrl-click adds a caret only with multiple selection enabled");
-    editor.Send(Message::SetSavePoint);
+    editor.Send(SetSavePoint);
 }
 void Lifecycle(EditorFrame* frame, SettingsStore& settings, int option, const wxString& action) {
     if (action != "keep") {

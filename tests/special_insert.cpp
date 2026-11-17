@@ -2,6 +2,7 @@
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <filesystem>
+#include <utility>
 #include <fstream>
 #include <sstream>
 #include <string_view>
@@ -59,6 +60,7 @@ void Controls(EditorFrame* frame) {
     auto* editor = frame->Editor();
     size_t index = 0;
     for (const auto& control : ControlFixtures()) {
+        using enum Scintilla::Message;
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", control.label);
         Require(id != wxNOT_FOUND, "every original control character retains its descriptive native menu name");
         auto* item = frame->GetMenuBar()->FindItem(id);
@@ -69,15 +71,16 @@ void Controls(EditorFrame* frame) {
         NativeSearch::Command(frame, id);
         Require(TestEditor::Text(editor) == "A" + control.bytes + "Z",
                 "native control command inserts exact original UTF-8 bytes");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(GetModify),
                 "control insertion has one Undo restoring text and save point");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(TestEditor::Text(editor) == "A" + control.bytes + "Z", "Redo restores the exact control bytes");
     }
     std::puts("PASS: all 27 original control names and exact bytes through native menus");
 }
 void Guid(EditorFrame* frame) {
+    using enum Scintilla::Message;
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", "New GUID");
     Require(id != wxNOT_FOUND, "New GUID is available in the native Insert menu");
     TestEditor::ResetStream(frame->Editor(), "AoldZ", 1, 4);
@@ -88,14 +91,15 @@ void Guid(EditorFrame* frame) {
     const auto guid = text.substr(1, 36);
     RequireGuid(guid);
     TestEditor::RequireSelection(frame->Editor(), 37, 37, "GUID replacement collapses to its UTF-8 end");
-    frame->Editor()->Send(Message::Undo);
-    Require(TestEditor::Text(frame) == "AoldZ" && !frame->Editor()->Send(Message::GetModify),
+    frame->Editor()->Send(Undo);
+    Require(TestEditor::Text(frame) == "AoldZ" && !frame->Editor()->Send(GetModify),
             "one Undo restores original text and save point");
-    frame->Editor()->Send(Message::Redo);
+    frame->Editor()->Send(Redo);
     Require(TestEditor::Text(frame) == text, "Redo restores the exact originally generated value");
     std::puts("PASS: native GUID representation, selection boundary and Undo/Redo");
 }
 std::string Snapshot(EditorControl* editor, int guidOffset) {
+    using enum Scintilla::Message;
     auto text = TestEditor::Text(editor);
     if (guidOffset >= 0) {
         const auto offset = static_cast<size_t>(guidOffset);
@@ -107,63 +111,65 @@ std::string Snapshot(EditorControl* editor, int guidOffset) {
     for (unsigned char byte : text)
         output << digits[byte >> 4] << digits[byte & 15];
     for (Message message :
-         {Message::GetAnchor, Message::GetCurrentPos, Message::GetModify, Message::CanUndo, Message::CanRedo,
-          Message::GetSelections, Message::GetMainSelection, Message::GetSelectionMode})
+         {GetAnchor, GetCurrentPos, GetModify, CanUndo, CanRedo, GetSelections, GetMainSelection, GetSelectionMode})
         output << '\t' << editor->Send(message);
-    const auto main = static_cast<uintptr_t>(editor->Send(Message::GetMainSelection));
-    output << '\t' << editor->Send(Message::GetSelectionNAnchorVirtualSpace, main) << '\t'
-           << editor->Send(Message::GetSelectionNCaretVirtualSpace, main) << '\t' << editor->Send(Message::GetEOLMode);
+    const auto main = static_cast<uintptr_t>(editor->Send(GetMainSelection));
+    output << '\t' << editor->Send(GetSelectionNAnchorVirtualSpace, main) << '\t'
+           << editor->Send(GetSelectionNCaretVirtualSpace, main) << '\t' << editor->Send(GetEOLMode);
     return output.str();
 }
 void PrepareCase(EditorControl* editor, const std::string& name) {
+    using enum Scintilla::Message;
     TestEditor::ResetStream(editor, "AoldZ", 1, 4, Scintilla::EndOfLine::CrLf);
-    editor->Send(Message::SetMultipleSelection, 0);
-    editor->Send(Message::SetVirtualSpaceOptions, 3);
-    if (name == "empty") editor->Send(Message::SetSel, 1, 1);
-    if (name == "reverse") editor->Send(Message::SetSel, 4, 1);
+    editor->Send(SetMultipleSelection, 0);
+    editor->Send(SetVirtualSpaceOptions, 3);
+    if (name == "empty") editor->Send(SetSel, 1, 1);
+    if (name == "reverse") editor->Send(SetSel, 4, 1);
     if (name == "multiple" || name == "multiple_first" || name == "rectangle") {
         TestEditor::ResetStream(editor, "abcd\nefgh", 1, 2);
         if (name == "rectangle") {
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-            editor->Send(Message::SetRectangularSelectionAnchor, 1);
-            editor->Send(Message::SetRectangularSelectionCaret, 7);
+            editor->Send(SetSelectionMode,
+                         static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+            editor->Send(SetRectangularSelectionAnchor, 1);
+            editor->Send(SetRectangularSelectionCaret, 7);
         } else {
-            editor->Send(Message::SetMultipleSelection, 1);
-            editor->Send(Message::AddSelection, 7, 6);
-            if (name == "multiple_first") editor->Send(Message::SetMainSelection, 0);
+            editor->Send(SetMultipleSelection, 1);
+            editor->Send(AddSelection, 7, 6);
+            if (name == "multiple_first") editor->Send(SetMainSelection, 0);
         }
     }
     if (name == "virtual") {
         TestEditor::ResetStream(editor, "a\nx", 1, 1);
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 1);
-        editor->Send(Message::SetRectangularSelectionCaret, 3);
-        editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 1);
-        editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 3);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, 1);
+        editor->Send(SetRectangularSelectionCaret, 3);
+        editor->Send(SetRectangularSelectionAnchorVirtualSpace, 1);
+        editor->Send(SetRectangularSelectionCaretVirtualSpace, 3);
     }
     if (name == "readonly" || name == "pending") {
-        const auto end = editor->Send(Message::GetLength);
-        editor->Send(Message::SetSel, static_cast<uintptr_t>(end), end);
-        editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 4, 1);
-        if (name == "readonly") editor->Send(Message::SetReadOnly, 1);
+        const auto end = editor->Send(GetLength);
+        editor->Send(SetSel, static_cast<uintptr_t>(end), end);
+        editor->Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 4, 1);
+        if (name == "readonly") editor->Send(SetReadOnly, 1);
     }
     if (name == "supplementary") TestEditor::ResetStream(editor, "😀old🦊", 4, 7);
 }
 void InsertCapturedCommand(EditorControl* editor, int command, bool defaultEncoding) {
     switch (command) {
+        using enum UnicodeControlCharacter;
     case 40380:
         editor->InsertGuid();
         break;
     case 40260:
-        editor->InsertUnicodeControlCharacter(UnicodeControlCharacter::Lrm, defaultEncoding);
+        editor->InsertUnicodeControlCharacter(Lrm, defaultEncoding);
         break;
     case 40275:
-        editor->InsertUnicodeControlCharacter(UnicodeControlCharacter::Rs, defaultEncoding);
+        editor->InsertUnicodeControlCharacter(Rs, defaultEncoding);
         break;
     case 40285:
-        editor->InsertUnicodeControlCharacter(UnicodeControlCharacter::Alm, defaultEncoding);
+        editor->InsertUnicodeControlCharacter(Alm, defaultEncoding);
         break;
     default:
         throw std::runtime_error("state fixture uses a captured command");
@@ -206,12 +212,13 @@ void OriginalStates(EditorFrame* frame) {
               "and redo");
 }
 void Availability(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto controls = ControlFixtures();
     const int guid = frame->GetMenuBar()->FindMenuItem("Edit", "New GUID");
     for (bool readOnly : {false, true}) {
         TestEditor::ResetStream(editor, "");
-        editor->Send(Message::SetReadOnly, readOnly);
+        editor->Send(SetReadOnly, readOnly);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(guid),
                 "original GUID remains available in empty and read-only documents");
@@ -220,16 +227,16 @@ void Availability(EditorFrame* frame) {
                     "original control menus remain available in empty and read-only documents");
     }
     TestEditor::ResetStream(editor, "AoldZ", 4, 1);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 4, 1);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 4, 1);
+    editor->Send(SetReadOnly, 1);
     NativeSearch::Command(frame, guid);
-    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+    Require(TestEditor::Text(editor) == "AoldZ" && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "native read-only GUID preserves original bytes and history");
     TestEditor::RequireSelection(editor, 1, 1, "native read-only GUID retains original selection collapse");
-    editor->Send(Message::SetReadOnly, 0);
-    Require(editor->Send(Message::CanRedo), "native read-only GUID preserves the pending redo");
+    editor->Send(SetReadOnly, 0);
+    Require(editor->Send(CanRedo), "native read-only GUID preserves the pending redo");
 }
 int NativeControl(EditorFrame* frame, const std::vector<ControlFixture>& controls, int originalCommand) {
     for (const auto& control : controls) {
@@ -241,23 +248,24 @@ void NondefaultEolMetadata(EditorFrame* frame) {
     auto* editor = frame->Editor();
     constexpr char before[] = "😀\r\nold\nZ\rQ";
     for (auto mode : {Scintilla::EndOfLine::Lf, Scintilla::EndOfLine::Cr}) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, before, 6, 9, mode);
         editor->InsertUnicodeControlCharacter(UnicodeControlCharacter::Ls, false);
         Require(TestEditor::Text(editor) == "😀\r\n\x{e2}\x{80}\x{a8}\nZ\rQ" &&
-                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode),
+                    editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode)),
                 "line-separator insertion preserves nondefault EOL metadata and unrelated mixed-EOL bytes");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == before && !editor->Send(GetModify),
                 "control Undo restores original mixed-EOL bytes and save point");
         editor->InsertGuid();
         const auto text = TestEditor::Text(editor);
         Require(text.size() == 46 && text.starts_with("😀\r\n") && text.ends_with("\nZ\rQ") &&
-                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode),
+                    editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode)),
                 "GUID insertion preserves LF/CR metadata and every neighboring byte");
         RequireGuid(std::string_view(text).substr(6, 36));
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::GetModify) &&
-                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == before && !editor->Send(GetModify) &&
+                    editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode)),
                 "GUID Undo retains nondefault EOL metadata and restores source bytes");
     }
     std::puts("PASS: GUID/control insertion retains nondefault LF/CR metadata and mixed-EOL neighboring bytes");

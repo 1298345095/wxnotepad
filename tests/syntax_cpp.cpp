@@ -4,6 +4,7 @@
 #include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
+#include <utility>
 #include <SciLexer.h>
 #include <wx/wx.h>
 #include <wx/statusbr.h>
@@ -54,12 +55,13 @@ public:
         CallAfter([this, frame] {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-cpp");
             try {
+                using enum Scintilla::Message;
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "example.CPP";
                 std::ofstream(path, std::ios::binary) << "int value = 42; // 中文\r\n";
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "C++ file must open");
                 Paint(frame);
-                Require(frame->Editor()->Send(Scintilla::Message::GetStyleIndexAt, 0) == SCE_C_WORD2,
+                Require(frame->Editor()->Send(GetStyleIndexAt, 0) == SCE_C_WORD2,
                         "opening .CPP must immediately highlight int as a type keyword");
                 Require(frame->GetStatusBar()->GetStatusText().Contains("C/C++"),
                         "status must show effective C/C++ language");
@@ -95,32 +97,32 @@ public:
                 }
                 Style(editor, source.find("中文"), SCE_C_COMMENTLINE);
                 Style(editor, source.find("中文", source.find("const")), SCE_C_STRING);
-                Require(editor->Send(Message::StyleGetFore, SCE_C_WORD) == 0xFF0000 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_2NDWORD) == 0xFF0000 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_COMMENT) == 0x608060 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_COMMENTLINE) == 0x608060 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_COMMENTLINEDOC) == 0x408040 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_COMMENTDOC_TAG_XML) == 0x408040 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_STRING) == 0x008000 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_CHARACTER) == 0x008000 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_STRINGEOL) == 0x008000 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_NUMBER) == 0x0000FF &&
-                            editor->Send(Message::StyleGetFore, SCE_C_PREPROCESSOR) == 0x0080FF &&
-                            editor->Send(Message::StyleGetFore, SCE_C_MACRO) == 0xB000B0 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_MACRO2) == 0xB000B0 &&
-                            editor->Send(Message::StyleGetBack, SCE_C_LABEL) == 0x40C0FF &&
-                            editor->Send(Message::StyleGetBold, SCE_C_INTERFACE),
+                Require(editor->Send(StyleGetFore, SCE_C_WORD) == 0xFF0000 &&
+                            editor->Send(StyleGetFore, SCE_C_2NDWORD) == 0xFF0000 &&
+                            editor->Send(StyleGetFore, SCE_C_COMMENT) == 0x608060 &&
+                            editor->Send(StyleGetFore, SCE_C_COMMENTLINE) == 0x608060 &&
+                            editor->Send(StyleGetFore, SCE_C_COMMENTLINEDOC) == 0x408040 &&
+                            editor->Send(StyleGetFore, SCE_C_COMMENTDOC_TAG_XML) == 0x408040 &&
+                            editor->Send(StyleGetFore, SCE_C_STRING) == 0x008000 &&
+                            editor->Send(StyleGetFore, SCE_C_CHARACTER) == 0x008000 &&
+                            editor->Send(StyleGetFore, SCE_C_STRINGEOL) == 0x008000 &&
+                            editor->Send(StyleGetFore, SCE_C_NUMBER) == 0x0000FF &&
+                            editor->Send(StyleGetFore, SCE_C_PREPROCESSOR) == 0x0080FF &&
+                            editor->Send(StyleGetFore, SCE_C_MACRO) == 0xB000B0 &&
+                            editor->Send(StyleGetFore, SCE_C_MACRO2) == 0xB000B0 &&
+                            editor->Send(StyleGetBack, SCE_C_LABEL) == 0x40C0FF &&
+                            editor->Send(StyleGetBold, SCE_C_INTERFACE),
                         "original default palette and all grouped styles must be installed");
                 for (const int style : {SCE_C_WORD, SCE_C_COMMENT, SCE_C_STRING, SCE_C_NUMBER, SCE_C_PREPROCESSOR}) {
-                    Require(Font(editor, style) == Font(editor, static_cast<int>(Scintilla::StylesCommon::Default)) &&
-                                editor->Send(Message::StyleGetSizeFractional, style) ==
-                                    editor->Send(Message::StyleGetSizeFractional,
-                                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) &&
-                                editor->Send(Message::StyleGetBack, style) == 0xFFFFFF,
+                    Require(Font(editor, style) == Font(editor, std::to_underlying(Scintilla::StylesCommon::Default)) &&
+                                editor->Send(StyleGetSizeFractional, style) ==
+                                    editor->Send(StyleGetSizeFractional, static_cast<uintptr_t>(std::to_underlying(
+                                                                             Scintilla::StylesCommon::Default))) &&
+                                editor->Send(StyleGetBack, style) == 0xFFFFFF,
                             "syntax must inherit the native font and point size on explicit light background");
                 }
-                Require(Text(editor) == source && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo) && frame->DocumentHasUtf8Bom() &&
+                Require(Text(editor) == source && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                            frame->DocumentHasUtf8Bom() &&
                             frame->GetStatusBar()->GetStatusText() == "UTF-8 (BOM) | C/C++ | EOL: LF",
                         "styling must preserve loaded text, clean save point, encoding and BOM status");
                 Require(frame->Save().status == SaveStatus::Saved, "highlighted document must save");
@@ -151,13 +153,13 @@ public:
                 Paint(frame);
                 Style(editor, 0, 0);
                 Require(frame->GetStatusBar()->GetStatusText().Contains("Plain Text") &&
-                            editor->Send(Message::StyleGetFore, SCE_C_WORD2) == 0 &&
-                            !editor->Send(Message::StyleGetBold, SCE_C_INTERFACE),
+                            editor->Send(StyleGetFore, SCE_C_WORD2) == 0 &&
+                            !editor->Send(StyleGetBold, SCE_C_INTERFACE),
                         "Plain Text must clear syntax colors and font attributes");
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "C++ must reopen");
                 Command(frame, wxID_NEW);
-                Require(Text(editor).empty() && frame->DocumentPath().empty() && !editor->Send(Message::CanUndo) &&
-                            !editor->Send(Message::GetModify) &&
+                Require(Text(editor).empty() && frame->DocumentPath().empty() && !editor->Send(CanUndo) &&
+                            !editor->Send(GetModify) &&
                             frame->GetStatusBar()->GetStatusText() == "UTF-8 | Plain Text | EOL: CRLF",
                         "real New command must reset language with the existing empty-document semantics");
                 std::puts("PASS: case-insensitive extension selection, failed/cancelled Open and real New");
@@ -171,23 +173,23 @@ public:
                 const auto close = comment.find("*/");
                 const auto after = comment.find("int");
                 Style(editor, after, SCE_C_WORD2);
-                editor->Send(Message::GotoPos, close);
+                editor->Send(GotoPos, close);
                 Delete(editor);
-                Require(editor->Send(Message::GetEndStyled) < editor->Send(Message::GetLength),
+                Require(editor->Send(GetEndStyled) < editor->Send(GetLength),
                         "typing must leave recoloring to the original incremental styling lifecycle");
                 Paint(frame);
                 Style(editor, after - 1, SCE_C_COMMENT);
-                Require(editor->Send(Message::GetCurrentPos) == static_cast<intptr_t>(close) &&
-                            editor->Send(Message::GetAnchor) == static_cast<intptr_t>(close) &&
-                            editor->Send(Message::CanUndo) && editor->Send(Message::GetModify),
+                Require(editor->Send(GetCurrentPos) == static_cast<intptr_t>(close) &&
+                            editor->Send(GetAnchor) == static_cast<intptr_t>(close) && editor->Send(CanUndo) &&
+                            editor->Send(GetModify),
                         "recolor after deleting a comment terminator must preserve caret and edit history");
                 Command(frame, wxID_UNDO);
                 Style(editor, after, SCE_C_WORD2);
-                Require(Text(editor) == comment && !editor->Send(Message::GetModify) && editor->Send(Message::CanRedo),
+                Require(Text(editor) == comment && !editor->Send(GetModify) && editor->Send(CanRedo),
                         "Undo must restore closing comment and original save point");
                 Command(frame, wxID_REDO);
                 Style(editor, after - 1, SCE_C_COMMENT);
-                editor->Send(Message::GotoPos, close);
+                editor->Send(GotoPos, close);
                 Character(editor, '*');
                 Paint(frame);
                 Style(editor, after, SCE_C_WORD2);
@@ -196,9 +198,9 @@ public:
                 Style(editor, after - 1, SCE_C_COMMENT);
                 Command(frame, wxID_REDO);
                 Style(editor, after, SCE_C_WORD2);
-                while (editor->Send(Message::CanUndo))
+                while (editor->Send(CanUndo))
                     Command(frame, wxID_UNDO);
-                Require(Text(editor) == comment && !editor->Send(Message::GetModify),
+                Require(Text(editor) == comment && !editor->Send(GetModify),
                         "style updates must not add undo actions or move the save point");
                 std::puts("PASS: real typing/Delete/Undo/Redo update following multiline-comment styles");
                 result_ = 0;

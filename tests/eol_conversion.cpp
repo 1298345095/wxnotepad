@@ -7,6 +7,7 @@
 #include <fstream>
 #include "settings/settings_store.h"
 #include <memory>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -24,9 +25,10 @@ void Convert(EditorFrame* frame, const char* mode) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("File", EolLabel(mode)));
 }
 void Load(EditorControl* editor, const char* text) {
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    using enum Scintilla::Message;
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 }
 void Enter(EditorControl* editor) {
 #ifdef __WXMSW__
@@ -43,16 +45,17 @@ void Enter(EditorControl* editor) {
     wxYield();
 }
 void History(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const std::string source = "中文\r\nsecond\nthird\rlast";
     Load(editor, source.c_str());
     Convert(frame, "LF");
-    Require(editor->Send(Message::GetModify), "a text-changing conversion must dirty the document");
+    Require(editor->Send(GetModify), "a text-changing conversion must dirty the document");
     NativeSearch::Command(frame, wxID_UNDO);
-    Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+    Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                editor->Send(CanRedo),
             "one Undo must restore exact mixed bytes and the original save point");
-    Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
+    Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)) &&
                 frame->GetStatusBar()->GetStatusText().Contains("EOL: LF"),
             "Undo must retain the chosen insertion preference and truthful status");
     Convert(frame, "LF");
@@ -60,26 +63,27 @@ void History(EditorFrame* frame) {
             "selecting the already selected mode must normalize mixed bytes restored by Undo");
     NativeSearch::Command(frame, wxID_UNDO);
     NativeSearch::Command(frame, wxID_REDO);
-    Require(NativeSearch::Text(editor) == "中文\nsecond\nthird\nlast" && editor->Send(Message::GetModify),
+    Require(NativeSearch::Text(editor) == "中文\nsecond\nthird\nlast" && editor->Send(GetModify),
             "Redo must restore the converted bytes");
-    editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
+    editor->Send(GotoPos, editor->Send(GetLength));
     Enter(editor);
     Require(NativeSearch::Text(editor) == "中文\nsecond\nthird\nlast\n",
             "native Enter must use the explicitly selected insertion mode");
     for (const auto* text : {"", "中文", "one\ntwo"}) {
         Load(editor, text);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
         Convert(frame, "LF");
-        Require(NativeSearch::Text(editor) == text && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+        Require(NativeSearch::Text(editor) == text && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                    editor->Send(CanRedo),
                 "no-op conversion must preserve save point and pending redo for empty, single and normalized text");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(NativeSearch::Text(editor) == std::string(text) + "!", "no-op conversion must retain redo bytes");
     }
     std::puts("PASS: single-action history, unchanged insertion preference, native Enter and no-op Redo");
 }
 void FoldedSelection(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int language = frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++");
     NativeSearch::Command(frame, language);
@@ -90,17 +94,17 @@ void FoldedSelection(EditorFrame* frame) {
     Load(editor, source.c_str());
     editor->ToggleWordWrap();
     NativeFold::Paint(editor);
-    Require(editor->Send(Message::WrapCount, 1) > 1, "fixture must wrap the selected logical line");
+    Require(editor->Send(WrapCount, 1) > 1, "fixture must wrap the selected logical line");
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
-    Require(!editor->Send(Message::GetLineVisible, 1), "fixture must hide the inner logical line");
-    editor->Send(Message::SetSel, 24, 18);
+    Require(!editor->Send(GetLineVisible, 1), "fixture must hide the inner logical line");
+    editor->Send(SetSel, 24, 18);
     Convert(frame, "LF");
-    Require(editor->Send(Message::GetAnchor) == 23 && editor->Send(Message::GetCurrentPos) == 17,
+    Require(editor->Send(GetAnchor) == 23 && editor->Send(GetCurrentPos) == 17,
             "conversion must preserve reversed selection at logical Unicode character boundaries");
-    const auto current = editor->Send(Message::GetCurrentPos);
-    const auto currentLine = editor->Send(Message::LineFromPosition, current);
-    const auto y = editor->Send(Message::PointYFromPosition, 0, current);
-    Require(editor->Send(Message::GetLineVisible, currentLine) && y >= 0 && y < editor->GetClientSize().y,
+    const auto current = editor->Send(GetCurrentPos);
+    const auto currentLine = editor->Send(LineFromPosition, current);
+    const auto y = editor->Send(PointYFromPosition, 0, current);
+    Require(editor->Send(GetLineVisible, currentLine) && y >= 0 && y < editor->GetClientSize().y,
             "conversion must reveal its logical caret inside a wrapped folded block");
     Require(frame->GetMenuBar()->FindItem(language)->IsChecked(), "conversion must retain manual syntax choice");
     editor->ToggleWordWrap();
@@ -130,13 +134,14 @@ void Files(EditorFrame* frame, const std::filesystem::path& directory) {
     };
     std::filesystem::create_directory(directory);
     for (const auto& sample : samples) {
+        using enum Scintilla::Message;
         const auto input = directory / (std::string(sample.name) + ".txt");
         const auto output = directory / (std::string(sample.name) + "-as.txt");
         {
             std::ofstream file(input, std::ios::binary);
             file << sample.source;
         }
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         Require(frame->Open(Filename(input), sample.encoding).status == OpenStatus::Opened,
                 "encoding fixture must open through the application");
         const auto encoding = frame->DocumentEncoding();
@@ -148,34 +153,36 @@ void Files(EditorFrame* frame, const std::filesystem::path& directory) {
         Require(frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
                     frame->SaveAs(Filename(directory / "missing" / "file.txt")).status == SaveStatus::Failed,
                 "cancelled and failed Save As must retain the converted document");
-        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
-                    frame->DocumentPath() == Filename(input) && editor->Send(Message::GetModify),
+        Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)) &&
+                    frame->DocumentPath() == Filename(input) && editor->Send(GetModify),
                 "failed and cancelled save must retain insertion preference, identity and dirty state");
         Require(frame->Save().status == SaveStatus::Saved && Bytes(input) == sample.expected,
                 "Save must write independently verified converted encoding bytes without a final newline");
         RecordBytes(sample.name, "converted-save", input);
         NativeSearch::Command(frame, wxID_UNDO);
-        Require(editor->Send(Message::GetModify) && frame->SaveAs(Filename(output)).status == SaveStatus::Saved &&
+        Require(editor->Send(GetModify) && frame->SaveAs(Filename(output)).status == SaveStatus::Saved &&
                     Bytes(output) == sample.source,
                 "Undo across a saved conversion must write the exact original bytes through Save As");
         RecordBytes(sample.name, "undo-save-as", output);
         NativeSearch::Command(frame, wxID_REDO);
-        Require(editor->Send(Message::GetModify) && frame->Save().status == SaveStatus::Saved &&
+        Require(editor->Send(GetModify) && frame->Save().status == SaveStatus::Saved &&
                     Bytes(output) == sample.expected,
                 "Redo across the Undo save point must save converted bytes again");
         NativeSearch::Command(frame, wxID_UNDO);
-        Require(editor->Send(Message::GetModify), "Undo away from converted save point must dirty text");
+        Require(editor->Send(GetModify), "Undo away from converted save point must dirty text");
         NativeSearch::Command(frame, wxID_REDO);
-        Require(!editor->Send(Message::GetModify), "Redo to converted save point must restore clean state");
+        Require(!editor->Send(GetModify), "Redo to converted save point must restore clean state");
         std::printf("PASS: %s Save/Save As independent bytes, conversion/Undo/Redo save points\n", sample.name);
     }
     Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled &&
                 frame->Open(Filename(directory / "absent.txt")).status == OpenStatus::Failed &&
-                editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::Lf) &&
+                editor->Send(Message::GetEOLMode) ==
+                    static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)) &&
                 NativeSearch::Text(editor) == "中\nnext\nlast",
             "cancelled and failed Open must retain converted text and insertion preference");
     Require(frame->NewDocument() &&
-                editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf) &&
+                editor->Send(Message::GetEOLMode) ==
+                    static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::CrLf)) &&
                 NativeSearch::Text(editor).empty() && frame->GetStatusBar()->GetStatusText().Contains("EOL: CRLF"),
             "successful New must restore the existing CRLF default and status");
     std::puts("PASS: cancelled/failed file operations retain mode; New restores the original default");
@@ -224,9 +231,10 @@ public:
                                       {"LF", "中文\nsecond\nthird\nlast", Scintilla::EndOfLine::Lf},
                                       {"CR", "中文\rsecond\rthird\rlast", Scintilla::EndOfLine::Cr}};
                 for (const auto& mode : modes) {
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文\r\nsecond\nthird\rlast"));
-                    editor->Send(Message::EmptyUndoBuffer);
-                    editor->Send(Message::SetSavePoint);
+                    using enum Scintilla::Message;
+                    editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中文\r\nsecond\nthird\rlast"));
+                    editor->Send(EmptyUndoBuffer);
+                    editor->Send(SetSavePoint);
                     const int id = frame->GetMenuBar()->FindMenuItem("File", EolLabel(mode.label));
                     Require(id != wxNOT_FOUND, "Edit must offer CRLF, LF and CR conversion commands");
                     NativeSearch::Command(frame, id);
@@ -235,7 +243,7 @@ public:
                                      NativeSearch::Text(editor).c_str());
                     Require(NativeSearch::Text(editor) == mode.expected,
                             "native conversion must normalize mixed endings without adding a final newline");
-                    Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode.mode),
+                    Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode.mode)),
                             "conversion must choose the original core insertion mode");
                     Require(frame->GetStatusBar()->GetStatusText().Contains(wxString("EOL: ") + mode.label),
                             "status must explicitly identify the insertion mode");
@@ -247,7 +255,7 @@ public:
                                     frame->GetMenuBar()->FindItem(otherId)->IsChecked() == (other.mode == mode.mode),
                                 "conversion commands must be mutually exclusive checked items");
                     }
-                    editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
+                    editor->Send(GotoPos, editor->Send(GetLength));
                     Enter(editor);
                     const char* ending = mode.mode == Scintilla::EndOfLine::CrLf ? "\r\n"
                                          : mode.mode == Scintilla::EndOfLine::Cr ? "\r"
