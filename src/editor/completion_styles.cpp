@@ -1,11 +1,12 @@
 #include "editor/completion_styles.h"
 #include <SciLexer.h>
 CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
+    using enum SyntaxLanguage;
     CompletionStyles result;
     result.lexer = definition.lexer;
     const auto& original = definition.original;
     result.angleBracketGeneric = (original.lexerAttributes & SyntaxLexerAttribute::AngleBracketGeneric) != 0;
-    result.xml = SyntaxSettingsLanguage(definition.language) == SyntaxLanguage::Xml;
+    result.xml = SyntaxSettingsLanguage(definition.language) == Xml;
     result.operatorStyle = original.operatorStyle;
     result.operatorStyle2 = original.operatorStyle2;
     result.escapeCharacterStart = original.escapeCharacterStart;
@@ -17,22 +18,22 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
                              0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU};
     // Original pinned generated cache cases. Keep masks independent of display styles.
     switch (definition.language) {
-    case SyntaxLanguage::Toml:
-    case SyntaxLanguage::Yaml:
-    case SyntaxLanguage::CMake:
+    case Toml:
+    case Yaml:
+    case CMake:
         // Pinned InitAutoCompletionCache has no per-scheme overrides here.
         // Keep raw/generic/character-prefix masks empty; the original scalar
         // metadata below supplies each language's comment/string masks.
         break;
-    case SyntaxLanguage::Go:
+    case Go:
         result.rawStrings[SCE_GO_RAW_STRING >> 5] |= (1U << (SCE_GO_RAW_STRING & 31));
         break;
-    case SyntaxLanguage::Lua:
+    case Lua:
         result.rawStrings[SCE_LUA_LITERALSTRING >> 5] |= (1U << (SCE_LUA_LITERALSTRING & 31));
         break;
-    case SyntaxLanguage::MarkdownGitHub:
-    case SyntaxLanguage::MarkdownGitLab:
-    case SyntaxLanguage::MarkdownPandoc:
+    case MarkdownGitHub:
+    case MarkdownGitLab:
+    case MarkdownPandoc:
         result.comments[SCE_H_COMMENT >> 5] |= (1U << (SCE_H_COMMENT & 31));
         result.comments[SCE_H_SGML_COMMENT >> 5] |= (1U << (SCE_H_SGML_COMMENT & 31));
         result.comments[STYLE_COMMENT_LINK >> 5] |= (1U << (STYLE_COMMENT_LINK & 31));
@@ -45,7 +46,7 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
         result.plainText[2] = UINT32_MAX;
         result.plainText[3] = UINT32_MAX;
         break;
-    case SyntaxLanguage::Rust:
+    case Rust:
         result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));
         result.wordCharacters[':' >> 5] |= (1 << (':' & 31));
         result.characterPrefixes['b' >> 5] |= (1 << ('b' & 31));
@@ -57,12 +58,12 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
         result.genericTypes[SCE_RUST_ENUMERATION >> 5] |= (1U << (SCE_RUST_ENUMERATION & 31));
         result.genericTypes[SCE_RUST_UNION >> 5] |= (1U << (SCE_RUST_UNION & 31));
         break;
-    case SyntaxLanguage::PlainText:
+    case PlainText:
 
         result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));
         break;
-    case SyntaxLanguage::TypeScript:
-    case SyntaxLanguage::Tsx:
+    case TypeScript:
+    case Tsx:
 
         result.wordCharacters['#' >> 5] |= (1 << ('#' & 31));
         result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));
@@ -72,15 +73,15 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
         result.genericTypes[SCE_JS_ENUM >> 5] |= (1U << (SCE_JS_ENUM & 31));
         result.genericTypes[SCE_JS_WORD2 >> 5] |= (1U << (SCE_JS_WORD2 & 31));
         break;
-    case SyntaxLanguage::Bash:
-    case SyntaxLanguage::CShell:
-    case SyntaxLanguage::M4:
+    case Bash:
+    case CShell:
+    case M4:
 
         result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));
         result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));
         result.rawStrings[SCE_SH_STRING_SQ >> 5] |= (1U << (SCE_SH_STRING_SQ & 31));
         break;
-    case SyntaxLanguage::Cpp:
+    case Cpp:
 
         result.wordCharacters[':' >> 5] |= (1 << (':' & 31));
         result.characterPrefixes['L' >> 5] |= (1 << ('L' & 31));
@@ -98,19 +99,19 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
         result.ignoredWords[SCE_C_ASM_REGISTER >> 5] |= (1U << (SCE_C_ASM_REGISTER & 31));
         result.ignoredWords[SCE_C_ASM_INSTRUCTION >> 5] |= (1U << (SCE_C_ASM_INSTRUCTION & 31));
         break;
-    case SyntaxLanguage::Html:
-    case SyntaxLanguage::AspVb:
-    case SyntaxLanguage::AspJs:
-    case SyntaxLanguage::AspxCs:
-    case SyntaxLanguage::AspxVb:
-    case SyntaxLanguage::Jsp:
-    case SyntaxLanguage::Jspx:
-    case SyntaxLanguage::Xml:
-    case SyntaxLanguage::Svg:
-    case SyntaxLanguage::Xsd:
-    case SyntaxLanguage::Xslt:
-    case SyntaxLanguage::Dtd:
-    case SyntaxLanguage::Plist:
+    case Html:
+    case AspVb:
+    case AspJs:
+    case AspxCs:
+    case AspxVb:
+    case Jsp:
+    case Jspx:
+    case Xml:
+    case Svg:
+    case Xsd:
+    case Xslt:
+    case Dtd:
+    case Plist:
 
         result.wordCharacters['-' >> 5] |= (1 << ('-' & 31));
         result.wordCharacters[':' >> 5] |= (1 << (':' & 31));
@@ -142,14 +143,14 @@ CompletionStyles CompletionStylesFor(const SyntaxDefinition& definition) {
         result.strings[SCE_HB_STRING >> 5] |= (1U << (SCE_HB_STRING & 31));
         result.plainText[SCE_H_DEFAULT >> 5] |= (1U << (SCE_H_DEFAULT & 31));
         break;
-    case SyntaxLanguage::JavaScript:
-    case SyntaxLanguage::Jsx:
+    case JavaScript:
+    case Jsx:
 
         result.wordCharacters['#' >> 5] |= (1 << ('#' & 31));
         result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));
         result.wordCharacters['@' >> 5] |= (1 << ('@' & 31));
         break;
-    case SyntaxLanguage::Python:
+    case Python:
 
         result.wordCharacters['$' >> 5] |= (1 << ('$' & 31));
         result.characterPrefixes['B' >> 5] |= (1 << ('B' & 31));

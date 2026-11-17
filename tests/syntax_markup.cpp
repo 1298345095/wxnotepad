@@ -309,6 +309,7 @@ void OriginalOracle(EditorFrame* frame) {
     std::puts("PASS: 44 independent original markup style/fold states including incremental edit and Undo/Redo");
 }
 void Commands(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     struct Fixture {
         const char* before;
@@ -321,9 +322,9 @@ void Commands(EditorFrame* frame) {
           {"<style>.value {color:red}</style>", "color", "<style>.value {/*color*/:red}</style>"}}) {
         TestEditor::ResetStream(editor, fixture.before, 0, 0);
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Web Source Code"));
-        editor->Send(Message::Colourise, 0, -1);
+        editor->Send(Colourise, 0, -1);
         const auto start = std::string(fixture.before).find(fixture.token);
-        editor->Send(Message::SetSel, start, start + std::strlen(fixture.token));
+        editor->Send(SetSel, start, start + std::strlen(fixture.token));
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
         Require(TestEditor::Text(editor) == fixture.after,
                 "comment delimiters must follow the original embedded region");
@@ -342,8 +343,8 @@ void Commands(EditorFrame* frame) {
                                 {"ASP VBScript", "<%\nvalue = 1\n%>\n", "<%\n' value = 1\n%>\n"}}) {
         TestEditor::ResetStream(editor, fixture.before, 0, 0);
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", fixture.scheme));
-        editor->Send(Message::Colourise, 0, -1);
-        editor->Send(Message::GotoPos, std::string(fixture.before).find("value"));
+        editor->Send(Colourise, 0, -1);
+        editor->Send(GotoPos, std::string(fixture.before).find("value"));
         TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Line Comment"));
         Require(TestEditor::Text(editor) == fixture.after, "line comments follow original embedded JS/VB regions");
         TestSyntax::Command(frame, wxID_UNDO);
@@ -352,11 +353,11 @@ void Commands(EditorFrame* frame) {
     const std::string braces = "<script>\nconst value = (1);\n</script>\n";
     TestEditor::ResetStream(editor, braces.c_str(), 0, 0);
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Web Source Code"));
-    editor->Send(Message::Colourise, 0, -1);
-    editor->Send(Message::GotoPos, braces.find('('));
+    editor->Send(Colourise, 0, -1);
+    editor->Send(GotoPos, braces.find('('));
     TestSyntax::Command(frame, frame->GetMenuBar()->FindMenuItem("Search", "Find Matching Brace"));
-    Require(editor->Send(Message::GetCurrentPos) == static_cast<intptr_t>(braces.find(')')) &&
-                !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+    Require(editor->Send(GetCurrentPos) == static_cast<intptr_t>(braces.find(')')) && !editor->Send(GetModify) &&
+                !editor->Send(CanUndo),
             "shared brace command uses embedded JavaScript token styles without editing");
 }
 void NativeTabsAndFoldedFind(EditorFrame* frame) {

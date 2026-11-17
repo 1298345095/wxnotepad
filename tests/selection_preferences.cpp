@@ -2,6 +2,7 @@
 #include "native_key_helpers.h"
 #include "native_paint_helpers.h"
 #include <fstream>
+#include <utility>
 #include <filesystem>
 #include <sstream>
 
@@ -27,20 +28,19 @@ void CheckReference(EditorControl* editor, const std::string& name) {
     std::string row;
     std::getline(input, row);
     while (std::getline(input, row)) {
+        using enum Scintilla::Message;
         std::istringstream fields(row);
         std::string key;
         fields >> key;
         if (key != name) continue;
-        for (const auto message :
-             {Message::GetAnchor, Message::GetCurrentPos, Message::GetModify, Message::CanUndo, Message::CanRedo,
-              Message::GetSelections, Message::GetMultipleSelection, Message::GetUndoSelectionHistory,
-              Message::GetFirstVisibleLine, Message::GetXOffset}) {
+        for (const auto message : {GetAnchor, GetCurrentPos, GetModify, CanUndo, CanRedo, GetSelections,
+                                   GetMultipleSelection, GetUndoSelectionHistory, GetFirstVisibleLine, GetXOffset}) {
             intptr_t expected = 0;
             fields >> expected;
             const auto actual = editor->Send(message);
             if (!fields || actual != expected) {
                 std::fprintf(stderr, "%s message=%u expected=%lld actual=%lld\n", name.c_str(),
-                             static_cast<unsigned>(message), static_cast<long long>(expected),
+                             static_cast<unsigned>(std::to_underlying(message)), static_cast<long long>(expected),
                              static_cast<long long>(actual));
                 throw std::runtime_error("public editor state matches frozen original runtime");
             }
@@ -50,19 +50,20 @@ void CheckReference(EditorControl* editor, const std::string& name) {
     throw std::runtime_error("named frozen original state exists");
 }
 void History(EditorFrame* frame) {
+    using enum Scintilla::Message;
     constexpr const char* longLine = "012345678901234567890123456789012345678901234567890123456789"
                                      "012345678901234567890123456789012345678901234567890123456789\n";
     auto* editor = frame->Editor();
     Reset(editor, "abcd\nefgh\nijkl");
-    editor->Send(Message::SetSel, 2, 1);
-    editor->Send(Message::AddSelection, 7, 6);
+    editor->Send(SetSel, 2, 1);
+    editor->Send(AddSelection, 7, 6);
     CheckReference(editor, "multiple-before");
     Command(frame, "Enable Multiple Selection");
     CheckReference(editor, "multiple-disabled-active");
-    editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
+    editor->Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
     Require(TestEditor::Text(editor) == "acd\neXgh\nijkl", "disabled active ranges retain original replacement result");
     CheckReference(editor, "multiple-disabled-replace");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     CheckReference(editor, "multiple-disabled-undo");
     Command(frame, "Enable Multiple Selection");
     for (const bool enabled : {true, false}) {
@@ -72,59 +73,59 @@ void History(EditorFrame* frame) {
             for (int line = 0; line < 80; ++line)
                 text += longLine;
             Reset(editor, text.c_str());
-            const auto textLeft = editor->Send(Message::PointXFromPosition, 0, 0);
-            const auto lineWidth = editor->Send(Message::PointXFromPosition, 0, 120) - textLeft;
+            const auto textLeft = editor->Send(PointXFromPosition, 0, 0);
+            const auto lineWidth = editor->Send(PointXFromPosition, 0, 120) - textLeft;
             const auto clientWidth = editor->GetClientSize().x;
             const std::string prefix =
                 std::string("history-") + (enabled ? "True-" : "False-") + (reverse ? "True-" : "False-");
             std::printf("History scene: dpi=%d client=%d line=%lld scroll=%lld; %s\n", editor->GetDPI().x, clientWidth,
-                        static_cast<long long>(lineWidth),
-                        static_cast<long long>(editor->Send(Message::GetScrollWidth)), prefix.c_str());
-            Require(lineWidth > clientWidth && editor->Send(Message::GetScrollWidth) > clientWidth,
+                        static_cast<long long>(lineWidth), static_cast<long long>(editor->Send(GetScrollWidth)),
+                        prefix.c_str());
+            Require(lineWidth > clientWidth && editor->Send(GetScrollWidth) > clientWidth,
                     "history fixture must have a genuinely scrollable horizontal viewport");
-            editor->Send(Message::SetSel, reverse ? 2444 : 2440, reverse ? 2440 : 2444);
-            editor->Send(Message::SetFirstVisibleLine, 15);
-            editor->Send(Message::SetXOffset, 20);
+            editor->Send(SetSel, reverse ? 2444 : 2440, reverse ? 2440 : 2444);
+            editor->Send(SetFirstVisibleLine, 15);
+            editor->Send(SetXOffset, 20);
             // Both directions must keep the caret visible after restoring the
             // frozen 20-pixel scroll offset, including at 96 DPI.
             for (const auto position : {2440, 2444}) {
-                const auto x = editor->Send(Message::PointXFromPosition, 0, position);
+                const auto x = editor->Send(PointXFromPosition, 0, position);
                 Require(x >= textLeft && x < clientWidth,
                         "both history selection endpoints must remain inside the scrolled text viewport");
             }
-            editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
-            editor->Send(Message::SetSel, 615, 615);
-            editor->Send(Message::SetFirstVisibleLine, 5);
+            editor->Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
+            editor->Send(SetSel, 615, 615);
+            editor->Send(SetFirstVisibleLine, 5);
             const auto changed = TestEditor::Text(editor);
             CheckReference(editor, prefix + "edited");
-            editor->Send(Message::Undo);
+            editor->Send(Undo);
             Require(TestEditor::Text(editor) == text, "Undo restores original bytes");
             CheckReference(editor, prefix + "undo");
-            editor->Send(Message::Redo);
+            editor->Send(Redo);
             Require(TestEditor::Text(editor) == changed, "Redo restores edited bytes");
             CheckReference(editor, prefix + "redo");
         }
     }
     Command(frame, "Undo Redo Remember Selection");
     Reset(editor, longLine);
-    editor->Send(Message::SetXOffset, 20);
-    editor->Send(Message::SetSel, 24, 20);
-    editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
+    editor->Send(SetXOffset, 20);
+    editor->Send(SetSel, 24, 20);
+    editor->Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("X"));
     CheckReference(editor, "history-toggle-before");
     Command(frame, "Undo Redo Remember Selection");
     CheckReference(editor, "history-toggle-off");
     Command(frame, "Undo Redo Remember Selection");
     CheckReference(editor, "history-toggle-on");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     CheckReference(editor, "history-toggle-undo");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     CheckReference(editor, "history-toggle-redo");
     std::puts("PASS: frozen original active ranges, direction, scroll, history clearing and save state");
 }
 wxPoint Point(EditorControl* editor, intptr_t position) {
-    return {static_cast<int>(editor->Send(Message::PointXFromPosition, 0, position)),
-            static_cast<int>(editor->Send(Message::PointYFromPosition, 0, position) +
-                             editor->Send(Message::TextHeight, 0) / 2)};
+    using enum Scintilla::Message;
+    return {static_cast<int>(editor->Send(PointXFromPosition, 0, position)),
+            static_cast<int>(editor->Send(PointYFromPosition, 0, position) + editor->Send(TextHeight, 0) / 2)};
 }
 void Drag(EditorControl* editor, intptr_t anchor, intptr_t caret, bool control = false, bool alt = false) {
     constexpr int motionSteps = 12;
@@ -184,31 +185,31 @@ void NativeKey(EditorControl* editor, int key) {
 void Gestures(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const bool enabled : {true, false}) {
+        using enum Scintilla::Message;
         if (!enabled) Command(frame, "Enable Multiple Selection");
         Reset(editor, "abcd\r\nefgh\r\nijkl");
         Drag(editor, 1, 2);
         Drag(editor, 7, 8, true);
-        Require(editor->Send(Message::GetSelections) == (enabled ? 2 : 1), "native Ctrl drag follows live preference");
+        Require(editor->Send(GetSelections) == (enabled ? 2 : 1), "native Ctrl drag follows live preference");
         NativeKey(editor, 'X');
         Require(TestEditor::Text(editor) == (enabled ? "aXcd\r\neXgh\r\nijkl" : "abcd\r\neXgh\r\nijkl"),
                 "native typing replaces selected ranges");
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         NativeKey(editor, WXK_DELETE);
         Require(TestEditor::Text(editor) == (enabled ? "acd\r\negh\r\nijkl" : "abcd\r\negh\r\nijkl"),
                 "deletion reaches native selected ranges");
         Reset(editor, "abcd\r\nefgh\r\nijkl");
         Drag(editor, 1, 15, false, true);
-        Require(editor->Send(Message::GetSelections) == 3 &&
-                    editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == 15,
+        Require(editor->Send(GetSelections) == 3 && editor->Send(GetRectangularSelectionAnchor) == 1 &&
+                    editor->Send(GetRectangularSelectionCaret) == 15,
                 "native Alt rectangle remains available with either preference");
         NativeKey(editor, 'N');
         Require(TestEditor::Text(editor) == "aNd\r\neNh\r\niNl", "native rectangle typing reaches each logical line");
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         Require(TestEditor::Text(editor) == "abcd\r\nefgh\r\nijkl", "rectangle replacement remains one Undo");
         Reset(editor, "abcd\r\nefgh\r\nijkl");
-        editor->Send(Message::SetSel, 1, 8);
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Lines));
+        editor->Send(SetSel, 1, 8);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Lines)));
         NativeKey(editor, 'L');
         Require(TestEditor::Text(editor) == "L\r\nijkl",
                 "native line selection typing preserves the original line ending");

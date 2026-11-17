@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <utility>
 #include "file_helpers.h"
 #include "settings/settings_store.h"
 
@@ -94,21 +95,22 @@ void Fixtures(EditorFrame* frame) {
         {"last current line with supplementary caret", "x😀", 5, 5, false, "x", 1, 1},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
-        const auto eol = editor->Send(Message::GetEOLMode);
+        const auto eol = editor->Send(GetEOLMode);
         const auto encoding = frame->DocumentEncoding();
         Strip(frame, fixture.first);
         Require(TestEditor::Text(editor) == fixture.after, fixture.name);
         Range(editor, fixture.resultAnchor, fixture.resultCaret);
-        Require(editor->Send(Message::GetModify) && editor->Send(Message::CanUndo), "strip creates text history");
-        Require(editor->Send(Message::GetEOLMode) == eol && frame->DocumentEncoding() == encoding,
+        Require(editor->Send(GetModify) && editor->Send(CanUndo), "strip creates text history");
+        Require(editor->Send(GetEOLMode) == eol && frame->DocumentEncoding() == encoding,
                 "strip preserves EOL mode and encoding");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify) && editor->Send(Message::CanRedo),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == fixture.before && !editor->Send(CanUndo) && !editor->Send(GetModify) &&
+                    editor->Send(CanRedo),
                 "one Undo restores complete original bytes and save point");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+        editor->Send(Redo);
+        Require(TestEditor::Text(editor) == fixture.after && editor->Send(GetModify),
                 "one Redo restores complete strip group");
     }
     std::puts(
@@ -124,62 +126,64 @@ public:
     int count = 0;
 };
 void Protection(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const bool first : {true, false}) {
         const int id =
             frame->GetMenuBar()->FindMenuItem("Edit", first ? "Strip First Character" : "Strip Last Character");
         for (const auto& fixture : {std::pair{"", 0}, std::pair{"\r\n\n\r", 0}, std::pair{"abc\ndef", 3}}) {
             TestEditor::ResetStream(editor, fixture.first, fixture.second, fixture.second == 3 ? 4 : fixture.second);
-            const auto anchor = editor->Send(Message::GetAnchor);
-            const auto caret = editor->Send(Message::GetCurrentPos);
-            editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("!"));
-            editor->Send(Message::Undo);
+            const auto anchor = editor->Send(GetAnchor);
+            const auto caret = editor->Send(GetCurrentPos);
+            editor->Send(InsertText, 0, reinterpret_cast<intptr_t>("!"));
+            editor->Send(Undo);
             // Insertion/Undo use the core's normal selection-history setting.
-            editor->Send(Message::SetSel, anchor, caret);
+            editor->Send(SetSel, anchor, caret);
             Strip(frame, first);
-            Require(TestEditor::Text(editor) == fixture.first && !editor->Send(Message::CanUndo) &&
-                        editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+            Require(TestEditor::Text(editor) == fixture.first && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                        !editor->Send(GetModify),
                     "no eligible nonempty line preserves undo, pending redo and save point");
             Range(editor, anchor, caret);
         }
         TestEditor::ResetStream(editor, "abc\ndef", 1, 6);
-        editor->Send(Message::InsertText, 0, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 1, 6);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(InsertText, 0, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 1, 6);
+        editor->Send(SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(id), "original strip menu remains available in read-only text");
         Strip(frame, first);
-        Require(TestEditor::Text(editor) == "abc\ndef" && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == "abc\ndef" && !editor->Send(CanUndo) && !editor->Send(CanRedo) &&
+                    !editor->Send(GetModify),
                 "read-only core protects bytes and save point and disables undo/redo availability");
         Range(editor, 1, 6);
         for (const bool readOnly : {false, true})
             for (const bool empty : {false, true}) {
-                editor->Send(Message::SetReadOnly, readOnly);
-                editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-                editor->Send(Message::SetRectangularSelectionAnchor, 0);
-                editor->Send(Message::SetRectangularSelectionCaret, empty ? 0 : 6);
-                const auto anchor = editor->Send(Message::GetRectangularSelectionAnchor);
-                const auto caret = editor->Send(Message::GetRectangularSelectionCaret);
+                editor->Send(SetReadOnly, readOnly);
+                editor->Send(SetSelectionMode,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+                editor->Send(SetRectangularSelectionAnchor, 0);
+                editor->Send(SetRectangularSelectionCaret, empty ? 0 : 6);
+                const auto anchor = editor->Send(GetRectangularSelectionAnchor);
+                const auto caret = editor->Send(GetRectangularSelectionCaret);
                 RectangleFeedback feedback;
                 Strip(frame, first);
                 Require(feedback.count == 1, "rectangle warns before empty-scope and read-only handling");
-                Require(TestEditor::Text(editor) == "abc\ndef" && !editor->Send(Message::CanUndo) &&
-                            editor->Send(Message::CanRedo) == !readOnly && !editor->Send(Message::GetModify) &&
-                            editor->Send(Message::GetRectangularSelectionAnchor) == anchor &&
-                            editor->Send(Message::GetRectangularSelectionCaret) == caret,
+                Require(TestEditor::Text(editor) == "abc\ndef" && !editor->Send(CanUndo) &&
+                            editor->Send(CanRedo) == !readOnly && !editor->Send(GetModify) &&
+                            editor->Send(GetRectangularSelectionAnchor) == anchor &&
+                            editor->Send(GetRectangularSelectionCaret) == caret,
                         "rectangle retains text, selection, save point, undo and pending redo");
                 Require(!(first ? editor->StripFirstCharacter() : editor->StripLastCharacter()),
                         "public editor command reports unsupported rectangle");
             }
-        editor->Send(Message::SetReadOnly, 0);
-        Require(editor->Send(Message::CanRedo), "read-only and rectangle commands preserve pending redo");
-        editor->Send(Message::Redo);
+        editor->Send(SetReadOnly, 0);
+        Require(editor->Send(CanRedo), "read-only and rectangle commands preserve pending redo");
+        editor->Send(Redo);
         Require(TestEditor::Text(editor) == "!abc\ndef", "pending redo remains executable after removing read-only");
     }
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
+    editor->Send(SetReadOnly, 0);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
     std::puts(
         "PASS: empty/no-eligible scopes, enabled read-only menus, rectangle-first feedback and preserved redo/history");
 }
@@ -219,27 +223,28 @@ void SavedBytes(EditorFrame* frame) {
     };
     for (const auto& fixture : fixtures)
         for (const bool first : {true, false}) {
+            using enum Scintilla::Message;
             const auto path = directory / (std::string(fixture.name) + (first ? "-first.cpp" : "-last.cpp"));
             TestFiles::WriteBytes(path, fixture.before);
-            editor->Send(Message::SetSavePoint);
+            editor->Send(SetSavePoint);
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                     "open encoded fixture through application");
             const auto encoding = frame->DocumentEncoding();
             const auto bom = frame->DocumentHasBom();
-            const auto eol = editor->Send(Message::GetEOLMode);
-            editor->Send(Message::SelectAll);
+            const auto eol = editor->Send(GetEOLMode);
+            editor->Send(SelectAll);
             Strip(frame, first);
             const auto& after = first ? fixture.first : fixture.last;
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == after,
                     "strip Save preserves independent encoding, BOM, mixed EOL and final-newline bytes");
             Require(frame->DocumentEncoding() == encoding && frame->DocumentHasBom() == bom &&
-                        editor->Send(Message::GetEOLMode) == eol && !editor->Send(Message::GetModify),
+                        editor->Send(GetEOLMode) == eol && !editor->Send(GetModify),
                     "Save retains encoding, BOM and EOL mode and establishes a save point");
-            editor->Send(Message::Undo);
-            Require(editor->Send(Message::GetModify) && frame->Save().status == SaveStatus::Saved &&
+            editor->Send(Undo);
+            Require(editor->Send(GetModify) && frame->Save().status == SaveStatus::Saved &&
                         TestFiles::Bytes(path) == fixture.before,
                     "one Undo restores independently read original disk bytes");
-            editor->Send(Message::Redo);
+            editor->Send(Redo);
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == after,
                     "one Redo restores independently read stripped disk bytes");
         }

@@ -8,6 +8,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <tuple>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -32,13 +33,13 @@ void Shortcut(EditorControl* editor, int key) {
     wxYield();
 }
 auto DocumentState(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    return std::tuple(
-        NativeSearch::Text(editor), editor->Send(Message::GetAnchor), editor->Send(Message::GetCurrentPos),
-        editor->Send(Message::GetEOLMode), editor->Send(Message::GetModify), editor->Send(Message::CanUndo),
-        editor->Send(Message::CanRedo), editor->Send(Message::GetLineCount), frame->DocumentEncoding(),
-        frame->DocumentHasBom(),
-        editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)));
+    return std::tuple(NativeSearch::Text(editor), editor->Send(GetAnchor), editor->Send(GetCurrentPos),
+                      editor->Send(GetEOLMode), editor->Send(GetModify), editor->Send(CanUndo), editor->Send(CanRedo),
+                      editor->Send(GetLineCount), frame->DocumentEncoding(), frame->DocumentHasBom(),
+                      editor->Send(StyleGetSizeFractional,
+                                   static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default))));
 }
 void Combined(EditorFrame* frame) {
     auto* editor = frame->Editor();
@@ -181,6 +182,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 if (settings_) {
                     Configuration(frame);
                     if (wxString(argv[1]) == "exit")
@@ -198,36 +200,35 @@ public:
                 auto* eolItem = frame->GetMenuBar()->FindItem(eol);
                 auto* symbolsItem = frame->GetMenuBar()->FindItem(symbols);
                 Require(eolItem->IsCheckable() && symbolsItem->IsCheckable() && !eolItem->IsChecked() &&
-                            !symbolsItem->IsChecked() && editor->Send(Message::GetViewEOL) == 0 &&
-                            editor->Send(Message::GetWrapVisualFlags) == 0,
+                            !symbolsItem->IsChecked() && editor->Send(GetViewEOL) == 0 &&
+                            editor->Send(GetWrapVisualFlags) == 0,
                         "both original visibility preferences default to hidden");
                 const std::string source = "alpha\r\n\r\nbeta\ngamma\rlast";
                 TestEditor::ResetStream(editor, source.c_str(), 10, 2, Scintilla::EndOfLine::CrLf);
-                editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-                editor->Send(Message::Undo);
-                editor->Send(Message::SetSel, 10, 2);
+                editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+                editor->Send(Undo);
+                editor->Send(SetSel, 10, 2);
                 NativeSearch::Command(frame, eol);
                 NativeSearch::Command(frame, symbols);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-                Require(eolItem->IsChecked() && symbolsItem->IsChecked() && editor->Send(Message::GetViewEOL) == 1 &&
-                            editor->Send(Message::GetWrapVisualFlags) == 1 &&
-                            editor->Send(Message::GetWrapVisualFlagsLocation) == 0,
+                Require(eolItem->IsChecked() && symbolsItem->IsChecked() && editor->Send(GetViewEOL) == 1 &&
+                            editor->Send(GetWrapVisualFlags) == 1 && editor->Send(GetWrapVisualFlagsLocation) == 0,
                         "native menu enables physical EOLs and the original default end-at-border wrap arrow");
-                Require(NativeSearch::Text(editor) == source && editor->Send(Message::GetLineCount) == 5 &&
-                            editor->Send(Message::GetEOLMode) == 0 && editor->Send(Message::GetAnchor) == 10 &&
-                            editor->Send(Message::GetCurrentPos) == 2 && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                Require(NativeSearch::Text(editor) == source && editor->Send(GetLineCount) == 5 &&
+                            editor->Send(GetEOLMode) == 0 && editor->Send(GetAnchor) == 10 &&
+                            editor->Send(GetCurrentPos) == 2 && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                            editor->Send(CanRedo),
                         "view toggles preserve mixed physical endings, selection, save point and pending Redo");
                 Shortcut(editor, '9');
                 Shortcut(editor, '0');
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-                Require(!eolItem->IsChecked() && !symbolsItem->IsChecked() && !editor->Send(Message::GetViewEOL) &&
-                            !editor->Send(Message::GetWrapVisualFlags),
+                Require(!eolItem->IsChecked() && !symbolsItem->IsChecked() && !editor->Send(GetViewEOL) &&
+                            !editor->Send(GetWrapVisualFlags),
                         "original native shortcuts disable the same checked commands");
-                editor->Send(Message::Redo);
+                editor->Send(Redo);
                 Require(NativeSearch::Text(editor) == source + "!", "Redo retains the original edit");
-                editor->Send(Message::Undo);
-                Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify),
+                editor->Send(Undo);
+                Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify),
                         "Undo returns directly to the original save point");
                 std::puts("PASS: native EOL/wrap-symbol menu, accelerators and unchanged mixed-ending history");
                 Combined(frame);
@@ -250,6 +251,7 @@ private:
     std::unique_ptr<SettingsStore> settings_;
     std::unique_ptr<SettingsStore> fixtureSettings_;
     void Configuration(EditorFrame* frame) {
+        using enum Scintilla::Message;
         Require(argc == 5, "configuration process requires mode, flags, location and numbers");
         const int flags = std::stoi(wxString(argv[2]).ToStdString());
         const int location = std::stoi(wxString(argv[3]).ToStdString());
@@ -259,28 +261,25 @@ private:
         const int symbols = frame->GetMenuBar()->FindMenuItem("View", "Show Wrap Symbols");
         Require(eol != wxNOT_FOUND && symbols != wxNOT_FOUND, "configuration exposes both native controls");
         if (wxString(argv[1]) == "hidden-save") {
-            Require(!editor->Send(Message::GetViewEOL) && !editor->Send(Message::GetWrapVisualFlags),
+            Require(!editor->Send(GetViewEOL) && !editor->Send(GetWrapVisualFlags),
                     "hidden imported zero remains hidden before explicit save");
             NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
             return;
         }
         if (wxString(argv[1]) != "restore") {
-            Require(!editor->Send(Message::GetViewEOL) && !editor->Send(Message::GetWrapVisualFlags),
+            Require(!editor->Send(GetViewEOL) && !editor->Send(GetWrapVisualFlags),
                     "hidden imported settings do not expose markers");
             NativeSearch::Command(frame, eol);
             NativeSearch::Command(frame, symbols);
         }
-        Require(editor->Send(Message::GetViewEOL) == 1 && editor->Send(Message::GetWrapVisualFlags) == flags &&
-                    editor->Send(Message::GetWrapVisualFlagsLocation) == location &&
-                    editor->LineNumbersVisible() == numbers &&
-                    (editor->Send(Message::GetMarginWidthN, 0) > 0) == numbers &&
-                    editor->Send(Message::GetWrapMode) == 0,
+        Require(editor->Send(GetViewEOL) == 1 && editor->Send(GetWrapVisualFlags) == flags &&
+                    editor->Send(GetWrapVisualFlagsLocation) == location && editor->LineNumbersVisible() == numbers &&
+                    (editor->Send(GetMarginWidthN, 0) > 0) == numbers && editor->Send(GetWrapMode) == 0,
                 "imported placement must match independent original flags, location and line-number side effect");
         if (wxString(argv[1]) == "enable") {
             NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
             NativeSearch::Command(frame, symbols);
-            Require(!editor->Send(Message::GetWrapVisualFlags) &&
-                        editor->Send(Message::GetWrapVisualFlagsLocation) == location &&
+            Require(!editor->Send(GetWrapVisualFlags) && editor->Send(GetWrapVisualFlagsLocation) == location &&
                         editor->LineNumbersVisible() == numbers,
                     "hiding symbols retains original location and enabled numbers");
             if (numbers) {
@@ -288,14 +287,14 @@ private:
                 Require(!editor->LineNumbersVisible(), "numbers can be hidden independently while symbols are hidden");
             }
             NativeSearch::Command(frame, symbols);
-            Require(editor->Send(Message::GetWrapVisualFlags) == flags && editor->LineNumbersVisible() == numbers,
+            Require(editor->Send(GetWrapVisualFlags) == flags && editor->LineNumbersVisible() == numbers,
                     "re-enabling retained margin placement enables line numbers again");
             if (numbers) {
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Line Numbers"));
                 const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
                 NativeSearch::Command(frame, wrap);
                 NativeSearch::Command(frame, wrap);
-                Require(!editor->LineNumbersVisible() && editor->Send(Message::GetWrapVisualFlags) == flags,
+                Require(!editor->LineNumbersVisible() && editor->Send(GetWrapVisualFlags) == flags,
                         "manual number hiding and ordinary wrap toggles do not reapply the margin side effect");
             }
         }

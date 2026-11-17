@@ -1,4 +1,5 @@
 #include "document/document_session.h"
+#include <utility>
 #include "editor/editor_control.h"
 #include "syntax/syntax_scheme.h"
 #include "document/encoding/gbk_codec.h"
@@ -79,15 +80,18 @@ LineEndingCounts CountLineEndings(std::string_view bytes) {
 }
 
 Scintilla::EndOfLine SelectEol(const LineEndingCounts& counts, Scintilla::EndOfLine configured) {
+    using enum Scintilla::EndOfLine;
     // Notepad4 89b8b36 EditDetectEOLMode: retain the configured mode when tied,
     // otherwise choose the largest count, preferring CRLF and then LF.
     const size_t maximum = std::max({counts.crlf, counts.cr, counts.lf});
-    const size_t preferred = configured == Scintilla::EndOfLine::CrLf ? counts.crlf
-                             : configured == Scintilla::EndOfLine::Lf ? counts.lf
-                                                                      : counts.cr;
+    auto preferred = counts.cr;
+    if (configured == CrLf)
+        preferred = counts.crlf;
+    else if (configured == Lf)
+        preferred = counts.lf;
     if (preferred == maximum) return configured;
-    if (counts.crlf == maximum) return Scintilla::EndOfLine::CrLf;
-    return counts.lf == maximum ? Scintilla::EndOfLine::Lf : Scintilla::EndOfLine::Cr;
+    if (counts.crlf == maximum) return CrLf;
+    return counts.lf == maximum ? Lf : Cr;
 }
 
 struct PendingSave {
@@ -150,29 +154,29 @@ wxString PrepareSaveCopy(const wxString& destination) {
 }
 
 LegacyEncoded EncodeLegacy(std::string_view bytes, FileEncoding encoding) {
-    if (encoding == FileEncoding::Gbk) return EncodeGbk(bytes);
-    if (encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437)
-        return EncodeSingleByte(bytes, encoding);
+    using enum FileEncoding;
+    if (encoding == Gbk) return EncodeGbk(bytes);
+    if (encoding == Windows1252 || encoding == Dos437) return EncodeSingleByte(bytes, encoding);
     return EncodeChinese(bytes, encoding);
 }
 
 std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncoding encoding, bool bom,
                                                     const EncodingLossDecision& decideLoss) {
-    if (encoding == FileEncoding::Gbk || encoding == FileEncoding::Windows1252 || encoding == FileEncoding::Dos437 ||
-        encoding == FileEncoding::Gb18030 || encoding == FileEncoding::Big5) {
+    using enum FileEncoding;
+    if (encoding == Gbk || encoding == Windows1252 || encoding == Dos437 || encoding == Gb18030 || encoding == Big5) {
         if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, _("The document contains invalid UTF-8.")};
         const auto encoded = EncodeLegacy(bytes, encoding);
         if (encoded.loss && (!decideLoss || decideLoss() != EncodingLossChoice::Replace))
             return SaveResult{SaveStatus::Cancelled, {}};
         bytes = encoded.bytes;
-    } else if (encoding == FileEncoding::Utf16Le || encoding == FileEncoding::Utf16Be) {
-        auto encoded = encoding == FileEncoding::Utf16Be ? EncodeUtf16Be(bytes) : EncodeUtf16Le(bytes);
+    } else if (encoding == Utf16Le || encoding == Utf16Be) {
+        auto encoded = encoding == Utf16Be ? EncodeUtf16Be(bytes) : EncodeUtf16Le(bytes);
         if (!encoded)
-            return SaveResult{SaveStatus::Failed, encoding == FileEncoding::Utf16Be
+            return SaveResult{SaveStatus::Failed, encoding == Utf16Be
                                                       ? _("The document could not be encoded as UTF-16BE.")
                                                       : _("The document could not be encoded as UTF-16LE.")};
         bytes = std::move(*encoded);
-        if (bom) bytes.insert(0, encoding == FileEncoding::Utf16Be ? "\x{fe}\x{ff}" : "\x{ff}\x{fe}");
+        if (bom) bytes.insert(0, encoding == Utf16Be ? "\x{fe}\x{ff}" : "\x{ff}\x{fe}");
     } else if (bom)
         bytes.insert(0, "\x{ef}\x{bb}\x{bf}");
     return bytes;
@@ -200,36 +204,36 @@ void FixPositionsAfterEolConversion(EditorControl& editor) {
 }
 
 void EnsureConsistentLineEndings(EditorControl& editor) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     constexpr uintptr_t maxSmallFileSize = (1U << 31) - 16;
-    const auto lines = static_cast<uintptr_t>(editor.Send(Message::GetLineCount));
-    const auto actions = static_cast<uintptr_t>(editor.Send(Message::GetUndoActions));
-    const auto mode = static_cast<uintptr_t>(editor.Send(Message::GetEOLMode));
-    const bool large =
-        editor.Send(Message::GetDocumentOptions) & static_cast<intptr_t>(Scintilla::DocumentOption::TextLarge);
+    const auto lines = static_cast<uintptr_t>(editor.Send(GetLineCount));
+    const auto actions = static_cast<uintptr_t>(editor.Send(GetUndoActions));
+    const auto mode = static_cast<uintptr_t>(editor.Send(GetEOLMode));
+    const bool large = editor.Send(GetDocumentOptions) &
+                       static_cast<intptr_t>(std::to_underlying(Scintilla::DocumentOption::TextLarge));
     if (lines >= 2 && lines + actions < maxSmallFileSize &&
-        (mode != static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf) || large ||
-         static_cast<uintptr_t>(editor.Send(Message::GetLength)) + lines < maxSmallFileSize)) {
-        editor.Send(Message::ConvertEOLs, mode);
+        (mode != static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::CrLf)) || large ||
+         static_cast<uintptr_t>(editor.Send(GetLength)) + lines < maxSmallFileSize)) {
+        editor.Send(ConvertEOLs, mode);
         FixPositionsAfterEolConversion(editor);
     }
 }
 
 void StripTrailingBlanks(EditorControl& editor) {
-    using Scintilla::Message;
-    editor.Send(Message::BeginUndoAction);
-    const auto lines = editor.Send(Message::GetLineCount);
+    using enum Scintilla::Message;
+    editor.Send(BeginUndoAction);
+    const auto lines = editor.Send(GetLineCount);
     for (intptr_t line = 0; line < lines; ++line) {
-        const auto start = editor.Send(Message::PositionFromLine, line);
-        const auto end = editor.Send(Message::GetLineEndPosition, line);
+        const auto start = editor.Send(PositionFromLine, line);
+        const auto end = editor.Send(GetLineEndPosition, line);
         auto position = end;
         while (position >= start) {
-            const auto ch = editor.Send(Message::GetCharAt, --position);
+            const auto ch = editor.Send(GetCharAt, --position);
             if (ch != ' ' && ch != '\t') break;
         }
-        if (++position < end) editor.Send(Message::DeleteRange, position, end - position);
+        if (++position < end) editor.Send(DeleteRange, position, end - position);
     }
-    editor.Send(Message::EndUndoAction);
+    editor.Send(EndUndoAction);
 }
 
 struct LoadedDocument {
@@ -242,25 +246,26 @@ struct LoadedDocument {
 };
 
 wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& options) {
+    using enum FileEncoding;
     auto& bytes = loaded.text;
-    const bool utf16 = loaded.encoding == FileEncoding::Utf16Le || loaded.encoding == FileEncoding::Utf16Be;
+    const bool utf16 = loaded.encoding == Utf16Le || loaded.encoding == Utf16Be;
     if (!utf16) loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     if (loaded.bom) bytes.erase(0, utf16 ? 2 : 3);
-    if (loaded.encoding == FileEncoding::Gbk) {
+    if (loaded.encoding == Gbk) {
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return wxString(_("The file is not valid GBK (CP936). The document was not changed."));
         bytes = *decoded;
-    } else if (loaded.encoding == FileEncoding::Windows1252 || loaded.encoding == FileEncoding::Dos437) {
+    } else if (loaded.encoding == Windows1252 || loaded.encoding == Dos437) {
         bytes = DecodeSingleByte(bytes, loaded.encoding);
-    } else if (loaded.encoding == FileEncoding::Gb18030 || loaded.encoding == FileEncoding::Big5) {
+    } else if (loaded.encoding == Gb18030 || loaded.encoding == Big5) {
         const auto decoded = DecodeChinese(bytes, loaded.encoding);
         if (!decoded) return wxString(_("The file could not be decoded with the selected Chinese encoding."));
         bytes = *decoded;
     } else if (utf16) {
-        auto decoded = loaded.encoding == FileEncoding::Utf16Be ? DecodeUtf16Be(bytes) : DecodeUtf16Le(bytes);
+        auto decoded = loaded.encoding == Utf16Be ? DecodeUtf16Be(bytes) : DecodeUtf16Le(bytes);
         if (!decoded)
-            return wxString(loaded.encoding == FileEncoding::Utf16Be ? _("The file is not valid UTF-16BE.")
-                                                                     : _("The file is not valid UTF-16LE."));
+            return wxString(loaded.encoding == Utf16Be ? _("The file is not valid UTF-16BE.")
+                                                       : _("The file is not valid UTF-16LE."));
         bytes = std::move(*decoded);
         loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     } else if (!IsUtf8(bytes))
@@ -312,42 +317,33 @@ struct ReloadView {
 };
 
 ReloadView CaptureReloadView(EditorControl& editor) {
-    using Scintilla::Message;
-    const auto caret = editor.Send(Message::GetCurrentPos);
-    const auto anchor = editor.Send(Message::GetAnchor);
-    const auto line = editor.Send(Message::LineFromPosition, caret);
-    const auto column = editor.Send(Message::GetColumn, caret, line);
-    const auto visibleTop = editor.Send(Message::GetFirstVisibleLine);
-    const auto documentTop = editor.Send(Message::DocLineFromVisible, visibleTop);
-    return {caret,
-            anchor,
-            line,
-            column,
-            visibleTop,
-            documentTop,
-            editor.Send(Message::GetXOffset),
-            editor.Send(Message::GetScrollWidth)};
+    using enum Scintilla::Message;
+    const auto caret = editor.Send(GetCurrentPos);
+    const auto anchor = editor.Send(GetAnchor);
+    const auto line = editor.Send(LineFromPosition, caret);
+    const auto column = editor.Send(GetColumn, caret, line);
+    const auto visibleTop = editor.Send(GetFirstVisibleLine);
+    const auto documentTop = editor.Send(DocLineFromVisible, visibleTop);
+    return {caret, anchor, line, column, visibleTop, documentTop, editor.Send(GetXOffset), editor.Send(GetScrollWidth)};
 }
 
 void RestoreReloadView(EditorControl& editor, const ReloadView& view) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     // ClearAll resets width tracking. Restore the current file's measured range
     // before its view, so native layout cannot clamp the saved offset before paint.
-    editor.Send(Message::SetScrollWidth, static_cast<uintptr_t>(view.scrollWidth));
-    editor.Send(Message::SetSel, view.anchor, view.caret);
+    editor.Send(SetScrollWidth, static_cast<uintptr_t>(view.scrollWidth));
+    editor.Send(SetSel, view.anchor, view.caret);
     // Original FileLoad compares the saved one-based line against the restored
     // zero-based line, then uses EditJumpTo/EditSelectEx.
-    const auto displacement =
-        view.line + 1 - editor.Send(Message::LineFromPosition, editor.Send(Message::GetCurrentPos));
+    const auto displacement = view.line + 1 - editor.Send(LineFromPosition, editor.Send(GetCurrentPos));
     if (displacement > 5 || displacement < -5) {
-        const auto position = view.line >= editor.Send(Message::GetLineCount)
-                                  ? editor.Send(Message::GetLength)
-                                  : editor.Send(Message::FindColumn, view.line, view.column);
+        const auto position = view.line >= editor.Send(GetLineCount) ? editor.Send(GetLength)
+                                                                     : editor.Send(FindColumn, view.line, view.column);
         editor.JumpToPosition(position);
     } else {
-        editor.Send(Message::EnsureVisible, view.documentTop);
-        editor.Send(Message::LineScroll, 0, view.visibleTop - editor.Send(Message::GetFirstVisibleLine));
-        editor.Send(Message::SetXOffset, view.xOffset);
+        editor.Send(EnsureVisible, view.documentTop);
+        editor.Send(LineScroll, 0, view.visibleTop - editor.Send(GetFirstVisibleLine));
+        editor.Send(SetXOffset, view.xOffset);
     }
 }
 } // namespace
@@ -381,9 +377,10 @@ bool DocumentSession::RefreshReadOnlyFile() {
 SaveResult DocumentSession::SaveFirst(const std::optional<wxString>& destination,
                                       const EncodingLossDecision& decideLoss, SaveFileType fileType,
                                       SaveTimeMode timeMode) {
-    if (!destination) return {SaveStatus::Cancelled, {}};
-    if (!path_.empty()) return {SaveStatus::Failed, _("This document already has a file name.")};
-    if (destination->empty()) return {SaveStatus::Failed, _("Choose a file name before saving.")};
+    using enum SaveStatus;
+    if (!destination) return {Cancelled, {}};
+    if (!path_.empty()) return {Failed, _("This document already has a file name.")};
+    if (destination->empty()) return {Failed, _("Choose a file name before saving.")};
     return SaveTo(*destination, decideLoss, fileType, false, timeMode);
 }
 
@@ -561,24 +558,25 @@ OpenResult DocumentSession::Open(const std::optional<wxString>& source, const st
 
 OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, EncodingChoice encoding,
                                     bool keepLanguage) {
+    using enum Scintilla::Message;
     const auto lineEndings = CountLineEndings(bytes);
-    editor_.Send(Scintilla::Message::SetReadOnly, 0);
-    const auto changeHistory = editor_.Send(Scintilla::Message::GetChangeHistory);
-    editor_.Send(Scintilla::Message::SetChangeHistory, 0);
-    const auto selectionHistory = editor_.Send(Scintilla::Message::GetUndoSelectionHistory);
-    editor_.Send(Scintilla::Message::SetUndoSelectionHistory, 0);
-    editor_.Send(Scintilla::Message::SetUndoCollection, 0);
-    editor_.Send(Scintilla::Message::ClearAll);
-    editor_.Send(Scintilla::Message::MarkerDeleteAll, 0);
-    editor_.Send(Scintilla::Message::AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
-    editor_.Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(SelectEol(lineEndings, defaultEolMode_)));
-    editor_.Send(Scintilla::Message::SetUndoCollection, 1);
-    editor_.Send(Scintilla::Message::EmptyUndoBuffer);
-    editor_.Send(Scintilla::Message::GotoPos, 0);
-    editor_.Send(Scintilla::Message::SetXOffset, 0);
-    editor_.Send(Scintilla::Message::SetSavePoint);
-    editor_.Send(Scintilla::Message::SetChangeHistory, changeHistory);
-    editor_.Send(Scintilla::Message::SetUndoSelectionHistory, selectionHistory);
+    editor_.Send(SetReadOnly, 0);
+    const auto changeHistory = editor_.Send(GetChangeHistory);
+    editor_.Send(SetChangeHistory, 0);
+    const auto selectionHistory = editor_.Send(GetUndoSelectionHistory);
+    editor_.Send(SetUndoSelectionHistory, 0);
+    editor_.Send(SetUndoCollection, 0);
+    editor_.Send(ClearAll);
+    editor_.Send(MarkerDeleteAll, 0);
+    editor_.Send(AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
+    editor_.Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(SelectEol(lineEndings, defaultEolMode_))));
+    editor_.Send(SetUndoCollection, 1);
+    editor_.Send(EmptyUndoBuffer);
+    editor_.Send(GotoPos, 0);
+    editor_.Send(SetXOffset, 0);
+    editor_.Send(SetSavePoint);
+    editor_.Send(SetChangeHistory, changeHistory);
+    editor_.Send(SetUndoSelectionHistory, selectionHistory);
     path_ = path;
     RefreshReadOnlyFile();
     encoding_ = encoding.encoding;
@@ -609,44 +607,43 @@ bool DocumentSession::IsModified() const {
 }
 
 bool DocumentSession::SelectEncoding(EncodingChoice choice) {
+    using enum Scintilla::Message;
     // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
     if (choice == CurrentEncoding()) return false;
     const bool crossesAnsi = choice.systemDefault != systemDefaultEncoding_;
-    const auto length = editor_.Send(Scintilla::Message::GetLength);
+    const auto length = editor_.Send(GetLength);
     // Pinned EditConvertText changes the native buffer, discarding its history.
     // This adapter keeps the original core in UTF-8 and round-trips native text
     // at that boundary. UTF-8 native locales need no buffer conversion, as in
     // the original's cpSource == cpDest early return.
     const auto native = NativeEncodingChoice();
     if (crossesAnsi && native && native->encoding != FileEncoding::Utf8 && length < NativeConversionLimit) {
-        using Scintilla::Message;
         std::string text(static_cast<size_t>(length) + 1, '\0');
-        editor_.Send(Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+        editor_.Send(GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
         text.resize(static_cast<size_t>(length));
         if (choice.systemDefault)
             text = NativeDefaultEncodingText(wxString::FromUTF8(text.data(), text.size())).utf8_string();
-        const auto history = editor_.Send(Message::GetChangeHistory);
-        const auto selectionHistory = editor_.Send(Message::GetUndoSelectionHistory);
-        editor_.Send(Message::SetReadOnly, 0);
-        editor_.Send(Message::Cancel);
-        editor_.Send(Message::SetChangeHistory, 0);
-        editor_.Send(Message::SetUndoSelectionHistory, 0);
-        editor_.Send(Message::SetUndoCollection, 0);
-        editor_.Send(Message::EmptyUndoBuffer);
-        editor_.Send(Message::ClearAll);
-        editor_.Send(Message::MarkerDeleteAll, static_cast<uintptr_t>(-1));
-        editor_.Send(Message::AppendText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-        editor_.Send(Message::EmptyUndoBuffer);
-        editor_.Send(Message::SetUndoCollection, 1);
-        if (!length && path_.empty()) editor_.Send(Message::SetSavePoint);
-        editor_.Send(Message::SetChangeHistory, history);
-        editor_.Send(Message::SetUndoSelectionHistory, selectionHistory);
+        const auto history = editor_.Send(GetChangeHistory);
+        const auto selectionHistory = editor_.Send(GetUndoSelectionHistory);
+        editor_.Send(SetReadOnly, 0);
+        editor_.Send(Cancel);
+        editor_.Send(SetChangeHistory, 0);
+        editor_.Send(SetUndoSelectionHistory, 0);
+        editor_.Send(SetUndoCollection, 0);
+        editor_.Send(EmptyUndoBuffer);
+        editor_.Send(ClearAll);
+        editor_.Send(MarkerDeleteAll, static_cast<uintptr_t>(-1));
+        editor_.Send(AppendText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+        editor_.Send(EmptyUndoBuffer);
+        editor_.Send(SetUndoCollection, 1);
+        if (!length && path_.empty()) editor_.Send(SetSavePoint);
+        editor_.Send(SetChangeHistory, history);
+        editor_.Send(SetUndoSelectionHistory, selectionHistory);
     }
     // Notepad4 89b8b36 Notepad4.cpp IDM_ENCODING_SELECT: an empty
     // Untitled document adopts the format; a named one compares BOM presence.
     // The original core continues to own text, selection and Undo/Redo.
-    if (editor_.Send(Scintilla::Message::GetLength) == 0 &&
-        (path_.empty() || choice.bom == (originalEncoding_ && originalEncoding_->bom)))
+    if (editor_.Send(GetLength) == 0 && (path_.empty() || choice.bom == (originalEncoding_ && originalEncoding_->bom)))
         originalEncoding_ = choice;
     if (length && crossesAnsi) originalEncoding_.reset();
     encoding_ = choice.encoding;
@@ -682,7 +679,8 @@ void DocumentSession::ApplyEmptySchemeDefaults(bool overrideEncoding) {
     using Scintilla::Message;
     if (editor_.Send(Message::GetLength) || editor_.Send(Message::GetUndoActions)) return;
     const bool shell = SyntaxSettingsLanguage(Language()) == SyntaxLanguage::Bash;
-    editor_.Send(Message::SetEOLMode, static_cast<uintptr_t>(shell ? Scintilla::EndOfLine::Lf : defaultEolMode_));
+    editor_.Send(Message::SetEOLMode,
+                 static_cast<uintptr_t>(std::to_underlying(shell ? Scintilla::EndOfLine::Lf : defaultEolMode_)));
     // Style_SetLexer's LexerChanged_Override bit is set by a user switch to a
     // different scheme, but not by FileLoad/New or automatic save detection.
     if (hasBom_) return;

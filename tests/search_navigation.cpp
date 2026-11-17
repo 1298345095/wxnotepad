@@ -55,11 +55,11 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 NativeSearch::AcceptFeedback feedback;
-                using Scintilla::Message;
                 auto* editor = frame->Editor();
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("oneone one"));
-                editor->Send(Message::GotoPos, 10);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("oneone one"));
+                editor->Send(GotoPos, 10);
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 Require(query, "Find must expose the query");
@@ -96,28 +96,28 @@ public:
                 Command(frame, wxID_FIND);
                 Require(wrap->GetValue(), "Wrap must remain enabled after reopening Find");
                 Wrap(wrap, false);
-                editor->Send(Message::SetSel, 3, 0);
+                editor->Send(SetSel, 3, 0);
                 Click(dialog, wxID_BACKWARD);
-                Require(editor->Send(Message::GetAnchor) == 3 && editor->Send(Message::GetCurrentPos) == 0,
+                Require(editor->Send(GetAnchor) == 3 && editor->Send(GetCurrentPos) == 0,
                         "disabled wrap at document start must preserve a reversed selection");
                 Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
                         "disabled wrap must report no match at the boundary");
-                editor->Send(Message::SetSel, 10, 7);
+                editor->Send(SetSel, 10, 7);
                 Click(dialog, wxID_FORWARD);
-                Require(editor->Send(Message::GetAnchor) == 10 && editor->Send(Message::GetCurrentPos) == 7,
+                Require(editor->Send(GetAnchor) == 10 && editor->Send(GetCurrentPos) == 7,
                         "disabled forward wrap at document end must preserve a reversed selection");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 3, 6, "Previous must start before the smaller endpoint of reversed selections");
-                editor->Send(Message::GotoPos, 3);
+                editor->Send(GotoPos, 3);
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 0, 3, "Previous from a caret must include a match ending at the caret");
                 std::puts("PASS: native dialog Previous, Shift+F3 and disabled wrap boundaries");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文😀中文😀"));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::GotoPos, 20);
-                editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
-                editor->Send(Message::Undo);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中文😀中文😀"));
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(GotoPos, 20);
+                editor->Send(AddText, 1, reinterpret_cast<intptr_t>("!"));
+                editor->Send(Undo);
                 query->SetValue(wxString::FromUTF8("中文😀"));
                 Wrap(wrap, true);
                 Click(dialog, wxID_BACKWARD);
@@ -128,36 +128,36 @@ public:
                 Selection(editor, 10, 20, "direction change must retain multibyte byte boundaries");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 10, "forward wrap must preserve multibyte byte boundaries");
-                Require(Text(editor) == "中文😀中文😀" && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                Require(Text(editor) == "中文😀中文😀" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                            editor->Send(CanRedo),
                         "successful navigation must preserve text, save point and redo history");
                 query->SetValue("missing");
-                editor->Send(Message::SetSel, 10, 0);
+                editor->Send(SetSel, 10, 0);
                 Click(dialog, wxID_BACKWARD);
                 Click(dialog, wxID_FORWARD);
-                Require(editor->Send(Message::GetAnchor) == 10 && editor->Send(Message::GetCurrentPos) == 0 &&
+                Require(editor->Send(GetAnchor) == 10 && editor->Send(GetCurrentPos) == 0 &&
                             frame->GetStatusBar()->GetStatusText(2) == "No match found",
                         "no match in either direction must preserve selection direction and report failure");
                 query->Clear();
                 Click(dialog, wxID_BACKWARD);
-                Require(editor->Send(Message::GetAnchor) == 10 && editor->Send(Message::GetCurrentPos) == 0,
+                Require(editor->Send(GetAnchor) == 10 && editor->Send(GetCurrentPos) == 0,
                         "empty Previous must not execute a search");
-                editor->Send(Message::Redo);
-                Require(Text(editor) == "中文😀中文😀!" && editor->Send(Message::GetModify),
+                editor->Send(Redo);
+                Require(Text(editor) == "中文😀中文😀!" && editor->Send(GetModify),
                         "navigation must leave the original redo action available");
-                editor->Send(Message::Undo);
-                Require(!editor->Send(Message::GetModify), "undo must still reach the original save point");
+                editor->Send(Undo);
+                Require(!editor->Send(GetModify), "undo must still reach the original save point");
                 std::puts("PASS: multibyte navigation, empty/no match and exact editing history");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one"));
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one"));
                 wxYield();
-                editor->Send(Message::SetSel, 3, 0);
+                editor->Send(SetSel, 3, 0);
                 query->SetValue("one");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 0, 3, "a single match must remain selected after backward wrapping");
                 Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped", "single match must report wrap");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 3, "a single match must remain selected after forward wrapping");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(""));
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>(""));
                 wxYield();
                 Click(dialog, wxID_BACKWARD);
                 Click(dialog, wxID_FORWARD);

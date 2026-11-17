@@ -122,6 +122,7 @@ long long NowSeconds() {
         .count();
 }
 void PreserveTimes(EditorFrame* frame, const std::filesystem::path& path, int save) {
+    using enum Scintilla::Message;
     SetOldTimes(path);
     const auto before = ReadTimes(path);
     TestEditor::Append(frame, " dirty");
@@ -131,22 +132,23 @@ void PreserveTimes(EditorFrame* frame, const std::filesystem::path& path, int sa
     LogTimes("Original-time save after", after);
     Require(WritableTimesEqual(before, after),
             "original-time save must preserve all filesystem-representable writable times");
-    Require(TestFiles::Bytes(path) == "backing dirty" && !frame->Editor()->Send(Message::GetModify),
+    Require(TestFiles::Bytes(path) == "backing dirty" && !frame->Editor()->Send(GetModify),
             "original-time command must write content and establish normal save point");
-    frame->Editor()->Send(Message::Undo);
-    Require(frame->Editor()->Send(Message::GetModify), "Undo across original-time save must be dirty");
-    frame->Editor()->Send(Message::Redo);
-    Require(!frame->Editor()->Send(Message::GetModify), "Redo to original-time save must be clean");
+    frame->Editor()->Send(Undo);
+    Require(frame->Editor()->Send(GetModify), "Undo across original-time save must be dirty");
+    frame->Editor()->Send(Redo);
+    Require(!frame->Editor()->Send(GetModify), "Redo to original-time save must be clean");
     std::printf("PASS: original-time content save preserves timestamps, mtime=%lld\n", ModifiedSeconds(after));
 }
 void UpdateDirty(EditorFrame* frame, const std::filesystem::path& path, int update) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     TestEditor::Append(frame, " unsaved  \n");
-    editor->Send(Message::SetSel, 8, 2);
+    editor->Send(SetSel, 8, 2);
     const auto text = TestEditor::Text(frame);
     const auto identity = frame->DocumentPath();
     const auto encoding = frame->DocumentEncoding();
-    const auto actions = editor->Send(Message::GetUndoActions);
+    const auto actions = editor->Send(GetUndoActions);
     SetOldTimes(path);
     const auto before = ReadTimes(path);
     const auto earliest = NowSeconds();
@@ -159,15 +161,15 @@ void UpdateDirty(EditorFrame* frame, const std::filesystem::path& path, int upda
             "timestamp update must set current mtime and retain other writable times");
     Require(TestFiles::Bytes(path) == "backing dirty" && TestEditor::Text(frame) == text &&
                 frame->DocumentPath() == identity && frame->DocumentEncoding() == encoding &&
-                editor->Send(Message::GetUndoActions) == actions && editor->Send(Message::GetModify),
+                editor->Send(GetUndoActions) == actions && editor->Send(GetModify),
             "timestamp-only dirty document must keep independent backing bytes, content, history and identity");
     TestEditor::RequireSelection(editor, 8, 2, "timestamp-only action must retain reversed selection");
-    editor->Send(Message::Undo);
-    Require(!editor->Send(Message::GetModify), "timestamp-only action must retain previous save point");
-    editor->Send(Message::Redo);
-    Require(editor->Send(Message::GetModify) && TestEditor::Text(frame) == text,
+    editor->Send(Undo);
+    Require(!editor->Send(GetModify), "timestamp-only action must retain previous save point");
+    editor->Send(Redo);
+    Require(editor->Send(GetModify) && TestEditor::Text(frame) == text,
             "timestamp-only action must retain pending Redo text");
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     std::printf("PASS: timestamp-only dirty update preserves disk bytes/editor state, mtime=%lld\n",
                 ModifiedSeconds(after));
 }

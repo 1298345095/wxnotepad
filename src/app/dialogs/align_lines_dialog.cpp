@@ -1,4 +1,5 @@
 #include "app/dialogs/align_lines_dialog.h"
+#include <utility>
 #include <wx/translation.h>
 #include "editor/align_lines.h"
 #include <wx/dialog.h>
@@ -21,7 +22,7 @@ bool ShowAlignLinesDialog(wxWindow* parent, AlignmentMode& mode) {
         choices[i]->SetName(names[i]);
         contents->Add(choices[i], 0, wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(10));
     }
-    choices[static_cast<size_t>(mode)]->SetValue(true);
+    choices[static_cast<size_t>(std::to_underlying(mode))]->SetValue(true);
     contents->Add(dialog.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, dialog.FromDIP(10));
     dialog.SetSizerAndFit(contents);
     dialog.CentreOnParent();

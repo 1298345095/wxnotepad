@@ -24,9 +24,10 @@ void Character(EditorControl* editor, int ch) {
     editor->GetEventHandler()->ProcessEvent(event);
 }
 void Reset(EditorControl* editor, const char* text) {
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
-    editor->Send(Message::Colourise, 0, -1);
+    using enum Scintilla::Message;
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor->Send(GotoPos, editor->Send(GetLength));
+    editor->Send(Colourise, 0, -1);
 }
 void Typing(EditorFrame* frame, int bit, bool enabled) {
     auto* editor = frame->Editor();

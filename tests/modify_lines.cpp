@@ -7,6 +7,7 @@
 #include <wx/msgdlg.h>
 #include <chrono>
 #include <functional>
+#include <utility>
 #ifdef __WXMSW__
 #include <commctrl.h>
 #endif
@@ -17,16 +18,17 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 void NumberedLines(EditorControl* editor) {
+    using enum Scintilla::Message;
     TestEditor::ResetStream(editor, "zero\none\n\nthree\nfour", 6, 16);
     Require(editor->ModifyLines("$(L):", ":$(N)", true), "numbered stream lines are supported");
     Require(TestEditor::Text(editor) == "zero\n2:one:1\n\n4:three:2\nfour",
             "document numbering advances across skipped lines while continuous counters advance on insertion");
     TestEditor::RequireSelection(editor, 5, 24, "partial selection expands to participating whole lines");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "zero\none\n\nthree\nfour" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "zero\none\n\nthree\nfour" && !editor->Send(CanUndo) &&
+                !editor->Send(GetModify),
             "prefix and suffix undo together to save point");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "zero\n2:one:1\n\n4:three:2\nfour", "redo restores numbered lines");
 }
 void Substitutions(EditorControl* editor) {
@@ -428,7 +430,8 @@ void Protection(EditorFrame* frame) {
     TestEditor::ResetStream(editor, "alpha\nbeta", 0, 5);
     editor->ModifyLines("[", "]");
     editor->Send(Message::Undo);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+    editor->Send(Message::SetSelectionMode,
+                 static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
     editor->Send(Message::SetRectangularSelectionAnchor, 0);
     editor->Send(Message::SetRectangularSelectionCaret, 8);
     Require(!editor->ModifyLines("", ""), "rectangle rejection precedes the both-empty shortcut");

@@ -16,14 +16,15 @@ std::wstring SelectedUnits(EditorControl& editor, intptr_t start, intptr_t end) 
     return units;
 }
 void ReplaceUnits(EditorControl& editor, intptr_t start, intptr_t end, std::wstring_view units) {
+    using enum Scintilla::Message;
     std::string bytes(UTF8Length(units), '\0');
     UTF8FromUTF16(units, bytes.data(), bytes.size());
-    const bool backwards = editor.Send(Message::GetAnchor) > editor.Send(Message::GetCurrentPos);
-    editor.Send(Message::SetTargetStart, start);
-    editor.Send(Message::SetTargetEnd, end);
-    editor.Send(Message::ReplaceTarget, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
+    const bool backwards = editor.Send(GetAnchor) > editor.Send(GetCurrentPos);
+    editor.Send(SetTargetStart, start);
+    editor.Send(SetTargetEnd, end);
+    editor.Send(ReplaceTarget, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     const auto resultEnd = start + static_cast<intptr_t>(bytes.size());
-    editor.Send(Message::SetSel, backwards ? resultEnd : start, backwards ? start : resultEnd);
+    editor.Send(SetSel, backwards ? resultEnd : start, backwards ? start : resultEnd);
 }
 
 bool FlushTabStop(std::wstring& output, std::wstring& spaces, wchar_t unit, wchar_t next) {

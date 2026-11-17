@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <utility>
 #include <ScintillaTypes.h>
 #include <cstdlib>
 
@@ -11,6 +12,7 @@ void EditorControl::ToggleBookmark() {
 }
 
 void EditorControl::GoToBookmark(bool forwards) {
+    using enum Scintilla::CaretPolicy;
     // Original Notepad4.cpp::BME_EDIT_BOOKMARKNEXT/PREV, including its caret policy.
     const auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));
     const auto message = forwards ? Message::MarkerNext : Message::MarkerPrevious;
@@ -21,11 +23,11 @@ void EditorControl::GoToBookmark(bool forwards) {
     Send(Message::EnsureVisible, target);
     Send(Message::GotoLine, target);
     Send(Message::SetYCaretPolicy,
-         static_cast<uintptr_t>(Scintilla::CaretPolicy::Slop) | static_cast<uintptr_t>(Scintilla::CaretPolicy::Strict) |
-             static_cast<uintptr_t>(Scintilla::CaretPolicy::Even),
+         static_cast<uintptr_t>(std::to_underlying(Slop)) | static_cast<uintptr_t>(std::to_underlying(Strict)) |
+             static_cast<uintptr_t>(std::to_underlying(Even)),
          10);
     Send(Message::ScrollCaret);
-    Send(Message::SetYCaretPolicy, static_cast<uintptr_t>(Scintilla::CaretPolicy::Even), 0);
+    Send(Message::SetYCaretPolicy, static_cast<uintptr_t>(std::to_underlying(Even)), 0);
 }
 
 void EditorControl::SelectAllBookmarks() {

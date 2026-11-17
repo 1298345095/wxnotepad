@@ -65,6 +65,7 @@ public:
                     std::string("\n\0", 2)};
                 for (bool bom : {false, true})
                     for (const auto& payload : payloads) {
+                        using enum Scintilla::Message;
                         const auto bytes = (bom ? std::string("\x{ff}\x{fe}", 2) : std::string{}) + payload;
                         Write(source, bytes);
                         Require(frame->Open(Filename(source), FileEncoding::Utf16Le).status == OpenStatus::Opened,
@@ -74,15 +75,14 @@ public:
                                 "UTF-16LE format metadata must distinguish BOM");
                         Require(frame->Save().status == SaveStatus::Saved && Bytes(source) == bytes,
                                 "Save must preserve UTF-16LE with NUL and actual EOLs");
-                        frame->Editor()->Send(Scintilla::Message::GotoPos,
-                                              frame->Editor()->Send(Scintilla::Message::GetLength));
-                        frame->Editor()->Send(Scintilla::Message::AddText, 4, reinterpret_cast<intptr_t>("😀"));
+                        frame->Editor()->Send(GotoPos, frame->Editor()->Send(GetLength));
+                        frame->Editor()->Send(AddText, 4, reinterpret_cast<intptr_t>("😀"));
                         const auto copy = directory / u8"另存.txt";
                         Require(frame->SaveAs(Filename(copy)).status == SaveStatus::Saved &&
                                     Bytes(copy) == bytes + std::string("\x{3d}\x{d8}\0\x{de}", 4),
                                 "edited Save As must preserve UTF-16LE BOM and exact bytes");
                         Require(Bytes(source) == bytes, "Save As must preserve original source bytes");
-                        frame->Editor()->Send(Scintilla::Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
+                        frame->Editor()->Send(AddText, 1, reinterpret_cast<intptr_t>("!"));
                         const auto oldText = Text(frame);
                         Require(frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
                                     frame->SaveAs(Filename(directory / "missing" / "bad.txt")).status ==
@@ -91,15 +91,14 @@ public:
                         Require(Text(frame) == oldText && frame->DocumentPath() == Filename(copy) &&
                                     frame->DocumentHasBom() == bom &&
                                     frame->DocumentEncoding() == FileEncoding::Utf16Le &&
-                                    frame->Editor()->Send(Scintilla::Message::GetModify),
+                                    frame->Editor()->Send(GetModify),
                                 "save failure must retain text/identity/format/dirty state");
                         Write(bad, invalid[0]);
                         Require(frame->Open(Filename(bad), FileEncoding::Utf16Le).status == OpenStatus::Failed &&
-                                    Text(frame) == oldText && frame->Editor()->Send(Scintilla::Message::GetModify),
+                                    Text(frame) == oldText && frame->Editor()->Send(GetModify),
                                 "strict failure must preserve dirty state without prompting");
-                        frame->Editor()->Send(Scintilla::Message::Undo);
-                        Require(!frame->Editor()->Send(Scintilla::Message::GetModify),
-                                "failure must preserve Undo to save point");
+                        frame->Editor()->Send(Undo);
+                        Require(!frame->Editor()->Send(GetModify), "failure must preserve Undo to save point");
                         Require(frame->NewDocument() && frame->DocumentEncoding() == FileEncoding::Utf8 &&
                                     !frame->DocumentHasBom(),
                                 "New must reset UTF8/no-BOM metadata");

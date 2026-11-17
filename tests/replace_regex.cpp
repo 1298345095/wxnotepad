@@ -74,15 +74,17 @@ public:
                 auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
                 Toggle(wrap, false);
                 const auto setup = [&](const char* before, const char* pattern, const char* with) {
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(before));
-                    editor->Send(Message::EmptyUndoBuffer);
-                    editor->Send(Message::SetSavePoint);
-                    editor->Send(Message::GotoPos, 0);
+                    using enum Scintilla::Message;
+                    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(before));
+                    editor->Send(EmptyUndoBuffer);
+                    editor->Send(SetSavePoint);
+                    editor->Send(GotoPos, 0);
                     query->SetValue(wxString::FromUTF8(pattern));
                     replacement->SetValue(wxString::FromUTF8(with));
                 };
                 const auto example = [&](const char* before, const char* pattern, const char* with,
                                          const char* expected) {
+                    using enum Scintilla::Message;
                     setup(before, pattern, with);
                     Click(dialog, wxID_FORWARD);
                     Click(dialog, wxID_REPLACE);
@@ -90,11 +92,10 @@ public:
                         std::fprintf(stderr, "Expansion actual: %s; expected: %s\n", Text(editor).c_str(), expected);
                     Require(Text(editor) == expected, "replacement must follow the explicit original-format example");
                     Command(frame, wxID_UNDO);
-                    Require(Text(editor) == before && !editor->Send(Message::GetModify) &&
-                                !editor->Send(Message::CanUndo),
+                    Require(Text(editor) == before && !editor->Send(GetModify) && !editor->Send(CanUndo),
                             "each expansion must be one undo action");
                     Command(frame, wxID_REDO);
-                    Require(Text(editor) == expected && editor->Send(Message::GetModify),
+                    Require(Text(editor) == expected && editor->Send(GetModify),
                             "Redo must restore exact expansion bytes");
                 };
                 example("中文12", "(中文)([0-9]+)", "\\2-\\1", "12-中文");

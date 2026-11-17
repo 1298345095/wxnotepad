@@ -116,7 +116,7 @@ private:
         editor_->Send(Scintilla::Message::GotoPos, 0);
     }
     void Report() {
-        using Scintilla::Message;
+        using enum Scintilla::Message;
         if (++ticks_ > (argc == 3 ? 3000 : 600)) {
             frame_->Close();
             return;
@@ -124,16 +124,15 @@ private:
         std::ofstream output(report_, std::ios::trunc);
         const auto origin = editor_->ClientToScreen(wxPoint(0, 0));
         output << origin.x << ' ' << origin.y << ' ' << editor_->GetClientSize().x << ' ' << editor_->GetClientSize().y;
-        for (auto message :
-             {Message::GetCurrentPos, Message::GetAnchor, Message::GetFirstVisibleLine, Message::GetXOffset})
+        for (auto message : {GetCurrentPos, GetAnchor, GetFirstVisibleLine, GetXOffset})
             output << ' ' << editor_->Send(message);
         for (int position : {1, 12})
-            output << ' ' << editor_->Send(Message::PointXFromPosition, 0, position) << ' '
-                   << editor_->Send(Message::PointYFromPosition, 0, position);
+            output << ' ' << editor_->Send(PointXFromPosition, 0, position) << ' '
+                   << editor_->Send(PointYFromPosition, 0, position);
         output << '\n';
-        const auto length = editor_->Send(Message::GetLength);
+        const auto length = editor_->Send(GetLength);
         std::string text(static_cast<size_t>(length) + 1, '\0');
-        editor_->Send(Message::GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+        editor_->Send(GetText, text.size(), reinterpret_cast<intptr_t>(text.data()));
         for (intptr_t index = 0; index < length; ++index)
             output << std::format("{:02x}", static_cast<unsigned char>(text[index]));
         output << '\n';

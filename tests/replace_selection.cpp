@@ -6,6 +6,7 @@
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <utility>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -63,10 +64,11 @@ void SelectionExamples(EditorFrame* frame, EditorControl* editor, wxTextCtrl* qu
                           result](const char* before, intptr_t anchor, intptr_t caret, const char* pattern,
                                   const char* with, bool regularExpression, const char* expected, size_t count,
                                   intptr_t selectedStart, intptr_t selectedEnd) {
-        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(before));
-        editor->Send(Message::EmptyUndoBuffer);
-        editor->Send(Message::SetSavePoint);
-        editor->Send(Message::SetSel, anchor, caret);
+        using enum Scintilla::Message;
+        editor->Send(SetText, 0, reinterpret_cast<intptr_t>(before));
+        editor->Send(EmptyUndoBuffer);
+        editor->Send(SetSavePoint);
+        editor->Send(SetSel, anchor, caret);
         if (regex->GetValue() != regularExpression) NativeSearch::Toggle(regex, regularExpression);
         query->SetValue(wxString::FromUTF8(pattern));
         replacement->SetValue(wxString::FromUTF8(with));
@@ -78,17 +80,16 @@ void SelectionExamples(EditorFrame* frame, EditorControl* editor, wxTextCtrl* qu
         Require(NativeSearch::Text(editor) == expected && result->GetLabel() == expectedCount,
                 "selection replacement produces the pinned bytes and count");
         NativeSearch::Selection(editor, selectedStart, selectedEnd, "selection range is repaired");
-        Require((editor->Send(Message::GetAnchor) > editor->Send(Message::GetCurrentPos)) == (anchor > caret),
+        Require((editor->Send(GetAnchor) > editor->Send(GetCurrentPos)) == (anchor > caret),
                 "selection replacement preserves selection direction");
         if (std::string(before) != expected) {
             NativeSearch::Command(frame, wxID_UNDO);
-            Require(NativeSearch::Text(editor) == before && !editor->Send(Message::GetModify) &&
-                        !editor->Send(Message::CanUndo),
+            Require(NativeSearch::Text(editor) == before && !editor->Send(GetModify) && !editor->Send(CanUndo),
                     "one Undo restores every selected edit");
             NativeSearch::Command(frame, wxID_REDO);
             Require(NativeSearch::Text(editor) == expected, "one Redo restores every selected edit");
         } else {
-            Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+            Require(!editor->Send(GetModify) && !editor->Send(CanUndo),
                     "unchanged selection replacements retain history and save point");
         }
     };
@@ -123,6 +124,7 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 NativeSearch::AcceptFeedback feedback;
                 auto* editor = frame->Editor();
                 NativeSearch::Command(frame, wxID_REPLACE);
@@ -131,38 +133,38 @@ public:
                 auto* button = wxDynamicCast(wxWindow::FindWindowByName("Replace in selection", frame), wxButton);
                 Require(query && replacement && button, "Replace exposes the original In Selection operation");
                 auto* dialog = query->GetParent();
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one one"));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::SetSel, 4, 7);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one one one"));
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(SetSel, 4, 7);
                 query->SetValue("one");
                 replacement->SetValue("two two");
                 NativeSearch::Click(dialog, button->GetId());
                 Require(NativeSearch::Text(editor) == "one two two one", "only the original selected match grows");
                 NativeSearch::Selection(editor, 4, 11, "selection follows the growing replacement");
                 NativeSearch::Command(frame, wxID_UNDO);
-                Require(NativeSearch::Text(editor) == "one one one" && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo),
+                Require(NativeSearch::Text(editor) == "one one one" && !editor->Send(GetModify) &&
+                            !editor->Send(CanUndo),
                         "one Undo restores the selection replacement");
                 std::puts("PASS: original selection scope, growth and one-operation Undo");
                 auto* regex = wxDynamicCast(wxWindow::FindWindowByName("Regular expression", frame), wxCheckBox);
                 auto* result = wxDynamicCast(wxWindow::FindWindowByName("Replacement result", dialog), wxStaticText);
                 Require(regex && result, "selection replacement shares regex options and count feedback");
                 SelectionExamples(frame, editor, query, replacement, button, dialog, regex, result);
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one"));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::InsertText, 7, reinterpret_cast<intptr_t>("!"));
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one one"));
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(InsertText, 7, reinterpret_cast<intptr_t>("!"));
                 NativeSearch::Command(frame, wxID_UNDO);
-                editor->Send(Message::SetSel, 3, 0);
+                editor->Send(SetSel, 3, 0);
                 if (!regex->GetValue()) NativeSearch::Toggle(regex, true);
                 for (const auto* pattern : {"missing", "(one)", "["}) {
                     query->SetValue(pattern);
                     replacement->SetValue("$&");
                     NativeSearch::Click(dialog, button->GetId());
-                    Require(NativeSearch::Text(editor) == "one one" && !editor->Send(Message::GetModify) &&
-                                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
-                                editor->Send(Message::GetAnchor) == 3 && editor->Send(Message::GetCurrentPos) == 0,
+                    Require(NativeSearch::Text(editor) == "one one" && !editor->Send(GetModify) &&
+                                !editor->Send(CanUndo) && editor->Send(CanRedo) && editor->Send(GetAnchor) == 3 &&
+                                editor->Send(GetCurrentPos) == 0,
                             "no-match, no-op and invalid selection replacements retain Redo and direction");
                 }
                 Require(result->GetLabel() == "Invalid regular expression",
@@ -175,12 +177,13 @@ public:
                 Require(!button->IsShown(), "Find view hides replacement-only operation");
                 NativeSearch::Command(frame, wxID_REPLACE);
                 Require(button->IsShown(), "Replace view restores In Selection");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("a\nb\nc"));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-                editor->Send(Message::SetRectangularSelectionAnchor, 0);
-                editor->Send(Message::SetRectangularSelectionCaret, 3);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("a\nb\nc"));
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(SetSelectionMode,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+                editor->Send(SetRectangularSelectionAnchor, 0);
+                editor->Send(SetRectangularSelectionCaret, 3);
                 query->SetValue("[");
                 const wxString previousResult = result->GetLabel();
                 {
@@ -193,11 +196,11 @@ public:
 #endif
                 }
                 Require(
-                    NativeSearch::Text(editor) == "a\nb\nc" && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::GetModify) && editor->Send(Message::SelectionIsRectangle) &&
-                        result->GetLabel() == previousResult,
+                    NativeSearch::Text(editor) == "a\nb\nc" && !editor->Send(CanUndo) && !editor->Send(GetModify) &&
+                        editor->Send(SelectionIsRectangle) && result->GetLabel() == previousResult,
                     "rectangle rejection precedes invalid-pattern feedback and retains document, selection and count");
-                editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
+                editor->Send(SetSelectionMode,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
                 std::puts("PASS: native rectangular-selection warning without edits");
 
                 const auto path = TestFiles::TemporaryDirectory() /
@@ -213,7 +216,7 @@ public:
                 const wxString filename = wxString::FromUTF8(path.string());
 #endif
                 Require(frame->Open(filename).status == OpenStatus::Opened, "selected disk fixture opens");
-                editor->Send(Message::SetSel, 10, 18);
+                editor->Send(SetSel, 10, 18);
                 if (!regex->GetValue()) NativeSearch::Toggle(regex, true);
                 query->SetValue(wxString::FromUTF8("(中文)([0-9]+)"));
                 replacement->SetValue("$2:$1:$2");
@@ -229,7 +232,7 @@ public:
                 Require(frame->Open(filename).status == OpenStatus::Opened &&
                             NativeSearch::Text(editor) == "中文12\r\n34:中文:34\n中文56\r",
                         "saved selection replacement reopens with exact bytes");
-                editor->Send(Message::SetSel, 10, 22);
+                editor->Send(SetSel, 10, 22);
                 query->SetValue(wxString::FromUTF8("([0-9]+):中文:\\1"));
                 replacement->SetValue("X");
                 NativeSearch::Click(dialog, button->GetId());

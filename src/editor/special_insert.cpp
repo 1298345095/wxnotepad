@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <utility>
 #include "syntax/syntax_catalog.h"
 #include "ScintillaTypes.h"
 
@@ -28,7 +29,7 @@ void EditorControl::InsertGuid() {
 }
 
 void EditorControl::InsertUnicodeControlCharacter(UnicodeControlCharacter character, bool defaultEncoding) {
-    const char* text = UnicodeControlInsertions[static_cast<size_t>(character)].utf8;
+    const char* text = UnicodeControlInsertions[static_cast<size_t>(std::to_underlying(character))].utf8;
     if (defaultEncoding && text[1] != '\0') return;
     Send(Scintilla::Message::ReplaceSel, 0, reinterpret_cast<intptr_t>(text));
 }

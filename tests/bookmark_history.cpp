@@ -11,6 +11,7 @@
 #include <sstream>
 #include <vector>
 #include <filesystem>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -39,10 +40,8 @@ std::vector<std::vector<std::string>> LoadHistoryFixture(const std::filesystem::
     return rows;
 }
 void CheckHistoryState(EditorControl* editor, const std::vector<std::string>& expected, const char* name) {
-    for (const auto [index, message] : {std::pair{2, Message::GetChangeHistory},
-                                        {3, Message::GetModify},
-                                        {4, Message::CanUndo},
-                                        {5, Message::CanRedo}})
+    using enum Scintilla::Message;
+    for (const auto [index, message] : {std::pair{2, GetChangeHistory}, {3, GetModify}, {4, CanUndo}, {5, CanRedo}})
         Require(editor->Send(message) == std::stoll(expected[index]), name);
 }
 void History(EditorFrame* frame) {
@@ -135,11 +134,10 @@ void History(EditorFrame* frame) {
     std::puts("PASS: original insert/delete/savepoint/Undo/Redo/read-only/New history fixtures and undo gate");
 }
 void MarginClick(EditorControl* editor, int line) {
-    const int x =
-        static_cast<int>(editor->Send(Message::GetMarginWidthN, 0) + editor->Send(Message::GetMarginWidthN, 1) / 2);
-    const int y =
-        static_cast<int>(editor->Send(Message::PointYFromPosition, 0, editor->Send(Message::PositionFromLine, line)) +
-                         editor->Send(Message::TextHeight, line) / 2);
+    using enum Scintilla::Message;
+    const int x = static_cast<int>(editor->Send(GetMarginWidthN, 0) + editor->Send(GetMarginWidthN, 1) / 2);
+    const auto y = static_cast<int>(editor->Send(PointYFromPosition, 0, editor->Send(PositionFromLine, line)) +
+                                    editor->Send(TextHeight, line) / 2);
 #ifdef __WXMSW__
     const auto window = static_cast<HWND>(editor->GetHandle());
     SendMessageW(window, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(x, y));
@@ -174,9 +172,10 @@ void Geometry(EditorFrame* frame) {
     Require(editor->Send(Message::MarkerGet, 1) & 1, "native bookmark command shares marker zero");
     Menu(frame, "Bookmark Margin");
     const auto bookmarkCount = [&] {
-        const int height = static_cast<int>(editor->Send(Message::TextHeight, 0));
-        const int width = static_cast<int>(editor->Send(Message::GetMarginWidthN, 1));
-        const int left = static_cast<int>(editor->Send(Message::GetMarginWidthN, 0));
+        using enum Scintilla::Message;
+        const auto height = static_cast<int>(editor->Send(TextHeight, 0));
+        const int width = static_cast<int>(editor->Send(GetMarginWidthN, 1));
+        const int left = static_cast<int>(editor->Send(GetMarginWidthN, 0));
         const auto pixels = NativePaint::Read(editor, wxRect(left, height, width, height));
         return std::count(pixels.begin(), pixels.end(), wxColour(64, 128, 64));
     };
@@ -320,21 +319,22 @@ public:
         auto* frame = new EditorFrame;
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
+            using enum Scintilla::Message;
             try {
                 Require(ready, "native view is presented");
                 auto* editor = frame->Editor();
                 std::printf("native bookmark/history dpi=%d\n", editor->GetDPI().y);
-                Require(editor->Send(Message::GetMarginWidthN, 1) == 0 && editor->Send(Message::GetChangeHistory) == 0,
+                Require(editor->Send(GetMarginWidthN, 1) == 0 && editor->Send(GetChangeHistory) == 0,
                         "original defaults hide bookmark margin and disable change history");
                 Menu(frame, "Bookmark Margin");
-                Require(editor->Send(Message::GetMarginWidthN, 1) == editor->Send(Message::TextHeight, 0) - 2 &&
-                            editor->Send(Message::MarkerSymbolDefined, 0) ==
-                                static_cast<intptr_t>(Scintilla::MarkerSymbol::VerticalBookmark),
+                Require(editor->Send(GetMarginWidthN, 1) == editor->Send(TextHeight, 0) - 2 &&
+                            editor->Send(MarkerSymbolDefined, 0) ==
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::MarkerSymbol::VerticalBookmark)),
                         "native menu shows original vertical bookmark at text-height minus two width");
                 NativeKeys::Shortcut(frame, 'M', true, false, true);
-                Require(editor->Send(Message::GetMarginWidthN, 1) == 0 &&
-                            editor->Send(Message::MarkerSymbolDefined, 0) ==
-                                static_cast<intptr_t>(Scintilla::MarkerSymbol::Background),
+                Require(editor->Send(GetMarginWidthN, 1) == 0 &&
+                            editor->Send(MarkerSymbolDefined, 0) ==
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::MarkerSymbol::Background)),
                         "native Ctrl+Shift+M restores background bookmark and hides margin");
                 std::puts("PASS: native bookmark margin menu/shortcut and original geometry/styles");
                 History(frame);
@@ -344,7 +344,7 @@ public:
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
-            frame->Editor()->Send(Message::SetSavePoint);
+            frame->Editor()->Send(SetSavePoint);
             frame->Destroy();
             ExitMainLoop();
         });

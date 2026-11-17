@@ -9,6 +9,7 @@
 #include <wx/timer.h>
 #include "native_dialog_helpers.h"
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -87,10 +88,9 @@ private:
                 "native save types must initially select current scheme first, with All Files last");
         GSList* remaining = filters->next;
         for (const auto& definition : SyntaxCatalog()) {
-            if (definition.language == SyntaxLanguage::MarkdownGitLab ||
-                definition.language == SyntaxLanguage::MarkdownPandoc)
-                continue;
-            const auto* name = definition.language == SyntaxLanguage::MarkdownGitHub ? "Markdown" : definition.name;
+            using enum SyntaxLanguage;
+            if (definition.language == MarkdownGitLab || definition.language == MarkdownPandoc) continue;
+            const auto* name = definition.language == MarkdownGitHub ? "Markdown" : definition.name;
             if (current_ == name) continue;
             Require(remaining && wxString::FromUTF8(gtk_file_filter_get_name(GTK_FILE_FILTER(remaining->data)))
                                      .StartsWith(wxString(name) + " ("),
@@ -106,14 +106,17 @@ private:
     int stage_ = 0;
 };
 wxString SaveCommand(EditorFrame* frame, int id, const wxString& path = {}, const wxString& type = {}) {
+    using enum SyntaxLanguage;
     const auto lexer = frame->Editor()->Send(Message::GetLexer);
-    auto current = lexer == SCLEX_CPP      ? SyntaxLanguage::Cpp
-                   : lexer == SCLEX_PYTHON ? SyntaxLanguage::Python
-                   : lexer == SCLEX_JSON   ? SyntaxLanguage::Json
-                                           : SyntaxLanguage::PlainText;
+    auto current = PlainText;
+    if (lexer == SCLEX_CPP)
+        current = Cpp;
+    else if (lexer == SCLEX_PYTHON)
+        current = Python;
+    else if (lexer == SCLEX_JSON)
+        current = Json;
     if (lexer == SCLEX_JAVASCRIPT) {
-        const SyntaxLanguage dialects[] = {SyntaxLanguage::JavaScript, SyntaxLanguage::Jsx, SyntaxLanguage::TypeScript,
-                                           SyntaxLanguage::Tsx};
+        constexpr std::array dialects{JavaScript, Jsx, TypeScript, Tsx};
         const auto dialect = frame->Editor()->Send(Message::GetPropertyInt, reinterpret_cast<uintptr_t>("lexer.lang"));
         Require(dialect >= 0 && dialect < 4, "native Save chooser must retain JS dialect");
         current = dialects[dialect];
@@ -167,28 +170,28 @@ public:
         CallAfter([this, frame] {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-syntax-save");
             try {
+                using enum Scintilla::Message;
                 std::filesystem::create_directory(directory);
                 const auto cpp = directory / "first.CpP";
                 const auto plain = directory / "plain.txt";
                 const auto back = directory / "back.cpp";
                 auto* editor = frame->Editor();
                 const std::string source = "int value; // 中文\r\nint next;\n";
-                editor->Send(Message::AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
-                editor->Send(Message::SetSel, 7, 2);
-                const auto eol = editor->Send(Message::GetEOLMode);
+                editor->Send(AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
+                editor->Send(SetSel, 7, 2);
+                const auto eol = editor->Send(GetEOLMode);
                 SaveCommand(frame, wxID_SAVE, Filename(cpp));
                 Language(frame, true);
                 Require(NativeDialogs::PathEquals(frame->DocumentPath(), Filename(cpp)) && Bytes(cpp) == source &&
-                            Text(editor) == source && !editor->Send(Message::GetModify) &&
-                            editor->Send(Message::CanUndo) && editor->Send(Message::GetAnchor) == 7 &&
-                            editor->Send(Message::GetCurrentPos) == 2 && editor->Send(Message::GetEOLMode) == eol &&
-                            frame->DocumentEncoding() == FileEncoding::Utf8,
+                            Text(editor) == source && !editor->Send(GetModify) && editor->Send(CanUndo) &&
+                            editor->Send(GetAnchor) == 7 && editor->Send(GetCurrentPos) == 2 &&
+                            editor->Send(GetEOLMode) == eol && frame->DocumentEncoding() == FileEncoding::Utf8,
                         "first Save must preserve text, selection, EOL, encoding and history at its save point");
                 Command(frame, wxID_UNDO);
-                Require(Text(editor).empty() && editor->Send(Message::GetModify),
+                Require(Text(editor).empty() && editor->Send(GetModify),
                         "one Undo after first Save must undo the original insertion, not syntax");
                 Command(frame, wxID_REDO);
-                Require(Text(editor) == source && !editor->Send(Message::GetModify),
+                Require(Text(editor) == source && !editor->Send(GetModify),
                         "Redo must restore the saved text and save point");
                 std::puts("PASS: native first Save selects C++ without an extra history action");
 
@@ -202,49 +205,47 @@ public:
                 Require(frame->GetStatusBar()->GetStatusText().Contains("override"),
                         "named C++ default Save As to .txt must explicitly retain C++");
                 Require(frame->Open(Filename(cpp)).status == OpenStatus::Opened, "BOM fixture must reopen");
-                editor->Send(Message::GotoPos, source.size());
-                editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("x"));
+                editor->Send(GotoPos, source.size());
+                editor->Send(AddText, 1, reinterpret_cast<intptr_t>("x"));
                 Command(frame, wxID_UNDO);
-                editor->Send(Message::SetSel, 8, 1);
-                const auto loadedEol = editor->Send(Message::GetEOLMode);
+                editor->Send(SetSel, 8, 1);
+                const auto loadedEol = editor->Send(GetEOLMode);
                 SaveCommand(frame, wxID_SAVEAS, Filename(plain), "All Files");
                 Language(frame, false);
                 Require(Bytes(plain) == bytes && Bytes(cpp) == bytes && Text(editor) == source &&
-                            frame->DocumentHasUtf8Bom() && editor->Send(Message::CanRedo) &&
-                            !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify) &&
-                            editor->Send(Message::GetAnchor) == 8 && editor->Send(Message::GetCurrentPos) == 1 &&
-                            editor->Send(Message::GetEOLMode) == loadedEol,
+                            frame->DocumentHasUtf8Bom() && editor->Send(CanRedo) && !editor->Send(CanUndo) &&
+                            !editor->Send(GetModify) && editor->Send(GetAnchor) == 8 &&
+                            editor->Send(GetCurrentPos) == 1 && editor->Send(GetEOLMode) == loadedEol,
                         "C++ to Plain Text Save As must preserve BOM/EOL, selection and the pending redo branch");
                 SaveCommand(frame, wxID_SAVEAS, Filename(back), "All Files");
                 Language(frame, true);
-                Require(Bytes(back) == bytes && editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo),
+                Require(Bytes(back) == bytes && editor->Send(CanRedo) && !editor->Send(CanUndo),
                         "Plain Text to C++ Save As must retain exact bytes and redo history");
                 Command(frame, wxID_REDO);
-                Require(Text(editor) == source + "x" && editor->Send(Message::GetModify),
+                Require(Text(editor) == source + "x" && editor->Send(GetModify),
                         "Save As must not discard pending Redo");
                 Command(frame, wxID_UNDO);
-                Require(Text(editor) == source && !editor->Send(Message::GetModify),
+                Require(Text(editor) == source && !editor->Send(GetModify),
                         "Undo must return to the new saved path's save point");
                 std::puts("PASS: native Save As switches both directions and preserves BOM, mixed EOL and Redo");
 
-                editor->Send(Message::SetSel, 9, 3);
-                editor->Send(Message::StyleSetFore, SCE_C_WORD2, 0x123456);
+                editor->Send(SetSel, 9, 3);
+                editor->Send(StyleSetFore, SCE_C_WORD2, 0x123456);
                 Command(frame, wxID_SAVE);
-                Require(editor->Send(Message::StyleGetFore, SCE_C_WORD2) == 0x123456 &&
-                            editor->Send(Message::GetAnchor) == 9 && editor->Send(Message::GetCurrentPos) == 3,
+                Require(editor->Send(StyleGetFore, SCE_C_WORD2) == 0x123456 && editor->Send(GetAnchor) == 9 &&
+                            editor->Send(GetCurrentPos) == 3,
                         "ordinary Save to the same path must not reinstall the scheme or move selection");
                 Require(frame->SaveAs(Filename(back)).status == SaveStatus::Saved &&
-                            editor->Send(Message::StyleGetFore, SCE_C_WORD2) == 0x123456,
+                            editor->Send(StyleGetFore, SCE_C_WORD2) == 0x123456,
                         "successful Save As to the unchanged path must not reinstall the scheme");
                 SaveCommand(frame, wxID_SAVEAS, {}, "JSON");
                 Require(frame->SaveAs(std::nullopt).status == SaveStatus::Cancelled &&
                             frame->SaveAs(Filename(directory / "missing" / "failed.txt"), {}, SyntaxLanguage::Python)
                                     .status == SaveStatus::Failed &&
                             frame->DocumentPath() == Filename(back) && Bytes(back) == bytes && Text(editor) == source &&
-                            frame->DocumentHasUtf8Bom() && !editor->Send(Message::GetModify) &&
-                            editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo) &&
-                            editor->Send(Message::GetAnchor) == 9 && editor->Send(Message::GetCurrentPos) == 3 &&
-                            editor->Send(Message::StyleGetFore, SCE_C_WORD2) == 0x123456,
+                            frame->DocumentHasUtf8Bom() && !editor->Send(GetModify) && editor->Send(CanRedo) &&
+                            !editor->Send(CanUndo) && editor->Send(GetAnchor) == 9 &&
+                            editor->Send(GetCurrentPos) == 3 && editor->Send(StyleGetFore, SCE_C_WORD2) == 0x123456,
                         "chooser cancellation and write failure must preserve path, scheme and document state");
                 Language(frame, true);
                 std::puts("PASS: unchanged-path saves, cancelled chooser and failed write preserve scheme and state");
@@ -260,17 +261,17 @@ public:
                                            NamingCase{"JSON", "unknown", "Plain Text", SCLEX_NULL},
                                            NamingCase{"Plain Text", "CxX", "C/C++", SCLEX_CPP}}) {
                     Command(frame, wxID_NEW);
-                    editor->Send(Message::AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
-                    editor->Send(Message::SetSel, 9, 3);
+                    editor->Send(AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
+                    editor->Send(SetSel, 9, 3);
                     Choose(frame, naming.manual);
                     const auto first = directory / (std::string("matrix-first.") + naming.extension);
                     const auto renamed = directory / (std::string("matrix-renamed.") + naming.extension);
                     Require(frame->SaveFirst(Filename(first), {}, SaveType::AllFiles).status == SaveStatus::Saved,
                             "first Save of every manual choice must succeed");
                     Automatic(frame, naming.automatic, naming.lexer);
-                    Require(Bytes(first) == source && Text(editor) == source && !editor->Send(Message::GetModify) &&
-                                editor->Send(Message::CanUndo) && editor->Send(Message::GetAnchor) == 9 &&
-                                editor->Send(Message::GetCurrentPos) == 3,
+                    Require(Bytes(first) == source && Text(editor) == source && !editor->Send(GetModify) &&
+                                editor->Send(CanUndo) && editor->Send(GetAnchor) == 9 &&
+                                editor->Send(GetCurrentPos) == 3,
                             "first Save must preserve independent bytes, selection and existing edit history");
                     Choose(frame, naming.manual);
                     Require(frame->SaveAs(Filename(renamed), {}, SaveType::AllFiles).status == SaveStatus::Saved,
@@ -281,8 +282,8 @@ public:
                             "explicit Save As to the identical pathname must succeed");
                     Automatic(frame, naming.automatic, naming.lexer);
                     Require(Bytes(first) == source && Bytes(renamed) == source && Text(editor) == source &&
-                                !editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
-                                editor->Send(Message::GetAnchor) == 9 && editor->Send(Message::GetCurrentPos) == 3,
+                                !editor->Send(GetModify) && editor->Send(CanUndo) && editor->Send(GetAnchor) == 9 &&
+                                editor->Send(GetCurrentPos) == 3,
                             "both explicit Save As forms must preserve exact bytes, selection and history");
                 }
                 std::puts(
@@ -290,7 +291,7 @@ public:
 
                 Command(frame, wxID_NEW);
                 Choose(frame, "Plain Text");
-                editor->Send(Message::AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
+                editor->Send(AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
                 const auto exception = directory / "untitled-plain.cpp";
                 SaveCommand(frame, wxID_SAVE, Filename(exception), "Plain Text");
                 Automatic(frame, "C/C++", SCLEX_CPP);
@@ -298,7 +299,7 @@ public:
 
                 Command(frame, wxID_NEW);
                 Choose(frame, "C/C++");
-                editor->Send(Message::AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
+                editor->Send(AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
                 const auto forcedPlain = directory / "forced-plain.cpp";
                 SaveCommand(frame, wxID_SAVE, Filename(forcedPlain), "Plain Text");
                 Selected(frame, "Plain Text", SCLEX_NULL);
@@ -331,8 +332,8 @@ public:
                     Require(frame->SaveAs(Filename(automaticPython), {}, naming.first).status == SaveStatus::Saved,
                             "specific type on identical path must save");
                     Selected(frame, SyntaxFor(naming.first).name, naming.second);
-                    Require(Bytes(automaticPython) == source && Text(editor) == source &&
-                                editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+                    Require(Bytes(automaticPython) == source && Text(editor) == source && editor->Send(CanUndo) &&
+                                !editor->Send(GetModify),
                             "specific types on the same path must retain bytes, history and save point");
                 }
                 std::puts("PASS: each specific type applies even on an identical path");

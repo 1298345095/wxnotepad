@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <vector>
+#include <utility>
 
 namespace {
 void Require(bool value, const char* message) {
@@ -321,13 +322,13 @@ void Saves(EditorFrame* frame) {
         frame->Editor()->Send(Message::SetSel, 1, 4);
         frame->SelectEncoding(EncodingChoice(codec.encoding));
         if (lossy) {
+            using enum Scintilla::Message;
             LossPrompt driver;
             Require(frame->Save().status == SaveStatus::Cancelled, "native Big5 loss warning Cancel cancels Save");
             driver.Stop();
             Require(driver.shown == 1 && TestFiles::Bytes(source) == "unchanged" && TestEditor::Text(frame) == sample &&
-                        frame->DocumentIsModified() && frame->Editor()->Send(Message::CanUndo) &&
-                        frame->Editor()->Send(Message::GetAnchor) == 1 &&
-                        frame->Editor()->Send(Message::GetCurrentPos) == 4,
+                        frame->DocumentIsModified() && frame->Editor()->Send(CanUndo) &&
+                        frame->Editor()->Send(GetAnchor) == 1 && frame->Editor()->Send(GetCurrentPos) == 4,
                     "native loss Cancel preserves disk, selected format, live text, selection and Undo");
         }
         const auto blocked = TestFiles::TemporaryDirectory();
@@ -380,20 +381,21 @@ void Detection(EditorFrame* frame) {
                 ? std::vector<const char*>{"BIG5", "cn_big5", "csbig5", "xxbig5", "cp950", "ms950"}
                 : std::vector<const char*>{"GB18030", "gb_18030"};
         for (const auto* name : aliases) {
+            using enum OpenStatus;
             const std::string pair = codec.encoding == FileEncoding::Big5 ? "\x{a4}\x{a4}" : "\x{d6}\x{d0}";
             const std::string prefix = std::string("# coding: ") + name + "\n";
             TestFiles::WriteBytes(path, prefix + pair);
             const auto opened = frame->Open(TestFiles::Filename(path));
-            if (opened.status != OpenStatus::Opened || frame->DocumentEncoding() != codec.encoding ||
+            if (opened.status != Opened || frame->DocumentEncoding() != codec.encoding ||
                 TestEditor::Text(frame) != prefix + "中")
                 std::fprintf(stderr, "Alias %s: status=%d, codec=%d expected=%d, error=%s\n", name,
-                             static_cast<int>(opened.status), static_cast<int>(frame->DocumentEncoding()),
-                             static_cast<int>(codec.encoding), opened.error.utf8_str().data());
-            Require(opened.status == OpenStatus::Opened && frame->DocumentEncoding() == codec.encoding &&
+                             std::to_underlying(opened.status), std::to_underlying(frame->DocumentEncoding()),
+                             std::to_underlying(codec.encoding), opened.error.utf8_str().data());
+            Require(opened.status == Opened && frame->DocumentEncoding() == codec.encoding &&
                         TestEditor::Text(frame) == prefix + "中",
                     "original catalog aliases select GB18030/CP950 without a new detector");
             TestFiles::WriteBytes(path, prefix + "中");
-            Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
+            Require(frame->Open(TestFiles::Filename(path)).status == Opened &&
                         frame->DocumentEncoding() == FileEncoding::Utf8,
                     "valid multibyte UTF-8 retains precedence over Chinese declarations");
         }

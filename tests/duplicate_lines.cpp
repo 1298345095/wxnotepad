@@ -8,6 +8,7 @@
 #include <fstream>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -40,13 +41,14 @@ void Range(EditorControl* editor, intptr_t anchor, intptr_t caret) {
     TestEditor::RequireSelection(editor, anchor, caret, "original selection direction and replacement extent");
 }
 void History(EditorControl* editor, const std::string& before, const std::string& after) {
-    Require(editor->Send(Message::CanUndo) && editor->Send(Message::GetModify),
+    using enum Scintilla::Message;
+    Require(editor->Send(CanUndo) && editor->Send(GetModify),
             "ordinary replacement records history even for identical bytes");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == before && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == before && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "one Undo restores original bytes and save point");
-    editor->Send(Message::Redo);
-    Require(TestEditor::Text(editor) == after && !editor->Send(Message::CanRedo) && editor->Send(Message::GetModify),
+    editor->Send(Redo);
+    Require(TestEditor::Text(editor) == after && !editor->Send(CanRedo) && editor->Send(GetModify),
             "one Redo restores complete replacement");
 }
 void StreamFixtures(EditorFrame* frame) {
@@ -94,7 +96,8 @@ void StreamFixtures(EditorFrame* frame) {
                          TestEditor::Text(editor).c_str(), fixture.after);
         Require(TestEditor::Text(editor) == fixture.after, "literal original stream duplicate-line result");
         Range(editor, fixture.resultAnchor, fixture.resultCaret);
-        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(fixture.mode), "current EOL mode survives");
+        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(std::to_underlying(fixture.mode)),
+                "current EOL mode survives");
         History(editor, fixture.before, fixture.after);
     }
     std::puts("PASS: case-sensitive nonadjacent groups, empty/Unicode lines, partial/reversed endpoints, current EOL "
@@ -103,6 +106,7 @@ void StreamFixtures(EditorFrame* frame) {
 void AvailabilityAndNoChange(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const bool merge : {true, false}) {
+        using enum Scintilla::Message;
         const int id = CommandId(frame, merge);
         Require(frame->GetMenuBar()->FindItem(id)->GetItemLabel().Find('\t') == wxNOT_FOUND,
                 "original duplicate-line commands have no accelerator");
@@ -115,46 +119,47 @@ void AvailabilityAndNoChange(EditorFrame* frame) {
                 editor->MergeDuplicateLines();
             else
                 editor->RemoveDuplicateLines();
-            Require(TestEditor::Text(editor) == "A\nA" && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::GetModify),
+            Require(TestEditor::Text(editor) == "A\nA" && !editor->Send(CanUndo) && !editor->Send(GetModify),
                     "caret and fewer than two effective lines return without replacement");
             Range(editor, 0, caret);
         }
         Reset(editor, "A\nB\nA\nC", 1, 7);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         const auto revision = editor->DocumentRevision();
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(id),
                 "original duplicate-line menu remains enabled for read-only selection");
         Command(frame, merge);
-        Require(TestEditor::Text(editor) == "A\nB\nA\nC" && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify) && editor->DocumentRevision() == revision,
+        Require(TestEditor::Text(editor) == "A\nB\nA\nC" && !editor->Send(CanUndo) && !editor->Send(GetModify) &&
+                    editor->DocumentRevision() == revision,
                 "read-only core refuses byte changes, history and revision");
         Range(editor, 0, merge ? 5 : 3);
-        editor->Send(Message::SetReadOnly, 0);
+        editor->Send(SetReadOnly, 0);
 
         Reset(editor, "A\nB", 0, 0);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 0, 2);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 0, 2);
         Command(frame, merge);
-        Require(editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+        Require(editor->Send(CanRedo) && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "effective single-line early return preserves pending Redo and save point");
-        editor->Send(Message::SetSel, 0, 3);
+        editor->Send(SetSel, 0, 3);
         Command(frame, merge);
-        Require(!editor->Send(Message::CanRedo), "identical multiline replacement discards pending Redo");
+        Require(!editor->Send(CanRedo), "identical multiline replacement discards pending Redo");
         History(editor, "A\nB", "A\nB");
     }
     std::puts("PASS: original menu count, no accelerators, read-only selection repair, early no-op and pending Redo");
 }
 void Rectangle(EditorControl* editor, intptr_t anchor, intptr_t caret, intptr_t anchorVirtual = 0,
                intptr_t caretVirtual = 0) {
-    editor->Send(Message::SetRectangularSelectionAnchor, anchor);
-    editor->Send(Message::SetRectangularSelectionCaret, caret);
-    editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, anchorVirtual);
-    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, caretVirtual);
+    using enum Scintilla::Message;
+    editor->Send(SetRectangularSelectionAnchor, anchor);
+    editor->Send(SetRectangularSelectionCaret, caret);
+    editor->Send(SetRectangularSelectionAnchorVirtualSpace, anchorVirtual);
+    editor->Send(SetRectangularSelectionCaretVirtualSpace, caretVirtual);
 }
 void RectangleDirection(EditorFrame* frame, bool reverse, bool merge) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Reset(editor, "A\nlong\nA\nlong\nTAIL", 0, 0);
     Rectangle(editor, reverse ? 12 : 1, reverse ? 1 : 12);
@@ -163,26 +168,25 @@ void RectangleDirection(EditorFrame* frame, bool reverse, bool merge) {
     Require(TestEditor::Text(editor) == after,
             "rectangle reuses padding then compares complete lines, retaining original order");
     if (merge) {
-        Require(editor->Send(Message::SelectionIsRectangle) &&
-                    editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 7 : 1) &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 1 : 7),
+        Require(editor->Send(SelectionIsRectangle) &&
+                    editor->Send(GetRectangularSelectionAnchor) == (reverse ? 7 : 1) &&
+                    editor->Send(GetRectangularSelectionCaret) == (reverse ? 1 : 7),
                 "original rectangle endpoint columns and vertical direction restored over result lines");
     } else {
-        Require(!editor->Send(Message::SelectionIsRectangle), "empty replacement collapses rectangle to stream");
+        Require(!editor->Send(SelectionIsRectangle), "empty replacement collapses rectangle to stream");
         Range(editor, 0, 0);
     }
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "A\nlong\nA\nlong\nTAIL" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "A\nlong\nA\nlong\nTAIL" && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "one Undo combines rectangle padding and duplicate replacement");
-    Require(editor->Send(Message::SelectionIsRectangle) &&
-                editor->Send(Message::GetRectangularSelectionAnchor) == (reverse ? 12 : 1) &&
-                editor->Send(Message::GetRectangularSelectionCaret) == (reverse ? 1 : 12),
+    Require(editor->Send(SelectionIsRectangle) && editor->Send(GetRectangularSelectionAnchor) == (reverse ? 12 : 1) &&
+                editor->Send(GetRectangularSelectionCaret) == (reverse ? 1 : 12),
             "core Undo restores original rectangular selection");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == after, "Redo restores padding plus duplicate replacement");
 }
 void Rectangles(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     editor->SetIndentationWidths(4, 4);
     for (const bool reverse : {false, true})
@@ -193,16 +197,15 @@ void Rectangles(EditorFrame* frame) {
     Command(frame, true);
     Require(TestEditor::Text(editor) == "AB\n\nA ",
             "rectangle padding skips truly empty lines before duplicate comparison");
-    Require(editor->Send(Message::GetRectangularSelectionAnchorVirtualSpace) == 0 &&
-                editor->Send(Message::GetRectangularSelectionCaretVirtualSpace) == 0,
+    Require(editor->Send(GetRectangularSelectionAnchorVirtualSpace) == 0 &&
+                editor->Send(GetRectangularSelectionCaretVirtualSpace) == 0,
             "original FindColumn restoration clears virtual columns");
     History(editor, "AB\n\nA\nAB", "AB\n\nA ");
     Reset(editor, "A\nA", 0, 0, Scintilla::EndOfLine::CrLf);
     Rectangle(editor, 0, 3);
     Command(frame, true);
-    Require(TestEditor::Text(editor) == "A" && editor->Send(Message::SelectionIsRectangle) &&
-                editor->Send(Message::GetRectangularSelectionAnchor) == 0 &&
-                editor->Send(Message::GetRectangularSelectionCaret) == 1,
+    Require(TestEditor::Text(editor) == "A" && editor->Send(SelectionIsRectangle) &&
+                editor->Send(GetRectangularSelectionAnchor) == 0 && editor->Send(GetRectangularSelectionCaret) == 1,
             "unterminated result retains original EOL subtraction and single-line rectangle extent");
     History(editor, "A\nA", "A");
     std::puts("PASS: forward/reverse rectangle padding, full-line equality, skip-empty, virtual columns, original "
@@ -232,22 +235,23 @@ void SavedBytes(EditorFrame* frame) {
     };
     for (const auto& fixture : fixtures) {
         for (const bool merge : {true, false}) {
+            using enum Scintilla::Message;
             const auto path = directory / (std::string(fixture.name) + (merge ? "-merge.txt" : "-remove.txt"));
             TestFiles::WriteBytes(path, fixture.before);
-            frame->Editor()->Send(Message::SetSavePoint);
+            frame->Editor()->Send(SetSavePoint);
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                     "saved-byte fixture opens through application");
             auto* editor = frame->Editor();
-            editor->Send(Message::SetSel, 0, editor->Send(Message::GetLength));
+            editor->Send(SetSel, 0, editor->Send(GetLength));
             Command(frame, merge);
             const auto& after = merge ? fixture.merged : fixture.removed;
             Require(frame->DocumentEncoding() == fixture.encoding && frame->Save().status == SaveStatus::Saved &&
                         TestFiles::Bytes(path) == after,
                     "Save preserves encoding/BOM with original current-mode EOL reconstruction");
-            editor->Send(Message::Undo);
+            editor->Send(Undo);
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                     "one Undo and Save restores independent original disk bytes");
-            editor->Send(Message::Redo);
+            editor->Send(Redo);
             Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == after,
                     "one Redo and Save restores independent transformed disk bytes");
             std::printf("PASS: %s %s independent saved bytes, encoding/BOM/EOL and Undo/Redo\n", fixture.name,

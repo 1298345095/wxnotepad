@@ -16,23 +16,25 @@ wxDEFINE_EVENT(wxEVT_EDITOR_STATE_CHANGED, wxCommandEvent);
 
 namespace {
 bool HandleControlDelete(EditorControl& editor, const wxKeyEvent& event) {
+    using enum Scintilla::Message;
     if (!event.ControlDown() || event.ShiftDown() || event.AltDown() || event.MetaDown() ||
         (event.GetKeyCode() != WXK_BACK && event.GetKeyCode() != WXK_DELETE))
         return false;
     // Notepad4 CMD_CTRLBACK/CMD_CTRLDEL precede the core key map.
-    const auto caret = editor.Send(Message::GetCurrentPos);
-    if (caret != editor.Send(Message::GetAnchor)) {
-        editor.Send(Message::SetSel, caret, caret);
+    if (const auto caret = editor.Send(GetCurrentPos); caret != editor.Send(GetAnchor)) {
+        editor.Send(SetSel, caret, caret);
     } else {
-        const auto line = editor.Send(Message::LineFromPosition, caret);
-        const auto start = editor.Send(Message::PositionFromLine, line);
-        if (event.GetKeyCode() == WXK_BACK)
-            editor.Send(caret == start                                               ? Message::DeleteBack
-                        : caret <= editor.Send(Message::GetLineIndentPosition, line) ? Message::DelLineLeft
-                                                                                     : Message::DelWordLeft);
-        else
-            editor.Send(start == editor.Send(Message::GetLineEndPosition, line) ? Message::LineDelete
-                                                                                : Message::DelWordRight);
+        const auto line = editor.Send(LineFromPosition, caret);
+        const auto start = editor.Send(PositionFromLine, line);
+        if (event.GetKeyCode() == WXK_BACK) {
+            auto message = DelWordLeft;
+            if (caret == start)
+                message = DeleteBack;
+            else if (caret <= editor.Send(GetLineIndentPosition, line))
+                message = DelLineLeft;
+            editor.Send(message);
+        } else
+            editor.Send(start == editor.Send(GetLineEndPosition, line) ? LineDelete : DelWordRight);
     }
     return true;
 }
@@ -81,24 +83,28 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     Send(Message::SetCaretLineHighlightSubLine, 1);
     SetCurrentLineHighlightMode(lineHighlightMode_);
     WXNOTE_TRACE("editor.create", "\ttarget=%p\thandle=%p", static_cast<void*>(this), GetHandle());
-    Send(Message::SetMarginTypeN, EditorMargin::LineNumber, static_cast<intptr_t>(Scintilla::MarginType::Number));
+    Send(Message::SetMarginTypeN, EditorMargin::LineNumber,
+         static_cast<intptr_t>(std::to_underlying(Scintilla::MarginType::Number)));
     Send(Message::SetMarginMaskN, EditorMargin::LineNumber, 0);
     SetLineNumbersVisible(true);
-    Send(Message::SetMarginTypeN, EditorMargin::Bookmark, static_cast<intptr_t>(Scintilla::MarginType::Symbol));
+    Send(Message::SetMarginTypeN, EditorMargin::Bookmark,
+         static_cast<intptr_t>(std::to_underlying(Scintilla::MarginType::Symbol)));
     Send(Message::SetMarginMaskN, EditorMargin::Bookmark, ~Scintilla::MaskFolders);
     Send(Message::SetMarginSensitiveN, EditorMargin::Bookmark, 1);
-    Send(Message::SetMarginCursorN, EditorMargin::Bookmark, static_cast<intptr_t>(Scintilla::CursorShape::Arrow));
+    Send(Message::SetMarginCursorN, EditorMargin::Bookmark,
+         static_cast<intptr_t>(std::to_underlying(Scintilla::CursorShape::Arrow)));
     SetBookmarkMarginVisible(false);
     // Original Styles.cpp change-history defaults: saved green, modified blue.
     for (const auto marker :
          {Scintilla::MarkerOutline::HistoryRevertedToOrigin, Scintilla::MarkerOutline::HistorySaved,
           Scintilla::MarkerOutline::HistoryModified, Scintilla::MarkerOutline::HistoryRevertedToModified}) {
         const auto colour = marker <= Scintilla::MarkerOutline::HistorySaved ? 0xFF008000 : 0xFFFF8000;
-        Send(Message::MarkerSetForeTranslucent, static_cast<uintptr_t>(marker), colour);
-        Send(Message::MarkerSetBackTranslucent, static_cast<uintptr_t>(marker),
+        Send(Message::MarkerSetForeTranslucent, static_cast<uintptr_t>(std::to_underlying(marker)), colour);
+        Send(Message::MarkerSetBackTranslucent, static_cast<uintptr_t>(std::to_underlying(marker)),
              marker == Scintilla::MarkerOutline::HistoryRevertedToOrigin ||
                      marker == Scintilla::MarkerOutline::HistoryRevertedToModified
-                 ? 0xFF000000 | Send(Message::StyleGetBack, static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber))
+                 ? 0xFF000000 | Send(Message::StyleGetBack,
+                                     static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::LineNumber)))
                  : colour);
     }
     SetCurrentBlockHighlighted(true);
@@ -184,12 +190,12 @@ void EditorControl::FlushPendingUIUpdate() {
 void EditorControl::SetLineSelectionMode(LineSelectionMode mode) {
     lineSelectionMode_ = mode;
     if (mode == LineSelectionMode::None)
-        Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
+        Send(Message::SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
 }
 
 void EditorControl::SetCurrentLineHighlightMode(LineHighlightMode mode) {
     lineHighlightMode_ = mode;
-    const auto element = static_cast<uintptr_t>(Scintilla::Element::CaretLineBack);
+    const auto element = static_cast<uintptr_t>(std::to_underlying(Scintilla::Element::CaretLineBack));
     if (mode == LineHighlightMode::None) {
         Send(Message::ResetElementColour, element);
         return;
@@ -203,14 +209,14 @@ void EditorControl::SetCurrentLineHighlightMode(LineHighlightMode mode) {
                                                        (DisplayUnits::DefaultDpi * DisplayUnits::ZoomPercentScale))))
             : 0;
     Send(Message::SetCaretLineFrame, width);
-    Send(Message::SetCaretLineLayer, static_cast<uintptr_t>(Scintilla::Layer::UnderText));
+    Send(Message::SetCaretLineLayer, static_cast<uintptr_t>(std::to_underlying(Scintilla::Layer::UnderText)));
     Send(Message::SetElementColour, element, outline ? 0x5AC3C0C2 : 0x5A00FFFF);
 }
 
 void EditorControl::Copy() {
     // Notepad4.cpp::IDM_EDIT_COPY at 89b8b36; see licenses/Notepad4.txt.
     if (Send(Message::GetSelectionEmpty) && lineSelectionMode_ != LineSelectionMode::None)
-        Send(Message::LineCopy, static_cast<uintptr_t>(lineSelectionMode_) & 1);
+        Send(Message::LineCopy, static_cast<uintptr_t>(std::to_underlying(lineSelectionMode_)) & 1);
     else
         Send(Message::Copy);
 }
@@ -279,23 +285,24 @@ void EditorControl::Cut() {
         return;
     }
     const auto column = Send(Message::GetColumn, Send(Message::GetCurrentPos), -1);
-    Send(Message::LineCut, static_cast<uintptr_t>(lineSelectionMode_) & 1);
+    Send(Message::LineCut, static_cast<uintptr_t>(std::to_underlying(lineSelectionMode_)) & 1);
     auto line = Send(Message::LineFromPosition, Send(Message::GetCurrentPos));
     if (lineSelectionMode_ == LineSelectionMode::OldVisualStudio && line > 0) --line;
     const Scintilla::CharacterRangeFull range{line, column};
-    const auto position = Send(Message::FindColumnEx, static_cast<uintptr_t>(Scintilla::ColumnType::Default),
-                               reinterpret_cast<intptr_t>(&range));
+    const auto position =
+        Send(Message::FindColumnEx, static_cast<uintptr_t>(std::to_underlying(Scintilla::ColumnType::Default)),
+             reinterpret_cast<intptr_t>(&range));
     JumpToPosition(position);
 }
 
 void EditorControl::CopyLine() {
     // Original IDM_EDIT_COPYLINE: the low mode bit controls line-copy metadata.
-    Send(Message::LineCopy, static_cast<uintptr_t>(lineSelectionMode_) & 1);
+    Send(Message::LineCopy, static_cast<uintptr_t>(std::to_underlying(lineSelectionMode_)) & 1);
 }
 
 void EditorControl::CutLine() {
     // Explicit Cut Line retains the core's position, unlike caret-only Cut.
-    Send(Message::LineCut, static_cast<uintptr_t>(lineSelectionMode_) & 1);
+    Send(Message::LineCut, static_cast<uintptr_t>(std::to_underlying(lineSelectionMode_)) & 1);
 }
 
 void EditorControl::DeleteLine() {
@@ -305,10 +312,10 @@ void EditorControl::DeleteLine() {
 void EditorControl::JumpToPosition(intptr_t position) {
     // Original EditSelectEx: unfold and center the destination, then restore
     // the normal policies and the preferred column for subsequent navigation.
-    using Scintilla::CaretPolicy;
-    const auto even = static_cast<uintptr_t>(CaretPolicy::Even);
-    const auto slop = static_cast<uintptr_t>(CaretPolicy::Slop);
-    const auto strictPolicy = slop | static_cast<uintptr_t>(CaretPolicy::Strict) | even;
+    using enum Scintilla::CaretPolicy;
+    const auto even = static_cast<uintptr_t>(std::to_underlying(Even));
+    const auto slop = static_cast<uintptr_t>(std::to_underlying(Slop));
+    const auto strictPolicy = slop | static_cast<uintptr_t>(std::to_underlying(Strict)) | even;
     Send(Message::SetXCaretPolicy, strictPolicy, 50);
     Send(Message::SetYCaretPolicy, strictPolicy, 5);
     Send(Message::EnsureVisibleEnforcePolicy, Send(Message::LineFromPosition, position));
@@ -325,10 +332,9 @@ void EditorControl::SetAutoShrinkScrollWidth(bool enabled) {
 }
 
 void EditorControl::ToggleWordWrap() {
-    const auto mode = Send(Message::GetWrapMode) == static_cast<intptr_t>(Scintilla::Wrap::None)
-                          ? Scintilla::Wrap::Word
-                          : Scintilla::Wrap::None;
-    Send(Message::SetWrapMode, static_cast<uintptr_t>(mode));
+    using enum Scintilla::Wrap;
+    const auto mode = Send(Message::GetWrapMode) == static_cast<intptr_t>(std::to_underlying(None)) ? Word : None;
+    Send(Message::SetWrapMode, static_cast<uintptr_t>(std::to_underlying(mode)));
     core_->UpdateWrapLayout();
 }
 
@@ -391,11 +397,11 @@ void EditorControl::SetBookmarkMarginVisible(bool visible) {
     bookmarkMarginVisible_ = visible;
     // Original Styles.cpp::Style_SetBookmark at 89b8b36.
     Send(Message::MarkerDefine, 0,
-         static_cast<intptr_t>(visible ? Scintilla::MarkerSymbol::VerticalBookmark
-                                       : Scintilla::MarkerSymbol::Background));
+         static_cast<intptr_t>(std::to_underlying(visible ? Scintilla::MarkerSymbol::VerticalBookmark
+                                                          : Scintilla::MarkerSymbol::Background)));
     Send(Message::MarkerSetBackTranslucent, 0, visible ? 0xFF408040 : 0x2800FF00);
     if (visible) Send(Message::MarkerSetForeTranslucent, 0, 0xFF408040);
-    Send(Message::MarkerSetLayer, 0, static_cast<intptr_t>(Scintilla::Layer::OverText));
+    Send(Message::MarkerSetLayer, 0, static_cast<intptr_t>(std::to_underlying(Scintilla::Layer::OverText)));
     bookmarkMarginWidthDirty_ = true;
     UpdateBookmarkMargin();
 }
@@ -419,19 +425,18 @@ void EditorControl::SetChangeHistoryOptions(int options) {
 }
 
 void EditorControl::ToggleChangeHistory() {
+    using enum Scintilla::ChangeHistoryOption;
     // Notepad4.cpp::IDM_VIEW_CHANGE_HISTORY_MARKER. Never discard undo to enable it.
     if (changeHistoryOptions_ != 0 || !Send(Message::CanUndo))
-        SetChangeHistoryOptions(changeHistoryOptions_ == 0
-                                    ? static_cast<int>(Scintilla::ChangeHistoryOption::Enabled) |
-                                          static_cast<int>(Scintilla::ChangeHistoryOption::Markers)
-                                    : static_cast<int>(Scintilla::ChangeHistoryOption::Disabled));
+        SetChangeHistoryOptions(changeHistoryOptions_ == 0 ? std::to_underlying(Enabled) | std::to_underlying(Markers)
+                                                           : std::to_underlying(Disabled));
 }
 
 void EditorControl::SetCodeFoldingVisible(bool visible) {
     codeFoldingVisible_ = visible;
     foldMarginWidthDirty_ = true;
     UpdateFoldMargin();
-    if (!visible) Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Expand));
+    if (!visible) Send(Message::FoldAll, static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Expand)));
     core_->UpdateWrapLayout();
 }
 
@@ -439,10 +444,12 @@ void EditorControl::UpdateFoldMargin() {
     if (!foldMarginWidthDirty_) return;
     foldMarginWidthDirty_ = false;
     // Original Styles.cpp::UpdateFoldMarginWidth, default CodeFolding size 0.
-    const auto width = codeFoldingVisible_ ? core_->WndProc(Message::TextWidth,
-                                                            static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber),
-                                                            reinterpret_cast<intptr_t>("+_"))
-                                           : 0;
+    const auto width =
+        codeFoldingVisible_
+            ? core_->WndProc(Message::TextWidth,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::LineNumber)),
+                             reinterpret_cast<intptr_t>("+_"))
+            : 0;
     if (core_->WndProc(Message::GetMarginWidthN, EditorMargin::Folding, 0) != width) {
         core_->WndProc(Message::SetMarginWidthN, EditorMargin::Folding, width);
         core_->UpdateWrapLayout();
@@ -464,7 +471,8 @@ void EditorControl::UpdateLineNumberMargin() {
         const std::string digits(std::to_string(count).size(), '9');
         // Like Notepad4's UpdateLineNumberWidth, measure the core's number style.
         // Use the required digit count and native DIP padding, without reading text.
-        width = core_->WndProc(Message::TextWidth, static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber),
+        width = core_->WndProc(Message::TextWidth,
+                               static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::LineNumber)),
                                reinterpret_cast<intptr_t>(digits.c_str())) +
                 FromDIP(8);
     }

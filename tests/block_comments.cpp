@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdio>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 void Require(bool value, const char* message) {
@@ -28,7 +29,6 @@ void Toggle(EditorFrame* frame) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment"));
 }
 void Cases(EditorFrame* frame) {
-    using Scintilla::Message;
     auto* editor = frame->Editor();
     struct Case {
         const char* before;
@@ -58,16 +58,17 @@ void Cases(EditorFrame* frame) {
     for (const char* language : {"C/C++", "JSON"}) {
         Choose(frame, language);
         for (const auto& item : cases) {
+            using enum Scintilla::Message;
             TestEditor::ResetStream(editor, item.before, item.anchor, item.caret);
-            editor->Send(Message::Colourise, 0, -1);
+            editor->Send(Colourise, 0, -1);
             Toggle(frame);
             Text(editor, item.after, "original style-dependent insertion or innermost delimiter removal");
             TestEditor::RequireSelection(editor, item.newAnchor, item.newCaret, "original block-comment selection");
-            Require(editor->Send(Message::CanUndo) && editor->Send(Message::GetModify), "comment edit creates history");
-            editor->Send(Message::Undo);
+            Require(editor->Send(CanUndo) && editor->Send(GetModify), "comment edit creates history");
+            editor->Send(Undo);
             Text(editor, item.before, "one Undo restores whole original comment operation");
-            Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify), "Undo restores save point");
-            editor->Send(Message::Redo);
+            Require(!editor->Send(CanUndo) && !editor->Send(GetModify), "Undo restores save point");
+            editor->Send(Redo);
             Text(editor, item.after, "one Redo restores whole comment operation");
         }
     }
@@ -75,20 +76,20 @@ void Cases(EditorFrame* frame) {
               "and crossing delimiters, grouped Undo/Redo");
 }
 void PausedStyles(EditorFrame* frame) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Choose(frame, "C/C++");
     const auto& syntax = SyntaxFor(SyntaxLanguage::Cpp);
     TestEditor::ResetStream(editor, "/*alpha*/", 4, 4);
-    editor->Send(Message::Colourise, 0, -1);
-    editor->Send(Message::SetLexer, SCLEX_CONTAINER);
-    Require(editor->Send(Message::GetStyleIndexAt, 4) != 0, "pausing lexer retains existing comment styles");
+    editor->Send(Colourise, 0, -1);
+    editor->Send(SetLexer, SCLEX_CONTAINER);
+    Require(editor->Send(GetStyleIndexAt, 4) != 0, "pausing lexer retains existing comment styles");
     Require(editor->ToggleBlockComments(syntax.blockCommentOpen, syntax.blockCommentClose, syntax.commentStyleLast),
             "public block-comment operation accepts retained styles");
     Text(editor, "alpha", "paused lexer still removes delimiters when current styles classify comment");
     TestEditor::ResetStream(editor, "/*alpha*/", 4, 4);
-    editor->Send(Message::ClearDocumentStyle);
-    Require(editor->Send(Message::GetStyleIndexAt, 4) == 0, "paused unstyled fixture has default style");
+    editor->Send(ClearDocumentStyle);
+    Require(editor->Send(GetStyleIndexAt, 4) == 0, "paused unstyled fixture has default style");
     Require(editor->ToggleBlockComments(syntax.blockCommentOpen, syntax.blockCommentClose, syntax.commentStyleLast),
             "public block-comment operation accepts pending styles");
     Text(editor, "/*al/**/pha*/", "paused unstyled comment inserts delimiters without forcing highlighting");
@@ -106,7 +107,7 @@ public:
     int count = 0;
 };
 void Protection(EditorFrame* frame) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int id = frame->GetMenuBar()->FindMenuItem("Edit", "Toggle Block Comment");
     for (const char* language : {"Python", "Plain Text"}) {
@@ -118,86 +119,82 @@ void Protection(EditorFrame* frame) {
         frame->GetEventHandler()->ProcessEvent(command);
         Text(editor, "alpha", "unavailable block command preserves bytes");
         TestEditor::RequireSelection(editor, 0, 5, "unavailable block command preserves selection");
-        Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
-                "unavailable command preserves history");
+        Require(!editor->Send(CanUndo) && !editor->Send(GetModify), "unavailable command preserves history");
     }
     Choose(frame, "C/C++");
     TestEditor::ResetStream(editor, "alpha", 0, 5);
     Toggle(frame);
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 0, 5);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(Undo);
+    editor->Send(SetSel, 0, 5);
+    editor->Send(SetReadOnly, 1);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(id), "original block-comment menu remains available in read-only mode");
     Toggle(frame);
     Text(editor, "alpha", "core protects read-only insertion bytes");
     TestEditor::RequireSelection(editor, 2, 5, "read-only enclosure retains original selection repair");
-    Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+    Require(!editor->Send(CanUndo) && !editor->Send(CanRedo) && !editor->Send(GetModify),
             "read-only mode suppresses undo/redo availability and retains save point");
-    Require(editor->Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::OutsideDocument),
+    Require(editor->Send(GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::OutsideDocument)),
             "original host reports rejected out-of-range suffix through message status");
-    editor->Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
-    editor->Send(Message::SetReadOnly, 0);
-    Require(editor->Send(Message::CanRedo), "read-only insertion preserves pending redo after unlocking");
+    editor->Send(SetStatus, static_cast<uintptr_t>(std::to_underlying(Scintilla::Status::Ok)));
+    editor->Send(SetReadOnly, 0);
+    Require(editor->Send(CanRedo), "read-only insertion preserves pending redo after unlocking");
     TestEditor::ResetStream(editor, "/*alpha*/", 4, 4);
-    editor->Send(Message::Colourise, 0, -1);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(Colourise, 0, -1);
+    editor->Send(SetReadOnly, 1);
     Toggle(frame);
     Text(editor, "/*alpha*/", "core protects read-only removal bytes");
     TestEditor::RequireSelection(editor, 4, 4, "read-only removal retains core selection");
-    Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
-            "read-only removal preserves history");
+    Require(!editor->Send(CanUndo) && !editor->Send(GetModify), "read-only removal preserves history");
     TestEditor::ResetStream(editor, "alpha\nbeta", 0, 5);
     Toggle(frame);
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 0);
-    editor->Send(Message::SetRectangularSelectionCaret, 7);
+    editor->Send(Undo);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+    editor->Send(SetRectangularSelectionAnchor, 0);
+    editor->Send(SetRectangularSelectionCaret, 7);
     RectangleFeedback feedback;
     Toggle(frame);
     Require(feedback.count == 1, "rectangle insertion reports original unsupported enclosure");
     Text(editor, "alpha\nbeta", "rectangle rejection preserves bytes");
-    Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify) &&
-                editor->Send(Message::GetRectangularSelectionAnchor) == 0 &&
-                editor->Send(Message::GetRectangularSelectionCaret) == 7,
+    Require(!editor->Send(CanUndo) && editor->Send(CanRedo) && !editor->Send(GetModify) &&
+                editor->Send(GetRectangularSelectionAnchor) == 0 && editor->Send(GetRectangularSelectionCaret) == 7,
             "rectangle rejection preserves history, save point, pending redo and selection");
     TestEditor::ResetStream(editor, "/*alpha\nbeta*/");
-    editor->Send(Message::Colourise, 0, -1);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 2);
-    editor->Send(Message::SetRectangularSelectionCaret, 10);
+    editor->Send(Colourise, 0, -1);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+    editor->Send(SetRectangularSelectionAnchor, 2);
+    editor->Send(SetRectangularSelectionCaret, 10);
     Toggle(frame);
     Text(editor, "alpha\nbeta", "original uncomment runs before rectangular enclosure rejection");
-    Require(feedback.count == 1 && editor->Send(Message::SelectionIsRectangle),
+    Require(feedback.count == 1 && editor->Send(SelectionIsRectangle),
             "rectangle removal keeps original mode without feedback");
     std::puts(
         "PASS: original language availability, read-only selection/history and rectangle insertion/removal behavior");
 }
 void MultipleSelections(EditorFrame* frame) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Choose(frame, "C/C++");
     TestEditor::ResetStream(editor, "alpha beta", 0, 5);
-    editor->Send(Message::AddSelection, 10, 6);
-    editor->Send(Message::SetMainSelection, 0);
+    editor->Send(AddSelection, 10, 6);
+    editor->Send(SetMainSelection, 0);
     Toggle(frame);
     Text(editor, "/*alpha*/ beta", "enclosure edits main selection");
-    Require(editor->Send(Message::GetSelections) == 1, "original enclosure resets to one selection");
+    Require(editor->Send(GetSelections) == 1, "original enclosure resets to one selection");
     TestEditor::RequireSelection(editor, 2, 7, "main enclosure selection");
     TestEditor::ResetStream(editor, "/*alpha*/ beta", 4, 4);
-    editor->Send(Message::AddSelection, 14, 10);
-    editor->Send(Message::SetMainSelection, 0);
-    editor->Send(Message::Colourise, 0, -1);
+    editor->Send(AddSelection, 14, 10);
+    editor->Send(SetMainSelection, 0);
+    editor->Send(Colourise, 0, -1);
     Toggle(frame);
     Text(editor, "alpha beta", "uncomment removes main enclosing comment");
-    Require(editor->Send(Message::GetSelections) == 2 && editor->Send(Message::GetSelectionNAnchor, 1) == 6 &&
-                editor->Send(Message::GetSelectionNCaret, 1) == 10,
+    Require(editor->Send(GetSelections) == 2 && editor->Send(GetSelectionNAnchor, 1) == 6 &&
+                editor->Send(GetSelectionNCaret, 1) == 10,
             "original deletion preserves and adjusts additional selections");
     TestEditor::RequireSelection(editor, 2, 2, "uncomment main caret adjustment");
     std::puts("PASS: original operation-specific multiple-selection behavior");
 }
 void SavedBytes(EditorFrame* frame) {
-    using Scintilla::Message;
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-block-comment");
     std::filesystem::create_directory(directory);
@@ -217,30 +214,32 @@ void SavedBytes(EditorFrame* frame) {
     };
     for (const char* extension : {"cpp", "json"}) {
         for (const auto& fixture : fixtures) {
+            using enum SaveStatus;
+            using enum Scintilla::Message;
             const auto path = directory / (std::string(fixture.name) + "." + extension);
             TestFiles::WriteBytes(path, fixture.before);
-            editor->Send(Message::SetSavePoint);
+            editor->Send(SetSavePoint);
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                     "open block-comment fixture through application");
-            editor->Send(Message::SelectAll);
+            editor->Send(SelectAll);
             Toggle(frame);
-            Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
+            Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.after,
                     "block insertion Save preserves independent encoded/BOM/mixed-EOL bytes");
-            editor->Send(Message::Undo);
-            Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
+            editor->Send(Undo);
+            Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.before,
                     "one insertion Undo saves original bytes");
-            editor->Send(Message::Redo);
-            Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
+            editor->Send(Redo);
+            Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.after,
                     "one insertion Redo saves commented bytes");
-            editor->Send(Message::Colourise, 0, -1);
+            editor->Send(Colourise, 0, -1);
             Toggle(frame);
-            Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
+            Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.before,
                     "styled block removal Save restores original independent bytes");
-            editor->Send(Message::Undo);
-            Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after,
+            editor->Send(Undo);
+            Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.after,
                     "one removal Undo saves commented bytes");
-            editor->Send(Message::Redo);
-            Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
+            editor->Send(Redo);
+            Require(frame->Save().status == Saved && TestFiles::Bytes(path) == fixture.before,
                     "one removal Redo saves original bytes");
         }
     }

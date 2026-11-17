@@ -8,6 +8,7 @@
 #include <wx/app.h>
 #include <wx/modalhook.h>
 #include <cstdio>
+#include <utility>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
@@ -23,13 +24,15 @@ void Menu(EditorFrame* frame, const char* label) {
     NativeSearch::Command(frame, id);
 }
 void Reset(EditorControl* editor, std::string_view text, intptr_t anchor, intptr_t caret) {
+    using enum Scintilla::Message;
     TestEditor::ResetStream(editor, "");
-    editor->Send(Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    editor->Send(AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+    editor->Send(SetSel, anchor, caret);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 }
 template <typename Fixture> void ConversionCase(EditorFrame* frame, const Fixture& fixture, bool reverse) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto before = static_cast<intptr_t>(fixture.before.size());
     const auto after = static_cast<intptr_t>(fixture.after.size());
@@ -41,17 +44,16 @@ template <typename Fixture> void ConversionCase(EditorFrame* frame, const Fixtur
     Require(TestEditor::Text(editor) == fixture.after, "conversion matches captured original bytes");
     TestEditor::RequireSelection(editor, reverse ? after : 0, reverse ? 0 : after,
                                  "converted endpoints match original direction");
-    Require(editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+    Require(editor->Send(GetModify) && editor->Send(CanUndo) && !editor->Send(CanRedo),
             "original replacement modifies history even when output is unchanged");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == fixture.before && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                editor->Send(CanRedo),
             "one Undo restores original bytes and save point");
     TestEditor::RequireSelection(editor, reverse ? before : 0, reverse ? 0 : before,
                                  "Undo restores original endpoints");
-    editor->Send(Message::Redo);
-    Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
-            "one Redo restores converted bytes");
+    editor->Send(Redo);
+    Require(TestEditor::Text(editor) == fixture.after && editor->Send(GetModify), "one Redo restores converted bytes");
     TestEditor::RequireSelection(editor, 0, 0, "Redo matches original collapsed selection");
 }
 void Fixtures(EditorFrame* frame) {
@@ -71,65 +73,65 @@ public:
     int count = 0;
 };
 void SelectionAndHistory(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const char* command : {"To Hexadecimal", "To Decimal", "To Binary", "To Octet"}) {
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", command);
         TestEditor::ResetStream(editor, "plain text", 10, 0);
-        editor->Send(Message::InsertText, 10, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
+        editor->Send(InsertText, 10, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
         Menu(frame, command);
-        Require(TestEditor::Text(editor) == "plain text" && editor->Send(Message::GetModify) &&
-                    editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+        Require(TestEditor::Text(editor) == "plain text" && editor->Send(GetModify) && editor->Send(CanUndo) &&
+                    !editor->Send(CanRedo),
                 "captured unchanged-output replacement discards pending redo and leaves save point");
         TestEditor::RequireSelection(editor, 10, 0, "unchanged replacement retains reverse selection");
-        editor->Send(Message::Undo);
-        Require(!editor->Send(Message::GetModify), "Undo unchanged replacement restores save point");
+        editor->Send(Undo);
+        Require(!editor->Send(GetModify), "Undo unchanged replacement restores save point");
 
-        editor->Send(Message::SetSel, 3, 3);
+        editor->Send(SetSel, 3, 3);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(!frame->GetMenuBar()->IsEnabled(id), "empty selection disables original command");
         Menu(frame, command);
-        Require(TestEditor::Text(editor) == "plain text" && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+        Require(TestEditor::Text(editor) == "plain text" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                    editor->Send(CanRedo),
                 "empty command preserves bytes, history and save point");
         TestEditor::RequireSelection(editor, 3, 3, "empty command retains caret");
 
         TestEditor::ResetStream(editor, "12\n34");
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 0);
-        editor->Send(Message::SetRectangularSelectionCaret, 5);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, 0);
+        editor->Send(SetRectangularSelectionCaret, 5);
         RectangleFeedback feedback;
         Menu(frame, command);
-        Require(feedback.count == 1 && TestEditor::Text(editor) == "12\n34" && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo) && editor->Send(Message::GetRectangularSelectionAnchor) == 0 &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == 5,
+        Require(feedback.count == 1 && TestEditor::Text(editor) == "12\n34" && !editor->Send(GetModify) &&
+                    !editor->Send(CanUndo) && editor->Send(GetRectangularSelectionAnchor) == 0 &&
+                    editor->Send(GetRectangularSelectionCaret) == 5,
                 "original rectangle warns and preserves bytes, endpoints and save point");
-        editor->Send(Message::SetRectangularSelectionAnchor, 1);
-        editor->Send(Message::SetRectangularSelectionCaret, 1);
+        editor->Send(SetRectangularSelectionAnchor, 1);
+        editor->Send(SetRectangularSelectionCaret, 1);
         Menu(frame, command);
         Require(feedback.count == 1, "empty rectangle returns before warning");
     }
     TestEditor::ResetStream(editor, "12 a 34", 0, 2, Scintilla::EndOfLine::CrLf);
-    editor->Send(Message::AddSelection, 7, 5);
+    editor->Send(AddSelection, 7, 5);
     Menu(frame, "To Hexadecimal");
-    Require(TestEditor::Text(editor) == "12 a 0xc\r\n0x22" && editor->Send(Message::GetSelections) == 1,
+    Require(TestEditor::Text(editor) == "12 a 0xc\r\n0x22" && editor->Send(GetSelections) == 1,
             "captured multiple-selection text is concatenated and replaces only main selection");
     TestEditor::RequireSelection(editor, 5, 14, "multiple-selection replacement has captured main endpoints");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "12 a 34" && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "12 a 34" && !editor->Send(GetModify),
             "multiple-selection replacement is one undo action");
 
     TestEditor::ResetStream(editor, "12 a 34", 0, 2);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetReadOnly, 1);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     const int hex = frame->GetMenuBar()->FindMenuItem("Edit", "To Hexadecimal");
     Require(frame->GetMenuBar()->IsEnabled(hex), "original read-only selection keeps conversion available");
     Menu(frame, "To Hexadecimal");
-    Require(TestEditor::Text(editor) == "12 a 34" && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo),
+    Require(TestEditor::Text(editor) == "12 a 34" && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "read-only core preserves original bytes and save point");
     TestEditor::RequireSelection(editor, 0, 3, "read-only replacement retains captured formatted endpoint");
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
 
     TestEditor::ResetStream(editor, "head12tail", 4, 6);
     Menu(frame, "To Hexadecimal");
@@ -175,15 +177,16 @@ void SavedBytes(EditorFrame* frame) {
                      14)},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "open encoded fixture through application");
-        const auto eol = editor->Send(Message::GetEOLMode);
-        editor->Send(Message::SelectAll);
+        const auto eol = editor->Send(GetEOLMode);
+        editor->Send(SelectAll);
         Menu(frame, "To Hexadecimal");
-        Require(frame->DocumentEncoding() == fixture.encoding && editor->Send(Message::GetEOLMode) == eol,
+        Require(frame->DocumentEncoding() == fixture.encoding && editor->Send(GetEOLMode) == eol,
                 "conversion preserves encoding and EOL metadata");
         TestFiles::RequireSavedUndoRedo(frame, path, fixture,
                                         {"independent UTF-8 BOM, GBK and UTF-16LE BOM disk bytes match",

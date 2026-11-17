@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <chrono>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -19,10 +20,11 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 void Load(EditorControl* editor, const std::string& bytes) {
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
-    editor->Send(Message::MarkerDeleteAll, 0);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    using enum Scintilla::Message;
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(bytes.c_str()));
+    editor->Send(MarkerDeleteAll, 0);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
     NativePaint::Complete(editor);
 }
 void SlicedFindAll(EditorControl* editor, wxTextCtrl* query, wxButton* action, wxStaticText* result) {
@@ -194,7 +196,8 @@ public:
                 const auto cpp = frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++");
                 Command(frame, cpp);
                 editor->Send(Message::Colourise, 0, -1);
-                editor->Send(Message::FoldAll, static_cast<uintptr_t>(Scintilla::FoldAction::Contract));
+                editor->Send(Message::FoldAll,
+                             static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Contract)));
                 Require(!editor->Send(Message::GetLineVisible, 1), "folded fixture hides matched line");
                 query->SetValue("needle");
                 run();

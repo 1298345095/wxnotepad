@@ -2,6 +2,7 @@
 #include "settings/settings_store.h"
 #include "encoded_file_helpers.h"
 #include <fstream>
+#include <utility>
 #include <sstream>
 #include <string_view>
 
@@ -57,8 +58,9 @@ void Fixtures(EditorFrame* frame) {
     std::getline(capture, line); // Named tabular columns.
     auto* editor = frame->Editor();
     const auto requireState = [editor](bool modified, bool undo, bool redo) {
-        Require(bool(editor->Send(Message::GetModify)) == modified && bool(editor->Send(Message::CanUndo)) == undo &&
-                    bool(editor->Send(Message::CanRedo)) == redo,
+        using enum Scintilla::Message;
+        Require(bool(editor->Send(GetModify)) == modified && bool(editor->Send(CanUndo)) == undo &&
+                    bool(editor->Send(CanRedo)) == redo,
                 "URL conversion preserves captured original modification and Undo/Redo state");
     };
     constexpr const char* labels[] = {"URL Encode", "URL Component Encode", "URL Decode"};
@@ -93,7 +95,8 @@ void Fixtures(EditorFrame* frame) {
             }
             TestEditor::RequireSelection(editor, fixture.anchor, fixture.caret, "captured original URL endpoints");
             requireState(fixture.modified, fixture.canUndo, fixture.canRedo);
-            Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(Scintilla::EndOfLine::CrLf),
+            Require(editor->Send(Message::GetEOLMode) ==
+                        static_cast<intptr_t>(std::to_underlying(Scintilla::EndOfLine::CrLf)),
                     "URL conversion preserves document EOL metadata");
             editor->Send(Message::Undo);
             Require(TestEditor::Text(editor) == input, "one Undo restores every original byte");
@@ -122,17 +125,18 @@ public:
 void Rectangles(EditorFrame* frame, const char* label) {
     auto* editor = frame->Editor();
     for (bool empty : {false, true}) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "a b\nc d");
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 1);
-        editor->Send(Message::SetRectangularSelectionCaret, empty ? 1 : 6);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, 1);
+        editor->Send(SetRectangularSelectionCaret, empty ? 1 : 6);
         RectangleFeedback feedback;
         Menu(frame, label);
-        Require(feedback.count == (empty ? 0 : 1) && TestEditor::Text(editor) == "a b\nc d" &&
-                    !editor->Send(Message::CanUndo) && editor->Send(Message::SelectionIsRectangle),
+        Require(feedback.count == (empty ? 0 : 1) && TestEditor::Text(editor) == "a b\nc d" && !editor->Send(CanUndo) &&
+                    editor->Send(SelectionIsRectangle),
                 "URL rejects nonempty rectangles with notification after its empty-input gate");
-        Require(editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
-                    editor->Send(Message::GetRectangularSelectionCaret) == (empty ? 1 : 6),
+        Require(editor->Send(GetRectangularSelectionAnchor) == 1 &&
+                    editor->Send(GetRectangularSelectionCaret) == (empty ? 1 : 6),
                 "rectangle notification preserves endpoints");
     }
 }
@@ -140,6 +144,7 @@ void Rectangles(EditorFrame* frame, const char* label) {
 void State(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const char* label : {"URL Encode", "URL Component Encode", "URL Decode"}) {
+        using enum Scintilla::Message;
         const bool decode = std::string_view(label) == "URL Decode";
         TestEditor::ResetStream(editor, "Xa bY", 4, 1);
         Menu(frame, label);
@@ -151,49 +156,47 @@ void State(EditorFrame* frame) {
         Require(!frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", label)),
                 "URL menu requires nonempty selection");
         Menu(frame, label);
-        Require(TestEditor::Text(editor) == "Xa bY" && !editor->Send(Message::CanUndo),
+        Require(TestEditor::Text(editor) == "Xa bY" && !editor->Send(CanUndo),
                 "empty URL invocation leaves document and history unchanged");
         TestEditor::RequireSelection(editor, 3, 3, "empty selection retains its endpoints");
         for (const char* text : {" \t", "abc"}) {
             TestEditor::ResetStream(editor, text, 0, 0);
-            editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-            editor->Send(Message::Undo);
-            editor->Send(Message::SetSel, 0, text[0] == 'a' ? 3 : 2);
+            editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+            editor->Send(Undo);
+            editor->Send(SetSel, 0, text[0] == 'a' ? 3 : 2);
             Menu(frame, label);
             const bool unchanged = !decode && text[0] == ' ';
-            Require(TestEditor::Text(editor) == text && bool(editor->Send(Message::CanRedo)) == unchanged &&
-                        bool(editor->Send(Message::CanUndo)) != unchanged &&
-                        bool(editor->Send(Message::GetModify)) != unchanged,
+            Require(TestEditor::Text(editor) == text && bool(editor->Send(CanRedo)) == unchanged &&
+                        bool(editor->Send(CanUndo)) != unchanged && bool(editor->Send(GetModify)) != unchanged,
                     "original no-change predicate controls pending Redo, Undo and save point");
         }
         TestEditor::ResetStream(editor, "Xa bY\nZa bW", 1, 4, Scintilla::EndOfLine::CrLf);
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::AddSelection, 10, 7);
+        editor->Send(SetMultipleSelection, 1);
+        editor->Send(AddSelection, 10, 7);
         Menu(frame, label);
         Require(TestEditor::Text(editor) == (decode ? "Xa bY\nZa b\r\na bW" : "Xa bY\nZa%20b%0D%0Aa%20bW") &&
-                    editor->Send(Message::GetSelections) == 1,
+                    editor->Send(GetSelections) == 1,
                 "all selected ranges feed original main-only replacement with document-EOL separators");
         TestEditor::RequireSelection(editor, 7, decode ? 15 : 23, "multiple-selection original result endpoints");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == "Xa bY\nZa bW" && !editor->Send(Message::CanUndo),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == "Xa bY\nZa bW" && !editor->Send(CanUndo),
                 "one Undo restores main-only multiple-selection edit");
-        editor->Send(Message::SetMultipleSelection, 0);
+        editor->Send(SetMultipleSelection, 0);
         Rectangles(frame, label);
         TestEditor::ResetStream(editor, "Xa bY", 4, 1);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 4, 1);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 4, 1);
+        editor->Send(SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", label)),
                 "selected read-only text keeps original URL menu availability");
         Menu(frame, label);
-        Require(TestEditor::Text(editor) == "Xa bY" && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == "Xa bY" && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "read-only URL invocation retains bytes and save point");
         TestEditor::RequireSelection(editor, decode ? 4 : 5, 1, "original read-only result selection clamps to buffer");
-        editor->Send(Message::SetReadOnly, 0);
-        Require(editor->Send(Message::CanRedo), "read-only invocation preserves pending Redo");
+        editor->Send(SetReadOnly, 0);
+        Require(editor->Send(CanRedo), "read-only invocation preserves pending Redo");
     }
 }
 void Shortcuts(EditorFrame* frame) {

@@ -75,11 +75,12 @@ void FrozenCompletion(EditorFrame* frame, int id) {
     std::puts("PASS: frozen original candidate lists, case, numbers, CJK, keywords and prefix fallbacks");
 }
 void RequireDocumentState(EditorControl* editor, const CompletionDocumentState& state) {
+    using enum Scintilla::Message;
     Require(TestEditor::Text(editor) == state.text, "original completion document bytes");
     TestEditor::RequireSelection(editor, state.anchor, state.caret, "original completion selection");
-    Require(static_cast<bool>(editor->Send(Message::GetModify)) == state.modified &&
-                static_cast<bool>(editor->Send(Message::CanUndo)) == state.undo &&
-                static_cast<bool>(editor->Send(Message::CanRedo)) == state.redo,
+    Require(static_cast<bool>(editor->Send(GetModify)) == state.modified &&
+                static_cast<bool>(editor->Send(CanUndo)) == state.undo &&
+                static_cast<bool>(editor->Send(CanRedo)) == state.redo,
             "original completion save point and history state");
 }
 void FrozenBehaviors(EditorFrame* frame, SettingsStore& store, int command) {
@@ -147,20 +148,20 @@ void EscapePrefixCompletion(EditorFrame* frame) {
     settings.completeOption = WordCompletionOption::CompleteWord | WordCompletionOption::ScanWordsInDocument |
                               WordCompletionOption::OnlyWordsInDocument;
     for (const auto& fixture : fixtures) {
-        editor->Send(Message::AutoCCancel);
+        using enum Scintilla::Message;
+        editor->Send(AutoCCancel);
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", fixture.scheme));
         const std::string before = fixture.text;
         const auto escape = before.find("\\nal");
         Require(escape != std::string::npos, "escape completion fixture contains its explicit caret marker");
         const auto caret = escape + 4;
         TestEditor::ResetStream(editor, before.c_str(), caret, caret);
-        editor->Send(Message::Colourise, 0, -1);
-        Require(editor->Send(Message::GetStyleIndexAt, escape) == fixture.escapeStyle,
+        editor->Send(Colourise, 0, -1);
+        Require(editor->Send(GetStyleIndexAt, escape) == fixture.escapeStyle,
                 "native lexer marks the escape prefix in its embedded or standalone style");
         CompleteWord(*editor, SyntaxFor(fixture.language), settings, false);
         if (!fixture.completes) {
-            Require(!editor->Send(Message::AutoCActive) && TestEditor::Text(editor) == before &&
-                        !editor->Send(Message::CanUndo),
+            Require(!editor->Send(AutoCActive) && TestEditor::Text(editor) == before && !editor->Send(CanUndo),
                     "an escaped backslash keeps the following n in the completion root");
             continue;
         }
@@ -175,13 +176,14 @@ void EscapePrefixCompletion(EditorFrame* frame) {
         after.replace(escape + 2, 2, "alpha");
         Require(TestEditor::Text(editor) == after, "completion retains the escape prefix and surrounding source");
         TestEditor::RequireSelection(editor, escape + 7, escape + 7, "escape completion caret");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == before && !editor->Send(Message::CanUndo),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == before && !editor->Send(CanUndo),
                 "escape completion remains one Undo action");
     }
     std::puts("PASS: embedded and standalone JavaScript completion preserves escape prefixes");
 }
 void LargeKeywordList(EditorFrame* frame) {
+    using enum Scintilla::Message;
     constexpr int CandidateCount = 200000;
     std::string words;
     words.reserve(CandidateCount * 10);
@@ -198,18 +200,17 @@ void LargeKeywordList(EditorFrame* frame) {
     WordCompletionSettings settings;
     settings.completeOption = WordCompletionOption::CompleteWord;
     auto* editor = frame->Editor();
-    editor->Send(Message::AutoCCancel);
+    editor->Send(AutoCCancel);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     TestEditor::ResetStream(editor, "a", 1, 1);
     CompleteWord(*editor, definition, settings, false);
-    Require(editor->Send(Message::AutoCActive) && editor->Send(Message::AutoCGetCurrent) == 0 &&
-                CurrentCandidate(editor) == "a00000000",
+    Require(editor->Send(AutoCActive) && editor->Send(AutoCGetCurrent) == 0 && CurrentCandidate(editor) == "a00000000",
             "large sorted keyword lists retain the first completion candidate");
-    editor->Send(Message::AutoCSelect, 0, reinterpret_cast<intptr_t>("a00199999"));
-    Require(editor->Send(Message::AutoCGetCurrent) == CandidateCount - 1 && CurrentCandidate(editor) == "a00199999",
+    editor->Send(AutoCSelect, 0, reinterpret_cast<intptr_t>("a00199999"));
+    Require(editor->Send(AutoCGetCurrent) == CandidateCount - 1 && CurrentCandidate(editor) == "a00199999",
             "large keyword insertion and traversal preserve every candidate in sorted order");
-    editor->Send(Message::AutoCCancel);
-    Require(TestEditor::Text(editor) == "a" && !editor->Send(Message::CanUndo),
+    editor->Send(AutoCCancel);
+    Require(TestEditor::Text(editor) == "a" && !editor->Send(CanUndo),
             "constructing and canceling a large completion list leaves document history unchanged");
     std::puts("PASS: 200000 sorted completion candidates exceed the former tree traversal stack bound");
 }

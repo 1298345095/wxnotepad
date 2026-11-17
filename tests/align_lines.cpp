@@ -8,6 +8,7 @@
 #include <array>
 #include <chrono>
 #include <vector>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -15,16 +16,17 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 void Left(EditorControl* editor) {
+    using enum Scintilla::Message;
     TestEditor::ResetStream(editor, "  one   two  \r\n    three\nTAIL", 1, 18);
     Require(editor->AlignLines(AlignmentMode::Left) == AlignmentResult::Complete, "left alignment succeeds");
     Require(TestEditor::Text(editor) == "  one two\r\n  three\nTAIL",
             "left uses minimum indentation and whole selected lines");
     TestEditor::RequireSelection(editor, 0, 19, "left expands the forward selection to complete lines");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "  one   two  \r\n    three\nTAIL" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "  one   two  \r\n    three\nTAIL" && !editor->Send(CanUndo) &&
+                !editor->Send(GetModify),
             "one Undo restores original bytes and save point");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "  one two\r\n  three\nTAIL", "Redo restores left alignment");
 }
 void Right(EditorControl* editor) {
@@ -50,21 +52,21 @@ void Justify(EditorControl* editor) {
     TestEditor::RequireSelection(editor, 0, 19, "justification selects whole lines");
 }
 void Paragraph(EditorControl* editor) {
+    using enum AlignmentMode;
     TestEditor::ResetStream(editor, "a b\nc d\n\n12345678\none two", 0, 25);
-    Require(editor->AlignLines(AlignmentMode::JustifyParagraph) == AlignmentResult::Complete,
-            "paragraph justification succeeds");
+    Require(editor->AlignLines(JustifyParagraph) == AlignmentResult::Complete, "paragraph justification succeeds");
     Require(TestEditor::Text(editor) == "a      b\nc d\n\n12345678\none two",
             "paragraph mode justifies continued lines and left-aligns short or exactly three-quarter final lines");
     TestEditor::ResetStream(editor, "123456789012\naaaa bbbbbb", 0, 24);
-    editor->AlignLines(AlignmentMode::JustifyParagraph);
+    editor->AlignLines(JustifyParagraph);
     Require(TestEditor::Text(editor) == "123456789012\naaaa  bbbbbb",
             "paragraph final line longer than three quarters is justified");
     TestEditor::ResetStream(editor, "a    b\n\ntail", 1, 5);
-    editor->AlignLines(AlignmentMode::JustifyParagraph);
+    editor->AlignLines(JustifyParagraph);
     Require(TestEditor::Text(editor) == "a    b\n\ntail",
             "single-line selection forces justification even at paragraph end");
     TestEditor::ResetStream(editor, "12345678\na b\nx y", 0, 13);
-    editor->AlignLines(AlignmentMode::JustifyParagraph);
+    editor->AlignLines(JustifyParagraph);
     Require(TestEditor::Text(editor) == "12345678\na      b\nx y",
             "paragraph continuation uses the actual next line outside selection");
 }
@@ -139,8 +141,9 @@ public:
             wxRadioButton* chosen = nullptr;
             for (size_t i = 0; i < names.size(); ++i) {
                 auto* radio = wxDynamicCast(wxWindow::FindWindowByName(names[i], dialog), wxRadioButton);
-                valid = valid && radio && radio->GetValue() == (i == static_cast<size_t>(expected_));
-                if (i == static_cast<size_t>(chosen_)) chosen = radio;
+                valid =
+                    valid && radio && radio->GetValue() == (i == static_cast<size_t>(std::to_underlying(expected_)));
+                if (i == static_cast<size_t>(std::to_underlying(chosen_))) chosen = radio;
             }
             observed = valid;
             if (chosen) {
@@ -179,20 +182,20 @@ void Dialog(EditorFrame* frame, AlignmentMode expected, AlignmentMode chosen, in
             "native dialog exposes five exclusive choices and accepted-choice recall");
 }
 void NativeDialog(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    using enum AlignmentMode;
     auto* editor = frame->Editor();
     TestEditor::ResetStream(editor, "a b\n12345678", 0, 12);
-    Dialog(frame, AlignmentMode::Left, AlignmentMode::Right, wxID_CANCEL, true);
-    Require(TestEditor::Text(editor) == "a b\n12345678" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    Dialog(frame, Left, Right, wxID_CANCEL, true);
+    Require(TestEditor::Text(editor) == "a b\n12345678" && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "Cancel preserves document state");
-    Dialog(frame, AlignmentMode::Left, AlignmentMode::Right, wxID_OK);
+    Dialog(frame, Left, Right, wxID_OK);
     Require(TestEditor::Text(editor) == "     a b\n12345678", "native Right choice applies on OK");
-    editor->Send(Message::Undo);
-    Dialog(frame, AlignmentMode::Right, AlignmentMode::Center, wxID_CANCEL);
-    Require(TestEditor::Text(editor) == "a b\n12345678" && editor->Send(Message::CanRedo) &&
-                !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Dialog(frame, Right, Center, wxID_CANCEL);
+    Require(TestEditor::Text(editor) == "a b\n12345678" && editor->Send(CanRedo) && !editor->Send(GetModify),
             "Cancel preserves previous accepted mode and pending Redo");
-    Dialog(frame, AlignmentMode::Right, AlignmentMode::Left, wxID_OK);
+    Dialog(frame, Right, Left, wxID_OK);
 }
 class AlignmentFeedback final : public wxModalDialogHook {
 public:
@@ -211,76 +214,77 @@ public:
     bool alignmentVisible = false;
 };
 void NativeProtectionAndRecall(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    using enum AlignmentMode;
     auto* editor = frame->Editor();
     AlignmentFeedback feedback;
     const auto rejected = "x  y\n" + std::string(1024, 'z');
     TestEditor::ResetStream(editor, rejected.c_str(), 1028, 1);
-    Dialog(frame, AlignmentMode::Left, AlignmentMode::Right, wxID_OK);
+    Dialog(frame, Left, Right, wxID_OK);
     Require(feedback.messages.size() == 1 &&
                 feedback.messages[0] == "This operation can't be performed (lines too long)." &&
-                !feedback.alignmentVisible && TestEditor::Text(editor) == rejected && !editor->Send(Message::CanUndo),
+                !feedback.alignmentVisible && TestEditor::Text(editor) == rejected && !editor->Send(CanUndo),
             "oversized input gives original feedback after the native choice dialog closes");
     TestEditor::RequireSelection(editor, 1029, 0,
                                  "native oversized path repairs selection despite rejected transformation");
     TestEditor::ResetStream(editor, "a b\nc d");
-    editor->Send(Message::SetRectangularSelectionAnchor, 0);
-    editor->Send(Message::SetRectangularSelectionCaret, 6);
-    Dialog(frame, AlignmentMode::Right, AlignmentMode::Center, wxID_OK);
+    editor->Send(SetRectangularSelectionAnchor, 0);
+    editor->Send(SetRectangularSelectionCaret, 6);
+    Dialog(frame, Right, Center, wxID_OK);
     Require(feedback.messages.size() == 2 &&
                 feedback.messages[1] == "This operation can't be performed within a rectangular selection." &&
                 !feedback.alignmentVisible && TestEditor::Text(editor) == "a b\nc d" &&
-                editor->Send(Message::SelectionIsRectangle) &&
-                editor->Send(Message::GetRectangularSelectionAnchor) == 0 &&
-                editor->Send(Message::GetRectangularSelectionCaret) == 6,
+                editor->Send(SelectionIsRectangle) && editor->Send(GetRectangularSelectionAnchor) == 0 &&
+                editor->Send(GetRectangularSelectionCaret) == 6,
             "rectangle keeps endpoints and gives original warning after dialog closes");
     TestEditor::ResetStream(editor, "a   b\nlongword", 1, 12);
-    editor->Send(Message::SetReadOnly, 1);
-    Dialog(frame, AlignmentMode::Center, AlignmentMode::Justify, wxID_OK);
-    Require(TestEditor::Text(editor) == "a   b\nlongword" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify) && feedback.messages.size() == 2,
+    editor->Send(SetReadOnly, 1);
+    Dialog(frame, Center, Justify, wxID_OK);
+    Require(TestEditor::Text(editor) == "a   b\nlongword" && !editor->Send(CanUndo) && !editor->Send(GetModify) &&
+                feedback.messages.size() == 2,
             "read-only native OK retains text, history and save point");
     TestEditor::RequireSelection(editor, 0, 14, "read-only native alignment repairs selection");
     const std::array<const char*, 5> results{"a b c\n12345678", "   a b c\n12345678", " a  b c\n12345678",
                                              "a  b   c\n12345678", "a  b   c\n12345678"};
-    auto recalled = AlignmentMode::Justify;
+    auto recalled = Justify;
     for (size_t i = 0; i < results.size(); ++i) {
         TestEditor::ResetStream(editor, "a b c\n12345678", 0, 14);
         const auto choice = static_cast<AlignmentMode>(i);
         Dialog(frame, recalled, choice, wxID_OK);
-        Require(TestEditor::Text(editor) == results[i] && editor->Send(Message::CanUndo),
+        Require(TestEditor::Text(editor) == results[i] && editor->Send(CanUndo),
                 "every native radio choice invokes its original alignment mode");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == "a b c\n12345678" && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == "a b c\n12345678" && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "every native choice is one Undo group");
         recalled = choice;
     }
-    editor->Send(Message::SetSavePoint);
+    editor->Send(SetSavePoint);
     Require(frame->NewDocument(), "new document opens in the current frame");
-    Dialog(frame, AlignmentMode::JustifyParagraph, AlignmentMode::Right, wxID_CANCEL);
-    Require(TestEditor::Text(editor).empty() && !editor->Send(Message::CanUndo),
+    Dialog(frame, JustifyParagraph, Right, wxID_CANCEL);
+    Require(TestEditor::Text(editor).empty() && !editor->Send(CanUndo),
             "empty document keeps alignment menu available and accepted recall survives New");
     auto* other = new EditorFrame;
     other->Show();
-    Dialog(other, AlignmentMode::Left, AlignmentMode::Center, wxID_CANCEL);
+    Dialog(other, Left, Center, wxID_CANCEL);
     other->Destroy();
 }
 void OriginalEdges(EditorControl* editor) {
+    using enum Scintilla::Message;
     editor->SetIndentationWidths(4, 4);
-    editor->Send(Message::SetUseTabs, 0);
+    editor->Send(SetUseTabs, 0);
     TestEditor::ResetStream(editor, "\t😀\t中  \r\n  a b\nLONGEST\rx", 28, 1);
-    const auto eol = editor->Send(Message::GetEOLMode);
+    const auto eol = editor->Send(GetEOLMode);
     editor->AlignLines(AlignmentMode::Right);
     Require(TestEditor::Text(editor) == "     😀 中\r\n      a b\n  LONGEST\r        x",
             "Tabs, supplementary UTF-16 word lengths, Unicode and mixed EOLs retain original alignment");
     TestEditor::RequireSelection(editor, 44, 0, "Unicode reversed partial selection expands through unterminated EOF");
-    Require(editor->Send(Message::GetEOLMode) == eol, "alignment preserves insertion EOL mode");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "\t😀\t中  \r\n  a b\nLONGEST\rx" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    Require(editor->Send(GetEOLMode) == eol, "alignment preserves insertion EOL mode");
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "\t😀\t中  \r\n  a b\nLONGEST\rx" && !editor->Send(CanUndo) &&
+                !editor->Send(GetModify),
             "mixed-EOL right alignment has one Undo");
     TestEditor::RequireSelection(editor, 28, 1, "Undo restores original partial reversed endpoints");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(TestEditor::Text(editor) == "     😀 中\r\n      a b\n  LONGEST\r        x",
             "mixed-EOL Redo restores literal bytes");
     TestEditor::ResetStream(editor, "😀 😀\n123", 0, 13);
@@ -292,13 +296,13 @@ void OriginalEdges(EditorControl* editor) {
     Require(TestEditor::Text(editor) == "x y\nz   w", "an empty stream selection aligns only its current logical line");
     TestEditor::RequireSelection(editor, 0, 4, "caret alignment selects its current complete line");
     editor->SetIndentationWidths(8, 8);
-    editor->Send(Message::SetUseTabs, 1);
+    editor->Send(SetUseTabs, 1);
     TestEditor::ResetStream(editor, "\t a   b\n        x\n", 0, 18);
     editor->AlignLines(AlignmentMode::Left);
     Require(TestEditor::Text(editor) == "\ta b\n\tx\n",
             "effective tab width and core indentation policy produce original Tab indentation");
     editor->SetIndentationWidths(4, 4);
-    editor->Send(Message::SetUseTabs, 0);
+    editor->Send(SetUseTabs, 0);
 
     TestEditor::ResetStream(editor,
                             "  a\x{c2}\x{a0}"
@@ -314,60 +318,59 @@ void OriginalEdges(EditorControl* editor) {
     Require(TestEditor::Text(editor) == "\n\n", "space-only and Tab-only lines are emptied");
     TestEditor::RequireSelection(editor, 0, 2, "blank-line transformation retains whole-line selection");
     TestEditor::ResetStream(editor, "a   b\nlongword\nc  d", 1, 4);
-    editor->Send(Message::AddSelection, 18, 15);
-    editor->Send(Message::SetMainSelection, 0);
+    editor->Send(AddSelection, 18, 15);
+    editor->Send(SetMainSelection, 0);
     editor->AlignLines(AlignmentMode::Left);
-    Require(TestEditor::Text(editor) == "a b\nlongword\nc  d" && editor->Send(Message::GetSelections) == 1,
+    Require(TestEditor::Text(editor) == "a b\nlongword\nc  d" && editor->Send(GetSelections) == 1,
             "alignment uses the main stream selection and performs original single-selection repair");
     TestEditor::RequireSelection(editor, 0, 4, "main selection expands only its own logical line");
 }
 void HistoryAndProtection(EditorControl* editor) {
+    using enum Scintilla::Message;
+    using enum AlignmentMode;
     TestEditor::ResetStream(editor, "a b\nc d", 1, 6);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 1, 6);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 1, 6);
     const auto beforeRevision = editor->DocumentRevision();
-    editor->AlignLines(AlignmentMode::Left);
-    Require(TestEditor::Text(editor) == "a b\nc d" && editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::CanRedo) && editor->Send(Message::GetModify) &&
-                editor->DocumentRevision() > beforeRevision,
+    editor->AlignLines(Left);
+    Require(TestEditor::Text(editor) == "a b\nc d" && editor->Send(CanUndo) && !editor->Send(CanRedo) &&
+                editor->Send(GetModify) && editor->DocumentRevision() > beforeRevision,
             "equal-byte target replacement retains original history, revision and save-point behavior");
     TestEditor::RequireSelection(editor, 0, 7, "unchanged bytes still receive whole-line selection repair");
-    editor->Send(Message::Undo);
-    Require(TestEditor::Text(editor) == "a b\nc d" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(TestEditor::Text(editor) == "a b\nc d" && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "equal-byte replacement is one Undo group returning to save point");
-    for (const auto mode : {AlignmentMode::Left, AlignmentMode::Right, AlignmentMode::Center, AlignmentMode::Justify,
-                            AlignmentMode::JustifyParagraph}) {
+    for (const auto mode : {Left, Right, Center, Justify, JustifyParagraph}) {
         TestEditor::ResetStream(editor, "  a   b\nlongword", 1, 14);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         const auto revision = editor->DocumentRevision();
         Require(editor->AlignLines(mode) == AlignmentResult::Complete &&
-                    TestEditor::Text(editor) == "  a   b\nlongword" && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify) && editor->DocumentRevision() == revision,
+                    TestEditor::Text(editor) == "  a   b\nlongword" && !editor->Send(CanUndo) &&
+                    !editor->Send(GetModify) && editor->DocumentRevision() == revision,
                 "original core protects read-only text for every alignment mode");
         TestEditor::RequireSelection(editor, 0, 16, "read-only command retains original selection repair");
     }
     TestEditor::ResetStream(editor, "a b\nc d", 0, 2);
-    editor->Send(Message::SetRectangularSelectionAnchor, 0);
-    editor->Send(Message::SetRectangularSelectionCaret, 6);
+    editor->Send(SetRectangularSelectionAnchor, 0);
+    editor->Send(SetRectangularSelectionCaret, 6);
     const auto revision = editor->DocumentRevision();
-    Require(editor->AlignLines(AlignmentMode::Left) == AlignmentResult::RectangularSelection &&
-                TestEditor::Text(editor) == "a b\nc d" && editor->Send(Message::SelectionIsRectangle) &&
-                editor->Send(Message::GetRectangularSelectionAnchor) == 0 &&
-                editor->Send(Message::GetRectangularSelectionCaret) == 6 && !editor->Send(Message::CanUndo) &&
-                editor->DocumentRevision() == revision,
+    Require(editor->AlignLines(Left) == AlignmentResult::RectangularSelection &&
+                TestEditor::Text(editor) == "a b\nc d" && editor->Send(SelectionIsRectangle) &&
+                editor->Send(GetRectangularSelectionAnchor) == 0 && editor->Send(GetRectangularSelectionCaret) == 6 &&
+                !editor->Send(CanUndo) && editor->DocumentRevision() == revision,
             "rectangle rejects before text, selection or history changes");
     TestEditor::ResetStream(editor, "");
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
     const auto emptyRevision = editor->DocumentRevision();
-    editor->AlignLines(AlignmentMode::Left);
-    Require(TestEditor::Text(editor).empty() && !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
-                !editor->Send(Message::GetModify) && editor->DocumentRevision() == emptyRevision,
+    editor->AlignLines(Left);
+    Require(TestEditor::Text(editor).empty() && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                !editor->Send(GetModify) && editor->DocumentRevision() == emptyRevision,
             "empty alignment preserves pending Redo, revision and save point");
 }
 void BufferBoundary(EditorControl* editor) {
+    using enum Scintilla::Message;
     const std::string accepted = "x  y\n" + std::string(1023, 'z');
     TestEditor::ResetStream(editor, accepted.c_str(), 1, 1027);
     Require(editor->AlignLines(AlignmentMode::Left) == AlignmentResult::Complete &&
@@ -381,14 +384,13 @@ void BufferBoundary(EditorControl* editor) {
             "fixed UTF-16 input boundary includes CRLF while trimmed column 1023 remains accepted");
     const std::string rejected = "x  y\n" + std::string(1024, 'z');
     TestEditor::ResetStream(editor, rejected.c_str(), 1028, 1);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 1028, 1);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 1028, 1);
     const auto revision = editor->DocumentRevision();
     Require(editor->AlignLines(AlignmentMode::Left) == AlignmentResult::LinesTooLong &&
-                TestEditor::Text(editor) == rejected && !editor->Send(Message::CanUndo) &&
-                editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify) &&
-                editor->DocumentRevision() == revision,
+                TestEditor::Text(editor) == rejected && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                !editor->Send(GetModify) && editor->DocumentRevision() == revision,
             "column 1024 rejects the complete transformation and preserves pending Redo");
     TestEditor::RequireSelection(editor, 1029, 0,
                                  "original rejected boundary still repairs reversed partial selection");
@@ -398,7 +400,7 @@ void BufferBoundary(EditorControl* editor) {
     wide += "  x";
     TestEditor::ResetStream(editor, wide.c_str());
     Require(editor->AlignLines(AlignmentMode::Left) == AlignmentResult::Complete && TestEditor::Text(editor) == wide &&
-                !editor->Send(Message::CanUndo),
+                !editor->Send(CanUndo),
             "original failed UTF-16 conversion skips a line above 1024 units despite lower core columns");
     const auto spaces = std::string(1100, ' ');
     TestEditor::ResetStream(editor, spaces.c_str());

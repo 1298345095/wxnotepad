@@ -1,4 +1,5 @@
 #include "editor/go_to_location.h"
+#include <utility>
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <ScintillaStructures.h>
@@ -42,7 +43,8 @@ GoToResult GoToLocation(EditorControl& editor, const wxString& line, const wxStr
             --newColumn;
         }
         const Scintilla::CharacterRangeFull range{newLine - 1, newColumn};
-        position = editor.Send(Message::FindColumnEx, static_cast<uintptr_t>(type), reinterpret_cast<intptr_t>(&range));
+        position = editor.Send(Message::FindColumnEx, static_cast<uintptr_t>(std::to_underlying(type)),
+                               reinterpret_cast<intptr_t>(&range));
     }
 
     editor.JumpToPosition(position);

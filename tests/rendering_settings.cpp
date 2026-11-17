@@ -2,6 +2,7 @@
 #include "settings/settings_store.h"
 #include <SciLexer.h>
 #include <wx/vlbox.h>
+#include <utility>
 #ifdef __WXMSW__
 #include <imm.h>
 #endif
@@ -149,7 +150,7 @@ public:
                                 static_cast<intptr_t>(expected == 1 ? Technology::DirectWrite : Technology::Default),
                             "application applies supported request or preserves usable GDI fallback");
 #else
-                    Require(frame->Editor()->Send(Message::GetTechnology) == static_cast<intptr_t>(Technology::Default), "Linux retains native renderer");
+                    Require(frame->Editor()->Send(Message::GetTechnology) == static_cast<intptr_t>(std::to_underlying(Technology::Default)), "Linux retains native renderer");
 #endif
                     if (argc > 2 && argv[2] != "keep") {
 #ifdef __WXMSW__
@@ -185,7 +186,7 @@ public:
                 }
                 DocumentAndPopup(frame, gdi, d2d);
 #else
-                Require(frame->Editor()->Send(Message::GetTechnology) == static_cast<intptr_t>(Technology::Default), "Linux retains native rendering");
+                Require(frame->Editor()->Send(Message::GetTechnology) == static_cast<intptr_t>(std::to_underlying(Technology::Default)), "Linux retains native rendering");
                 Require(frame->GetMenuBar()->FindMenuItem("Settings", "Legacy GDI") == wxNOT_FOUND &&
                             frame->GetMenuBar()->FindMenuItem("Settings", "Direct2D") == wxNOT_FOUND,
                         "Linux does not expose Windows rendering choices");

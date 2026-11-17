@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -33,49 +34,49 @@ void Command(EditorFrame* frame, const char* menu, const char* label) {
     NativeSearch::Command(frame, id);
 }
 void Guides(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    const auto fontSize =
-        editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
-    Require(editor->Send(Message::GetIndentationGuides) == 0, "guides default to hidden");
+    const auto fontSize = editor->Send(StyleGetSizeFractional,
+                                       static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)));
+    Require(editor->Send(GetIndentationGuides) == 0, "guides default to hidden");
     Command(frame, "View", "Indentation Guides");
-    Require(editor->Send(Message::GetIndentationGuides) == 2, "plain text enables original look-forward guides");
+    Require(editor->Send(GetIndentationGuides) == 2, "plain text enables original look-forward guides");
     for (const auto& [language, mode] :
          {std::pair{"C/C++", 3}, std::pair{"Python", 2}, std::pair{"JSON", 3}, std::pair{"Plain Text", 2}}) {
         const int id = frame->GetMenuBar()->FindMenuItem("Scheme", language);
         Require(id != wxNOT_FOUND, "delivered language remains reachable");
         NativeSearch::Command(frame, id);
-        Require(editor->Send(Message::GetIndentationGuides) == mode,
+        Require(editor->Send(GetIndentationGuides) == mode,
                 "visible guides follow original delivered-language metadata");
-        Require(editor->Send(Message::StyleGetFore, 37) == 0x0080FF &&
-                    editor->Send(Message::StyleGetBack, 37) == 0xFFFFFF,
+        Require(editor->Send(StyleGetFore, 37) == 0x0080FF && editor->Send(StyleGetBack, 37) == 0xFFFFFF,
                 "scheme installation applies original guide default foreground and inherited background");
     }
-    Require(editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) ==
-                    fontSize &&
+    Require(editor->Send(StyleGetSizeFractional,
+                         static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default))) == fontSize &&
                 editor->GetDPI().x > 0,
             "guide styles preserve native base font and current DPI");
     Command(frame, "View", "Indentation Guides");
-    Require(editor->Send(Message::GetIndentationGuides) == 0, "second native guide command hides them");
+    Require(editor->Send(GetIndentationGuides) == 0, "second native guide command hides them");
     NativeKeys::Shortcut(frame, 'G', true, false, true);
-    Require(editor->Send(Message::GetIndentationGuides) == 2, "native Ctrl+Shift+G enables guides exactly once");
+    Require(editor->Send(GetIndentationGuides) == 2, "native Ctrl+Shift+G enables guides exactly once");
     NativeKeys::Shortcut(frame, 'G', true, false, true);
-    Require(editor->Send(Message::GetIndentationGuides) == 0, "native Ctrl+Shift+G hides guides exactly once");
+    Require(editor->Send(GetIndentationGuides) == 0, "native Ctrl+Shift+G hides guides exactly once");
 }
 void Marker(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    Require(editor->Send(Message::GetEdgeMode) == 0, "long-line marker defaults to hidden");
-    Require(editor->Send(Message::GetEdgeColumn) == 80, "default shared long-line boundary is 80");
+    Require(editor->Send(GetEdgeMode) == 0, "long-line marker defaults to hidden");
+    Require(editor->Send(GetEdgeColumn) == 80, "default shared long-line boundary is 80");
     Command(frame, "View", "Long Line Marker");
-    Require(editor->Send(Message::GetEdgeMode) == 1 && editor->Send(Message::GetEdgeColour) == 0x00C0FF,
+    Require(editor->Send(GetEdgeMode) == 1 && editor->Send(GetEdgeColour) == 0x00C0FF,
             "long-line command enables original line mode and default yellow color");
     Command(frame, "View", "Long Line Marker");
-    Require(editor->Send(Message::GetEdgeMode) == 0 && editor->Send(Message::GetEdgeColumn) == 80,
-            "hiding marker retains its boundary");
-    Require(editor->Send(Message::GetEdgeColour) == 0x00C0FF, "hiding a line marker retains its original color");
+    Require(editor->Send(GetEdgeMode) == 0 && editor->Send(GetEdgeColumn) == 80, "hiding marker retains its boundary");
+    Require(editor->Send(GetEdgeColour) == 0x00C0FF, "hiding a line marker retains its original color");
     NativeKeys::Shortcut(frame, 'L', true, false, true);
-    Require(editor->Send(Message::GetEdgeMode) == 1, "native Ctrl+Shift+L enables the marker exactly once");
+    Require(editor->Send(GetEdgeMode) == 1, "native Ctrl+Shift+L enables the marker exactly once");
     NativeKeys::Shortcut(frame, 'L', true, false, true);
-    Require(editor->Send(Message::GetEdgeMode) == 0, "native Ctrl+Shift+L hides the marker exactly once");
+    Require(editor->Send(GetEdgeMode) == 0, "native Ctrl+Shift+L hides the marker exactly once");
 }
 class LimitDriver final : public wxModalDialogHook, public wxEvtHandler {
 public:
@@ -215,53 +216,53 @@ void DialogNavigation(EditorFrame* frame) {
     LongLineDialog(frame, "19", wxString::Format("%lld", static_cast<long long>(boundary)));
 }
 void DialogAndModeline(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto path = TestFiles::TemporaryDirectory() / std::filesystem::path(u8"guide-中文.py");
     const std::string before = "# -*- fill-column: 22 -*-\r\nif True:\r\n\tvalue = '中😀'\r\n\r\n    pass\r\n";
     TestFiles::WriteBytes(path, before);
     Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened, "open modeline guide fixture");
-    Require(editor->Send(Message::GetEdgeColumn) == 22, "fill-column overrides global long-line limit");
+    Require(editor->Send(GetEdgeColumn) == 22, "fill-column overrides global long-line limit");
     const auto unicode = before.find("中");
-    Require(editor->Send(Message::GetColumn, unicode, -1) == 13 &&
-                editor->Send(Message::GetColumn, unicode + 3, -1) == 14 &&
-                editor->Send(Message::GetColumn, unicode + 7, -1) == 15,
+    Require(editor->Send(GetColumn, unicode, -1) == 13 && editor->Send(GetColumn, unicode + 3, -1) == 14 &&
+                editor->Send(GetColumn, unicode + 7, -1) == 15,
             "Unicode display columns match independent original capture");
     editor->SetIndentationWidths(8, 4);
-    Require(editor->Send(Message::GetColumn, unicode, -1) == 17 && editor->Send(Message::GetEdgeColumn) == 22,
+    Require(editor->Send(GetColumn, unicode, -1) == 17 && editor->Send(GetEdgeColumn) == 22,
             "tab width changes expanded display columns while retaining marker boundary");
     editor->SetIndentationWidths(4, 4);
-    editor->Send(Message::SetSel, 40, 8);
-    const auto eol = editor->Send(Message::GetEOLMode);
+    editor->Send(SetSel, 40, 8);
+    const auto eol = editor->Send(GetEOLMode);
     WrapSeed(frame, "22");
     LongLineDialog(frame, "22", "35", 2);
-    Require(editor->Send(Message::GetEdgeColumn) == 35 && editor->Send(Message::GetEdgeMode) == 2,
+    Require(editor->Send(GetEdgeColumn) == 35 && editor->Send(GetEdgeMode) == 2,
             "accept updates the current-file boundary and enables background marker");
     const auto light = wxSystemSettings::GetColour(wxSYS_COLOUR_3DLIGHT);
     const auto color = light.Red() | (light.Green() << 8U) | (light.Blue() << 16U);
-    Require(editor->Send(Message::GetEdgeColour) == color, "default background uses native system 3D-light fallback");
+    Require(editor->Send(GetEdgeColour) == color, "default background uses native system 3D-light fallback");
     WrapSeed(frame, "35");
-    Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled && editor->Send(Message::GetEdgeColumn) == 35,
+    Require(frame->Open(std::nullopt).status == OpenStatus::Cancelled && editor->Send(GetEdgeColumn) == 35,
             "cancelled Open retains live boundary");
     Require(frame->Open(TestFiles::Filename(path.parent_path() / "missing-document.py")).status == OpenStatus::Failed &&
-                editor->Send(Message::GetEdgeColumn) == 35,
+                editor->Send(GetEdgeColumn) == 35,
             "failed Open retains live boundary");
-    editor->Send(Message::Colourise, 0, -1);
-    editor->Send(Message::FoldLine, 1, static_cast<intptr_t>(Scintilla::FoldAction::Contract));
-    Require(!editor->Send(Message::GetLineVisible, 2), "nested Python block is folded before display settings");
+    editor->Send(Colourise, 0, -1);
+    editor->Send(FoldLine, 1, static_cast<intptr_t>(std::to_underlying(Scintilla::FoldAction::Contract)));
+    Require(!editor->Send(GetLineVisible, 2), "nested Python block is folded before display settings");
     LongLineDialog(frame, "35", "18", 1, false);
-    Require(!editor->Send(Message::GetLineVisible, 2), "display settings preserve existing folded block");
-    Require(editor->Send(Message::GetEdgeMode) == 2 && editor->Send(Message::GetEdgeColumn) == 35,
+    Require(!editor->Send(GetLineVisible, 2), "display settings preserve existing folded block");
+    Require(editor->Send(GetEdgeMode) == 2 && editor->Send(GetEdgeColumn) == 35,
             "cancel preserves current boundary and remembered background mode");
     Command(frame, "View", "Long Line Marker");
     LongLineDialog(frame, "35", "21", 1, false);
-    Require(editor->Send(Message::GetEdgeMode) == 0, "cancel does not enable a hidden marker");
+    Require(editor->Send(GetEdgeMode) == 0, "cancel does not enable a hidden marker");
     Command(frame, "View", "Long Line Marker");
-    Require(editor->Send(Message::GetEdgeMode) == 2, "showing restores remembered background mode");
+    Require(editor->Send(GetEdgeMode) == 2, "showing restores remembered background mode");
     LongLineDialog(frame, "35", "", 1, true, false);
     LongLineDialog(frame, "35", "4097");
-    Require(editor->Send(Message::GetEdgeColumn) == 4096, "original limit clamps to 4096");
+    Require(editor->Send(GetEdgeColumn) == 4096, "original limit clamps to 4096");
     LongLineDialog(frame, "4096", "2147483648");
-    Require(editor->Send(Message::GetEdgeColumn) == 0, "original UINT-to-int conversion clamps to zero");
+    Require(editor->Send(GetEdgeColumn) == 0, "original UINT-to-int conversion clamps to zero");
     int boundary = 0;
     for (const auto& [input, expected] :
          {std::pair{" ", -1}, std::pair{"-1", -1}, std::pair{" 12", 12}, std::pair{"12 ", -1}, std::pair{"12x", -1},
@@ -269,20 +270,18 @@ void DialogAndModeline(EditorFrame* frame) {
           std::pair{"4096", 4096}, std::pair{"2147483647", 4096}, std::pair{"0", 0}}) {
         LongLineDialog(frame, wxString::Format("%d", boundary), wxString::FromUTF8(input), 1, true, expected >= 0);
         if (expected >= 0) boundary = expected;
-        Require(editor->Send(Message::GetEdgeColumn) == boundary,
-                "original dialog numeric capture matches live edge column");
+        Require(editor->Send(GetEdgeColumn) == boundary, "original dialog numeric capture matches live edge column");
     }
     Require(TestEditor::Text(editor) == before && TestFiles::Bytes(path) == before,
             "guide and dialog actions preserve text and independent disk bytes");
     TestEditor::RequireSelection(editor, 40, 8, "display settings preserve reverse selection");
-    Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo) &&
-                editor->Send(Message::GetEOLMode) == eol && frame->DocumentPath() == TestFiles::Filename(path) &&
+    Require(!editor->Send(GetModify) && !editor->Send(CanUndo) && !editor->Send(CanRedo) &&
+                editor->Send(GetEOLMode) == eol && frame->DocumentPath() == TestFiles::Filename(path) &&
                 frame->DocumentEncoding() == FileEncoding::Utf8,
             "display settings preserve document metadata/history");
-    Require(frame->NewDocument() && editor->Send(Message::GetEdgeColumn) == 0,
+    Require(frame->NewDocument() && editor->Send(GetEdgeColumn) == 0,
             "New initializes current boundary from updated global");
-    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
-                editor->Send(Message::GetEdgeColumn) == 22,
+    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened && editor->Send(GetEdgeColumn) == 22,
             "reopen reparses original fill-column");
     Require(frame->NewDocument(), "create separate Column Wrap recall document");
     TestEditor::ResetStream(editor, "one two", 0, 7);
@@ -298,22 +297,22 @@ void DialogAndModeline(EditorFrame* frame) {
     }
     LongLineDialog(frame, "0", "35");
     WrapSeed(frame, "7");
-    editor->Send(Message::SetSavePoint);
+    editor->Send(SetSavePoint);
     Require(frame->NewDocument(), "New resets accepted Column Wrap recall");
     TestEditor::ResetStream(editor, "one two", 0, 7);
     WrapSeed(frame, "35");
     DialogNavigation(frame);
 }
 std::vector<intptr_t> SelectionState(EditorControl* editor) {
+    using enum Scintilla::Message;
     std::vector<intptr_t> state;
-    for (const auto message :
-         {Message::GetModify, Message::CanUndo, Message::CanRedo, Message::GetReadOnly, Message::GetSelectionMode,
-          Message::GetMainSelection, Message::GetRectangularSelectionAnchor, Message::GetRectangularSelectionCaret,
-          Message::GetRectangularSelectionAnchorVirtualSpace, Message::GetRectangularSelectionCaretVirtualSpace})
+    for (const auto message : {GetModify, CanUndo, CanRedo, GetReadOnly, GetSelectionMode, GetMainSelection,
+                               GetRectangularSelectionAnchor, GetRectangularSelectionCaret,
+                               GetRectangularSelectionAnchorVirtualSpace, GetRectangularSelectionCaretVirtualSpace})
         state.push_back(editor->Send(message));
-    for (intptr_t index = 0; index < editor->Send(Message::GetSelections); ++index)
-        for (const auto message : {Message::GetSelectionNAnchor, Message::GetSelectionNCaret,
-                                   Message::GetSelectionNAnchorVirtualSpace, Message::GetSelectionNCaretVirtualSpace})
+    for (intptr_t index = 0; index < editor->Send(GetSelections); ++index)
+        for (const auto message :
+             {GetSelectionNAnchor, GetSelectionNCaret, GetSelectionNAnchorVirtualSpace, GetSelectionNCaretVirtualSpace})
             state.push_back(editor->Send(message, index));
     return state;
 }
@@ -339,35 +338,36 @@ void SavedHistoryAndViews(EditorFrame* frame) {
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{0a}\x{00}\x{21}\x{00}", 8)},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         const auto path = TestFiles::TemporaryDirectory() / std::filesystem::path(u8"显示状态-") / fixture.name;
         std::filesystem::create_directories(path.parent_path());
         TestFiles::WriteBytes(path, fixture.before);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "open encoded display fixture");
-        const auto eol = editor->Send(Message::GetEOLMode);
+        const auto eol = editor->Send(GetEOLMode);
         const auto bom = frame->DocumentHasBom();
-        editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
+        editor->Send(GotoPos, editor->Send(GetLength));
         for (const char character : {'!', '?'}) {
-            editor->Send(Message::BeginUndoAction);
-            editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>(&character));
-            editor->Send(Message::EndUndoAction);
+            editor->Send(BeginUndoAction);
+            editor->Send(AddText, 1, reinterpret_cast<intptr_t>(&character));
+            editor->Send(EndUndoAction);
         }
-        editor->Send(Message::Undo);
-        Require(editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+        editor->Send(Undo);
+        Require(editor->Send(GetModify) && editor->Send(CanUndo) && editor->Send(CanRedo),
                 "display fixture starts dirty with both Undo and Redo pending");
-        editor->Send(Message::SetSel, editor->Send(Message::GetLength), 0);
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::AddSelection, 0, 0);
-        editor->Send(Message::SetZoom, 175);
+        editor->Send(SetSel, editor->Send(GetLength), 0);
+        editor->Send(SetMultipleSelection, 1);
+        editor->Send(AddSelection, 0, 0);
+        editor->Send(SetZoom, 175);
         editor->SetIndentationWidths(8, 4);
-        if (editor->Send(Message::GetWrapMode) == 0) editor->ToggleWordWrap();
+        if (editor->Send(GetWrapMode) == 0) editor->ToggleWordWrap();
         DisplayInvariant(frame);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         DisplayInvariant(frame);
-        editor->Send(Message::SetReadOnly, 0);
-        Require(editor->Send(Message::GetZoom) == 175 && editor->Send(Message::GetTabWidth) == 8 &&
-                    editor->Send(Message::GetWrapMode) != 0 && editor->Send(Message::GetEOLMode) == eol &&
-                    frame->DocumentHasBom() == bom && frame->DocumentEncoding() == fixture.encoding &&
+        editor->Send(SetReadOnly, 0);
+        Require(editor->Send(GetZoom) == 175 && editor->Send(GetTabWidth) == 8 && editor->Send(GetWrapMode) != 0 &&
+                    editor->Send(GetEOLMode) == eol && frame->DocumentHasBom() == bom &&
+                    frame->DocumentEncoding() == fixture.encoding &&
                     frame->DocumentPath() == TestFiles::Filename(path) && TestFiles::Bytes(path) == fixture.before,
                 "display actions preserve wrapped/zoomed/tabbed view and independent original encoded disk bytes");
         TestFiles::RequireSavedUndoRedo(frame, path, fixture,
@@ -379,16 +379,17 @@ void SavedHistoryAndViews(EditorFrame* frame) {
         editor, [frame] { DisplayInvariant(frame); }, "display actions preserve rectangular virtual space");
 }
 void Preferences(EditorFrame* frame, int guides, int edge, int column, const wxString& action) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    Require(editor->Send(Message::GetIndentationGuides) == guides,
+    Require(editor->Send(GetIndentationGuides) == guides,
             "imported ShowIndentGuides/SimpleIndentGuides selects original mode");
     if (guides != 0) {
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
-        Require(editor->Send(Message::GetIndentationGuides) == (guides == 1 ? 1 : 3),
+        Require(editor->Send(GetIndentationGuides) == (guides == 1 ? 1 : 3),
                 "imported simple mode survives language changes");
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
     }
-    Require(editor->Send(Message::GetEdgeMode) == edge && editor->Send(Message::GetEdgeColumn) == column,
+    Require(editor->Send(GetEdgeMode) == edge && editor->Send(GetEdgeColumn) == column,
             "imported long-line mode, visibility and limit reach the real editor");
     if (action == "toggle" || action == "explicit") {
         Command(frame, "View", "Indentation Guides");

@@ -62,10 +62,11 @@ void NativeAlt(EditorFrame* frame, bool upwards, bool shift = false) {
     wxYield();
 }
 void Reset(EditorControl* editor, const char* text, intptr_t anchor, intptr_t caret) {
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    using enum Scintilla::Message;
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor->Send(SetSel, anchor, caret);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 }
 void Fixtures(EditorFrame* frame) {
     auto* editor = frame->Editor();
@@ -96,40 +97,40 @@ void Fixtures(EditorFrame* frame) {
         {"unterminated multiline up uses current EOL", "A\nbb\nlast", 3, 7, true, "bb\nlast\r\nA", 0, 9},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         Reset(editor, fixture.before, fixture.anchor, fixture.caret);
-        const auto eol = editor->Send(Message::GetEOLMode);
+        const auto eol = editor->Send(GetEOLMode);
         const auto encoding = frame->DocumentEncoding();
         Menu(frame, fixture.upwards ? "Move Up" : "Move Down");
         Require(NativeSearch::Text(editor) == fixture.after, fixture.name);
-        Require(editor->Send(Message::GetAnchor) == fixture.movedAnchor &&
-                    editor->Send(Message::GetCurrentPos) == fixture.movedCaret,
+        Require(editor->Send(GetAnchor) == fixture.movedAnchor && editor->Send(GetCurrentPos) == fixture.movedCaret,
                 fixture.name);
-        Require(editor->Send(Message::GetModify) && editor->Send(Message::CanUndo), "move modifies with undo");
-        Require(editor->Send(Message::GetEOLMode) == eol && frame->DocumentEncoding() == encoding,
+        Require(editor->Send(GetModify) && editor->Send(CanUndo), "move modifies with undo");
+        Require(editor->Send(GetEOLMode) == eol && frame->DocumentEncoding() == encoding,
                 "move preserves EOL mode and encoding");
         Menu(frame, "Undo");
-        Require(NativeSearch::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        Require(NativeSearch::Text(editor) == fixture.before && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "one Undo restores bytes and save point");
         Menu(frame, "Redo");
-        Require(NativeSearch::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+        Require(NativeSearch::Text(editor) == fixture.after && editor->Send(GetModify),
                 "one Redo restores moved bytes");
         std::printf("PASS: %s, anchor/caret, one-step Undo/Redo, mode preservation\n", fixture.name);
     }
 }
 void NoOps(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const bool upwards : {true, false}) {
         const char* before = "A\nBB\nlast";
         const intptr_t position = upwards ? 1 : 8;
         Reset(editor, before, position, position);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, position, position);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, position, position);
         Menu(frame, upwards ? "Move Up" : "Move Down");
-        Require(NativeSearch::Text(editor) == before && editor->Send(Message::GetAnchor) == position &&
-                    editor->Send(Message::GetCurrentPos) == position && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+        Require(NativeSearch::Text(editor) == before && editor->Send(GetAnchor) == position &&
+                    editor->Send(GetCurrentPos) == position && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                    editor->Send(CanRedo),
                 "boundary no-op preserves selection, clean state and pending redo");
         Menu(frame, "Redo");
         Require(NativeSearch::Text(editor) == "A\nBB\nlast!", "pending redo survives boundary no-op");
@@ -137,16 +138,15 @@ void NoOps(EditorFrame* frame) {
     Reset(editor, "", 0, 0);
     Menu(frame, "Move Up");
     Menu(frame, "Move Down");
-    Require(!editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo), "empty moves are no-ops");
+    Require(!editor->Send(GetModify) && !editor->Send(CanUndo), "empty moves are no-ops");
     Reset(editor, "A\nBB\nlast", 0, 5);
     Menu(frame, "Move Up");
-    Require(NativeSearch::Text(editor) == "A\nBB\nlast" && editor->Send(Message::GetCurrentPos) == 5 &&
-                !editor->Send(Message::GetModify),
+    Require(NativeSearch::Text(editor) == "A\nBB\nlast" && editor->Send(GetCurrentPos) == 5 && !editor->Send(GetModify),
             "first multiline block cannot move up");
-    editor->Send(Message::SetSel, 3, 8);
+    editor->Send(SetSel, 3, 8);
     Menu(frame, "Move Down");
-    Require(NativeSearch::Text(editor) == "A\nBB\nlast" && editor->Send(Message::GetAnchor) == 3 &&
-                editor->Send(Message::GetCurrentPos) == 8 && !editor->Send(Message::GetModify),
+    Require(NativeSearch::Text(editor) == "A\nBB\nlast" && editor->Send(GetAnchor) == 3 &&
+                editor->Send(GetCurrentPos) == 8 && !editor->Send(GetModify),
             "last multiline block cannot move down");
     std::puts("PASS: first/last-line, multiline and empty boundaries preserve history and selection");
 }
@@ -201,37 +201,38 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 auto* editor = frame->Editor();
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("first\n\t中文 tail\nlast"));
-                editor->Send(Message::SetSel, 13, 7);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("first\n\t中文 tail\nlast"));
+                editor->Send(SetSel, 13, 7);
                 Menu(frame, "Move Up");
                 Require(NativeSearch::Text(editor) == "\t中文 tail\nfirst\nlast", "Move Up transposes a logical line");
-                Require(editor->Send(Message::GetAnchor) == 7 && editor->Send(Message::GetCurrentPos) == 1,
+                Require(editor->Send(GetAnchor) == 7 && editor->Send(GetCurrentPos) == 1,
                         "same-line reverse selection keeps byte-relative anchor and caret");
                 std::puts("PASS: native Move Up preserves original same-line selection");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("A\nbb\nccc\nD\n"));
-                editor->Send(Message::SetSel, 2, 5);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("A\nbb\nccc\nD\n"));
+                editor->Send(SetSel, 2, 5);
                 Menu(frame, "Move Down");
                 Require(NativeSearch::Text(editor) == "A\nccc\nbb\nD\n", "Move Down excludes next-line-start endpoint");
-                Require(editor->Send(Message::GetAnchor) == 6 && editor->Send(Message::GetCurrentPos) == 9,
+                Require(editor->Send(GetAnchor) == 6 && editor->Send(GetCurrentPos) == 9,
                         "multiline movement selects complete moved lines with original orientation");
                 std::puts("PASS: native Move Down excludes next-line-start endpoint");
                 Fixtures(frame);
                 NoOps(frame);
                 Reset(editor, "A\nBB\nlast", 3, 4);
                 NativeAlt(frame, true);
-                Require(NativeSearch::Text(editor) == "BB\nA\nlast" && editor->Send(Message::GetAnchor) == 1 &&
-                            editor->Send(Message::GetCurrentPos) == 2,
+                Require(NativeSearch::Text(editor) == "BB\nA\nlast" && editor->Send(GetAnchor) == 1 &&
+                            editor->Send(GetCurrentPos) == 2,
                         "native Alt+Up uses original helper");
                 NativeAlt(frame, false);
-                Require(NativeSearch::Text(editor) == "A\nBB\nlast" && editor->Send(Message::GetAnchor) == 3 &&
-                            editor->Send(Message::GetCurrentPos) == 4,
+                Require(NativeSearch::Text(editor) == "A\nBB\nlast" && editor->Send(GetAnchor) == 3 &&
+                            editor->Send(GetCurrentPos) == 4,
                         "native Alt+Down uses original helper");
                 NativeAlt(frame, true, true);
                 Require(NativeSearch::Text(editor) == "A\nBB\nlast", "Alt+Shift+Up does not move lines");
                 std::puts("PASS: actual native Alt+Up/Down and exact modifiers");
                 TestEditor::ResetStream(editor, "alpha\r\nbeta\r\n", 4, 1);
-                editor->Send(Message::SetReadOnly, 1);
+                editor->Send(SetReadOnly, 1);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 for (const char* label : {"Move Up", "Move Down"}) {
                     Require(frame->GetMenuBar()->IsEnabled(frame->GetMenuBar()->FindMenuItem("Edit", label)),
@@ -240,13 +241,12 @@ public:
                 editor->MoveLines(false);
                 TestEditor::RequireSelection(editor, 11, 8,
                                              "original protected Move Down repairs the destination selection");
-                editor->Send(Message::SetSel, 4, 1);
+                editor->Send(SetSel, 4, 1);
                 NativeAlt(frame, false);
-                Require(NativeSearch::Text(editor) == "alpha\r\nbeta\r\n" && editor->Send(Message::GetAnchor) == 11 &&
-                            editor->Send(Message::GetCurrentPos) == 8 && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo),
+                Require(NativeSearch::Text(editor) == "alpha\r\nbeta\r\n" && editor->Send(GetAnchor) == 11 &&
+                            editor->Send(GetCurrentPos) == 8 && !editor->Send(GetModify) && !editor->Send(CanUndo),
                         "read-only native Move Down retains original selection repair without changing bytes/history");
-                editor->Send(Message::SetReadOnly, 0);
+                editor->Send(SetReadOnly, 0);
                 std::puts("PASS: original read-only menu/keyboard availability and selection effects");
                 const std::string longLine = "first " + std::string(300, 'x');
                 Reset(editor, (longLine + "\nB\nlast").c_str(), 2, 2);
@@ -255,10 +255,9 @@ public:
                 editor->Refresh();
                 editor->Update();
                 wxYield();
-                Require(editor->Send(Message::WrapCount, 0) > 1, "fixture has wrapped display rows");
+                Require(editor->Send(WrapCount, 0) > 1, "fixture has wrapped display rows");
                 NativeAlt(frame, false);
-                Require(NativeSearch::Text(editor) == "B\n" + longLine + "\nlast" &&
-                            editor->Send(Message::GetCurrentPos) == 4,
+                Require(NativeSearch::Text(editor) == "B\n" + longLine + "\nlast" && editor->Send(GetCurrentPos) == 4,
                         "wrapped rows move as one logical line");
                 editor->ToggleWordWrap();
                 Reset(editor, "before\nvoid f() {\n  call();\n}\nafter();\n", 7, 29);
@@ -267,11 +266,11 @@ public:
                 editor->Update();
                 wxYield();
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
-                Require(!editor->Send(Message::GetLineVisible, 2), "fixture includes folded content");
-                editor->Send(Message::SetSel, 7, 30);
+                Require(!editor->Send(GetLineVisible, 2), "fixture includes folded content");
+                editor->Send(SetSel, 7, 30);
                 NativeAlt(frame, true);
                 Require(NativeSearch::Text(editor) == "void f() {\n  call();\n}\nbefore\nafter();\n" &&
-                            editor->Send(Message::GetAnchor) == 0 && editor->Send(Message::GetCurrentPos) == 23,
+                            editor->Send(GetAnchor) == 0 && editor->Send(GetCurrentPos) == 23,
                         "folded selection moves its hidden logical lines with original bounds");
                 Require(frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++")),
                         "move preserves selected language");

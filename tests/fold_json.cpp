@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 using Scintilla::Message;
@@ -21,7 +22,7 @@ void MarginClick(EditorControl* editor, int line) {
 }
 bool Header(EditorControl* editor, int line) {
     return (static_cast<uintptr_t>(editor->Send(Message::GetFoldLevel, line)) &
-            static_cast<uintptr_t>(Scintilla::FoldLevel::HeaderFlag)) != 0;
+            static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldLevel::HeaderFlag))) != 0;
 }
 class FoldJsonApp final : public wxApp {
 public:
@@ -30,72 +31,71 @@ public:
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 auto* editor = frame->Editor();
                 const std::string source = "{\n  \"items\": [\n    {\n      \"text\": \"{ [ \\\" } ]\"\n    },\n    "
                                            "2\n  ],\n  \"tail\": true\n}\n";
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "JSON"));
                 Paint(editor);
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(GotoPos, 0);
                 Require(Header(editor, 0) && Header(editor, 1) && Header(editor, 2) && !Header(editor, 3),
                         "JSON must fold nested objects and arrays while ignoring braces in quoted strings");
                 MarginClick(editor, 2);
-                Require(!editor->Send(Message::GetFoldExpanded, 2) && !editor->Send(Message::GetLineVisible, 3) &&
-                            editor->Send(Message::GetLineVisible, 5),
+                Require(!editor->Send(GetFoldExpanded, 2) && !editor->Send(GetLineVisible, 3) &&
+                            editor->Send(GetLineVisible, 5),
                         "native object margin toggle must hide only its nested contents");
-                Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo),
+                Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) && !editor->Send(CanUndo),
                         "JSON folding must retain text, save point and history");
                 std::puts("PASS: JSON native margin uses original object/array levels and ignores quoted braces");
                 MarginClick(editor, 1);
-                Require(!editor->Send(Message::GetLineVisible, 2) && editor->Send(Message::GetLineVisible, 7),
+                Require(!editor->Send(GetLineVisible, 2) && editor->Send(GetLineVisible, 7),
                         "native array toggle must hide its elements and leave the following property visible");
                 MarginClick(editor, 1);
-                Require(editor->Send(Message::GetLineVisible, 2) && !editor->Send(Message::GetLineVisible, 3) &&
-                            !editor->Send(Message::GetFoldExpanded, 2),
+                Require(editor->Send(GetLineVisible, 2) && !editor->Send(GetLineVisible, 3) &&
+                            !editor->Send(GetFoldExpanded, 2),
                         "expanding an array must preserve its nested object's collapsed state");
                 MarginClick(editor, 2);
                 MarginClick(editor, 3);
-                Require(editor->Send(Message::GetFoldExpanded, 2) && editor->Send(Message::GetLineVisible, 3),
+                Require(editor->Send(GetFoldExpanded, 2) && editor->Send(GetLineVisible, 3),
                         "quoted braces must not make an ordinary property line toggle a containing fold");
                 MarginClick(editor, 1);
                 const auto array = source.find('[');
-                editor->Send(Message::SetTargetStart, array);
-                editor->Send(Message::SetTargetEnd, array + 1);
-                editor->Send(Message::ReplaceTarget, 0, reinterpret_cast<intptr_t>(""));
+                editor->Send(SetTargetStart, array);
+                editor->Send(SetTargetEnd, array + 1);
+                editor->Send(ReplaceTarget, 0, reinterpret_cast<intptr_t>(""));
                 Paint(editor);
-                Require(!Header(editor, 1) && editor->Send(Message::GetLineVisible, 2) &&
-                            editor->Send(Message::GetLineVisible, 3),
+                Require(!Header(editor, 1) && editor->Send(GetLineVisible, 2) && editor->Send(GetLineVisible, 3),
                         "removing a collapsed array opener must recalculate its header and reveal former elements");
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
-                Require(Header(editor, 1) && NativeSearch::Text(editor) == source &&
-                            !editor->Send(Message::GetModify) && editor->Send(Message::GetLineVisible, 3),
+                Require(Header(editor, 1) && NativeSearch::Text(editor) == source && !editor->Send(GetModify) &&
+                            editor->Send(GetLineVisible, 3),
                         "Undo must restore JSON levels, exact bytes and save point with reachable elements");
                 NativeSearch::Command(frame, wxID_REDO);
                 Paint(editor);
-                Require(!Header(editor, 1) && editor->Send(Message::GetLineVisible, 3),
+                Require(!Header(editor, 1) && editor->Send(GetLineVisible, 3),
                         "Redo of a delimiter removal must recalculate levels without stranding lines");
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
                 MarginClick(editor, 1);
                 const auto close = source.rfind(']');
-                editor->Send(Message::SetTargetStart, close);
-                editor->Send(Message::SetTargetEnd, close + 1);
-                editor->Send(Message::ReplaceTarget, 0, reinterpret_cast<intptr_t>(""));
+                editor->Send(SetTargetStart, close);
+                editor->Send(SetTargetEnd, close + 1);
+                editor->Send(ReplaceTarget, 0, reinterpret_cast<intptr_t>(""));
                 Paint(editor);
-                Require(editor->Send(Message::GetLineVisible, 3) && editor->Send(Message::GetLineVisible, 6),
+                Require(editor->Send(GetLineVisible, 3) && editor->Send(GetLineVisible, 6),
                         "editing a hidden closing delimiter must expose the edited block");
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
-                Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
-                            Header(editor, 1) && editor->Send(Message::GetLineVisible, 3),
+                Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) && Header(editor, 1) &&
+                            editor->Send(GetLineVisible, 3),
                         "Undo of a closing delimiter edit must retain lexer levels and reachable original text");
                 NativeSearch::Command(frame, wxID_REDO);
                 Paint(editor);
-                Require(editor->Send(Message::GetLineVisible, 6), "Redo must keep the edited closing line visible");
+                Require(editor->Send(GetLineVisible, 6), "Redo must keep the edited closing line visible");
                 NativeSearch::Command(frame, wxID_UNDO);
                 Paint(editor);
                 std::puts("PASS: array opener and hidden closing delimiter edits repair visibility through Undo/Redo");
@@ -104,28 +104,27 @@ public:
                 const auto path = directory / "fold.json";
                 const auto filename = TestFiles::Filename(path);
                 Require(frame->SaveAs(filename).status == SaveStatus::Saved, "JSON fold fixture must save");
-                editor->Send(Message::GotoPos, 0);
-                const auto canUndo = editor->Send(Message::CanUndo);
-                const auto canRedo = editor->Send(Message::CanRedo);
-                const auto caret = editor->Send(Message::GetCurrentPos);
-                const auto anchor = editor->Send(Message::GetAnchor);
+                editor->Send(GotoPos, 0);
+                const auto canUndo = editor->Send(CanUndo);
+                const auto canRedo = editor->Send(CanRedo);
+                const auto caret = editor->Send(GetCurrentPos);
+                const auto anchor = editor->Send(GetAnchor);
                 MarginClick(editor, 1);
-                Require(frame->Save().status == SaveStatus::Saved && !editor->Send(Message::GetFoldExpanded, 1),
+                Require(frame->Save().status == SaveStatus::Saved && !editor->Send(GetFoldExpanded, 1),
                         "unchanged-language Save must preserve JSON folds");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "JSON"));
-                Require(!editor->Send(Message::GetFoldExpanded, 1),
-                        "choosing JSON again must preserve its nested fold state");
+                Require(!editor->Send(GetFoldExpanded, 1), "choosing JSON again must preserve its nested fold state");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
-                Require(editor->Send(Message::GetMarginWidthN, 2) > 0 && editor->Send(Message::GetLineVisible, 3),
+                Require(editor->Send(GetMarginWidthN, 2) > 0 && editor->Send(GetLineVisible, 3),
                         "Plain Text must retain the original fold margin and reveal old contracted JSON text");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "JSON"));
                 Paint(editor);
                 Require(Header(editor, 0) && Header(editor, 1) && Header(editor, 2) &&
-                            editor->Send(Message::GetFoldExpanded, 1) && editor->Send(Message::GetLineVisible, 3),
+                            editor->Send(GetFoldExpanded, 1) && editor->Send(GetLineVisible, 3),
                         "returning to JSON must recolor original lexer levels and start expanded");
-                Require(NativeSearch::Text(editor) == source && !editor->Send(Message::GetModify) &&
-                            editor->Send(Message::CanUndo) == canUndo && editor->Send(Message::CanRedo) == canRedo &&
-                            editor->Send(Message::GetCurrentPos) == caret && editor->Send(Message::GetAnchor) == anchor,
+                Require(NativeSearch::Text(editor) == source && !editor->Send(GetModify) &&
+                            editor->Send(CanUndo) == canUndo && editor->Send(CanRedo) == canRedo &&
+                            editor->Send(GetCurrentPos) == caret && editor->Send(GetAnchor) == anchor,
                         "language changes and folding must preserve text, selection, save point and history");
                 std::ifstream saved(path, std::ios::binary);
                 Require(std::string(std::istreambuf_iterator<char>(saved), {}) == source,
@@ -134,11 +133,11 @@ public:
                 MarginClick(editor, 1);
                 Require(frame->Open(filename).status == OpenStatus::Opened, "JSON fixture must reopen");
                 Paint(editor);
-                Require(Header(editor, 1) && editor->Send(Message::GetFoldExpanded, 1) &&
-                            editor->Send(Message::GetLineVisible, 3) && !editor->Send(Message::CanUndo),
+                Require(Header(editor, 1) && editor->Send(GetFoldExpanded, 1) && editor->Send(GetLineVisible, 3) &&
+                            !editor->Send(CanUndo),
                         "same-language Open must rebuild JSON fold levels and clear old contraction/history");
                 NativeSearch::Command(frame, wxID_NEW);
-                Require(editor->Send(Message::GetLength) == 0 && editor->Send(Message::GetMarginWidthN, 2) > 0,
+                Require(editor->Send(GetLength) == 0 && editor->Send(GetMarginWidthN, 2) > 0,
                         "New must reset JSON folding to unnamed Plain Text");
                 std::filesystem::remove_all(directory);
                 std::puts("PASS: JSON language/reset transitions preserve editor history and saved bytes");

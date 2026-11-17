@@ -9,6 +9,7 @@
 #include <wx/accel.h>
 #include <wx/timer.h>
 #include <filesystem>
+#include <utility>
 #include <cstdio>
 #include <memory>
 #include <stdexcept>
@@ -218,13 +219,14 @@ void SaveSuggestedCopy(EditorFrame* frame, const std::filesystem::path& director
         !std::filesystem::is_regular_file(target))
         std::fprintf(stderr, "Suggested copy folder='%s' display='%s' expected='%s' status=%d\n",
                      chooser.folder.utf8_str().data(), chooser.filename.utf8_str().data(),
-                     Filename(target).utf8_str().data(), static_cast<int>(result.status));
+                     Filename(target).utf8_str().data(), std::to_underlying(result.status));
     Require(result.status == SaveStatus::Saved && chooser.choosers == 1 && chooser.folder == Filename(directory) &&
                 Bytes(target) == expected && frame->DocumentPath() == identity,
             "untouched native copy suggestion must save the exact ORIGINAL full basename and bytes");
 }
 
 void Identity(EditorFrame* frame, const std::filesystem::path& directory) {
+    using enum Scintilla::Message;
     const auto source = directory / "source.txt";
     const auto copy = directory / u8"另存副本.cpp";
     const std::string original = "\x{ef}\x{bb}\x{bf}"
@@ -235,7 +237,7 @@ void Identity(EditorFrame* frame, const std::filesystem::path& directory) {
     NativeSearch::Command(frame, language);
     TestEditor::Append(frame, "中文!");
     auto* editor = frame->Editor();
-    editor->Send(Message::SetSel, 7, 2);
+    editor->Send(SetSel, 7, 2);
     wxYield();
     const auto title = frame->GetTitle();
     const auto text = TestEditor::Text(frame);
@@ -246,22 +248,22 @@ void Identity(EditorFrame* frame, const std::filesystem::path& directory) {
             "copy must independently write BOM, Unicode and mixed EOL without saving the source");
     Require(frame->DocumentPath() == Filename(source) && frame->GetTitle() == title &&
                 frame->GetMenuBar()->IsChecked(language) && TestEditor::Text(frame) == text &&
-                frame->DocumentHasUtf8Bom() && editor->Send(Message::GetModify),
+                frame->DocumentHasUtf8Bom() && editor->Send(GetModify),
             "copy must retain original identity, scheme, encoding, text and dirty state");
     TestEditor::RequireSelection(editor, 7, 2, "copy must retain reversed selection");
-    editor->Send(Message::Undo);
-    Require(!editor->Send(Message::GetModify), "Undo after copy must return to the source save point");
-    editor->Send(Message::Redo);
-    Require(editor->Send(Message::GetModify) && TestEditor::Text(frame) == text,
+    editor->Send(Undo);
+    Require(!editor->Send(GetModify), "Undo after copy must return to the source save point");
+    editor->Send(Redo);
+    Require(editor->Send(GetModify) && TestEditor::Text(frame) == text,
             "Redo after copy must retain pending source changes");
     Require(frame->SaveCopy(std::nullopt).status == SaveStatus::Cancelled &&
                 frame->SaveCopy(Filename(directory / "missing" / "fail.txt")).status == SaveStatus::Failed &&
-                frame->DocumentPath() == Filename(source) && editor->Send(Message::GetModify),
+                frame->DocumentPath() == Filename(source) && editor->Send(GetModify),
             "copy cancellation and failed write must retain source state");
     Require(frame->SaveCopy(Filename(source)).status == SaveStatus::Saved && Bytes(source) == Bytes(copy) &&
-                editor->Send(Message::GetModify),
+                editor->Send(GetModify),
             "copy onto current source path must write bytes without establishing a save point");
-    Require(frame->Save().status == SaveStatus::Saved && !editor->Send(Message::GetModify),
+    Require(frame->Save().status == SaveStatus::Saved && !editor->Send(GetModify),
             "ordinary Save after copy must retain its existing save-point contract");
     std::puts("PASS: Save Copy bytes, original identity/scheme, selection, save point and subsequent Save");
 }
@@ -338,6 +340,7 @@ void RememberDirectory(EditorFrame* frame, const std::filesystem::path& director
 }
 
 void Formats(SettingsStore* settings, const std::filesystem::path& directory) {
+    using enum FileEncoding;
     struct Sample {
         const char* name;
         FileEncoding encoding;
@@ -346,17 +349,16 @@ void Formats(SettingsStore* settings, const std::filesystem::path& directory) {
     // Literal samples also exercised by the independent original capture script
     // in evidence/native-utilities-2026-11-06/138.
     const Sample samples[] = {
-        {"utf8", FileEncoding::Utf8, "中文\r\nx\nz\r"},
-        {"utf8-bom", FileEncoding::Utf8,
+        {"utf8", Utf8, "中文\r\nx\nz\r"},
+        {"utf8-bom", Utf8,
          "\x{ef}\x{bb}\x{bf}"
          "中文\r\nx\nz\r"},
-        {"utf16", FileEncoding::Utf16Le, std::string("\x{2d}\x{4e}\x{87}\x{65}\r\0\n\0x\0\n\0z\0\r\0", 16)},
-        {"utf16-bom", FileEncoding::Utf16Le,
-         std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\r\0\n\0x\0\n\0z\0\r\0", 18)},
-        {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\x{ce}\x{c4}\r\nx\nz\r"},
-        {"empty", FileEncoding::Utf8, {}},
-        {"bom-only", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}"},
-        {"utf16-empty", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}", 2)},
+        {"utf16", Utf16Le, std::string("\x{2d}\x{4e}\x{87}\x{65}\r\0\n\0x\0\n\0z\0\r\0", 16)},
+        {"utf16-bom", Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\r\0\n\0x\0\n\0z\0\r\0", 18)},
+        {"gbk", Gbk, "\x{d6}\x{d0}\x{ce}\x{c4}\r\nx\nz\r"},
+        {"empty", Utf8, {}},
+        {"bom-only", Utf8, "\x{ef}\x{bb}\x{bf}"},
+        {"utf16-empty", Utf16Le, std::string("\x{ff}\x{fe}", 2)},
     };
     for (const auto& sample : samples) {
         const auto source = directory / (std::string(sample.name) + ".txt");
@@ -473,32 +475,33 @@ void Cleanup(SettingsStore* settings, const std::filesystem::path& directory) {
     const std::string before = "a \t\r\nb \t\nc \t";
     TestFiles::WriteBytes(source, before);
     for (const auto& policy : policies) {
+        using enum Scintilla::Message;
         settings->values.fixLineEndings = policy.fix;
         settings->values.fixTrailingBlanks = policy.strip;
         auto* frame = new EditorFrame(settings);
         Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "cleanup source must open");
         auto* editor = frame->Editor();
-        editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
-        editor->Send(Message::SetSel, 12, 1);
+        editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
+        editor->Send(SetSel, 12, 1);
         Require(frame->SaveCopy(Filename(copy)).status == SaveStatus::Saved && Bytes(copy) == policy.expected &&
                     TestEditor::Text(frame) == policy.expected && Bytes(source) == before &&
                     frame->DocumentPath() == Filename(source) &&
-                    bool(editor->Send(Message::GetModify)) == (policy.fix || policy.strip),
+                    bool(editor->Send(GetModify)) == (policy.fix || policy.strip),
                 "copy cleanup must change live text/disk while retaining source identity and old save point");
         TestEditor::RequireSelection(editor, static_cast<intptr_t>(std::string(policy.expected).size()), 1,
                                      "copy cleanup must retain original reversed selection movement");
         if (policy.strip) {
-            editor->Send(Message::Undo);
+            editor->Send(Undo);
             Require(TestEditor::Text(frame) == (policy.fix ? "a \t\nb \t\nc \t" : before),
                     "first Undo must restore original independent trailing-blank cleanup");
         }
-        if (policy.fix) editor->Send(Message::Undo);
-        Require(TestEditor::Text(frame) == before && !editor->Send(Message::GetModify),
+        if (policy.fix) editor->Send(Undo);
+        Require(TestEditor::Text(frame) == before && !editor->Send(GetModify),
                 "Undo of copy cleanup must return to the ORIGINAL clean source save point");
-        if (policy.fix) editor->Send(Message::Redo);
-        if (policy.strip) editor->Send(Message::Redo);
+        if (policy.fix) editor->Send(Redo);
+        if (policy.strip) editor->Send(Redo);
         Require(TestEditor::Text(frame) == policy.expected &&
-                    bool(editor->Send(Message::GetModify)) == (policy.fix || policy.strip),
+                    bool(editor->Send(GetModify)) == (policy.fix || policy.strip),
                 "Redo of copy cleanup must retain original dirty state without a copy save point");
         frame->Destroy();
     }
@@ -508,6 +511,7 @@ void Cleanup(SettingsStore* settings, const std::filesystem::path& directory) {
 }
 
 void DirtyCleanup(SettingsStore* settings, const std::filesystem::path& directory) {
+    using enum Scintilla::Message;
     struct Policy {
         bool fix;
         bool strip;
@@ -530,20 +534,20 @@ void DirtyCleanup(SettingsStore* settings, const std::filesystem::path& director
         auto* frame = new EditorFrame(settings);
         Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "dirty cleanup source must open");
         auto* editor = frame->Editor();
-        editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
-        editor->Send(Message::SetSel, 12, 1);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
+        editor->Send(SetSel, 12, 1);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
         const auto copy = directory / "dirty-cleanup-copy.txt";
         Require(frame->SaveCopy(Filename(copy)).status == SaveStatus::Saved && Bytes(copy) == policy.after &&
-                    TestEditor::Text(frame) == policy.after && editor->Send(Message::GetModify),
+                    TestEditor::Text(frame) == policy.after && editor->Send(GetModify),
                 "dirty copy cleanup must match independently captured text/bytes/modification");
         TestEditor::RequireSelection(editor, policy.anchor, 1, "dirty cleanup must match original selection");
-        editor->Send(Message::Undo);
+        editor->Send(Undo);
         Require(TestEditor::Text(frame) == policy.undone &&
-                    bool(editor->Send(Message::GetModify)) == (policy.fix || policy.strip),
+                    bool(editor->Send(GetModify)) == (policy.fix || policy.strip),
                 "dirty copy first Undo must match original cleanup grouping and save point");
-        editor->Send(Message::Redo);
-        Require(TestEditor::Text(frame) == policy.after && editor->Send(Message::GetModify),
+        editor->Send(Redo);
+        Require(TestEditor::Text(frame) == policy.after && editor->Send(GetModify),
                 "dirty copy Redo must retain original pending modification");
         frame->Destroy();
     }
@@ -552,19 +556,18 @@ void DirtyCleanup(SettingsStore* settings, const std::filesystem::path& director
     auto* frame = new EditorFrame(settings);
     Require(frame->Open(Filename(source)).status == OpenStatus::Opened, "read-only cleanup source must open");
     auto* editor = frame->Editor();
-    editor->Send(Message::SetSel, 12, 1);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetSel, 12, 1);
+    editor->Send(SetReadOnly, 1);
     const auto readonly = directory / "readonly-copy.txt";
     Require(frame->SaveCopy(Filename(readonly)).status == SaveStatus::Saved &&
-                Bytes(readonly) == "a \t\r\nb \t\nc \t" && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo),
+                Bytes(readonly) == "a \t\r\nb \t\nc \t" && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "read-only Save Copy must skip live cleanup as in the original");
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
     TestEditor::ResetStream(editor, "stable", 4, 1);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
     Require(frame->SaveCopy(Filename(directory / "pending-copy.txt")).status == SaveStatus::Saved &&
-                !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                !editor->Send(GetModify) && !editor->Send(CanUndo) && editor->Send(CanRedo),
             "no-op copy cleanup must preserve original pending Redo history");
     frame->Destroy();
     settings->values.fixTrailingBlanks = false;

@@ -25,18 +25,20 @@ const char* Label(int mapping) {
     return labels[mapping - 40204];
 }
 void ResetBytes(EditorControl* editor, std::string_view before) {
+    using enum Scintilla::Message;
     TestEditor::ResetStream(editor, "");
-    editor->Send(Message::SetMultipleSelection, 0);
-    editor->Send(Message::AddText, before.size(), reinterpret_cast<intptr_t>(before.data()));
-    editor->Send(Message::SetSel, 0, before.size());
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    editor->Send(SetMultipleSelection, 0);
+    editor->Send(AddText, before.size(), reinterpret_cast<intptr_t>(before.data()));
+    editor->Send(SetSel, 0, before.size());
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 }
 void ReferenceFixtures(EditorFrame* frame) {
     auto* editor = frame->Editor();
     for (const auto& fixture : EscapeFixtures) {
+        using enum Scintilla::Message;
         ResetBytes(editor, fixture.before);
-        const auto eol = editor->Send(Message::GetEOLMode);
+        const auto eol = editor->Send(GetEOLMode);
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", fixture.label));
         if (TestEditor::Text(editor) != fixture.after)
             std::fprintf(stderr, "Original escape fixture mapping=%d before length=%zu\n", fixture.mapping,
@@ -44,16 +46,15 @@ void ReferenceFixtures(EditorFrame* frame) {
         Require(TestEditor::Text(editor) == fixture.after, "escape output matches literal original Windows bytes");
         TestEditor::RequireSelection(editor, 0, fixture.after.size(), "escape selection follows original byte length");
         const bool changed = fixture.before != fixture.after;
-        Require(bool(editor->Send(Message::GetModify)) == changed && bool(editor->Send(Message::CanUndo)) == changed &&
-                    editor->Send(Message::GetEOLMode) == eol,
+        Require(bool(editor->Send(GetModify)) == changed && bool(editor->Send(CanUndo)) == changed &&
+                    editor->Send(GetEOLMode) == eol,
                 "escape results preserve original save point, undo availability and EOL mode");
         if (changed) {
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::GetModify) &&
-                        !editor->Send(Message::CanUndo),
+            editor->Send(Undo);
+            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(GetModify) && !editor->Send(CanUndo),
                     "one Undo restores complete original bytes and clean history");
-            editor->Send(Message::Redo);
-            Require(TestEditor::Text(editor) == fixture.after && editor->Send(Message::GetModify),
+            editor->Send(Redo);
+            Require(TestEditor::Text(editor) == fixture.after && editor->Send(GetModify),
                     "one Redo restores complete original escaped bytes");
         }
     }
@@ -61,35 +62,36 @@ void ReferenceFixtures(EditorFrame* frame) {
         "PASS: 40 original escape byte fixtures including controls, limited C escapes, entities, Unicode and NUL");
 }
 template <typename Fixture> void PrepareSelectionState(EditorControl* editor, const Fixture& fixture) {
+    using enum Scintilla::Message;
     ResetBytes(editor, fixture.before);
     const std::string_view kind = fixture.kind;
     const auto length = fixture.before.size();
     const auto firstEnd = fixture.before.find('\n');
-    editor->Send(Message::SetSel, kind == "reversed" ? length : 0, kind == "empty" || kind == "reversed" ? 0 : length);
+    editor->Send(SetSel, kind == "reversed" ? length : 0, kind == "empty" || kind == "reversed" ? 0 : length);
     if (kind == "multiple") {
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::SetSel, 0, firstEnd);
-        editor->Send(Message::AddSelection, firstEnd + 1, length);
-        editor->Send(Message::AddSelection, firstEnd, firstEnd);
-        editor->Send(Message::SetMainSelection, 0);
+        editor->Send(SetMultipleSelection, 1);
+        editor->Send(SetSel, 0, firstEnd);
+        editor->Send(AddSelection, firstEnd + 1, length);
+        editor->Send(AddSelection, firstEnd, firstEnd);
+        editor->Send(SetMainSelection, 0);
     }
     if (kind.starts_with("rectangle")) {
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, kind == "rectangle-reversed" ? length : 0);
-        editor->Send(Message::SetRectangularSelectionCaret, kind == "rectangle-reversed" ? 0 : length);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+        editor->Send(SetRectangularSelectionAnchor, kind == "rectangle-reversed" ? length : 0);
+        editor->Send(SetRectangularSelectionCaret, kind == "rectangle-reversed" ? 0 : length);
         // Compare the same original byte ranges: native font metrics can
         // put equal rectangle x positions at different character columns.
         for (int index = 0; index < fixture.count; ++index) {
-            editor->Send(Message::SetSelectionNAnchor, index, fixture.initialRanges[index][0]);
-            editor->Send(Message::SetSelectionNCaret, index, fixture.initialRanges[index][1]);
+            editor->Send(SetSelectionNAnchor, index, fixture.initialRanges[index][0]);
+            editor->Send(SetSelectionNCaret, index, fixture.initialRanges[index][1]);
         }
     }
     if (kind == "pending" || kind == "readonly") {
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, 0, length);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 0, length);
     }
-    if (kind == "readonly") editor->Send(Message::SetReadOnly, 1);
+    if (kind == "readonly") editor->Send(SetReadOnly, 1);
 }
 template <typename Fixture> void DiagnoseSelectionState(EditorControl* editor, const Fixture& fixture) {
     if (TestEditor::Text(editor) != fixture.after || editor->Send(Message::GetAnchor) != fixture.anchor ||
@@ -104,6 +106,7 @@ template <typename Fixture> void DiagnoseSelectionState(EditorControl* editor, c
     }
 }
 void SelectionStates(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const auto& fixture : EscapeStateFixtures) {
         PrepareSelectionState(editor, fixture);
@@ -114,46 +117,44 @@ void SelectionStates(EditorFrame* frame) {
                 "escape menu follows original selection and read-only availability");
         // The disabled empty menu cannot dispatch; exercise its real editor command.
         if (kind == "empty")
-            editor->Send(Message::CustomCaseMapping, fixture.mapping);
+            editor->Send(CustomCaseMapping, fixture.mapping);
         else
             NativeSearch::Command(frame, id);
         DiagnoseSelectionState(editor, fixture);
         Require(TestEditor::Text(editor) == fixture.after, "selection conversion matches original literal bytes");
         TestEditor::RequireSelection(editor, fixture.anchor, fixture.caret,
                                      "original selection endpoints after escape");
-        Require(editor->Send(Message::GetSelections) == fixture.count &&
-                    editor->Send(Message::GetMainSelection) == fixture.main &&
-                    editor->Send(Message::GetModify) == fixture.modified &&
-                    editor->Send(Message::CanUndo) == fixture.undo && editor->Send(Message::CanRedo) == fixture.redo,
+        Require(editor->Send(GetSelections) == fixture.count && editor->Send(GetMainSelection) == fixture.main &&
+                    editor->Send(GetModify) == fixture.modified && editor->Send(CanUndo) == fixture.undo &&
+                    editor->Send(CanRedo) == fixture.redo,
                 "escape selection count, main selection, save point and history match original state");
         for (int index = 0; index < fixture.count; ++index)
-            Require(editor->Send(Message::GetSelectionNAnchor, index) == fixture.ranges[index][0] &&
-                        editor->Send(Message::GetSelectionNCaret, index) == fixture.ranges[index][1],
+            Require(editor->Send(GetSelectionNAnchor, index) == fixture.ranges[index][0] &&
+                        editor->Send(GetSelectionNCaret, index) == fixture.ranges[index][1],
                     "each original forward, reversed, empty or rectangle endpoint matches");
-        editor->Send(Message::SetReadOnly, 0);
+        editor->Send(SetReadOnly, 0);
         if (kind == "readonly") {
-            editor->Send(Message::Redo);
+            editor->Send(Redo);
             Require(TestEditor::Text(editor) == std::string(fixture.before) + "!",
                     "read-only conversion retains executable pending redo");
         } else if (fixture.modified) {
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::GetModify) &&
-                        !editor->Send(Message::CanUndo),
+            editor->Send(Undo);
+            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(GetModify) && !editor->Send(CanUndo),
                     "all converted selections form one Undo group");
-            editor->Send(Message::Redo);
+            editor->Send(Redo);
             Require(TestEditor::Text(editor) == fixture.after, "Redo reapplies every converted selection");
         }
     }
     for (int mapping = 40204; mapping <= 40207; ++mapping) {
         const int id = frame->GetMenuBar()->FindMenuItem("Edit", Label(mapping));
         TestEditor::ResetStream(editor, "ordinary", 8, 0);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
         NativeSearch::Command(frame, id);
-        Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+        Require(!editor->Send(CanUndo) && editor->Send(CanRedo) && !editor->Send(GetModify),
                 "unchanged escape preserves clean save point and pending redo");
         TestEditor::RequireSelection(editor, 8, 0, "unchanged escape retains reversed endpoints");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(TestEditor::Text(editor) == "ordinary!", "unchanged escape retains executable redo");
         TestEditor::RequireVirtualRectangleUnchanged(
             editor, [frame, id] { NativeSearch::Command(frame, id); },
@@ -201,44 +202,46 @@ void ShortcutsAndLanguages(EditorFrame* frame) {
     std::puts("PASS: four native shortcuts, exact modifiers, original labels and all supported languages");
 }
 void SavedBytes(EditorFrame* frame) {
+    using enum FileEncoding;
     const auto directory = TestFiles::TemporaryDirectory("escape-text");
     std::filesystem::create_directory(directory);
     const std::array<std::array<TestFiles::EncodedFixture, 3>, 4> fixtures{{
-        {{{"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\"", "\x{ef}\x{bb}\x{bf}中\\\""},
-          {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\"", "\x{d6}\x{d0}\\\""},
-          {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{22}\0", 6),
+        {{{"utf8", Utf8, "\x{ef}\x{bb}\x{bf}中\"", "\x{ef}\x{bb}\x{bf}中\\\""},
+          {"gbk", Gbk, "\x{d6}\x{d0}\"", "\x{d6}\x{d0}\\\""},
+          {"utf16", Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{22}\0", 6),
            std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{5c}\0\x{22}\0", 8)}}},
-        {{{"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\\t", "\x{ef}\x{bb}\x{bf}中\t"},
-          {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\\t", "\x{d6}\x{d0}\t"},
-          {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{5c}\0\x{74}\0", 8),
+        {{{"utf8", Utf8, "\x{ef}\x{bb}\x{bf}中\\t", "\x{ef}\x{bb}\x{bf}中\t"},
+          {"gbk", Gbk, "\x{d6}\x{d0}\\t", "\x{d6}\x{d0}\t"},
+          {"utf16", Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{5c}\0\x{74}\0", 8),
            std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{09}\0", 6)}}},
-        {{{"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中<", "\x{ef}\x{bb}\x{bf}中&lt;"},
-          {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}<", "\x{d6}\x{d0}&lt;"},
-          {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{3c}\0", 6),
+        {{{"utf8", Utf8, "\x{ef}\x{bb}\x{bf}中<", "\x{ef}\x{bb}\x{bf}中&lt;"},
+          {"gbk", Gbk, "\x{d6}\x{d0}<", "\x{d6}\x{d0}&lt;"},
+          {"utf16", Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{3c}\0", 6),
            std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{26}\0\x{6c}\0\x{74}\0\x{3b}\0", 12)}}},
-        {{{"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中&lt;", "\x{ef}\x{bb}\x{bf}中<"},
-          {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}&lt;", "\x{d6}\x{d0}<"},
-          {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{26}\0\x{6c}\0\x{74}\0\x{3b}\0", 12),
+        {{{"utf8", Utf8, "\x{ef}\x{bb}\x{bf}中&lt;", "\x{ef}\x{bb}\x{bf}中<"},
+          {"gbk", Gbk, "\x{d6}\x{d0}&lt;", "\x{d6}\x{d0}<"},
+          {"utf16", Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{26}\0\x{6c}\0\x{74}\0\x{3b}\0", 12),
            std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{3c}\0", 6)}}},
     }};
     auto* editor = frame->Editor();
     for (int command = 0; command < 4; ++command) {
         for (const auto& fixture : fixtures[command]) {
+            using enum Scintilla::Message;
             const auto path = directory / fixture.name;
             TestFiles::WriteBytes(path, fixture.before);
-            editor->Send(Message::SetSavePoint);
+            editor->Send(SetSavePoint);
             Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                     "open independently encoded escape fixture through application file command");
             const auto bom = frame->DocumentHasBom();
-            const auto eol = editor->Send(Message::GetEOLMode);
-            editor->Send(Message::SelectAll);
+            const auto eol = editor->Send(GetEOLMode);
+            editor->Send(SelectAll);
             NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", Label(40204 + command)));
             TestFiles::RequireSavedUndoRedo(frame, path, fixture,
                                             {"escape command saves independently reopened literal bytes",
                                              "Undo saves independently reopened original bytes",
                                              "Redo saves independently reopened converted bytes"});
             Require(frame->DocumentEncoding() == fixture.encoding && frame->DocumentHasBom() == bom &&
-                        editor->Send(Message::GetEOLMode) == eol && !editor->Send(Message::GetModify),
+                        editor->Send(GetEOLMode) == eol && !editor->Send(GetModify),
                     "escape conversion retains document encoding, BOM, EOL mode and saved state");
         }
     }

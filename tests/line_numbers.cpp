@@ -41,133 +41,133 @@ std::string Lines(int count) {
     return std::string(static_cast<size_t>(count - 1), '\n');
 }
 void MenuAndShortcut(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int command = frame->GetMenuBar()->FindMenuItem("View", "Line Numbers");
     Require(command != wxNOT_FOUND, "View must expose the Line Numbers command");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-    Require(frame->GetMenuBar()->IsChecked(command) && editor->Send(Message::GetMarginWidthN, 0) > 0,
+    Require(frame->GetMenuBar()->IsChecked(command) && editor->Send(GetMarginWidthN, 0) > 0,
             "a fresh window must show a checked line-number margin for logical line 1");
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
-    const auto foldWidth = editor->Send(Message::GetMarginWidthN, 2);
+    const auto foldWidth = editor->Send(GetMarginWidthN, 2);
     NativeSearch::Command(frame, command);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-    Require(!frame->GetMenuBar()->IsChecked(command) && editor->Send(Message::GetMarginWidthN, 0) == 0 &&
-                editor->Send(Message::GetMarginWidthN, 2) == foldWidth && foldWidth > 0,
+    Require(!frame->GetMenuBar()->IsChecked(command) && editor->Send(GetMarginWidthN, 0) == 0 &&
+                editor->Send(GetMarginWidthN, 2) == foldWidth && foldWidth > 0,
             "hiding line numbers must retain the independent fold margin");
     NativeSearch::Command(frame, command);
-    Require(editor->Send(Message::GetMarginWidthN, 0) > 0, "showing line numbers must restore the margin");
+    Require(editor->Send(GetMarginWidthN, 0) > 0, "showing line numbers must restore the margin");
     std::puts("PASS: native menu defaults and toggles preserve the fold margin");
     Shortcut(editor);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
-    Require(!frame->GetMenuBar()->IsChecked(command) && editor->Send(Message::GetMarginWidthN, 0) == 0,
+    Require(!frame->GetMenuBar()->IsChecked(command) && editor->Send(GetMarginWidthN, 0) == 0,
             "native Ctrl+Shift+N must control the same setting as the menu");
     Shortcut(editor);
-    Require(editor->Send(Message::GetMarginWidthN, 0) > 0, "the shortcut must restore line numbers");
+    Require(editor->Send(GetMarginWidthN, 0) > 0, "the shortcut must restore line numbers");
     std::puts("PASS: native Ctrl+Shift+N shares the menu setting");
 }
 void MarginGeometry(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const int boundary : {9, 99, 9999}) {
         const auto source = Lines(boundary);
-        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
-        editor->Send(Message::EmptyUndoBuffer);
-        editor->Send(Message::SetSavePoint);
-        editor->Send(Message::GotoPos, source.size());
-        const auto before = editor->Send(Message::GetMarginWidthN, 0);
-        editor->Send(Message::NewLine);
-        const auto after = editor->Send(Message::GetMarginWidthN, 0);
-        Require(editor->Send(Message::GetLineCount) == boundary + 1 && after > before,
+        editor->Send(SetText, 0, reinterpret_cast<intptr_t>(source.c_str()));
+        editor->Send(EmptyUndoBuffer);
+        editor->Send(SetSavePoint);
+        editor->Send(GotoPos, source.size());
+        const auto before = editor->Send(GetMarginWidthN, 0);
+        editor->Send(NewLine);
+        const auto after = editor->Send(GetMarginWidthN, 0);
+        Require(editor->Send(GetLineCount) == boundary + 1 && after > before,
                 "editing across a digit boundary must immediately grow the line-number margin");
-        editor->Send(Message::Undo);
-        Require(editor->Send(Message::GetMarginWidthN, 0) == before && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(editor->Send(GetMarginWidthN, 0) == before && !editor->Send(GetModify),
                 "Undo across a digit boundary must shrink the margin and return to the save point");
-        editor->Send(Message::Redo);
-        Require(editor->Send(Message::GetMarginWidthN, 0) == after,
+        editor->Send(Redo);
+        Require(editor->Send(GetMarginWidthN, 0) == after,
                 "Redo across a digit boundary must restore sufficient margin width");
         std::printf("PASS: %d/%d line margin transition: %lld -> %lld pixels\n", boundary, boundary + 1,
                     static_cast<long long>(before), static_cast<long long>(after));
     }
-    const auto normalWidth = editor->Send(Message::GetMarginWidthN, 0);
-    const auto numberStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::LineNumber);
-    const auto linkStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Link);
-    const auto defaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
-    const auto linkSize = editor->Send(Message::StyleGetSize, linkStyle);
-    editor->Send(Message::StyleSetSize, linkStyle, 24);
-    Require(editor->Send(Message::GetMarginWidthN, 0) == normalWidth,
+    const auto normalWidth = editor->Send(GetMarginWidthN, 0);
+    const auto numberStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::LineNumber));
+    const auto linkStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Link));
+    const auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
+    const auto linkSize = editor->Send(StyleGetSize, linkStyle);
+    editor->Send(StyleSetSize, linkStyle, 24);
+    Require(editor->Send(GetMarginWidthN, 0) == normalWidth,
             "link font metrics must not affect the line-number margin");
-    editor->Send(Message::StyleSetSize, numberStyle, 24);
-    Require(editor->Send(Message::GetMarginWidthN, 0) > normalWidth &&
-                editor->Send(Message::StyleGetSize, defaultStyle) == 12,
+    editor->Send(StyleSetSize, numberStyle, 24);
+    Require(editor->Send(GetMarginWidthN, 0) > normalWidth && editor->Send(StyleGetSize, defaultStyle) == 12,
             "the margin must follow its current font metrics without changing the text font");
-    editor->Send(Message::StyleSetSize, numberStyle, 12);
-    editor->Send(Message::StyleSetSize, linkStyle, linkSize);
-    Require(editor->Send(Message::GetMarginWidthN, 0) == normalWidth,
+    editor->Send(StyleSetSize, numberStyle, 12);
+    editor->Send(StyleSetSize, linkStyle, linkSize);
+    Require(editor->Send(GetMarginWidthN, 0) == normalWidth,
             "restoring the number font must restore the measured width");
     std::printf("PASS: font-dependent geometry at DPI %d, scale %g\n", editor->GetDPI().y, editor->GetDPIScaleFactor());
 }
 void FoldedCaretAndHistory(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int command = frame->GetMenuBar()->FindMenuItem("View", "Line Numbers");
     const std::string folded = "void outer() {\n  call();\n}\n" + std::string(300, 'x');
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(folded.c_str()));
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(folded.c_str()));
     editor->Refresh(false);
     editor->Update();
     wxYield();
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
     for (const char* suffix : {"first", "second"}) {
-        editor->Send(Message::BeginUndoAction);
-        editor->Send(Message::AppendText, std::char_traits<char>::length(suffix), reinterpret_cast<intptr_t>(suffix));
-        editor->Send(Message::EndUndoAction);
+        editor->Send(BeginUndoAction);
+        editor->Send(AppendText, std::char_traits<char>::length(suffix), reinterpret_cast<intptr_t>(suffix));
+        editor->Send(EndUndoAction);
     }
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     const auto savedBytes = NativeSearch::Text(editor);
-    const auto length = editor->Send(Message::GetLength);
-    editor->Send(Message::SetSel, length - 3, length);
-    editor->Send(Message::ScrollCaret);
-    editor->Send(Message::FoldLine, 0, static_cast<intptr_t>(Scintilla::FoldAction::Contract));
+    const auto length = editor->Send(GetLength);
+    editor->Send(SetSel, length - 3, length);
+    editor->Send(ScrollCaret);
+    editor->Send(FoldLine, 0, static_cast<intptr_t>(std::to_underlying(Scintilla::FoldAction::Contract)));
     const auto revision = editor->DocumentRevision();
     for (int toggle = 0; toggle < 2; ++toggle) {
         NativeSearch::Command(frame, command);
-        const auto caretX = editor->Send(Message::PointXFromPosition, 0, length);
-        const auto caretY = editor->Send(Message::PointYFromPosition, 0, length);
-        Require(caretX >= editor->Send(Message::GetMarginWidthN, 0) + editor->Send(Message::GetMarginWidthN, 1) +
-                              editor->Send(Message::GetMarginWidthN, 2) &&
+        const auto caretX = editor->Send(PointXFromPosition, 0, length);
+        const auto caretY = editor->Send(PointYFromPosition, 0, length);
+        Require(caretX >= editor->Send(GetMarginWidthN, 0) + editor->Send(GetMarginWidthN, 1) +
+                              editor->Send(GetMarginWidthN, 2) &&
                     caretX < editor->GetClientSize().x && caretY >= 0 && caretY < editor->GetClientSize().y,
                 "changing the number margin must keep the horizontally scrolled caret visible");
         Require(NativeSearch::Text(editor) == savedBytes && editor->DocumentRevision() == revision &&
-                    editor->Send(Message::GetModify) && editor->Send(Message::CanUndo) &&
-                    editor->Send(Message::CanRedo) && !editor->Send(Message::GetLineVisible, 1) &&
-                    editor->Send(Message::GetLineCount) == 4 && editor->Send(Message::DocLineFromVisible, 1) == 3,
+                    editor->Send(GetModify) && editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                    !editor->Send(GetLineVisible, 1) && editor->Send(GetLineCount) == 4 &&
+                    editor->Send(DocLineFromVisible, 1) == 3,
                 "view toggles must preserve text, history and logical line numbers after a folded block");
         NativeSearch::Selection(editor, length - 3, length, "view toggles must retain the selection");
     }
-    editor->Send(Message::Undo);
-    Require(NativeSearch::Text(editor) == folded && !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(NativeSearch::Text(editor) == folded && !editor->Send(GetModify),
             "Undo after toggling must still reach the original save point");
-    editor->Send(Message::Redo);
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
+    editor->Send(Redo);
     Require(NativeSearch::Text(editor) == folded + "firstsecond",
             "Redo after toggling must retain both original edits");
     std::puts("PASS: caret geometry, folds, selection, bytes, save point and history survive toggles");
     NativeSearch::Command(frame, command);
-    Require(GoToLogicalLine(*editor, "3") &&
-                editor->Send(Message::GetCurrentPos) == editor->Send(Message::PositionFromLine, 2) &&
-                editor->Send(Message::GetLineVisible, 1) && editor->Send(Message::GetMarginWidthN, 0) == 0,
+    Require(GoToLogicalLine(*editor, "3") && editor->Send(GetCurrentPos) == editor->Send(PositionFromLine, 2) &&
+                editor->Send(GetLineVisible, 1) && editor->Send(GetMarginWidthN, 0) == 0,
             "Go To Line must use logical lines and reveal folded targets while numbers are hidden");
     NativeSearch::Command(frame, command);
-    Require(editor->Send(Message::GetLineCount) == 4 && editor->Send(Message::GetMarginWidthN, 0) > 0,
+    Require(editor->Send(GetLineCount) == 4 && editor->Send(GetMarginWidthN, 0) > 0,
             "showing numbers after Go To Line must retain the same logical document");
     std::puts("PASS: Go To Line and hidden line numbers share the original logical line model");
     const int whitespace = frame->GetMenuBar()->FindMenuItem("View", "Show Whitespace");
     NativeSearch::Command(frame, whitespace);
     NativeSearch::Command(frame, command);
-    Require(editor->Send(Message::GetViewWS) != 0 && editor->Send(Message::GetMarginWidthN, 0) == 0 &&
-                editor->Send(Message::GetLineCount) == 4,
+    Require(editor->Send(GetViewWS) != 0 && editor->Send(GetMarginWidthN, 0) == 0 && editor->Send(GetLineCount) == 4,
             "visible whitespace must remain enabled when line numbers are hidden");
     NativeSearch::Command(frame, command);
     NativeSearch::Command(frame, whitespace);
-    Require(editor->Send(Message::GetViewWS) == 0 && editor->Send(Message::GetMarginWidthN, 0) > 0,
+    Require(editor->Send(GetViewWS) == 0 && editor->Send(GetMarginWidthN, 0) > 0,
             "the two independent view choices must restore without affecting each other");
     std::puts("PASS: whitespace markers coexist with the independent number margin");
 }

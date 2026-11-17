@@ -4,6 +4,7 @@
 #include "visual_brace_fixtures.h"
 #include "encoded_file_helpers.h"
 #include <array>
+#include <utility>
 #include <fstream>
 #include <wx/dcclient.h>
 #include <functional>
@@ -33,17 +34,18 @@ void Reference(EditorFrame* frame) {
     for (const auto* name : {"Plain Text", "C/C++", "Python", "JSON"}) {
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", name));
         for (const auto& fixture : BraceReference::fixtures) {
-            editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(fixture.text));
-            editor->Send(Message::SetSel, fixture.anchor, fixture.caret);
-            editor->Send(Message::EmptyUndoBuffer);
-            editor->Send(Message::SetSavePoint);
-            editor->Send(Message::Colourise, 0, -1);
+            using enum Scintilla::Message;
+            editor->Send(SetText, 0, reinterpret_cast<intptr_t>(fixture.text));
+            editor->Send(SetSel, fixture.anchor, fixture.caret);
+            editor->Send(EmptyUndoBuffer);
+            editor->Send(SetSavePoint);
+            editor->Send(Colourise, 0, -1);
             std::printf("reference %s/%s ", name, fixture.name);
             const auto match = fixture.match[language];
             Expect(editor, fixture.position, match, match < 0 && fixture.position >= 0 ? 35 : 34, fixture.guide);
-            Require(NativeSearch::Text(editor) == fixture.text && editor->Send(Message::GetAnchor) == fixture.anchor &&
-                        editor->Send(Message::GetCurrentPos) == fixture.caret && !editor->Send(Message::GetModify) &&
-                        !editor->Send(Message::CanUndo),
+            Require(NativeSearch::Text(editor) == fixture.text && editor->Send(GetAnchor) == fixture.anchor &&
+                        editor->Send(GetCurrentPos) == fixture.caret && !editor->Send(GetModify) &&
+                        !editor->Send(CanUndo),
                     "automatic feedback preserves original document, selection and history");
         }
         ++language;
@@ -107,19 +109,19 @@ int ColouredPixels(EditorControl* editor, intptr_t position, bool bad) {
     return count;
 }
 void BraceAppearance(EditorFrame* frame, int toggle) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     for (const auto [indicator, colour] : {std::pair{9, 0x0AEA02}, std::pair{10, 0x0000FF}}) {
-        Require(editor->Send(Message::IndicGetStyle, indicator) ==
-                        static_cast<intptr_t>(Scintilla::IndicatorStyle::RoundBox) &&
-                    editor->Send(Message::IndicGetFore, indicator) == colour &&
-                    editor->Send(Message::IndicGetAlpha, indicator) == 50 &&
-                    editor->Send(Message::IndicGetOutlineAlpha, indicator) == 200,
+        Require(editor->Send(IndicGetStyle, indicator) ==
+                        static_cast<intptr_t>(std::to_underlying(Scintilla::IndicatorStyle::RoundBox)) &&
+                    editor->Send(IndicGetFore, indicator) == colour && editor->Send(IndicGetAlpha, indicator) == 50 &&
+                    editor->Send(IndicGetOutlineAlpha, indicator) == 200,
                 "brace indicators use original light round-box green/red alpha50 outline200 styles");
     }
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "Plain Text"));
     editor->SetCurrentLineHighlightMode(LineHighlightMode::None);
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("  (x)  y"));
-    editor->Send(Message::GotoPos, 2);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>("  (x)  y"));
+    editor->Send(GotoPos, 2);
     Expect(editor, 2, 4, 34, 2);
     Require(ColouredPixels(editor, 2, false) > 0 && ColouredPixels(editor, 4, false) > 0 &&
                 ColouredPixels(editor, 7, false) == 0,
@@ -129,65 +131,65 @@ void BraceAppearance(EditorFrame* frame, int toggle) {
             "turning automatic feedback off removes its visible overlays");
     NativeSearch::Command(frame, toggle);
     Require(ColouredPixels(editor, 2, false) > 0, "enabling feedback restores visible green at a stationary caret");
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("  (x"));
-    editor->Send(Message::GotoPos, 2);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>("  (x"));
+    editor->Send(GotoPos, 2);
     Expect(editor, 2, -1, 35, 0);
     Require(ColouredPixels(editor, 2, true) > 0, "native widget paints original red for an unmatched brace");
     std::puts("PASS: original indicator styles and native matched/bad/off/on rendering");
 }
 void Lifecycle(EditorFrame* frame, int toggle) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("  (x)"));
-    editor->Send(Message::GotoPos, 2);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-    editor->Send(Message::DeleteRange, 4, 1);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>("  (x)"));
+    editor->Send(GotoPos, 2);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
+    editor->Send(DeleteRange, 4, 1);
     Expect(editor, 2, -1, 35, 0);
-    editor->Send(Message::Undo);
+    editor->Send(Undo);
     Expect(editor, 2, 4, 34, 2);
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Expect(editor, 2, -1, 35, 0);
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 0);
-    editor->Send(Message::SetRectangularSelectionCaret, 2);
-    editor->Send(Message::SetReadOnly, 1);
-    const auto rectangleAnchor = editor->Send(Message::GetAnchor);
-    const auto rectangleCaret = editor->Send(Message::GetCurrentPos);
-    const auto rectangleRedo = editor->Send(Message::CanRedo);
-    Require(editor->Send(Message::SelectionIsRectangle), "fixture creates a real rectangular selection");
+    editor->Send(Undo);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+    editor->Send(SetRectangularSelectionAnchor, 0);
+    editor->Send(SetRectangularSelectionCaret, 2);
+    editor->Send(SetReadOnly, 1);
+    const auto rectangleAnchor = editor->Send(GetAnchor);
+    const auto rectangleCaret = editor->Send(GetCurrentPos);
+    const auto rectangleRedo = editor->Send(CanRedo);
+    Require(editor->Send(SelectionIsRectangle), "fixture creates a real rectangular selection");
     NativeSearch::Command(frame, toggle);
     NativeSearch::Command(frame, toggle);
     Expect(editor, 2, 4, 34, 2);
-    Require(editor->Send(Message::SelectionIsRectangle) && editor->Send(Message::GetAnchor) == rectangleAnchor &&
-                editor->Send(Message::GetCurrentPos) == rectangleCaret && !editor->Send(Message::GetModify) &&
-                editor->Send(Message::CanRedo) == rectangleRedo,
+    Require(editor->Send(SelectionIsRectangle) && editor->Send(GetAnchor) == rectangleAnchor &&
+                editor->Send(GetCurrentPos) == rectangleCaret && !editor->Send(GetModify) &&
+                editor->Send(CanRedo) == rectangleRedo,
             "read-only rectangular selection and its edit history survive appearance changes");
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("[\"]\"]"));
-    editor->Send(Message::SetSel, 0, 0);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
-    editor->Send(Message::StyleSetSizeFractional, 0, 1450);
-    editor->Send(Message::SetZoom, 150);
+    editor->Send(SetReadOnly, 0);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>("[\"]\"]"));
+    editor->Send(SetSel, 0, 0);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
+    editor->Send(StyleSetSizeFractional, 0, 1450);
+    editor->Send(SetZoom, 150);
     std::array<char, 256> font{};
-    editor->Send(Message::StyleGetFont, 0, reinterpret_cast<intptr_t>(font.data()));
+    editor->Send(StyleGetFont, 0, reinterpret_cast<intptr_t>(font.data()));
     const std::string originalFont(font.data());
     const auto dpi = editor->GetDPI();
     for (const auto* language : {"C/C++", "Plain Text", "Python", "JSON", "Plain Text"}) {
         NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
         Expect(editor, 0, std::string_view(language) == "Plain Text" ? 2 : 4, 34, 0);
-        editor->Send(Message::StyleGetFont, 0, reinterpret_cast<intptr_t>(font.data()));
-        Require(editor->Send(Message::StyleGetSizeFractional, 0) == 1450 && editor->Send(Message::GetZoom) == 150 &&
-                    originalFont == font.data() && editor->GetDPI() == dpi && editor->Send(Message::GetAnchor) == 0 &&
-                    editor->Send(Message::GetCurrentPos) == 0 && !editor->Send(Message::GetModify) &&
-                    !editor->Send(Message::CanUndo),
+        editor->Send(StyleGetFont, 0, reinterpret_cast<intptr_t>(font.data()));
+        Require(editor->Send(StyleGetSizeFractional, 0) == 1450 && editor->Send(GetZoom) == 150 &&
+                    originalFont == font.data() && editor->GetDPI() == dpi && editor->Send(GetAnchor) == 0 &&
+                    editor->Send(GetCurrentPos) == 0 && !editor->Send(GetModify) && !editor->Send(CanUndo),
                 "syntax/highlighting changes refresh stationary context and preserve font/zoom/selection/history");
     }
     Require(frame->NewDocument(), "clean original fixture can be replaced through New");
     Expect(editor, -1, -1, 34, 0);
-    editor->Send(Message::ClearAll);
+    editor->Send(ClearAll);
     Expect(editor, -1, -1, 34, 0);
     std::puts("PASS: edit/Undo/Redo, read-only rectangle, stationary syntax changes and New/empty replacement");
 }
@@ -201,34 +203,34 @@ void SavedState(EditorFrame* frame, int toggle) {
           std::string("\x{FF}\x{FE}(\0x\0)\0!\0", 10)},
          {"gbk", FileEncoding::Gbk, "(\x{D6}\x{D0})", "(\x{D6}\x{D0})!"}}};
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".txt");
         std::ofstream(path, std::ios::binary) << fixture.before;
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "encoded fixture opens through real application file lifecycle");
-        editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
-        editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        editor->Send(Message::SetSel, editor->Send(Message::GetLength), 0);
-        const auto eol = editor->Send(Message::GetEOLMode);
+        editor->Send(GotoPos, editor->Send(GetLength));
+        editor->Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, editor->Send(GetLength), 0);
+        const auto eol = editor->Send(GetEOLMode);
         const auto bom = frame->DocumentHasBom();
-        const auto length = editor->Send(Message::GetLength);
+        const auto length = editor->Send(GetLength);
         NativeSearch::Command(frame, toggle);
         NativeSearch::Command(frame, toggle);
         Expect(editor, 0, length - 1, 34, 0);
-        Require(editor->Send(Message::GetAnchor) == length && editor->Send(Message::GetCurrentPos) == 0 &&
-                    editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify) &&
-                    editor->Send(Message::GetEOLMode) == eol && frame->DocumentHasBom() == bom &&
+        Require(editor->Send(GetAnchor) == length && editor->Send(GetCurrentPos) == 0 && editor->Send(CanRedo) &&
+                    !editor->Send(GetModify) && editor->Send(GetEOLMode) == eol && frame->DocumentHasBom() == bom &&
                     frame->DocumentEncoding() == fixture.encoding,
                 "visual feedback preserves encoded document metadata, reversed selection and Redo");
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                 "appearance-only save retains independently read original disk bytes");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         TestFiles::RequireSavedUndoRedo(frame, path, fixture,
                                         {"redo saves exact edited bytes", "undo saves exact original bytes",
                                          "second redo saves exact edited bytes"});
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "same-path replacement retains visual preference");
-        editor->Send(Message::GotoPos, 0);
+        editor->Send(GotoPos, 0);
         Expect(editor, 0, length - 1, 34, 0);
     }
     std::filesystem::remove_all(directory);
@@ -242,6 +244,7 @@ public:
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                using enum Scintilla::Message;
                 Require(presented, "owned editor is presented before native scenarios");
                 auto* editor = frame->Editor();
                 const int toggle = frame->GetMenuBar()->FindMenuItem("View", "Visual Brace Matching");
@@ -254,8 +257,8 @@ public:
                 const std::unique_ptr<wxAcceleratorEntry> paste(frame->GetMenuBar()->FindItem(wxID_PASTE)->GetAccel());
                 Require(paste && paste->GetKeyCode() == 'V' && paste->GetFlags() == wxACCEL_CTRL,
                         "Paste retains its exact native Ctrl+V accelerator");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("  (x)"));
-                editor->Send(Message::GotoPos, 2);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("  (x)"));
+                editor->Send(GotoPos, 2);
                 Expect(editor, 2, 4, 34, 2);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(frame->GetMenuBar()->IsChecked(toggle), "visual brace matching defaults enabled");
@@ -264,13 +267,13 @@ public:
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(!frame->GetMenuBar()->IsChecked(toggle), "native checked state follows disabled feedback");
                 NativeKeys::Shortcut(frame, 'B', true, false, false);
-                Require(editor->Send(Message::GetCurrentPos) == 4 && editor->Send(Message::GetAnchor) == 4,
+                Require(editor->Send(GetCurrentPos) == 4 && editor->Send(GetAnchor) == 4,
                         "native Ctrl+B remains usable while automatic visual feedback is off");
                 NativeKeys::Shortcut(frame, 'B', true, false, true);
-                Require(editor->Send(Message::GetCurrentPos) == 2 && editor->Send(Message::GetAnchor) == 5,
+                Require(editor->Send(GetCurrentPos) == 2 && editor->Send(GetAnchor) == 5,
                         "native Ctrl+Shift+B retains original directed selection while feedback is off");
                 Expect(editor, -1, -1, 34, 2);
-                editor->Send(Message::SetSel, 2, 2);
+                editor->Send(SetSel, 2, 2);
                 NativeKeys::Shortcut(frame, 'V', true, false, true);
                 Expect(editor, 2, 4, 34, 2);
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);

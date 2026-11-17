@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <utility>
 #include "app/localization.h"
 #include "editor/editor_control.h"
 #include "app/process_observer.h"
@@ -33,7 +34,9 @@ struct StartupOptions {
 
     bool ParseScheme(const wxString& value) {
         long setting = 0;
-        if (!value.ToLong(&setting) || setting < 0 || setting >= static_cast<int>(SyntaxLanguage::Count)) return false;
+        if (!value.ToLong(&setting) || setting < 0 ||
+            setting >= static_cast<int>(std::to_underlying(SyntaxLanguage::Count)))
+            return false;
         scheme = static_cast<SyntaxLanguage>(setting);
         return true;
     }

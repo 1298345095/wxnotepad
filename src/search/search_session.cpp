@@ -132,34 +132,33 @@ struct MatchRange {
 };
 
 bool AdvanceReplacement(EditorControl& editor, ReplacementCursor& cursor, MatchRange match, bool regexStartOfLine) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     if (cursor.position == cursor.limit) return false;
-    if (match.start == match.end && !regexStartOfLine)
-        cursor.position = editor.Send(Message::PositionAfter, cursor.position);
+    if (match.start == match.end && !regexStartOfLine) cursor.position = editor.Send(PositionAfter, cursor.position);
     // Keep the original special handling for patterns whose first byte is '^'.
     if (regexStartOfLine) {
-        const auto line = editor.Send(Message::LineFromPosition, cursor.position);
-        if (editor.Send(Message::PositionFromLine, line) == cursor.position)
-            cursor.position = editor.Send(Message::PositionFromLine, line + 1);
+        if (const auto line = editor.Send(LineFromPosition, cursor.position);
+            editor.Send(PositionFromLine, line) == cursor.position)
+            cursor.position = editor.Send(PositionFromLine, line + 1);
         if (cursor.position == cursor.limit) return false;
     }
     return true;
 }
 
 void RepairReplacementSelection(EditorControl& editor, intptr_t replacementEnd) {
-    using Scintilla::Message;
-    if (editor.Send(Message::GetSelectionEnd) >= replacementEnd) return;
-    const auto anchor = editor.Send(Message::GetAnchor);
-    const auto caret = editor.Send(Message::GetCurrentPos);
-    editor.Send(Message::SetSel, anchor > caret ? replacementEnd : anchor, anchor > caret ? caret : replacementEnd);
+    using enum Scintilla::Message;
+    if (editor.Send(GetSelectionEnd) >= replacementEnd) return;
+    const auto anchor = editor.Send(GetAnchor);
+    const auto caret = editor.Send(GetCurrentPos);
+    editor.Send(SetSel, anchor > caret ? replacementEnd : anchor, anchor > caret ? caret : replacementEnd);
 }
 
 ReplacementEffect EvaluateTargetReplacement(EditorControl& editor, const std::string& replacement, bool regex) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     using enum ReplacementEffect;
-    const auto length = static_cast<size_t>(editor.Send(Message::GetTargetEnd) - editor.Send(Message::GetTargetStart));
+    const auto length = static_cast<size_t>(editor.Send(GetTargetEnd) - editor.Send(GetTargetStart));
     std::string matched(length + 1, '\0');
-    editor.Send(Message::GetTargetText, 0, reinterpret_cast<intptr_t>(matched.data()));
+    editor.Send(GetTargetText, 0, reinterpret_cast<intptr_t>(matched.data()));
     matched.resize(length);
     if (!regex) return matched == replacement ? Unchanged : Changed;
     const auto expanded = editor.ExpandRegexReplacement(replacement);
@@ -248,17 +247,18 @@ std::optional<size_t> SearchSession::MatchCount() {
 }
 
 FindAllResult SearchSession::FindAll() {
+    using enum FindStatus;
     using Scintilla::Message;
     const auto query = QueryBytes();
-    if (!query.length()) return {FindStatus::EmptyQuery};
-    editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
+    if (!query.length()) return {EmptyQuery};
+    editor_.Send(Message::SetStatus, static_cast<uintptr_t>(std::to_underlying(Scintilla::Status::Ok)));
     const bool multiline = request_.options.transformBackslashes && query.find_first_of("\r\n") != std::string::npos;
     editor_.Occurrences().FindAll(query, SearchFlags(), multiline, request_.bookmarkMatchedLines);
-    if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
+    if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::RegEx))) {
         ClearFindAll();
-        return {FindStatus::InvalidPattern};
+        return {InvalidPattern};
     }
-    return {FindStatus::Found, editor_.Occurrences().FindAllCount().value_or(0)};
+    return {Found, editor_.Occurrences().FindAllCount().value_or(0)};
 }
 
 void SearchSession::SetWrapConfirmation(std::function<bool(SearchDirection)> confirm) {
@@ -276,13 +276,14 @@ FindResult SearchSession::FindFrom(intptr_t start, SearchDirection direction, bo
     const auto query = QueryBytes();
     if (!query.length()) return {FindStatus::EmptyQuery};
     using Scintilla::Message;
-    editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
-    editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
+    editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(std::to_underlying(SearchFlags())));
+    editor_.Send(Message::SetStatus, static_cast<uintptr_t>(std::to_underlying(Scintilla::Status::Ok)));
     const auto length = editor_.Send(Message::GetLength);
     const auto search = [this, &query](intptr_t from, intptr_t to) {
-        editor_.Send(Message::SetTargetStart, from);
-        editor_.Send(Message::SetTargetEnd, to);
-        return editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) >= 0;
+        using enum Scintilla::Message;
+        editor_.Send(SetTargetStart, from);
+        editor_.Send(SetTargetEnd, to);
+        return editor_.Send(SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) >= 0;
     };
     bool wrapped = false;
     // EditFindNext/EditFindPrev use the selection endpoint directly, even
@@ -293,7 +294,7 @@ FindResult SearchSession::FindFrom(intptr_t start, SearchDirection direction, bo
         wrapped = true;
         found = search(forward ? 0 : length, forward ? length : 0);
     }
-    if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx)) {
+    if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::RegEx))) {
         return {FindStatus::InvalidPattern};
     }
     if (!found) {
@@ -312,48 +313,49 @@ FindResult SearchSession::FindFrom(intptr_t start, SearchDirection direction, bo
 }
 
 FindResult SearchSession::SelectTarget(bool wrapped) {
-    using Scintilla::Message;
-    const auto matchStart = editor_.Send(Message::GetTargetStart);
-    const auto matchEnd = editor_.Send(Message::GetTargetEnd);
-    const auto firstLine = editor_.Send(Message::LineFromPosition, matchStart);
+    using enum Scintilla::Message;
+    const auto matchStart = editor_.Send(GetTargetStart);
+    const auto matchEnd = editor_.Send(GetTargetEnd);
+    const auto firstLine = editor_.Send(LineFromPosition, matchStart);
     // The target is end-exclusive. A zero-width match still needs its own line;
     // a match ending at the next line start need not open that line's folds.
-    const auto lastPosition = matchEnd > matchStart ? editor_.Send(Message::PositionBefore, matchEnd) : matchStart;
-    const auto lastLine = editor_.Send(Message::LineFromPosition, lastPosition);
+    const auto lastPosition = matchEnd > matchStart ? editor_.Send(PositionBefore, matchEnd) : matchStart;
+    const auto lastLine = editor_.Send(LineFromPosition, lastPosition);
     for (auto line = firstLine; line <= lastLine; ++line)
-        editor_.Send(Message::EnsureVisible, line);
-    editor_.Send(Message::SetSel, matchStart, matchEnd);
-    editor_.Send(Message::ScrollCaret);
+        editor_.Send(EnsureVisible, line);
+    editor_.Send(SetSel, matchStart, matchEnd);
+    editor_.Send(ScrollCaret);
     return {FindStatus::Found, wrapped, matchStart, matchEnd};
 }
 
 Scintilla::FindOption SearchSession::SearchFlags() const {
-    auto flags = Scintilla::FindOption::None;
-    if (request_.options.matchCase) flags = flags | Scintilla::FindOption::MatchCase;
-    if (request_.options.wholeWord) flags = flags | Scintilla::FindOption::WholeWord;
+    using enum Scintilla::FindOption;
+    auto flags = None;
+    if (request_.options.matchCase) flags = flags | MatchCase;
+    if (request_.options.wholeWord) flags = flags | WholeWord;
     if (request_.options.regularExpression)
-        flags = flags | Scintilla::FindOption::RegExp | Scintilla::FindOption::Cxx11RegEx;
+        flags = flags | RegExp | Cxx11RegEx;
     else if (request_.options.wildcardSearch)
-        flags = flags | Scintilla::FindOption::RegExp;
+        flags = flags | RegExp;
     return flags;
 }
 
 ReplaceOneResult SearchSession::ReplaceOne() {
+    using enum Scintilla::Message;
     const auto query = QueryBytes();
     if (!query.length()) return {false, FindResult{FindStatus::EmptyQuery}};
-    using Scintilla::Message;
-    const auto start = editor_.Send(Message::GetSelectionStart);
-    const auto end = editor_.Send(Message::GetSelectionEnd);
-    editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
-    editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
-    editor_.Send(Message::SetTargetStart, start);
-    editor_.Send(Message::SetTargetEnd, editor_.Send(Message::GetLength));
+    const auto start = editor_.Send(GetSelectionStart);
+    const auto end = editor_.Send(GetSelectionEnd);
+    editor_.Send(SetSearchFlags, static_cast<uintptr_t>(std::to_underlying(SearchFlags())));
+    editor_.Send(SetStatus, static_cast<uintptr_t>(std::to_underlying(Scintilla::Status::Ok)));
+    editor_.Send(SetTargetStart, start);
+    editor_.Send(SetTargetEnd, editor_.Send(GetLength));
     // Pinned EditReplace revalidates captures from selection start to EOF.
-    const auto found = editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data()));
-    if (found >= 0 && (found != start || editor_.Send(Message::GetTargetEnd) != end)) {
+    const auto found = editor_.Send(SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data()));
+    if (found >= 0 && (found != start || editor_.Send(GetTargetEnd) != end)) {
         return {false, SelectTarget(false)};
     }
-    if (found != start || editor_.Send(Message::GetTargetEnd) != end) {
+    if (found != start || editor_.Send(GetTargetEnd) != end) {
         return {false, FindFrom(start, SearchDirection::Forward)};
     }
     const auto replacement = ReplacementBytes();
@@ -362,11 +364,11 @@ ReplaceOneResult SearchSession::ReplaceOne() {
     const bool changesBytes = effect == ReplacementEffect::Changed;
     auto after = end;
     if (changesBytes) {
-        editor_.Send(UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget, replacement.length(),
+        editor_.Send(UsesRegex() ? ReplaceTargetRE : ReplaceTarget, replacement.length(),
                      reinterpret_cast<intptr_t>(replacement.c_str()));
-        after = editor_.Send(Message::GetTargetEnd);
+        after = editor_.Send(GetTargetEnd);
     }
-    editor_.Send(Message::SetSel, after, after);
+    editor_.Send(SetSel, after, after);
     return {changesBytes, Find(SearchDirection::Forward)};
 }
 
@@ -380,34 +382,33 @@ ReplaceAllResult SearchSession::ReplaceInSelection() {
 }
 
 ReplaceAllResult SearchSession::ReplaceRange(bool inSelection) {
+    using enum Scintilla::Message;
     const auto query = QueryBytes();
     const auto replacement = ReplacementBytes();
-    using Scintilla::Message;
     size_t count = 0;
     bool editing = false;
     const bool regexStartOfLine = UsesRegex() && query.length() && query.data()[0] == '^';
-    ReplacementCursor cursor{.position = inSelection ? editor_.Send(Message::GetSelectionStart) : 0,
-                             .limit = editor_.Send(Message::GetLength)};
+    ReplacementCursor cursor{.position = inSelection ? editor_.Send(GetSelectionStart) : 0,
+                             .limit = editor_.Send(GetLength)};
     intptr_t replacementEnd = cursor.position;
-    editor_.Send(Message::SetSearchFlags, static_cast<uintptr_t>(SearchFlags()));
-    const auto replacementMessage = UsesRegex() ? Message::ReplaceTargetRE : Message::ReplaceTarget;
+    editor_.Send(SetSearchFlags, static_cast<uintptr_t>(std::to_underlying(SearchFlags())));
+    const auto replacementMessage = UsesRegex() ? ReplaceTargetRE : ReplaceTarget;
     {
         DeferredUndoAction undo(editor_);
         // An initial empty document is eligible; original EditReplaceAll stops
         // once a replacement reaches the updated document end.
         while (query.length() && (cursor.position < cursor.limit || (UsesRegex() && cursor.position == cursor.limit))) {
-            editor_.Send(Message::SetStatus, static_cast<uintptr_t>(Scintilla::Status::Ok));
-            editor_.Send(Message::SetTargetStart, cursor.position);
-            editor_.Send(Message::SetTargetEnd, cursor.limit);
-            if (editor_.Send(Message::SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) < 0) {
-                if (editor_.Send(Message::GetStatus) == static_cast<intptr_t>(Scintilla::Status::RegEx))
+            editor_.Send(SetStatus, static_cast<uintptr_t>(std::to_underlying(Scintilla::Status::Ok)));
+            editor_.Send(SetTargetStart, cursor.position);
+            editor_.Send(SetTargetEnd, cursor.limit);
+            if (editor_.Send(SearchInTarget, query.length(), reinterpret_cast<intptr_t>(query.data())) < 0) {
+                if (editor_.Send(GetStatus) == static_cast<intptr_t>(std::to_underlying(Scintilla::Status::RegEx)))
                     return {ReplaceAllStatus::InvalidPattern, count, undo.Started()};
                 break;
             }
-            const MatchRange match{.start = editor_.Send(Message::GetTargetStart),
-                                   .end = editor_.Send(Message::GetTargetEnd)};
+            const MatchRange match{.start = editor_.Send(GetTargetStart), .end = editor_.Send(GetTargetEnd)};
             // Keep document-end matching context and the live selection limit.
-            if (inSelection && match.end > editor_.Send(Message::GetSelectionEnd)) break;
+            if (inSelection && match.end > editor_.Send(GetSelectionEnd)) break;
             const auto effect = EvaluateTargetReplacement(editor_, replacement, UsesRegex());
             if (effect == ReplacementEffect::ExpansionFailed)
                 return {ReplaceAllStatus::ExpansionFailed, count, undo.Started()};

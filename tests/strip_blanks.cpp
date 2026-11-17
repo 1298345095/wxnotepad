@@ -8,6 +8,7 @@
 #include "steady_stopwatch.h"
 #include <wx/textctrl.h>
 #include <cstdio>
+#include <utility>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
@@ -18,12 +19,13 @@ void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
 void Set(EditorControl* editor, const char* text, intptr_t anchor = 0, intptr_t caret = 0) {
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Stream));
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    using enum Scintilla::Message;
+    editor->Send(SetReadOnly, 0);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Stream)));
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor->Send(SetSel, anchor, caret);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 }
 int Command(EditorFrame* frame, bool leading) {
     const int id =
@@ -52,6 +54,7 @@ void Selections(EditorFrame* frame) {
         {false, "A \t\r\n \t\rB\n\t ", 0, 12, "A\r\n\rB\n", 0, 6},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         Set(editor, fixture.before, fixture.anchor, fixture.caret);
         NativeSearch::Command(frame, Command(frame, fixture.leading));
         if (TestEditor::Text(editor) != fixture.after)
@@ -59,18 +62,16 @@ void Selections(EditorFrame* frame) {
                          TestEditor::Text(editor).c_str(), fixture.after);
         Require(TestEditor::Text(editor) == fixture.after,
                 "selected regex retains real line anchors and complete matches");
-        Require(editor->Send(Message::GetAnchor) == fixture.afterAnchor &&
-                    editor->Send(Message::GetCurrentPos) == fixture.afterCaret,
+        Require(editor->Send(GetAnchor) == fixture.afterAnchor && editor->Send(GetCurrentPos) == fixture.afterCaret,
                 "selection tracks original endpoints and direction");
         if (std::string(fixture.before) != fixture.after) {
-            editor->Send(Message::Undo);
-            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::GetModify),
+            editor->Send(Undo);
+            Require(TestEditor::Text(editor) == fixture.before && !editor->Send(CanUndo) && !editor->Send(GetModify),
                     "selected replacements form one Undo action");
-            editor->Send(Message::Redo);
+            editor->Send(Redo);
             Require(TestEditor::Text(editor) == fixture.after, "one Redo restores selected replacements");
         } else {
-            Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+            Require(!editor->Send(CanUndo) && !editor->Send(GetModify),
                     "no complete selected match leaves history and save point unchanged");
         }
     }
@@ -106,54 +107,54 @@ void NativeKey(EditorControl* editor, bool shift = false, bool control = false) 
     wxYield();
 }
 void NativeAndProtection(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Set(editor, " A \t\r\n B\t", 1, 1);
     NativeKey(editor, true);
     NativeKey(editor, false, true);
-    Require(TestEditor::Text(editor) == " A \t\r\n B\t" && !editor->Send(Message::CanUndo),
+    Require(TestEditor::Text(editor) == " A \t\r\n B\t" && !editor->Send(CanUndo),
             "extra Shift or Control does not invoke Alt+T");
     NativeKey(editor);
     Require(TestEditor::Text(editor) == " A\r\n B", "actual native Alt+T invokes manual trailing cleanup");
     for (const bool leading : {false, true}) {
         Set(editor, " A \n B \n C ");
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 1);
-        editor->Send(Message::SetRectangularSelectionCaret, 5);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, 1);
+        editor->Send(SetRectangularSelectionCaret, 5);
         NativeSearch::Command(frame, Command(frame, leading));
         Require(TestEditor::Text(editor) == (leading ? "A \nB \nC " : " A\n B\n C") &&
-                    editor->Send(Message::SelectionIsRectangle),
+                    editor->Send(SelectionIsRectangle),
                 "rectangle trims the entire document without warning");
-        editor->Send(Message::Undo);
-        Require(TestEditor::Text(editor) == " A \n B \n C " && !editor->Send(Message::CanUndo) &&
-                    !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(TestEditor::Text(editor) == " A \n B \n C " && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "rectangle fallback remains one Undo action");
         for (const bool selected : {false, true}) {
             Set(editor, " A \n B ", 0, selected ? 7 : 0);
-            editor->Send(Message::SetReadOnly, 1);
+            editor->Send(SetReadOnly, 1);
             frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
             Require(frame->GetMenuBar()->IsEnabled(Command(frame, leading)), "original read-only menu remains enabled");
             NativeSearch::Command(frame, Command(frame, leading));
-            Require(TestEditor::Text(editor) == " A \n B " && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::GetModify),
+            Require(TestEditor::Text(editor) == " A \n B " && !editor->Send(CanUndo) && !editor->Send(GetModify),
                     "core read-only protection rejects manual deletion");
         }
         Set(editor, "\vA\f\n\u{00a0}X\u{3000}", 0, 0);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
         NativeSearch::Command(frame, Command(frame, leading));
-        Require(TestEditor::Text(editor) == "\vA\f\n\u{00a0}X\u{3000}" && editor->Send(Message::CanRedo) &&
-                    !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+        Require(TestEditor::Text(editor) == "\vA\f\n\u{00a0}X\u{3000}" && editor->Send(CanRedo) &&
+                    !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "non-ASCII whitespace and other control bytes preserve no-change redo and save point");
         Set(editor, leading ? "  A\n B" : "A  \nB  ", 0, leading ? 1 : 2);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
         NativeSearch::Command(frame, Command(frame, leading));
-        Require(editor->Send(Message::CanRedo) && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+        Require(editor->Send(CanRedo) && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "selection with no complete regex match retains pending redo");
     }
     std::puts("PASS: native Alt+T and exact modifiers, rectangular fallback, read-only core and no-change history");
 }
 void SearchState(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Set(editor, "  Needle \r\nlater ");
     NativeSearch::Command(frame, wxID_REPLACE);
@@ -165,16 +166,15 @@ void SearchState(EditorFrame* frame) {
     replacement->SetValue("replacement");
     NativeSearch::Toggle(regex, true);
     NativeSearch::Click(query->GetParent(), wxID_FORWARD);
-    const auto flags = editor->Send(Message::GetSearchFlags);
-    editor->Send(Message::SetSel, 0, 0);
+    const auto flags = editor->Send(GetSearchFlags);
+    editor->Send(SetSel, 0, 0);
     editor->StripLeadingBlanks();
-    editor->Send(Message::SetSel, 0, 7);
+    editor->Send(SetSel, 0, 7);
     editor->StripTrailingBlanks();
     Require(TestEditor::Text(editor) == "Needle\r\nlater " && query->GetValue() == "Needle" &&
-                replacement->GetValue() == "replacement" && regex->GetValue() &&
-                editor->Send(Message::GetSearchFlags) == flags,
+                replacement->GetValue() == "replacement" && regex->GetValue() && editor->Send(GetSearchFlags) == flags,
             "manual regex leaves active query, replacement and flags intact");
-    editor->Send(Message::SetSel, 0, 0);
+    editor->Send(SetSel, 0, 0);
     NativeSearch::Command(frame, wxID_FORWARD);
     NativeSearch::Selection(editor, 0, 6, "Find Next continues using the current search request");
     query->GetParent()->Hide();
@@ -191,29 +191,30 @@ void SavedBytes(EditorFrame* frame) {
     };
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {
-        editor->Send(Message::SetSavePoint);
+        using enum Scintilla::Message;
+        editor->Send(SetSavePoint);
         const auto path = TestFiles::TemporaryDirectory(std::string(fixture.name) + "-manual.txt");
         TestFiles::WriteBytes(path, fixture.before);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "independent encoded fixture opens");
         const auto encoding = frame->DocumentEncoding();
         const auto bom = frame->DocumentHasBom();
-        const auto eol = editor->Send(Message::GetEOLMode);
-        editor->Send(Message::SetSel, 0, 0);
+        const auto eol = editor->Send(GetEOLMode);
+        editor->Send(SetSel, 0, 0);
         NativeSearch::Command(frame, Command(frame, true));
         NativeSearch::Command(frame, Command(frame, false));
         Require(TestEditor::Text(editor) == "中\r\nx\ny" && frame->DocumentPath() == TestFiles::Filename(path) &&
                     frame->DocumentEncoding() == encoding && frame->DocumentHasBom() == bom &&
-                    editor->Send(Message::GetEOLMode) == eol && TestFiles::Bytes(path) == fixture.before,
+                    editor->Send(GetEOLMode) == eol && TestFiles::Bytes(path) == fixture.before,
                 "manual commands preserve encoding, BOM, EOL mode, path and disk bytes before Save");
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.after &&
-                    !editor->Send(Message::GetModify),
+                    !editor->Send(GetModify),
                 "Save independently confirms encoding, BOM and exact mixed-EOL bytes");
     }
     DocumentSession document(*editor);
     document.SetSaveCleanup({true, true});
     Set(editor, "  A \t\r\n  B \n");
-    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Cr));
+    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Cr)));
     editor->StripLeadingBlanks();
     Require(TestEditor::Text(editor) == "A \t\r\nB \n" && document.SaveCleanup().fixLineEndings &&
                 document.SaveCleanup().fixTrailingBlanks,
@@ -232,14 +233,15 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 auto* editor = frame->Editor();
                 Set(editor, " \ta \t\r\n\t \n中\t\r \t", 4, 4);
                 NativeSearch::Command(frame, Command(frame, false));
                 Require(TestEditor::Text(editor) == " \ta\r\n\n中\r",
                         "caret strips trailing ASCII blanks throughout document");
-                editor->Send(Message::Undo);
-                Require(TestEditor::Text(editor) == " \ta \t\r\n\t \n中\t\r \t" && !editor->Send(Message::CanUndo) &&
-                            !editor->Send(Message::GetModify),
+                editor->Send(Undo);
+                Require(TestEditor::Text(editor) == " \ta \t\r\n\t \n中\t\r \t" && !editor->Send(CanUndo) &&
+                            !editor->Send(GetModify),
                         "one Undo restores original mixed-EOL bytes and save point");
                 std::puts("PASS: whole-document trailing blanks and grouped history");
                 Selections(frame);

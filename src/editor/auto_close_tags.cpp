@@ -21,15 +21,15 @@ bool IsVoidTag(std::string tag) {
     return VoidTags.find(" " + tag + " ") != std::string_view::npos;
 }
 bool IsPreprocessorLine(EditorControl& editor, intptr_t position) {
-    using Scintilla::Message;
-    auto lineStart = editor.Send(Message::PositionFromLine, editor.Send(Message::LineFromPosition, position));
+    using enum Scintilla::Message;
+    auto lineStart = editor.Send(PositionFromLine, editor.Send(LineFromPosition, position));
     int ch = 0;
     while (lineStart < position) {
-        ch = static_cast<int>(editor.Send(Message::GetCharAt, lineStart));
+        ch = static_cast<int>(editor.Send(GetCharAt, lineStart));
         if (ch != ' ' && ch != '\t') break;
         ++lineStart;
     }
-    return ch == '#' && editor.Send(Message::GetStyleIndexAt, lineStart) == SCE_C_PREPROCESSOR;
+    return ch == '#' && editor.Send(GetStyleIndexAt, lineStart) == SCE_C_PREPROCESSOR;
 }
 } // namespace
 

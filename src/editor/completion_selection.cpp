@@ -6,10 +6,11 @@
 namespace {
 using Scintilla::Message;
 bool CompleteLatex(EditorControl& editor) {
-    if (editor.Send(Message::AutoCActive) || editor.Send(Message::GetSelections) > 1 ||
-        !editor.Send(Message::GetSelectionEmpty) || editor.Send(Message::GetReadOnly))
+    using enum Scintilla::Message;
+    if (editor.Send(AutoCActive) || editor.Send(GetSelections) > 1 || !editor.Send(GetSelectionEmpty) ||
+        editor.Send(GetReadOnly))
         return false;
-    const auto caret = editor.Send(Message::GetCurrentPos);
+    const auto caret = editor.Send(GetCurrentPos);
     if (caret <= MinLaTeXInputSequenceLength) return false;
     auto position = caret - 1;
     char buffer[MaxLaTeXInputBufferLength];
@@ -17,7 +18,7 @@ bool CompleteLatex(EditorControl& editor) {
     *ptr = 0;
     char ch;
     do {
-        ch = static_cast<char>(editor.Send(Message::GetCharAt, position));
+        ch = static_cast<char>(editor.Send(GetCharAt, position));
         if (!IsLaTeXInputSequenceChar(ch)) break;
         --position;
         --ptr;
@@ -30,10 +31,10 @@ bool CompleteLatex(EditorControl& editor) {
     const char16_t utf16[] = {static_cast<char16_t>(character & 0xffff), static_cast<char16_t>(character >> 16), 0};
     const auto text = wxString(reinterpret_cast<const char*>(utf16), wxMBConvUTF16LE(), utf16[1] != 0 ? 4 : 2)
                           .ToStdString(wxConvUTF8);
-    editor.Send(Message::SetTargetStart, position);
-    editor.Send(Message::SetTargetEnd, caret);
-    editor.Send(Message::ReplaceTarget, text.size(), reinterpret_cast<intptr_t>(text.c_str()));
-    editor.Send(Message::SetSel, position + text.size(), position + text.size());
+    editor.Send(SetTargetStart, position);
+    editor.Send(SetTargetEnd, caret);
+    editor.Send(ReplaceTarget, text.size(), reinterpret_cast<intptr_t>(text.c_str()));
+    editor.Send(SetSel, position + text.size(), position + text.size());
     return true;
 }
 struct CompletionText {

@@ -10,6 +10,7 @@
 #include <wx/timer.h>
 #include <wx/wx.h>
 #include <cstdio>
+#include <utility>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -122,6 +123,7 @@ public:
         CallAfter([this, frame] {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-json");
             try {
+                using enum Scintilla::Message;
                 std::filesystem::create_directory(directory);
                 const std::string source = "{\r\n  \"name\": \"中文\\nvalue\", \"count\": -12.5e2,\r\n"
                                            "  \"flags\": [true, false, null]\r\n}\r\n";
@@ -144,32 +146,30 @@ public:
                     Style(frame, source, keyword, SCE_JSON_KEYWORD);
                 for (const auto* punctuation : {"{", ":", ",", "-", "[", "]", "}"})
                     Style(frame, source, punctuation, SCE_JSON_OPERATOR);
-                Require(editor->Send(Message::StyleGetFore, SCE_JSON_PROPERTYNAME) == 0x0060A4 &&
-                            editor->Send(Message::StyleGetFore, SCE_JSON_STRING_DQ) == 0x008000 &&
-                            editor->Send(Message::StyleGetFore, SCE_JSON_ESCAPECHAR) == 0xC08000 &&
-                            editor->Send(Message::StyleGetFore, SCE_JSON_KEYWORD) == 0xFF0000 &&
-                            editor->Send(Message::StyleGetFore, SCE_JSON_NUMBER) == 0x0000FF &&
-                            editor->Send(Message::StyleGetFore, SCE_JSON_OPERATOR) == 0xB000B0,
+                Require(editor->Send(StyleGetFore, SCE_JSON_PROPERTYNAME) == 0x0060A4 &&
+                            editor->Send(StyleGetFore, SCE_JSON_STRING_DQ) == 0x008000 &&
+                            editor->Send(StyleGetFore, SCE_JSON_ESCAPECHAR) == 0xC08000 &&
+                            editor->Send(StyleGetFore, SCE_JSON_KEYWORD) == 0xFF0000 &&
+                            editor->Send(StyleGetFore, SCE_JSON_NUMBER) == 0x0000FF &&
+                            editor->Send(StyleGetFore, SCE_JSON_OPERATOR) == 0xB000B0,
                         "JSON styles must use the pinned default light palette");
                 for (const int style : {SCE_JSON_PROPERTYNAME, SCE_JSON_STRING_DQ, SCE_JSON_ESCAPECHAR,
                                         SCE_JSON_KEYWORD, SCE_JSON_NUMBER, SCE_JSON_OPERATOR}) {
-                    Require(editor->Send(Message::StyleGetSizeFractional, style) ==
-                                    editor->Send(Message::StyleGetSizeFractional,
-                                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) &&
-                                editor->Send(Message::StyleGetBack, style) == 0xFFFFFF &&
-                                !editor->Send(Message::StyleGetBold, style),
+                    Require(editor->Send(StyleGetSizeFractional, style) ==
+                                    editor->Send(StyleGetSizeFractional, static_cast<uintptr_t>(std::to_underlying(
+                                                                             Scintilla::StylesCommon::Default))) &&
+                                editor->Send(StyleGetBack, style) == 0xFFFFFF && !editor->Send(StyleGetBold, style),
                             "JSON styles must inherit native size and use the light background");
                 }
                 Command(frame, wxID_SAVE);
-                Require(Bytes(path) == source && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+                Require(Bytes(path) == source && !editor->Send(GetModify) && !editor->Send(CanUndo),
                         "automatic JSON styling and Save must preserve exact UTF-8 CRLF bytes and clean history");
                 std::puts("PASS: native mixed-case JSON Open, token styles, palette and exact saved bytes");
-                editor->Send(Message::SetSel, 18, 4);
+                editor->Send(SetSel, 18, 4);
                 Choose(frame, "Plain Text");
-                Require(editor->Send(Message::GetStyleIndexAt, source.find("name")) == 0 &&
-                            editor->Send(Message::StyleGetFore, SCE_JSON_ESCAPECHAR) == 0 &&
-                            editor->Send(Message::GetAnchor) == 18 && editor->Send(Message::GetCurrentPos) == 4 &&
-                            !editor->Send(Message::GetModify),
+                Require(editor->Send(GetStyleIndexAt, source.find("name")) == 0 &&
+                            editor->Send(StyleGetFore, SCE_JSON_ESCAPECHAR) == 0 && editor->Send(GetAnchor) == 18 &&
+                            editor->Send(GetCurrentPos) == 4 && !editor->Send(GetModify),
                         "leaving JSON must clear its styles without changing selection or save point");
                 Choose(frame, "C/C++");
                 Style(frame, source, "name", SCE_C_STRING);
@@ -181,11 +181,10 @@ public:
                             frame->GetMenuBar()->IsChecked(frame->GetMenuBar()->FindMenuItem("Scheme", "JSON")),
                         "native Save As current JSON type must retain JSON despite .txt and preserve exact bytes");
                 Choose(frame, "Automatic");
-                Require(editor->Send(Message::GetLexer) == SCLEX_NULL,
-                        "Automatic must follow the .txt path immediately");
+                Require(editor->Send(GetLexer) == SCLEX_NULL, "Automatic must follow the .txt path immediately");
                 const auto automatic = directory / "automatic.JSON";
                 FileCommand(frame, wxID_SAVEAS, automatic);
-                Require(editor->Send(Message::GetLexer) == SCLEX_NULL &&
+                Require(editor->Send(GetLexer) == SCLEX_NULL &&
                             frame->GetStatusBar()->GetStatusText().Contains("Plain Text (override)"),
                         "named Plain Text default type must force Plain Text despite .JSON");
                 Require(frame->SaveAs(Filename(automatic), {}, SaveType::AllFiles).status == SaveStatus::Saved,
@@ -195,48 +194,47 @@ public:
                 Require(Bytes(automatic) == source && !frame->GetStatusBar()->GetStatusText().Contains("override"),
                         "Automatic Save As must adopt JSON without creating an override");
                 Command(frame, wxID_NEW);
-                Require(editor->Send(Message::GetLexer) == SCLEX_NULL, "New must reset JSON to automatic Plain Text");
+                Require(editor->Send(GetLexer) == SCLEX_NULL, "New must reset JSON to automatic Plain Text");
                 Choose(frame, "JSON");
-                editor->Send(Message::AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
+                editor->Send(AddText, source.size(), reinterpret_cast<intptr_t>(source.data()));
                 Paint(frame);
                 Style(frame, source, "true", SCE_JSON_KEYWORD);
                 const auto escape = source.find("\\n");
-                editor->Send(Message::SetSel, escape, static_cast<intptr_t>(escape));
+                editor->Send(SetSel, escape, static_cast<intptr_t>(escape));
                 Delete(editor);
                 Paint(frame);
                 auto edited = source;
                 edited.erase(escape, 1);
-                Require(Text(editor) == edited && editor->Send(Message::GetStyleIndexAt, escape) == SCE_JSON_STRING_DQ,
+                Require(Text(editor) == edited && editor->Send(GetStyleIndexAt, escape) == SCE_JSON_STRING_DQ,
                         "deleting an escape must immediately restyle it as string content");
                 Command(frame, wxID_UNDO);
                 Style(frame, source, "\\n", SCE_JSON_ESCAPECHAR);
                 Command(frame, wxID_REDO);
-                Require(Text(editor) == edited && editor->Send(Message::GetStyleIndexAt, escape) == SCE_JSON_STRING_DQ,
+                Require(Text(editor) == edited && editor->Send(GetStyleIndexAt, escape) == SCE_JSON_STRING_DQ,
                         "Redo must restore the escape edit and its syntax");
                 Command(frame, wxID_UNDO);
                 const auto quote = source.find("value\"") + 5;
-                editor->Send(Message::SetSel, quote, static_cast<intptr_t>(quote));
+                editor->Send(SetSel, quote, static_cast<intptr_t>(quote));
                 Delete(editor);
                 Paint(frame);
                 edited = source;
                 edited.erase(quote, 1);
-                Require(Text(editor) == edited && editor->Send(Message::GetStyleIndexAt, quote) == SCE_JSON_STRING_DQ,
+                Require(Text(editor) == edited && editor->Send(GetStyleIndexAt, quote) == SCE_JSON_STRING_DQ,
                         "a removed closing quote must restyle punctuation as an incomplete string");
                 Command(frame, wxID_UNDO);
-                Require(Text(editor) == source &&
-                            editor->Send(Message::GetStyleIndexAt, quote + 1) == SCE_JSON_OPERATOR,
+                Require(Text(editor) == source && editor->Send(GetStyleIndexAt, quote + 1) == SCE_JSON_OPERATOR,
                         "Undo must restore the quote and punctuation syntax");
                 Command(frame, wxID_REDO);
-                Require(Text(editor) == edited && editor->Send(Message::GetStyleIndexAt, quote) == SCE_JSON_STRING_DQ,
+                Require(Text(editor) == edited && editor->Send(GetStyleIndexAt, quote) == SCE_JSON_STRING_DQ,
                         "Redo must restore the incomplete string syntax");
                 const auto incomplete = directory / "incomplete.txt";
                 Require(frame->SaveAs(Filename(incomplete)).status == SaveStatus::Saved && Bytes(incomplete) == edited,
                         "incomplete JSON must remain freely editable and save its exact bytes");
                 Choose(frame, "Plain Text");
-                Require(editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+                Require(editor->Send(CanUndo) && !editor->Send(GetModify),
                         "leaving JSON must preserve edit history and the saved incomplete document");
                 Command(frame, wxID_UNDO);
-                Require(Text(editor) == source && editor->Send(Message::CanRedo) && editor->Send(Message::GetModify),
+                Require(Text(editor) == source && editor->Send(CanRedo) && editor->Send(GetModify),
                         "view-only language switching must leave quote edit Undo and Redo intact");
                 std::puts("PASS: native JSON choice, Save As rules, scheme reset, escape/quote edits and Undo/Redo");
                 result_ = 0;

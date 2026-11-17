@@ -8,7 +8,6 @@
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 
 namespace {
-using Scintilla::Message;
 struct AlignmentColumns {
     intptr_t minimumIndent = 1024;
     intptr_t maximumColumn = 0;
@@ -17,16 +16,17 @@ struct AlignmentColumns {
 AlignmentColumns MeasureLines(EditorControl& editor, intptr_t first, intptr_t last) {
     AlignmentColumns columns;
     for (auto line = first; line <= last; ++line) {
-        auto lineEnd = editor.Send(Message::GetLineEndPosition, line);
-        const auto indent = editor.Send(Message::GetLineIndentPosition, line);
+        using enum Scintilla::Message;
+        auto lineEnd = editor.Send(GetLineEndPosition, line);
+        const auto indent = editor.Send(GetLineIndentPosition, line);
         if (indent >= lineEnd) continue;
         while (lineEnd > indent) {
-            const auto ch = editor.Send(Message::GetCharAt, lineEnd - 1);
+            const auto ch = editor.Send(GetCharAt, lineEnd - 1);
             if (ch != ' ' && ch != '\t') break;
             --lineEnd;
         }
-        columns.minimumIndent = std::min(columns.minimumIndent, editor.Send(Message::GetLineIndentation, line));
-        columns.maximumColumn = std::max(columns.maximumColumn, editor.Send(Message::GetColumn, lineEnd, line));
+        columns.minimumIndent = std::min(columns.minimumIndent, editor.Send(GetLineIndentation, line));
+        columns.maximumColumn = std::max(columns.maximumColumn, editor.Send(GetColumn, lineEnd, line));
     }
     return columns;
 }
@@ -91,53 +91,54 @@ std::string AlignWords(const std::vector<std::string_view>& words, AlignmentMode
 }
 
 void AlignLine(EditorControl& editor, intptr_t line, AlignmentMode mode, AlignmentColumns columns, bool singleLine) {
-    const auto start = editor.Send(Message::PositionFromLine, line);
-    const auto lineEnd = editor.Send(Message::GetLineEndPosition, line);
-    const auto indent = editor.Send(Message::GetLineIndentPosition, line);
+    using enum Scintilla::Message;
+    const auto start = editor.Send(PositionFromLine, line);
+    const auto lineEnd = editor.Send(GetLineEndPosition, line);
+    const auto indent = editor.Send(GetLineIndentPosition, line);
     if (indent == lineEnd && lineEnd > 0) {
-        editor.Send(Message::DeleteRange, start, lineEnd - start);
+        editor.Send(DeleteRange, start, lineEnd - start);
         return;
     }
-    const auto length = editor.Send(Message::LineLength, line);
-    const auto* bytes = reinterpret_cast<const char*>(editor.Send(Message::GetRangePointer, start, length));
+    const auto length = editor.Send(LineLength, line);
+    const auto* bytes = reinterpret_cast<const char*>(editor.Send(GetRangePointer, start, length));
     const std::string text(bytes ? bytes : "", static_cast<size_t>(length));
     // The original fixed UTF-16 conversion fails for an overlong input,
     // including line endings, even when its trimmed column fits.
     if (Scintilla::Internal::UTF16Length(text) > 1024) return;
     const auto words = AlignmentWords(text);
     if (words.empty()) return;
-    const bool nextLineBlank =
-        mode == AlignmentMode::JustifyParagraph &&
-        (editor.Send(Message::GetLineCount) <= line + 1 ||
-         editor.Send(Message::GetLineIndentPosition, line + 1) == editor.Send(Message::GetLineEndPosition, line + 1));
+    const bool nextLineBlank = mode == AlignmentMode::JustifyParagraph &&
+                               (editor.Send(GetLineCount) <= line + 1 || editor.Send(GetLineIndentPosition, line + 1) ==
+                                                                             editor.Send(GetLineEndPosition, line + 1));
     const auto spacing =
         MeasureSpacing(words, mode, columns.maximumColumn - columns.minimumIndent, nextLineBlank, singleLine);
     const auto aligned = AlignWords(words, mode, spacing);
     auto targetStart = start;
     if (mode == AlignmentMode::Right || mode == AlignmentMode::Center) {
-        editor.Send(Message::SetLineIndentation, line, columns.minimumIndent);
-        targetStart = editor.Send(Message::GetLineIndentPosition, line);
+        editor.Send(SetLineIndentation, line, columns.minimumIndent);
+        targetStart = editor.Send(GetLineIndentPosition, line);
     }
-    editor.Send(Message::SetTargetRange, targetStart, editor.Send(Message::GetLineEndPosition, line));
-    editor.Send(Message::ReplaceTarget, aligned.size(), reinterpret_cast<intptr_t>(aligned.data()));
+    editor.Send(SetTargetRange, targetStart, editor.Send(GetLineEndPosition, line));
+    editor.Send(ReplaceTarget, aligned.size(), reinterpret_cast<intptr_t>(aligned.data()));
     if (mode != AlignmentMode::Right && mode != AlignmentMode::Center)
-        editor.Send(Message::SetLineIndentation, line, columns.minimumIndent);
+        editor.Send(SetLineIndentation, line, columns.minimumIndent);
 }
 } // namespace
 
 AlignmentResult EditorControl::AlignLines(AlignmentMode mode) {
+    using enum AlignmentResult;
     // Edit.cpp::EditAlignText, Notepad4 89b8b36. Core columns count Unicode
     // characters; the original Windows word lengths count UTF-16 code units.
     using Scintilla::Message;
-    if (Send(Message::SelectionIsRectangle)) return AlignmentResult::RectangularSelection;
+    if (Send(Message::SelectionIsRectangle)) return RectangularSelection;
     const bool reversed = Send(Message::GetCurrentPos) < Send(Message::GetAnchor);
     const auto first = Send(Message::LineFromPosition, Send(Message::GetSelectionStart));
     const auto end = Send(Message::GetSelectionEnd);
     auto last = Send(Message::LineFromPosition, end);
     if (end <= Send(Message::PositionFromLine, last) && last - first >= 1) --last;
     const auto columns = MeasureLines(*this, first, last);
-    const auto result = columns.maximumColumn < 1024 ? AlignmentResult::Complete : AlignmentResult::LinesTooLong;
-    if (result == AlignmentResult::Complete) {
+    const auto result = columns.maximumColumn < 1024 ? Complete : LinesTooLong;
+    if (result == Complete) {
         Send(Message::BeginUndoAction);
         for (auto line = first; line <= last; ++line)
             AlignLine(*this, line, mode, columns, first == last);

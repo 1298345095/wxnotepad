@@ -8,6 +8,7 @@
 #include "auto_close_tags_encoding_reference.h"
 #include <cstdio>
 #include <stdexcept>
+#include <utility>
 namespace {
 using Scintilla::Message;
 void Character(EditorFrame* frame, int ch, bool native) {
@@ -29,23 +30,24 @@ void Character(EditorFrame* frame, int ch, bool native) {
     editor->GetEventHandler()->ProcessEvent(event);
 }
 void State(EditorControl* editor, const AutoCloseTagsReference::State& state) {
+    using enum Scintilla::Message;
     if (NativeSearch::Text(editor) != state.text) {
         std::fprintf(stderr, "actual='%s' expected='%s'\n", NativeSearch::Text(editor).c_str(), state.text);
         throw std::runtime_error("character notification must reproduce original text");
     }
-    if (editor->Send(Message::GetAnchor) != state.anchor || editor->Send(Message::GetCurrentPos) != state.caret)
+    if (editor->Send(GetAnchor) != state.anchor || editor->Send(GetCurrentPos) != state.caret)
         throw std::runtime_error("original anchor and caret direction");
-    if (editor->Send(Message::GetSelections) != static_cast<intptr_t>(state.selections.size()))
+    if (editor->Send(GetSelections) != static_cast<intptr_t>(state.selections.size()))
         throw std::runtime_error("original selection count");
     size_t index = 0;
     for (const auto& selection : state.selections) {
-        if (editor->Send(Message::GetSelectionNAnchor, index) != selection.anchor ||
-            editor->Send(Message::GetSelectionNCaret, index) != selection.caret)
+        if (editor->Send(GetSelectionNAnchor, index) != selection.anchor ||
+            editor->Send(GetSelectionNCaret, index) != selection.caret)
             throw std::runtime_error("original additional selection positions");
         ++index;
     }
-    if (bool(editor->Send(Message::GetModify)) != state.modified ||
-        bool(editor->Send(Message::CanUndo)) != state.canUndo || bool(editor->Send(Message::CanRedo)) != state.canRedo)
+    if (bool(editor->Send(GetModify)) != state.modified || bool(editor->Send(CanUndo)) != state.canUndo ||
+        bool(editor->Send(CanRedo)) != state.canRedo)
         throw std::runtime_error("original modification and history state");
 }
 std::string BytesFromHex(std::string_view hex) {
@@ -77,30 +79,32 @@ void EncodedFiles(EditorFrame* frame) {
     }
 }
 void OriginalCases(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     unsigned index = 0;
     for (const auto& item : AutoCloseTagsReference::cases) {
-        std::printf("case %u language=%d ch=%d\n", index++, static_cast<int>(item.language), item.character);
-        editor->Send(Message::SetReadOnly, 0);
+        std::printf("case %u language=%d ch=%d\n", index++, static_cast<int>(std::to_underlying(item.language)),
+                    item.character);
+        editor->Send(SetReadOnly, 0);
         ApplySyntaxLanguage(*editor, item.language);
-        editor->Send(Message::SetUndoSelectionHistory, 0);
-        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(item.before));
-        editor->Send(Message::SetSel, item.anchor, item.position);
-        if (item.extraCaret >= 0) editor->Send(Message::AddSelection, item.extraCaret, item.extraAnchor);
-        editor->Send(Message::SetOvertype, item.overtype);
-        editor->Send(Message::EmptyUndoBuffer);
-        editor->Send(Message::SetSavePoint);
-        editor->Send(Message::SetUndoSelectionHistory, 3);
-        editor->Send(Message::Colourise, 0, -1);
-        editor->Send(Message::SetReadOnly, item.readOnly);
+        editor->Send(SetUndoSelectionHistory, 0);
+        editor->Send(SetText, 0, reinterpret_cast<intptr_t>(item.before));
+        editor->Send(SetSel, item.anchor, item.position);
+        if (item.extraCaret >= 0) editor->Send(AddSelection, item.extraCaret, item.extraAnchor);
+        editor->Send(SetOvertype, item.overtype);
+        editor->Send(EmptyUndoBuffer);
+        editor->Send(SetSavePoint);
+        editor->Send(SetUndoSelectionHistory, 3);
+        editor->Send(Colourise, 0, -1);
+        editor->Send(SetReadOnly, item.readOnly);
         Character(frame, item.character, std::string_view(item.before) == "<div" && !item.readOnly);
         State(editor, item.after);
         for (const auto& state : item.undo) {
-            editor->Send(Message::Undo);
+            editor->Send(Undo);
             State(editor, state);
         }
         for (const auto& state : item.redo) {
-            editor->Send(Message::Redo);
+            editor->Send(Redo);
             State(editor, state);
         }
         DocumentSession document(*editor);
@@ -109,7 +113,7 @@ void OriginalCases(EditorFrame* frame) {
             TestFiles::Bytes(path) != item.saved)
             throw std::runtime_error("saved bytes reproduce independently captured original file");
     }
-    editor->Send(Message::SetReadOnly, 0);
+    editor->Send(SetReadOnly, 0);
 }
 class AutoCloseTagsApp final : public wxApp {
 public:

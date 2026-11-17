@@ -34,13 +34,13 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 NativeSearch::AcceptFeedback feedback;
-                using Scintilla::Message;
                 auto* editor = frame->Editor();
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one ONE one"));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one ONE one"));
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(GotoPos, 0);
                 Command(frame, wxID_REPLACE);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
                 auto* replacement = wxDynamicCast(wxWindow::FindWindowByName("Replacement text", frame), wxTextCtrl);
@@ -54,22 +54,21 @@ public:
                 replacement->SetValue("$1\\tail");
                 Click(dialog, wxID_REPLACE);
                 Selection(editor, 0, 3, "Replace at an arbitrary caret must first select the next match");
-                Require(Text(editor) == "one ONE one" && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo),
+                Require(Text(editor) == "one ONE one" && !editor->Send(GetModify) && !editor->Send(CanUndo),
                         "first Replace without a matching selection must not edit");
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "$1\\tail ONE one", "replacement dollars and backslashes must be literal");
                 Selection(editor, 8, 11, "successful Replace must select the next match after inserted text");
-                Require(editor->Send(Message::GetModify), "replacement must mark the document modified");
+                Require(editor->Send(GetModify), "replacement must mark the document modified");
                 Command(frame, wxID_UNDO);
-                Require(Text(editor) == "one ONE one" && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                Require(Text(editor) == "one ONE one" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                            editor->Send(CanRedo),
                         "one Undo must restore exact bytes and the original savepoint");
                 Command(frame, wxID_REDO);
-                Require(Text(editor) == "$1\\tail ONE one" && editor->Send(Message::GetModify),
+                Require(Text(editor) == "$1\\tail ONE one" && editor->Send(GetModify),
                         "Redo must restore the single replacement");
                 std::puts("PASS: native Replace selects first, replaces literally, advances and undoes once");
-                editor->Send(Message::SetSel, 8, 11);
+                editor->Send(SetSel, 8, 11);
                 dialog->Close();
                 wxYield();
                 wxKeyEvent replaceKey(wxEVT_CHAR_HOOK);
@@ -85,20 +84,19 @@ public:
                 Require(dialog->GetTitle() == "Find" && !replacement->IsShown() && query->GetValue() == "ONE",
                         "Find must import the selected query and hide replacement controls");
                 Selection(editor, 8, 11, "opening and switching Find/Replace must retain the source byte selection");
-                Require(Text(editor) == "$1\\tail ONE one" && editor->Send(Message::GetModify) &&
-                            editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+                Require(Text(editor) == "$1\\tail ONE one" && editor->Send(GetModify) && editor->Send(CanUndo) &&
+                            !editor->Send(CanRedo),
                         "opening and switching Find/Replace must preserve bytes and replacement history");
                 query->SetValue(wxString::FromUTF8("中文😀"));
-                editor->Send(Message::SetSel, editor->Send(Message::GetCurrentPos),
-                             editor->Send(Message::GetCurrentPos));
+                editor->Send(SetSel, editor->Send(GetCurrentPos), editor->Send(GetCurrentPos));
                 Command(frame, wxID_REPLACE);
                 Require(dialog->GetTitle() == "Replace" && query->GetValue() == wxString::FromUTF8("中文😀") &&
                             replacement->GetValue() == "$1\\tail",
                         "switching views must share query and retain replacement text");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文😀 中文😀"));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::SetSel, 10, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中文😀 中文😀"));
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(SetSel, 10, 0);
                 replacement->SetValue(wxString::FromUTF8("好"));
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "好 中文😀", "Replace must accept an exact reversed Unicode selection");
@@ -109,59 +107,57 @@ public:
                 Command(frame, wxID_UNDO);
                 Require(Text(editor) == "好 中文😀", "deletion must undo in one action");
                 Command(frame, wxID_UNDO);
-                Require(Text(editor) == "中文😀 中文😀" && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo),
+                Require(Text(editor) == "中文😀 中文😀" && !editor->Send(GetModify) && !editor->Send(CanUndo),
                         "two replacements must be exactly two undo actions and reach the savepoint");
                 std::puts("PASS: Ctrl+H, shared view state, reversed Unicode selection and empty deletion");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one two one"));
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::SetSel, 0, 3);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one two one"));
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(SetSel, 0, 3);
                 query->SetValue("two");
                 replacement->SetValue("X");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "one two one" && !editor->Send(Message::CanUndo),
+                Require(Text(editor) == "one two one" && !editor->Send(CanUndo),
                         "query changes must reject a previously selected different match");
                 Selection(editor, 4, 7, "query changes must immediately select the new query");
-                editor->Send(Message::SetSel, 0, 7);
+                editor->Send(SetSel, 0, 7);
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "one two one", "a selection containing a match must not be replaced");
-                editor->Send(Message::SetSel, 0, 3);
+                editor->Send(SetSel, 0, 3);
                 query->SetValue("one");
-                editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("bad"));
-                editor->Send(Message::SetSel, 0, 3);
+                editor->Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("bad"));
+                editor->Send(SetSel, 0, 3);
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "bad two one", "edits must invalidate a formerly matching range");
                 Selection(editor, 8, 11, "Replace must find the live remaining match after an edit");
-                editor->Send(Message::Undo);
-                editor->Send(Message::SetSel, 0, 3);
+                editor->Send(Undo);
+                editor->Send(SetSel, 0, 3);
                 query->Clear();
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "one two one" && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                Require(Text(editor) == "one two one" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                            editor->Send(CanRedo),
                         "empty query must preserve text, selection, savepoint and redo history");
                 Selection(editor, 0, 3, "empty query must preserve current selection");
                 query->SetValue("missing");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor) == "one two one" && !editor->Send(Message::CanUndo) &&
-                            editor->Send(Message::CanRedo),
+                Require(Text(editor) == "one two one" && !editor->Send(CanUndo) && editor->Send(CanRedo),
                         "no-match Replace must preserve redo history");
                 Selection(editor, 0, 3, "no-match Replace must preserve the selection");
                 Require(frame->NewDocument(), "New must work with the clean Replace view open");
                 query->SetValue("one");
                 Click(dialog, wxID_REPLACE);
-                Require(Text(editor).empty() && !editor->Send(Message::CanUndo),
+                Require(Text(editor).empty() && !editor->Send(CanUndo),
                         "Replace must revalidate against the new empty document");
                 std::puts("PASS: query, selection, live edit and New changes revalidate without stale replacements");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one"));
-                editor->Send(Message::SetSel, 4, 7);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one one"));
+                editor->Send(SetSel, 4, 7);
                 replacement->SetValue("X");
                 wrap->SetValue(true);
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "one X", "wrapped replacement must edit only the confirmed match");
                 Selection(editor, 0, 3, "Replace must wrap to the first match using the current search policy");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("one one"));
-                editor->Send(Message::SetSel, 4, 7);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("one one"));
+                editor->Send(SetSel, 4, 7);
                 wrap->SetValue(false);
                 Click(dialog, wxID_REPLACE);
                 Require(Text(editor) == "one X", "non-wrapping Replace must still replace the confirmed match");

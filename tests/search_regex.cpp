@@ -28,8 +28,8 @@ public:
         frame->Show();
         CallAfter([this, frame] {
             try {
+                using enum Scintilla::Message;
                 NativeSearch::AcceptFeedback feedback;
-                using Scintilla::Message;
                 auto* editor = frame->Editor();
                 Command(frame, wxID_FIND);
                 auto* query = wxDynamicCast(wxWindow::FindWindowByName("Find query", frame), wxTextCtrl);
@@ -38,16 +38,16 @@ public:
                 Require(!regex->GetValue(), "Regular expression must initially be off");
                 auto* dialog = wxDynamicCast(query->GetParent(), wxDialog);
                 Toggle(regex, true);
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文12 中文34"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中文12 中文34"));
+                editor->Send(GotoPos, 0);
                 query->SetValue(wxString::FromUTF8("(中文)([0-9]+)"));
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 8, "Boost capture groups must select the first Chinese match");
                 Command(frame, wxID_FORWARD);
                 Selection(editor, 9, 17, "Boost capture groups must select the next Chinese match");
                 std::puts("PASS: native regex option and frozen Chinese capture ranges");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中\n文 中\n文"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中\n文 中\n文"));
+                editor->Send(GotoPos, 0);
                 query->SetValue(wxString::FromUTF8("中\\n文"));
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 7, "explicit cross-line regex must use the frozen forward range");
@@ -61,36 +61,36 @@ public:
                 Selection(editor, 8, 15, "backward wrap still uses the original line-by-line matcher");
                 std::puts("PASS: cross-line Next and original line-by-line Previous");
                 query->SetValue("[");
-                editor->Send(Message::SetSel, 15, 8);
+                editor->Send(SetSel, 15, 8);
                 Click(dialog, wxID_FORWARD);
                 Require(frame->GetStatusBar()->GetStatusText(2) == "Invalid regular expression",
                         "invalid regex must be distinct from an exhausted search");
-                Require(editor->Send(Message::GetAnchor) == 15 && editor->Send(Message::GetCurrentPos) == 8,
+                Require(editor->Send(GetAnchor) == 15 && editor->Send(GetCurrentPos) == 8,
                         "invalid regex must preserve a reversed selection");
                 Click(dialog, wxID_BACKWARD);
                 Require(frame->GetStatusBar()->GetStatusText(2) == "Invalid regular expression",
                         "Previous must also report an invalid expression");
                 query->SetValue(wxString::FromUTF8("(?<=中)\\n文"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(GotoPos, 0);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 3, 7, "correcting an invalid expression must immediately recover with lookbehind");
                 std::puts("PASS: distinct invalid expression, preserved selection and correction/retry");
                 auto* wrap = wxDynamicCast(wxWindow::FindWindowByName("Wrap around", frame), wxCheckBox);
                 Require(wrap, "Find must expose Wrap around");
                 Toggle(wrap, false);
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文ab"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中文ab"));
+                editor->Send(GotoPos, 0);
                 query->SetValue("a*");
                 for (int repeat = 0; repeat != 3; ++repeat) {
                     Click(dialog, wxID_FORWARD);
                     Selection(editor, 0, 0, "original Next resumes at the same empty selection");
                 }
-                editor->Send(Message::GotoPos, 8);
+                editor->Send(GotoPos, 8);
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 8, 8, "original Previous includes the empty match at its target end");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 8, 8, "original Previous repeats the same empty boundary");
-                editor->Send(Message::GotoPos, 3);
+                editor->Send(GotoPos, 3);
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 3, 3, "original backward target preserves a UTF-8 boundary");
                 Toggle(wrap, true);
@@ -115,13 +115,13 @@ public:
                     {"alternation", "中文 测试 其他", "中文|测试", {{0, 6}, {7, 13}}},
                 };
                 for (const auto& example : cases) {
-                    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(example.text));
-                    editor->Send(Message::EmptyUndoBuffer);
-                    editor->Send(Message::SetSavePoint);
-                    editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
-                    editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
-                    editor->Send(Message::Undo);
-                    editor->Send(Message::GotoPos, 0);
+                    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(example.text));
+                    editor->Send(EmptyUndoBuffer);
+                    editor->Send(SetSavePoint);
+                    editor->Send(GotoPos, editor->Send(GetLength));
+                    editor->Send(AddText, 1, reinterpret_cast<intptr_t>("!"));
+                    editor->Send(Undo);
+                    editor->Send(GotoPos, 0);
                     query->SetValue(wxString::FromUTF8(example.pattern));
                     for (const auto& [start, end] : example.ranges) {
                         Click(dialog, wxID_FORWARD);
@@ -132,7 +132,7 @@ public:
                     // A fresh query makes the end caret an initial search position.
                     query->Clear();
                     query->SetValue(wxString::FromUTF8(example.pattern));
-                    editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
+                    editor->Send(GotoPos, editor->Send(GetLength));
                     for (auto range = example.ranges.rbegin(); range != example.ranges.rend(); ++range) {
                         Click(dialog, wxID_BACKWARD);
                         Selection(editor, range->first, range->second, example.name);
@@ -140,14 +140,14 @@ public:
                     Click(dialog, wxID_BACKWARD);
                     Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
                             "backward corpus must exhaust");
-                    Require(Text(editor) == example.text && !editor->Send(Message::GetModify) &&
-                                !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+                    Require(Text(editor) == example.text && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                                editor->Send(CanRedo),
                             "regex navigation must preserve exact text, savepoint and redo history");
                     std::printf("PASS: frozen %s ranges in both directions and unchanged editing history\n",
                                 example.name);
                 }
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("a.b aXb Axb cat scatter"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("a.b aXb Axb cat scatter"));
+                editor->Send(GotoPos, 0);
                 query->SetValue("a.b");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 3, "regex punctuation must initially match any character");
@@ -165,7 +165,7 @@ public:
                 Toggle(regex, false);
                 Require(wholeWord->IsEnabled() && matchCase->GetValue(),
                         "literal mode must restore independent options");
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(GotoPos, 0);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 3, "turning regex off must immediately interpret a.b literally");
                 Click(dialog, wxID_FORWARD);
@@ -176,12 +176,12 @@ public:
                 Require(wholeWord->GetValue() && !wholeWord->IsEnabled(),
                         "regex must retain the inactive Whole word value");
                 query->SetValue("cat");
-                editor->Send(Message::GotoPos, 15);
+                editor->Send(GotoPos, 15);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 17, 20, "pinned Boost must keep matching inside scatter when Whole word is retained");
                 Toggle(regex, false);
                 Require(wholeWord->GetValue() && wholeWord->IsEnabled(), "literal mode must restore Whole word");
-                editor->Send(Message::GotoPos, 15);
+                editor->Send(GotoPos, 15);
                 Click(dialog, wxID_FORWARD);
                 Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
                         "restored literal Whole word must reject scatter");
@@ -204,8 +204,8 @@ public:
                         "literal mode must restore both replacement actions");
                 std::puts("PASS: native F3, immediate mode/case changes, retained Whole word and replacement UI");
                 Toggle(regex, true);
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("aab"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("aab"));
+                editor->Send(GotoPos, 0);
                 query->SetValue("aa|(?<=aa)b");
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 2, "alternation must first consume aa");
@@ -214,76 +214,75 @@ public:
                 Require(frame->GetStatusBar()->GetStatusText(2) == "No match found",
                         "target-local continuation exhausts");
                 query->SetValue("(?<=aa)b");
-                editor->Send(Message::GotoPos, 2);
+                editor->Send(GotoPos, 2);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 2, 2, "original lookbehind cannot inspect before an arbitrary target start");
                 Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "caret lookbehind exhausts");
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(GotoPos, 0);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 2, 3, "the same lookbehind succeeds when target context starts at zero");
                 std::puts("PASS: original target-local continuation and caret lookbehind");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("ab"));
-                editor->Send(Message::GotoPos, 1);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("ab"));
+                editor->Send(GotoPos, 1);
                 query->SetValue("a(?=b)");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 1, 1, "original Previous clips lookahead at the caret");
                 Require(frame->GetStatusBar()->GetStatusText(2) == "No match found", "clipped lookahead exhausts");
-                editor->Send(Message::GotoPos, 1);
+                editor->Send(GotoPos, 1);
                 Toggle(wrap, true);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 1, "forward wrap must retain lookahead beyond the wrap boundary");
                 Require(frame->GetStatusBar()->GetStatusText(2) == "Search wrapped",
                         "context-sensitive Next must report wrap");
                 Toggle(wrap, false);
-                editor->Send(Message::GotoPos, 1);
+                editor->Send(GotoPos, 1);
                 query->SetValue("a\\z");
                 Click(dialog, wxID_BACKWARD);
                 Selection(editor, 0, 1, "original backward target end is the regex buffer end");
                 std::puts("PASS: original backward target end and full-range forward wrap");
                 query->SetValue("\\A.");
-                editor->Send(Message::GotoPos, 1);
+                editor->Send(GotoPos, 1);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 1, 2, "original buffer-start anchor is relative to the target start");
                 Toggle(wrap, true);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 1, "buffer-start anchor must wrap to the actual document start");
                 Toggle(wrap, false);
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中\n文\n"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中\n文\n"));
+                editor->Send(GotoPos, 0);
                 query->SetValue("^");
                 for (const intptr_t boundary : {0, 4, 8}) {
-                    editor->Send(Message::GotoPos, boundary);
+                    editor->Send(GotoPos, boundary);
                     Click(dialog, wxID_FORWARD);
                     Selection(editor, boundary, boundary, "line-start navigation must include the final empty line");
                 }
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 8, 8, "original final empty line can be found repeatedly");
-                editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("中文中文"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(SetText, 0, reinterpret_cast<intptr_t>("中文中文"));
+                editor->Send(GotoPos, 0);
                 query->SetValue(wxString::FromUTF8("(?=中)"));
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 0, "initial lookahead must include the caret");
-                editor->Send(Message::GotoPos, 12);
-                editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(GotoPos, 12);
+                editor->Send(AddText, 1, reinterpret_cast<intptr_t>("!"));
+                editor->Send(GotoPos, 0);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 0, "an edit while dirty must invalidate previous empty-match progress");
-                editor->Send(Message::Undo);
-                editor->Send(Message::GotoPos, 0);
+                editor->Send(Undo);
+                editor->Send(GotoPos, 0);
                 Click(dialog, wxID_FORWARD);
                 Selection(editor, 0, 0, "undo must also invalidate previous empty-match progress");
-                editor->Send(Message::EmptyUndoBuffer);
-                editor->Send(Message::SetSavePoint);
-                editor->Send(Message::GotoPos, 12);
-                editor->Send(Message::AddText, 1, reinterpret_cast<intptr_t>("!"));
-                editor->Send(Message::Undo);
-                editor->Send(Message::SetSel, 12, 0);
+                editor->Send(EmptyUndoBuffer);
+                editor->Send(SetSavePoint);
+                editor->Send(GotoPos, 12);
+                editor->Send(AddText, 1, reinterpret_cast<intptr_t>("!"));
+                editor->Send(Undo);
+                editor->Send(SetSel, 12, 0);
                 query->SetValue("(");
                 Click(dialog, wxID_FORWARD);
                 Click(dialog, wxID_BACKWARD);
-                Require(Text(editor) == "中文中文" && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo) &&
-                            editor->Send(Message::GetAnchor) == 12 && editor->Send(Message::GetCurrentPos) == 0,
+                Require(Text(editor) == "中文中文" && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                            editor->Send(CanRedo) && editor->Send(GetAnchor) == 12 && editor->Send(GetCurrentPos) == 0,
                         "invalid patterns must preserve exact text, reversed selection, savepoint and redo");
                 query->SetValue(wxString::FromUTF8("文"));
                 Toggle(wrap, true);

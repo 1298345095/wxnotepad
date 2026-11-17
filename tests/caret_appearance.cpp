@@ -13,6 +13,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <utility>
 #ifdef __WXGTK__
 #include <wx/graphics.h>
 #include <cairo.h>
@@ -35,31 +36,32 @@ void Check(EditorFrame* frame, const char* name, bool expected) {
             "native caret menu check matches original preference");
 }
 void Modes(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    const auto systemPeriod = editor->Send(Message::GetCaretPeriod);
-    Require(editor->Send(Message::GetCaretStyle) == 1, "original default draws a line caret in the original core");
+    const auto systemPeriod = editor->Send(GetCaretPeriod);
+    Require(editor->Send(GetCaretStyle) == 1, "original default draws a line caret in the original core");
     Menu(frame, "No Blink");
-    Require(editor->Send(Message::GetCaretPeriod) == 0, "No Blink selects original zero period");
+    Require(editor->Send(GetCaretPeriod) == 0, "No Blink selects original zero period");
     Check(frame, "No Blink", true);
     for (const auto& [label, style, width] : {std::tuple{"Block (INS Mode)", 2, 0},
                                               {"Line Width 1", 1, 1},
                                               {"Line Width 2", 1, 2},
                                               {"Line Width 3", 1, 3}}) {
         Menu(frame, label);
-        Require(editor->Send(Message::GetCaretStyle) == style, "insertion mode uses original core style flags");
-        if (width) Require(editor->Send(Message::GetCaretWidth) >= width, "line caret respects requested width");
+        Require(editor->Send(GetCaretStyle) == style, "insertion mode uses original core style flags");
+        if (width) Require(editor->Send(GetCaretWidth) >= width, "line caret respects requested width");
         Check(frame, label, true);
     }
     Menu(frame, "Block (OVR Mode)");
-    Require(editor->Send(Message::GetCaretStyle) == 17, "overstrike block is independent of insertion line width");
+    Require(editor->Send(GetCaretStyle) == 17, "overstrike block is independent of insertion line width");
     Menu(frame, "Block (INS Mode)");
-    Require(editor->Send(Message::GetCaretStyle) == 18, "insertion and overstrike blocks combine original flags");
+    Require(editor->Send(GetCaretStyle) == 18, "insertion and overstrike blocks combine original flags");
     Check(frame, "Draw Block Caret in Selection", true);
     Menu(frame, "Draw Block Caret in Selection");
-    Require(editor->Send(Message::GetCaretStyle) == 274, "unchecked selection mode uses original BlockAfter flag");
+    Require(editor->Send(GetCaretStyle) == 274, "unchecked selection mode uses original BlockAfter flag");
     Check(frame, "Draw Block Caret in Selection", false);
     Menu(frame, "No Blink");
-    Require(editor->Send(Message::GetCaretPeriod) == systemPeriod, "turning No Blink off restores system period");
+    Require(editor->Send(GetCaretPeriod) == systemPeriod, "turning No Blink off restores system period");
     Check(frame, "No Blink", false);
     std::puts("PASS: native caret menus, independent flags, checks and No Blink restore");
 }
@@ -125,10 +127,11 @@ private:
 };
 
 std::pair<int, int> Span(EditorControl* editor, PaintRows& paint, int y) {
-    const auto style = editor->Send(Message::GetCaretStyle);
-    editor->Send(Message::SetCaretStyle, 0);
+    using enum Scintilla::Message;
+    const auto style = editor->Send(GetCaretStyle);
+    editor->Send(SetCaretStyle, 0);
     const auto background = paint.Row(y);
-    editor->Send(Message::SetCaretStyle, style);
+    editor->Send(SetCaretStyle, style);
     const auto foreground = paint.Row(y);
     int first = -1, last = -1;
     for (size_t x = 0; x < background.size(); ++x) {
@@ -297,10 +300,11 @@ void BlinkAndLifecycle(EditorFrame* frame, PaintRows& paint) {
 }
 
 void ZoomAndDpi(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    const auto size =
-        editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default));
-    const auto quality = editor->Send(Message::GetFontQuality);
+    const auto size = editor->Send(StyleGetSizeFractional,
+                                   static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)));
+    const auto quality = editor->Send(GetFontQuality);
     const int dpi = editor->GetDPI().y;
     int systemWidth = 1;
 #ifdef __WXMSW__
@@ -315,54 +319,54 @@ void ZoomAndDpi(EditorFrame* frame) {
     for (int mode : {1, 2, 3}) {
         Menu(frame, mode == 1 ? "Line Width 1" : mode == 2 ? "Line Width 2" : "Line Width 3");
         for (int i = 0; i < 5; ++i) {
-            editor->Send(Message::SetZoom, zooms[i]);
+            editor->Send(SetZoom, zooms[i]);
             const int expected = systemWidth > mode ? systemWidth
                                  : mode == 1        ? (dpi == 96 ? widths96[i] : widths144[i])
                                                     : mode;
             std::printf("caret width mode=%d zoom=%d dpi=%d queried=%lld expected=%d\n", mode, zooms[i], dpi,
-                        static_cast<long long>(editor->Send(Message::GetCaretWidth)), expected);
-            Require(editor->Send(Message::GetCaretWidth) == std::min(expected, 20),
+                        static_cast<long long>(editor->Send(GetCaretWidth)), expected);
+            Require(editor->Send(GetCaretWidth) == std::min(expected, 20),
                     "default width scales with original DPI/zoom while explicit/accessibility widths remain pixels");
         }
     }
-    editor->Send(Message::SetZoom, 100);
-    Require(editor->Send(Message::StyleGetSizeFractional, static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) ==
-                    size &&
-                editor->Send(Message::GetFontQuality) == quality,
+    editor->Send(SetZoom, 100);
+    Require(editor->Send(StyleGetSizeFractional,
+                         static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default))) == size &&
+                editor->Send(GetFontQuality) == quality,
             "caret width scaling preserves native font point size and clarity");
     std::puts("PASS: original width distinction, native DPI/zoom and preserved font settings");
 }
 
 void SavedDocument(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-caret");
     std::filesystem::create_directory(directory);
     const auto path = directory / "caret.txt";
     const TestFiles::EncodedFixture fixture{"utf8", FileEncoding::Utf8, "a中😀\r\nlast", "a中😀\r\nlast!"};
     std::ofstream(path, std::ios::binary) << fixture.before;
-    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
-                editor->Send(Message::GetCaretStyle) == 273 && editor->Send(Message::GetCaretPeriod) == 0,
+    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened && editor->Send(GetCaretStyle) == 273 &&
+                editor->Send(GetCaretPeriod) == 0,
             "opening a document retains chosen caret appearance and blink policy");
-    editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
-    editor->Send(Message::ReplaceSel, 0, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 4, 1);
+    editor->Send(GotoPos, editor->Send(GetLength));
+    editor->Send(ReplaceSel, 0, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 4, 1);
     Menu(frame, "Block (INS Mode)");
     Menu(frame, "Draw Block Caret in Selection");
-    Require(editor->Send(Message::GetAnchor) == 4 && editor->Send(Message::GetCurrentPos) == 1 &&
-                !editor->Send(Message::GetModify) && editor->Send(Message::CanRedo),
+    Require(editor->Send(GetAnchor) == 4 && editor->Send(GetCurrentPos) == 1 && !editor->Send(GetModify) &&
+                editor->Send(CanRedo),
             "caret commands preserve selection direction, save point and pending redo");
     Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
             "caret preferences leave independently read saved bytes unchanged");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     TestFiles::RequireSavedUndoRedo(frame, path, fixture,
                                     {"redo saves original edited bytes", "undo saves original input bytes",
                                      "second redo saves original edited bytes"});
-    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
-                editor->Send(Message::GetCaretStyle) == 18 && editor->Send(Message::GetCaretPeriod) == 0,
+    Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened && editor->Send(GetCaretStyle) == 18 &&
+                editor->Send(GetCaretPeriod) == 0,
             "same-path reopen retains the selected block and No Blink");
-    Require(frame->NewDocument() && editor->Send(Message::GetCaretStyle) == 18 &&
-                editor->Send(Message::GetCaretPeriod) == 0,
+    Require(frame->NewDocument() && editor->Send(GetCaretStyle) == 18 && editor->Send(GetCaretPeriod) == 0,
             "New retains caret preferences after reopening and editing");
     std::filesystem::remove(path);
     std::filesystem::remove(directory);

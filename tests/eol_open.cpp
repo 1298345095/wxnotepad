@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <utility>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
@@ -82,27 +83,29 @@ public:
     }
 };
 void CountAndDefault(const std::filesystem::path& directory, SettingsStore& settings) {
+    using enum Scintilla::EndOfLine;
     struct Sample {
         const char* name;
         const char* bytes;
         EndOfLine expected[3];
     };
     const Sample samples[] = {
-        {"empty", "", {EndOfLine::CrLf, EndOfLine::Lf, EndOfLine::Cr}},
-        {"single", "last", {EndOfLine::CrLf, EndOfLine::Lf, EndOfLine::Cr}},
-        {"uniform-crlf", "one\r\ntwo\r\nlast", {EndOfLine::CrLf, EndOfLine::CrLf, EndOfLine::CrLf}},
-        {"uniform-lf", "one\ntwo\nlast", {EndOfLine::Lf, EndOfLine::Lf, EndOfLine::Lf}},
-        {"uniform-cr", "one\rtwo\rlast", {EndOfLine::Cr, EndOfLine::Cr, EndOfLine::Cr}},
-        {"three-way-tie", "one\r\ntwo\nthree\rlast", {EndOfLine::CrLf, EndOfLine::Lf, EndOfLine::Cr}},
-        {"crlf-lf-tie", "one\r\ntwo\nlast", {EndOfLine::CrLf, EndOfLine::Lf, EndOfLine::CrLf}},
-        {"crlf-cr-tie", "one\r\ntwo\rlast", {EndOfLine::CrLf, EndOfLine::CrLf, EndOfLine::Cr}},
-        {"lf-cr-tie", "one\ntwo\rthree\nfour\rlast", {EndOfLine::Lf, EndOfLine::Lf, EndOfLine::Cr}},
-        {"predominant-crlf", "one\r\ntwo\r\nthree\nfour\rlast", {EndOfLine::CrLf, EndOfLine::CrLf, EndOfLine::CrLf}},
-        {"predominant-lf", "one\r\ntwo\nthree\nfour\rlast", {EndOfLine::Lf, EndOfLine::Lf, EndOfLine::Lf}},
-        {"predominant-cr", "one\r\ntwo\nthree\rfour\rlast", {EndOfLine::Cr, EndOfLine::Cr, EndOfLine::Cr}},
-        {"adjacent-trailing", "\r\r\n\n", {EndOfLine::CrLf, EndOfLine::Lf, EndOfLine::Cr}},
+        {"empty", "", {CrLf, Lf, Cr}},
+        {"single", "last", {CrLf, Lf, Cr}},
+        {"uniform-crlf", "one\r\ntwo\r\nlast", {CrLf, CrLf, CrLf}},
+        {"uniform-lf", "one\ntwo\nlast", {Lf, Lf, Lf}},
+        {"uniform-cr", "one\rtwo\rlast", {Cr, Cr, Cr}},
+        {"three-way-tie", "one\r\ntwo\nthree\rlast", {CrLf, Lf, Cr}},
+        {"crlf-lf-tie", "one\r\ntwo\nlast", {CrLf, Lf, CrLf}},
+        {"crlf-cr-tie", "one\r\ntwo\rlast", {CrLf, CrLf, Cr}},
+        {"lf-cr-tie", "one\ntwo\rthree\nfour\rlast", {Lf, Lf, Cr}},
+        {"predominant-crlf", "one\r\ntwo\r\nthree\nfour\rlast", {CrLf, CrLf, CrLf}},
+        {"predominant-lf", "one\r\ntwo\nthree\nfour\rlast", {Lf, Lf, Lf}},
+        {"predominant-cr", "one\r\ntwo\nthree\rfour\rlast", {Cr, Cr, Cr}},
+        {"adjacent-trailing", "\r\r\n\n", {CrLf, Lf, Cr}},
     };
     for (int configured = 0; configured < 3; ++configured) {
+        using enum Scintilla::Message;
         settings.values.defaultEOLMode = configured;
         settings.values.warnLineEndings = false;
         auto* frame = new EditorFrame(&settings);
@@ -116,24 +119,31 @@ void CountAndDefault(const std::filesystem::path& directory, SettingsStore& sett
             disabled.Start(20);
             Require(frame->Open(Filename(input)).status == OpenStatus::Opened, "configured Open must load the fixture");
             disabled.Stop();
-            Require(!disabled.seen && Text(editor) == sample.bytes && !editor->Send(Message::GetModify) &&
-                        !editor->Send(Message::CanUndo),
+            Require(!disabled.seen && Text(editor) == sample.bytes && !editor->Send(GetModify) &&
+                        !editor->Send(CanUndo),
                     "warning-disabled Open must retain bytes and clean history");
             const auto mode = sample.expected[configured];
-            Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(mode),
+            Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(mode)),
                     "configured tie preference and original counting must choose insertion mode");
-            editor->Send(Message::GotoPos, editor->Send(Message::GetLength));
-            editor->Send(Message::NewLine);
-            const char* ending = mode == EndOfLine::CrLf ? "\r\n" : mode == EndOfLine::Lf ? "\n" : "\r";
+            editor->Send(GotoPos, editor->Send(GetLength));
+            editor->Send(NewLine);
+            const char* ending = "\r";
+            if (mode == CrLf)
+                ending = "\r\n";
+            else if (mode == Lf)
+                ending = "\n";
             Require(frame->SaveAs(Filename(output)).status == SaveStatus::Saved &&
                         Bytes(output) == std::string(sample.bytes) + ending && Bytes(input) == sample.bytes &&
-                        !editor->Send(Message::GetModify),
+                        !editor->Send(GetModify),
                     "Save As must preserve bytes and append the chosen ending");
         }
+        auto configuredMode = Cr;
+        if (configured == 0)
+            configuredMode = CrLf;
+        else if (configured == 1)
+            configuredMode = Lf;
         Require(frame->NewDocument() &&
-                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(configured == 0   ? EndOfLine::CrLf
-                                                                               : configured == 1 ? EndOfLine::Lf
-                                                                                                 : EndOfLine::Cr),
+                    editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(configuredMode)),
                 "New must restore the configured insertion default");
         frame->Destroy();
         wxYield();
@@ -146,6 +156,7 @@ void WarningChoices(const std::filesystem::path& directory, SettingsStore& setti
     const std::string mixed = "one\r\ntwo\nthree\rlast";
     const char* normalized[] = {"one\r\ntwo\r\nthree\r\nlast", "one\ntwo\nthree\nlast", "one\rtwo\rthree\rlast"};
     for (int selected = 0; selected < 3; ++selected) {
+        using enum Scintilla::Message;
         settings.values.defaultEOLMode = selected;
         settings.values.warnLineEndings = true;
         auto* frame = new EditorFrame(&settings);
@@ -158,8 +169,8 @@ void WarningChoices(const std::filesystem::path& directory, SettingsStore& setti
         Require(frame->Open(Filename(uniformPath)).status == OpenStatus::Opened,
                 "uniform input must open with the warning preference enabled");
         uniform.Stop();
-        Require(!uniform.seen && !editor->Send(Message::GetModify) &&
-                    editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(EndOfLine::Lf),
+        Require(!uniform.seen && !editor->Send(GetModify) &&
+                    editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(EndOfLine::Lf)),
                 "uniform endings must not warn and must select their actual insertion mode");
         Write(input, mixed);
         WarningDriver declined;
@@ -169,11 +180,11 @@ void WarningChoices(const std::filesystem::path& directory, SettingsStore& setti
         Require(frame->Open(Filename(input), FileEncoding::Utf8).status == OpenStatus::Opened,
                 "No must still open the file");
         declined.Check();
-        Require(Text(editor) == mixed && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+        Require(Text(editor) == mixed && !editor->Send(GetModify) && !editor->Send(CanUndo),
                 "No must retain loaded mixed bytes, clean save point and empty Undo history");
-        Require(editor->Send(Message::GetEOLMode) == static_cast<intptr_t>(selected == 0   ? EndOfLine::CrLf
-                                                                           : selected == 1 ? EndOfLine::Lf
-                                                                                           : EndOfLine::Cr),
+        Require(editor->Send(GetEOLMode) == static_cast<intptr_t>(std::to_underlying(selected == 0   ? EndOfLine::CrLf
+                                                                                     : selected == 1 ? EndOfLine::Lf
+                                                                                                     : EndOfLine::Cr)),
                 "No must ignore a changed selector and retain the detected insertion mode");
         Require(frame->SaveAs(Filename(output)).status == SaveStatus::Saved && Bytes(output) == mixed,
                 "Save after No must preserve independent mixed disk bytes");
@@ -187,20 +198,20 @@ void WarningChoices(const std::filesystem::path& directory, SettingsStore& setti
                 "Yes must complete Open");
         accepted.Check();
         const int target = accepted.selection;
-        Require(Text(editor) == normalized[target] && editor->Send(Message::GetModify) &&
-                    editor->Send(Message::CanUndo) && Bytes(input) == mixed,
+        Require(Text(editor) == normalized[target] && editor->Send(GetModify) && editor->Send(CanUndo) &&
+                    Bytes(input) == mixed,
                 "Yes must normalize as an undoable dirty edit without writing the source");
-        const auto chosen = editor->Send(Message::GetEOLMode);
-        editor->Send(Message::Undo);
-        Require(Text(editor) == mixed && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                    editor->Send(Message::CanRedo) && editor->Send(Message::GetEOLMode) == chosen,
+        const auto chosen = editor->Send(GetEOLMode);
+        editor->Send(Undo);
+        Require(Text(editor) == mixed && !editor->Send(GetModify) && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                    editor->Send(GetEOLMode) == chosen,
                 "one Undo must restore loaded bytes and save point while retaining selected insertion mode");
-        editor->Send(Message::Redo);
-        Require(editor->Send(Message::GetModify) && frame->Save().status == SaveStatus::Saved &&
-                    Bytes(input) == normalized[target] && !editor->Send(Message::GetModify),
+        editor->Send(Redo);
+        Require(editor->Send(GetModify) && frame->Save().status == SaveStatus::Saved &&
+                    Bytes(input) == normalized[target] && !editor->Send(GetModify),
                 "Redo and Save must write exact normalized bytes and establish the save point");
-        editor->Send(Message::Undo);
-        Require(editor->Send(Message::GetModify) && frame->SaveAs(Filename(output)).status == SaveStatus::Saved &&
+        editor->Send(Undo);
+        Require(editor->Send(GetModify) && frame->SaveAs(Filename(output)).status == SaveStatus::Saved &&
                     Bytes(output) == mixed,
                 "Undo after Save must dirty text and Save As must write original bytes");
         WarningDriver disabled;
@@ -208,7 +219,7 @@ void WarningChoices(const std::filesystem::path& directory, SettingsStore& setti
         Require(frame->Open(Filename(output)).status == OpenStatus::Opened,
                 "mixed file must reopen after disabling warning");
         disabled.Stop();
-        Require(!disabled.seen && Text(editor) == mixed && !editor->Send(Message::GetModify),
+        Require(!disabled.seen && Text(editor) == mixed && !editor->Send(GetModify),
                 "unchecking Always show must suppress subsequent warnings and preserve the loaded save point");
         frame->Destroy();
         wxYield();

@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <utility>
 #include "syntax/syntax_scheme.h"
 #include "editor/editor_control.h"
 #include "app/dialogs/document_dialogs.h"
@@ -18,19 +19,20 @@
 namespace {
 wxString EncodingName(FileEncoding encoding) {
     switch (encoding) {
-    case FileEncoding::Utf16Le:
+        using enum FileEncoding;
+    case Utf16Le:
         return "UTF-16LE";
-    case FileEncoding::Utf16Be:
+    case Utf16Be:
         return "UTF-16BE";
-    case FileEncoding::Gbk:
+    case Gbk:
         return "GBK (CP936)";
-    case FileEncoding::Gb18030:
+    case Gb18030:
         return "GB18030 (CP54936)";
-    case FileEncoding::Big5:
+    case Big5:
         return "Big5 (CP950)";
-    case FileEncoding::Windows1252:
+    case Windows1252:
         return "Windows-1252";
-    case FileEncoding::Dos437:
+    case Dos437:
         return "DOS-437";
     default:
         return "UTF-8";
@@ -42,11 +44,12 @@ wxString DocumentEncodingLabel(const DocumentSession& document) {
     const wxString name = EncodingName(encoding);
     if (document.IsDefaultEncoding()) {
         switch (encoding) {
-        case FileEncoding::Gbk:
+            using enum FileEncoding;
+        case Gbk:
             return "ANSI (CP936)";
-        case FileEncoding::Gb18030:
+        case Gb18030:
             return "ANSI (CP54936)";
-        case FileEncoding::Big5:
+        case Big5:
             return "ANSI (CP950)";
         default:
             return "ANSI (" + name + ")";
@@ -103,7 +106,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
                           : settings->values.defaultEOLMode == 1 ? Scintilla::EndOfLine::Lf
                                                                  : Scintilla::EndOfLine::Cr;
         document_.SetDefaultEolMode(mode);
-        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(mode));
+        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(mode)));
         warnLineEndings_ = settings->values.warnLineEndings;
         editor_->Send(Scintilla::Message::SetZoom, settings->values.zoomLevel);
         editor_->SetCaretAppearance(settings->values.caret);
@@ -120,8 +123,9 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         ApplyWrapSymbols();
         if (settings->values.wordWrap) editor_->ToggleWordWrap();
         editor_->Send(Scintilla::Message::SetViewWS,
-                      static_cast<uintptr_t>(settings->values.viewWhiteSpace ? Scintilla::WhiteSpace::VisibleAlways
-                                                                             : Scintilla::WhiteSpace::Invisible));
+                      static_cast<uintptr_t>(std::to_underlying(settings->values.viewWhiteSpace
+                                                                    ? Scintilla::WhiteSpace::VisibleAlways
+                                                                    : Scintilla::WhiteSpace::Invisible)));
     }
     document_.New();
     CreateMenus();
@@ -185,22 +189,25 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
     settings_->values.zoomLevel = static_cast<int>(editor_->Send(Scintilla::Message::GetZoom));
     settings_->values.caret = editor_->GetCaretAppearance();
     settings_->values.highlightCurrentLine =
-        static_cast<int>(editor_->GetCurrentLineHighlightMode()) +
+        std::to_underlying(editor_->GetCurrentLineHighlightMode()) +
         10 * static_cast<int>(editor_->Send(Scintilla::Message::GetCaretLineHighlightSubLine));
     CaptureSearchSettings(search_, settings_->values);
-    settings_->values.lineSelection = static_cast<int>(editor_->GetLineSelectionMode());
+    settings_->values.lineSelection = std::to_underlying(editor_->GetLineSelectionMode());
     settings_->values.markOccurrences = editor_->Occurrences().Options();
     return settings_->Save(explicitSave);
 }
 
 void EditorFrame::ShowLineEndingOptions() {
+    using enum Scintilla::EndOfLine;
     LineEndingOptionsDialog dialog(this, {defaultEolMode_, warnLineEndings_, document_.SaveCleanup()});
     const auto choice = dialog.Choose();
     if (!choice) return;
     defaultEolMode_ = choice->defaultMode;
-    const auto defaultMode = defaultEolMode_ == 0   ? Scintilla::EndOfLine::CrLf
-                             : defaultEolMode_ == 1 ? Scintilla::EndOfLine::Lf
-                                                    : Scintilla::EndOfLine::Cr;
+    auto defaultMode = Cr;
+    if (defaultEolMode_ == 0)
+        defaultMode = CrLf;
+    else if (defaultEolMode_ == 1)
+        defaultMode = Lf;
     document_.SetDefaultEolMode(defaultMode);
     warnLineEndings_ = choice->warn;
     document_.SetSaveCleanup(choice->cleanup);
@@ -233,20 +240,21 @@ void EditorFrame::Search(bool forward, bool extendSelection) {
 
 void EditorFrame::ReportFind(const FindResult& result) {
     switch (result.status) {
-    case FindStatus::Found:
+        using enum FindStatus;
+    case Found:
         SetStatusText(result.wrapped ? _("Search wrapped") : _("Match found"), 2);
         break;
-    case FindStatus::NotFound:
+    case NotFound:
         SetStatusText(_("No match found"), 2);
         ShowSearchMessage("MsgNotFound", _("The specified text was not found."), false);
         break;
-    case FindStatus::InvalidPattern:
+    case InvalidPattern:
         SetStatusText(_("Invalid regular expression"), 2);
         break;
-    case FindStatus::EmptyQuery:
+    case EmptyQuery:
         ShowSearchMessage("MsgNotFound", _("The specified text was not found."), false);
         break;
-    case FindStatus::Cancelled:
+    case Cancelled:
         break;
     }
 }
@@ -505,18 +513,19 @@ OpenResult EditorFrame::Revert() {
 }
 
 OpenResult EditorFrame::ReloadWithEncoding() {
-    if (document_.Path().empty()) return {OpenStatus::Cancelled, {}};
+    using enum OpenStatus;
+    if (document_.Path().empty()) return {Cancelled, {}};
     // F8's original DontSave path confirms loss before showing the picker.
     if (document_.IsModified() &&
         wxMessageBox(_("Recoding requires reloading file from disk, unsaved changes will be lost!"),
                      _("Reload Encoding"), wxOK | wxCANCEL | wxICON_WARNING, this) != wxOK)
-        return {OpenStatus::Cancelled, {}};
+        return {Cancelled, {}};
     // Original IDM_RECODE_SELECT maps the BOM variants to their source codec.
     // Native ANSI maps to CPI_NONE: the user must select an explicit source.
     const auto encoding = ChooseReloadEncoding(this, document_.IsDefaultEncoding() || document_.IsOemEncoding()
                                                          ? std::nullopt
                                                          : std::optional<FileEncoding>(document_.Encoding()));
-    if (!encoding) return {OpenStatus::Cancelled, {}};
+    if (!encoding) return {Cancelled, {}};
     return LoadFile(document_.Path(), [] { return true; }, encoding, std::nullopt, OpenDecisionTiming::AfterRead, true);
 }
 
@@ -646,7 +655,7 @@ EncodingLossChoice EditorFrame::ConfirmEncodingLoss() {
 bool EditorFrame::ShowEncodingWarning(EncodingWarning warning, const wxString& message, bool yesNo) {
     // Original InfoBox keys and modes: suppress=1 returns Yes/OK immediately;
     // never-suppress=2 leaves the checkbox disabled. Cancel may also persist it.
-    const auto index = static_cast<size_t>(warning);
+    const auto index = static_cast<size_t>(std::to_underlying(warning));
     const wxString key = wxString::Format("MsgConv%zu", index + 1);
     int& mode = suppressedEncodingMessages_[index];
     if (settings_) mode = settings_->MessageSuppression(key);
@@ -667,7 +676,7 @@ void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts, bo
     const auto choice = dialog.Choose();
     warnLineEndings_ = choice.warn;
     if (choice.convert) {
-        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(choice.mode));
-        editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(choice.mode));
+        editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(choice.mode)));
+        editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(std::to_underlying(choice.mode)));
     }
 }

@@ -11,28 +11,31 @@ void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 void Position(EditorControl* editor, intptr_t anchor, intptr_t caret, const char* message) {
-    if (editor->Send(Message::GetAnchor) != anchor || editor->Send(Message::GetCurrentPos) != caret) {
+    using enum Scintilla::Message;
+    if (editor->Send(GetAnchor) != anchor || editor->Send(GetCurrentPos) != caret) {
         std::fprintf(stderr, "Anchor/caret: %lld/%lld; expected %lld/%lld\n",
-                     static_cast<long long>(editor->Send(Message::GetAnchor)),
-                     static_cast<long long>(editor->Send(Message::GetCurrentPos)), static_cast<long long>(anchor),
+                     static_cast<long long>(editor->Send(GetAnchor)),
+                     static_cast<long long>(editor->Send(GetCurrentPos)), static_cast<long long>(anchor),
                      static_cast<long long>(caret));
         throw std::runtime_error(message);
     }
 }
 void Load(EditorControl* editor, const std::string& text, intptr_t anchor, intptr_t caret) {
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    using enum Scintilla::Message;
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text.c_str()));
+    editor->Send(SetSel, anchor, caret);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 }
 void Case(EditorFrame* frame, int command, const std::string& text, intptr_t anchor, intptr_t caret,
           intptr_t expectedAnchor, intptr_t expectedCaret, const char* message) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Load(editor, text, anchor, caret);
     NativeSearch::Command(frame, command);
     Position(editor, expectedAnchor, expectedCaret, message);
-    Require(NativeSearch::Text(editor) == text && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+    Require(NativeSearch::Text(editor) == text && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                !editor->Send(CanRedo),
             "brace command must preserve document bytes, save point and empty edit history");
 }
 void Language(EditorFrame* frame, const char* name) {
@@ -68,24 +71,25 @@ void Shortcut(EditorControl* editor, bool shift) {
     wxYield();
 }
 std::pair<int, int> BasicBraceCases(EditorFrame* frame) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const int find = frame->GetMenuBar()->FindMenuItem("Search", "Find Matching Brace");
     Require(find != wxNOT_FOUND, "native Edit menu must expose Find Matching Brace");
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("(a(b)c)"));
-    editor->Send(Message::GotoPos, 2);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>("(a(b)c)"));
+    editor->Send(GotoPos, 2);
     NativeSearch::Command(frame, find);
-    Require(editor->Send(Message::GetCurrentPos) == 4 && editor->Send(Message::GetAnchor) == 4,
+    Require(editor->Send(GetCurrentPos) == 4 && editor->Send(GetAnchor) == 4,
             "Find Matching Brace navigates to the nested closing delimiter");
     std::puts("PASS: native menu navigates to the matching nested brace");
     const int select = frame->GetMenuBar()->FindMenuItem("Search", "Select to Matching Brace");
     Require(select != wxNOT_FOUND, "native Edit menu must expose Select to Matching Brace");
-    editor->Send(Message::SetSel, 0, 2);
+    editor->Send(SetSel, 0, 2);
     NativeSearch::Command(frame, select);
-    Require(editor->Send(Message::GetAnchor) == 0 && editor->Send(Message::GetCurrentPos) == 5,
+    Require(editor->Send(GetAnchor) == 0 && editor->Send(GetCurrentPos) == 5,
             "forward matching selection includes both nested braces and retains existing extent");
-    editor->Send(Message::SetSel, 7, 4);
+    editor->Send(SetSel, 7, 4);
     NativeSearch::Command(frame, select);
-    Require(editor->Send(Message::GetAnchor) == 7 && editor->Send(Message::GetCurrentPos) == 2,
+    Require(editor->Send(GetAnchor) == 7 && editor->Send(GetCurrentPos) == 2,
             "backward matching selection includes both nested braces and retains existing extent");
     std::puts("PASS: native menu expands selections in the matching direction");
     Language(frame, "Plain Text");
@@ -160,56 +164,56 @@ void LexerStyleMatching(EditorFrame* frame, int find, int select) {
     std::puts("PASS: Plain Text/C++/Python/JSON preserve pinned-core lexer-style matching");
 }
 void BraceHistoryAndProtection(EditorFrame* frame, int find, int select) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Language(frame, "Plain Text");
     Load(editor, "(x)", 0, 0);
-    editor->Send(Message::InsertText, 3, reinterpret_cast<intptr_t>("!"));
+    editor->Send(InsertText, 3, reinterpret_cast<intptr_t>("!"));
     NativeSearch::Command(frame, find);
-    Require(NativeSearch::Text(editor) == "(x)!" && editor->Send(Message::GetModify) && editor->Send(Message::CanUndo),
+    Require(NativeSearch::Text(editor) == "(x)!" && editor->Send(GetModify) && editor->Send(CanUndo),
             "navigation preserves existing modified state and Undo history");
-    editor->Send(Message::Undo);
-    Require(NativeSearch::Text(editor) == "(x)" && !editor->Send(Message::GetModify) && editor->Send(Message::CanRedo),
+    editor->Send(Undo);
+    Require(NativeSearch::Text(editor) == "(x)" && !editor->Send(GetModify) && editor->Send(CanRedo),
             "one Undo after navigation still restores the preceding edit");
-    editor->Send(Message::SetSel, 0, 0);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetSel, 0, 0);
+    editor->Send(SetReadOnly, 1);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(find) && frame->GetMenuBar()->IsEnabled(select),
             "read-only documents retain both nonediting brace commands");
     NativeSearch::Command(frame, select);
     Position(editor, 0, 3, "read-only selection still includes both matching delimiters");
-    Require(!editor->Send(Message::GetModify), "read-only selection preserves the save point");
-    editor->Send(Message::SetReadOnly, 0);
-    Require(editor->Send(Message::CanRedo), "selection preserves existing Redo history");
-    editor->Send(Message::Redo);
+    Require(!editor->Send(GetModify), "read-only selection preserves the save point");
+    editor->Send(SetReadOnly, 0);
+    Require(editor->Send(CanRedo), "selection preserves existing Redo history");
+    editor->Send(Redo);
     Require(NativeSearch::Text(editor) == "(x)!", "Redo still restores the edit after brace selection");
     std::puts("PASS: read-only commands preserve bytes, modified state and existing Undo/Redo history");
 }
 void CollapsedBraceTargets(EditorFrame* frame, int find, int select) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Language(frame, "C/C++");
     const int collapse = frame->GetMenuBar()->FindMenuItem("View", "Collapse All");
     Require(collapse != wxNOT_FOUND, "fold fixture must expose Collapse All");
     Load(editor, "{\n x\n}\n{\n y\n}\n", 0, 0);
-    editor->Send(Message::Colourise, 0, -1);
+    editor->Send(Colourise, 0, -1);
     NativeFold::Paint(editor);
     NativeSearch::Command(frame, collapse);
-    Require(!editor->Send(Message::GetFoldExpanded, 0) && !editor->Send(Message::GetLineVisible, 2) &&
-                !editor->Send(Message::GetFoldExpanded, 3),
+    Require(!editor->Send(GetFoldExpanded, 0) && !editor->Send(GetLineVisible, 2) && !editor->Send(GetFoldExpanded, 3),
             "both real lexer folds must start collapsed");
     NativeSearch::Command(frame, find);
     Position(editor, 5, 5, "navigation retains the original hidden closing-brace position");
-    Require(!editor->Send(Message::GetFoldExpanded, 0) && !editor->Send(Message::GetLineVisible, 2) &&
-                !editor->Send(Message::GetFoldExpanded, 3),
+    Require(!editor->Send(GetFoldExpanded, 0) && !editor->Send(GetLineVisible, 2) && !editor->Send(GetFoldExpanded, 3),
             "GotoPos must retain collapsed destination and unrelated folds");
-    editor->Send(Message::SetSel, 0, 0);
+    editor->Send(SetSel, 0, 0);
     NativeSearch::Command(frame, select);
     Position(editor, 0, 6, "selection includes the hidden matching closing brace");
-    Require(!editor->Send(Message::GetFoldExpanded, 0) && !editor->Send(Message::GetLineVisible, 2) &&
-                !editor->Send(Message::GetFoldExpanded, 3),
+    Require(!editor->Send(GetFoldExpanded, 0) && !editor->Send(GetLineVisible, 2) && !editor->Send(GetFoldExpanded, 3),
             "SetSel must retain destination and unrelated folds");
     std::puts("PASS: original GotoPos/SetSel visibility retains collapsed folds");
 }
 void WrappedBraceTargets(EditorFrame* frame, int find, int select) {
+    using enum Scintilla::Message;
     auto* editor = frame->Editor();
     Language(frame, "Plain Text");
     const std::string wrapped = "(" + std::string(8000, 'x') + ")";
@@ -217,16 +221,15 @@ void WrappedBraceTargets(EditorFrame* frame, int find, int select) {
     const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");
     NativeSearch::Command(frame, wrap);
     NativeFold::Paint(editor);
-    Require(editor->Send(Message::WrapCount, 0) > 1, "long logical line must span multiple display rows");
+    Require(editor->Send(WrapCount, 0) > 1, "long logical line must span multiple display rows");
     NativeSearch::Command(frame, find);
     Position(editor, 8001, 8001, "wrapped navigation retains the matching logical byte position");
-    const auto caretY = editor->Send(Message::PointYFromPosition, 0, 8001);
-    Require(editor->Send(Message::GetFirstVisibleLine) > 0 && caretY >= 0 && caretY < editor->GetClientSize().y,
+    const auto caretY = editor->Send(PointYFromPosition, 0, 8001);
+    Require(editor->Send(GetFirstVisibleLine) > 0 && caretY >= 0 && caretY < editor->GetClientSize().y,
             "original GotoPos scrolls the wrapped matching caret into the viewport");
     NativeSearch::Command(frame, select);
     Position(editor, 8002, 0, "wrapped backward selection includes both delimiters");
-    Require(NativeSearch::Text(editor) == wrapped && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo),
+    Require(NativeSearch::Text(editor) == wrapped && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "wrapped brace commands preserve document and edit history");
     std::puts("PASS: wrapped logical-line matching and inclusive selection");
 }

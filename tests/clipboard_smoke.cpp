@@ -20,6 +20,7 @@
 #include <exception>
 #include <stdexcept>
 #include <vector>
+#include <utility>
 #ifdef __WXMSW__
 #include <windows.h>
 #endif
@@ -291,7 +292,7 @@ void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer, bool readines
     Require(peer.Request("shape-read") == "line" && peer.SavedText() == "last",
             "Ctrl+C follows the same current-line option as Copy menu");
     editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("A\t中文Z\nB\t日本Q"));
-    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
+    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
     editor->Send(Message::SetRectangularSelectionAnchor, 1);
     editor->Send(Message::SetRectangularSelectionCaret, 18);
     Gesture(editor);
@@ -306,10 +307,11 @@ void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer, bool readines
     peer.PreserveSavedText("clipboard-shape-peer.txt");
     std::puts("PASS: native rectangle marker and independent saved Unicode bytes");
     const auto load = [editor](const char* text, intptr_t start, intptr_t end) {
-        editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-        editor->Send(Message::SetSel, start, end);
-        editor->Send(Message::EmptyUndoBuffer);
-        editor->Send(Message::SetSavePoint);
+        using enum Scintilla::Message;
+        editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+        editor->Send(SetSel, start, end);
+        editor->Send(EmptyUndoBuffer);
+        editor->Send(SetSavePoint);
     };
     const auto paste = [editor, &peer](const char* offer) {
         const auto response = peer.Request(offer);
@@ -317,10 +319,11 @@ void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer, bool readines
         editor->Send(Message::Paste);
     };
     const auto undo = [editor](const char* before) {
-        editor->Send(Message::Undo);
-        Require(Text(editor) == before && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+        using enum Scintilla::Message;
+        editor->Send(Undo);
+        Require(Text(editor) == before && !editor->Send(GetModify) && !editor->Send(CanUndo),
                 "one Undo restores shape paste and save point");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
     };
     load("A\t中文Z\nB\t日本Q", 0, 0);
     editor->Send(Message::SetRectangularSelectionAnchor, 1);
@@ -376,7 +379,7 @@ void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer, bool readines
     Require(Text(editor) == "ab12\ncd34" && !editor->Send(Message::CanUndo),
             "read-only shape paste and cut retain bytes/history");
     editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::CrLf));
+    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::CrLf)));
     load("ab12\r\ncd34", 2, 2);
     paste("shape-line");
     Require(Text(editor) == "中文\tX\r\n日本\tY\r\nab12\r\ncd34", "line paste converts peer LF to local CRLF");
@@ -386,14 +389,14 @@ void Shapes(EditorFrame* frame, EditorControl* editor, Peer& peer, bool readines
     Require(Text(editor) == "中文\tX\n日本\tY\r\nab12\r\ncd34",
             "disabled paste conversion retains peer LF and uses local appended EOL");
     editor->Send(Message::SetPasteConvertEndings, 1);
-    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
+    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
     for (const auto mode : {Scintilla::MultiPaste::Once, Scintilla::MultiPaste::Each}) {
         load("ab12\ncd34", 1, 2);
         editor->Send(Message::SetMultipleSelection, 1);
         editor->Send(Message::SetAdditionalSelectionTyping, 0);
         editor->Send(Message::AddSelection, 7, 6);
         editor->Send(Message::SetMainSelection, 0);
-        editor->Send(Message::SetMultiPaste, static_cast<uintptr_t>(mode));
+        editor->Send(Message::SetMultiPaste, static_cast<uintptr_t>(std::to_underlying(mode)));
         paste("shape-line");
         Require(Text(editor) == (mode == Scintilla::MultiPaste::Each ? "a中文\tX\n日本\tY12\nc中文\tX\n日本\tY34"
                                                                      : "a中文\tX\n日本\tY12\ncd34"),
@@ -485,26 +488,26 @@ void NativeLineShortcut(EditorControl* editor, int key, bool shift = true, bool 
     wxYield();
 }
 void LineCommandModes(EditorControl* editor, Peer& peer) {
+    using enum LineSelectionMode;
     using Scintilla::Message;
-    for (const auto mode : {LineSelectionMode::None, LineSelectionMode::VisualStudio, LineSelectionMode::Normal,
-                            LineSelectionMode::OldVisualStudio}) {
+    for (const auto mode : {None, VisualStudio, Normal, OldVisualStudio}) {
+        using enum Scintilla::Message;
         editor->SetLineSelectionMode(mode);
-        const bool line = mode == LineSelectionMode::VisualStudio || mode == LineSelectionMode::OldVisualStudio;
+        const bool line = mode == VisualStudio || mode == OldVisualStudio;
         TestEditor::ResetStream(editor, "aa\nbb\ncc", 4, 4, Scintilla::EndOfLine::Lf);
         Gesture(editor);
         editor->CopyLine();
         Require(peer.Request("shape-read") == (line ? "line" : "stream") && peer.SavedText() == "bb\n",
                 "explicit Copy Line retains each original mode's metadata bit");
         TestEditor::RequireSelection(editor, 4, 4, "Copy Line retains the caret in every mode");
-        Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
-                "Copy Line preserves history and save point");
+        Require(!editor->Send(CanUndo) && !editor->Send(GetModify), "Copy Line preserves history and save point");
         TestEditor::ResetStream(editor, "AB\nCD", 1, 1);
-        editor->Send(Message::Paste);
+        editor->Send(Paste);
         Require(Text(editor) == (line ? "bb\nAB\nCD" : "Abb\nB\nCD"),
                 "caret-only paste uses the original line or stream insertion position");
         TestEditor::RequireSelection(editor, 4, 4, "line or stream paste retains original caret offset");
-        editor->Send(Message::Undo);
-        Require(Text(editor) == "AB\nCD" && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(Text(editor) == "AB\nCD" && !editor->Send(GetModify),
                 "one Undo restores each mode's line paste and save point");
         TestEditor::ResetStream(editor, "aa\nbb\ncc", 4, 4);
         Gesture(editor);
@@ -513,13 +516,13 @@ void LineCommandModes(EditorControl* editor, Peer& peer) {
                     peer.SavedText() == "bb\n",
                 "explicit Cut Line uses each mode's original metadata without ordinary Cut's column jump");
         TestEditor::RequireSelection(editor, 3, 3, "explicit Cut Line collapses at the deleted line start");
-        editor->Send(Message::Undo);
-        Require(Text(editor) == "aa\nbb\ncc" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(Text(editor) == "aa\nbb\ncc" && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "one Undo restores original Cut Line text and save point");
-        editor->Send(Message::Redo);
-        Require(Text(editor) == "aa\ncc" && !editor->Send(Message::CanRedo), "Redo restores explicit Cut Line");
+        editor->Send(Redo);
+        Require(Text(editor) == "aa\ncc" && !editor->Send(CanRedo), "Redo restores explicit Cut Line");
     }
-    editor->SetLineSelectionMode(LineSelectionMode::VisualStudio);
+    editor->SetLineSelectionMode(VisualStudio);
     std::puts("PASS: all four explicit line-command modes, metadata, paste placement and Undo/Redo");
 }
 void LineCommandSelections(EditorControl* editor, Peer& peer) {
@@ -545,13 +548,14 @@ void LineCommandSelections(EditorControl* editor, Peer& peer) {
         {"tail", 2, 2, "tail", "", 0},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret, fixture.eol);
         Gesture(editor);
         editor->CopyLine();
         Require(peer.Request("shape-read") == "line" && peer.SavedText() == fixture.copied,
                 "independent native peer reads exact original selected-line boundaries and final EOL");
         TestEditor::RequireSelection(editor, fixture.anchor, fixture.caret, "Copy Line retains selection direction");
-        Require(Text(editor) == fixture.before && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+        Require(Text(editor) == fixture.before && !editor->Send(GetModify) && !editor->Send(CanUndo),
                 "Copy Line preserves selected text, history and save point");
         Gesture(editor);
         editor->CutLine();
@@ -559,11 +563,11 @@ void LineCommandSelections(EditorControl* editor, Peer& peer) {
         TestEditor::RequireSelection(editor, fixture.position, fixture.position, "Cut Line's original position");
         Require(peer.Request("shape-read") == "line" && peer.SavedText() == fixture.copied,
                 "Cut Line publishes exact original selected-line bytes");
-        editor->Send(Message::Undo);
-        Require(Text(editor) == fixture.before && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+        editor->Send(Undo);
+        Require(Text(editor) == fixture.before && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "one Undo restores inclusive selected-line Cut");
-        editor->Send(Message::Redo);
-        Require(Text(editor) == fixture.cut && !editor->Send(Message::CanRedo), "Redo restores selected-line Cut");
+        editor->Send(Redo);
+        Require(Text(editor) == fixture.cut && !editor->Send(CanRedo), "Redo restores selected-line Cut");
     }
     struct DeleteFixture {
         intptr_t anchor;
@@ -575,15 +579,15 @@ void LineCommandSelections(EditorControl* editor, Peer& peer) {
     for (const auto& fixture : {DeleteFixture{1, 4, "aa\ncc\ndd", 1, 3}, DeleteFixture{4, 1, "bb\ncc\ndd", 1, 0},
                                 DeleteFixture{1, 3, "aa\ncc\ndd", 1, 3}, DeleteFixture{1, 7, "aa\nbb\ndd", 1, 6},
                                 DeleteFixture{10, 10, "aa\nbb\ncc\n", 9, 9}}) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "aa\nbb\ncc\ndd", fixture.anchor, fixture.caret);
         editor->DeleteLine();
         Require(Text(editor) == fixture.after, "Delete Line removes only the main caret's physical line");
         TestEditor::RequireSelection(editor, fixture.afterAnchor, fixture.afterCaret,
                                      "Delete Line retains original endpoint adjustment");
-        editor->Send(Message::Undo);
-        Require(Text(editor) == "aa\nbb\ncc\ndd" && !editor->Send(Message::GetModify),
-                "one Undo restores caret-line Delete");
-        editor->Send(Message::Redo);
+        editor->Send(Undo);
+        Require(Text(editor) == "aa\nbb\ncc\ndd" && !editor->Send(GetModify), "one Undo restores caret-line Delete");
+        editor->Send(Redo);
         Require(Text(editor) == fixture.after, "Redo restores caret-line Delete");
     }
     std::puts("PASS: partial/reversed/multiline/next-line-start selections, caret-line Delete and exact EOLs");
@@ -591,10 +595,11 @@ void LineCommandSelections(EditorControl* editor, Peer& peer) {
 void LineCommandShapes(EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
     const auto rectangle = [editor] {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "ab12\ncd34\nef56", 0, 0, Scintilla::EndOfLine::Lf);
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 1);
-        editor->Send(Message::SetRectangularSelectionCaret, 12);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, 1);
+        editor->Send(SetRectangularSelectionCaret, 12);
     };
     for (const auto mode : {LineSelectionMode::VisualStudio, LineSelectionMode::Normal}) {
         editor->SetLineSelectionMode(mode);
@@ -631,11 +636,12 @@ void LineCommandShapes(EditorControl* editor, Peer& peer) {
         Require(Text(editor) == "ab12\ncd34\nef56", "one Undo restores rectangle Delete Line");
     }
     const auto multiple = [editor](bool additional) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, "aa\nbb\ncc\ndd", 1, 2, Scintilla::EndOfLine::Lf);
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::SetAdditionalSelectionTyping, additional);
-        editor->Send(Message::AddSelection, 10, 9);
-        editor->Send(Message::SetMainSelection, 0);
+        editor->Send(SetMultipleSelection, 1);
+        editor->Send(SetAdditionalSelectionTyping, additional);
+        editor->Send(AddSelection, 10, 9);
+        editor->Send(SetMainSelection, 0);
     };
     for (const auto mode : {LineSelectionMode::VisualStudio, LineSelectionMode::Normal}) {
         editor->SetLineSelectionMode(mode);
@@ -671,34 +677,34 @@ void LineCommandShapes(EditorControl* editor, Peer& peer) {
     std::puts("PASS: original rectangle and multiple-selection Cut/Copy/Delete distinctions");
 }
 void LineCommandUnchanged(EditorFrame* frame, EditorControl* editor, Peer& peer) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     const int copy = frame->GetMenuBar()->FindMenuItem("Edit", "Copy Line");
     const int cut = frame->GetMenuBar()->FindMenuItem("Edit", "Cut Line");
     const int erase = frame->GetMenuBar()->FindMenuItem("Edit", "Delete Line");
     for (const char* text : {"", "aa\nbb\ncc"}) {
         TestEditor::ResetStream(editor, text);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetReadOnly, 1);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(copy) && frame->GetMenuBar()->IsEnabled(cut) &&
                     frame->GetMenuBar()->IsEnabled(erase),
                 "original explicit line menus stay available for empty and read-only documents");
     }
     TestEditor::ResetStream(editor, "aa\nbb\ncc", 1, 4);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetReadOnly, 1);
     Gesture(editor);
     NativeSearch::Command(frame, copy);
     Require(peer.Request("shape-read") == "line" && peer.SavedText() == "aa\nbb\n",
             "read-only Copy Line remains available and publishes full lines");
     NativeSearch::Command(frame, cut);
-    Require(Text(editor) == "aa\nbb\ncc" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+    Require(Text(editor) == "aa\nbb\ncc" && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "read-only Cut Line preserves bytes and history");
     TestEditor::RequireSelection(editor, 6, 0, "read-only Cut Line retains the original expanded selection");
     Require(peer.Request("shape-read") == "line" && peer.SavedText() == "aa\nbb\n",
             "read-only Cut Line retains previous clipboard data");
-    editor->Send(Message::SetSel, 1, 4);
+    editor->Send(SetSel, 1, 4);
     NativeSearch::Command(frame, erase);
     TestEditor::RequireSelection(editor, 1, 4, "read-only Delete Line preserves the selection");
-    Require(Text(editor) == "aa\nbb\ncc" && !editor->Send(Message::CanUndo), "read-only Delete Line preserves history");
+    Require(Text(editor) == "aa\nbb\ncc" && !editor->Send(CanUndo), "read-only Delete Line preserves history");
     for (const auto mode : {LineSelectionMode::None, LineSelectionMode::VisualStudio, LineSelectionMode::Normal,
                             LineSelectionMode::OldVisualStudio}) {
         editor->SetLineSelectionMode(mode);
@@ -715,19 +721,19 @@ void LineCommandUnchanged(EditorFrame* frame, EditorControl* editor, Peer& peer)
         Require(peer.Request("shape-read") == (line ? "line" : "stream") && peer.SavedText().empty(),
                 "empty Copy Line publishes an empty payload with each mode's original metadata");
         editor->DeleteLine();
-        Require(Text(editor) == "tail\n" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify),
+        Require(Text(editor) == "tail\n" && !editor->Send(CanUndo) && !editor->Send(GetModify),
                 "empty final-line commands preserve bytes/history/save point");
         TestEditor::RequireSelection(editor, 5, 5, "empty final-line commands retain original endpoints");
     }
     editor->SetLineSelectionMode(LineSelectionMode::VisualStudio);
     TestEditor::ResetStream(editor, "aa", 1, 1);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
     Gesture(editor);
     editor->CopyLine();
-    Require(Text(editor) == "aa" && editor->Send(Message::CanRedo) && !editor->Send(Message::GetModify),
+    Require(Text(editor) == "aa" && editor->Send(CanRedo) && !editor->Send(GetModify),
             "Copy Line preserves a pre-existing redo branch and save point");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(Text(editor) == "aa!", "Copy Line retains the actual original redo edit");
     std::puts("PASS: original menu availability, read-only selection effects, empty payloads and retained redo");
 }
@@ -847,48 +853,45 @@ void LineCommands(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 }
 void CurrentLineEnabledMode(EditorControl* editor, EditorControl* other, Peer& peer, LineSelectionMode mode,
                             const wxString& shape) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     const bool line = mode != LineSelectionMode::Normal;
     Require(shape == (line ? "line" : "stream") && peer.SavedText() == "middle\n",
             "current-line Copy follows the original mode's clipboard meaning");
-    Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify) &&
-                editor->Send(Message::GetCurrentPos) == 8,
+    Require(!editor->Send(CanUndo) && !editor->Send(GetModify) && editor->Send(GetCurrentPos) == 8,
             "Copy preserves caret, save point and undo history in every enabled mode");
-    other->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("ab\ncd"));
-    other->Send(Message::SetEOLMode, static_cast<uintptr_t>(Scintilla::EndOfLine::Lf));
-    other->Send(Message::GotoPos, 1);
-    other->Send(Message::Paste);
-    Require(Text(other) == (line ? "middle\nab\ncd" : "amiddle\nb\ncd") && other->Send(Message::GetCurrentPos) == 8,
+    other->Send(SetText, 0, reinterpret_cast<intptr_t>("ab\ncd"));
+    other->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::EndOfLine::Lf)));
+    other->Send(GotoPos, 1);
+    other->Send(Paste);
+    Require(Text(other) == (line ? "middle\nab\ncd" : "amiddle\nb\ncd") && other->Send(GetCurrentPos) == 8,
             "a separate editor document pastes line/stream text at the original position");
     Key(editor, 'V');
     Require(Text(editor) == (line ? "first\nmiddle\nmiddle\nlast" : "first\nmimiddle\nddle\nlast") &&
-                editor->Send(Message::GetCurrentPos) == 15,
+                editor->Send(GetCurrentPos) == 15,
             "same-editor paste follows the original line/stream meaning and caret offset");
-    editor->Send(Message::Undo);
-    Require(Text(editor) == "first\nmiddle\nlast" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(Text(editor) == "first\nmiddle\nlast" && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "one Undo restores current-line paste and save point");
-    editor->Send(Message::GotoPos, 8);
+    editor->Send(GotoPos, 8);
     Key(editor, 'X');
     Require(Text(editor) == "first\nlast" &&
-                editor->Send(Message::GetCurrentPos) == (mode == LineSelectionMode::OldVisualStudio ? 2 : 8),
+                editor->Send(GetCurrentPos) == (mode == LineSelectionMode::OldVisualStudio ? 2 : 8),
             "Cut follows the original next-line or old Visual Studio previous-line column");
-    editor->Send(Message::Undo);
-    Require(Text(editor) == "first\nmiddle\nlast" && !editor->Send(Message::CanUndo) &&
-                !editor->Send(Message::GetModify),
+    editor->Send(Undo);
+    Require(Text(editor) == "first\nmiddle\nlast" && !editor->Send(CanUndo) && !editor->Send(GetModify),
             "one Undo restores Cut and save point in every enabled mode");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(Text(editor) == "first\nlast", "Redo restores each mode's Cut bytes");
 }
 void LoadCurrentLine(EditorControl* editor, const char* text, intptr_t position,
                      Scintilla::EndOfLine eol = Scintilla::EndOfLine::Lf) {
-    using Scintilla::Message;
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>(text));
-    editor->Send(Message::SetEOLMode, static_cast<uintptr_t>(eol));
-    editor->Send(Message::GotoPos, position);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    using enum Scintilla::Message;
+    editor->Send(SetReadOnly, 0);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>(text));
+    editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(eol)));
+    editor->Send(GotoPos, position);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 }
 void CurrentLineModes(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
@@ -919,7 +922,7 @@ void CurrentLineModes(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         LoadCurrentLine(editor, "first\nmiddle\nlast", 8);
         Key(editor, 'C', true);
         SettleClipboard();
-        Require(peer.Request("shape-read") == ((static_cast<int>(mode) & 1) ? "line" : "stream") &&
+        Require(peer.Request("shape-read") == ((std::to_underlying(mode) & 1) ? "line" : "stream") &&
                     peer.SavedText() == "middle\n",
                 "Ctrl+Shift+C follows the actual line-selection option");
         Key(editor, 'X', true);
@@ -950,17 +953,18 @@ void CurrentLines(EditorFrame* frame, EditorControl* editor, Peer& peer) {
              Case{"first\r\nmiddle\r\nlast\r\n", 17, "first\r\nmiddle\r\n", 15, "last\r\n", Scintilla::EndOfLine::CrLf},
              Case{"first\rmiddle\rlast", 8, "first\rlast", 8, "middle\r", Scintilla::EndOfLine::Cr},
          }) {
+        using enum Scintilla::Message;
         LoadCurrentLine(editor, item.before, item.caret, item.eol);
         Menu(frame, wxID_CUT);
-        Require(Text(editor) == item.after && editor->Send(Message::GetCurrentPos) == item.cutCaret,
+        Require(Text(editor) == item.after && editor->Send(GetCurrentPos) == item.cutCaret,
                 "first/middle/final-line Cut preserves original EOL and next-line column");
         SettleClipboard();
         Require(peer.Request("shape-read") == "line" && peer.SavedText() == item.copied,
                 "independent peer saves exact current-line bytes including the actual final newline");
-        editor->Send(Message::Undo);
-        Require(Text(editor) == item.before && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+        editor->Send(Undo);
+        Require(Text(editor) == item.before && !editor->Send(GetModify) && !editor->Send(CanUndo),
                 "one Undo restores each boundary Cut and save point");
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         Require(Text(editor) == item.after, "Redo restores each boundary Cut");
     }
     LoadCurrentLine(editor, "first\n\t中文long\nab\tXYZ", 13);
@@ -1019,12 +1023,12 @@ void UtilityShortcut(EditorFrame* frame, int key, bool control, bool alt = false
 }
 
 void UtilityBytes(EditorControl* editor, const std::string& text, intptr_t anchor, intptr_t caret) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     TestEditor::ResetStream(editor, "", 0, 0, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
-    editor->Send(Message::SetSel, anchor, caret);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    editor->Send(AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+    editor->Send(SetSel, anchor, caret);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 }
 
 void UtilityTextBoundaries(EditorFrame* frame, EditorControl* editor, Peer& peer) {
@@ -1090,20 +1094,19 @@ void UtilityTextBoundaries(EditorFrame* frame, EditorControl* editor, Peer& peer
 }
 
 void UtilityRectangleText(EditorFrame* frame, EditorControl* editor, Peer& peer) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     TestEditor::ResetStream(editor, "a1b\nc2d", 0, 0, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 6);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 6);
     Gesture(editor);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Copy All"));
     Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "a1b\nc2d" &&
-                editor->Send(Message::SelectionIsRectangle) &&
-                editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
-                editor->Send(Message::GetRectangularSelectionCaret) == 6,
+                editor->Send(SelectionIsRectangle) && editor->Send(GetRectangularSelectionAnchor) == 1 &&
+                editor->Send(GetRectangularSelectionCaret) == 6,
             "Copy All publishes the whole buffer while retaining rectangular selection");
     Gesture(editor);
-    editor->Send(Message::Copy);
+    editor->Send(Copy);
     SettleClipboard();
     TestEditor::ResetStream(editor, "tail", 0, 4);
     Gesture(editor);
@@ -1111,12 +1114,12 @@ void UtilityRectangleText(EditorFrame* frame, EditorControl* editor, Peer& peer)
     Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "1\n2\r\n\r\ntail",
             "Copy Add uses rectangle text without a synthetic native transport separator");
     TestEditor::ResetStream(editor, "a1b\n\n", 0, 0, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 4);
-    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 0);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 4);
+    editor->Send(SetRectangularSelectionCaretVirtualSpace, 0);
     Gesture(editor);
-    editor->Send(Message::Copy);
+    editor->Send(Copy);
     SettleClipboard();
     TestEditor::ResetStream(editor, "tail", 0, 4);
     Gesture(editor);
@@ -1137,7 +1140,7 @@ public:
 };
 
 void UtilityFallbacks(EditorFrame* frame, EditorControl* editor, Peer& peer) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     const int copyAdd = frame->GetMenuBar()->FindMenuItem("Edit", "Copy Add");
     for (const char* offer : {"utility-empty", "nontext"}) {
         for (const auto mode : {LineSelectionMode::None, LineSelectionMode::VisualStudio, LineSelectionMode::Normal,
@@ -1148,7 +1151,7 @@ void UtilityFallbacks(EditorFrame* frame, EditorControl* editor, Peer& peer) {
             const auto before = peer.Request("utility-formats");
             Gesture(editor);
             Require(editor->CopyAdd(), "caret-only missing-Unicode fallback invokes underlying Copy");
-            Require(peer.Request("utility-formats") == before && !editor->Send(Message::CanPaste),
+            Require(peer.Request("utility-formats") == before && !editor->Send(CanPaste),
                     "underlying Copy leaves missing-Unicode clipboard unchanged for every current-line preference");
             TestEditor::RequireSelection(editor, 2, 2, "caret-only fallback preserves its endpoints");
         }
@@ -1159,9 +1162,9 @@ void UtilityFallbacks(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "irs",
                 "selected missing-Unicode fallback transfers ordinary core selection text");
         TestEditor::ResetStream(editor, "a1b\nc2d", 0, 0, Scintilla::EndOfLine::Lf);
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 1);
-        editor->Send(Message::SetRectangularSelectionCaret, 6);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, 1);
+        editor->Send(SetRectangularSelectionCaret, 6);
         Require(peer.Request(offer) == "ready", "seed missing Unicode for rectangular fallback");
         Gesture(editor);
         UtilityFeedback feedback;
@@ -1176,9 +1179,9 @@ void UtilityFallbacks(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     }
     editor->SetLineSelectionMode(LineSelectionMode::VisualStudio);
     TestEditor::ResetStream(editor, "a1b\nc2d", 0, 0, Scintilla::EndOfLine::Lf);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 6);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 6);
     peer.OfferText("unchanged");
     Gesture(editor);
     {
@@ -1187,10 +1190,10 @@ void UtilityFallbacks(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         Require(feedback.count == 1 && peer.Request("utility-read") == "stream" && peer.SavedText() == "unchanged",
                 "Unicode append reports a rectangular selection and preserves the independently owned offer");
     }
-    Require(Text(editor) == "a1b\nc2d" && editor->Send(Message::GetRectangularSelectionAnchor) == 1 &&
-                editor->Send(Message::GetRectangularSelectionCaret) == 6 && !editor->Send(Message::CanUndo),
+    Require(Text(editor) == "a1b\nc2d" && editor->Send(GetRectangularSelectionAnchor) == 1 &&
+                editor->Send(GetRectangularSelectionCaret) == 6 && !editor->Send(CanUndo),
             "rectangle rejection retains editor bytes, rectangle and history");
-    editor->Send(Message::SetRectangularSelectionCaret, 1);
+    editor->Send(SetRectangularSelectionCaret, 1);
     Gesture(editor);
     Require(editor->CopyAdd(), "empty rectangle uses the original whole-buffer Unicode branch");
     Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "unchanged\r\n\r\na1b\nc2d",
@@ -1218,22 +1221,23 @@ void UtilitySavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
                      14)},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "open independently encoded clipboard utility fixture");
         const auto text = Text(editor);
         const auto bom = frame->DocumentHasBom();
-        const auto eol = editor->Send(Message::GetEOLMode);
-        editor->Send(Message::EmptyUndoBuffer);
-        editor->Send(Message::SetSavePoint);
-        editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-        editor->Send(Message::Undo);
-        Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+        const auto eol = editor->Send(GetEOLMode);
+        editor->Send(EmptyUndoBuffer);
+        editor->Send(SetSavePoint);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        Require(!editor->Send(CanUndo) && editor->Send(CanRedo),
                 "seed an original pending Redo before clipboard commands");
-        editor->Send(Message::SetSel, 3, 0);
-        editor->Send(Message::SetReadOnly, 1);
+        editor->Send(SetSel, 3, 0);
+        editor->Send(SetReadOnly, 1);
         {
             UtilityFeedback feedback;
             for (const char* label : {"Copy All", "Copy Add", "Clear Clipboard"}) {
@@ -1249,20 +1253,20 @@ void UtilitySavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         Require(peer.Request("utility-formats") == "empty", "encoded utility commands leave no clipboard formats");
         Require(Text(editor) == text, "clipboard utilities retain full decoded editor bytes");
         Require(frame->DocumentEncoding() == fixture.encoding && frame->DocumentHasBom() == bom &&
-                    editor->Send(Message::GetEOLMode) == eol,
+                    editor->Send(GetEOLMode) == eol,
                 "clipboard utilities retain encoding, BOM and EOL metadata");
-        Require(!editor->Send(Message::GetModify), "clipboard utilities retain document save point");
-        Require(!editor->Send(Message::CanUndo) && !editor->Send(Message::CanRedo),
+        Require(!editor->Send(GetModify), "clipboard utilities retain document save point");
+        Require(!editor->Send(CanUndo) && !editor->Send(CanRedo),
                 "read-only clipboard commands retain disabled Undo/Redo availability");
         TestEditor::RequireSelection(editor, 3, 0, "clipboard utilities retain reverse selected endpoints");
-        editor->Send(Message::SetReadOnly, 0);
-        Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo),
+        editor->Send(SetReadOnly, 0);
+        Require(!editor->Send(CanUndo) && editor->Send(CanRedo),
                 "clipboard commands preserve pending Redo while read-only commands are disabled");
         Require(frame->Save().status == SaveStatus::Saved && TestFiles::Bytes(path) == fixture.before,
                 "clipboard utilities independently save the unchanged original encoded bytes");
         const auto artifact = std::string("clipboard-utilities-") + fixture.name;
         std::filesystem::copy_file(path, artifact + "-before.txt", std::filesystem::copy_options::overwrite_existing);
-        editor->Send(Message::Redo);
+        editor->Send(Redo);
         TestFiles::RequireSavedUndoRedo(frame, path, fixture,
                                         {"clipboard commands preserve previous Redo encoded result",
                                          "clipboard commands preserve previous Undo encoded result",
@@ -1274,22 +1278,21 @@ void UtilitySavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 }
 
 void Utilities(EditorFrame* frame, EditorControl* editor, Peer& peer) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     const int copyAll = frame->GetMenuBar()->FindMenuItem("Edit", "Copy All");
     Require(copyAll != wxNOT_FOUND, "native Copy All menu exists");
     const std::string text = "first\r\n中文😀\nlast\rtail";
     TestEditor::ResetStream(editor, text.c_str());
-    editor->Send(Message::SetSel, 12, 2);
-    const auto anchor = editor->Send(Message::GetAnchor);
-    const auto caret = editor->Send(Message::GetCurrentPos);
+    editor->Send(SetSel, 12, 2);
+    const auto anchor = editor->Send(GetAnchor);
+    const auto caret = editor->Send(GetCurrentPos);
     Gesture(editor);
     NativeSearch::Command(frame, copyAll);
     Require(peer.Request("shape-read") == "stream" && peer.SavedText() == text,
             "Copy All transfers whole Unicode mixed-EOL buffer as native stream text");
     peer.PreserveSavedText("clipboard-utilities-peer.txt");
-    Require(Text(editor) == text && editor->Send(Message::GetAnchor) == anchor &&
-                editor->Send(Message::GetCurrentPos) == caret && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo),
+    Require(Text(editor) == text && editor->Send(GetAnchor) == anchor && editor->Send(GetCurrentPos) == caret &&
+                !editor->Send(GetModify) && !editor->Send(CanUndo),
             "Copy All retains selection, caret, bytes and save point");
     UtilityShortcut(frame, 'A', false, true);
     Require(peer.Request("shape-read") == "stream" && peer.SavedText() == text, "native Alt+A invokes Copy All");
@@ -1302,9 +1305,8 @@ void Utilities(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     NativeSearch::Command(frame, copyAdd);
     Require(peer.Request("shape-read") == "stream" && peer.SavedText() == "中文\tX\n日本\tY\r\n\r\nalpha",
             "Copy Add appends two CRLF separators and selected text while dropping line tags");
-    Require(Text(editor) == "alpha\nbeta" && editor->Send(Message::GetAnchor) == 0 &&
-                editor->Send(Message::GetCurrentPos) == 5 && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo),
+    Require(Text(editor) == "alpha\nbeta" && editor->Send(GetAnchor) == 0 && editor->Send(GetCurrentPos) == 5 &&
+                !editor->Send(GetModify) && !editor->Send(CanUndo),
             "Copy Add retains document, selection, save point and history");
     Require(peer.Request("shape-line") == "ready", "prepare independently owned clipboard for native Ctrl+E");
     UtilityShortcut(frame, 'E', true);
@@ -1322,9 +1324,8 @@ void Utilities(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     Require(peer.Request("utility-formats") == "empty", "independent native process observes a cleared clipboard");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(!frame->GetMenuBar()->IsEnabled(clearClipboard), "empty native clipboard disables Clear Clipboard");
-    Require(Text(editor) == "alpha\nbeta" && editor->Send(Message::GetAnchor) == 0 &&
-                editor->Send(Message::GetCurrentPos) == 5 && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo),
+    Require(Text(editor) == "alpha\nbeta" && editor->Send(GetAnchor) == 0 && editor->Send(GetCurrentPos) == 5 &&
+                !editor->Send(GetModify) && !editor->Send(CanUndo),
             "Clear Clipboard retains document, selection, save point and history");
     std::puts("PASS: native Clear Clipboard");
     UtilityRectangleText(frame, editor, peer);
@@ -1340,14 +1341,14 @@ void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     Require(submenu != wxNOT_FOUND, "original Copy to Clipboard submenu exists");
     auto* copy = edit->FindItem(submenu)->GetSubMenu();
     const auto state = [editor] {
+        using enum Scintilla::Message;
         std::vector<intptr_t> result;
-        for (const auto message : {Message::GetAnchor, Message::GetCurrentPos, Message::GetModify, Message::CanUndo,
-                                   Message::CanRedo, Message::GetSelections, Message::GetMainSelection,
-                                   Message::GetSelectionMode, Message::GetEOLMode, Message::GetReadOnly})
+        for (const auto message : {GetAnchor, GetCurrentPos, GetModify, CanUndo, CanRedo, GetSelections,
+                                   GetMainSelection, GetSelectionMode, GetEOLMode, GetReadOnly})
             result.push_back(editor->Send(message));
-        for (intptr_t i = 0; i < editor->Send(Message::GetSelections); ++i) {
-            result.push_back(editor->Send(Message::GetSelectionNAnchor, i));
-            result.push_back(editor->Send(Message::GetSelectionNCaret, i));
+        for (intptr_t i = 0; i < editor->Send(GetSelections); ++i) {
+            result.push_back(editor->Send(GetSelectionNAnchor, i));
+            result.push_back(editor->Send(GetSelectionNCaret, i));
         }
         return result;
     };
@@ -1414,7 +1415,8 @@ void PathTextCopies(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         else if (shape == 1)
             editor->Send(Message::AddSelection, 7, 6);
         else if (shape == 2) {
-            editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+            editor->Send(Message::SetSelectionMode,
+                         static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
             editor->Send(Message::SetRectangularSelectionAnchor, 1);
             editor->Send(Message::SetRectangularSelectionCaret, 7);
         } else if (shape == 3)
@@ -1594,7 +1596,7 @@ void SwapBoundaries(EditorControl* editor, Peer& peer) {
 }
 
 void SwapAvailability(EditorFrame* frame, EditorControl* editor, Peer& peer) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     const int swap = frame->GetMenuBar()->FindMenuItem("Edit", "Swap");
     for (const char* offer : {"utility-empty", "nontext"}) {
         TestEditor::ResetStream(editor, "AoldZ", 1, 4);
@@ -1603,17 +1605,16 @@ void SwapAvailability(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(swap), "selection enables Swap without native paste capability");
         SwapNow(editor);
-        Require(Text(editor) == "AoldZ" && !editor->Send(Message::CanUndo) && !editor->Send(Message::GetModify) &&
+        Require(Text(editor) == "AoldZ" && !editor->Send(CanUndo) && !editor->Send(GetModify) &&
                     peer.Request("utility-formats") == formats,
                 "unreadable selected Swap retains document history and independent native formats");
-        editor->Send(Message::SetSel, 2, 2);
+        editor->Send(SetSel, 2, 2);
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(!frame->GetMenuBar()->IsEnabled(swap), "absent/non-text caret disables native Swap");
         UtilityShortcut(frame, 'K', true);
         Require(peer.Request("utility-formats") == formats, "disabled native Ctrl+K retains the independent offer");
         SwapNow(editor);
-        Require(Text(editor) == "AoldZ" && !editor->Send(Message::CanUndo) &&
-                    peer.Request("utility-formats") == "empty",
+        Require(Text(editor) == "AoldZ" && !editor->Send(CanUndo) && peer.Request("utility-formats") == "empty",
                 "forced caret command clears non-text formats separately from native availability");
     }
     const int readOnly = frame->GetMenuBar()->FindMenuItem("File", "Read Only Mode");
@@ -1624,7 +1625,7 @@ void SwapAvailability(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
         Require(frame->GetMenuBar()->IsEnabled(swap) == !empty, "original selection enables Swap in read-only mode");
         SwapNow(editor);
-        Require(Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+        Require(Text(editor) == "AoldZ" && !editor->Send(GetModify) && !editor->Send(CanUndo),
                 "read-only Swap retains document bytes and history");
         TestEditor::RequireSelection(editor, empty ? 2 : 1, empty ? 2 : 5,
                                      "read-only Swap retains original selected endpoint side effect");
@@ -1636,22 +1637,22 @@ void SwapAvailability(EditorFrame* frame, EditorControl* editor, Peer& peer) {
         NativeSearch::Command(frame, readOnly);
     }
     TestEditor::ResetStream(editor, "AoldZ", 1, 4);
-    editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));
-    editor->Send(Message::Undo);
-    editor->Send(Message::SetSel, 1, 4);
+    editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+    editor->Send(Undo);
+    editor->Send(SetSel, 1, 4);
     Require(peer.Request("nontext") == "ready", "prepare a non-text no-op with pending Redo");
     SwapNow(editor);
-    Require(!editor->Send(Message::CanUndo) && editor->Send(Message::CanRedo), "no-op Swap preserves pending Redo");
+    Require(!editor->Send(CanUndo) && editor->Send(CanRedo), "no-op Swap preserves pending Redo");
     peer.OfferText("X");
     SwapNow(editor);
-    Require(Text(editor) == "AXZ" && !editor->Send(Message::CanRedo), "actual Swap replaces the old Redo branch");
+    Require(Text(editor) == "AXZ" && !editor->Send(CanRedo), "actual Swap replaces the old Redo branch");
 #ifdef __WXMSW__
     TestEditor::ResetStream(editor, "AoldZ", 1, 4);
     peer.OfferText("owned held offer");
     Require(peer.Request("hold") == "held", "independent process holds Windows clipboard");
     SwapNow(editor);
     Require(peer.Request("release") == "released", "independent process releases Windows clipboard");
-    Require(Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && peer.Request("utility-read") == "stream" &&
+    Require(Text(editor) == "AoldZ" && !editor->Send(GetModify) && peer.Request("utility-read") == "stream" &&
                 peer.SavedText() == "owned held offer",
             "unavailable Windows clipboard leaves selected Swap unchanged");
 #endif
@@ -1671,14 +1672,15 @@ void RequireRectangleRanges(EditorControl* editor, bool reverse) {
 void SwapSelectedRectangles(EditorControl* editor, Peer& peer) {
     using Scintilla::Message;
     for (const bool reverse : {false, true}) {
+        using enum Scintilla::Message;
         // Identical rows keep the original post-Cut rectangle geometry independent of native fonts.
         TestEditor::ResetStream(editor, "abcd\r\nabcd\r\nabcd", 0, 0, Scintilla::EndOfLine::CrLf);
         wxYield();
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, reverse ? 14 : 1);
-        editor->Send(Message::SetRectangularSelectionCaret, reverse ? 1 : 14);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, reverse ? 14 : 1);
+        editor->Send(SetRectangularSelectionCaret, reverse ? 1 : 14);
         peer.OfferText("Q\nR");
-        Require(editor->Send(Message::GetSelections) == 3 && editor->Send(Message::GetMainSelection) == 2,
+        Require(editor->Send(GetSelections) == 3 && editor->Send(GetMainSelection) == 2,
                 "uniform native rectangle matches independently captured original selection state");
         RequireRectangleRanges(editor, reverse);
         SwapNow(editor);
@@ -1686,7 +1688,7 @@ void SwapSelectedRectangles(EditorControl* editor, Peer& peer) {
                 "selected rectangle Swap retains original main-range insertion site");
         TestEditor::RequireSelection(editor, reverse ? 5 : 1, reverse ? 1 : 5,
                                      "rectangle Swap uses original rectangle endpoint direction and becomes stream");
-        Require(!editor->Send(Message::SelectionIsRectangle) && peer.Request("utility-read") == "rectangle",
+        Require(!editor->Send(SelectionIsRectangle) && peer.Request("utility-read") == "rectangle",
                 "selected rectangle Swap independently publishes original rectangular Cut metadata");
 #ifdef __WXGTK__
         Require(peer.SavedText() == "b\r\nb\r\nb\n", "GTK native rectangle retains its required LF transport carrier");
@@ -1700,13 +1702,14 @@ void SwapRectanglePlainText(EditorControl* editor) {
     using Scintilla::Message;
     // Our earlier rectangle Copy offers exact plain text in addition to its native shape carrier.
     for (const bool emptyLastRow : {false, true}) {
+        using enum Scintilla::Message;
         TestEditor::ResetStream(editor, emptyLastRow ? "a1b\n\n" : "a1b\nc2d", 0, 0, Scintilla::EndOfLine::Lf);
-        editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-        editor->Send(Message::SetRectangularSelectionAnchor, 1);
-        editor->Send(Message::SetRectangularSelectionCaret, emptyLastRow ? 4 : 6);
-        if (emptyLastRow) editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 2);
+        editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+        editor->Send(SetRectangularSelectionAnchor, 1);
+        editor->Send(SetRectangularSelectionCaret, emptyLastRow ? 4 : 6);
+        if (emptyLastRow) editor->Send(SetRectangularSelectionCaretVirtualSpace, 2);
         Gesture(editor);
-        editor->Send(Message::Copy);
+        editor->Send(Copy);
         TestEditor::ResetStream(editor, "AoldZ", 1, 4, Scintilla::EndOfLine::Lf);
         SwapNow(editor);
         Require(Text(editor) == (emptyLastRow ? "A1\nZ" : "A1\n2Z"),
@@ -1746,29 +1749,29 @@ void SwapShapes(EditorControl* editor, Peer& peer) {
 }
 
 void SwapMultiple(EditorControl* editor, Peer& peer) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     for (const bool additional : {false, true}) {
         TestEditor::ResetStream(editor, "abcd efgh ijkl", 1, 3, Scintilla::EndOfLine::CrLf);
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::SetAdditionalSelectionTyping, additional);
-        editor->Send(Message::AddSelection, 8, 6);
-        editor->Send(Message::SetMainSelection, 1);
+        editor->Send(SetMultipleSelection, 1);
+        editor->Send(SetAdditionalSelectionTyping, additional);
+        editor->Send(AddSelection, 8, 6);
+        editor->Send(SetMainSelection, 1);
         peer.OfferText("QQQ");
         SwapNow(editor);
         Require(Text(editor) == (additional ? "ad eQQQh ijkl" : "abcd eQQQh ijkl"),
                 "Swap retains original selected-range filtering and main insertion");
         TestEditor::RequireSelection(editor, 6, 9, "multiple-selection Swap retains recorded original endpoints");
-        Require(editor->Send(Message::GetSelections) == 1 && peer.Request("utility-read") == "stream" &&
+        Require(editor->Send(GetSelections) == 1 && peer.Request("utility-read") == "stream" &&
                     peer.SavedText() == "bc\r\nfg",
                 "Cut extracts every original range before selection filtering");
     }
     for (const auto mode : {Scintilla::MultiPaste::Once, Scintilla::MultiPaste::Each}) {
         TestEditor::ResetStream(editor, "abcd efgh", 1, 1);
-        editor->Send(Message::SetMultipleSelection, 1);
-        editor->Send(Message::SetAdditionalSelectionTyping, 1);
-        editor->Send(Message::AddSelection, 6, 6);
-        editor->Send(Message::SetMainSelection, 1);
-        editor->Send(Message::SetMultiPaste, static_cast<uintptr_t>(mode));
+        editor->Send(SetMultipleSelection, 1);
+        editor->Send(SetAdditionalSelectionTyping, 1);
+        editor->Send(AddSelection, 6, 6);
+        editor->Send(SetMainSelection, 1);
+        editor->Send(SetMultiPaste, static_cast<uintptr_t>(std::to_underlying(mode)));
         peer.OfferText("Q");
         SwapNow(editor);
         Require(Text(editor) == (mode == Scintilla::MultiPaste::Once ? "abcd eQfgh" : "aQbcd eQfgh"),
@@ -1777,26 +1780,25 @@ void SwapMultiple(EditorControl* editor, Peer& peer) {
                                      "multi-caret Swap selects the recorded old/new main caret span");
         Require(peer.Request("utility-formats") == "empty", "multi-caret Swap clears independent native ownership");
     }
-    editor->Send(Message::SetMultipleSelection, 0);
-    editor->Send(Message::SetAdditionalSelectionTyping, 0);
-    editor->Send(Message::SetMultiPaste, static_cast<uintptr_t>(Scintilla::MultiPaste::Once));
+    editor->Send(SetMultipleSelection, 0);
+    editor->Send(SetAdditionalSelectionTyping, 0);
+    editor->Send(SetMultiPaste, static_cast<uintptr_t>(std::to_underlying(Scintilla::MultiPaste::Once)));
     TestEditor::ResetStream(editor, "a\r\nb", 1, 1, Scintilla::EndOfLine::CrLf);
-    editor->Send(Message::SetVirtualSpaceOptions, 3);
-    editor->Send(Message::SetSelectionNAnchorVirtualSpace, 0, 2);
-    editor->Send(Message::SetSelectionNCaretVirtualSpace, 0, 2);
+    editor->Send(SetVirtualSpaceOptions, 3);
+    editor->Send(SetSelectionNAnchorVirtualSpace, 0, 2);
+    editor->Send(SetSelectionNCaretVirtualSpace, 0, 2);
     peer.OfferText("Q");
     SwapNow(editor);
     Require(Text(editor) == "a  Q\r\nb", "caret Swap realizes original virtual space through Paste");
     TestEditor::RequireSelection(editor, 1, 4, "virtual caret Swap selects padding and inserted text together");
-    editor->Send(Message::Undo);
-    Require(editor->Send(Message::GetSelectionNCaretVirtualSpace, 0) == 2,
-            "Undo restores the original virtual caret state");
+    editor->Send(Undo);
+    Require(editor->Send(GetSelectionNCaretVirtualSpace, 0) == 2, "Undo restores the original virtual caret state");
     TestEditor::ResetStream(editor, "a\r\nb", 0, 0, Scintilla::EndOfLine::CrLf);
-    editor->Send(Message::SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
-    editor->Send(Message::SetRectangularSelectionAnchor, 1);
-    editor->Send(Message::SetRectangularSelectionCaret, 4);
-    editor->Send(Message::SetRectangularSelectionAnchorVirtualSpace, 1);
-    editor->Send(Message::SetRectangularSelectionCaretVirtualSpace, 3);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Rectangle)));
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 4);
+    editor->Send(SetRectangularSelectionAnchorVirtualSpace, 1);
+    editor->Send(SetRectangularSelectionCaretVirtualSpace, 3);
     peer.OfferText("Q");
     SwapNow(editor);
     Require(Text(editor) == "a\r\nbQ" && peer.Request("utility-read") == "rectangle" && peer.SavedText() == "\r\n",
@@ -1832,20 +1834,21 @@ void SwapSavedState(EditorFrame* frame, EditorControl* editor, Peer& peer) {
                      8)},
     };
     for (const auto& fixture : fixtures) {
+        using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);
-        editor->Send(Message::SetSavePoint);
+        editor->Send(SetSavePoint);
         Require(frame->Open(TestFiles::Filename(path), fixture.encoding).status == OpenStatus::Opened,
                 "open independently encoded Swap fixture with Unicode path");
         const auto bom = frame->DocumentHasBom();
-        const auto eol = editor->Send(Message::GetEOLMode);
+        const auto eol = editor->Send(GetEOLMode);
         const bool gbk = fixture.encoding == FileEncoding::Gbk;
-        editor->Send(Message::SetSel, gbk ? 3 : 1, gbk ? 6 : 4);
-        editor->Send(Message::EmptyUndoBuffer);
+        editor->Send(SetSel, gbk ? 3 : 1, gbk ? 6 : 4);
+        editor->Send(EmptyUndoBuffer);
         peer.OfferText("X");
         SwapNow(editor);
         Require(Text(editor) == (gbk ? "前X後" : "AXZ") && frame->DocumentEncoding() == fixture.encoding &&
-                    frame->DocumentHasBom() == bom && editor->Send(Message::GetEOLMode) == eol,
+                    frame->DocumentHasBom() == bom && editor->Send(GetEOLMode) == eol,
                 "Swap retains decoded Unicode, file encoding, BOM and EOL metadata");
         Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
                 "independent peer receives cut text from every encoded document");
@@ -1972,12 +1975,13 @@ void SwapDefaultReadOnly(EditorFrame* frame, EditorControl* editor, Peer& peer) 
         constexpr intptr_t end = 11;
 #endif
         for (const bool reversed : {false, true}) {
+            using enum Scintilla::Message;
             TestFiles::WriteBytes(path, disk);
             Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened,
                     "configured system-default protected document opens through native detection");
             NativeSearch::Command(frame, readOnly);
-            Require(editor->Send(Message::GetReadOnly), "native Read Only mode protects the actual document");
-            editor->Send(Message::SetSel, reversed ? 4 : 1, reversed ? 1 : 4);
+            Require(editor->Send(GetReadOnly), "native Read Only mode protects the actual document");
+            editor->Send(SetSel, reversed ? 4 : 1, reversed ? 1 : 4);
             peer.OfferText("中文😀");
             frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
             Require(frame->GetMenuBar()->IsEnabled(swap), "original selected Swap remains enabled in Read Only mode");
@@ -1987,8 +1991,8 @@ void SwapDefaultReadOnly(EditorFrame* frame, EditorControl* editor, Peer& peer) 
             // review-fixes/original-ansi-readonly.json; protected writes insert nothing.
             TestEditor::RequireSelection(editor, reversed ? end : 1, reversed ? 1 : end,
                                          "protected default-ANSI Swap uses original converted native byte endpoints");
-            Require(Text(editor) == original && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                        !editor->Send(Message::CanRedo) && TestFiles::Bytes(path) == disk &&
+            Require(Text(editor) == original && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                        !editor->Send(CanRedo) && TestFiles::Bytes(path) == disk &&
                         peer.Request("utility-read") == "stream" && peer.SavedText() == "中文😀",
                     "protected default-ANSI Swap preserves independent document, disk, clipboard and history");
             NativeSearch::Command(frame, readOnly);
@@ -2063,7 +2067,7 @@ void SwapDefaultEncoding(EditorFrame* frame, EditorControl* editor, Peer& peer) 
 }
 
 void Swap(EditorFrame* frame, EditorControl* editor, Peer& peer) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     const int swap = frame->GetMenuBar()->FindMenuItem("Edit", "Swap");
     Require(swap != wxNOT_FOUND, "native Swap menu exists");
     TestEditor::ResetStream(editor, "AoldZ", 1, 4);
@@ -2074,11 +2078,10 @@ void Swap(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     TestEditor::RequireSelection(editor, 1, 2, "selected Swap retains forward replacement endpoints");
     Require(peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
             "independent native receiver gets the original cut selection");
-    editor->Send(Message::Undo);
-    Require(Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                editor->Send(Message::CanRedo),
+    editor->Send(Undo);
+    Require(Text(editor) == "AoldZ" && !editor->Send(GetModify) && !editor->Send(CanUndo) && editor->Send(CanRedo),
             "one Undo restores the original saved document");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(Text(editor) == "AXZ" && peer.Request("utility-read") == "stream" && peer.SavedText() == "old",
             "Redo restores the document exchange while the native clipboard retains cut text");
     std::puts("PASS: original selected Swap and independent clipboard history");
@@ -2097,11 +2100,11 @@ void Swap(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     Require(Text(editor) == "AoXldZ", "empty-selection Swap uses the original native paste path");
     TestEditor::RequireSelection(editor, 2, 3, "empty-selection Swap selects the original-to-resulting caret span");
     Require(peer.Request("utility-formats") == "empty", "empty-selection Swap clears every native clipboard format");
-    editor->Send(Message::Undo);
-    Require(Text(editor) == "AoldZ" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&
-                editor->Send(Message::CanRedo) && peer.Request("utility-formats") == "empty",
+    editor->Send(Undo);
+    Require(Text(editor) == "AoldZ" && !editor->Send(GetModify) && !editor->Send(CanUndo) && editor->Send(CanRedo) &&
+                peer.Request("utility-formats") == "empty",
             "empty-selection Undo restores the saved document while its clipboard remains cleared");
-    editor->Send(Message::Redo);
+    editor->Send(Redo);
     Require(Text(editor) == "AoXldZ" && peer.Request("utility-formats") == "empty",
             "empty-selection Redo retains independently observed clipboard emptiness");
     std::puts("PASS: empty-selection Paste, selected span and independent Clear Clipboard history");
@@ -2113,17 +2116,17 @@ void Swap(EditorFrame* frame, EditorControl* editor, Peer& peer) {
 }
 
 void ClipboardRoundtrip(EditorFrame* frame, EditorControl* editor, Peer& peer) {
-    using Scintilla::Message;
+    using enum Scintilla::Message;
     {
         wxClipboardLocker lock;
         Require(!(!lock), "open system clipboard for owned fixture");
         Require(wxTheClipboard->SetData(new wxTextDataObject("owned seed")), "seed clipboard");
     }
     SettleClipboard();
-    editor->Send(Message::SetText, 0, reinterpret_cast<intptr_t>("A中文\r\nline B"));
-    editor->Send(Message::SetSel, 1, 15);
+    editor->Send(SetText, 0, reinterpret_cast<intptr_t>("A中文\r\nline B"));
+    editor->Send(SetSel, 1, 15);
     Gesture(editor);
-    editor->Send(Message::Copy);
+    editor->Send(Copy);
     SettleClipboard();
     wxTextDataObject copied;
     {
@@ -2135,12 +2138,12 @@ void ClipboardRoundtrip(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     if (copiedText != wxString::FromUTF8("中文\nline B"))
         std::fprintf(stderr, "Copy diagnostic: seed remains=%d, returned characters=%zu, selection=%ld..%ld\n",
                      copiedText == "owned seed", copiedText.length(),
-                     static_cast<long>(editor->Send(Message::GetSelectionStart)),
-                     static_cast<long>(editor->Send(Message::GetSelectionEnd)));
+                     static_cast<long>(editor->Send(GetSelectionStart)),
+                     static_cast<long>(editor->Send(GetSelectionEnd)));
     Require(copiedText == wxString::FromUTF8("中文\nline B"), "Copy publishes selected Unicode multiline text");
     std::puts("PASS: Copy selected Unicode multiline text to system clipboard");
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
     {
         wxClipboardLocker lock;
         Require(!(!lock) &&
@@ -2148,44 +2151,42 @@ void ClipboardRoundtrip(EditorFrame* frame, EditorControl* editor, Peer& peer) {
                 "publish paste fixture");
     }
     SettleClipboard();
-    editor->Send(Message::Paste);
+    editor->Send(Paste);
     Require(Text(editor) == "Apaste中文\r\nsecond line\r\n第三行",
             "Paste replaces selection with owned UTF-8 and core EOL conversion");
-    Require(editor->Send(Message::GetModify), "Paste marks document modified");
-    editor->Send(Message::Undo);
-    Require(Text(editor) == "A中文\r\nline B" && !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo),
+    Require(editor->Send(GetModify), "Paste marks document modified");
+    editor->Send(Undo);
+    Require(Text(editor) == "A中文\r\nline B" && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "one Undo restores the replaced selection at save point");
-    editor->Send(Message::Redo);
-    Require(Text(editor) == "Apaste中文\r\nsecond line\r\n第三行" && editor->Send(Message::GetModify),
+    editor->Send(Redo);
+    Require(Text(editor) == "Apaste中文\r\nsecond line\r\n第三行" && editor->Send(GetModify),
             "Redo restores paste and modified state");
     std::puts("PASS: Paste selection replacement, one-step Undo/Redo and save point");
-    editor->Send(Message::SetSel, 1, editor->Send(Message::GetLength));
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    editor->Send(SetSel, 1, editor->Send(GetLength));
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
 #ifdef __WXMSW__
     Require(peer.Request("hold") == "held", "external peer holds system clipboard");
-    editor->Send(Message::Cut);
-    Require(Text(editor) == "Apaste中文\r\nsecond line\r\n第三行" && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo),
+    editor->Send(Cut);
+    Require(Text(editor) == "Apaste中文\r\nsecond line\r\n第三行" && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "failed system copy must not delete Cut selection or change history");
     Require(peer.Request("release") == "released", "external peer releases clipboard");
 #endif
     Gesture(editor);
-    editor->Send(Message::Cut);
-    Require(Text(editor) == "A" && editor->Send(Message::GetModify), "Cut deletes selection after copy succeeds");
+    editor->Send(Cut);
+    Require(Text(editor) == "A" && editor->Send(GetModify), "Cut deletes selection after copy succeeds");
     SettleClipboard();
     Require(peer.Request("paste") == wxString::FromUTF8("paste中文\nsecond line\n第三行"),
             "independent stock text app receives Cut text");
-    editor->Send(Message::Undo);
-    Require(Text(editor) == "Apaste中文\r\nsecond line\r\n第三行" && !editor->Send(Message::GetModify) &&
-                !editor->Send(Message::CanUndo),
+    editor->Send(Undo);
+    Require(Text(editor) == "Apaste中文\r\nsecond line\r\n第三行" && !editor->Send(GetModify) && !editor->Send(CanUndo),
             "one Undo restores Cut at save point");
-    editor->Send(Message::Redo);
-    Require(Text(editor) == "A" && editor->Send(Message::GetModify), "Redo restores Cut and modified state");
+    editor->Send(Redo);
+    Require(Text(editor) == "A" && editor->Send(GetModify), "Redo restores Cut and modified state");
     std::puts("PASS: Cut success/failure, external receiver, one-step Undo/Redo and save point");
     Require(peer.Request("nontext") == "ready", "independent app publishes non-text fixture");
     SettleClipboard();
-    editor->Send(Message::SetSel, 0, 0);
+    editor->Send(SetSel, 0, 0);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(wxID_COPY), "nonempty document enables Copy");
     Require(frame->GetMenuBar()->IsEnabled(wxID_CUT), "nonempty writable document enables Cut");
@@ -2195,23 +2196,23 @@ void ClipboardRoundtrip(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     TextOffer(editor);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(wxID_PASTE), "text from external app enables Paste");
-    editor->Send(Message::SetSel, 0, 1);
-    editor->Send(Message::SetReadOnly, 1);
+    editor->Send(SetSel, 0, 1);
+    editor->Send(SetReadOnly, 1);
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(frame->GetMenuBar()->IsEnabled(wxID_COPY), "original read-only nonempty document permits Copy");
     Require(frame->GetMenuBar()->IsEnabled(wxID_CUT), "original read-only nonempty document keeps Cut available");
     Require(!frame->GetMenuBar()->IsEnabled(wxID_PASTE), "original read-only document disables the Paste menu");
-    editor->Send(Message::Cut);
-    editor->Send(Message::Paste);
+    editor->Send(Cut);
+    editor->Send(Paste);
     Require(Text(editor) == "A", "read-only commands preserve document");
     TestEditor::RequireSelection(editor, 0, 0, "original direct protected Paste collapses the selection");
-    editor->Send(Message::SetReadOnly, 0);
-    editor->Send(Message::SetSel, 0, 1);
-    editor->Send(Message::EmptyUndoBuffer);
-    editor->Send(Message::SetSavePoint);
+    editor->Send(SetReadOnly, 0);
+    editor->Send(SetSel, 0, 1);
+    editor->Send(EmptyUndoBuffer);
+    editor->Send(SetSavePoint);
     Menu(frame, wxID_PASTE);
     Require(Text(editor) == "peer English 中文 😀\r\n第二行\r\nlast", "Paste menu receives external stock-widget text");
-    editor->Send(Message::SelectAll);
+    editor->Send(SelectAll);
     Key(editor, 'C');
     SettleClipboard();
     Require(peer.Request("paste") == wxString::FromUTF8("peer English 中文 😀\n第二行\nlast"),
@@ -2221,7 +2222,7 @@ void ClipboardRoundtrip(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     SettleClipboard();
     Key(editor, 'V');
     Require(Text(editor) == "peer English 中文 😀\r\n第二行\r\nlast", "Ctrl+V pastes copied selection");
-    editor->Send(Message::SelectAll);
+    editor->Send(SelectAll);
     Key(editor, 'X');
     Require(Text(editor).empty(), "Ctrl+X cuts selection");
     SettleClipboard();

@@ -4,6 +4,7 @@
 #include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <memory>
+#include <utility>
 #include <SciLexer.h>
 #include <wx/wx.h>
 #include <wx/statusbr.h>
@@ -61,6 +62,7 @@ public:
         CallAfter([this, frame] {
             const auto directory = TestFiles::TemporaryDirectory("wxnotepad-python");
             try {
+                using enum Scintilla::Message;
                 std::filesystem::create_directory(directory);
                 const auto path = directory / "example.Py";
                 std::ofstream(path, std::ios::binary) << "return 42 # 中文\r\n";
@@ -104,26 +106,26 @@ public:
                                                    {"int", SCE_PY_WORD2}}) {
                     Style(editor, source.find(token), style);
                 }
-                Require(editor->Send(Message::StyleGetFore, SCE_PY_WORD) == 0x0080FF &&
-                            editor->Send(Message::StyleGetBold, SCE_PY_WORD) &&
-                            editor->Send(Message::StyleGetFore, SCE_PY_COMMENTLINE) == 0x608060 &&
-                            editor->Send(Message::StyleGetFore, SCE_PY_COMMENTBLOCK) == 0x608060 &&
-                            editor->Send(Message::StyleGetFore, SCE_PY_STRING_SQ) == 0x008000 &&
-                            editor->Send(Message::StyleGetFore, SCE_PY_STRING_DQ) == 0x008000 &&
-                            editor->Send(Message::StyleGetFore, SCE_PY_TRIPLE_STRING_DQ) == 0x0080F0 &&
-                            editor->Send(Message::StyleGetFore, SCE_PY_FMTSTRING_DQ) == 0x008064 &&
-                            editor->Send(Message::StyleGetFore, SCE_PY_NUMBER) == 0x0000FF,
+                Require(editor->Send(StyleGetFore, SCE_PY_WORD) == 0x0080FF &&
+                            editor->Send(StyleGetBold, SCE_PY_WORD) &&
+                            editor->Send(StyleGetFore, SCE_PY_COMMENTLINE) == 0x608060 &&
+                            editor->Send(StyleGetFore, SCE_PY_COMMENTBLOCK) == 0x608060 &&
+                            editor->Send(StyleGetFore, SCE_PY_STRING_SQ) == 0x008000 &&
+                            editor->Send(StyleGetFore, SCE_PY_STRING_DQ) == 0x008000 &&
+                            editor->Send(StyleGetFore, SCE_PY_TRIPLE_STRING_DQ) == 0x0080F0 &&
+                            editor->Send(StyleGetFore, SCE_PY_FMTSTRING_DQ) == 0x008064 &&
+                            editor->Send(StyleGetFore, SCE_PY_NUMBER) == 0x0000FF,
                         "original Python light palette and grouped styles must be installed");
                 for (const int style : {SCE_PY_WORD, SCE_PY_STRING_DQ, SCE_PY_TRIPLE_STRING_DQ, SCE_PY_FMTSTRING_DQ}) {
-                    Require(Font(editor, style) == Font(editor, static_cast<int>(Scintilla::StylesCommon::Default)) &&
-                                editor->Send(Message::StyleGetSizeFractional, style) ==
-                                    editor->Send(Message::StyleGetSizeFractional,
-                                                 static_cast<uintptr_t>(Scintilla::StylesCommon::Default)) &&
-                                editor->Send(Message::StyleGetBack, style) == 0xFFFFFF,
+                    Require(Font(editor, style) == Font(editor, std::to_underlying(Scintilla::StylesCommon::Default)) &&
+                                editor->Send(StyleGetSizeFractional, style) ==
+                                    editor->Send(StyleGetSizeFractional, static_cast<uintptr_t>(std::to_underlying(
+                                                                             Scintilla::StylesCommon::Default))) &&
+                                editor->Send(StyleGetBack, style) == 0xFFFFFF,
                             "Python styles must retain native font, size and light background");
                 }
-                Require(Text(editor) == source && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo) && frame->DocumentHasUtf8Bom(),
+                Require(Text(editor) == source && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
+                            frame->DocumentHasUtf8Bom(),
                         "highlighting must preserve loaded text, BOM and clean history");
                 Require(frame->Save().status == SaveStatus::Saved, "Python must save");
                 std::ifstream input(path, std::ios::binary);
@@ -141,17 +143,15 @@ public:
                     Style(editor, 0, SCE_PY_WORD);
                 }
                 const auto originalText = Text(editor);
-                editor->Send(Message::SetSel, 2, 5);
+                editor->Send(SetSel, 2, 5);
                 Choose(frame, "Plain Text");
                 Style(editor, 0, 0);
-                Require(editor->Send(Message::StyleGetFore, SCE_PY_WORD) == 0 &&
-                            !editor->Send(Message::StyleGetBold, SCE_PY_WORD),
+                Require(editor->Send(StyleGetFore, SCE_PY_WORD) == 0 && !editor->Send(StyleGetBold, SCE_PY_WORD),
                         "Plain Text must clear Python palette");
                 Choose(frame, "Python");
                 Style(editor, 0, SCE_PY_WORD);
-                Require(Text(editor) == originalText && editor->Send(Message::GetAnchor) == 2 &&
-                            editor->Send(Message::GetCurrentPos) == 5 && !editor->Send(Message::GetModify) &&
-                            !editor->Send(Message::CanUndo) &&
+                Require(Text(editor) == originalText && editor->Send(GetAnchor) == 2 &&
+                            editor->Send(GetCurrentPos) == 5 && !editor->Send(GetModify) && !editor->Send(CanUndo) &&
                             frame->GetStatusBar()->GetStatusText() == "UTF-8 | Python (override) | EOL: LF",
                         "manual Python choice preserves document state and displays override");
                 Require(frame->SaveAs(Filename(directory / "manual.txt"), {}, SaveType::AllFiles).status ==
@@ -197,23 +197,23 @@ public:
                 const auto close = triple.rfind("\"\"\"");
                 const auto after = triple.find("return");
                 Style(editor, after, SCE_PY_WORD);
-                editor->Send(Message::GotoPos, close);
+                editor->Send(GotoPos, close);
                 Delete(editor);
                 Paint(frame);
                 Style(editor, after - 1, SCE_PY_TRIPLE_STRING_DQ);
                 Command(frame, wxID_UNDO);
                 Style(editor, after, SCE_PY_WORD);
-                Require(Text(editor) == triple && !editor->Send(Message::GetModify) && editor->Send(Message::CanRedo),
+                Require(Text(editor) == triple && !editor->Send(GetModify) && editor->Send(CanRedo),
                         "Undo restores triple-string terminator, bytes and save point");
                 Command(frame, wxID_REDO);
                 Style(editor, after - 1, SCE_PY_TRIPLE_STRING_DQ);
-                editor->Send(Message::GotoPos, close);
+                editor->Send(GotoPos, close);
                 Character(editor, '"');
                 Paint(frame);
                 Style(editor, after, SCE_PY_WORD);
-                while (editor->Send(Message::CanUndo))
+                while (editor->Send(CanUndo))
                     Command(frame, wxID_UNDO);
-                Require(Text(editor) == triple && !editor->Send(Message::GetModify),
+                Require(Text(editor) == triple && !editor->Send(GetModify),
                         "recoloring must not create history entries");
 
                 const std::string formatted = "message = f\"你好 {len('中文')}\"\nreturn 42\n";
@@ -223,23 +223,23 @@ public:
                 const auto prefix = formatted.find("f\"");
                 const auto expression = formatted.find("len");
                 Style(editor, expression, SCE_PY_BUILTIN_FUNCTION);
-                editor->Send(Message::GotoPos, prefix);
+                editor->Send(GotoPos, prefix);
                 Delete(editor);
                 Paint(frame);
                 Style(editor, expression - 1, SCE_PY_STRING_DQ);
                 Command(frame, wxID_UNDO);
                 Style(editor, expression, SCE_PY_BUILTIN_FUNCTION);
-                Require(Text(editor) == formatted && !editor->Send(Message::GetModify),
+                Require(Text(editor) == formatted && !editor->Send(GetModify),
                         "Undo restores formatted expression and save point");
                 Command(frame, wxID_REDO);
                 Style(editor, expression - 1, SCE_PY_STRING_DQ);
-                editor->Send(Message::GotoPos, prefix);
+                editor->Send(GotoPos, prefix);
                 Character(editor, 'f');
                 Paint(frame);
                 Style(editor, expression, SCE_PY_BUILTIN_FUNCTION);
-                while (editor->Send(Message::CanUndo))
+                while (editor->Send(CanUndo))
                     Command(frame, wxID_UNDO);
-                Require(Text(editor) == formatted && !editor->Send(Message::GetModify),
+                Require(Text(editor) == formatted && !editor->Send(GetModify),
                         "formatted-string edits retain exact UTF-8 bytes and history");
                 std::puts("PASS: real Delete/typing/Undo/Redo update triple and formatted string spans");
                 result_ = 0;
