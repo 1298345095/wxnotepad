@@ -99,7 +99,7 @@ public:
                             "Redo must restore exact expansion bytes");
                 };
                 example("中文12", "(中文)([0-9]+)", "\\2-\\1", "12-中文");
-                example("a", "(a)", "$$|\\\\|$10|${name}|$`|$'|\\u|\\x|$|\\", "$|\\|a0|${name}|$`|$'|\\u|\\x|$|\\");
+                example("a", "(a)", R"($$|\\|$10|${name}|$`|$'|\u|\x|$|\)", R"($|\|a0|${name}|$`|$'|\u|\x|$|\)");
                 example("b", "(a)?(b)", "$1|\\1|$2|\\2", "||b|b");
                 example("a", "(a)", "\\1\\n\\t", "a\n\t");
                 setup("aab", "(?<=aa)(b)", "$1!");

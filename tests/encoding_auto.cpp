@@ -120,19 +120,19 @@ void CheckAutomaticDetection(EditorControl* editor, const std::filesystem::path&
         std::string text;
         bool bom;
     };
-    const Boundary boundaries[] = {
-        {"", "", false},
-        {"\x{fe}\x{ff}", "", true},
-        {std::string("\x{fe}\x{ff}\0A\0", 5), "A", true},
-        {std::string("\0A\0", 3), "A", false},
-        {"\x{fe}\x{ff}\x{d8}\x{3d}", "\x{ef}\x{bf}\x{bd}", true},
-        {std::string("\x{fe}\x{ff}\x{de}\0", 4), "\x{ef}\x{bf}\x{bd}", true},
-        {std::string("\x{fe}\x{ff}\x{d8}\x{3d}\0A", 6),
-         "\x{ef}\x{bf}\x{bd}"
-         "A",
-         true},
-        {std::string("\x{fe}\x{ff}\x{d8}\x{3d}\x{de}\0", 6), "😀", true},
-        {std::string("\x{fe}\x{ff}\0A\0\0\0B\0\r\0\n\0C\0\n\0D\0\r", 20), std::string("A\0B\r\nC\nD\r", 9), true}};
+    const std::array<Boundary, 9> boundaries = {
+        {{"", "", false},
+         {"\x{fe}\x{ff}", "", true},
+         {std::string("\x{fe}\x{ff}\0A\0", 5), "A", true},
+         {std::string("\0A\0", 3), "A", false},
+         {"\x{fe}\x{ff}\x{d8}\x{3d}", "\x{ef}\x{bf}\x{bd}", true},
+         {std::string("\x{fe}\x{ff}\x{de}\0", 4), "\x{ef}\x{bf}\x{bd}", true},
+         {std::string("\x{fe}\x{ff}\x{d8}\x{3d}\0A", 6),
+          "\x{ef}\x{bf}\x{bd}"
+          "A",
+          true},
+         {std::string("\x{fe}\x{ff}\x{d8}\x{3d}\x{de}\0", 6), "😀", true},
+         {std::string("\x{fe}\x{ff}\0A\0\0\0B\0\r\0\n\0C\0\n\0D\0\r", 20), std::string("A\0B\r\nC\nD\r", 9), true}}};
     const auto boundaryPath = directory / "boundary.txt";
     for (const auto& boundary : boundaries) {
         TestFiles::WriteBytes(boundaryPath, boundary.bytes);

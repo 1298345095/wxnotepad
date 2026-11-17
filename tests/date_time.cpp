@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/datetime.h>
@@ -100,11 +101,15 @@ void LiveCommands(EditorFrame* frame) {
         const char* label;
         uint64_t divisor;
     };
-    const Command commands[] = {{"Current Date", 0},           {"Current Date Time", 0},
-                                {"UTC Date Time", 0},          {"Unix Timestamp", 1000000000},
-                                {"Millisecond (ms)", 1000000}, {"Microsecond (us)", 1000},
-                                {"Nanosecond (ns)", 1},        {"Time/Date (Short Form)", 0},
-                                {"Time/Date (Long Form)", 0}};
+    const std::array<Command, 9> commands = {{{"Current Date", 0},
+                                              {"Current Date Time", 0},
+                                              {"UTC Date Time", 0},
+                                              {"Unix Timestamp", 1000000000},
+                                              {"Millisecond (ms)", 1000000},
+                                              {"Microsecond (us)", 1000},
+                                              {"Nanosecond (ns)", 1},
+                                              {"Time/Date (Short Form)", 0},
+                                              {"Time/Date (Long Form)", 0}}};
     for (const auto& command : commands) {
         TestEditor::ResetStream(frame->Editor(), "");
         const auto before = NanosecondsNow();
@@ -146,11 +151,11 @@ void SavedBytes(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("date-time");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8.txt", FileEncoding::Utf8, "AoldZ", "A时刻Z"},
-        {"utf16.txt", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{41}\0o\0l\0d\0Z\0", 12),
-         std::string("\x{ff}\x{fe}\x{41}\0\x{f6}\x{65}\x{3b}\x{52}Z\0", 10)},
-        {"cp936.txt", FileEncoding::Gbk, "AoldZ", "A\x{ca}\x{b1}\x{bf}\x{cc}Z"}};
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {
+        {{"utf8.txt", FileEncoding::Utf8, "AoldZ", "A时刻Z"},
+         {"utf16.txt", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{41}\0o\0l\0d\0Z\0", 12),
+          std::string("\x{ff}\x{fe}\x{41}\0\x{f6}\x{65}\x{3b}\x{52}Z\0", 10)},
+         {"cp936.txt", FileEncoding::Gbk, "AoldZ", "A\x{ca}\x{b1}\x{bf}\x{cc}Z"}}};
     for (const auto& fixture : fixtures) {
         const auto path = directory / fixture.name;
         TestFiles::WriteBytes(path, fixture.before);

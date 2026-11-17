@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <array>
 #include <charconv>
 #include <string>
 
@@ -16,13 +17,13 @@ int GetHexDigit(char ch) {
 void ConvertNumRadix(std::string& output, uint64_t num, unsigned radix) {
     // Adapted from Notepad4 89b8b36 Edit.cpp::ConvertNumRadix.
     if (radix == 16 || radix == 10) {
-        char buffer[32]{};
-        const auto result = std::to_chars(buffer, buffer + sizeof(buffer), num, static_cast<int>(radix));
+        std::array<char, 32> buffer{};
+        const auto result = std::to_chars(buffer.data(), buffer.data() + buffer.size(), num, static_cast<int>(radix));
         if (radix == 16) output += "0x";
-        output.append(buffer, result.ptr);
+        output.append(buffer.data(), result.ptr);
     } else {
-        char buffer[80]{};
-        unsigned index = sizeof(buffer) - 1;
+        std::array<char, 80> buffer{};
+        unsigned index = buffer.size() - 1;
         unsigned bitCount = 0;
         const unsigned shift = radix == 8 ? 3 : 1;
         do {
@@ -33,7 +34,7 @@ void ConvertNumRadix(std::string& output, uint64_t num, unsigned radix) {
         } while (num);
         buffer[--index] = radix == 8 ? 'O' : 'b';
         buffer[--index] = '0';
-        output += buffer + index;
+        output += buffer.data() + index;
     }
 }
 uint64_t ReadHexadecimal(const char*& p) {

@@ -8,10 +8,10 @@ baselines and dispositions below describe the earlier project and the applicatio
 revisions named in each section. Current-project findings are reviewed separately
 against their current issue keys; the continuation record appears at the end.
 
-Latest review: [PR #224 analysis follow-up](#pr-224-analysis-follow-up),
-on [`codex/sonarcloud-enum-cleanup`](https://github.com/1298345095/wxnotepad/tree/codex/sonarcloud-enum-cleanup).
-[PR #223](https://github.com/1298345095/wxnotepad/pull/223) was merged into main
-at `395ad59521dff2e7a5fb1c660188d73ea2269726` before this review.
+Latest review: [Array and raw-literal cleanup](#array-and-raw-literal-cleanup),
+on [`codex/sonar-arrays-raw-literals`](https://github.com/1298345095/wxnotepad/tree/codex/sonar-arrays-raw-literals).
+[PR #224](https://github.com/1298345095/wxnotepad/pull/224) was merged into main
+at `ecf7c0849da662f8428383a30b375c5bddbd9562` before this review.
 
 The 2026-11-04 MCP baseline at application revision
 `7a3da91cadaaf93accab530cacd178a76aecc494` contained 863 open issues.
@@ -1744,3 +1744,128 @@ Changing them requires a separate control-flow review that preserves
 `FindTextFull` call order, undo grouping and selection repair. The previously
 recorded coordinate, dynamic point-count, NLS generator, exception-boundary and
 inheritance recommendations remain listed in the first batch's evidence record.
+
+## Array and raw-literal cleanup
+
+The November 17 main analysis at `ecf7c0849da662f8428383a30b375c5bddbd9562`
+contains **1,931 OPEN/CONFIRMED issues**, including **278 S5945** and
+**272 S3628** findings. All four MCP result pages were collected, with 1,931
+unique keys. The [review ledger](sonarqube-arrays-raw-literals-review.json)
+records every selected main key, its original location, the reviewed contract,
+source hashes, validation and retained work.
+
+### Code changes
+
+This batch addresses **555 main code-fix keys**:
+
+| Rule | Main keys | Change and preserved contract |
+| --- | ---: | --- |
+| S5945 | 278 | Replace all reported fixed arrays with `std::array`, and the completion buffers with owned vectors where their sizes are dynamic. Preserve element order, zero initialization, NUL termination, buffer capacities and native pointer/count interfaces. |
+| S3628 | 272 | Rewrite 274 escaped literal tokens as raw strings while preserving every character, embedded control byte and final NUL. Two extra tokens share reported source lines. |
+| S924 | 1 | Reduce `StripSelectedBlanks` to one loop `break`, retaining search/selection checks, native call order, undo grouping and final selection repair. |
+| S886 | 1 | Make startup argument consumption explicit in the `while` loop; each option still consumes the same argument name and optional value. |
+| S6004 | 1 | Scope the observation-directory temporary to its `if` initializer. |
+| S995 | 2 | Make the Find All fixture's button and result-label parameters pointers to const; their native handle and label reads retain the same calls. |
+
+The fixed tables include all 19 generated syntax headers, encoding metadata,
+completion keyword lists, command/fixture tables and original observation arrays.
+Their maintained emitters are updated together. All 18 language headers first
+reproduce the baseline exactly from pinned Notepad4
+`89b8b36e0ee2c23f73be922315f17261ccfbbe1a`; the updated generators then emit
+the new array declarations with the same data. The markup generator also emits
+the embedded-style array in its matching representation.
+
+Observation records containing nested `std::initializer_list` use direct
+`std::array<T, N>` aggregate initialization. This retains the lifetime of the
+backing arrays. Their element counts, history, selections, embedded NUL bytes
+and UTF-8 data are checked against the complete baseline records. The capture
+scripts for auto insertion, auto close tags, block navigation, number-radix
+fixtures and column-wrap digits emit the matching declarations. The auto
+insertion emitter also chooses a raw-string delimiter absent from its data.
+
+Completion storage retains its original stack threshold and separately allocated
+arena blocks. Moving the outer vector preserves each inner vector's allocated
+storage and existing node pointers. The AA-tree uses one two-element link array
+in place of overlapping array/left/right union aliases; rotations and traversal
+use the same two links. Initial allocation, growth, serialization, failure and
+retry paths have independent executable checks.
+
+The retained `StripSelectedBlanks` recommendation is now addressed. Its current
+main key is `AaHo6Pfk_GfhQBClBqeF`; the previous section's historical main key
+`AaGwmVUYEeGJK6USKRqT` is closed. The new loop short-circuits the live selection
+endpoint check after `FindTextFull`. A terminal replacement still skips line
+navigation, and the shared terminal check follows any leading-line advance.
+The existing native fixture covers partial matches, reversed selections,
+mixed line endings, read-only protection, undo/redo and saved bytes.
+
+Complete-source reading and repository searches establish the affected callers
+and consumers. Independent reviews cover production storage, command control
+flow, all test-array conversions and the generator changes.
+
+### Local validation
+
+- **90 C++23 translation units pass GCC 14.2 syntax compilation**, including
+  all changed units and additional consumers of changed headers: 17 application
+  units and 73 test units. The check uses official wxWidgets 3.3.3 public
+  headers, real GTK 3 development headers and the prepared pinned core. Host
+  definitions come from wx configure; GUI options use the upstream GTK defaults.
+  Each target retains its CMake `char8_t` setting and fixture-path definitions.
+- **274 compiler-evaluated literal comparisons** check every byte and final NUL.
+- **520 complete captured records** compare equal under AddressSanitizer and
+  UndefinedBehaviorSanitizer. This includes all 444 auto-insertion and 76
+  completion-behavior records and their nested history/selection data.
+- **110 further fixture arrays, containing 2,415 top-level elements**, compare
+  equal recursively, including 400 auto-close-tag cases and 1,062 block-navigation
+  fixtures. The comparison is compiled with strict C++23 diagnostics.
+- **75 production data arrays and 36 metadata/title values** compare equal.
+  Directly compiled production escaping code passes all 40 original fixtures.
+  The actual completion storage implementation passes the existing allocation
+  failure and recovery checks with its production fault injector.
+- All 444 original auto-insertion records reproduce the changed capture header.
+  Three further capture emitters reproduce their data rows and compile with
+  Unicode, embedded-NUL and nested-selection samples.
+- The Python helper suite finishes **53 tests, 44 passed and 9 environment-specific
+  skips**. Canonical clang-format **23.1.2** passes all **374** tracked C/C++
+  files; Python syntax compilation and `git diff --check` pass.
+
+Hosted Windows/Linux builds, native X11/Wayland tests, coverage, clang-tidy,
+fuzz sanitizers, CodeQL and SonarCloud validate the published PR head. Their
+current results are recorded in the PR description. Main issue closure follows
+the subsequent main analysis after merge.
+
+### Retained recommendations
+
+The prior coordinate/point-count, NLS payload, exception-boundary and
+framework-inheritance recommendations remain OPEN in this review. Their exact
+keys and source-specific rationale are carried forward in the ledger. Drawing
+coordinates require a consistent range/rounding/clipping policy; the dynamic
+`PolyLine` callers need their own count bounds. The NLS representation must be
+changed together with its generator and compressed-stream checks. The reviewed
+ordinary exception boundaries do not satisfy S1181's documented exceptions;
+the reported framework hierarchy depth is accurate. These design changes remain
+separate from the completed array/literal and small control-flow fixes.
+
+### Verified character and arithmetic false positives
+
+Eighteen existing S6022 findings in changed files were reviewed against the
+rule's byte-oriented-memory contract and their complete consumers. Seven
+findings describe actual text characters or arithmetic colour values:
+
+| Location | Main keys | Verified contract |
+| --- | ---: | --- |
+| `WordList::CompareNode` | 1 | `AddWord` stores a terminated candidate character string after the node; `strcmp` consumes that text, and `GetList` copies it into `AutoCShow` text. The owning arena already uses `std::byte`. |
+| `GetHexDigit` and `ConvertLeadingZero` | 2 | ASCII case folding normalizes selected numeric-text characters before character comparisons and digit arithmetic. |
+| `SniffInterpreter` | 1 | ASCII case folding normalizes a shebang interpreter name before textual prefix matching. |
+| Native guide colour assertion | 3 | wxColour channel getters supply numeric magnitudes for a 24-bit RGB integer. The expression compares the resulting colour number with the pinned core's `OpaqueRGB()` result. |
+
+The wxWidgets 3.3.3 channel-getter documentation explicitly describes arithmetic
+use, and its own `GetRGB()` uses the same numeric shifts and combination.
+Independent review agrees with all seven dispositions. Each main key received
+an individual FALSE_POSITIVE transition through MCP, with its source-to-consumer
+explanation. Exact-key queries return **seven FALSE_POSITIVE matches and zero
+OPEN/CONFIRMED matches**; comments and successful mutation responses are retained
+in the ledger.
+
+The other eleven S6022 findings examine UTF-16/CP936 representations, URL-escape
+bytes or UTF-8/UTF-16 validation structure. They retain OPEN status and individual
+review notes. All S5945/S3628 findings in this batch receive code fixes.

@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor_test_helpers.h"
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
@@ -224,7 +225,7 @@ void ColumnCases(EditorControl* editor) {
     };
     // Literal results from Edit.cpp::EditWrapToColumn (89b8b36), including
     // its bModified condition rather than a comparison of output bytes.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 21> fixtures = {{
         {"one two three", 2, 13, 6, "one\ntwo\nthree", 0, 13},
         {"one two three", 13, 2, 6, "one\ntwo\nthree", 13, 0},
         {"one two three", 1, 5, 4, "one\ntwo three", 0, 5},
@@ -246,7 +247,7 @@ void ColumnCases(EditorControl* editor) {
         {"a\u{00a0}b  c", 0, 7, 4, "a\u{00a0}b\nc", 0, 6},
         {"a\vlong  b", 0, 9, 80, "a\vlong b", 0, 8},
         {"a  b", 2, 2, 1, "a  b", 2, 2, false},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret, fixture.mode);
         Require(editor->WrapToColumn(fixture.column), "stream column wrap succeeds");
@@ -482,7 +483,7 @@ void SavedBytes(EditorFrame* frame) {
         std::string split;
         std::string wrap;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}one two three\n中  文",
          "\x{ef}\x{bb}\x{bf}one two \nthree\n中  文", "\x{ef}\x{bb}\x{bf}one\ntwo\nthree\n中 文"},
         {"gbk", FileEncoding::Gbk, "one two three\n\x{d6}\x{d0}  \x{ce}\x{c4}",
@@ -497,7 +498,7 @@ void SavedBytes(EditorFrame* frame) {
          std::string("\x{ff}\x{fe}"
                      "o\0n\0e\0\n\0t\0w\0o\0\n\0t\0h\0r\0e\0e\0",
                      28)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         for (bool split : {false, true}) {
             using enum Scintilla::Message;

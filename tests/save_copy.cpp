@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
@@ -348,7 +349,7 @@ void Formats(SettingsStore* settings, const std::filesystem::path& directory) {
     };
     // Literal samples also exercised by the independent original capture script
     // in evidence/native-utilities-2026-11-06/138.
-    const Sample samples[] = {
+    const std::array<Sample, 8> samples = {{
         {"utf8", Utf8, "中文\r\nx\nz\r"},
         {"utf8-bom", Utf8,
          "\x{ef}\x{bb}\x{bf}"
@@ -359,7 +360,7 @@ void Formats(SettingsStore* settings, const std::filesystem::path& directory) {
         {"empty", Utf8, {}},
         {"bom-only", Utf8, "\x{ef}\x{bb}\x{bf}"},
         {"utf16-empty", Utf16Le, std::string("\x{ff}\x{fe}", 2)},
-    };
+    }};
     for (const auto& sample : samples) {
         const auto source = directory / (std::string(sample.name) + ".txt");
         const auto copy = directory / (std::string(sample.name) + "-copy.txt");
@@ -466,10 +467,10 @@ void Cleanup(SettingsStore* settings, const std::filesystem::path& directory) {
         bool strip;
         const char* expected;
     };
-    const Policy policies[] = {{false, false, "a \t\r\nb \t\nc \t"},
-                               {true, false, "a \t\nb \t\nc \t"},
-                               {false, true, "a\r\nb\nc"},
-                               {true, true, "a\nb\nc"}};
+    const std::array<Policy, 4> policies = {{{false, false, "a \t\r\nb \t\nc \t"},
+                                             {true, false, "a \t\nb \t\nc \t"},
+                                             {false, true, "a\r\nb\nc"},
+                                             {true, true, "a\nb\nc"}}};
     const auto source = directory / "cleanup-source.txt";
     const auto copy = directory / "cleanup-copy.txt";
     const std::string before = "a \t\r\nb \t\nc \t";
@@ -520,12 +521,12 @@ void DirtyCleanup(SettingsStore* settings, const std::filesystem::path& director
         const char* undone;
     };
     // Independent original after/first-Undo captures: original-formats.json.
-    const Policy policies[] = {
+    const std::array<Policy, 4> policies = {{
         {false, false, "a \t\r\nb \t\nc \t!", 12, "a \t\r\nb \t\nc \t"},
         {true, false, "a \t\nb \t\nc \t!", 11, "a \t\r\nb \t\nc \t!"},
         {false, true, "a\r\nb\nc \t!", 8, "a \t\r\nb \t\nc \t!"},
         {true, true, "a\nb\nc \t!", 7, "a \t\nb \t\nc \t!"},
-    };
+    }};
     const auto source = directory / "dirty-cleanup.txt";
     TestFiles::WriteBytes(source, "a \t\r\nb \t\nc \t");
     for (const auto& policy : policies) {

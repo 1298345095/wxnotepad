@@ -129,11 +129,11 @@ def main():
             process.wait(timeout=10)
     (output / "original.json").write_text(json.dumps(dict(revision="89b8b36e0ee2c23f73be922315f17261ccfbbe1a",
         documents=documents, fixtures=results), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    rows = ["// Captured from original Notepad4 89b8b36 by tests/reference_capture/capture_block_navigation.py.", "#pragma once", "namespace BlockReference {",
-        "struct Document { const char* language; const char* text; };", "inline constexpr Document documents[] = {"]
+    rows = ["// Captured from original Notepad4 89b8b36 by tests/reference_capture/capture_block_navigation.py.", "#pragma once", "#include <array>", "namespace BlockReference {",
+        "struct Document { const char* language; const char* text; };", f"inline constexpr std::array<Document, {len(documents)}> documents = {{{{"]
     for document in documents:
         rows.append("    {" + json.dumps(document["language"]) + ", " + json.dumps(document["text"], ensure_ascii=False) + "},")
-    rows += ["};", "struct Fixture { int document, command, mode, setup; long anchor, caret, expectedAnchor, expectedCaret; int selectionMode, selections, anchorVirtual, caretVirtual; const char* visible; const char* expanded; };", "inline constexpr Fixture fixtures[] = {"]
+    rows += ["}};", "struct Fixture { int document, command, mode, setup; long anchor, caret, expectedAnchor, expectedCaret; int selectionMode, selections, anchorVirtual, caretVirtual; const char* visible; const char* expanded; };", f"inline constexpr std::array<Fixture, {len(results)}> fixtures = {{{{"]
     for row in results:
         after = row["after"]
         values = [row[key] for key in ["document", "command", "mode", "setup", "anchor", "caret"]]
@@ -141,7 +141,7 @@ def main():
         visible = json.dumps("".join(map(str, after["visible"])))
         expanded = json.dumps("".join(map(str, after["expanded"])))
         rows.append("    {" + ", ".join(map(str, values)) + ", " + visible + ", " + expanded + "},")
-    rows += ["};", "}", ""]
+    rows += ["}};", "}", ""]
     header.write_text("\n".join(rows), encoding="utf-8")
     print(f"Captured {len(results)} original block command cases")
 

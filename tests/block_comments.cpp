@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "native_search_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -38,7 +39,7 @@ void Cases(EditorFrame* frame) {
         intptr_t newAnchor;
         intptr_t newCaret;
     };
-    const Case cases[] = {
+    const std::array<Case, 15> cases = {{
         {"", 0, 0, "/**/", 2, 2},
         {"alpha", 5, 0, "/*alpha*/", 7, 2},
         {"中文", 0, 6, "/*中文*/", 2, 8},
@@ -54,7 +55,7 @@ void Cases(EditorFrame* frame) {
         {"/** @param x */", 6, 6, "* @param x ", 4, 4},
         {"/*a*//**b*/", 2, 9, "/*/*a*//**b*/*/", 4, 11},
         {"//alpha", 3, 3, "//a/**/lpha", 5, 5},
-    };
+    }};
     for (const char* language : {"C/C++", "JSON"}) {
         Choose(frame, language);
         for (const auto& item : cases) {
@@ -204,14 +205,14 @@ void SavedBytes(EditorFrame* frame) {
         std::string before;
         std::string after;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中文\r\nB\nlast", "\x{ef}\x{bb}\x{bf}/*中文\r\nB\nlast*/"},
         {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\x{ce}\x{c4}\rB\r\nlast\n",
          "/*\x{d6}\x{d0}\x{ce}\x{c4}\rB\r\nlast\n*/"},
         {"utf16", FileEncoding::Utf16Le,
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0\x{42}\0", 12),
          std::string("\x{ff}\x{fe}/\0*\0\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0\x{42}\0*\0/\0", 20)},
-    };
+    }};
     for (const char* extension : {"cpp", "json"}) {
         for (const auto& fixture : fixtures) {
             using enum SaveStatus;

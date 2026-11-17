@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include "encoded_file_helpers.h"
 #include "file_command_driver.h"
 #include <wx/wx.h>
@@ -244,7 +245,7 @@ void SelectionShapes(EditorFrame* frame) {
 void SavedFormats(EditorFrame* frame) {
     using enum Scintilla::Message;
     using namespace std::string_literals;
-    const TestFiles::EncodedFixture fixtures[] = {
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8,
          "\x{ef}\x{bb}\x{bf}"
          "a \r\n中\t",
@@ -256,7 +257,7 @@ void SavedFormats(EditorFrame* frame) {
          "\x{ff}\x{fe}"
          "a\0 \0\r\0\n\0\x{2d}\x{4e}\t\0!\0"s},
         {"gbk", FileEncoding::Gbk, "a \r\n\x{d6}\x{d0}\t", "a \r\n\x{d6}\x{d0}\t!"},
-    };
+    }};
     auto* editor = frame->Editor();
     for (const auto& fixture : fixtures) {
         const auto path = TestFiles::TemporaryDirectory() / (std::string(fixture.name) + "-source.txt");
@@ -323,8 +324,8 @@ void NativeEditingKey(EditorFrame* frame, int key, const char* name) {
 void NavigationAndEditing(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    const std::tuple<int, const char*, int, int> keys[] = {
-        {WXK_DELETE, "Delete", 1, 1}, {WXK_BACK, "BackSpace", 1, 1}, {'X', "x", 4, 1}, {WXK_RIGHT, "Right", 4, 4}};
+    const std::array<std::tuple<int, const char*, int, int>, 4> keys = {
+        {{WXK_DELETE, "Delete", 1, 1}, {WXK_BACK, "BackSpace", 1, 1}, {'X', "x", 4, 1}, {WXK_RIGHT, "Right", 4, 4}}};
     for (const auto& [key, name, anchor, caret] : keys) {
         TestEditor::ResetStream(editor, "alpha\r\nbeta\r\n", 4, 1);
         editor->Send(SetReadOnly, 1);
@@ -387,11 +388,12 @@ private:
 void TransformationDialogs(EditorFrame* frame) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    const std::tuple<const char*, const char*, int, intptr_t> commands[] = {{"With...", "Enclose Selection", 'Q', 1},
-                                                                            {"Modify Lines...", "Modify Lines", 'M', 0},
-                                                                            {"Align Lines...", "Align Lines", 'J', 0},
-                                                                            {"Sort Lines...", "Sort Lines", 'O', 0},
-                                                                            {"Column Wrap...", "Column Wrap", 0, 0}};
+    const std::array<std::tuple<const char*, const char*, int, intptr_t>, 5> commands = {
+        {{"With...", "Enclose Selection", 'Q', 1},
+         {"Modify Lines...", "Modify Lines", 'M', 0},
+         {"Align Lines...", "Align Lines", 'J', 0},
+         {"Sort Lines...", "Sort Lines", 'O', 0},
+         {"Column Wrap...", "Column Wrap", 0, 0}}};
     for (const auto& [label, title, key, anchor] : commands) {
         for (bool keyboard : {false, true}) {
             if (keyboard && !key) continue;

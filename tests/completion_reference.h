@@ -1,5 +1,6 @@
 // Captured from original Notepad4 89b8b36 by issue-191/capture_completion.py.
 #pragma once
+#include <array>
 #include <vector>
 #include <string>
 struct CompletionReference {
@@ -11,7 +12,7 @@ struct CompletionReference {
     const char* confirmed;
     intptr_t confirmedCaret;
 };
-inline const CompletionReference completionReference[] = {
+inline const std::array<CompletionReference, 31> completionReference = {{
     {"Plain Text", "alpha alpine al", "alpha alpine al", 15, {"alpha", "alpine"}, "alpha alpine alpha", 18},
     {"Plain Text", "alpha al", "alpha alpha", 11, {}, nullptr, 0},
     {"Plain Text", "alpha alpha", "alpha alpha", 11, {}, nullptr, 0},
@@ -143,4 +144,4 @@ inline const CompletionReference completionReference[] = {
     {"GitHub GFM", "<di", "<di", 3, {"dialog", "dir", "div"}, nullptr, 0},
     {"GitLab GLFM", "</di", "</di", 4, {"dialog", "dir", "div"}, nullptr, 0},
     {"Pandoc", "contented", "contenteditable", 15, {}, nullptr, 0},
-};
+}};

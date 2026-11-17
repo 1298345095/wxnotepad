@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include "settings/settings_store.h"
 #include "encoded_file_helpers.h"
 #include <fstream>
@@ -63,7 +64,7 @@ void Fixtures(EditorFrame* frame) {
                     bool(editor->Send(CanRedo)) == redo,
                 "URL conversion preserves captured original modification and Undo/Redo state");
     };
-    constexpr const char* labels[] = {"URL Encode", "URL Component Encode", "URL Decode"};
+    constexpr std::array<const char*, 3> labels = {{"URL Encode", "URL Component Encode", "URL Decode"}};
     unsigned commandCases = 0;
     while (std::getline(capture, line)) {
         Fixture fixture;
@@ -219,7 +220,7 @@ void Shortcuts(EditorFrame* frame) {
 void SavedBytes(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-url-conversion");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8,
          "\x{ef}\x{bb}\x{bf}"
          "A B\r\n",
@@ -235,7 +236,7 @@ void SavedBytes(EditorFrame* frame) {
                      "2\0"
                      "0\0B\0",
                      12)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);

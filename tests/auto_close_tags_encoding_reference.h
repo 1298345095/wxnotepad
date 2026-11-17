@@ -1,5 +1,6 @@
 // Frozen original 89b8b36 capture_auto_close_tags_encoding.py output.
 #pragma once
+#include <array>
 namespace AutoCloseTagsEncodingReference {
 struct Case {
     SyntaxLanguage language;
@@ -10,7 +11,7 @@ struct Case {
     const char* saved;
     AutoCloseTagsReference::State after;
 };
-inline const Case cases[] = {
+inline const std::array<Case, 24> cases = {{
     {SyntaxLanguage::Html,
      FileEncoding::Utf8,
      false,
@@ -179,5 +180,5 @@ inline const Case cases[] = {
      "2320636f64696e673a2047424b0ad6d00a3c646976",
      "2320636f64696e673a2047424b0ad6d00a3c6469763e3c2f6469763e",
      {"# coding: GBK\n\u{4e2d}\n<div></div>", 23, 23, true, true, false, {{23, 23}}}},
-};
+}};
 } // namespace AutoCloseTagsEncodingReference

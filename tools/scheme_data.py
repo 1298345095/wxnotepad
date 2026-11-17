@@ -97,15 +97,15 @@ def generate_scheme(data, filename, symbol, name, *, include_extensions=True):
     keywords, flags, styles, metadata, extensions, title = original_scheme(data, symbol)
     output = provenance('update_schemes.py', f'src/EditLexers/stl{filename}.cpp', data)
     output += ['// Full original groups and attributes, including completion-only lists.',
-               '// clang-format off', f'constexpr const char* {name}Keywords[] = {{' + keywords + '};',
-               f'constexpr SyntaxKeywords {name}Lists[] = {{']
+               '// clang-format off', f'constexpr auto {name}Keywords = std::to_array<const char*>({{' + keywords + '});',
+               f'constexpr auto {name}Lists = std::to_array<SyntaxKeywords>({{']
     output += [f'    {{{name}Keywords[{index}] ? {name}Keywords[{index}] : "", {flag}U << 8U}},'
                for index, flag in enumerate(flags)]
-    output += ['};', f'constexpr SyntaxStyle {name}Styles[] = {{',
-               *style_initializers(styles, 'SCE_', eol_filled=True), '};',
+    output += ['});', f'constexpr auto {name}Styles = std::to_array<SyntaxStyle>({{',
+               *style_initializers(styles, 'SCE_', eol_filled=True), '});',
                f'constexpr SyntaxOriginalMetadata {name}Original = {{' + ', '.join(metadata) + '};',
                f'constexpr const char* {name}SettingsSection = "{title}";']
     if include_extensions:
-        output += [f'constexpr const char* {name}Extensions[] = {{' +
-                   ', '.join(f'"{ext}"' for ext in extensions) + '};']
+        output += [f'constexpr auto {name}Extensions = std::to_array<const char*>({{' +
+                   ', '.join(f'"{ext}"' for ext in extensions) + '});']
     return '\n'.join(output + ['// clang-format on', ''])

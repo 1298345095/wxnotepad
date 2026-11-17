@@ -123,7 +123,7 @@ public:
                         "1 replacement");
                 example("b b", "(a)?(b)", "$1|\\1|$2|\\2", "||b|b ||b|b", "2 replacements");
                 example("a a", "(a)", "\\1\\n\\t", "a\n\t a\n\t", "2 replacements");
-                example("a a", "(a)", "$$|\\\\|$10|${name}|\\u|$|\\",
+                example("a a", "(a)", R"($$|\\|$10|${name}|\u|$|\)",
                         "$|\\|a0|${name}|\\u|$|\\ $|\\|a0|${name}|\\u|$|\\", "2 replacements");
                 example("中文后 中文后", "(?<=中)文(?=后)", "X", "中X后 中X后", "2 replacements");
                 example("aab", "aa|(?<=aa)b", "$&!", "aa!b", "1 replacement");

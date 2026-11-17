@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <array>
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/ffile.h>
@@ -38,7 +39,7 @@ void Fixtures(EditorFrame* frame) {
     };
     // Literal byte outcomes follow pinned EditCompressSpaces/EditReplaceRange,
     // including bytes immediately outside the selected range.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 20> fixtures = {{
         {"whole document from caret", " \tA  B\tC \r\n\tD\t \r E \n \t", 4, 4, "A B C\r\nD\rE\n", 0, 11},
         {"whole unterminated document", "A  B \t", 2, 2, "A B", 0, 3},
         {"whole whitespace-only document", " \t  \r\n\t \n \t\r ", 1, 1, "\r\n\n\r", 0, 4},
@@ -61,7 +62,7 @@ void Fixtures(EditorFrame* frame) {
         {"Unicode whitespace and control bytes are ordinary text",
          " \tA\x{c2}\x{a0}\t\tB\x{e3}\x{80}\x{80}  C\v\tD\f  E ", 0, 0, "A\x{c2}\x{a0} B\x{e3}\x{80}\x{80} C\v D\f E",
          0, 16},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         std::printf("Fixture: %s\n", fixture.name);
@@ -219,7 +220,7 @@ void SavedBytes(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-compress-whitespace");
     std::filesystem::create_directory(directory);
     using Fixture = TestFiles::EncodedFixture;
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf} \t中文  B\r\n\tC \rD\t \n ",
          "\x{ef}\x{bb}\x{bf}中文 B\r\nC\rD\n"},
         {"gbk", FileEncoding::Gbk, "\t\x{d6}\x{d0}\x{ce}\x{c4}  B\rC\tD \n ", "\x{d6}\x{d0}\x{ce}\x{c4} B\rC D\n"},
@@ -230,7 +231,7 @@ void SavedBytes(EditorFrame* frame) {
          std::string("\x{ff}\x{fe}"
                      "A\0 \0B\0\r\0\n\0C\0",
                      14)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);

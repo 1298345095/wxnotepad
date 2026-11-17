@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "syntax_language_test_helpers.h"
 #include "file_helpers.h"
@@ -22,11 +23,11 @@ void Require(bool condition, const char* message) {
 }
 using TestLanguages::Choose;
 using TestLanguages::SchemeFixture;
-constexpr SchemeFixture schemes[] = {
+constexpr std::array<SchemeFixture, 3> schemes = {{
     {"Rust", SyntaxLanguage::Rust, SCLEX_RUST, "rs", "fn main() {\n    let value = 42;\n}\n", "//", "/*", "*/"},
     {"Go", SyntaxLanguage::Go, SCLEX_GO, "go", "package main\nfunc main() {\n    println(42)\n}\n", "//", "/*", "*/"},
     {"Lua", SyntaxLanguage::Lua, SCLEX_LUA, "lua", "function main()\n    print(42)\nend\n", "--", "--[[", "]]"},
-};
+}};
 
 void SchemeWorkflow(EditorFrame* frame, SettingsStore& settings, const SchemeFixture& fixture, intptr_t fontSize) {
     auto* editor = frame->Editor();

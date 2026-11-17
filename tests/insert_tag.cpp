@@ -2,6 +2,7 @@
 #include "encoded_file_helpers.h"
 #include <wx/textctrl.h>
 #include "steady_stopwatch.h"
+#include <array>
 #include <exception>
 #include <functional>
 #include <fstream>
@@ -197,7 +198,7 @@ std::string Escaped(std::string_view value) {
     for (char ch : value) {
         switch (ch) {
         case '\\':
-            result += "\\\\";
+            result += R"(\\)";
             break;
         case '\t':
             result += "\\t";
@@ -389,11 +390,11 @@ void EmbeddedLineEndings(EditorFrame* frame) {
         Scintilla::EndOfLine mode;
         const char* after;
     };
-    const Capture captures[] = {
+    const std::array<Capture, 3> captures{{
         {Scintilla::EndOfLine::CrLf, "<a>\r\n前\r後\n😀x</a>\r\n末\r尾\n𐐀"},
         {Scintilla::EndOfLine::Cr, "<a>\r前\r後\n😀x</a>\r末\r尾\n𐐀"},
         {Scintilla::EndOfLine::Lf, "<a>\n前\r後\n😀x</a>\n末\r尾\n𐐀"},
-    };
+    }};
     auto* editor = frame->Editor();
     for (const auto& capture : captures) {
         using enum Scintilla::Message;

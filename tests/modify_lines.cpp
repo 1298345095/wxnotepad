@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <array>
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
 #include "settings/settings_store.h"
@@ -36,14 +37,14 @@ void Substitutions(EditorControl* editor) {
         const char* token;
         const char* expected;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 6> fixtures = {{
         {"$(L):", " 1:a\n\n 3:b\n 4:c\n 5:d\n 6:e\n 7:f\n 8:g\n 9:h\n10:i\n11:j"},
         {"$(0L):", "01:a\n\n03:b\n04:c\n05:d\n06:e\n07:f\n08:g\n09:h\n10:i\n11:j"},
         {"$(N):", " 1:a\n\n 2:b\n 3:c\n 4:d\n 5:e\n 6:f\n 7:g\n 8:h\n 9:i\n10:j"},
         {"$(0N):", "01:a\n\n02:b\n03:c\n04:d\n05:e\n06:f\n07:g\n08:h\n09:i\n10:j"},
         {"$(I):", " 0:a\n\n 1:b\n 2:c\n 3:d\n 4:e\n 5:f\n 6:g\n 7:h\n 8:i\n 9:j"},
         {"$(0I):", "00:a\n\n01:b\n02:c\n03:d\n04:e\n05:f\n06:g\n07:h\n08:i\n09:j"},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         TestEditor::ResetStream(editor, "a\n\nb\nc\nd\ne\nf\ng\nh\ni\nj", 0, 20);
         editor->ModifyLines(fixture.token, "", true);
@@ -76,11 +77,11 @@ void ScopeAndMultiline(EditorControl* editor) {
         const char* expected;
         intptr_t selectionEnd;
     };
-    const EolFixture fixtures[] = {
+    const std::array<EolFixture, 3> fixtures = {{
         {Scintilla::EndOfLine::CrLf, "P\r\nA\rB\nx\nP\r\nA\rB\ny", 5},
         {Scintilla::EndOfLine::Lf, "P\nA\rB\nx\nP\nA\rB\ny", 4},
         {Scintilla::EndOfLine::Cr, "P\rA\rB\nx\nP\rA\rB\ny", 4},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         TestEditor::ResetStream(editor, "x\ny", 0, 3, fixture.mode);
         editor->ModifyLines("P\r\nA\rB\n", "");
@@ -351,9 +352,9 @@ void NativeEolAndRecall(EditorFrame* frame) {
         Scintilla::EndOfLine mode;
         const char* expected;
     };
-    const Fixture fixtures[] = {{Scintilla::EndOfLine::CrLf, "中\r\nx\r\n文"},
-                                {Scintilla::EndOfLine::Lf, "中\nx\n文"},
-                                {Scintilla::EndOfLine::Cr, "中\rx\r文"}};
+    const std::array<Fixture, 3> fixtures = {{{Scintilla::EndOfLine::CrLf, "中\r\nx\r\n文"},
+                                              {Scintilla::EndOfLine::Lf, "中\nx\n文"},
+                                              {Scintilla::EndOfLine::Cr, "中\rx\r文"}}};
     bool first = true;
     for (const auto& fixture : fixtures) {
         TestEditor::ResetStream(frame->Editor(), "x", 1, 1, fixture.mode);
@@ -491,7 +492,7 @@ void Protection(EditorFrame* frame) {
 void SavedBytes(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("modify-lines");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\r\n文",
          "\x{ef}\x{bb}\x{bf}"
          "1:中:0\r\n2:文:1"},
@@ -503,7 +504,7 @@ void SavedBytes(EditorFrame* frame) {
                      "2\0:\0\x{87}\x{65}:\0"
                      "1\0",
                      26)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);

@@ -1,11 +1,12 @@
 // Captured from original Notepad4 89b8b36 by tests/reference_capture/capture_block_navigation.py.
 #pragma once
+#include <array>
 namespace BlockReference {
 struct Document {
     const char* language;
     const char* text;
 };
-inline constexpr Document documents[] = {
+inline constexpr std::array<Document, 5> documents = {{
     {"C/C++",
      "void outer() {\n\tif (a) {\n\t\twork();\n\t}\n\tif (b) {\n\t\tmore();\n\t}\n}\n \t\nvoid last() {\n\tdone();\n}"},
     {"Python", "def outer():\n\tif a:\n\t\twork()\n\tif b:\n\t\tmore()\n\t\n\tdone()\n\n \t\ndef last():\n\tpass"},
@@ -30,7 +31,7 @@ inline constexpr Document documents[] = {
      "中文😀 long body\n\t// 中文😀 long body\n\t// 中文😀 long body\n\t// 中文😀 long body\n\t// 中文😀 long "
      "body\n\t// 中文😀 long body\n\t// 中文😀 long body\n\t// 中文😀 long body\n\t// 中文😀 long body\n\t// 中文😀 "
      "long body\n\t// 中文😀 long body\n}\nvoid sibling() {\n}"},
-};
+}};
 struct Fixture {
     int document, command, mode, setup;
     long anchor, caret, expectedAnchor, expectedCaret;
@@ -38,7 +39,7 @@ struct Fixture {
     const char* visible;
     const char* expanded;
 };
-inline constexpr Fixture fixtures[] = {
+inline constexpr std::array<Fixture, 1062> fixtures = {{
     {0, 0, 1, 0, 2, 2, 2, 2, 0, 1, 0, 0, "111111111111", "111111111111"},
     {0, 1, 1, 0, 2, 2, 62, 62, 0, 1, 0, 0, "111111111111", "111111111111"},
     {0, 2, 1, 0, 2, 2, 2, 2, 0, 1, 0, 0, "111111111111", "111111111111"},
@@ -1281,5 +1282,5 @@ inline constexpr Fixture fixtures[] = {
     {4, 6, 3, 0, 2040, 2040, 2022, 2040, 2, 1, 0, 0,
      "111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
      "111111111111111111111111111111111111111111111111111111111111111111111111111111111111"},
-};
+}};
 } // namespace BlockReference

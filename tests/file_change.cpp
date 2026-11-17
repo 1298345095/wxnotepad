@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
@@ -38,13 +39,14 @@ void Wait(Predicate predicate, const std::source_location& caller = std::source_
                                  ":" + std::to_string(caller.line()));
 }
 void Peer(const wxString& path, const wxString& text, const wxString& action = "write", bool asynchronous = false) {
-    const wxString arguments[] = {wxStandardPaths::Get().GetExecutablePath(), "--peer", path, text, action};
-    const wchar_t* argv[] = {arguments[0].wc_str(), arguments[1].wc_str(), arguments[2].wc_str(),
-                             arguments[3].wc_str(), arguments[4].wc_str(), nullptr};
+    const std::array<wxString, 5> arguments = {
+        {wxStandardPaths::Get().GetExecutablePath(), "--peer", path, text, action}};
+    std::array<const wchar_t*, 6> argv = {{arguments[0].wc_str(), arguments[1].wc_str(), arguments[2].wc_str(),
+                                           arguments[3].wc_str(), arguments[4].wc_str(), nullptr}};
     // Synchronous commands represent completed file operations: dispatch
     // notifications after the writer closes, not during its truncate/write gap.
     // Keep native windows enabled; the asynchronous stream still runs live.
-    const auto result = wxExecute(argv, asynchronous ? wxEXEC_ASYNC : wxEXEC_BLOCK | wxEXEC_NODISABLE);
+    const auto result = wxExecute(argv.data(), asynchronous ? wxEXEC_ASYNC : wxEXEC_BLOCK | wxEXEC_NODISABLE);
     Require(asynchronous ? result > 0 : result == 0, "independent file writer must start or finish");
 }
 void Pause(int milliseconds) {
@@ -90,8 +92,9 @@ private:
         for (auto* child : dialog->GetChildren()) {
             if (auto* checkbox = wxDynamicCast(child, wxCheckBox)) {
                 Require(checkbox->IsEnabled(), "original monitoring options remain enabled in every mode");
-                const wxString labels[] = {"&Monitor continuously updated file (e.g. log file).",
-                                           "&Keep at document end after reloading.", "&Reset if a new file is opened."};
+                const std::array<wxString, 3> labels = {{"&Monitor continuously updated file (e.g. log file).",
+                                                         "&Keep at document end after reloading.",
+                                                         "&Reset if a new file is opened."}};
                 Require(checkboxes < 3 && checkbox->GetLabel() == labels[checkboxes],
                         "native dialog offers the original three option labels");
                 const bool expected =

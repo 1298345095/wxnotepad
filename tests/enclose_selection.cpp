@@ -5,6 +5,7 @@
 #include <wx/ffile.h>
 #include "steady_stopwatch.h"
 #include <wx/eventfilter.h>
+#include <array>
 #include <fstream>
 #include <functional>
 #include <utility>
@@ -108,7 +109,7 @@ void Shortcuts(EditorFrame* frame) {
     Require(TestEditor::Text(editor) == "'''x'''", "native Ctrl+3 encloses with triple single quotes");
     TestEditor::ResetStream(editor, "x", 0, 1);
     NativeKey(frame, '6', true);
-    Require(TestEditor::Text(editor) == "\"\"\"x\"\"\"", "native Ctrl+6 encloses with triple double quotes");
+    Require(TestEditor::Text(editor) == R"("""x""")", "native Ctrl+6 encloses with triple double quotes");
     TestEditor::ResetStream(editor, "x", 0, 1);
     NativeKey(frame, '9', true);
     Require(TestEditor::Text(editor) == "```x```", "native Ctrl+9 encloses with triple backticks");
@@ -259,11 +260,11 @@ void PublicBehavior(EditorFrame* frame) {
         const char* expected;
         intptr_t prefixLength;
     };
-    const EolFixture fixtures[] = {
+    const std::array<EolFixture, 3> fixtures{{
         {Scintilla::EndOfLine::CrLf, "前\r\nA\rB\nxS\r\nT\rU\nV", 9},
         {Scintilla::EndOfLine::Lf, "前\nA\rB\nxS\nT\rU\nV", 8},
         {Scintilla::EndOfLine::Cr, "前\rA\rB\nxS\rT\rU\nV", 8},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         TestEditor::ResetStream(editor, "x", 1, 0);
         editor->Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(fixture.mode)));
@@ -376,12 +377,12 @@ void SavedBytes(EditorFrame* frame) {
         const char* command;
         const char* after;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 4> fixtures{{
         {"cpp", "C/C++", "Triple Single Quotes", "\x{ef}\x{bb}\x{bf}'''中文'''\r\nnext\nlast\r"},
         {"py", "Python", "Triple Double Quotes", "\x{ef}\x{bb}\x{bf}\"\"\"中文\"\"\"\r\nnext\nlast\r"},
         {"json", "JSON", "Triple Backticks", "\x{ef}\x{bb}\x{bf}```中文```\r\nnext\nlast\r"},
         {"txt", "Plain Text", "Triple Single Quotes", "\x{ef}\x{bb}\x{bf}'''中文'''\r\nnext\nlast\r"},
-    };
+    }};
     const std::string before = "\x{ef}\x{bb}\x{bf}中文\r\nnext\nlast\r";
     for (const auto& fixture : fixtures) {
         using enum SaveStatus;
@@ -403,11 +404,11 @@ void SavedBytes(EditorFrame* frame) {
                 "one Redo and save restore independently read enclosed disk bytes");
     }
     using EncodedFixture = TestFiles::EncodedFixture;
-    const EncodedFixture encoded[] = {
+    const std::array<EncodedFixture, 2> encoded{{
         {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}", "\x{ce}\x{c4}\n\x{d6}\x{d0}\x{d6}\x{d0}"},
         {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe}\x{2d}\x{4e}", 4),
          std::string("\x{ff}\x{fe}\x{87}\x{65}\n\0\x{2d}\x{4e}\x{2d}\x{4e}", 10)},
-    };
+    }};
     for (const auto& fixture : encoded) {
         using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".txt");

@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "encoded_file_helpers.h"
 #include "native_key_helpers.h"
@@ -240,16 +241,16 @@ void SavedState(EditorFrame* frame) {
     auto* editor = frame->Editor();
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-current-line");
     std::filesystem::create_directory(directory);
-    const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, "A\x{E4}\x{B8}\x{AD}\r\nlast", "A\x{E4}\x{B8}\x{AD}\r\nlast!"},
-        {"utf16", FileEncoding::Utf16Le,
-         std::string("\x{FF}\x{FE}"
-                     "A\0-\x{4E}\r\0\n\0",
-                     10),
-         std::string("\x{FF}\x{FE}"
-                     "A\0-\x{4E}\r\0\n\0!\0",
-                     12)},
-        {"gbk", FileEncoding::Gbk, "A\x{D6}\x{D0}\nlast", "A\x{D6}\x{D0}\nlast!"}};
+    const std::array<TestFiles::EncodedFixture, 3> fixtures = {
+        {{"utf8", FileEncoding::Utf8, "A\x{E4}\x{B8}\x{AD}\r\nlast", "A\x{E4}\x{B8}\x{AD}\r\nlast!"},
+         {"utf16", FileEncoding::Utf16Le,
+          std::string("\x{FF}\x{FE}"
+                      "A\0-\x{4E}\r\0\n\0",
+                      10),
+          std::string("\x{FF}\x{FE}"
+                      "A\0-\x{4E}\r\0\n\0!\0",
+                      12)},
+         {"gbk", FileEncoding::Gbk, "A\x{D6}\x{D0}\nlast", "A\x{D6}\x{D0}\nlast!"}}};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".txt");

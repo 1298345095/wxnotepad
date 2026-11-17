@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <array>
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include <wx/choice.h>
@@ -142,10 +143,10 @@ void Policies(EditorFrame* frame, const std::filesystem::path& directory) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     const std::string source = "a \t\r\nb \t\nc \t";
-    const Policy policies[] = {{false, false, "a \t\r\nb \t\nc \t"},
-                               {true, false, "a \t\nb \t\nc \t"},
-                               {false, true, "a\r\nb\nc"},
-                               {true, true, "a\nb\nc"}};
+    const std::array<Policy, 4> policies = {{{false, false, "a \t\r\nb \t\nc \t"},
+                                             {true, false, "a \t\nb \t\nc \t"},
+                                             {false, true, "a\r\nb\nc"},
+                                             {true, true, "a\nb\nc"}}};
     for (const auto& policy : policies) {
         CheckPolicy(frame, directory, source, policy);
     }
@@ -200,11 +201,11 @@ void Encodings(EditorFrame* frame, const std::filesystem::path& directory) {
         std::string expected;
         std::optional<FileEncoding> encoding;
     };
-    const Sample samples[] = {
-        {"utf8", "中 \t\r\nnext \nlast\t", "中\nnext\nlast", FileEncoding::Utf8},
-        {"utf16", "\x{ff}\x{fe}\x{2d}\x{4e} \0\t\0\r\0\n\0n\0 \0\n\0z\0\t\0"s,
-         "\x{ff}\x{fe}\x{2d}\x{4e}\n\0n\0\n\0z\0"s, FileEncoding::Utf16Le},
-        {"gbk", "\x{d6}\x{d0} \t\r\nnext \nlast\t", "\x{d6}\x{d0}\nnext\nlast", FileEncoding::Gbk}};
+    const std::array<Sample, 3> samples = {
+        {{"utf8", "中 \t\r\nnext \nlast\t", "中\nnext\nlast", FileEncoding::Utf8},
+         {"utf16", "\x{ff}\x{fe}\x{2d}\x{4e} \0\t\0\r\0\n\0n\0 \0\n\0z\0\t\0"s,
+          "\x{ff}\x{fe}\x{2d}\x{4e}\n\0n\0\n\0z\0"s, FileEncoding::Utf16Le},
+         {"gbk", "\x{d6}\x{d0} \t\r\nnext \nlast\t", "\x{d6}\x{d0}\nnext\nlast", FileEncoding::Gbk}}};
     for (const auto& sample : samples) {
         const auto input = directory / (std::string(sample.name) + ".txt");
         const auto output = directory / (std::string(sample.name) + "-as.txt");

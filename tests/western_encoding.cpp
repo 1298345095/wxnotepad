@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -375,8 +376,8 @@ void ExplicitOpen(EditorFrame* frame) {
         const char* input;
         const char* text;
     };
-    constexpr Fixture fixtures[] = {{"Open As Windows-1252...", FileEncoding::Windows1252, "\x{80}", "€"},
-                                    {"Open As DOS-437...", FileEncoding::Dos437, "\x{ec}", "∞"}};
+    constexpr std::array<Fixture, 2> fixtures = {{{"Open As Windows-1252...", FileEncoding::Windows1252, "\x{80}", "€"},
+                                                  {"Open As DOS-437...", FileEncoding::Dos437, "\x{ec}", "∞"}}};
     for (const auto& fixture : fixtures) {
         const auto path = TestFiles::TemporaryDirectory("open-as-western.nfo");
         TestFiles::WriteBytes(path, fixture.input);

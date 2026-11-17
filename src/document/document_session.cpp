@@ -16,6 +16,7 @@
 #include <wx/translation.h>
 #include <cstdio>
 #include <algorithm>
+#include <array>
 #ifdef __WXMSW__
 #include <windows.h>
 #else
@@ -59,8 +60,8 @@ std::optional<FileTimes> ReadFileTimes(const wxString& path) {
     return FileTimes{info.st_atim, info.st_mtim};
 }
 bool SetFileTimes(const wxString& path, const FileTimes& times) {
-    const timespec fields[]{times.access, times.modified};
-    return ::utimensat(AT_FDCWD, path.utf8_str(), fields, 0) == 0;
+    const std::array fields{times.access, times.modified};
+    return ::utimensat(AT_FDCWD, path.utf8_str(), fields.data(), 0) == 0;
 }
 #endif
 
@@ -495,8 +496,8 @@ bool DocumentSession::UpdateFileTime() {
     const int file = ::open(path_.utf8_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     if (file < 0) return false;
     // Preserve access time; ctime follows the filesystem's metadata-update rules.
-    const timespec times[]{{0, UTIME_OMIT}, {0, UTIME_NOW}};
-    const bool updated = ::futimens(file, times) == 0;
+    const std::array<timespec, 2> times{{{0, UTIME_OMIT}, {0, UTIME_NOW}}};
+    const bool updated = ::futimens(file, times.data()) == 0;
     ::close(file);
 #endif
     return updated;
@@ -660,9 +661,9 @@ void DocumentSession::SelectLanguage(std::optional<SyntaxLanguage> language) {
     // Pinned Styles.cpp::Style_SelectLexer sniffs only the canonical Web/XML
     // choices; explicit dialect choices retain the user's selected language.
     if (language == SyntaxLanguage::Html || language == SyntaxLanguage::Xml) {
-        char prefix[4000]{};
-        editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
-        markupDialect_ = DetectMarkupDocType(prefix);
+        std::array<char, 4000> prefix{};
+        editor_.Send(Scintilla::Message::GetText, prefix.size() - 1, reinterpret_cast<intptr_t>(prefix.data()));
+        markupDialect_ = DetectMarkupDocType(prefix.data());
     }
     languageOverride_ = language;
     if (!language) DetectAutomaticLanguage();
@@ -709,9 +710,9 @@ bool DocumentSession::DetectAutomaticLanguage() {
     // Match original SciCall_GetText(255) with the original 256-byte buffer.
     // Style_GetDocTypeLanguage inspects a larger header than the 255-byte
     // filename/shebang/markup guess. DetectLanguage retains both limits.
-    char prefix[4000]{};
-    editor_.Send(Scintilla::Message::GetText, sizeof(prefix) - 1, reinterpret_cast<intptr_t>(prefix));
-    const auto detected = DetectLanguage(path_, prefix, detection_);
+    std::array<char, 4000> prefix{};
+    editor_.Send(Scintilla::Message::GetText, prefix.size() - 1, reinterpret_cast<intptr_t>(prefix.data()));
+    const auto detected = DetectLanguage(path_, prefix.data(), detection_);
     automaticLanguage_ = detected ? detected->schemeLanguage : SyntaxLanguage::PlainText;
     markupDialect_ = detected ? detected->markupDialect : std::nullopt;
     return detected.has_value();

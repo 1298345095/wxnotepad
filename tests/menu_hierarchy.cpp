@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include "settings/settings_store.h"
 #include <wx/menu.h>
 #include <stdexcept>
@@ -27,7 +28,7 @@ void Order(wxMenu* menu, std::initializer_list<const char*> names) {
 }
 void CheckMenu(EditorFrame* frame) {
     auto* bar = frame->GetMenuBar();
-    constexpr const char* names[] = {"File", "Edit", "Search", "View", "Scheme", "Settings"};
+    constexpr std::array<const char*, 6> names = {{"File", "Edit", "Search", "View", "Scheme", "Settings"}};
     Require(bar->GetMenuCount() == std::size(names), "delivered menus follow the original six groups");
     for (size_t index = 0; index < std::size(names); ++index)
         Require(bar->GetMenuLabelText(index) == names[index], "original top-level menu order");

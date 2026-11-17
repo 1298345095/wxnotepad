@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "native_search_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
@@ -111,7 +112,7 @@ void SelectionBoundaries(EditorFrame* frame, bool backwards) {
 void Conversions(EditorFrame* frame) {
     auto* editor = frame->Editor();
     // Literal results from the pinned EditSpacesToTabs/EditTabsToSpaces rules.
-    const ConversionFixture fixtures[] = {
+    const std::array<ConversionFixture, 13> fixtures = {{
         {"Tabify Selection", 4, "abc d", "abc d"},
         {"Tabify Selection", 4, "abc  d", "abc\t d"},
         {"Tabify Selection", 4, " \t  X\t Y\r\n    Z\n \r  ", "\t  X\t Y\r\n\tZ\n \r  "},
@@ -125,7 +126,7 @@ void Conversions(EditorFrame* frame) {
         {"Untabify Selection", 4, "\tA\tB\r\n \tC\n😀\tX\rD\tY", "    A   B\r\n    C\n😀  X\rD   Y"},
         {"Untabify Indent", 4, "\tA\tB\r\n \tC\n😀\tX\rD\tY", "    A\tB\r\n    C\n😀\tX\rD\tY"},
         {"Untabify Selection", 3, "😀\tX\n\tY", "😀 X\n   Y"},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         for (bool backwards : {false, true}) {
             CheckConversion(frame, fixture, backwards);
@@ -216,7 +217,7 @@ void SavedBytes(EditorFrame* frame) {
         std::string before;
         std::string after;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 6> fixtures = {{
         {"utf8-bom", "Untabify Selection", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}😀\tX\r\n \t中\nlast\t",
          "\x{ef}\x{bb}\x{bf}😀  X\r\n    中\nlast    "},
         {"gbk", "Untabify Selection", FileEncoding::Gbk, "\x{d6}\x{d0}\tX\rY\t\n", "\x{d6}\x{d0}   X\rY   \n"},
@@ -228,7 +229,7 @@ void SavedBytes(EditorFrame* frame) {
         {"tabify-indent-gbk", "Tabify Indent", FileEncoding::Gbk, "    \x{d6}\x{d0}   X\rY   Z",
          "\t\x{d6}\x{d0}   X\rY   Z"},
         {"untabify-indent-utf8", "Untabify Indent", FileEncoding::Utf8, " \tA\tB\n\tC", "    A\tB\n    C"},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         const auto path = directory / (std::string(fixture.name) + ".cpp");

@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include "settings/settings_store.h"
 #include "syntax/syntax_scheme.h"
 #include <wx/checkbox.h>
@@ -163,11 +164,11 @@ void WordSettings(EditorFrame* frame, SettingsStore& settings, bool reopen) {
                 "word completion flags and normalized punctuation reopen");
         return;
     }
-    const char* options[] = {
-        "Complete words",           "Scan words in document",   "Only words in document",     "English IME mode only",
-        "Complete inside comments", "Complete inside strings",  "Complete inside plain text", "Scan inside comments",
-        "Scan inside strings",      "Scan inside plain text",   "Complete with Enter",        "Complete with Tab",
-        "Complete with Space",      "Complete with punctuation"};
+    std::array<const char*, 14> options = {
+        {"Complete words", "Scan words in document", "Only words in document", "English IME mode only",
+         "Complete inside comments", "Complete inside strings", "Complete inside plain text", "Scan inside comments",
+         "Scan inside strings", "Scan inside plain text", "Complete with Enter", "Complete with Tab",
+         "Complete with Space", "Complete with punctuation"}};
     const auto edit = [&options](wxDialog* dialog) {
         for (const char* name : options)
             Click(Check(dialog, name));
@@ -243,9 +244,9 @@ public:
                         "insertion setting bit must be a power of two from 1 through 256");
                 const auto bit = static_cast<int>(requestedBit);
                 const bool reopen = argv[1] == "--reopen";
-                const char* labels[] = {"Parentheses ()",    "Braces {}",         "Square brackets []",
-                                        "Angle brackets <>", "Double quotes",     "Single quotes",
-                                        "Backticks",         "Space after comma", "Space after comment"};
+                std::array<const char*, 9> labels = {{"Parentheses ()", "Braces {}", "Square brackets []",
+                                                      "Angle brackets <>", "Double quotes", "Single quotes",
+                                                      "Backticks", "Space after comma", "Space after comment"}};
                 const auto index = std::countr_zero(static_cast<unsigned>(bit));
                 if (reopen) {
                     Require(settings_->values.autoInsertMask == (PreservedBit | (511 ^ bit)),

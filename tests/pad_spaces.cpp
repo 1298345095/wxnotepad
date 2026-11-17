@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "encoded_file_helpers.h"
 #include "native_search_helpers.h"
 #include "settings/settings_store.h"
@@ -62,7 +63,7 @@ void StreamFixtures(EditorFrame* frame) {
         intptr_t resultCaret;
     };
     // Literal results from EditPadWithSpaces and the pinned core's column/selection operations.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 9> fixtures = {{
         {"single-line reverse selection pads whole document", "A\nlong\nx", 4, 3, "A   \nlong\nx   ", 7, 6},
         {"forward partial multiline selection", "AA\nbbbb\nx\nlastLONG", 1, 9, "AA  \nbbbb\nx   \nlastLONG", 0, 14},
         {"reverse partial multiline selection", "AA\nbbbb\nx\nlastLONG", 9, 1, "AA  \nbbbb\nx   \nlastLONG", 14, 0},
@@ -73,7 +74,7 @@ void StreamFixtures(EditorFrame* frame) {
          0, 0},
         {"Unicode scalar columns and combining marks", "😀\nx\né", 0, 0, "😀 \nx \né", 0, 0},
         {"whitespace-only line participates", "abcd\n \n\t", 0, 0, "abcd\n    \n\t", 0, 0},
-    };
+    }};
     editor->SetIndentationWidths(4, 4);
     for (const auto& fixture : fixtures) {
         Reset(editor, fixture.before, fixture.anchor, fixture.caret);
@@ -274,13 +275,13 @@ void SavedBytes(EditorFrame* frame) {
     const auto directory = TestFiles::TemporaryDirectory("wxnotepad-pad-spaces");
     std::filesystem::create_directory(directory);
     using Fixture = TestFiles::EncodedFixture;
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8-bom", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中文\r\nA\n😀\r", "\x{ef}\x{bb}\x{bf}中文\r\nA \n😀 \r  "},
         {"gbk", FileEncoding::Gbk, "\x{d6}\x{d0}\x{ce}\x{c4}\rA\r\nx\n", "\x{d6}\x{d0}\x{ce}\x{c4}\rA \r\nx \n  "},
         {"utf16-bom", FileEncoding::Utf16Le,
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0\x{41}\0", 12),
          std::string("\x{ff}\x{fe}\x{2d}\x{4e}\x{87}\x{65}\x{0d}\0\x{0a}\0\x{41}\0\x{20}\0", 14)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         const auto path = directory / (std::string(fixture.name) + ".txt");
         TestFiles::WriteBytes(path, fixture.before);

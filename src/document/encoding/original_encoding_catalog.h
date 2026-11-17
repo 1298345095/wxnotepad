@@ -1,7 +1,7 @@
 // Encoding catalog from Notepad4 89b8b36, src/EditEncoding.cpp.
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 // Metadata only: unsupported codecs are not converted by this port.
-constexpr OriginalEncoding catalog[] = {
+constexpr auto catalog = std::to_array<OriginalEncoding>({
     {0, false, "ANSI,ansi,ascii,"},
     {1, true, "OEM,oem,"},
     {0, false, ""},
@@ -94,4 +94,4 @@ constexpr OriginalEncoding catalog[] = {
     {50227, false, "x-cp50227,xcp50227,"},
     {50229, false, "ISO-2022-CN,iso2022cn,"},
     {20000, true, "x-Chinese-CNS,xchinesecns,"},
-};
+});

@@ -23,26 +23,26 @@ namespace {
 #include "syntax/generated/cmake_scheme_data.h"
 #include "syntax/generated/detection_extensions.h"
 
-constexpr const char* textExtensions[] = {"txt"};
-constexpr const char* cppExtensions[] = {"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"};
-constexpr const char* pythonExtensions[] = {"py", "pyw", "pyi"};
-constexpr const char* jsonExtensions[] = {"json"};
-constexpr const char* bashExtensions[] = {"sh", "zsh", "bash", "in"};
-constexpr const char* cShellExtensions[] = {"csh", "tcsh"};
-constexpr const char* m4Extensions[] = {"m4", "ac"};
-constexpr SyntaxProperty cppProperties[] = {{"lexer.lang", "0"}};
-constexpr SyntaxProperty bashProperties[] = {{"lexer.lang", "0"}};
-constexpr SyntaxProperty cShellProperties[] = {{"lexer.lang", "1"}};
-constexpr SyntaxProperty m4Properties[] = {{"lexer.lang", "2"}};
-constexpr SyntaxProperty markdownGitHubProperties[] = {{"lexer.lang", "0"}};
-constexpr SyntaxProperty markdownGitLabProperties[] = {{"lexer.lang", "1"}};
-constexpr SyntaxProperty markdownPandocProperties[] = {{"lexer.lang", "2"}};
-constexpr const char* jsxExtensions[] = {"jsx"};
-constexpr const char* tsxExtensions[] = {"tsx"};
-constexpr SyntaxProperty javascriptProperties[] = {{"lexer.lang", "0"}};
-constexpr SyntaxProperty jsxProperties[] = {{"lexer.lang", "1"}};
-constexpr SyntaxProperty typescriptProperties[] = {{"lexer.lang", "2"}};
-constexpr SyntaxProperty tsxProperties[] = {{"lexer.lang", "3"}};
+constexpr auto textExtensions = std::to_array<const char*>({"txt"});
+constexpr auto cppExtensions = std::to_array<const char*>({"c", "cpp", "cxx", "cc", "h", "hpp", "hxx", "hh"});
+constexpr auto pythonExtensions = std::to_array<const char*>({"py", "pyw", "pyi"});
+constexpr auto jsonExtensions = std::to_array<const char*>({"json"});
+constexpr auto bashExtensions = std::to_array<const char*>({"sh", "zsh", "bash", "in"});
+constexpr auto cShellExtensions = std::to_array<const char*>({"csh", "tcsh"});
+constexpr auto m4Extensions = std::to_array<const char*>({"m4", "ac"});
+constexpr auto cppProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "0"}});
+constexpr auto bashProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "0"}});
+constexpr auto cShellProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "1"}});
+constexpr auto m4Properties = std::to_array<SyntaxProperty>({{"lexer.lang", "2"}});
+constexpr auto markdownGitHubProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "0"}});
+constexpr auto markdownGitLabProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "1"}});
+constexpr auto markdownPandocProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "2"}});
+constexpr auto jsxExtensions = std::to_array<const char*>({"jsx"});
+constexpr auto tsxExtensions = std::to_array<const char*>({"tsx"});
+constexpr auto javascriptProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "0"}});
+constexpr auto jsxProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "1"}});
+constexpr auto typescriptProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "2"}});
+constexpr auto tsxProperties = std::to_array<SyntaxProperty>({{"lexer.lang", "3"}});
 // Pinned Styles.cpp / LexHTML.cxx HtmlOption contract. lexer.lang stores
 // these flags as little endian bytes, rather than a decimal property string.
 enum HtmlOption : unsigned {
@@ -67,28 +67,28 @@ constexpr auto jspOptions = HtmlOptionBytes(JspBase | HtmlAllowAsp);
 constexpr auto jspxOptions = HtmlOptionBytes(JspBase | HtmlAllowJspx | HtmlIsXml);
 constexpr auto xmlOptions = HtmlOptionBytes(XmlDefault);
 constexpr auto svgOptions = HtmlOptionBytes(XmlDefault | HtmlAllowStyle);
-constexpr SyntaxProperty htmlProperties[] = {{"lexer.lang", htmlOptions.data()}};
-constexpr SyntaxProperty htmlVbProperties[] = {{"lexer.lang", htmlVbOptions.data()}};
-constexpr SyntaxProperty jspProperties[] = {{"lexer.lang", jspOptions.data()}};
-constexpr SyntaxProperty jspxProperties[] = {{"lexer.lang", jspxOptions.data()}};
-constexpr SyntaxProperty xmlProperties[] = {{"lexer.lang", xmlOptions.data()}};
-constexpr SyntaxProperty svgProperties[] = {{"lexer.lang", svgOptions.data()}};
-constexpr const char* aspExtensions[] = {"asp"};
-constexpr const char* aspxExtensions[] = {"aspx"};
-constexpr const char* jspExtensions[] = {"jsp"};
-constexpr const char* jspxExtensions[] = {"jspx"};
-constexpr const char* svgExtensions[] = {"svg"};
-constexpr const char* xsdExtensions[] = {"xsd"};
-constexpr const char* xsltExtensions[] = {"xsl", "xslt"};
-constexpr const char* dtdExtensions[] = {"dtd"};
-constexpr const char* plistExtensions[] = {"plist"};
+constexpr auto htmlProperties = std::to_array<SyntaxProperty>({{"lexer.lang", htmlOptions.data()}});
+constexpr auto htmlVbProperties = std::to_array<SyntaxProperty>({{"lexer.lang", htmlVbOptions.data()}});
+constexpr auto jspProperties = std::to_array<SyntaxProperty>({{"lexer.lang", jspOptions.data()}});
+constexpr auto jspxProperties = std::to_array<SyntaxProperty>({{"lexer.lang", jspxOptions.data()}});
+constexpr auto xmlProperties = std::to_array<SyntaxProperty>({{"lexer.lang", xmlOptions.data()}});
+constexpr auto svgProperties = std::to_array<SyntaxProperty>({{"lexer.lang", svgOptions.data()}});
+constexpr auto aspExtensions = std::to_array<const char*>({"asp"});
+constexpr auto aspxExtensions = std::to_array<const char*>({"aspx"});
+constexpr auto jspExtensions = std::to_array<const char*>({"jsp"});
+constexpr auto jspxExtensions = std::to_array<const char*>({"jspx"});
+constexpr auto svgExtensions = std::to_array<const char*>({"svg"});
+constexpr auto xsdExtensions = std::to_array<const char*>({"xsd"});
+constexpr auto xsltExtensions = std::to_array<const char*>({"xsl", "xslt"});
+constexpr auto dtdExtensions = std::to_array<const char*>({"dtd"});
+constexpr auto plistExtensions = std::to_array<const char*>({"plist"});
 // Pinned stlDefault.cpp::lexTextFile uses the distinct Text Settings table.
 constexpr SyntaxOriginalMetadata plainOriginal = {
     SyntaxLexerAttribute::NoLineComment | SyntaxLexerAttribute::NoBlockComment |
         SyntaxLexerAttribute::IndentBasedFolding | SyntaxLexerAttribute::IndentLookForward |
         SyntaxLexerAttribute::PlainTextFile,
     4, 4, (1 << 1) | (1 << 2)};
-constexpr SyntaxDefinition definitions[] = {
+constexpr auto definitions = std::to_array<SyntaxDefinition>({
     {wxTRANSLATE("Plain Text"),
      textExtensions,
      {},
@@ -312,7 +312,7 @@ constexpr SyntaxDefinition definitions[] = {
      false,
      nullptr,
      cmakeOriginal},
-};
+});
 
 bool Space(char ch) {
     return ch == ' ' || (ch >= '\t' && ch <= '\r');

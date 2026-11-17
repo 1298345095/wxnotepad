@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <fstream>
@@ -31,7 +32,7 @@ void Fixtures(EditorFrame* frame) {
         intptr_t resultCaret;
     };
     // Literal outcomes of pinned EditRemoveBlankLines, including its final-line exception.
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 14> fixtures = {{
         {"merge keeps final blank whitespace and EOL", "A\n \r\n\t\rB", true, 4, 4, "A\n\t\rB", 2, 2},
         {"remove whole document from caret", "A\n \r\n\t\rB", false, 4, 4, "A\nB", 2, 2},
         {"merge leading, interior, trailing runs", " \n\t\nA\n\n \r\nB\n \n\t", true, 0, 0, "\t\nA\n \r\nB\n\t", 0, 0},
@@ -48,7 +49,7 @@ void Fixtures(EditorFrame* frame) {
         {"remove entire whitespace document", " \r\n\t", false, 0, 0, "", 0, 0},
         {"other whitespace bytes are ordinary text", "\v\n\f\n\x{c2}\x{a0}\n \t\n\nZ", false, 0, 0,
          "\v\n\f\n\x{c2}\x{a0}\nZ", 0, 0},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
@@ -79,11 +80,16 @@ void NoChange(EditorFrame* frame) {
         intptr_t anchor;
         intptr_t caret;
     };
-    const Fixture fixtures[] = {
-        {"", true, 0, 0},        {"", false, 0, 0},           {"A\n", true, 0, 0},
-        {"A\n", false, 0, 0},    {"A\n \nB\n\t", true, 3, 3}, {"A\nB", false, 2, 0},
-        {"\t \nA", false, 1, 2}, {"A\n \n\t\nZ", true, 2, 4},
-    };
+    const std::array<Fixture, 8> fixtures = {{
+        {"", true, 0, 0},
+        {"", false, 0, 0},
+        {"A\n", true, 0, 0},
+        {"A\n", false, 0, 0},
+        {"A\n \nB\n\t", true, 3, 3},
+        {"A\nB", false, 2, 0},
+        {"\t \nA", false, 1, 2},
+        {"A\n \n\t\nZ", true, 2, 4},
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         TestEditor::ResetStream(editor, fixture.before, fixture.anchor, fixture.caret);
@@ -212,14 +218,14 @@ void SavedBytes(EditorFrame* frame) {
         std::string merged;
         std::string removed;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf} \r\n\t\n中文\r\n \t\r\n\nZ\n \t",
          "\x{ef}\x{bb}\x{bf}\t\n中文\r\n\nZ\n \t", "\x{ef}\x{bb}\x{bf}中文\r\nZ\n"},
         {"gbk", FileEncoding::Gbk, " \r\n\t\n\x{d6}\x{d0}\x{ce}\x{c4}\r\n \t\r\n\nZ\n \t",
          "\t\n\x{d6}\x{d0}\x{ce}\x{c4}\r\n\nZ\n \t", "\x{d6}\x{d0}\x{ce}\x{c4}\r\nZ\n"},
         {"utf16", FileEncoding::Utf16Le, std::string("\x{ff}\x{fe} \0\n\0\t\0\r\0\n\0A\0\n\0 \0\t\0", 20),
          std::string("\x{ff}\x{fe}\t\0\r\0\n\0A\0\n\0 \0\t\0", 16), std::string("\x{ff}\x{fe}\x{41}\0\n\0", 6)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         for (const bool merge : {true, false}) {
             using enum SaveStatus;

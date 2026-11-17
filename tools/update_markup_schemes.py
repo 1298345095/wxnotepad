@@ -23,13 +23,13 @@ def main():
         name = filename.lower()
         header = generate_scheme(data, filename, filename, name)
         (ROOT / f'src/syntax/generated/{name}_scheme_data.h').write_text(header, encoding='utf-8', newline='\n')
-    output += ["constexpr SyntaxStyle markupEmbeddedStyles[] = {"]
+    output += ["constexpr auto markupEmbeddedStyles = std::to_array<SyntaxStyle>({"]
     for filename, group, offset in [("stlJavaScript.cpp", "JS", "js_style"), ("stlCSS.cpp", "CSS", "css_style")]:
         path = "src/EditLexers/" + filename
         data = read_pinned(args.source, path)
         output.extend(provenance("update_markup_schemes.py", path, data))
         output.extend(styles(data.decode("utf-8"), group, offset))
-    output += ["};", "// clang-format on", ""]
+    output += ["});", "// clang-format on", ""]
     (ROOT / "src/syntax/generated/markup_scheme_data.h").write_text("\n".join(output), encoding="utf-8", newline="\n")
 
 

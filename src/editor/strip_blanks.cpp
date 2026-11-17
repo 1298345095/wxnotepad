@@ -28,8 +28,8 @@ void StripSelectedBlanks(EditorControl& editor, bool leading) {
                                    {0, 0}};
     bool editing = false;
     while (editor.Send(FindTextFull, static_cast<uintptr_t>(std::to_underlying(Scintilla::FindOption::RegExp)),
-                       reinterpret_cast<intptr_t>(&find)) >= 0) {
-        if (find.chrgText.cpMax > editor.Send(GetSelectionEnd)) break;
+                       reinterpret_cast<intptr_t>(&find)) >= 0 &&
+           find.chrgText.cpMax <= editor.Send(GetSelectionEnd)) {
         if (!editing) {
             editor.Send(BeginUndoAction);
             editing = true;
@@ -39,13 +39,12 @@ void StripSelectedBlanks(EditorControl& editor, bool leading) {
         const auto inserted = editor.Send(ReplaceTarget, 0, reinterpret_cast<intptr_t>(""));
         find.chrg.cpMin = find.chrgText.cpMin + inserted;
         find.chrg.cpMax += find.chrg.cpMin - find.chrgText.cpMax;
-        if (find.chrg.cpMin == find.chrg.cpMax) break;
-        if (leading) {
+        if (leading && find.chrg.cpMin != find.chrg.cpMax) {
             if (const auto line = editor.Send(LineFromPosition, find.chrg.cpMin);
                 editor.Send(PositionFromLine, line) == find.chrg.cpMin)
                 find.chrg.cpMin = editor.Send(PositionFromLine, line + 1);
-            if (find.chrg.cpMin == find.chrg.cpMax) break;
         }
+        if (find.chrg.cpMin == find.chrg.cpMax) break;
     }
     if (editing) {
         editor.Send(EndUndoAction);

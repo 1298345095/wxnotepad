@@ -58,9 +58,9 @@ class JavaScriptGeneratorTest(unittest.TestCase):
                 self.assertIn('{SCE_JS_WORD, 0x0000FF, 0xFFFF00, true, false, false}', text)
                 self.assertIn(f'{name}Keywords[0] : "", 2U << 8U', text)
                 self.assertIn(f'{name}Keywords[5] : "", 0', text)
-            self.assertIn('javascriptExtensions[] = {"js", "mjs", "jsx"}',
+            self.assertIn('javascriptExtensions = std::to_array<const char*>({"js", "mjs", "jsx"})',
                           (output / 'javascript_scheme_data.h').read_text(encoding='utf-8'))
-            self.assertIn('typescriptExtensions[] = {"ts", "tsx"}',
+            self.assertIn('typescriptExtensions = std::to_array<const char*>({"ts", "tsx"})',
                           (output / 'typescript_scheme_data.h').read_text(encoding='utf-8'))
 
     def test_source_argument_is_required(self):

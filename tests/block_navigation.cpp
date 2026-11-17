@@ -1,4 +1,5 @@
 #include "native_key_helpers.h"
+#include <array>
 #include "native_fold_helpers.h"
 #include "block_navigation_fixtures.h"
 #include "file_helpers.h"
@@ -13,13 +14,9 @@ using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-constexpr const char* names[] = {"Goto Block Start",
-                                 "Goto Block End",
-                                 "Goto Previous Block",
-                                 "Goto Next Block",
-                                 "Goto Previous Sibling Block",
-                                 "Goto Next Sibling Block",
-                                 "Select Lines in Current Block"};
+constexpr std::array<const char*, 7> names = {{"Goto Block Start", "Goto Block End", "Goto Previous Block",
+                                               "Goto Next Block", "Goto Previous Sibling Block",
+                                               "Goto Next Sibling Block", "Select Lines in Current Block"}};
 void Position(EditorControl* editor, const BlockReference::Fixture& row) {
     using enum Scintilla::Message;
     if (editor->Send(GetAnchor) != row.expectedAnchor || editor->Send(GetCurrentPos) != row.expectedCaret ||
@@ -90,10 +87,10 @@ void ReferenceCase(EditorFrame* frame, const int* commands, const int* modeIds, 
 void ReferenceCases(EditorFrame* frame, const int* commands) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
-    const int modeIds[] = {frame->GetMenuBar()->FindMenuItem("Settings", "None"),
-                           frame->GetMenuBar()->FindMenuItem("Settings", "Visual Studio"),
-                           frame->GetMenuBar()->FindMenuItem("Settings", "Normal"),
-                           frame->GetMenuBar()->FindMenuItem("Settings", "Old Visual Studio")};
+    const std::array<int, 4> modeIds = {{frame->GetMenuBar()->FindMenuItem("Settings", "None"),
+                                         frame->GetMenuBar()->FindMenuItem("Settings", "Visual Studio"),
+                                         frame->GetMenuBar()->FindMenuItem("Settings", "Normal"),
+                                         frame->GetMenuBar()->FindMenuItem("Settings", "Old Visual Studio")}};
     const auto encoding = frame->DocumentEncoding();
     const bool bom = frame->DocumentHasBom();
     for (size_t document = 0; document < std::size(BlockReference::documents); ++document) {
@@ -117,7 +114,7 @@ void ReferenceCases(EditorFrame* frame, const int* commands) {
                 "original fixture's styling and first-line fold header are ready after history setup");
         for (const auto& row : BlockReference::fixtures) {
             if (row.document != static_cast<int>(document)) continue;
-            ReferenceCase(frame, commands, modeIds, source, row, encoding, bom);
+            ReferenceCase(frame, commands, modeIds.data(), source, row, encoding, bom);
         }
         editor->Send(SetReadOnly, 0);
         editor->Send(Redo);
@@ -158,7 +155,7 @@ void ExcludedShortcut(EditorFrame* frame, int key, bool control, bool shift) {
 }
 void KeyboardCases(EditorFrame* frame, const int* commands) {
     auto* editor = frame->Editor();
-    const int keys[] = {'[', ']', ',', '.', ',', '.', ']'};
+    const std::array<int, 7> keys = {{'[', ']', ',', '.', ',', '.', ']'}};
     for (size_t index = 0; index < std::size(keys); ++index) {
         const bool control = index == 4 || index == 5;
         const bool shift = index == 6;
@@ -267,14 +264,14 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {
             try {
                 Require(ready, "owned native window must be presented");
-                int commands[std::size(names)];
+                std::array<int, std::size(names)> commands;
                 for (size_t index = 0; index < std::size(names); ++index) {
                     commands[index] = frame->GetMenuBar()->FindMenuItem("Search", names[index]);
                     Require(commands[index] != wxNOT_FOUND, "Search exposes the original navigation commands");
                 }
-                ReferenceCases(frame, commands);
-                KeyboardCases(frame, commands);
-                FilePolicyCases(frame, commands);
+                ReferenceCases(frame, commands.data());
+                KeyboardCases(frame, commands.data());
+                FilePolicyCases(frame, commands.data());
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

@@ -1,5 +1,6 @@
 #include "editor/date_time.h"
 #include "editor/editor_control.h"
+#include <array>
 #include <chrono>
 #include <ctime>
 #include <cwchar>
@@ -89,22 +90,22 @@ std::wstring MinuteFormat(std::wstring format, locale_t locale) {
 #endif
 
 wxString LocalizedDateTime(const std::tm& time, bool shortDate, const wxString& format) {
-    wchar_t output[256]{};
+    std::array<wchar_t, 256> output{};
 #ifdef __WXMSW__
     if (!format.empty()) {
-        if (!std::wcsftime(output, std::size(output), format.wc_str(), &time)) return {};
+        if (!std::wcsftime(output.data(), output.size(), format.wc_str(), &time)) return {};
     } else {
         const SYSTEMTIME local{static_cast<WORD>(time.tm_year + 1900), static_cast<WORD>(time.tm_mon + 1),
                                static_cast<WORD>(time.tm_wday),        static_cast<WORD>(time.tm_mday),
                                static_cast<WORD>(time.tm_hour),        static_cast<WORD>(time.tm_min),
                                static_cast<WORD>(time.tm_sec),         0};
-        wchar_t date[128]{};
-        wchar_t clock[128]{};
-        GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, shortDate ? DATE_SHORTDATE : DATE_LONGDATE, &local, nullptr, date,
-                        static_cast<int>(std::size(date)), nullptr);
-        GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, TIME_NOSECONDS, &local, nullptr, clock,
-                        static_cast<int>(std::size(clock)));
-        return wxString(clock) + " " + date;
+        std::array<wchar_t, 128> date{};
+        std::array<wchar_t, 128> clock{};
+        GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, shortDate ? DATE_SHORTDATE : DATE_LONGDATE, &local, nullptr,
+                        date.data(), static_cast<int>(date.size()), nullptr);
+        GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, TIME_NOSECONDS, &local, nullptr, clock.data(),
+                        static_cast<int>(clock.size()));
+        return wxString(clock.data()) + " " + date.data();
     }
 #else
     locale_t locale = newlocale(LC_TIME_MASK | LC_CTYPE_MASK, "", nullptr);
@@ -117,11 +118,11 @@ wxString LocalizedDateTime(const std::tm& time, bool shortDate, const wxString& 
         pattern = wxString(MinuteFormat(wxString::FromUTF8(nl_langinfo_l(T_FMT, locale)).ToStdWstring(), locale)) +
                   " " + wxString(dateFormat);
     }
-    const auto length = wcsftime_l(output, std::size(output), pattern.wc_str(), &time, locale);
+    const auto length = wcsftime_l(output.data(), output.size(), pattern.wc_str(), &time, locale);
     freelocale(locale);
     if (!length) return {};
 #endif
-    return wxString(output);
+    return wxString(output.data());
 }
 } // namespace
 

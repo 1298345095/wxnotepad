@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <array>
 #include "native_key_helpers.h"
 #include "settings/settings_store.h"
 #include "sort_reference_fixtures.h"
@@ -221,7 +222,7 @@ void Fixtures(EditorControl* editor) {
         const char* after;
         bool requiresCapturedLocale = false;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 18> fixtures = {{
         {"b\na\nc", SortOption::Descending, "c\nb\na"},
         {"a\nA\na\nB", SortOption::IgnoreCase, "a\nA\na\nB"},
         {"a\nA\na\nB", SortOption::IgnoreCase | SortOption::MergeDuplicate, "a\nB"},
@@ -245,7 +246,7 @@ void Fixtures(EditorControl* editor) {
          SortOption::FileType,
          "dir.ext\\file\nfile\nname.\nz.TXT\na.cpp\na "
          "b.ext\nfile..ext\ndir.ext/file\n.gitignore\na.tar.gz\nb.txt\na.txt:stream"},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         if (fixture.requiresCapturedLocale && !capturedLocale) continue;
@@ -403,7 +404,7 @@ void SavedBytes(EditorFrame* frame) {
         std::string before;
         std::string after;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 3> fixtures = {{
         {"utf8", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}中\r\nB\nA",
          "\x{ef}\x{bb}\x{bf}"
          "A\r\nB\r\n中"},
@@ -412,7 +413,7 @@ void SavedBytes(EditorFrame* frame) {
          std::string("\x{ff}\x{fe}"
                      "A\0\r\0\n\0B\0\r\0\n\0\x{2d}\x{4e}",
                      16)},
-    };
+    }};
     for (const auto& fixture : fixtures) {
         using enum Scintilla::Message;
         using enum SaveStatus;

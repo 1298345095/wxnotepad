@@ -1,4 +1,5 @@
 #include "app/editor_frame.h"
+#include <array>
 #include "editor/editor_control.h"
 #include "editor_test_helpers.h"
 #include "file_helpers.h"
@@ -97,8 +98,8 @@ Times ReadTimes(const std::filesystem::path& path) {
             info.st_ctim.tv_sec * NanosecondsPerSecond + info.st_ctim.tv_nsec};
 }
 void SetOldTimes(const std::filesystem::path& path) {
-    const timespec times[]{{1609459200, 123400000}, {1609545600, 567800000}};
-    Require(::utimensat(AT_FDCWD, path.c_str(), times, 0) == 0, "fixture timestamps must be settable");
+    const std::array<timespec, 2> times{{{1609459200, 123400000}, {1609545600, 567800000}}};
+    Require(::utimensat(AT_FDCWD, path.c_str(), times.data(), 0) == 0, "fixture timestamps must be settable");
 }
 long long ModifiedSeconds(const Times& times) {
     return times.modified / NanosecondsPerSecond;

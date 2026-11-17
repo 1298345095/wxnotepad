@@ -134,9 +134,9 @@ void NativeWheel(EditorControl* editor) {
 }
 void CheckZoomedGeometry(EditorControl* editor, std::string_view bytes, uint64_t revision) {
     using enum Scintilla::Message;
-    char font[100]{};
+    std::array<char, 100> font{};
     editor->Send(StyleGetFont, static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)),
-                 reinterpret_cast<intptr_t>(font));
+                 reinterpret_cast<intptr_t>(font.data()));
 #ifdef __WXMSW__
     constexpr std::array technologies{Scintilla::Technology::DirectWrite, Scintilla::Technology::Default};
 #else
@@ -155,15 +155,15 @@ void CheckZoomedGeometry(EditorControl* editor, std::string_view bytes, uint64_t
             editor->Update();
             wxYield();
             wxClientDC native(editor);
-            native.SetFont(wxFont(wxFontInfo(points).FaceName(wxString::FromUTF8(font))));
+            native.SetFont(wxFont(wxFontInfo(points).FaceName(wxString::FromUTF8(font.data()))));
 #ifdef __WXMSW__
             if (technology == Scintilla::Technology::DirectWrite) {
                 Require(editor->Send(TextWidth, static_cast<uintptr_t>(Scintilla::StylesCommon::Default),
                                      reinterpret_cast<intptr_t>("WWWWWW")) ==
-                            OriginalDirectWriteWidth(editor, font, points, "WWWWWW"),
+                            OriginalDirectWriteWidth(editor, font.data(), points, "WWWWWW"),
                         "zoomed DirectWrite text matches the pinned original at the same point size and DPI");
                 Require(editor->Send(GetMarginWidthN, 0) ==
-                            OriginalDirectWriteWidth(editor, font, points, "999") + editor->FromDIP(8),
+                            OriginalDirectWriteWidth(editor, font.data(), points, "999") + editor->FromDIP(8),
                         "DirectWrite line-number margin matches original native glyph metrics and DPI padding");
             } else
 #endif

@@ -1,4 +1,5 @@
 #include "editor_test_helpers.h"
+#include <array>
 #include "native_search_helpers.h"
 #include "native_key_helpers.h"
 #include "encoded_file_helpers.h"
@@ -172,7 +173,7 @@ void SavedBytes(EditorFrame* frame) {
         TestFiles::EncodedFixture file;
         bool upper;
     };
-    const Fixture fixtures[] = {
+    const std::array<Fixture, 5> fixtures = {{
         {{"utf8-upper", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}Straße ﬃ ΐ\r\n", "\x{ef}\x{bb}\x{bf}STRASSE FFI Ϊ́\r\n"},
          true},
         {{"gbk-upper", FileEncoding::Gbk,
@@ -197,7 +198,7 @@ void SavedBytes(EditorFrame* frame) {
                       "\0",
                       18)},
          false},
-    };
+    }};
     const auto directory = TestFiles::TemporaryDirectory("case-conversion");
     std::filesystem::create_directory(directory);
     for (const auto& fixture : fixtures) {

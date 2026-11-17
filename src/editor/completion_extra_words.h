@@ -1,10 +1,10 @@
 // Original Notepad4 89b8b36 src/EditAutoC_Data0.h; licenses/Notepad4.txt.
 // clang-format off
 constexpr unsigned NP2_KEYWORDS_COUNT = 4;
-using NP2_KEYWORDS = const char* const[NP2_KEYWORDS_COUNT];
+using NP2_KEYWORDS = std::array<const char*, NP2_KEYWORDS_COUNT>;
 
 // Doxygen
-static const char* const kwDoxyDoc[NP2_KEYWORDS_COUNT] = {
+static const NP2_KEYWORDS kwDoxyDoc = {
     "a addindex addtogroup anchor arg attention author authors b brief bug c callgraph callergraph category cite class "
     "code cond copybrief copydetails copydoc copyright date def defgroup deprecated details dir docbookonly "
     "dontinclude dot dotfile e else elseif em endcode endcond enddocbookonly enddot endhtmlonly endif endinternal "
@@ -21,7 +21,7 @@ static const char* const kwDoxyDoc[NP2_KEYWORDS_COUNT] = {
     "type name cref ", nullptr};
 
 // XML Schema
-static const char* const kwXmlSchema[NP2_KEYWORDS_COUNT] = {
+static const NP2_KEYWORDS kwXmlSchema = {
     "xs xsd schema simpleType complexType complexContent simpleContent extension restriction element unique key keyref "
     "selector field group all choice sequence any anyAttribute attribute attributeGroup include import redefine "
     "notation "
@@ -44,8 +44,8 @@ static const char* const kwXmlSchema[NP2_KEYWORDS_COUNT] = {
     nullptr};
 
 // XML Stylesheet
-static const char* const
-    kwXmlStylesheet[NP2_KEYWORDS_COUNT] =
+static const NP2_KEYWORDS
+    kwXmlStylesheet =
         {
             "xsl stylesheet transform attribute-set character-map output-character decimal-format import import-schema "
             "include "
@@ -78,7 +78,7 @@ static const char* const
             nullptr};
 
 // Apple Property List
-static const char* const kwPList[NP2_KEYWORDS_COUNT] = {"plist array data date dict key real integer string ", nullptr,
+static const NP2_KEYWORDS kwPList = {"plist array data date dict key real integer string ", nullptr,
                                                         nullptr, nullptr};
 
 

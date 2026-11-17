@@ -9,6 +9,7 @@
 #include <wx/wx.h>
 #include <wx/statusbr.h>
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -45,9 +46,9 @@ void Character(EditorControl* editor, int character) {
 }
 using TestEditor::Text;
 std::string Font(EditorControl* editor, int style) {
-    char name[256]{};
-    editor->Send(Message::StyleGetFont, style, reinterpret_cast<intptr_t>(name));
-    return name;
+    std::array<char, 256> name{};
+    editor->Send(Message::StyleGetFont, style, reinterpret_cast<intptr_t>(name.data()));
+    return name.data();
 }
 class PythonApp final : public wxApp {
 public:
@@ -101,7 +102,7 @@ public:
                                                    {"ValueError", SCE_PY_CLASS},
                                                    {"f\"", SCE_PY_FMTSTRING_DQ},
                                                    {"total:04d", SCE_PY_IDENTIFIER},
-                                                   {"\"\"\"中文", SCE_PY_TRIPLE_STRING_DQ},
+                                                   {R"("""中文)", SCE_PY_TRIPLE_STRING_DQ},
                                                    {"return", SCE_PY_WORD},
                                                    {"int", SCE_PY_WORD2}}) {
                     Style(editor, source.find(token), style);
@@ -194,7 +195,7 @@ public:
                 std::ofstream(path, std::ios::binary) << triple;
                 Require(frame->Open(Filename(path)).status == OpenStatus::Opened, "triple string fixture must open");
                 Paint(frame);
-                const auto close = triple.rfind("\"\"\"");
+                const auto close = triple.rfind(R"(""")");
                 const auto after = triple.find("return");
                 Style(editor, after, SCE_PY_WORD);
                 editor->Send(GotoPos, close);

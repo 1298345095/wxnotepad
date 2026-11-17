@@ -1,4 +1,5 @@
 #include "native_search_helpers.h"
+#include <array>
 #include "native_fold_helpers.h"
 #include "file_helpers.h"
 #include "encoded_file_helpers.h"
@@ -123,11 +124,11 @@ void Combined(EditorFrame* frame) {
                             "A\0\r\0\n\0B\0\n\0C\0\r\0",
                             16);
     const std::string gbk = "\x{d6}\x{d0}\r\nA\rB\n";
-    const TestFiles::EncodedFixture fixtures[] = {
-        {"utf8", FileEncoding::Utf8, utf8, utf8 + "!"},
-        {"utf8bom", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}" + utf8, "\x{ef}\x{bb}\x{bf}" + utf8 + "!"},
-        {"utf16le", FileEncoding::Utf16Le, utf16, utf16 + std::string("!\0", 2)},
-        {"gbk", FileEncoding::Gbk, gbk, gbk + "!"}};
+    const std::array<TestFiles::EncodedFixture, 4> fixtures = {
+        {{"utf8", FileEncoding::Utf8, utf8, utf8 + "!"},
+         {"utf8bom", FileEncoding::Utf8, "\x{ef}\x{bb}\x{bf}" + utf8, "\x{ef}\x{bb}\x{bf}" + utf8 + "!"},
+         {"utf16le", FileEncoding::Utf16Le, utf16, utf16 + std::string("!\0", 2)},
+         {"gbk", FileEncoding::Gbk, gbk, gbk + "!"}}};
     for (const auto& fixture : fixtures) {
 #ifdef __WXMSW__
         const auto filename = std::filesystem::path(wxString::FromUTF8(fixture.name).ToStdWstring() + L"-中文.txt");

@@ -1,5 +1,6 @@
 // Decision order, catalog and file-variable rules adapted from Notepad4
 // 89b8b36, src/EditEncoding.cpp and src/Edit.cpp. See licenses/Notepad4.txt.
+#include <array>
 #include "document/encoding/encoding_detection.h"
 #include "document/file_variables.h"
 #include "document/encoding/gbk_codec.h"
@@ -106,8 +107,8 @@ unsigned LegacyCodePage(unsigned native) {
 }
 
 int DefaultEncoding(int value) {
-    constexpr int mapping[] = {CPI_DEFAULT, CPI_UNICODEBOM, CPI_UNICODEBEBOM, CPI_UTF8, CPI_UTF8SIGN,
-                               CPI_OEM,     CPI_UNICODE,    CPI_UNICODEBE,    CPI_UTF7};
+    constexpr auto mapping = std::to_array<int>({CPI_DEFAULT, CPI_UNICODEBOM, CPI_UNICODEBEBOM, CPI_UTF8, CPI_UTF8SIGN,
+                                                 CPI_OEM, CPI_UNICODE, CPI_UNICODEBE, CPI_UTF7});
     if (value < 0) return CPI_UTF8;
     if (value < static_cast<int>(std::size(mapping))) return mapping[value];
     const int index = CodePageIndex(static_cast<unsigned>(value));
@@ -430,7 +431,7 @@ int NormalizeEncodingSetting(int value) {
     const int index = DefaultEncoding(value);
     if (index == CPI_UTF8) return CPI_NONE; // Original global UTF-8 default is omitted on Save.
     // Persisted INI values, indexed by the original catalog order.
-    constexpr int mapping[] = {0, 5, 1, 2, 6, 7, 3, 4, 8};
+    constexpr auto mapping = std::to_array<int>({0, 5, 1, 2, 6, 7, 3, 4, 8});
     return index < static_cast<int>(std::size(mapping)) ? mapping[index] : static_cast<int>(catalog[index].codePage);
 }
 
@@ -445,7 +446,7 @@ std::optional<EncodingChoice> DefaultEncodingChoice(int setting) {
 int EncodingSetting(EncodingChoice choice) {
     const int index = EncodingIndex(choice);
     if (index == CPI_UTF8) return CPI_NONE;
-    constexpr int mapping[] = {0, 5, 1, 2, 6, 7, 3, 4, 8};
+    constexpr auto mapping = std::to_array<int>({0, 5, 1, 2, 6, 7, 3, 4, 8});
     return index < static_cast<int>(std::size(mapping)) ? mapping[index] : static_cast<int>(catalog[index].codePage);
 }
 

@@ -1,4 +1,5 @@
 #include "native_renderer_helpers.h"
+#include <array>
 #include "app/editor_frame.h"
 #include "editor/editor_control.h"
 #include "encoded_file_helpers.h"
@@ -312,9 +313,9 @@ void ZoomAndDpi(EditorFrame* frame) {
     if (SystemParametersInfoW(SPI_GETCARETWIDTH, 0, &width, 0)) systemWidth = static_cast<int>(width);
 #endif
     // Independent original captures at 144 DPI and complementary 96-DPI fixture.
-    const int zooms[] = {50, 100, 150, 200, 500};
-    const int widths96[] = {1, 1, 2, 2, 5};
-    const int widths144[] = {1, 2, 2, 3, 8};
+    const std::array<int, 5> zooms = {{50, 100, 150, 200, 500}};
+    const std::array<int, 5> widths96 = {{1, 1, 2, 2, 5}};
+    const std::array<int, 5> widths144 = {{1, 2, 2, 3, 8}};
     Require(dpi == 96 || dpi == 144, "caret DPI fixture supports captured 96 and 144 DPI windows");
     for (int mode : {1, 2, 3}) {
         Menu(frame, mode == 1 ? "Line Width 1" : mode == 2 ? "Line Width 2" : "Line Width 3");

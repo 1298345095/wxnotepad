@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include "editor/platform/core_headers.h"
 #include <LaTeXInput.h>
+#include <array>
 namespace {
 using Scintilla::Message;
 bool CompleteLatex(EditorControl& editor) {
@@ -13,8 +14,8 @@ bool CompleteLatex(EditorControl& editor) {
     const auto caret = editor.Send(GetCurrentPos);
     if (caret <= MinLaTeXInputSequenceLength) return false;
     auto position = caret - 1;
-    char buffer[MaxLaTeXInputBufferLength];
-    char* ptr = buffer + sizeof(buffer) - 1;
+    std::array<char, MaxLaTeXInputBufferLength> buffer;
+    char* ptr = buffer.data() + buffer.size() - 1;
     *ptr = 0;
     char ch;
     do {
@@ -23,13 +24,14 @@ bool CompleteLatex(EditorControl& editor) {
         --position;
         --ptr;
         *ptr = ch;
-    } while (position >= 0 && ptr != buffer);
+    } while (position >= 0 && ptr != buffer.data());
     if (ch != 92) return false;
-    const auto length = buffer + sizeof(buffer) - 1 - ptr;
+    const auto length = buffer.data() + buffer.size() - 1 - ptr;
     const uint32_t character = GetLaTeXInputUnicodeCharacter(ptr, length);
     if (!character) return false;
-    const char16_t utf16[] = {static_cast<char16_t>(character & 0xffff), static_cast<char16_t>(character >> 16), 0};
-    const auto text = wxString(reinterpret_cast<const char*>(utf16), wxMBConvUTF16LE(), utf16[1] != 0 ? 4 : 2)
+    const std::array<char16_t, 3> utf16{static_cast<char16_t>(character & 0xffff),
+                                        static_cast<char16_t>(character >> 16), 0};
+    const auto text = wxString(reinterpret_cast<const char*>(utf16.data()), wxMBConvUTF16LE(), utf16[1] != 0 ? 4 : 2)
                           .ToStdString(wxConvUTF8);
     editor.Send(SetTargetStart, position);
     editor.Send(SetTargetEnd, caret);

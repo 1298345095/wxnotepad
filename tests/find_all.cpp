@@ -27,7 +27,7 @@ void Load(EditorControl* editor, const std::string& bytes) {
     editor->Send(SetSavePoint);
     NativePaint::Complete(editor);
 }
-void SlicedFindAll(EditorControl* editor, wxTextCtrl* query, wxButton* action, wxStaticText* result) {
+void SlicedFindAll(EditorControl* editor, wxTextCtrl* query, const wxButton* action, const wxStaticText* result) {
     // The first search slice covers at most its initial 1 MiB
     // window plus a line. Short lines keep the trailing matches
     // outside that window without relying on elapsed search time.

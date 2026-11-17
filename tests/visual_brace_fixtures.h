@@ -14,7 +14,7 @@ struct Fixture {
     std::array<intptr_t, 4> match; // Plain Text, C/C++, Python, JSON.
     intptr_t guide;
 };
-inline constexpr Fixture fixtures[] = {
+inline constexpr std::array<Fixture, 18> fixtures = {{
     {"before", "  (x)", 2, 2, 2, {4, 4, 4, 4}, 2},
     {"after", "  (x)", 3, 3, 2, {4, 4, 4, 4}, 2},
     {"closing", "  (x)", 4, 4, 4, {2, 2, 2, 2}, 2},
@@ -33,5 +33,5 @@ inline constexpr Fixture fixtures[] = {
     {"string-bad", "[\"]\"]", 2, 2, 2, {0, -1, -1, -1}, 0},
     {"comment", "( /* ) */ x)", 0, 0, 0, {5, 11, 5, 11}, 0},
     {"line-comment", "( # )\n)", 0, 0, 0, {4, 4, 6, 4}, 0},
-};
+}};
 } // namespace BraceReference

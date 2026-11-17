@@ -1,4 +1,5 @@
 #include "app/dialogs/auto_completion_settings_dialog.h"
+#include <array>
 #include <utility>
 #include "app/editor_frame.h"
 #include "app/localization.h"
@@ -513,7 +514,7 @@ void EditorFrame::AppendEnclosureCommands(wxMenu* edit) {
         Bind(wxEVT_UPDATE_UI, [](wxUpdateUIEvent& event) { event.Enable(true); }, id);
     };
     addEnclosure(_("Triple &Single Quotes\tCtrl+3"), "'''");
-    addEnclosure(_("Triple &Double Quotes\tCtrl+6"), "\"\"\"");
+    addEnclosure(_("Triple &Double Quotes\tCtrl+6"), R"(""")");
     addEnclosure(_("Triple &Backticks\tCtrl+9"), "```");
     edit->AppendSubMenu(enclosure, _("&Enclose Selection"));
 }
@@ -1209,8 +1210,8 @@ void EditorFrame::AppendCaretCommands(wxMenu* view) {
         wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->GetCaretAppearance().overstrikeBlock); },
         overstrike);
     caret->AppendSeparator();
-    const char* modes[] = {wxTRANSLATE("Block (&INS Mode)"), wxTRANSLATE("Line Width &1"), wxTRANSLATE("Line Width &2"),
-                           wxTRANSLATE("Line Width &3")};
+    const std::array modes = {wxTRANSLATE("Block (&INS Mode)"), wxTRANSLATE("Line Width &1"),
+                              wxTRANSLATE("Line Width &2"), wxTRANSLATE("Line Width &3")};
     for (int width = 0; width <= 3; ++width) {
         const int id = wxWindow::NewControlId();
         caret->AppendRadioItem(id, wxGetTranslation(modes[width]));
