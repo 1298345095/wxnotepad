@@ -44,6 +44,9 @@ void CheckInvalidByte(EditorFrame* frame) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Tools", "Decode"));
     Require(TestEditor::Text(editor) == std::string(1, '\x81'), "native Base64 Decode produces invalid UTF-8 byte 81");
     const auto revision = editor->DocumentRevision();
+#ifdef __WXGTK__
+    NativeKeys::Shortcut(frame, 'A', true); // Supplies Wayland's owned input serial for clipboard publication.
+#endif
     {
         wxClipboardLocker clipboard;
         if (!clipboard) throw TestEditor::Failure("open the owned Character Info clipboard");

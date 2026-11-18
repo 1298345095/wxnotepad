@@ -301,7 +301,7 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     const bool utf16 = loaded.encoding == Utf16Le || loaded.encoding == Utf16Be;
     if (!utf16) loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     if (loaded.bom) bytes.erase(0, utf16 ? 2 : 3);
-    if (loaded.systemDefault) {
+    if (loaded.systemDefault && loaded.encoding != Utf8) {
         // Native ANSI keeps arbitrary bytes and aliases that cannot round-trip
         // through Unicode, just like the native Base64 Decode boundary.
         bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw);

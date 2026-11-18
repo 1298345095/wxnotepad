@@ -158,13 +158,13 @@ public:
                 Require(presented, "native compositor presents the provenance allocation fixture");
                 NativeByteRanges raw;
                 const auto decoded = NativeDefaultEncodingBuffer(std::string(1, '\xff'), &raw);
-                if (decoded == std::string(1, '\xff') && raw == NativeByteRanges{{0, 1}}) {
+                if (NativeEncodingChoice() && decoded == std::string(1, '\xff') && raw == NativeByteRanges{{0, 1}}) {
                     CheckRecovery(frame);
                     CheckDeletionAndHistory(frame);
                     CheckRejectedFork(frame);
                     result_ = 0;
                 } else {
-                    std::printf("SKIP: native ACP %u does not preserve FF as a raw-origin byte\n", GetACP());
+                    std::printf("SKIP: native ACP %u does not provide this raw-origin fixture\n", GetACP());
                     result_ = SkipUnavailableProvenance;
                 }
             } catch (const std::exception& error) {
