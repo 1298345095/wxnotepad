@@ -2,6 +2,8 @@
 
 #include "diagnostics/trace.h"
 #include "editor/editor_control.h"
+#include "editor/font_settings.h"
+#include "editor/platform/native_drawing_error.h"
 #include "editor/print_font.h"
 #include "editor/platform/text_measurement.h"
 #include "editor_printing.h"
@@ -19,6 +21,7 @@
 #include <wx/uilocale.h>
 #include <wx/printdlg.h>
 #ifdef __WXMSW__
+#include <wx/fontutil.h>
 #include <wx/msw/dcprint.h>
 #include <wx/msw/printdlg.h>
 #include <wx/msw/wrapwin.h>
@@ -32,6 +35,7 @@ namespace EditorPrinting {
 namespace {
 using Scintilla::Message;
 using Scintilla::Position;
+using Scintilla::Internal::NativeDrawingError;
 using Scintilla::Internal::PrintSurface;
 using Scintilla::Internal::TextMeasurement;
 
@@ -63,6 +67,100 @@ wxString DateLabel(PrintHeader header) {
 #endif
 }
 
+// Bridge.cpp expresses cell heights and insets in printer device units.
+constexpr int PointsPerInch = 72;
+constexpr int LabelInset = 5;
+constexpr int RuleWidth = 1;
+
+#ifdef __WXMSW__
+class DecorationContext {
+public:
+    explicit DecorationContext(wxDC& dc) : dc_(static_cast<HDC>(dc.GetHDC())), saved_(SaveDC(dc_)) {
+        if (!saved_) throw NativeDrawingError("Could not save the printer drawing state");
+    }
+    ~DecorationContext() { RestoreDC(dc_, saved_); }
+    DecorationContext(const DecorationContext&) = delete;
+    DecorationContext& operator=(const DecorationContext&) = delete;
+
+    void UseFont(const wxFont& font) const {
+        const auto previous = SelectObject(dc_, static_cast<HFONT>(font.GetHFONT()));
+        if (!previous || previous == HGDI_ERROR) throw NativeDrawingError("Could not select a printer heading font");
+    }
+    int LineHeight() const {
+        TEXTMETRICW metrics{};
+        if (!GetTextMetricsW(dc_, &metrics)) throw NativeDrawingError("Could not measure a printer heading font");
+        return metrics.tmHeight + metrics.tmExternalLeading;
+    }
+    int Width(const wxString& text) const {
+        SIZE size{};
+        if (!GetTextExtentPoint32W(dc_, text.wc_str(), static_cast<int>(text.size()), &size))
+            throw NativeDrawingError("Could not measure a printer heading");
+        return size.cx;
+    }
+    void DrawLabel(const wxString& text, int x, int y, const RECT& rect, UINT align) const {
+        SetTextAlign(dc_, align);
+        SetTextColor(dc_, RGB(0, 0, 0));
+        SetBkColor(dc_, RGB(255, 255, 255));
+        ExtTextOutW(dc_, x, y, ETO_OPAQUE, &rect, text.wc_str(), static_cast<UINT>(text.size()), nullptr);
+    }
+    void DrawRule(int left, int right, int y) const {
+        const auto pen = CreatePen(PS_SOLID, RuleWidth, RGB(0, 0, 0));
+        if (!pen) throw NativeDrawingError("Could not create the printer rule pen");
+        const auto previous = SelectObject(dc_, pen);
+        if (previous && previous != HGDI_ERROR) {
+            MoveToEx(dc_, left, y, nullptr);
+            LineTo(dc_, right, y);
+            SelectObject(dc_, previous);
+        }
+        DeleteObject(pen);
+    }
+
+private:
+    HDC dc_;
+    int saved_;
+};
+#endif
+
+int DecorationLineHeight(wxDC& dc, const wxFont& font) {
+#ifdef __WXMSW__
+    const DecorationContext context(dc);
+    context.UseFont(font);
+    return context.LineHeight();
+#else
+    dc.SetFont(font);
+    wxCoord width = 0;
+    wxCoord height = 0;
+    wxCoord leading = 0;
+    dc.GetTextExtent("Hg", &width, &height, nullptr, &leading);
+    return height + leading;
+#endif
+}
+
+wxFont DecorationFont(wxDC& dc, const wxString& face, int size) {
+    constexpr int pointUnitsPerInch = PointsPerInch * Scintilla::FontSizeMultiplier;
+#ifdef __WXMSW__
+    // Positive LOGFONT height requests the complete cell, including internal leading.
+    wxNativeFontInfo native;
+    native.SetFaceName(face);
+    native.lf.lfHeight = std::max(1, MulDiv(size, dc.GetPPI().y, pointUnitsPerInch));
+    native.lf.lfWeight = FW_NORMAL;
+    native.lf.lfCharSet = DEFAULT_CHARSET;
+    native.lf.lfQuality = DEFAULT_QUALITY;
+    wxFont font;
+    font.SetNativeFontInfo(native);
+    return font;
+#else
+    wxFont font = FontForPrinter(
+        wxFont(wxFontInfo(static_cast<double>(size) / Scintilla::FontSizeMultiplier).FaceName(face)), dc);
+    // Pango specifies the em size. Scale it against the printer layout's
+    // measured cell so the requested height means the same thing as in GDI.
+    const double cell = static_cast<double>(size) * dc.GetPPI().y / pointUnitsPerInch;
+    const int measured = DecorationLineHeight(dc, font);
+    if (measured > 0) font.SetFractionalPointSize(font.GetFractionalPointSize() * cell / measured);
+    return font;
+#endif
+}
+
 // The original EditPrint reserves a line and a half for each enabled heading.
 class PageLayout {
 public:
@@ -80,8 +178,8 @@ public:
         margins_ = wxRect(area.paper.x + left, area.paper.y + top, std::max(0, area.paper.width - left - right),
                           std::max(0, area.paper.height - top - bottom))
                        .Intersect(area.imageable);
-        if (options.header != PrintHeader::Blank) headerHeight_ = TextHeight(dc, header_);
-        if (options.footer != PrintFooter::Blank) footerHeight_ = TextHeight(dc, footer_);
+        if (options.header != PrintHeader::Blank) headerHeight_ = DecorationLineHeight(dc, header_);
+        if (options.footer != PrintFooter::Blank) footerHeight_ = DecorationLineHeight(dc, footer_);
         content_ = {margins_.x, margins_.y + headerHeight_ + headerHeight_ / 2, margins_.GetRight() + 1,
                     margins_.GetBottom() + 1 - footerHeight_ - footerHeight_ / 2};
         printable_ = {area.imageable.x, area.imageable.y, area.imageable.GetRight() + 1,
@@ -96,57 +194,66 @@ public:
 
     void DrawHeader(wxDC& dc, const wxString& title, const wxString& date) const {
         if (!headerHeight_) return;
-        const auto baseline = margins_.y + headerHeight_;
-        const auto inset = TextInset(dc);
+        const int bottom = content_.top - headerHeight_ / 2;
+        const int rule = content_.top - headerHeight_ / 4;
+#ifdef __WXMSW__
+        const DecorationContext context(dc);
+        RECT area{content_.left, bottom - headerHeight_, content_.right, bottom};
+        context.UseFont(header_);
+        context.DrawLabel(title, area.left + LabelInset, bottom, area, TA_BOTTOM);
+        if (!date.empty()) {
+            context.UseFont(footer_);
+            area.left = area.right - 2 * LabelInset - context.Width(date);
+            context.DrawLabel(date, area.left + LabelInset, bottom, area, TA_BOTTOM);
+        }
+        context.DrawRule(content_.left, content_.right, rule);
+#else
         dc.SetTextForeground(*wxBLACK);
         dc.SetBackgroundMode(wxBRUSHSTYLE_TRANSPARENT);
         dc.SetFont(footer_);
         const auto dateSize = dc.GetTextExtent(date);
-        const auto dateX = margins_.GetRight() - inset - dateSize.x;
+        const int dateX = content_.right - LabelInset - dateSize.x;
         {
-            const auto titleSpace = date.empty() ? margins_.width : dateX - margins_.x - inset;
-            if (titleSpace > inset) {
-                wxDCClipper titleClip(dc, margins_.x, margins_.y, titleSpace, headerHeight_);
+            const int titleRight = date.empty() ? content_.right : dateX - LabelInset;
+            const int titleSpace = titleRight - content_.left;
+            if (titleSpace > LabelInset) {
+                wxDCClipper titleClip(dc, content_.left, bottom - headerHeight_, titleSpace, headerHeight_);
                 dc.SetFont(header_);
-                dc.DrawText(title, margins_.x + inset, baseline - dc.GetTextExtent(title).y);
+                dc.DrawText(title, content_.left + LabelInset, bottom - dc.GetTextExtent(title).y);
             }
         }
         dc.SetFont(footer_);
         if (!date.empty()) {
-            wxDCClipper dateClip(dc, margins_.x, margins_.y, margins_.width, headerHeight_);
-            dc.DrawText(date, dateX, baseline - dateSize.y);
+            wxDCClipper dateClip(dc, content_.left, bottom - headerHeight_, margins_.width, headerHeight_);
+            dc.DrawText(date, dateX, bottom - dateSize.y);
         }
+        dc.SetPen(wxPen(*wxBLACK, RuleWidth));
+        dc.DrawLine(content_.left, rule, content_.right, rule);
+#endif
     }
 
-    void DrawRulesAndFooter(wxDC& dc, int page) const {
-        dc.SetPen(*wxBLACK_PEN);
-        if (headerHeight_) {
-            const auto y = content_.top - headerHeight_ / 4;
-            dc.DrawLine(content_.left, y, content_.right, y);
-        }
+    void DrawFooter(wxDC& dc, int page) const {
         if (!footerHeight_) return;
-        const auto line = content_.bottom + footerHeight_ / 4;
-        dc.DrawLine(content_.left, line, content_.right, line);
+        const int top = content_.bottom + footerHeight_ / 2;
+        const int rule = content_.bottom + footerHeight_ / 4;
+        const auto label = wxString::Format(_("Page %s"), wxNumberFormatter::ToString(static_cast<long>(page)));
+#ifdef __WXMSW__
+        const DecorationContext context(dc);
+        const RECT area{content_.left, top, content_.right, top + footerHeight_};
+        context.UseFont(footer_);
+        context.DrawLabel(label, area.right - LabelInset - context.Width(label), top, area, TA_TOP);
+        context.DrawRule(content_.left, content_.right, rule);
+#else
         dc.SetFont(footer_);
         dc.SetTextForeground(*wxBLACK);
         dc.SetBackgroundMode(wxBRUSHSTYLE_TRANSPARENT);
-        const auto label = wxString::Format(_("Page %s"), wxNumberFormatter::ToString(static_cast<long>(page)));
-        const auto width = dc.GetTextExtent(label).x;
-        dc.DrawText(label, content_.right - TextInset(dc) - width, content_.bottom + footerHeight_ / 2);
+        dc.DrawText(label, content_.right - LabelInset - dc.GetTextExtent(label).x, top);
+        dc.SetPen(wxPen(*wxBLACK, RuleWidth));
+        dc.DrawLine(content_.left, rule, content_.right, rule);
+#endif
     }
 
 private:
-    static int TextHeight(wxDC& dc, const wxFont& font) {
-        dc.SetFont(font);
-        wxCoord width = 0;
-        wxCoord height = 0;
-        wxCoord leading = 0;
-        dc.GetTextExtent("Hg", &width, &height, nullptr, &leading);
-        return height + leading;
-    }
-
-    static int TextInset(const wxDC& dc) { return std::max(1, dc.GetPPI().x / 72); }
-
     wxFont header_;
     wxFont footer_;
     wxRect margins_;
@@ -195,7 +302,7 @@ public:
         layout.DrawHeader(surface.dc, title_, date_);
         const auto range = pages_[index];
         const auto next = std::min(Format(layout, surface, true, range.cpMin, range.cpMax), range.cpMax);
-        layout.DrawRulesAndFooter(surface.dc, index + 1);
+        layout.DrawFooter(surface.dc, index + 1);
         const auto expected = index + 1 == PageCount() ? range.cpMax : pages_[index + 1].cpMin;
         return next == expected;
     }
@@ -203,16 +310,13 @@ public:
 private:
     PageLayout Layout(wxDC& dc, PageArea area) const {
         const auto style = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
-        constexpr auto pointFraction = 100.0;
-        const auto fontSize = static_cast<double>(editor_.Send(Message::StyleGetSizeFractional, style)) / pointFraction;
-        const auto faceLength = editor_.Send(Message::StyleGetFont, style);
-        std::string face(static_cast<size_t>(std::max<intptr_t>(0, faceLength)) + 1, '\0');
-        editor_.Send(Message::StyleGetFont, style, reinterpret_cast<intptr_t>(face.data()));
-        const auto font = [&](double adjustment) {
-            return FontForPrinter(
-                wxFont(wxFontInfo(std::max(1.0, fontSize + adjustment)).FaceName(wxString::FromUTF8(face.data()))), dc);
+        constexpr int points = Scintilla::FontSizeMultiplier;
+        const int baseSize = static_cast<int>(editor_.Send(Message::StyleGetSizeFractional, style));
+        const auto face = DefaultStyleFont(editor_.Fonts(), false).GetFaceName();
+        const auto font = [&](int adjustment) {
+            return DecorationFont(dc, face, std::max(points, baseSize + adjustment));
         };
-        return {dc, area, options_, unitsPerInch_, font(-0.5), font(-2.0)};
+        return {dc, area, options_, unitsPerInch_, font(-points / 2), font(-2 * points)};
     }
 
     void SetPrintFormat() {

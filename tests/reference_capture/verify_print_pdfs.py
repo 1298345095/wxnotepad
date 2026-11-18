@@ -24,19 +24,32 @@ def check_wrapped(tool, path):
     return len(pages)
 
 
-def body_font(tool, path):
+def print_labels(tool, path):
     data = subprocess.check_output([tool, '-i', '-xml', '-stdout', '-zoom', '1', path])
     tree = ET.fromstring(data)
-    text = next(node for node in tree.findall('.//text') if 'PrintWrap1000' in ''.join(node.itertext()))
-    font = tree.find(f'.//fontspec[@id="{text.attrib["font"]}"]')
-    return int(font.attrib['size']), font.attrib['color'].lower()
+    first_page = tree.find('page')
+    nodes = first_page.findall('text')
+
+    def label(node):
+        font = tree.find(f'.//fontspec[@id="{node.attrib["font"]}"]')
+        return tuple(int(node.attrib[key]) for key in ('left', 'top', 'width', 'height')) + (
+            int(font.attrib['size']), font.attrib['color'].lower())
+
+    def find(text):
+        return next(node for node in nodes if text in ''.join(node.itertext()))
+
+    return label(find('PrintWrap1000')), [label(node) for node in (nodes[0], nodes[1], find('Page 1'))]
 
 
 def check_color_and_zoom(pdftotext, pdftohtml, color, monochrome):
     small_pages = check_wrapped(pdftotext, color)
     large_pages = check_wrapped(pdftotext, monochrome)
-    small, foreground = body_font(pdftohtml, color)
-    large, black = body_font(pdftohtml, monochrome)
+    small_label, color_decoration = print_labels(pdftohtml, color)
+    large_label, monochrome_decoration = print_labels(pdftohtml, monochrome)
+    small, foreground = small_label[-2:]
+    large, black = large_label[-2:]
+    assert color_decoration == monochrome_decoration, 'Print zoom changed the header, date, or footer'
+    assert all(item[-2] < small and item[-1] == '#000000' for item in color_decoration), color_decoration
     assert foreground == '#dc4020' and black == '#000000', (foreground, black)
     assert small < large and small_pages < large_pages, (small, large, small_pages, large_pages)
     print(f'PASS: printed zoom increases body size from {small}pt to {large}pt; Black on white removes color')
