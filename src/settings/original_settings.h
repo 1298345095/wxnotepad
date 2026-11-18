@@ -27,6 +27,10 @@ struct OriginalSettings {
     bool saveBeforeRunningTools = false;
     uint16_t uiLanguage = UILanguage::System;
     bool wordWrap = true;
+    int wordWrapMode = std::to_underlying(Scintilla::Wrap::Auto);
+    WrapContinuationIndent wordWrapIndent = WrapContinuationIndent::None;
+    bool wordWrapSelectSubLine = false;
+    int endAtLastLine = 1;
     bool showLineNumbers = true;
     bool showBookmarkMargin = false;
     int changeHistoryMarker = 0;
@@ -86,6 +90,7 @@ struct OriginalSettings {
     wxString dateTimeShort;
     wxString dateTimeLong;
     bool viewEOLs = false;
+    bool showUnicodeControlCharacter = false;
     bool showWordWrapSymbols = false;
     int wordWrapSymbols = 2;
     // wxnotepad opt-in; false retains original growth-only width tracking.

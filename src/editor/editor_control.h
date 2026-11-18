@@ -12,6 +12,7 @@
 #include "editor/base64_conversion.h"
 #include "editor/occurrence_marking.h"
 #include <ScintillaMessages.h>
+#include <ScintillaTypes.h>
 #include <wx/control.h>
 #include <wx/timer.h>
 #include <cstdint>
@@ -41,6 +42,10 @@ public:
     uint64_t SelectionRevision() const;
     intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
+    void SetWordWrapMode(Scintilla::Wrap mode);
+    Scintilla::Wrap PreferredWordWrapMode() const { return wordWrapMode_; }
+    void SetWordWrapIndent(WrapContinuationIndent indent);
+    WrapContinuationIndent WordWrapIndent() const { return wordWrapIndent_; }
     bool AutoShrinkScrollWidth() const { return autoShrinkScrollWidth_; }
     void SetAutoShrinkScrollWidth(bool enabled);
     void IndentLines(bool forwards);
@@ -164,6 +169,9 @@ private:
     bool AutoCloseTag();
     bool autoIndent_ = true;
     bool autoShrinkScrollWidth_ = false;
+    Scintilla::Wrap wordWrapMode_ = Scintilla::Wrap::Auto;
+    WrapContinuationIndent wordWrapIndent_ = WrapContinuationIndent::None;
+    void ApplyWrapIndent();
     bool matchBraces_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
