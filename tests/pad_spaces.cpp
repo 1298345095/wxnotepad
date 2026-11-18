@@ -319,6 +319,7 @@ public:
         settings_->values.fixLineEndings = false;
         settings_->values.fixTrailingBlanks = false;
         auto* frame = new EditorFrame(settings_.get());
+        TestEditor::UseFixedWidthFont(frame->Editor());
         frame->Show();
         CallAfter([this, frame] {
             try {

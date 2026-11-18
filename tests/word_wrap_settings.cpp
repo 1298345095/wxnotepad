@@ -471,6 +471,9 @@ public:
         }
 #endif
         settings_ = std::make_unique<SettingsStore>();
+        // Keep the original narrow editor viewport independent of the wider
+        // native menu requisition after adding Tools. Commands remain native.
+        settings_->values.showMenu = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) {

@@ -87,6 +87,7 @@ class SelectionApp final : public wxApp {
 public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
+        TestEditor::UseFixedWidthFont(frame->Editor());
         frame->Show();
         CallAfter([this, frame] {
             try {

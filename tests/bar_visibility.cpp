@@ -64,9 +64,12 @@ void HiddenMenuEditing(EditorFrame* frame, int menu, int status) {
     frame->SetSize(frame->FromDIP(wxSize(640, 460)));
     wxYield();
     NativePaint::Complete(editor);
-    Require(editor->GetClientSize().x > 0 && editor->GetClientSize().y > 0 && editor->Send(WrapCount, 0) > 1 &&
-                editor->Send(GetMarginWidthN, 0) == marginWidth,
-            "hidden bars retain valid wrapped layout and margins after native resize");
+    WaitForLayout(
+        [&] {
+            return editor->GetClientSize().x > 0 && editor->GetClientSize().y > 0 && editor->Send(WrapCount, 0) > 1 &&
+                   editor->Send(GetMarginWidthN, 0) == marginWidth;
+        },
+        "hidden bars retain valid wrapped layout and margins after native resize");
     checkDocument();
     NativeKeys::Shortcut(frame, 'Y', true);
     Require(NativeSearch::Text(editor) == text + "!" && frame->DocumentIsModified(),

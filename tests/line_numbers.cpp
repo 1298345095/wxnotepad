@@ -239,6 +239,7 @@ public:
         // Mixed-EOL warning choices are covered by mixed_line_ending_open.
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
+        TestEditor::UseFixedWidthFont(frame->Editor());
         frame->ShowWithoutActivating();
         CallAfter([this, frame] {
             try {
