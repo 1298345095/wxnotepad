@@ -21,6 +21,9 @@
 #include <wx/filename.h>
 #include <wx/translation.h>
 #include <array>
+#ifdef __WXMSW__
+#include <wx/msw/wrapwin.h>
+#endif
 
 namespace {
 wxString EncodingName(FileEncoding encoding) {
@@ -83,6 +86,12 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const auto& preferences = settings ? settings->values : defaults_;
 #ifdef __WXMSW__
     editor_->Send(Scintilla::Message::SetTechnology, preferences.renderingTechnology);
+    Bind(wxEVT_SHOW, [this](wxShowEvent& event) {
+        // Recalculate native bar metrics on the shown window before laying out
+        // the editor; Layout alone retains the pre-show non-client geometry.
+        if (event.IsShown()) CallAfter([this] { ApplyBarVisibility(); });
+        event.Skip();
+    });
 #endif
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
@@ -142,6 +151,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     document_.New();
     CreateMenus();
     CreateStatusBar(3);
+    ApplyBarVisibility();
     search_.SetWrapConfirmation([this](SearchDirection direction) { return SearchMessage(direction); });
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         UpdatePositionStatus();
@@ -172,6 +182,49 @@ EditorFrame::EditorFrame(SettingsStore* settings)
 #endif
     UpdateDocumentState();
     editor_->SetFocus();
+}
+
+EditorFrame::~EditorFrame() {
+#ifdef __WXMSW__
+    // wxMSW leaves attached HMENUs for DestroyWindow to free. Restore native
+    // ownership even when we hid the bar without detaching wx's accelerators.
+    const auto window = static_cast<HWND>(GetHandle());
+    if (!::GetMenu(window)) ::SetMenu(window, static_cast<HMENU>(GetMenuBar()->GetHMenu()));
+#endif
+}
+
+#ifdef __WXMSW__
+bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
+    // A hidden native menu receives no WM_INITMENU to refresh command state.
+    // Refresh command gestures, leaving ordinary character input alone.
+    if (!(settings_ ? settings_->values : defaults_).showMenu &&
+        (message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN)) {
+        const bool functionKey = message->wParam >= VK_F1 && message->wParam <= VK_F24;
+        const bool modifiedCommand = ::GetKeyState(VK_CONTROL) < 0 || ::GetKeyState(VK_MENU) < 0;
+        const bool shiftedEdit =
+            (message->wParam == VK_INSERT || message->wParam == VK_DELETE) && ::GetKeyState(VK_SHIFT) < 0;
+        if (functionKey || modifiedCommand || shiftedEdit) UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    }
+    return wxFrame::MSWTranslateMessage(message);
+}
+#endif
+
+void EditorFrame::ApplyBarVisibility() {
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+#ifdef __WXMSW__
+    // Adapt Notepad4 89b8b36 IDM_VIEW_MENU: hide the native HMENU while
+    // retaining wx's attached menu and its accelerator table.
+    const auto window = static_cast<HWND>(GetHandle());
+    ::SetMenu(window, preferences.showMenu ? static_cast<HMENU>(GetMenuBar()->GetHMenu()) : nullptr);
+    ::DrawMenuBar(window);
+#else
+    // Keep the GTK menu's accelerator group attached when its widget is hidden.
+    GetMenuBar()->Show(preferences.showMenu);
+#endif
+    GetStatusBar()->Show(preferences.showStatusbar);
+    SendSizeEvent();
+    Layout();
+    UpdateDocumentState();
 }
 
 bool EditorFrame::SaveSettings(bool explicitSave) {

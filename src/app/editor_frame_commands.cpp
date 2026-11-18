@@ -2004,6 +2004,27 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     auto* appearance = new wxMenu;
+    for (const auto& [label, member] :
+         {std::pair{wxTRANSLATE("Show &Menu	Alt+F11"), &OriginalSettings::showMenu},
+          std::pair{wxTRANSLATE("Show Stat&usbar	Shift+F11"), &OriginalSettings::showStatusbar}}) {
+        const int id = wxWindow::NewControlId();
+        appearance->AppendCheckItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, member](wxCommandEvent&) {
+                auto& preferences = settings_ ? settings_->values : defaults_;
+                preferences.*member = !(preferences.*member);
+                ApplyBarVisibility();
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, member](wxUpdateUIEvent& event) {
+                event.Check((settings_ ? settings_->values : defaults_).*member);
+            },
+            id);
+    }
+    appearance->AppendSeparator();
     auto* scrollPastLastLine = new wxMenu;
     // Keep Notepad4's full EndAtLastLine integer contract (One Page is zero).
     for (const auto& [label, mode] : {std::pair{wxTRANSLATE("&No"), 1}, std::pair{wxTRANSLATE("&One Page"), 0},
