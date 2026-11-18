@@ -1,6 +1,7 @@
 #include "completion_allocation_fault.h"
 #include "native_completion_helpers.h"
 #include "file_helpers.h"
+#include "editor/platform/native_encoding.h"
 #include <cstdio>
 #include <exception>
 
@@ -8,6 +9,7 @@ namespace {
 using enum Scintilla::Message;
 constexpr auto Ok = static_cast<uintptr_t>(std::to_underlying(Scintilla::Status::Ok));
 constexpr auto BadAlloc = static_cast<intptr_t>(std::to_underlying(Scintilla::Status::BadAlloc));
+constexpr int SkipUnavailableProvenance = 77;
 
 void Require(bool condition, const char* message) {
     if (!condition) throw TestEditor::Failure(message);
@@ -154,10 +156,17 @@ public:
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
                 Require(presented, "native compositor presents the provenance allocation fixture");
-                CheckRecovery(frame);
-                CheckDeletionAndHistory(frame);
-                CheckRejectedFork(frame);
-                result_ = 0;
+                NativeByteRanges raw;
+                const auto decoded = NativeDefaultEncodingBuffer(std::string(1, '\xff'), &raw);
+                if (NativeEncodingChoice() && decoded == std::string(1, '\xff') && raw == NativeByteRanges{{0, 1}}) {
+                    CheckRecovery(frame);
+                    CheckDeletionAndHistory(frame);
+                    CheckRejectedFork(frame);
+                    result_ = 0;
+                } else {
+                    std::printf("SKIP: native ACP %u does not provide this raw-origin fixture\n", GetACP());
+                    result_ = SkipUnavailableProvenance;
+                }
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
             }
