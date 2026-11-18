@@ -47,7 +47,7 @@ Edit
     Encoding Identifier; Script Shebang Line
   Special > Complete Word (Alt+/); Character to Hex; Hex to Character; Escape C Chars; Unescape C Chars
 Search
-  Find; Find Next; Find Previous; Replace
+  Find; Save Find Text (Alt+F3); Find Next; Find Previous; Replace; Replace Next (F4)
   Find Matching Brace; Select to Matching Brace; Select Lines in Current Block
   Select to Next; Select to Previous
   Bookmarks > Toggle; Goto Next; Goto Previous; Select All; Clear All

@@ -848,13 +848,27 @@ void EditorFrame::AppendLineWrappingCommands(wxMenu* edit) {
 
 void EditorFrame::AppendSearchCommands(wxMenu* edit) {
     edit->Append(wxID_FIND, _("&Find...\tCtrl+F"));
+    const int saveFind = wxWindow::NewControlId();
+    const int replaceNext = wxWindow::NewControlId();
+    edit->Append(saveFind, _("Sa&ve Find Text\tAlt+F3"));
     edit->Append(wxID_FORWARD, _("Find &Next\tF3"));
     edit->Append(wxID_BACKWARD, _("Find &Previous\tShift+F3"));
     edit->Append(wxID_REPLACE, _("R&eplace...\tCtrl+H"));
+    edit->Append(replaceNext, _("Repl&ace Next\tF4"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(); }, wxID_FIND);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { search_.SaveSelectionAsFindText(true); }, saveFind);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(true); }, wxID_REPLACE);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindNext(); }, wxID_FORWARD);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindPrevious(); }, wxID_BACKWARD);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ReplaceNext(); }, replaceNext);
+
+    const int nextSelection = wxWindow::NewControlId();
+    const int previousSelection = wxWindow::NewControlId();
+    const std::array<wxAcceleratorEntry, 2> selectionKeys = {
+        {{wxACCEL_CTRL, WXK_F3, nextSelection}, {wxACCEL_CTRL | wxACCEL_SHIFT, WXK_F3, previousSelection}}};
+    SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(selectionKeys.size()), selectionKeys.data()));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindSelection(SearchDirection::Forward); }, nextSelection);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindSelection(SearchDirection::Backward); }, previousSelection);
 }
 
 void EditorFrame::AppendNavigationCommands(wxMenu* edit) {
@@ -1702,12 +1716,29 @@ bool EditorFrame::HandleSearchKey(const wxKeyEvent& event) {
         ShowFind(true);
     else if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown())
         Search(!event.ShiftDown(), true);
-    else if (event.GetKeyCode() == WXK_F3 && !event.HasAnyModifiers())
-        FindNext();
-    else if (event.GetKeyCode() == WXK_F3 && event.ShiftDown() && !event.ControlDown() && !event.AltDown() &&
-             !event.MetaDown())
-        FindPrevious();
-    else
+    else if (event.GetKeyCode() == WXK_F3) {
+        switch (event.GetModifiers()) {
+        case wxMOD_NONE:
+            FindNext();
+            break;
+        case wxMOD_SHIFT:
+            FindPrevious();
+            break;
+        case wxMOD_ALT:
+            search_.SaveSelectionAsFindText(true);
+            break;
+        case wxMOD_CONTROL:
+            FindSelection(SearchDirection::Forward);
+            break;
+        case wxMOD_CONTROL | wxMOD_SHIFT:
+            FindSelection(SearchDirection::Backward);
+            break;
+        default:
+            break;
+        }
+    } else if (event.GetKeyCode() == WXK_F4 && !event.AltDown()) {
+        if (!event.HasAnyModifiers()) ReplaceNext();
+    } else
         return false;
     return true;
 }
