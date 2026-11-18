@@ -40,7 +40,57 @@ std::vector<wxColour> Pixels(EditorControl* editor, const wxRect& area) {
             pixels.emplace_back(image.GetRed(x, y), image.GetGreen(x, y), image.GetBlue(x, y));
     return pixels;
 #else
-    return NativePaint::Read(editor, area);
+    class Capture final {
+    public:
+        Capture(EditorControl* editor, const wxRect& area) : widget_(editor->GetConnectWidget()), area_(area) {
+            handler_ = g_signal_connect_after(widget_, "draw", G_CALLBACK(Draw), this);
+        }
+        ~Capture() { g_signal_handler_disconnect(widget_, handler_); }
+        std::vector<wxColour> pixels;
+        bool pending = true;
+
+    private:
+        static gboolean Draw(GtkWidget*, cairo_t* context, gpointer data) {
+            static_cast<Capture*>(data)->Sample(context);
+            return FALSE;
+        }
+        void Sample(cairo_t* context) {
+            // GTK's native after-draw signal runs after the production wx paint
+            // handler. A pushed wx event handler can run before that handler,
+            // observing a fresh blank high-DPI Wayland buffer instead.
+            auto* surface = cairo_get_group_target(context);
+            cairo_surface_flush(surface);
+            double scaleX, scaleY, offsetX, offsetY;
+            cairo_surface_get_device_scale(surface, &scaleX, &scaleY);
+            cairo_surface_get_device_offset(surface, &offsetX, &offsetY);
+            auto* image = cairo_surface_map_to_image(surface, nullptr);
+            Require(cairo_surface_status(image) == CAIRO_STATUS_SUCCESS, "map the actual native paint surface");
+            const int stride = cairo_image_surface_get_stride(image);
+            const auto* data = cairo_image_surface_get_data(image);
+            pixels.clear();
+            for (int y = area_.y; y <= area_.GetBottom(); ++y) {
+                for (int x = area_.x; x <= area_.GetRight(); ++x) {
+                    double deviceX = x, deviceY = y;
+                    cairo_user_to_device(context, &deviceX, &deviceY);
+                    const int nativeX = static_cast<int>(std::lround(deviceX * scaleX + offsetX));
+                    const int nativeY = static_cast<int>(std::lround(deviceY * scaleY + offsetY));
+                    Require(nativeX >= 0 && nativeX < cairo_image_surface_get_width(image) && nativeY >= 0 &&
+                                nativeY < cairo_image_surface_get_height(image),
+                            "sample inside actual native paint surface");
+                    const auto pixel = reinterpret_cast<const uint32_t*>(data + nativeY * stride)[nativeX];
+                    pixels.emplace_back((pixel >> 16U) & 0xffU, (pixel >> 8U) & 0xffU, pixel & 0xffU);
+                }
+            }
+            cairo_surface_unmap_image(surface, image);
+            pending = false;
+        }
+        GtkWidget* widget_;
+        gulong handler_ = 0;
+        wxRect area_;
+    } capture(editor, area);
+    NativeFold::Paint(editor);
+    Require(!capture.pending, "observe the actual native fold paint");
+    return capture.pixels;
 #endif
 }
 void Evidence(EditorControl* editor, int line, const wxString& name) {
