@@ -1830,6 +1830,18 @@ msgstr ""
 msgid "Search wrapped"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Select &All\tCtrl+A"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Lines (Expand Selection)\tCtrl+Shift+Space"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Word\tCtrl+Alt+Space"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select &default encoding:"
 msgstr ""
@@ -1852,6 +1864,14 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select source &encoding to reload file:"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Document En&d"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Document Star&t"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp

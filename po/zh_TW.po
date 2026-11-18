@@ -2151,6 +2151,18 @@ msgstr "捲動超出最後一行(&L)"
 msgid "Search wrapped"
 msgstr "循環搜尋"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Select &All\tCtrl+A"
+msgstr "全選(&A)\tCtrl+A"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Lines (Expand Selection)\tCtrl+Shift+Space"
+msgstr "選取行（擴展選取範圍）(&L)\tCtrl+Shift+Space"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Word\tCtrl+Alt+Space"
+msgstr "選取單字(&W)\tCtrl+Alt+Space"
+
 # Original Notepad4 zh-Hant: IDS_SELRECT_DEFAULT_ENCODING; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select &default encoding:"
@@ -2180,6 +2192,14 @@ msgstr "選擇目前檔案編碼(&E)："
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select source &encoding to reload file:"
 msgstr "選擇重新載入檔案使用的來源編碼(&E)："
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Document En&d"
+msgstr "選取至文件結尾(&D)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Document Star&t"
+msgstr "選取至文件開頭(&T)"
 
 # Original Notepad4 zh-Hant: IDM_EDIT_SELTOMATCHINGBRACE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
