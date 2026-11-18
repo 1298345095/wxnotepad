@@ -63,6 +63,7 @@ public:
     bool EncloseSelection(const wxString& before, const wxString& after);
     bool ConvertUrl(UrlConversion command);
     bool ConvertBase64(Base64Conversion command, const wxString& path = {}, bool defaultEncoding = false);
+    void CopyAsRtf(bool nativeAnsi);
     NativeByteSnapshot RawNativeBytes() const;
     std::string NativeSelectedBytes(bool binary = true);
     std::string NativeBytesAfter(intptr_t position);
