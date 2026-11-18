@@ -2,6 +2,7 @@
 
 #include "syntax/syntax_catalog.h"
 #include <wx/font.h>
+#include <wx/colour.h>
 #include <array>
 #include <utility>
 
@@ -24,5 +25,6 @@ struct FontSettings {
     const SchemeFontStyle& Scheme(SyntaxLanguage language) const;
 };
 wxFont DefaultStyleFont(const FontSettings& settings, bool code);
+wxColour DefaultStyleForeground(const FontSettings& settings, bool code);
 wxString MergeChosenFont(const wxString& style, const wxFont& font);
 void ApplyFontSettings(EditorControl& editor, SyntaxLanguage language);

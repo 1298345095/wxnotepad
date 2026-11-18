@@ -14,14 +14,18 @@ namespace NativeFonts {
 // Drive the platform font chooser itself, including its initial native values.
 class Chooser final : public wxModalDialogHook, public wxTimer {
 public:
-    Chooser(EditorFrame* frame, int expectedPoints, wxString family, bool cancel)
-        : frame_(frame), expectedPoints_(expectedPoints), family_(std::move(family)), cancel_(cancel) {
+    Chooser(EditorFrame* frame, int expectedPoints, wxString family, bool cancel, wxColour colour = {})
+        : frame_(frame), expectedPoints_(expectedPoints), family_(std::move(family)), cancel_(cancel), colour_(colour) {
         Register();
     }
     ~Chooser() override { Unregister(); }
     int Enter(wxDialog* dialog) override {
         if (auto* font = wxDynamicCast(dialog, wxFontDialog)) {
             dialog_ = font;
+            if (colour_.IsOk() && dialog_->GetFontData().GetColour() != colour_) {
+                error_ = "font chooser starts with the selected default foreground, which font confirmation preserves";
+                return wxID_CANCEL;
+            }
             std::fprintf(stderr, "native chooser initial: %s\n",
                          dialog_->GetFontData().GetInitialFont().GetNativeFontInfoDesc().utf8_str().data());
 #ifdef __WXGTK__
@@ -102,7 +106,7 @@ public:
                 // Family/style/size are the native common-dialog controls.
                 auto* family = GetDlgItem(native, cmb1);
                 const auto familyIndex = SendMessageW(family, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1),
-                                      reinterpret_cast<LPARAM>(family_.wc_str()));
+                                                      reinterpret_cast<LPARAM>(family_.wc_str()));
                 if (familyIndex == CB_ERR) throw std::runtime_error("requested native font family must be installed");
                 SendMessageW(family, CB_SETCURSEL, familyIndex, 0);
                 SendMessageW(native, WM_COMMAND, MAKEWPARAM(cmb1, CBN_SELCHANGE), reinterpret_cast<LPARAM>(family));
@@ -195,6 +199,7 @@ private:
     int expectedPoints_;
     wxString family_;
     bool cancel_;
+    wxColour colour_;
     bool selected_ = false;
     bool done_ = false;
     bool released_ = false;

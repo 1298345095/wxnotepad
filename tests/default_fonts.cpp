@@ -218,7 +218,8 @@ private:
                 "independent process keeps the separate text font");
         if (argv[1] == "change" || argv[1] == "explicit" || argv[1] == "cancel") {
             NativeSearch::Command(frame, bar->FindMenuItem("Scheme", "Python"));
-            NativeFonts::Chooser chooser(frame, 14, wxString::FromUTF8(family), argv[1] == "cancel");
+            NativeFonts::Chooser chooser(frame, 14, wxString::FromUTF8(family), argv[1] == "cancel",
+                                         wxColour("#123456"));
             chooser.OpenWithMenu(bar->FindMenuItem("View", "Default Code Font..."));
             chooser.Verify();
             if (argv[1] != "cancel") {

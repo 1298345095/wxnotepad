@@ -122,6 +122,10 @@ wxFont DefaultStyleFont(const FontSettings& settings, bool code) {
     font.SetStrikethrough(Attribute(style, "strike"));
     return font;
 }
+wxColour DefaultStyleForeground(const FontSettings& settings, bool code) {
+    const wxColour colour(Value(code ? settings.codeStyle : settings.textStyle, "fore"));
+    return colour.IsOk() ? colour : wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+}
 wxString MergeChosenFont(const wxString& style, const wxFont& font) {
     // Adapted from Notepad4 89b8b36 Styles.cpp::Style_SelectFont (BSD-3-Clause).
     wxString result = "font:" + font.GetFaceName() + "; size:";

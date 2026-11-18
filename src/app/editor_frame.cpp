@@ -708,6 +708,7 @@ void EditorFrame::ChooseDefaultFont(bool code) {
     const auto initial = DefaultStyleFont(fonts, code);
     wxFontData data;
     data.SetInitialFont(initial);
+    data.SetColour(DefaultStyleForeground(fonts, code));
 #ifdef __WXGTK__
     // A synthetic weight can render correctly but have no face in GTK's
     // chooser. Start at Pango's loaded face, as a native font chooser does.
