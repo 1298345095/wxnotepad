@@ -174,9 +174,29 @@ void CheckPreview(EditorFrame* frame) {
                 popup->GetDPI().x, popup->GetDPI().y, popup->GetContentScaleFactor(), popup->GetSize().x,
                 popup->GetSize().y);
     CapturePreview(popup, "inline");
+    wxMouseEvent leave(wxEVT_LEAVE_WINDOW);
+    leave.SetEventObject(editor);
+    editor->GetEventHandler()->ProcessEvent(leave);
+    Require(VisibleCallTip(editor), "leaving the editor keeps the current CallTip visible");
     Hover(editor, 8);
     Require(WaitFor([editor] { return !VisibleCallTip(editor); }) && !editor->Send(CallTipActive),
             "dwelling just outside the accepted color range dismisses the popup");
+    Hover(editor, 5);
+    Require(WaitFor([editor] { return VisibleCallTip(editor); }), "dwell reopens the preview before typing");
+    wxKeyEvent letter(wxEVT_CHAR);
+    letter.SetEventObject(editor);
+    letter.m_uniChar = 'q';
+    editor->GetEventHandler()->ProcessEvent(letter);
+    Require(VisibleCallTip(editor) && NativeSearch::Text(editor) == "qpre #aB3 and",
+            "ordinary typing changes the document and retains the existing CallTip");
+    NativeSearch::Command(frame, modes->FindItem("Off"));
+    Require(VisibleCallTip(editor), "choosing Off keeps the current preview until it is dismissed");
+#ifdef __WXMSW__
+    NativeCompletion::Key(editor, VK_ESCAPE);
+#else
+    NativeCompletion::Key(editor, GDK_KEY_Escape);
+#endif
+    Require(!VisibleCallTip(editor), "Escape closes the retained CallTip while dwell is disabled");
 }
 
 void ClickCallTip(wxWindow* popup) {
@@ -197,7 +217,7 @@ void ClickCallTip(wxWindow* popup) {
 
 class ChooseColor final : public wxModalDialogHook {
 public:
-    ChooseColor(wxColour original, wxColour wanted, bool cancel, [[maybe_unused]] bool shift)
+    ChooseColor(const wxColour& original, bool cancel, const wxColour& wanted, [[maybe_unused]] bool shift)
         : original_(original), wanted_(wanted), cancel_(cancel) {
 #ifdef __WXMSW__
         shift_ = shift;
@@ -289,9 +309,9 @@ private:
     bool cancel_;
 };
 
-void CheckColorEdit(EditorFrame* frame, const char* mode, const char* source, intptr_t hover, const wxColour& initial,
-                    const char* expected, intptr_t start, intptr_t end, intptr_t caret, bool cancel = false,
-                    bool shift = false) {
+void CheckColorEdit(EditorFrame* frame, const wxString& mode, const char* source, intptr_t hover,
+                    const wxColour& initial, const char* expected, intptr_t start, intptr_t end, intptr_t caret,
+                    bool cancel = false, bool shift = false) {
     using enum Scintilla::Message;
     auto* editor = frame->Editor();
     NativeSearch::Command(frame, CallTipMenu(frame)->FindItem(mode));
@@ -303,7 +323,7 @@ void CheckColorEdit(EditorFrame* frame, const char* mode, const char* source, in
     Hover(editor, hover);
     Require(WaitFor([editor] { return VisibleCallTip(editor); }), "original color previews before edit");
     const bool changed = std::string_view(expected) != source;
-    ChooseColor chooser(initial, changed || cancel ? wxColour(205, 171, 239) : initial, cancel, shift);
+    ChooseColor chooser(initial, cancel, changed || cancel ? wxColour(205, 171, 239) : initial, shift);
     ClickCallTip(VisibleCallTip(editor));
     Require(WaitFor([&] { return chooser.completed; }) && chooser.matched,
             "click opens the native chooser with the original computed RGB");
@@ -429,7 +449,8 @@ void CheckTokenBounds(EditorFrame* frame) {
     const auto position = visibleLines;
     Hover(editor, position);
     Require(WaitFor([editor] { return VisibleCallTip(editor); }), "the bottom editor line can show a color preview");
-    const auto anchorY = editor->ClientToScreen(wxPoint(0, editor->Send(PointYFromPosition, 0, position))).y;
+    const auto anchorY =
+        editor->ClientToScreen(wxPoint(0, static_cast<int>(editor->Send(PointYFromPosition, 0, position)))).y;
     auto* window = VisibleCallTip(editor);
     const auto popup = window->GetScreenRect();
     Require(popup.y < anchorY, "the original CallTip moves above the anchor at the bottom editor edge");

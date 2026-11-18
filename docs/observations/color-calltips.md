@@ -33,3 +33,11 @@ Run the independent reference probe on Windows with the pinned executable:
 ```text
 python -X utf8 .github/scripts/ci.py probe --report-dir F:/evidence/calltip-reference-probe --timeout 140 --runs 1 -- python -X utf8 tests/reference_capture/capture_color_calltips.py --original F:/reference/Notepad4.exe --output F:/evidence/calltip-reference
 ```
+
+Run the native `original_color_calltip` regression through `ci.py test` on
+Windows, X11 and Wayland. Windows also registers `native_directwrite_color_calltip`.
+Set `WXNOTEPAD_CALLTIP_CAPTURE_DIR` to an absolute output directory to retain
+PNG copies of the inline and bottom-edge popup paints at device resolution.
+For X11 the additional `original_color_calltip_scale2` test sets `GDK_SCALE=2`.
+For a 200% Wayland capture, use a private Weston output configured with `--scale=2`;
+the compositor's output scale controls the reported GTK DPI there.

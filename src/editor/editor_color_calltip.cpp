@@ -14,7 +14,7 @@ constexpr bool IsHexDigit(char value) noexcept {
     return (value >= '0' && value <= '9') || (value >= 'A' && value <= 'F') || (value >= 'a' && value <= 'f');
 }
 
-uint32_t PreviewColor(uint32_t value, ptrdiff_t digits, ColorCallTipMode mode) noexcept {
+uint32_t PreviewColor(uint32_t value, ColorCallTipMode mode, ptrdiff_t digits) noexcept {
     using enum ColorCallTipMode;
     if (digits == 6) return mode == RGBA || mode == ARGB ? ColorFromRGBHex(value) : value;
     if (digits == 8) {
@@ -38,7 +38,7 @@ uint32_t PreviewColor(uint32_t value, ptrdiff_t digits, ColorCallTipMode mode) n
     return (red | (green << 8) | (blue << 16) | (alpha << 24)) * 0x11;
 }
 
-uint32_t ReplacementColor(uint32_t color, int digits, ColorCallTipMode mode) noexcept {
+uint32_t ReplacementColor(uint32_t color, ColorCallTipMode mode, int digits) noexcept {
     using enum ColorCallTipMode;
     if (digits == 6) return mode == RGBA || mode == ARGB ? ColorToRGBHex(color) : color;
     if (mode == RGBA) return ColorToRGBAHex(color);
@@ -84,7 +84,7 @@ void EditorControl::ShowColorCallTip(intptr_t position) {
 
     uint32_t value = 0;
     if (std::from_chars(prefix + 1, tail, value, 16).ec != std::errc{}) return;
-    const auto color = PreviewColor(value, digits, colorCallTipMode_);
+    const auto color = PreviewColor(value, colorCallTipMode_, digits);
     const auto anchor = position - (hover - prefix);
     colorCallTip_ = ColorCallTipRange{anchor, anchor + digits + (hash ? 1 : 2), color};
     *tail++ = '\n';
@@ -120,7 +120,7 @@ void EditorControl::EditColorCallTip(ColorCallTipRange range) {
 
     const auto color = chosen | (range.color & ~RgbMask);
     const int digits = color > RgbMask ? 8 : 6;
-    const auto replacement = ReplacementColor(color, digits, colorCallTipMode_);
+    const auto replacement = ReplacementColor(color, colorCallTipMode_, digits);
     const auto text =
         ShiftHeld() ? std::format("{:0{}X}", replacement, digits) : std::format("{:0{}x}", replacement, digits);
     Send(SetSel, range.start + 1, range.end);
