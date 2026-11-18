@@ -34,6 +34,20 @@ DYNAMIC = {
               '正規表示式(E)', '無效的正規表示式'),
 }
 
+# Reviewed command captions for #209. Check the deployed application rather than
+# deriving expected translations from the catalog being tested.
+EDITOR_CONTROLS = {
+    'en': ('Default &Code Font...\tAlt+F12', 'Word Wrap Settings...', 'Scroll Past &Last Line',
+           'Select &Word\tCtrl+Alt+Space', 'Show Character &Info', 'Un&icode Control Character',
+           'Show &Menu\tAlt+F11', 'Standard &Encode'),
+    'zh_CN': ('默认代码字体(&C)...\tAlt+F12', '自动换行设置...', '滚动超出末行(&L)',
+              '选择单词(&W)\tCtrl+Alt+Space', '显示字符信息(&I)', '显示 Unicode 控制字符(&I)',
+              '显示菜单(&M)\tAlt+F11', '标准编码(&E)'),
+    'zh_TW': ('預設程式碼字型(&C)...\tAlt+F12', '自動換行設定...', '捲動超出最後一行(&L)',
+              '選取單字(&W)\tCtrl+Alt+Space', '顯示字元資訊(&I)', 'Un&icode 控制字元',
+              '顯示功能表(&M)\tAlt+F11', '標準編碼(&E)'),
+}
+
 
 class Acceptance:
     def __init__(self, args, directory):
@@ -67,6 +81,9 @@ class Acceptance:
         text = TEXT[code]
         assert app.state['menu_top.0.label'] == text['file'], (code, app.state)
         assert app.state['title'] == text['untitled'] + ' - wxnotepad', app.state
+        captions = {item['label'] for item in menus(app.state).values()}
+        for caption in EDITOR_CONTROLS[code]:
+            assert caption in captions, ('Packaged native editor control caption', code, caption, captions)
         selected = [identity for identity in (language_id(app.state, value) for value in (1024, 1033, 2052, 1028))
                     if menus(app.state)[identity]['checked'] == '1']
         assert selected == ([] if configured is None else [language_id(app.state, configured)]), (configured, selected)
