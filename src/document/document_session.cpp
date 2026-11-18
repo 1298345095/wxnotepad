@@ -349,7 +349,9 @@ std::variant<LoadedDocument, wxString> ReadDocument(const wxFileName& path,
         encoding = sourceEncoding->encoding;
     else if (const auto* codec = std::get_if<FileEncoding>(&decoding))
         encoding = *codec;
-    const auto detected = DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
+    const auto* quick = std::get_if<QuickReloadEncoding>(&decoding);
+    const auto detected = quick ? DetectQuickReloadEncoding(bytes, *quick, options)
+                                : DetectEncoding(path.GetFullPath(), bytes, encoding, options, weakEncoding);
     if (!detected.encoding)
         return wxString::Format(
             _("The selected encoding (code page %u) is not migrated. The document was not changed."),
@@ -388,6 +390,9 @@ struct PlanDocumentLoad {
     LoadPlan operator()(DocumentLoad::ReloadWithEncoding intent) const { return {CurrentPath(), intent.encoding, {}}; }
     LoadPlan operator()(const DocumentLoad::ReloadAsUtf8& intent) const {
         return {CurrentPath(), FileEncoding::Utf8, {}, &intent.beforeReplace, LoadDecisionTiming::BeforeRead};
+    }
+    LoadPlan operator()(const DocumentLoad::ReloadQuickEncoding& intent) const {
+        return {CurrentPath(), intent.encoding, {}, &intent.beforeReplace, LoadDecisionTiming::BeforeRead};
     }
 };
 
