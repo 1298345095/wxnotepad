@@ -1,9 +1,12 @@
 #include "native_key_helpers.h"
 #include "native_paint_helpers.h"
 #include "settings/settings_store.h"
+#include "file_helpers.h"
+#include <memory>
 #include <wx/statusbr.h>
 
 namespace {
+constexpr int LifecycleArgumentCount = 5;
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -64,12 +67,9 @@ void HiddenMenuEditing(EditorFrame* frame, int menu, int status) {
     frame->SetSize(frame->FromDIP(wxSize(640, 460)));
     wxYield();
     NativePaint::Complete(editor);
-    WaitForLayout(
-        [&] {
-            return editor->GetClientSize().x > 0 && editor->GetClientSize().y > 0 && editor->Send(WrapCount, 0) > 1 &&
-                   editor->Send(GetMarginWidthN, 0) == marginWidth;
-        },
-        "hidden bars retain valid wrapped layout and margins after native resize");
+    Require(editor->GetClientSize().x > 0 && editor->GetClientSize().y > 0 && editor->Send(WrapCount, 0) > 1 &&
+                editor->Send(GetMarginWidthN, 0) == marginWidth,
+            "hidden bars retain valid wrapped layout and margins after native resize");
     checkDocument();
     NativeKeys::Shortcut(frame, 'Y', true);
     Require(NativeSearch::Text(editor) == text + "!" && frame->DocumentIsModified(),
@@ -107,9 +107,14 @@ void HiddenMenuEditing(EditorFrame* frame, int menu, int status) {
 class VisibilityApp final : public wxApp {
 public:
     bool OnInit() override {
+        // The standalone layout scenario owns the original default inputs.
+        // Persistence scenarios run copied executables with their supplied INI.
+        settings_ = argc == LifecycleArgumentCount ? std::make_unique<SettingsStore>()
+                                                   : std::make_unique<SettingsStore>(TestFiles::Filename(
+                                                         TestFiles::TemporaryDirectory() / "bar-visibility.ini"));
         // Find tests its application accelerator without consulting the shared clipboard.
-        if (argc == 1) settings_.values.selectOption &= ~SelectOption_CopyPasteBufferAsFindText;
-        auto* frame = new EditorFrame(&settings_);
+        if (argc == 1) settings_->values.selectOption &= ~SelectOption_CopyPasteBufferAsFindText;
+        auto* frame = new EditorFrame(settings_.get());
         frame->ShowWithoutActivating();
         NativeKeys::AfterPresentation(frame, [this, frame](bool ready) mutable {
             try {
@@ -132,7 +137,8 @@ public:
                 }
 #endif
                 if (argc > 1) {
-                    Require(argc == 5, "lifecycle requires expected menu/status, action and save policy");
+                    Require(argc == LifecycleArgumentCount,
+                            "lifecycle requires expected menu/status, action and save policy");
                     Require(MenuVisible(frame) == (argv[1] == "1") &&
                                 frame->GetStatusBar()->IsShown() == (argv[2] == "1"),
                             "original menu and status INI values apply to restarted native window");
@@ -195,7 +201,7 @@ public:
     int OnExit() override { return result_; }
 
 private:
-    SettingsStore settings_;
+    std::unique_ptr<SettingsStore> settings_;
     int result_ = 1;
 };
 } // namespace
