@@ -1870,6 +1870,10 @@ msgstr "移除最近的文件？"
 msgid "Ren&dering Technology"
 msgstr "渲染技术(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Repl&ace Next\tF4"
+msgstr "替换下一个(&A)\tF4"
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Replace"
 msgstr "替换"
@@ -1920,6 +1924,10 @@ msgstr "SHY — 软连字符(&Q)"
 #: src/syntax/syntax_catalog.cpp
 msgid "SVG"
 msgstr "SVG"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Sa&ve Find Text\tAlt+F3"
+msgstr "保存查找文本(&V)\tAlt+F3"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVEAS.
 #: src/app/editor_frame_commands.cpp
