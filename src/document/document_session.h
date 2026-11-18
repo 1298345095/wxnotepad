@@ -87,6 +87,7 @@ public:
     SaveResult SaveAs(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {},
                       SaveFileType fileType = SaveType::CurrentScheme, SaveTimeMode timeMode = SaveTimeMode::Current);
     SaveResult SaveCopy(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss = {});
+    void SaveBackup();
     bool UpdateFileTime();
     // Reload intents obtain their path and any current-encoding hint from this
     // session. Loaded settings are applied before restoring the same-path view.

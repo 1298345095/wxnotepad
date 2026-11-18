@@ -2082,6 +2082,10 @@ msgstr "另存為(&A)...\tF6"
 msgid "Save As"
 msgstr "另存為"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Save Back&up"
+msgstr "儲存備份(&U)"
+
 # Original Notepad4 zh-Hant: IDM_FILE_SAVECOPY; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Save Cop&y...\tCtrl+F6"
