@@ -121,6 +121,11 @@ public:
                             editor->Send(Message::StyleGetWeight, DefaultStyle) == 700 &&
                             editor->Send(Message::StyleGetItalic, DefaultStyle),
                         "native font confirmation applies point size, numeric weight and italic");
+#ifdef __WXMSW__
+                Require(editor->Send(Message::StyleGetUnderline, DefaultStyle) &&
+                            editor->Send(Message::StyleGetStrike, DefaultStyle),
+                        "native Windows font effects apply underline and strike independently of weight/italic");
+#endif
                 Require(TestEditor::Text(editor) == originalText && frame->DocumentEncoding() == originalEncoding &&
                             editor->Send(Message::GetAnchor) == 12 && editor->Send(Message::GetCurrentPos) == 3 &&
                             !editor->Send(Message::GetModify) && !editor->Send(Message::CanUndo) &&

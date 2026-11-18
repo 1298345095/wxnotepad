@@ -43,6 +43,8 @@ with tempfile.TemporaryDirectory(prefix="wxnotepad-fonts-") as temporary:
         actual = parser["Global Styles"]["Default Code Style"]
         if changed:
             assert "; size:15;" in actual and "; bold" in actual and "; italic" in actual, actual
+            if os.name == "nt":
+                assert "; underline" in actual and "; strike" in actual, actual
             for attribute in ["overline", "locale:zh-CN", "fore:#123456", "back:#EEEEDD", "alpha:77", "outline:99", "case:U", "custom:保留"]:
                 assert attribute in actual, (attribute, actual)
             assert parser["C/C++ Source"].getboolean("UseDefaultCodeStyle", fallback=True)
