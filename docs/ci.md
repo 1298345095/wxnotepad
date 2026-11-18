@@ -329,6 +329,17 @@ directory. Each run's combined output and process result remain in
 stops and fails on its first abnormal exit. The complete suite's JUnit and
 logs remain separate.
 
+The Windows invalid-byte Character Info test runs under an external parent monitor.
+If the child is still running after 45 seconds, system DbgHelp captures its thread
+stacks, module list and referenced memory under `.ci/reports/windows-dumps`.
+The original CTest 60-second guard, child arguments, working directory, output
+and numeric exit status remain in force. A kill-on-close job cleans up the owned
+child if CTest terminates the monitor. A triggered capture failure is reported
+and fails an otherwise successful child result. The evidence upload retains the
+matching executable and any PDB. `native_character_info_hang_monitor` verifies
+real child exits, GUI output forwarding, dump streams, capture failure and both
+hard parent termination and CTest timeout cleanup.
+
 The JSON native fixture waits for GTK's initial folder load before selecting a
 file, so that load cannot replace the requested selection. On Linux with CMake
 3.27 or newer, its unchanged 60-second timeout sends SIGQUIT with a five-second
