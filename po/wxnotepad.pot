@@ -159,6 +159,10 @@ msgstr ""
 msgid "&Decode"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Encoding\tCtrl+Alt+F"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Default encoding:"
 msgstr ""
@@ -626,6 +630,14 @@ msgstr ""
 
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "As &ANSI\tCtrl+Shift+A"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "As &OEM\tCtrl+Shift+O"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
