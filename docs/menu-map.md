@@ -19,7 +19,7 @@ Edit
   Undo; Redo
   Cut; Copy; Paste; Swap
   Clear Clipboard
-  Copy to Clipboard > File Name; File Name and Ext.; Full Path Name; Copy All; Copy Add
+  Copy to Clipboard > File Name; File Name and Ext.; Full Path Name; Copy All; Copy Add; Copy as RTF
   Selection
     Duplicate
     Toggle Line Comment; Toggle Block Comment; Indent; Unindent

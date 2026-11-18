@@ -993,6 +993,10 @@ msgstr "复制剪贴板内容作为查找文本"
 msgid "Copy Selection As Find Text"
 msgstr "复制选中文本作为查找文本"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Copy as &RTF"
+msgstr "复制为富文本(&R)"
+
 #: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr "无法关闭已写入完毕的临时文件。"
