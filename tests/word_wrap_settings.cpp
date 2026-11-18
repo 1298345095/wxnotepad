@@ -8,6 +8,9 @@
 #include <wx/filename.h>
 #include <array>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <map>
 #include <memory>
 #include <stdexcept>
 #include <tuple>
@@ -47,9 +50,28 @@ public:
                 NativeKeys::AfterPresentation(dialog, [this, dialog](bool presented) {
                     try {
                         Require(presented, "owned wrap settings dialog is presented");
+#ifdef __WXMSW__
+                        Require(static_cast<int>(GetDpiForWindow(static_cast<HWND>(dialog->GetHandle()))) ==
+                                    dialog->GetDPI().y,
+                                "wrap dialog DPI agrees with its actual native window");
+#endif
+                        Require(dialog->GetDPI() == dialog->GetParent()->GetDPI(),
+                                "wrap dialog uses its parent frame's active DPI");
                         const auto area = wxDisplay(wxDisplay::GetFromWindow(dialog)).GetClientArea();
                         Require(area.Contains(dialog->GetScreenRect()),
                                 "wrap settings fits the active native work area");
+                        for (auto* child : dialog->GetChildren())
+                            if (child->IsShown() &&
+                                (wxDynamicCast(child, wxChoice) || wxDynamicCast(child, wxCheckBox) ||
+                                 wxDynamicCast(child, wxButton)))
+                                Require(dialog->GetScreenRect().Contains(child->GetScreenRect()),
+                                        "every native wrap control and button fits the dialog at the active DPI");
+                        if (!reportedDpi_) {
+                            std::printf("wrap dialog dpi=%dx%d size=%dx%d work_area=%dx%d\n", dialog->GetDPI().x,
+                                        dialog->GetDPI().y, dialog->GetSize().x, dialog->GetSize().y, area.width,
+                                        area.height);
+                            reportedDpi_ = true;
+                        }
                         action_(dialog);
                     } catch (...) {
                         failure = std::current_exception();
@@ -63,6 +85,7 @@ public:
 
 private:
     std::function<void(wxDialog*)> action_;
+    inline static bool reportedDpi_ = false;
 };
 template <class Action> void Visit(EditorFrame* frame, Action action) {
     const auto id = frame->GetMenuBar()->FindMenuItem("Settings", "Word Wrap Settings...");
@@ -308,9 +331,145 @@ void Exercise(EditorFrame* frame, SettingsStore& settings) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Settings", "Save Settings Now"));
     std::puts("PASS: original wrap modes, every indent and symbol, Cancel/OK, metadata, file variables and save");
 }
+void OriginalReference(EditorFrame* frame, const wxString& input) {
+    using enum Message;
+    auto* editor = frame->Editor();
+    auto path = std::filesystem::path(input.ToStdWstring());
+    if (std::filesystem::is_directory(path))
+        path /= "word_wrap_original_" + std::to_string(editor->GetDPI().y) + ".tsv";
+    std::ifstream reference(path);
+    Require(reference.is_open(), "independent original wrap capture exists for the active window DPI");
+    std::ifstream inputs(path.parent_path() / "word_wrap_inputs.tsv");
+    std::map<std::string, std::string> samples;
+    std::string sample, hex;
+    while (inputs >> sample >> hex)
+        samples.emplace(sample, hex);
+    Require(samples.size() == 4, "all four original reference input samples exist");
+    std::string header;
+    std::getline(reference, header);
+    int records = 0;
+    int mode = 0, indent = 0, width = 0, height = 0, dpi = 0;
+    while (reference >> sample >> mode >> indent >> width >> height >> dpi) {
+        std::array<intptr_t, 17> expected{};
+        for (auto& value : expected)
+            reference >> value;
+        Require(static_cast<bool>(reference), "original capture row contains every observed field");
+        Require(samples.contains(sample), "original reference row identifies an input sample");
+        hex = samples.at(sample);
+        std::string text;
+        for (size_t offset = 0; offset < hex.size(); offset += 2)
+            text += static_cast<char>(std::stoi(hex.substr(offset, 2), nullptr, 16));
+        TestEditor::ResetStream(editor, text.c_str(), 6, 1, Scintilla::EndOfLine::CrLf);
+        editor->Send(SetCodePage, Scintilla::CpUtf8);
+        editor->Send(SetLexer, 1); // Original Null lexer; explicit fold levels below.
+        editor->Send(SetTechnology, std::to_underlying(Scintilla::Technology::Default));
+        editor->Send(SetZoom, 100);
+        editor->Send(SetFontQuality, std::to_underlying(Scintilla::FontQuality::QualityDefault));
+        editor->Send(SetFontLocale, 0, reinterpret_cast<intptr_t>(""));
+        constexpr auto defaultStyle = std::to_underlying(Scintilla::StylesCommon::Default);
+        constexpr int referencePointSizeFractional = 1000;
+        editor->Send(StyleSetFont, defaultStyle, reinterpret_cast<intptr_t>("Consolas"));
+        editor->Send(StyleSetSizeFractional, defaultStyle, referencePointSizeFractional);
+        editor->Send(StyleSetWeight, defaultStyle, std::to_underlying(Scintilla::FontWeight::Normal));
+        editor->Send(StyleSetItalic, defaultStyle, 0);
+        editor->Send(StyleSetCharacterSet, defaultStyle, std::to_underlying(Scintilla::CharacterSet::Default));
+        editor->Send(StyleSetStretch, defaultStyle, std::to_underlying(Scintilla::FontStretch::Normal));
+        editor->Send(StyleClearAll);
+        editor->SetIndentationWidths(8, 3);
+        editor->Send(SetExtraAscent, 0);
+        editor->Send(SetExtraDescent, 0);
+        editor->SetLineNumbersVisible(false);
+        editor->SetBookmarkMarginVisible(false);
+        editor->SetCodeFoldingVisible(false);
+        for (int margin = 0; margin < 5; ++margin)
+            editor->Send(SetMarginWidthN, margin, 0);
+        editor->Send(SetMarginLeft, 0, 1);
+        editor->Send(SetMarginRight, 0, 1);
+        editor->Send(AppendText, 1, reinterpret_cast<intptr_t>("!"));
+        editor->Send(Undo);
+        editor->Send(SetSel, 6, 1);
+        if (sample == "folded") {
+            constexpr auto foldBase = std::to_underlying(Scintilla::FoldLevel::Base);
+            editor->Send(SetFoldLevel, 0, foldBase | std::to_underlying(Scintilla::FoldLevel::HeaderFlag));
+            for (int line = 1; line < 4; ++line)
+                editor->Send(SetFoldLevel, line, foldBase + 1);
+            editor->Send(SetFoldLevel, 4, foldBase);
+            editor->Send(FoldLine, 0, std::to_underlying(Scintilla::FoldAction::Contract));
+        }
+        Visit(frame, [mode, indent](wxDialog* dialog) {
+            Choose(dialog, "Wrap mode", mode);
+            Choose(dialog, "Wrap indent", indent);
+            Choose(dialog, "Wrap symbol before", 1);
+            Choose(dialog, "Wrap symbol after", 3);
+            Check(dialog, "Wrap select subline", true);
+            Check(dialog, "Wrap highlight subline", true);
+            NativeSearch::Click(dialog, wxID_OK);
+        });
+        // The original's margin-symbol setting enables line numbers. Clear the
+        // geometric margins after that host side effect on both reference hosts.
+        editor->SetLineNumbersVisible(false);
+        for (int margin = 0; margin < 5; ++margin)
+            editor->Send(SetMarginWidthN, margin, 0);
+        // Normalize the actual client viewport, independently of frame chrome and scrollbars.
+        for (int attempt = 0; attempt < 3; ++attempt) {
+            frame->SetClientSize(frame->GetClientSize() + wxSize(width, height) - editor->GetClientSize());
+            frame->Layout();
+            NativeFold::Paint(editor);
+            if (editor->GetClientSize() == wxSize(width, height)) break;
+        }
+        Require(editor->GetClientSize() == wxSize(width, height) && editor->GetDPI().y == dpi,
+                "original comparison has identical reported native viewport and window DPI");
+        std::string face(static_cast<size_t>(editor->Send(StyleGetFont, defaultStyle)) + 1, '\0');
+        editor->Send(StyleGetFont, defaultStyle, reinterpret_cast<intptr_t>(face.data()));
+        Require(std::string(face.c_str()) == "Consolas" &&
+                    editor->Send(StyleGetSizeFractional, defaultStyle) == referencePointSizeFractional &&
+                    editor->Send(GetZoom) == 100 && editor->Send(GetTechnology) == 0 &&
+                    editor->Send(GetMarginLeft) == 1 && editor->Send(GetMarginRight) == 1,
+                "comparison retains the actual original font, renderer, zoom and edge margins");
+        for (int margin = 0; margin < 5; ++margin)
+            Require(editor->Send(GetMarginWidthN, margin) == 0, "comparison retains zero native margin columns");
+        const std::array<intptr_t, 17> observed{
+            editor->Send(GetWrapMode),
+            editor->Send(GetWrapIndentMode),
+            editor->Send(GetWrapStartIndent),
+            editor->Send(GetWrapVisualFlags),
+            editor->Send(GetWrapVisualFlagsLocation),
+            editor->Send(GetMarginOptions),
+            editor->Send(GetCaretLineHighlightSubLine),
+            editor->Send(WrapCount, 0),
+            editor->Send(GetLineVisible, 2),
+            editor->Send(GetAnchor),
+            editor->Send(GetCurrentPos),
+            editor->Send(GetModify),
+            editor->Send(CanUndo),
+            editor->Send(CanRedo),
+            editor->Send(TextHeight, 0),
+            editor->Send(TextWidth, defaultStyle, reinterpret_cast<intptr_t>("W")),
+            editor->Send(TextWidth, defaultStyle, reinterpret_cast<intptr_t>("中文"))};
+        for (size_t field = 0; field < expected.size(); ++field) {
+            if (observed[field] != expected[field])
+                std::fprintf(stderr,
+                             "original %s mode=%d indent=%d width=%d dpi=%d field=%zu expected=%lld actual=%lld\n",
+                             sample.c_str(), mode, indent, width, dpi, field, static_cast<long long>(expected[field]),
+                             static_cast<long long>(observed[field]));
+        }
+        Require(observed == expected, "native wrap result equals independent original executable capture");
+        Require(NativeSearch::Text(editor) == text, "original comparison retains exact sample bytes");
+        ++records;
+    }
+    Require(records == 32, "all four original samples, modes and both viewports were compared");
+    std::printf("PASS: %d independent original dialog/wrap records at %d DPI\n", records, editor->GetDPI().y);
+}
 class WrapSettingsApp final : public wxApp {
 public:
     bool OnInit() override {
+#ifdef __WXMSW__
+        if (wxGetenv("WXNOTEPAD_WRAP_DPI96")) {
+            Require(SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE) != nullptr,
+                    "create complementary emulated 96-DPI wrap window");
+            std::puts("Complementary 96-DPI unaware-thread emulation; monitor scaling remains unchanged");
+        }
+#endif
         settings_ = std::make_unique<SettingsStore>();
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
@@ -318,7 +477,14 @@ public:
             const bool exitSave = argc > 1 && argv[1] == "--exit";
             try {
                 Require(ready, "owned editor frame is presented before native wrap actions");
-                if (exitSave) {
+#ifdef __WXMSW__
+                if (wxGetenv("WXNOTEPAD_WRAP_DPI96"))
+                    Require(frame->GetDPI().y == 96 && frame->Editor()->GetDPI().y == 96,
+                            "complementary native frame and editor both report the requested 96 DPI");
+#endif
+                if (argc > 1 && argv[1] == "--reference") {
+                    OriginalReference(frame, argv[2]);
+                } else if (exitSave) {
                     Visit(frame, [](wxDialog* dialog) {
                         Choose(dialog, "Wrap mode", 2);
                         Choose(dialog, "Wrap indent", 3);
