@@ -6,6 +6,7 @@
 #include "syntax/syntax_catalog.h"
 #include "document/encoding/encoding_detection.h"
 #include "document/file_variables.h"
+#include "editor/native_byte_history.h"
 #include <optional>
 #include <functional>
 #include <string>
@@ -140,5 +141,5 @@ private:
                       std::optional<SaveFileType> fileType = std::nullopt, bool copy = false,
                       SaveTimeMode timeMode = SaveTimeMode::Current);
     OpenResult Replace(const std::string& bytes, const wxString& path, EncodingChoice encoding,
-                       bool keepLanguage = false);
+                       bool keepLanguage = false, NativeByteRanges raw = {});
 };

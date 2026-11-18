@@ -287,6 +287,7 @@ void StripTrailingBlanks(EditorControl& editor) {
 
 struct LoadedDocument {
     std::string text;
+    NativeByteRanges raw;
     FileEncoding encoding;
     bool bom;
     bool systemDefault;
@@ -300,7 +301,11 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     const bool utf16 = loaded.encoding == Utf16Le || loaded.encoding == Utf16Be;
     if (!utf16) loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     if (loaded.bom) bytes.erase(0, utf16 ? 2 : 3);
-    if (loaded.encoding == Gbk) {
+    if (loaded.systemDefault) {
+        // Native ANSI keeps arbitrary bytes and aliases that cannot round-trip
+        // through Unicode, just like the native Base64 Decode boundary.
+        bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw);
+    } else if (loaded.encoding == Gbk) {
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return wxString(_("The file is not valid GBK (CP936). The document was not changed."));
         bytes = *decoded;
@@ -626,9 +631,9 @@ OpenResult DocumentSession::Load(const DocumentLoad::Intent& intent,
         if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     }
     auto& loaded = std::get<LoadedDocument>(candidate);
-    const auto result =
-        Replace(loaded.text, loadPath.GetFullPath(),
-                EncodingChoice(loaded.encoding, loaded.bom, loaded.systemDefault, loaded.systemOem), samePath);
+    const auto result = Replace(loaded.text, loadPath.GetFullPath(),
+                                EncodingChoice(loaded.encoding, loaded.bom, loaded.systemDefault, loaded.systemOem),
+                                samePath, std::move(loaded.raw));
     originalEncoding_ = CurrentEncoding();
     fileVariables_ = std::move(loaded.variables);
     // FileLoad applies the loaded file's indentation before restoring its view
@@ -640,7 +645,7 @@ OpenResult DocumentSession::Load(const DocumentLoad::Intent& intent,
 }
 
 OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, EncodingChoice encoding,
-                                    bool keepLanguage) {
+                                    bool keepLanguage, NativeByteRanges raw) {
     using enum Scintilla::Message;
     const auto lineEndings = CountLineEndings(bytes);
     editor_.Send(SetReadOnly, 0);
@@ -651,7 +656,13 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     editor_.Send(SetUndoCollection, 0);
     editor_.Send(ClearAll);
     editor_.Send(MarkerDeleteAll, 0);
-    editor_.Send(AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
+    if (raw.empty())
+        editor_.Send(AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
+    else {
+        editor_.Send(SetTargetStart, 0);
+        editor_.Send(SetTargetEnd, 0);
+        editor_.ReplaceTargetWithNativeBytes(bytes, std::move(raw));
+    }
     editor_.Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(SelectEol(lineEndings, defaultEolMode_))));
     editor_.Send(SetUndoCollection, 1);
     editor_.Send(EmptyUndoBuffer);

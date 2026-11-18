@@ -926,7 +926,10 @@ if(BUILD_TESTING)
     if(WIN32)
         add_editor_test(native_byte_allocation native_byte_allocation_failures 60)
         target_sources(native_byte_allocation PRIVATE tests/completion_allocation_fault.cpp)
+        set_tests_properties(native_byte_allocation_failures PROPERTIES SKIP_RETURN_CODE 77)
+        add_editor_test(native_byte_load native_byte_load_roundtrip 60)
     endif()
+    add_editor_test(native_byte_information native_invalid_byte_character_information 60)
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

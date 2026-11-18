@@ -151,6 +151,7 @@ public:
 
 private:
     friend struct EditorCoreObservation;
+    friend class DocumentSession;
     class Core;
     template <typename Action> bool RunNativeEvent(Action&& action);
     template <typename Event, typename Handler>
