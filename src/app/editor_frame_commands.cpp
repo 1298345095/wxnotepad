@@ -80,7 +80,36 @@ void EditorFrame::CreateMenus() {
     menus->Append(CreateViewMenu(), _("&View"));
     menus->Append(CreateLanguageMenu(), _("Sche&me"));
     menus->Append(CreateSettingsMenu(), _("Sett&ings"));
+    menus->Append(CreateToolsMenu(), _("&Tools"));
     SetMenuBar(menus);
+}
+
+wxMenu* EditorFrame::CreateToolsMenu() {
+    auto* tools = new wxMenu;
+    auto* base64 = new wxMenu;
+    for (const auto& [label, command] :
+         {std::pair{wxTRANSLATE("Standard &Encode"), Base64Conversion::Encode},
+          std::pair{wxTRANSLATE("URL &Safe Encode"), Base64Conversion::UrlSafeEncode},
+          std::pair{wxTRANSLATE("Encode as HTML Embedded &Image"), Base64Conversion::HtmlEmbeddedImage},
+          std::pair{wxTRANSLATE("&Decode"), Base64Conversion::Decode},
+          std::pair{wxTRANSLATE("Decode as &Hex"), Base64Conversion::DecodeAsHex}}) {
+        const int id = wxWindow::NewControlId();
+        base64->Append(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, command](wxCommandEvent&) {
+                if (!editor_->ConvertBase64(command, document_.Path(), document_.IsDefaultEncoding()))
+                    wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
+    tools->AppendSubMenu(base64, _("&Base64"));
+    return tools;
 }
 
 void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
