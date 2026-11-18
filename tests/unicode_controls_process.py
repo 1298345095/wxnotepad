@@ -30,13 +30,14 @@ def main():
         environment = dict(os.environ, PATH=str(source.parent) + os.pathsep + os.environ['PATH'])
         config = folder / 'Notepad4.ini'
         source_file = folder / 'controls.txt'
-        original = 'A\u2060B\u200eC\u2028D'.encode()
+        original = ('A\u2060B\u200eC ' + 'a\u2060b ' * 120).encode()
         source_file.write_bytes(original)
         run = 0
+        rows = {}
 
         def seed(save, visible):
             config.write_text(f'[Settings]\nSaveSettings={save}\nShowUnicodeControlCharacter={visible}\n'
-                              'WordWrap=0\nWarnLineEndings=0\nUnrelatedSetting=keep\n'
+                              'WordWrap=1\nWarnLineEndings=0\nUnrelatedSetting=keep\n'
                               f'[Settings2]\nUILanguage={language}\n[Styles]\nUnrelatedStyle=保留\n',
                               encoding='utf-16')
 
@@ -50,6 +51,8 @@ def main():
                 assert len(found) == 1, (args.language, caption, items)
                 identity = found[0]
                 assert items[identity]['checked'] == str(int(visible)) and items[identity]['enabled'] == '1', items[identity]
+                if visible in rows:
+                    assert int(app.state['wrap_rows']) == rows[visible], (visible, rows, app.state['wrap_rows'])
             except BaseException:
                 app.stop()
                 raise
@@ -58,9 +61,12 @@ def main():
         seed(0, 1)
         app, identity = start(True)
         try:
+            rows[True] = int(app.state['wrap_rows'])
             before = tuple(app.state[key] for key in ('length', 'dirty', 'encoding', 'bom'))
             app.choose(identity)
             assert menus(app.state)[identity]['checked'] == '0'
+            rows[False] = int(app.state['wrap_rows'])
+            assert rows[True] > rows[False], ('persisted names must change visible wrapping', rows)
             assert tuple(app.state[key] for key in ('length', 'dirty', 'encoding', 'bom')) == before
             save_caption = {'en': 'Save Settings Now', 'zh_CN': '立即保存设置(N)',
                             'zh_TW': '立即儲存設定(N)'}[args.language]
@@ -84,6 +90,7 @@ def main():
             try:
                 app.choose(identity)
                 assert menus(app.state)[identity]['checked'] == '1'
+                assert int(app.state['wrap_rows']) == rows[True], rows
                 app.close()
             finally:
                 app.stop()
