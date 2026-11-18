@@ -546,6 +546,21 @@ if(BUILD_TESTING)
     add_test(NAME original_word_wrap_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/word_wrap_settings_process.py" "$<TARGET_FILE:word_wrap_settings>")
     set_tests_properties(original_word_wrap_settings PROPERTIES TIMEOUT 180)
+    if(WIN32)
+        add_test(NAME original_word_wrap_settings_dpi96 COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/word_wrap_settings_process.py" "$<TARGET_FILE:word_wrap_settings>")
+        set_tests_properties(original_word_wrap_settings_dpi96 PROPERTIES TIMEOUT 180
+            ENVIRONMENT "WXNOTEPAD_WRAP_DPI96=1")
+        add_test(NAME original_word_wrap_reference COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/word_wrap_reference_process.py" "$<TARGET_FILE:word_wrap_settings>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+        set_tests_properties(original_word_wrap_reference PROPERTIES TIMEOUT 120)
+        add_test(NAME original_word_wrap_reference_dpi96 COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/word_wrap_reference_process.py" "$<TARGET_FILE:word_wrap_settings>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+        set_tests_properties(original_word_wrap_reference_dpi96 PROPERTIES TIMEOUT 120
+            ENVIRONMENT "WXNOTEPAD_WRAP_DPI96=1")
+    endif()
     add_editor_test(word_wrap word_wrap_view 60)
     if(WIN32)
         foreach(target IN ITEMS clipboard_smoke word_wrap)
