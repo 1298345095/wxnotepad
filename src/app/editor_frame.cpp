@@ -11,6 +11,11 @@
 #include "settings/recent_files.h"
 #include "diagnostics/trace.h"
 #include <wx/menu.h>
+#include <wx/fontdlg.h>
+#ifdef __WXGTK__
+#include <wx/fontutil.h>
+#include <gtk/gtk.h>
+#endif
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
 #include <wx/filename.h>
@@ -83,6 +88,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
         event.Skip();
     });
+    editor_->SetFontSettings(preferences.fonts);
     editor_->SetAutoInsertMask(preferences.autoInsertMask);
     editor_->SetCompletionSettings(preferences.completion);
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
@@ -329,6 +335,7 @@ void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
     document_.SelectLanguage(language);
     indentation_.Apply(*editor_, document_.Language());
     UpdateDocumentState();
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss,
@@ -674,4 +681,40 @@ void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts, bo
         editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(choice.mode)));
         editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(std::to_underlying(choice.mode)));
     }
+}
+
+void EditorFrame::ChooseDefaultFont(bool code) {
+    auto& fonts = (settings_ ? settings_->values : defaults_).fonts;
+    auto& style = code ? fonts.codeStyle : fonts.textStyle;
+    const auto initial = DefaultStyleFont(fonts, code);
+    wxFontData data;
+    data.SetInitialFont(initial);
+#ifdef __WXGTK__
+    // A synthetic weight can render correctly but have no face in GTK's
+    // chooser. Start at Pango's loaded face, as a native font chooser does.
+    auto* context = gtk_widget_get_pango_context(GTK_WIDGET(editor_->GetHandle()));
+    if (auto* loaded = pango_context_load_font(context, initial.GetNativeFontInfo()->description)) {
+        wxNativeFontInfo native;
+        native.description = pango_font_describe(loaded);
+        wxFont effective(native);
+        effective.SetFractionalPointSize(initial.GetFractionalPointSize());
+        data.SetInitialFont(effective);
+        g_object_unref(loaded);
+    }
+#endif
+    data.EnableEffects(true);
+    wxFontDialog dialog(this, data);
+    dialog.SetTitle(code ? _("Default Code Font") : _("Default Text Font"));
+    if (dialog.ShowModal() != wxID_OK) return;
+    auto chosen = dialog.GetFontData().GetChosenFont();
+    if (!chosen.IsOk()) return;
+#ifdef __WXGTK__
+    // GTK's native font chooser has no underline or strike controls.
+    chosen.SetUnderlined(initial.GetUnderlined());
+    chosen.SetStrikethrough(initial.GetStrikethrough());
+#endif
+    style = MergeChosenFont(style, chosen);
+    editor_->SetFontSettings(fonts);
+    ApplySyntaxLanguage(*editor_, document_.Language(), document_.EffectiveLanguage());
+    UpdatePositionStatus();
 }
