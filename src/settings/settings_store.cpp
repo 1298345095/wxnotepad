@@ -92,6 +92,8 @@ SettingsStore::SettingsStore() : SettingsStore(ConfigurationPath()) {
 SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     const OriginalSettings defaults;
     LoadLines();
+    values.fonts.codeStyle = ReadString("Default Code Style", defaults.fonts.codeStyle, "Global Styles");
+    values.fonts.textStyle = ReadString("Default Text Style", defaults.fonts.textStyle, "Global Styles");
     values.saveSettings = ReadBool("SaveSettings", defaults.saveSettings);
     values.saveBeforeRunningTools = ReadBool("SaveBeforeRunningTools", defaults.saveBeforeRunningTools);
     values.uiLanguage = UILanguage::Normalize(ReadInt("UILanguage", defaults.uiLanguage, "Settings2"));
@@ -124,6 +126,7 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.showIndentGuides = ReadBool("ShowIndentGuides", defaults.showIndentGuides);
     values.simpleIndentGuides = ReadBool("SimpleIndentGuides", defaults.simpleIndentGuides, "Settings2");
     values.viewEOLs = ReadBool("ViewEOLs", defaults.viewEOLs);
+    values.showUnicodeControlCharacter = ReadBool("ShowUnicodeControlCharacter", defaults.showUnicodeControlCharacter);
     values.showWordWrapSymbols = ReadBool("ShowWordWrapSymbols", defaults.showWordWrapSymbols);
     const int wrapSymbols = std::clamp(ReadInt("WordWrapSymbols", defaults.wordWrapSymbols), 0, 32);
     values.wordWrapSymbols = std::min(wrapSymbols % 10, 2) + (wrapSymbols / 10) * 10;
@@ -216,6 +219,9 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
         const auto language = static_cast<SyntaxLanguage>(index);
         if (SyntaxSettingsLanguage(language) != language) continue;
         const auto* section = SyntaxSettingsSection(language);
+        auto& style = values.fonts.schemes[index];
+        style.useCode = ReadBool("UseDefaultCodeStyle", style.useCode, section);
+        style.defaultStyle = ReadString("Default", {}, section);
         auto& tabs = values.schemeTabs[index];
         tabs.tabWidth = std::clamp(ReadInt("TabWidth", tabs.tabWidth, section), 1, OriginalSettingLimits::MaxTabWidth);
         tabs.indentWidth =
@@ -438,12 +444,12 @@ void SettingsStore::WriteString(const wxString& key, const wxString& value, cons
     }
     lines_.insert(lines_.begin() + static_cast<std::ptrdiff_t>(insertion), key + "=" + value);
 }
-wxString SettingsStore::ReadString(const wxString& key, const wxString& fallback) const {
+wxString SettingsStore::ReadString(const wxString& key, const wxString& fallback, const wxString& sectionName) const {
     bool section = false;
     for (auto line : lines_) {
         line.Trim().Trim(false);
         if (line.StartsWith("["))
-            section = line.CmpNoCase("[Settings]") == 0;
+            section = line.CmpNoCase("[" + sectionName + "]") == 0;
         else if (section && line.Contains('=') && line.BeforeFirst('=').Trim().Trim(false) == key) {
             wxString value = line.AfterFirst('=').Trim().Trim(false);
             if (value.StartsWith("\"") && value.EndsWith("\"") && value.length() >= 2)
@@ -462,6 +468,15 @@ bool SettingsStore::Save(bool explicitSave) {
     if (!LoadLines()) return false;
     WriteBool("SaveSettings", values.saveSettings, defaults.saveSettings);
     if (values.saveSettings || explicitSave) {
+        WriteString("Default Code Style", values.fonts.codeStyle, defaults.fonts.codeStyle, "Global Styles");
+        WriteString("Default Text Style", values.fonts.textStyle, defaults.fonts.textStyle, "Global Styles");
+        for (const auto& scheme : SyntaxCatalog()) {
+            if (SyntaxSettingsLanguage(scheme.language) != scheme.language) continue;
+            const auto* section = SyntaxSettingsSection(scheme.language);
+            const auto& style = values.fonts.Scheme(scheme.language);
+            WriteBool("UseDefaultCodeStyle", style.useCode, defaults.fonts.Scheme(scheme.language).useCode, section);
+            WriteString("Default", style.defaultStyle, {}, section);
+        }
         WriteBool("SaveBeforeRunningTools", values.saveBeforeRunningTools, defaults.saveBeforeRunningTools);
         WriteInt("SaveRecentFiles",
                  static_cast<int>((static_cast<unsigned>(values.maxRecentFiles) << 1) |
@@ -485,6 +500,8 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ViewWhiteSpace", values.viewWhiteSpace, defaults.viewWhiteSpace);
         WriteBool("ShowIndentGuides", values.showIndentGuides, defaults.showIndentGuides);
         WriteBool("ViewEOLs", values.viewEOLs, defaults.viewEOLs);
+        WriteBool("ShowUnicodeControlCharacter", values.showUnicodeControlCharacter,
+                  defaults.showUnicodeControlCharacter);
         WriteBool("ShowWordWrapSymbols", values.showWordWrapSymbols, defaults.showWordWrapSymbols);
         WriteInt("WordWrapSymbols", values.wordWrapSymbols, defaults.wordWrapSymbols);
         WriteBool("AutoSelect", values.autoSelect, defaults.autoSelect, "Styles");

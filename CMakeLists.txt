@@ -70,6 +70,7 @@ add_library(editor_runtime STATIC
     src/editor/platform/latex_input.cpp
     src/editor/caret_appearance.cpp
     src/editor/date_time.cpp
+    src/editor/character_information.cpp
     src/editor/align_lines.cpp
     src/editor/blank_lines.cpp
     src/editor/bookmarks.cpp
@@ -121,6 +122,7 @@ add_library(editor_features STATIC
     src/editor/word_completion.cpp
     src/editor/completion_styles.cpp
     src/editor/go_to_location.cpp
+    src/editor/font_settings.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/file_variables.cpp
@@ -533,6 +535,27 @@ if(BUILD_TESTING)
     add_editor_test(case_conversion original_case_conversion 60)
     add_editor_test(custom_case original_custom_case 60)
     add_editor_test(character_hex original_character_hex 60)
+    add_editor_test(character_information original_character_information 90)
+    add_test(NAME packaged_character_information COMMAND "${Python3_EXECUTABLE}" -X utf8
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/character_information_process.py" "$<TARGET_FILE:wxnotepad>"
+        --cmake-dir "${CMAKE_BINARY_DIR}"
+        --evidence "${CMAKE_BINARY_DIR}/Testing/Temporary/character-information-package")
+    set_tests_properties(packaged_character_information PROPERTIES TIMEOUT 120)
+    if(UNIX AND NOT APPLE)
+        find_package(ICU QUIET COMPONENTS uc)
+        if(ICU_FOUND)
+            string(REGEX MATCH "^[0-9]+" character_metadata_major "${ICU_VERSION}")
+            add_library(character_metadata_unavailable SHARED tests/character_metadata_unavailable.cpp)
+            set_target_properties(character_metadata_unavailable PROPERTIES OUTPUT_NAME icuuc
+                SOVERSION "${character_metadata_major}"
+                LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/unavailable-character-metadata")
+            add_dependencies(character_information character_metadata_unavailable)
+            add_test(NAME original_character_information_no_metadata COMMAND "${CMAKE_COMMAND}" -E env
+                "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:character_metadata_unavailable>"
+                "WXNOTEPAD_EXPECT_NO_CHARACTER_METADATA=1" "$<TARGET_FILE:character_information>")
+            set_tests_properties(original_character_information_no_metadata PROPERTIES TIMEOUT 90)
+        endif()
+    endif()
     add_editor_test(duplicate_transpose original_duplicate_transpose 60)
     add_editor_test(font_smoke native_font_metrics 20)
     add_editor_test(measurement_threads native_parallel_measurement 90)
@@ -640,6 +663,22 @@ if(BUILD_TESTING)
     add_test(NAME original_guides_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/guides_process.py" "$<TARGET_FILE:guides>")
     set_tests_properties(original_guides_settings_lifecycle PROPERTIES TIMEOUT 90)
+    add_editor_test(unicode_controls original_unicode_controls 60)
+    if(WIN32)
+        add_test(NAME original_unicode_controls_dpi96 COMMAND unicode_controls)
+        set_tests_properties(original_unicode_controls_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_UNICODE_DPI96=1")
+    else()
+        add_test(NAME original_unicode_controls_scale2 COMMAND unicode_controls)
+        set_tests_properties(original_unicode_controls_scale2 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
+    endif()
+    foreach(language en zh_CN zh_TW)
+        add_test(NAME original_unicode_controls_process_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/unicode_controls_process.py" "$<TARGET_FILE:wxnotepad>"
+            --language "${language}")
+        set_tests_properties(original_unicode_controls_process_${language} PROPERTIES TIMEOUT 90)
+    endforeach()
     add_editor_test(line_symbols original_line_symbols 60)
     add_test(NAME original_line_symbol_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_symbols_process.py" "$<TARGET_FILE:line_symbols>"
@@ -769,7 +808,7 @@ if(BUILD_TESTING)
         set_tests_properties(native_directwrite_original_custom_contrast PROPERTIES TIMEOUT 90
             ENVIRONMENT "MACTYPE_FORCE_EXCLUDE=1")
 
-        foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup)
+        foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup unicode_controls)
             add_gui_program(directwrite_${probe} tests/${probe}.cpp app_shell)
             target_compile_definitions(directwrite_${probe} PRIVATE WXNOTEPAD_TEST_DIRECTWRITE)
         endforeach()
@@ -779,6 +818,11 @@ if(BUILD_TESTING)
         set_tests_properties(native_directwrite_caret_appearance PROPERTIES TIMEOUT 60)
         add_test(NAME native_directwrite_caret_dpi96 COMMAND directwrite_caret_appearance)
         set_tests_properties(native_directwrite_caret_dpi96 PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_CARET_DPI96=1")
+        add_test(NAME native_directwrite_unicode_controls COMMAND directwrite_unicode_controls)
+        set_tests_properties(native_directwrite_unicode_controls PROPERTIES TIMEOUT 60)
+        add_test(NAME native_directwrite_unicode_controls_dpi96 COMMAND directwrite_unicode_controls)
+        set_tests_properties(native_directwrite_unicode_controls_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_UNICODE_DPI96=1")
         add_test(NAME native_directwrite_auto_insertion COMMAND directwrite_auto_insertion)
         set_tests_properties(native_directwrite_auto_insertion PROPERTIES TIMEOUT 90)
         add_test(NAME native_directwrite_automatic_completion COMMAND directwrite_automatic_completion)
@@ -797,6 +841,15 @@ if(BUILD_TESTING)
         set_tests_properties(native_renderer_commands PROPERTIES TIMEOUT 60)
     endif()
 
+    add_editor_test(default_fonts original_default_fonts 60)
+    if(WIN32)
+        target_link_libraries(default_fonts PRIVATE imm32)
+        add_test(NAME original_default_fonts_gdi COMMAND default_fonts)
+        set_tests_properties(original_default_fonts_gdi PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_DEFAULT_FONTS_GDI=1")
+    endif()
+    add_test(NAME original_default_fonts_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/default_fonts_process.py" "$<TARGET_FILE:default_fonts>")
+    set_tests_properties(original_default_fonts_lifecycle PROPERTIES TIMEOUT 180)
     add_editor_test(rendering_settings original_rendering_settings_menu 60)
     if(WIN32)
         target_link_libraries(rendering_settings PRIVATE imm32)

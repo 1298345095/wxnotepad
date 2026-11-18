@@ -1,6 +1,7 @@
 #pragma once
 
 #include "settings/original_settings_constants.h"
+#include "editor/font_settings.h"
 #include <utility>
 #include "settings/ui_language.h"
 #include "editor/display_units.h"
@@ -23,6 +24,7 @@ struct OriginalTabs {
 
 // Defaults and INI names follow Notepad4 89b8b36, Notepad4.cpp::LoadSettings.
 struct OriginalSettings {
+    FontSettings fonts;
     bool saveSettings = true;
     bool saveBeforeRunningTools = false;
     uint16_t uiLanguage = UILanguage::System;
@@ -92,6 +94,7 @@ struct OriginalSettings {
     wxString dateTimeShort;
     wxString dateTimeLong;
     bool viewEOLs = false;
+    bool showUnicodeControlCharacter = false;
     bool showWordWrapSymbols = false;
     int wordWrapSymbols = 2;
     // wxnotepad opt-in; false retains original growth-only width tracking.
