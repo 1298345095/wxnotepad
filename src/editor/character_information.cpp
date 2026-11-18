@@ -1,6 +1,7 @@
 // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
 #include "editor/character_information.h"
 #include "editor/editor_control.h"
+#include "editor/platform/native_encoding.h"
 #include <string>
 #include <format>
 #include <iterator>
@@ -63,7 +64,7 @@ private:
 };
 } // namespace
 
-bool ShowHexCode(EditorControl& editor, [[maybe_unused]] bool nativeDefaultEncoding) {
+bool ShowHexCode(EditorControl& editor, bool nativeDefaultEncoding) {
     using enum Scintilla::Message;
     // Notepad4 89b8b36 EditShowHex: the binary selection getter preserves NUL,
     // and multiple selections retain the original inter-selection EOL bytes.
@@ -73,18 +74,9 @@ bool ShowHexCode(EditorControl& editor, [[maybe_unused]] bool nativeDefaultEncod
     std::string bytes(static_cast<size_t>(length) + 1, '\0');
     editor.Send(GetSelText, 1, reinterpret_cast<intptr_t>(bytes.data()));
     bytes.resize(static_cast<size_t>(length));
-#ifdef __WXMSW__
     // The migrated core keeps UTF-8. Only CPI_DEFAULT used native ACP bytes in
     // the original; explicit legacy codecs and UTF-16 used UTF-8 editor bytes.
-    if (nativeDefaultEncoding && !bytes.empty()) {
-        const auto wide = wxString::FromUTF8(bytes.data(), bytes.size()).ToStdWstring();
-        const int count =
-            WideCharToMultiByte(CP_ACP, 0, wide.data(), static_cast<int>(wide.size()), nullptr, 0, nullptr, nullptr);
-        bytes.resize(static_cast<size_t>(count));
-        WideCharToMultiByte(CP_ACP, 0, wide.data(), static_cast<int>(wide.size()), bytes.data(), count, nullptr,
-                            nullptr);
-    }
-#endif
+    if (nativeDefaultEncoding) bytes = editor.NativeSelectedBytes();
     std::string output("[");
     for (const unsigned char byte : bytes) {
         output += "0123456789ABCDEF"[byte >> 4];
@@ -98,12 +90,13 @@ bool ShowHexCode(EditorControl& editor, [[maybe_unused]] bool nativeDefaultEncod
     return true;
 }
 
-std::string CharacterInformation(EditorControl& editor) {
+std::string CharacterInformation(EditorControl& editor, bool nativeDefaultEncoding) {
     using enum Scintilla::Message;
     // Adapted from Notepad4 89b8b36 EditShowCharacterInfo. GetCharacterAndWidth
     // supplies the scalar at the *selection start*, including zero at EOF.
     const auto position = editor.Send(GetSelectionStart);
-    const auto character = static_cast<uint32_t>(editor.Send(GetCharacterAndWidth, position));
+    const auto character = nativeDefaultEncoding ? NativeDefaultEncodingCharacter(editor.NativeBytesAfter(position))
+                                                 : static_cast<uint32_t>(editor.Send(GetCharacterAndWidth, position));
     std::string output = character < 0x10000 ? std::format("Unicode: U+{:04X}\nUTF-16:", character)
                                              : std::format("Unicode: U+{:06X}\nUTF-16:", character);
     if (character >= 0x10000) {

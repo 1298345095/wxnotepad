@@ -33,6 +33,10 @@ public:
     uint64_t SelectionRevision() const noexcept;
 
     intptr_t SelectionCharacterCount();
+    NativeByteSnapshot RawNativeBytes() const { return nativeBytes_.Snapshot(); }
+    std::string NativeSelectedBytes(bool binary);
+    std::string NativeBytesAfter(intptr_t position);
+    void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
 
     void Draw(wxDC& dc);
     void RequestScrollWidthUpdate() noexcept { scrollWidthDirty_ = true; }
@@ -80,6 +84,7 @@ private:
     bool HandleApplicationKey(const wxKeyEvent& event);
 
     EditorControl& window_;
+    NativeByteHistory nativeBytes_;
     int verticalWheel_ = 0;
     int horizontalWheel_ = 0;
     void NotifyCaretMove() const noexcept override;
@@ -94,6 +99,8 @@ private:
     void Paste(bool) override;
     void NotifyChange() const noexcept override;
     void NotifyParent(Scintilla::NotificationData& notification) const noexcept override;
+    void NotifyModified(Scintilla::Internal::Document* document, Scintilla::Internal::DocModification modification,
+                        void* userData) override;
     void RecordNotificationChanges(const Scintilla::NotificationData& notification) const noexcept;
     void HandleCompletionNotification(const Scintilla::NotificationData& notification) const;
     void HandleCharacterAdded(const Scintilla::NotificationData& notification) const;

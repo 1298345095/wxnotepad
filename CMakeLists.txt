@@ -79,6 +79,9 @@ add_library(editor_runtime STATIC
     src/editor/selection_commands.cpp
     src/editor/enclose_selection.cpp
     src/editor/url_conversion.cpp
+    src/editor/base64_conversion.cpp
+    src/editor/platform/native_encoding.cpp
+    src/editor/native_byte_history.cpp
     src/editor/compress_whitespace.cpp
     src/editor/sort_lines.cpp
     src/editor/indentation.cpp
@@ -306,7 +309,7 @@ if(BUILD_TESTING)
     add_test(NAME observed_numeric_menu COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/observer_menu_process.py" "$<TARGET_FILE:wxnotepad>")
     set_tests_properties(observed_numeric_menu PROPERTIES TIMEOUT 45)
-    foreach(scenario startup lifecycle restart native dynamic layout errors)
+    foreach(scenario startup lifecycle restart native dynamic layout errors base64)
         add_test(NAME packaged_ui_localization_${scenario} COMMAND "${Python3_EXECUTABLE}" -X utf8
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/localization_process.py" "$<TARGET_FILE:wxnotepad>"
             --cmake-dir "${CMAKE_BINARY_DIR}"
@@ -376,6 +379,9 @@ if(BUILD_TESTING)
     target_compile_definitions(read_only PRIVATE
         "READ_ONLY_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/read_only_reference.tsv\"")
     add_editor_test(url_conversion original_url_conversion 60)
+    add_editor_test(base64_conversion original_base64_conversion 60)
+    target_compile_definitions(base64_conversion PRIVATE
+        "BASE64_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/base64_reference.tsv\"")
     target_compile_definitions(url_conversion PRIVATE
         "URL_REFERENCE_FIXTURES=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/url_reference_fixtures.tsv\"")
     add_test(NAME original_date_time_settings COMMAND "${Python3_EXECUTABLE}"

@@ -289,8 +289,33 @@ class Dialogs:
     def key(self, app, key, window=None):
         if sys.platform == 'win32':
             self.user.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
-            assert key == 'F10', key
             handle = int(app.state['editor_handle'])
+            if key == 'ctrl+a':
+                # Ctrl+A belongs to the editor's native key map, rather than an
+                # application menu accelerator. Share only the two owned input
+                # queues while delivering its synchronous native key messages.
+                kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+                current = kernel.GetCurrentThreadId()
+                target = self.user.GetWindowThreadProcessId(handle, None)
+                message = wintypes.MSG()
+                self.user.PeekMessageW(ctypes.byref(message), None, 0, 0, 0)
+                self.user.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+                assert self.user.AttachThreadInput(current, target, True), ctypes.WinError(ctypes.get_last_error())
+                previous = (wintypes.BYTE * 256)()
+                try:
+                    assert self.user.GetKeyboardState(previous)
+                    keys = (wintypes.BYTE * 256).from_buffer_copy(previous)
+                    vk_shift, vk_control, vk_menu = 0x10, 0x11, 0x12
+                    keys[vk_shift] = keys[vk_menu] = 0
+                    keys[vk_control] = 0x80
+                    assert self.user.SetKeyboardState(keys)
+                    self.user.SendMessageW(handle, 0x0100, ord('A'), 1)
+                    self.user.SendMessageW(handle, 0x0101, ord('A'), 0xc0000001)
+                finally:
+                    self.user.SetKeyboardState(previous)
+                    self.user.AttachThreadInput(current, target, False)
+                return
+            assert key == 'F10', key
             assert self.user.PostMessageW(handle, 0x0100, 0x79, 1)
             assert self.user.PostMessageW(handle, 0x0101, 0x79, 0xc0000001)
         else:

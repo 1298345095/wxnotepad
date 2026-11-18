@@ -28,8 +28,8 @@ void Order(wxMenu* menu, std::initializer_list<const char*> names) {
 }
 void CheckMenu(EditorFrame* frame) {
     auto* bar = frame->GetMenuBar();
-    constexpr std::array<const char*, 6> names = {{"File", "Edit", "Search", "View", "Scheme", "Settings"}};
-    Require(bar->GetMenuCount() == std::size(names), "delivered menus follow the original six groups");
+    constexpr std::array<const char*, 7> names = {{"File", "Edit", "Search", "View", "Scheme", "Settings", "Tools"}};
+    Require(bar->GetMenuCount() == std::size(names), "delivered menus follow the original groups");
     for (size_t index = 0; index < std::size(names); ++index)
         Require(bar->GetMenuLabelText(index) == names[index], "original top-level menu order");
     Order(bar->GetMenu(1),
@@ -85,6 +85,9 @@ void CheckMenu(EditorFrame* frame) {
            "Undo Redo Remember Selection", "Line Selection Mode"});
     Order(Submenu(Submenu(bar->GetMenu(5), "Select and Edit Options"), "Line Selection Mode"),
           {"None", "Visual Studio", "Old Visual Studio", "Normal"});
+    Order(bar->GetMenu(6), {"Base64"});
+    Order(Submenu(bar->GetMenu(6), "Base64"),
+          {"Standard Encode", "URL Safe Encode", "Encode as HTML Embedded Image", "Decode", "Decode as Hex"});
 }
 void Actions(EditorFrame* frame, SettingsStore& settings) {
     using Scintilla::Message;

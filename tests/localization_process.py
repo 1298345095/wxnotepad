@@ -319,6 +319,48 @@ class Acceptance:
                 app.stop()
         print('PASS: real settings commit failure reports an error and retains configured/current language', flush=True)
 
+    def base64(self):
+        self.prepare_reference()
+        captions = {
+            'en': ('Standard &Encode', 'URL &Safe Encode', 'Encode as HTML Embedded &Image', '&Decode', 'Decode as &Hex'),
+            'zh_CN': ('标准编码(&E)', 'URL 安全编码(&S)', '编码为 HTML 嵌入图片(&I)', '解码(&D)', '解码为 Hex(&H)'),
+            'zh_TW': ('標準編碼(&E)', 'URL 安全編碼(&S)', '編碼為 HTML 嵌入圖片(&I)', '解碼(&D)', '解碼為 Hex(&H)'),
+        }
+        identities = [next(identity for identity, item in self.reference.items() if item['label'] == caption)
+                      for caption in captions['en']]
+        undo = next(identity for identity, item in self.reference.items() if item['label'] == '&Undo\tCtrl+Z')
+        redo = next(identity for identity, item in self.reference.items() if item['label'] == '&Redo\tCtrl+Y')
+        for code in ('en', 'zh_CN', 'zh_TW'):
+            app = self.start(PREFERENCE[code])
+            try:
+                current = menus(app.state)
+                assert app.state['menu_top.6.label'] == {'en': '&Tools', 'zh_CN': '工具(&T)', 'zh_TW': '工具(&T)'}[code]
+                group = next(identity for identity, item in current.items() if item['label'] == '&Base64')
+                assert current[group]['path'] == '6/0', current[group]
+                for index, identity in enumerate(identities):
+                    assert current[identity]['label'] == captions[code][index]
+                    assert current[identity]['path'] == f'6/0/{index}'
+                    assert '\t' not in current[identity]['label'], 'Base64 has no original shortcuts'
+                    before = b'foo' if index < 3 else b'Zm9v'
+                    expected = (b'Zm9v', b'Zm9v', b'<img src="data:image/png;base64,Zm9v" />', b'foo', b'66 6F 6F')[index]
+                    path = self.directory / f'base64-{code}-{index}.PNG'
+                    path.write_bytes(before)
+                    app.send('open', str(path))
+                    self.dialogs.key(app, 'ctrl+a')
+                    app.choose(identity)
+                    assert app.state['dirty'] == '1'
+                    app.send('save')
+                    assert path.read_bytes() == expected
+                    app.choose(undo)
+                    app.send('save')
+                    assert path.read_bytes() == before
+                    app.choose(redo)
+                    app.send('save')
+                    assert path.read_bytes() == expected
+            finally:
+                app.stop()
+        print('PASS: packaged English/Simplified/Traditional Base64 menu commands and saved Undo/Redo bytes', flush=True)
+
     def native(self):
         self.prepare_reference()
         inserts = [identity for identity, item in self.reference.items()
@@ -810,7 +852,7 @@ def main():
     parser.add_argument('executable', type=Path)
     parser.add_argument('--cmake-dir', type=Path, required=True)
     parser.add_argument('--evidence', type=Path, required=True)
-    parser.add_argument('--scenario', choices=('startup', 'lifecycle', 'restart', 'native', 'dynamic', 'regional', 'layout', 'errors', 'installed'), default='startup')
+    parser.add_argument('--scenario', choices=('startup', 'lifecycle', 'restart', 'native', 'dynamic', 'regional', 'layout', 'errors', 'installed', 'base64'), default='startup')
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
     # Linux's native temporary filesystem exercises POSIX application IPC and

@@ -9,6 +9,8 @@
 #include "editor/caret_appearance.h"
 #include "editor/special_insert.h"
 #include "editor/url_conversion.h"
+#include "editor/base64_conversion.h"
+#include "editor/native_byte_history.h"
 #include "editor/occurrence_marking.h"
 #include <ScintillaMessages.h>
 #include <ScintillaTypes.h>
@@ -60,6 +62,10 @@ public:
     bool ToggleBlockComments(const char* open, const char* close, int commentStyleLast);
     bool EncloseSelection(const wxString& before, const wxString& after);
     bool ConvertUrl(UrlConversion command);
+    bool ConvertBase64(Base64Conversion command, const wxString& path = {}, bool defaultEncoding = false);
+    NativeByteSnapshot RawNativeBytes() const;
+    std::string NativeSelectedBytes(bool binary = true);
+    std::string NativeBytesAfter(intptr_t position);
     void InsertDateTime(DateTimeInsertion command, const wxString& format = {});
     void InsertGuid();
     void InsertEncodingIdentifier(std::string_view name, const SyntaxDefinition& syntax);
@@ -153,6 +159,7 @@ private:
     wxTimer scrollTimer_;
     wxTimer widenTimer_;
     std::unique_ptr<Core> core_;
+    void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
     std::unique_ptr<OccurrenceMarking> occurrences_;
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;

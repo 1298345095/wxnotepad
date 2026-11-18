@@ -436,6 +436,22 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     return result;
 }
 
+NativeByteSnapshot EditorControl::RawNativeBytes() const {
+    return core_->RawNativeBytes();
+}
+
+std::string EditorControl::NativeSelectedBytes(bool binary) {
+    return core_->NativeSelectedBytes(binary);
+}
+
+std::string EditorControl::NativeBytesAfter(intptr_t position) {
+    return core_->NativeBytesAfter(position);
+}
+
+void EditorControl::ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges) {
+    core_->ReplaceTargetWithNativeBytes(text, std::move(ranges));
+}
+
 uint64_t EditorControl::SelectionRevision() const {
     return core_->SelectionRevision();
 }
