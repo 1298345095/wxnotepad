@@ -83,6 +83,7 @@ void Limits(EditorFrame* frame, const std::array<intptr_t, 5>& expected) {
 }
 void Geometry(EditorFrame* frame) {
     auto* editor = frame->Editor();
+    if (editor->Send(GetWrapMode)) NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Word Wrap"));
     Page(editor, PageRows);
     TestEditor::ResetStream(editor, "");
     Limits(frame, {0, 0, 0, 0, 0});
