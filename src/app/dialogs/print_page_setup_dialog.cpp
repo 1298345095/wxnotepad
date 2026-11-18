@@ -64,39 +64,47 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
     }
     auto* marginBox = new wxStaticBoxSizer(wxVERTICAL, &dialog, marginGroup);
     auto* marginFields = new wxFlexGridSizer(4, dialog.FromDIP(5), padding);
-    const std::array marginLabels = {
-        // TRANSLATORS: Left paper margin in IDD_PAGESETUP.
-        _("Left:"),
-        // TRANSLATORS: Top paper margin in IDD_PAGESETUP.
-        _("Top:"),
-        // TRANSLATORS: Right paper margin in IDD_PAGESETUP.
-        _("Right:"),
-        // TRANSLATORS: Bottom paper margin in IDD_PAGESETUP.
-        _("Bottom:"),
+    struct MarginInput {
+        wxSpinCtrlDouble& control;
+        int& option;
     };
-    const std::array marginNames = {
-        // TRANSLATORS: Accessible name for the left paper margin input in IDD_PAGESETUP.
-        _("Left margin"),
-        // TRANSLATORS: Accessible name for the top paper margin input in IDD_PAGESETUP.
-        _("Top margin"),
-        // TRANSLATORS: Accessible name for the right paper margin input in IDD_PAGESETUP.
-        _("Right margin"),
-        // TRANSLATORS: Accessible name for the bottom paper margin input in IDD_PAGESETUP.
-        _("Bottom margin"),
+    auto* const marginOwner = marginBox->GetStaticBox();
+    const auto addMargin = [marginOwner, marginFields, units](const wxString& label, const wxString& accessibleName,
+                                                              int& option) -> MarginInput {
+        constexpr double maximumMargin = std::numeric_limits<int>::max();
+        marginFields->Add(new wxStaticText(marginOwner, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
+        auto* input = new wxSpinCtrlDouble(marginOwner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS,
+                                           0, maximumMargin / units.unitsPerDisplayUnit,
+                                           static_cast<double>(option) / units.unitsPerDisplayUnit,
+                                           1.0 / units.unitsPerDisplayUnit);
+        input->SetDigits(units.decimalPlaces);
+        AppLocalization::SetAccessibleName(*input, accessibleName);
+        marginFields->Add(input, 1, wxEXPAND);
+        return {*input, option};
     };
-    constexpr double maximumMargin = std::numeric_limits<int>::max();
-    std::array<wxSpinCtrlDouble*, PrintMarginKeys.size()> marginInputs{};
-    for (size_t index = 0; index < marginInputs.size(); ++index) {
-        auto* owner = marginBox->GetStaticBox();
-        marginFields->Add(new wxStaticText(owner, wxID_ANY, marginLabels[index]), 0, wxALIGN_CENTER_VERTICAL);
-        marginInputs[index] = new wxSpinCtrlDouble(
-            owner, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0,
-            maximumMargin / units.unitsPerDisplayUnit,
-            static_cast<double>(options.margins[index]) / units.unitsPerDisplayUnit, 1.0 / units.unitsPerDisplayUnit);
-        marginInputs[index]->SetDigits(units.decimalPlaces);
-        AppLocalization::SetAccessibleName(*marginInputs[index], marginNames[index]);
-        marginFields->Add(marginInputs[index], 1, wxEXPAND);
-    }
+    auto& [left, top, right, bottom] = options.margins;
+    const std::array marginInputs = {
+        addMargin(
+            // TRANSLATORS: Left paper margin in IDD_PAGESETUP.
+            _("Left:"),
+            // TRANSLATORS: Accessible name for the left paper margin input in IDD_PAGESETUP.
+            _("Left margin"), left),
+        addMargin(
+            // TRANSLATORS: Top paper margin in IDD_PAGESETUP.
+            _("Top:"),
+            // TRANSLATORS: Accessible name for the top paper margin input in IDD_PAGESETUP.
+            _("Top margin"), top),
+        addMargin(
+            // TRANSLATORS: Right paper margin in IDD_PAGESETUP.
+            _("Right:"),
+            // TRANSLATORS: Accessible name for the right paper margin input in IDD_PAGESETUP.
+            _("Right margin"), right),
+        addMargin(
+            // TRANSLATORS: Bottom paper margin in IDD_PAGESETUP.
+            _("Bottom:"),
+            // TRANSLATORS: Accessible name for the bottom paper margin input in IDD_PAGESETUP.
+            _("Bottom margin"), bottom),
+    };
     marginBox->Add(marginFields, 1, wxEXPAND | wxALL, padding);
     content->Add(marginBox, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, padding);
 
@@ -170,8 +178,7 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
     options.footer = static_cast<PrintFooter>(footer->GetSelection());
     options.colour = static_cast<Scintilla::PrintOption>(colour->GetSelection());
     options.zoom = ParseZoom(*zoom);
-    for (size_t index = 0; index < options.margins.size(); ++index)
-        options.margins[index] =
-            static_cast<int>(std::lround(marginInputs[index]->GetValue() * units.unitsPerDisplayUnit));
+    for (const auto& [control, option] : marginInputs)
+        option = static_cast<int>(std::lround(control.GetValue() * units.unitsPerDisplayUnit));
     return draft;
 }
