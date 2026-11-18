@@ -315,9 +315,10 @@ void EditorFrame::RefreshFullScreen() {
     const int topInset = frameHeight + (hideTitle ? ::GetSystemMetricsForDpi(SM_CYCAPTION, dpi) : 0);
     const auto& bounds = monitor.rcMonitor;
     ::SetWindowLongW(window, GWL_STYLE, fullScreenPlacement_->style & ~(WS_THICKFRAME | WS_MAXIMIZE));
+    // The off-screen caption inset exceeds the default native tracking height.
     ::SetWindowPos(window, nullptr, bounds.left - frameWidth, bounds.top - topInset,
                    bounds.right - bounds.left + 2 * frameWidth, bounds.bottom - bounds.top + topInset + frameHeight,
-                   SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE);
+                   SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
 }
 #endif
 
