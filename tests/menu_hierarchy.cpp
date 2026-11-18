@@ -59,10 +59,11 @@ void CheckMenu(EditorFrame* frame) {
                             "Select to Matching Brace", "Select Word", "Select Lines (Expand Selection)",
                             "Select Lines in Current Block", "Select to Document Start", "Select to Document End",
                             "Select to Next", "Select to Previous", "Bookmarks", "Goto"});
-    Order(bar->GetMenu(3), {"Caret Style", "Word Wrap", "Long Line Marker", "Indentation Guides", "Show Whitespace",
-                            "Show Line Endings", "Show Wrap Symbols", "Visual Brace Matching",
-                            "Highlight Current Block", "Highlight Current Line", "Mark Occurrences", "Line Numbers",
-                            "Bookmark Margin", "Change History Marker", "Show Code Folding", "Toggle Folds", "Zoom"});
+    Order(bar->GetMenu(3),
+          {"Default Code Font...", "Default Text Font...", "Caret Style", "Word Wrap", "Long Line Marker",
+           "Indentation Guides", "Show Whitespace", "Show Line Endings", "Show Wrap Symbols", "Visual Brace Matching",
+           "Highlight Current Block", "Highlight Current Line", "Mark Occurrences", "Line Numbers", "Bookmark Margin",
+           "Change History Marker", "Show Code Folding", "Toggle Folds", "Zoom"});
     Order(Submenu(bar->GetMenu(2), "Goto"),
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});
