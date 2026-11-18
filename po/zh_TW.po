@@ -1090,6 +1090,10 @@ msgstr "將貼上緩衝區複製為搜尋文字"
 msgid "Copy Selection As Find Text"
 msgstr "將選取範圍複製為搜尋文字"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Copy as &RTF"
+msgstr "複製為富文字(&R)"
+
 #: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr "無法關閉已寫入完成的暫存檔案。"

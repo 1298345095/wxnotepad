@@ -900,6 +900,10 @@ msgstr ""
 msgid "Copy Selection As Find Text"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Copy as &RTF"
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "Could not close the completed temporary file."
 msgstr ""
