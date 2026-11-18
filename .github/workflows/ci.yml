@@ -53,6 +53,14 @@ jobs:
         uses: ./.github/actions/dependencies
         with:
           profile: gui
+      - name: Validate parallel X11 display allocation
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for tool in Xvfb xauth xdpyinfo dbus-run-session xdotool ctest; do command -v "$tool"; done
+          timeout 90s python -X utf8 tests/test_xvfb_session.py -v \
+            2>&1 | tee .ci/reports/display-startup-tests.log
       - name: Set up compiler cache
         id: compiler_cache
         uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
@@ -313,6 +321,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          for tool in Xvfb xauth xdpyinfo dbus-run-session xdotool ctest; do command -v "$tool"; done
           .ci/coverage-venv/bin/python -m coverage run -m unittest discover -s tests -p 'test_*.py' -v \
             2>&1 | tee .ci/reports/coverage/python-tests.log
       - name: Measure Linux debug-symbol packaging

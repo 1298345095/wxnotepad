@@ -26,8 +26,11 @@ the reserved primary display `:0`, that owned server stays alive while a second
 server allocates the test display. The native-input primary-desktop guard remains
 in force. This avoids
 `xvfb-run -a` exhausting its ten display-number retries and then launching a client
-against another session's display. The native bootstrap regression connects forty
-concurrent clients through the actual CI entry point. Registration,
+against another session's display. A dedicated step after dependency installation
+connects forty concurrent clients through the actual CI entry point, retaining its
+90-second outer guard and the test's original deadlines. Coverage measures the
+same regression with the Python helper tests. It runs outside the GUI shards so
+its forty sessions do not multiply the configured backend session count. Registration,
 commands and original working directories come from the configured CTest tree.
 The per-backend test plan records every selected test and its shard. `test --jobs N`
 sets the Linux session count. Wayland still runs if X11 tests fail after a successful

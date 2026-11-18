@@ -233,11 +233,6 @@ if(BUILD_TESTING)
     endif()
     find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
     add_subdirectory(tests/fuzz)
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        add_test(NAME native_xvfb_parallel_startup COMMAND "${Python3_EXECUTABLE}" -X utf8
-            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_xvfb_session.py" -v)
-        set_tests_properties(native_xvfb_parallel_startup PROPERTIES TIMEOUT 90)
-    endif()
     add_gui_program(sdk_capabilities tests/sdk_capabilities.cpp wx::core wx::base)
     target_compile_definitions(sdk_capabilities PRIVATE
         WXNOTEPAD_VERIFY_TRIMMED_SDK=$<BOOL:${WXNOTEPAD_VERIFY_TRIMMED_SDK}>)
