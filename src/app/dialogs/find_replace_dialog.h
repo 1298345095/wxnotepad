@@ -48,8 +48,12 @@ private:
     int selectionOptions_;
     std::optional<uint64_t> findAllErrorRevision_;
     bool SeedQuery(bool firstTime);
+    void BindSearchKeys(std::function<void(wxKeyEvent&)> onKey);
+    bool HandleSearchKey(const wxKeyEvent& event);
     void UpdateButtons();
     void ConfigureSearch();
+    void SaveFindText();
+    void FindSelection(SearchDirection direction);
     void FindAll();
     void UpdateFindAllCount(size_t count);
     void OnEditorState(wxCommandEvent& event);

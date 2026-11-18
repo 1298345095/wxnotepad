@@ -49,6 +49,9 @@ public:
     explicit SearchSession(EditorControl& editor);
     const SearchRequest& Request() const { return request_; }
     void Configure(SearchRequest request);
+    void SeedFindOptions(bool transformBackslashes);
+    bool SaveSelectionAsFindText(bool selectWord);
+    std::optional<FindResult> FindSelection(SearchDirection direction);
     FindResult Find(SearchDirection direction, bool extendSelection = false);
     void SetWrapConfirmation(std::function<bool(SearchDirection)> confirm);
     void RestoreHistory(std::vector<wxString> find, std::vector<wxString> replace, bool lastReplaceEmpty);
@@ -57,9 +60,11 @@ public:
     const std::vector<wxString>& RecentReplace() const { return recentReplace_; }
     bool LastReplaceEmpty() const { return lastReplaceEmpty_; }
     bool HasFindText() const { return hasFindText_; }
+    bool ReplacementInitialized() const { return hasFindText_ && replacementInitialized_; }
     FindAllResult FindAll();
     std::optional<size_t> MatchCount();
     ReplaceOneResult ReplaceOne();
+    ReplaceOneResult ReplaceNext();
     ReplaceAllResult ReplaceAll();
     ReplaceAllResult ReplaceInSelection();
 
@@ -72,11 +77,14 @@ private:
     std::vector<wxString> recentReplace_;
     bool lastReplaceEmpty_ = false;
     bool hasFindText_ = false;
+    bool replacementInitialized_ = false;
+    bool replacementPrepared_ = false;
     std::function<bool(SearchDirection)> confirmWrap_;
     void ClearFindAll();
     Scintilla::FindOption SearchFlags() const;
     bool UsesRegex() const;
     FindResult SelectTarget(bool wrapped);
     FindResult FindFrom(intptr_t start, SearchDirection direction, bool extendSelection = false);
+    ReplaceOneResult ReplaceOne(bool applyReplacement);
     ReplaceAllResult ReplaceRange(bool inSelection);
 };
