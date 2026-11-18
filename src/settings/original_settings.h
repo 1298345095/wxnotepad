@@ -30,6 +30,7 @@ struct OriginalSettings {
     int wordWrapMode = std::to_underlying(Scintilla::Wrap::Auto);
     WrapContinuationIndent wordWrapIndent = WrapContinuationIndent::None;
     bool wordWrapSelectSubLine = false;
+    int endAtLastLine = 1;
     bool showLineNumbers = true;
     bool showBookmarkMargin = false;
     int changeHistoryMarker = 0;

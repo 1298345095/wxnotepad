@@ -1891,6 +1891,24 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     auto* appearance = new wxMenu;
+    auto* scrollPastLastLine = new wxMenu;
+    // Keep Notepad4's full EndAtLastLine integer contract (One Page is zero).
+    for (const auto& [label, mode] : {std::pair{wxTRANSLATE("&No"), 1}, std::pair{wxTRANSLATE("&One Page"), 0},
+                                      std::pair{wxTRANSLATE("&Half Page"), 2}, std::pair{wxTRANSLATE("1/&3 Page"), 3},
+                                      std::pair{wxTRANSLATE("1/&4 Page"), 4}}) {
+        const int id = wxWindow::NewControlId();
+        scrollPastLastLine->AppendRadioItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->Send(Scintilla::Message::SetEndAtLastLine, mode); },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) {
+                event.Check(editor_->Send(Scintilla::Message::GetEndAtLastLine) == mode);
+            },
+            id);
+    }
+    appearance->AppendSubMenu(scrollPastLastLine, _("Scroll Past &Last Line"));
     const int shrinkScrollWidth = wxWindow::NewControlId();
     appearance->AppendCheckItem(shrinkScrollWidth, _("Auto-Shrink Horizontal Scrollbar"));
     Bind(

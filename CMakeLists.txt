@@ -340,6 +340,10 @@ if(BUILD_TESTING)
     add_test(NAME original_new_window_maximized COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/new_window_process.py" "$<TARGET_FILE:new_window>" --scenario maximized)
     set_tests_properties(original_new_window_maximized PROPERTIES TIMEOUT 45 SKIP_RETURN_CODE 77)
+    add_editor_test(scroll_past_last_line original_scroll_past_last_line 60)
+    add_test(NAME original_scroll_past_last_line_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/scroll_past_last_line_process.py" "$<TARGET_FILE:scroll_past_last_line>")
+    set_tests_properties(original_scroll_past_last_line_lifecycle PROPERTIES TIMEOUT 120)
     add_editor_test(menu_hierarchy original_menu_hierarchy 60)
     add_editor_test(date_time original_date_time_insertion 60)
     add_editor_test(caret_appearance original_caret_appearance 60)
