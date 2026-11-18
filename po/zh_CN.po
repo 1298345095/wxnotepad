@@ -1070,9 +1070,25 @@ msgstr "删除行(&E)\tCtrl+Shift+D"
 msgid "DTD"
 msgstr "DTD"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Code Font...\tAlt+F12"
+msgstr "默认代码字体(&C)...\tAlt+F12"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Text Font..."
+msgstr "默认文本字体(&T)..."
+
+#: src/app/editor_frame.cpp
+msgid "Default Code Font"
+msgstr "默认代码字体"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default Encoding"
 msgstr "默认编码"
+
+#: src/app/editor_frame.cpp
+msgid "Default Text Font"
+msgstr "默认文本字体"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default encoding"
@@ -2439,6 +2455,10 @@ msgstr "未命名"
 #: src/app/editor_frame_commands.cpp
 msgid "Update File Time"
 msgstr "更新文件时间"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Use Default &Code Style\tShift+F12"
+msgstr "使用默认代码样式(&C)\tShift+F12"
 
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Use Global Tab Settings"
