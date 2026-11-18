@@ -499,8 +499,14 @@ DetectedEncoding DetectQuickReloadEncoding(std::string_view bytes, QuickReloadEn
     const bool utf8Ansi = pages.ansi == catalog[CPI_UTF8].codePage;
     const bool ascii = ansi && std::ranges::all_of(bytes, [](unsigned char ch) { return ch < 128; });
     constexpr size_t legacyRecodeLimit = (size_t{1} << 30) - 16;
-    if (ansi && !ascii && utf8Ansi && pages.legacyAnsi != pages.ansi && bytes.size() < legacyRecodeLimit)
-        return Choice(CPI_DEFAULT, pages.legacyAnsi, pages.oem);
+    if (ansi && !ascii && utf8Ansi && pages.legacyAnsi != pages.ansi && bytes.size() < legacyRecodeLimit) {
+        auto legacy = Choice(CPI_DEFAULT, pages.legacyAnsi, pages.oem);
+        if (legacy.encoding && !ValidLegacy(pages.legacyAnsi, bytes)) {
+            legacy.systemDefault = true;
+            legacy.nativeAnsiCodePage = pages.legacyAnsi;
+        }
+        return legacy;
+    }
     if (ascii && (utf8Ansi || options.loadANSIasUTF8 || options.loadASCIIasUTF8)) detected.systemDefault = false;
     return detected;
 }

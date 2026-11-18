@@ -54,14 +54,36 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
         if (paper.ShowModal() == wxID_OK) draft = paper.GetPageSetupDialogData().GetPrintData();
     });
 
-    // TRANSLATORS: IDD_PAGESETUP margin group with the current unit made explicit.
-    const auto marginGroup = units.metric ? _("Margins (millimeters)") : _("Margins (inches)");
+    wxString marginGroup;
+    if (units.metric) {
+        // TRANSLATORS: IDD_PAGESETUP margin group in a metric measurement locale.
+        marginGroup = _("Margins (millimeters)");
+    } else {
+        // TRANSLATORS: IDD_PAGESETUP margin group in a U.S. measurement locale.
+        marginGroup = _("Margins (inches)");
+    }
     auto* marginBox = new wxStaticBoxSizer(wxVERTICAL, &dialog, marginGroup);
     auto* marginFields = new wxFlexGridSizer(4, dialog.FromDIP(5), padding);
-    // TRANSLATORS: Paper edge labels in IDD_PAGESETUP, in left/top/right/bottom order.
-    const std::array marginLabels = {_("Left:"), _("Top:"), _("Right:"), _("Bottom:")};
-    // TRANSLATORS: Screen reader names for the four IDC_PAGESETUP_MARGIN_* inputs.
-    const std::array marginNames = {_("Left margin"), _("Top margin"), _("Right margin"), _("Bottom margin")};
+    const std::array marginLabels = {
+        // TRANSLATORS: Left paper margin in IDD_PAGESETUP.
+        _("Left:"),
+        // TRANSLATORS: Top paper margin in IDD_PAGESETUP.
+        _("Top:"),
+        // TRANSLATORS: Right paper margin in IDD_PAGESETUP.
+        _("Right:"),
+        // TRANSLATORS: Bottom paper margin in IDD_PAGESETUP.
+        _("Bottom:"),
+    };
+    const std::array marginNames = {
+        // TRANSLATORS: Accessible name for the left paper margin input in IDD_PAGESETUP.
+        _("Left margin"),
+        // TRANSLATORS: Accessible name for the top paper margin input in IDD_PAGESETUP.
+        _("Top margin"),
+        // TRANSLATORS: Accessible name for the right paper margin input in IDD_PAGESETUP.
+        _("Right margin"),
+        // TRANSLATORS: Accessible name for the bottom paper margin input in IDD_PAGESETUP.
+        _("Bottom margin"),
+    };
     constexpr double maximumMargin = std::numeric_limits<int>::max();
     std::array<wxSpinCtrlDouble*, PrintMarginKeys.size()> marginInputs{};
     for (size_t index = 0; index < marginInputs.size(); ++index) {
@@ -80,28 +102,55 @@ std::optional<wxPrintData> ShowPrintPageSetupDialog(wxWindow& parent, PrintOptio
 
     auto* fields = new wxFlexGridSizer(2, dialog.FromDIP(5), padding);
     fields->AddGrowableCol(1);
-    const auto* const header = AddChoices(
-        // TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_HEADER_LIST.
-        dialog, *fields, _("Header:"), _("Print header"),
-        // TRANSLATORS: IDS_PRINT_HEADER choices for text at the top of each printed page.
-        {_("Filename, Current Date and Time"), _("Filename, Current Date"), _("Filename"), _("Leave blank")},
-        std::to_underlying(options.header));
-    const auto* const footer = AddChoices(
-        // TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_FOOTER_LIST.
-        dialog, *fields, _("Footer:"), _("Print footer"),
-        // TRANSLATORS: IDS_PRINT_FOOTER choices for text at the bottom of each printed page.
-        {_("Page Number"), _("Leave blank")}, std::to_underlying(options.footer));
-    auto* const colour = AddChoices(
-        // TRANSLATORS: Caption and screen reader name for IDC_PAGESETUP_COLOR_MODE_LIST.
-        dialog, *fields, _("Print color mode:"), _("Print color mode"),
-        // TRANSLATORS: IDS_PRINT_COLOR choices for mapping editor colors to print.
-        {_("Normal"), _("Invert light (dark background)"), _("Black on white"), _("Color on white"),
-         _("Color on white (except line numbers)"), _("Current screen color (WYSIWYG)")},
-        std::to_underlying(options.colour));
+    // TRANSLATORS: IDS_PRINT_HEADER and IDS_PRINT_FOOTER choice to omit the header or footer.
+    const auto blank = _("Leave blank");
+    const auto* const header =
+        AddChoices(dialog, *fields,
+                   // TRANSLATORS: Caption for IDC_PAGESETUP_HEADER_LIST.
+                   _("Header:"),
+                   // TRANSLATORS: Accessible name for IDC_PAGESETUP_HEADER_LIST.
+                   _("Print header"),
+                   {// TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and the current date and time.
+                    _("Filename, Current Date and Time"),
+                    // TRANSLATORS: IDS_PRINT_HEADER choice: show the filename and current date without the time.
+                    _("Filename, Current Date"),
+                    // TRANSLATORS: IDS_PRINT_HEADER choice: show only the filename.
+                    _("Filename"), blank},
+                   std::to_underlying(options.header));
+    const auto* const footer =
+        AddChoices(dialog, *fields,
+                   // TRANSLATORS: Caption for IDC_PAGESETUP_FOOTER_LIST.
+                   _("Footer:"),
+                   // TRANSLATORS: Accessible name for IDC_PAGESETUP_FOOTER_LIST.
+                   _("Print footer"),
+                   {// TRANSLATORS: IDS_PRINT_FOOTER choice: show the page number at the bottom of each page.
+                    _("Page Number"), blank},
+                   std::to_underlying(options.footer));
+    auto* const colour =
+        AddChoices(dialog, *fields,
+                   // TRANSLATORS: Caption for IDC_PAGESETUP_COLOR_MODE_LIST.
+                   _("Print color mode:"),
+                   // TRANSLATORS: Accessible name for IDC_PAGESETUP_COLOR_MODE_LIST.
+                   _("Print color mode"),
+                   {
+                       // TRANSLATORS: IDS_PRINT_COLOR choice: normal print color mapping.
+                       _("Normal"),
+                       // TRANSLATORS: IDS_PRINT_COLOR choice: invert lightness when printing a dark theme.
+                       _("Invert light (dark background)"),
+                       // TRANSLATORS: IDS_PRINT_COLOR choice: print black text on white paper.
+                       _("Black on white"),
+                       // TRANSLATORS: IDS_PRINT_COLOR choice: print colored text on white paper.
+                       _("Color on white"),
+                       // TRANSLATORS: IDS_PRINT_COLOR choice: use white backgrounds except in the line number margin.
+                       _("Color on white (except line numbers)"),
+                       // TRANSLATORS: IDS_PRINT_COLOR choice: print with the current editor theme colors.
+                       _("Current screen color (WYSIWYG)"),
+                   },
+                   std::to_underlying(options.colour));
     colour->SetName("Print color mode");
-    // TRANSLATORS: IDC_PAGESETUP_ZOOMLEVEL label; the numbers are minimum and maximum zoom percentages.
-    const auto zoomLabel =
-        wxString::Format(_("Print zoom (%d%% to %d%%):"), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
+    const auto zoomLabel = wxString::Format(
+        // TRANSLATORS: IDC_PAGESETUP_ZOOMLEVEL label; the numbers are minimum and maximum zoom percentages.
+        _("Print zoom (%d%% to %d%%):"), Scintilla::MinZoomLevel, Scintilla::MaxZoomLevel);
     fields->Add(new wxStaticText(&dialog, wxID_ANY, zoomLabel), 0, wxALIGN_CENTER_VERTICAL);
     auto* zoom = new wxComboBox(&dialog, wxID_ANY, wxString::Format("%d%%", options.zoom));
     zoom->SetName("Print zoom");
