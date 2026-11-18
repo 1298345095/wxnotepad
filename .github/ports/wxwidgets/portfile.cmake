@@ -14,6 +14,7 @@ vcpkg_from_github(
         sdl2.patch
         libsecret-link-dirs.patch
         fix-wayland-build.patch # https://github.com/wxWidgets/wxWidgets/commit/c70a840f3a6dc288ff968ecd6f37df7251039483
+        msw-fswatcher-removal-lock.patch
 )
 
 vcpkg_check_features(
