@@ -1,6 +1,8 @@
 """Exercise private display authentication through the real parallel CI entry point."""
 import json
+import os
 from pathlib import Path
+import signal
 import shutil
 import subprocess
 import sys
@@ -37,12 +39,19 @@ class PrivateXvfb(unittest.TestCase):
                                      (sys.executable, probe, results, index, CONCURRENT_SESSIONS))
                 definitions.append(f'add_test(display_{index} {arguments})')
             (directory / 'CTestTestfile.cmake').write_text('\n'.join(definitions), encoding='utf-8')
-            result = subprocess.run(
+            command = (
                 [sys.executable, '-X', 'utf8', ROOT / '.github/scripts/ci.py', 'test', '--backend', 'x11',
                  '--cmake-dir', directory, '--jobs', str(CONCURRENT_SESSIONS),
-                 '--report-dir', directory / 'reports'],
-                capture_output=True, text=True, encoding='utf-8', timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                 '--report-dir', directory / 'reports'])
+            with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                  text=True, encoding='utf-8', start_new_session=True) as process:
+                try:
+                    output, _ = process.communicate(timeout=60)
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    output, _ = process.communicate()
+                    self.fail('Private display sessions exceeded their 60-second deadline:\n' + output)
+            self.assertEqual(process.returncode, 0, output)
             observations = [json.loads(path.read_text(encoding='utf-8')) for path in results.glob('*.json')]
             self.assertEqual(len(observations), CONCURRENT_SESSIONS)
             self.assertEqual(len({item['display'] for item in observations}), CONCURRENT_SESSIONS)
