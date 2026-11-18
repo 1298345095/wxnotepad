@@ -11,6 +11,7 @@ output path as documented in the corresponding observation:
 - [Automatic word completion](../../docs/observations/automatic-completion.md)
 - [Automatic tag closure](../../docs/observations/auto-close-tags.md)
 - [Caret appearance](../../docs/observations/caret-appearance.md)
+- [Color CallTips](../../docs/observations/color-calltips.md)
 - [Header insertion](../../docs/observations/header-insertion.md)
 - [Markdown dialects](../../docs/observations/syntax-markdown.md)
 - [Manual word completion](../../docs/observations/word-completion.md)

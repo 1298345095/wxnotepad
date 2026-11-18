@@ -60,6 +60,7 @@ View
   Caret Style
   Word Wrap; Long Line Marker; Indentation Guides
   Show Whitespace; Show Line Endings; Show Wrap Symbols
+  Show CallTip > Off; RGBA; ARGB; BGRA; ABGR
   Visual Brace Matching; Highlight Current Block; Highlight Current Line; Mark Occurrences
   Line Numbers; Bookmark Margin; Change History Marker
   Show Code Folding; Toggle Folds > Collapse All; Expand All

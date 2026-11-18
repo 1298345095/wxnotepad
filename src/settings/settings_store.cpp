@@ -127,6 +127,10 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.simpleIndentGuides = ReadBool("SimpleIndentGuides", defaults.simpleIndentGuides, "Settings2");
     values.viewEOLs = ReadBool("ViewEOLs", defaults.viewEOLs);
     values.showUnicodeControlCharacter = ReadBool("ShowUnicodeControlCharacter", defaults.showUnicodeControlCharacter);
+    const int callTipMode = ReadInt("ShowCallTip", std::to_underlying(defaults.showCallTip));
+    if (callTipMode >= std::to_underlying(ColorCallTipMode::Off) &&
+        callTipMode <= std::to_underlying(ColorCallTipMode::ABGR))
+        values.showCallTip = static_cast<ColorCallTipMode>(callTipMode);
     values.showWordWrapSymbols = ReadBool("ShowWordWrapSymbols", defaults.showWordWrapSymbols);
     const int wrapSymbols = std::clamp(ReadInt("WordWrapSymbols", defaults.wordWrapSymbols), 0, 32);
     values.wordWrapSymbols = std::min(wrapSymbols % 10, 2) + (wrapSymbols / 10) * 10;
@@ -502,6 +506,7 @@ bool SettingsStore::Save(bool explicitSave) {
         WriteBool("ViewEOLs", values.viewEOLs, defaults.viewEOLs);
         WriteBool("ShowUnicodeControlCharacter", values.showUnicodeControlCharacter,
                   defaults.showUnicodeControlCharacter);
+        WriteInt("ShowCallTip", std::to_underlying(values.showCallTip), std::to_underlying(defaults.showCallTip));
         WriteBool("ShowWordWrapSymbols", values.showWordWrapSymbols, defaults.showWordWrapSymbols);
         WriteInt("WordWrapSymbols", values.wordWrapSymbols, defaults.wordWrapSymbols);
         WriteBool("AutoSelect", values.autoSelect, defaults.autoSelect, "Styles");

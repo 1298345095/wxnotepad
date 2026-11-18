@@ -62,7 +62,7 @@ void EditorControl::BindCoreEvent(const wxEventTypeTag<Event>& type, Handler han
 EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                 wxBORDER_SIMPLE | wxWANTS_CHARS | wxVSCROLL | wxHSCROLL),
-      caretTimer_(this), scrollTimer_(this), widenTimer_(this) {
+      caretTimer_(this), scrollTimer_(this), widenTimer_(this), dwellTimer_(this) {
     // The native Notepad4 host initializes these tables before any document
     // copies its ASCII word classes. The wx host must do the same.
     [[maybe_unused]] static const bool unicodeDataInitialized = [] {
@@ -142,9 +142,11 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickCaret(); }, caretTimer_.GetId());
     BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickScroll(); }, scrollTimer_.GetId());
     BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickWiden(); }, widenTimer_.GetId());
+    BindCoreEvent(wxEVT_TIMER, [this](wxTimerEvent&) { core_->TickDwell(); }, dwellTimer_.GetId());
     BindCoreEvent(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) { core_->Mouse(event); });
     BindCoreEvent(wxEVT_LEFT_UP, [this](wxMouseEvent& event) { core_->Mouse(event); });
     BindCoreEvent(wxEVT_MOTION, [this](wxMouseEvent& event) { core_->Mouse(event); });
+    BindCoreEvent(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent&) { core_->MouseDeparted(); });
     BindCoreEvent(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) { core_->CaptureLost(); });
     BindCoreEvent(wxEVT_MOUSEWHEEL, [this](wxMouseEvent& event) { core_->Wheel(event); });
     const auto scroll = [this](wxScrollWinEvent& event) { core_->Scroll(event); };
@@ -190,6 +192,12 @@ EditorControl::~EditorControl() {
 
 void EditorControl::FlushPendingUIUpdate() {
     core_->FlushPendingUIUpdate();
+}
+
+void EditorControl::SetColorCallTipMode(ColorCallTipMode mode) {
+    constexpr int colorDwellMilliseconds = 250;
+    colorCallTipMode_ = mode;
+    Send(Message::SetMouseDwellTime, mode == ColorCallTipMode::Off ? Scintilla::TimeForever : colorDwellMilliseconds);
 }
 
 void EditorControl::SetLineSelectionMode(LineSelectionMode mode) {

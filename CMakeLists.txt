@@ -102,6 +102,7 @@ add_library(editor_runtime STATIC
     src/editor/editor_control.cpp
     src/editor/special_insert.cpp
     src/editor/editor_core.cpp
+    src/editor/editor_color_calltip.cpp
     src/editor/platform/clipboard.cpp
     src/editor/platform/custom_case.cpp
     src/editor/platform/character_hex.cpp
@@ -713,6 +714,12 @@ if(BUILD_TESTING)
     add_gui_program(completion_settings tests/completion_settings.cpp app_shell)
     add_test(NAME original_completion_settings COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/completion_settings_process.py" "$<TARGET_FILE:completion_settings>")
     add_editor_test(completion_popup original_completion_popup 60)
+    add_editor_test(color_calltip original_color_calltip 90)
+    if(NOT WIN32)
+        add_test(NAME original_color_calltip_scale2 COMMAND color_calltip)
+        set_tests_properties(original_color_calltip_scale2 PROPERTIES TIMEOUT 90
+            ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
+    endif()
     add_gui_program(auto_close_tags tests/auto_close_tags.cpp app_shell)
     add_test(NAME original_auto_close_tags COMMAND auto_close_tags)
     add_gui_program(auto_completion_settings tests/auto_completion_settings.cpp app_shell)
@@ -831,7 +838,8 @@ if(BUILD_TESTING)
         set_tests_properties(native_directwrite_original_custom_contrast PROPERTIES TIMEOUT 90
             ENVIRONMENT "MACTYPE_FORCE_EXCLUDE=1")
 
-        foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup unicode_controls)
+        foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup
+                      unicode_controls color_calltip)
             add_gui_program(directwrite_${probe} tests/${probe}.cpp app_shell)
             target_compile_definitions(directwrite_${probe} PRIVATE WXNOTEPAD_TEST_DIRECTWRITE)
         endforeach()
@@ -852,6 +860,8 @@ if(BUILD_TESTING)
         set_tests_properties(native_directwrite_automatic_completion PROPERTIES TIMEOUT 120)
         add_test(NAME native_directwrite_completion_popup COMMAND directwrite_completion_popup)
         set_tests_properties(native_directwrite_completion_popup PROPERTIES TIMEOUT 60)
+        add_test(NAME native_directwrite_color_calltip COMMAND directwrite_color_calltip)
+        set_tests_properties(native_directwrite_color_calltip PROPERTIES TIMEOUT 90)
         add_gui_program(native_gdi_resize_viewport tests/native_resize_viewport.cpp app_shell)
         target_compile_definitions(native_gdi_resize_viewport PRIVATE WXNOTEPAD_TEST_GDI)
         add_test(NAME native_gdi_original_resize_viewport COMMAND native_gdi_resize_viewport)

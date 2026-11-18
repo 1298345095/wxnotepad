@@ -31,6 +31,11 @@ configuration overlay. An existing INI takes precedence over a distribution's
 fields. This is a partial original-settings implementation, not complete settings
 or appearance import.
 
+View → Show CallTip uses `[Settings] ShowCallTip`: `0` or absent is Off,
+`1` is RGBA, `2` is ARGB, `3` is BGRA, and `4` is ABGR. The mode changes the
+editor's dwell setting immediately and is written by Save Settings Now or
+by Save Settings On Exit when enabled. Off removes the default-valued entry.
+
 Automatic language selection also loads `[Styles] AutoSelect` (default `1`) and
 `[Settings2] NoCGIGuess` (default `0`). AutoSelect controls filename selection and
 first-line interpreter guessing; NoCGIGuess disables the interpreter guess while
