@@ -2308,8 +2308,9 @@ void RequireNativeRtf(Peer& peer, std::string_view fixture, unsigned codePage) {
 }
 
 void RichTextCopy(EditorFrame* frame, EditorControl* editor, Peer& peer) {
-    Require(frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8, false)),
-            "empty editor uses the original capture's initial UTF-8 document identity");
+    if (frame->DocumentEncoding() != FileEncoding::Utf8)
+        Require(frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8, false)),
+                "empty editor uses the original capture's initial UTF-8 document identity");
     auto* bar = frame->GetMenuBar();
     auto* edit = bar->GetMenu(bar->FindMenu("Edit"));
     const auto submenu = edit->FindItem("Copy to Clipboard");
