@@ -1291,6 +1291,10 @@ msgstr "完整路径名称(&P)\tAlt+Shift+F9"
 msgid "Full &Path Name\tCtrl+Shift+F9"
 msgstr "完整路径名称(&P)\tCtrl+Shift+F9"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Full Scree&n Mode"
+msgstr "全屏模式(&N)"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "GitHub GFM"
 msgstr "GitHub GFM"
@@ -1371,6 +1375,10 @@ msgstr "按文件类型分组(&T)。"
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
 msgstr "十六进制转字符(&R)\tCtrl+Alt+C"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Hide &Title"
+msgstr "隐藏标题栏(&T)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Highlight &Subline"
@@ -1704,6 +1712,10 @@ msgstr "无"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr "OEM 美国 (DOS-437)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "On &Startup"
+msgstr "启动时进入全屏(&S)"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
@@ -2448,6 +2460,14 @@ msgstr "转八进制(&O)"
 #: src/app/editor_frame_commands.cpp
 msgid "Toggle Block &Comment\tCtrl+Q"
 msgstr "切换块注释(&C)\tCtrl+Q"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen\tF11 [Esc]"
+msgstr "切换全屏(&S)\tF11 [Esc]"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen [Esc]\tF11"
+msgstr "切换全屏(&S) [Esc]\tF11"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Traditional Chinese (Big5, Big5-HKSCS)"

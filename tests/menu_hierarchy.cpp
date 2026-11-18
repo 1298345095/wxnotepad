@@ -49,16 +49,17 @@ void CheckMenu(EditorFrame* frame) {
            "Escape C Chars", "Unescape C Chars"});
     Order(Submenu(bar->GetMenu(0), "Line Endings"),
           {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)", "Default..."});
-    // Notepad4.rc at 89b8b36: CMD_RELOADUTF8, separator, IDM_RECODE_SELECT,
-    // after filtering commands whose encoding capabilities are not delivered.
+    // Notepad4.rc at 89b8b36: the three source-codec commands precede
+    // Default Encoding and With Encoding, retaining their original separator.
     auto* reload = Submenu(bar->GetMenu(0), "Reload");
-    Order(reload, {"As UTF-8", "With Encoding..."});
-    Require(reload->GetMenuItemCount() == 3 && reload->FindItemByPosition(1)->IsSeparator(),
+    Order(reload, {"As UTF-8", "As ANSI", "As OEM", "Default Encoding", "With Encoding..."});
+    Require(reload->GetMenuItemCount() == 6 && reload->FindItemByPosition(3)->IsSeparator(),
             "Reload retains the original separator between quick reload and the encoding chooser");
-    Order(bar->GetMenu(2), {"Find...", "Find Next", "Find Previous", "Replace...", "Find Matching Brace",
-                            "Select to Matching Brace", "Select Word", "Select Lines (Expand Selection)",
-                            "Select Lines in Current Block", "Select to Document Start", "Select to Document End",
-                            "Select to Next", "Select to Previous", "Bookmarks", "Goto"});
+    Order(bar->GetMenu(2),
+          {"Find...", "Save Find Text", "Find Next", "Find Previous", "Replace...", "Replace Next",
+           "Find Matching Brace", "Select to Matching Brace", "Select Word", "Select Lines (Expand Selection)",
+           "Select Lines in Current Block", "Select to Document Start", "Select to Document End", "Select to Next",
+           "Select to Previous", "Bookmarks", "Goto"});
     Order(bar->GetMenu(3),
           {"Default Code Font...",   "Default Text Font...",      "Caret Style",           "Word Wrap",
            "Long Line Marker",       "Indentation Guides",        "Show Whitespace",       "Show Line Endings",
