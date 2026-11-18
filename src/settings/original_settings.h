@@ -92,6 +92,7 @@ struct OriginalSettings {
     wxString dateTimeShort;
     wxString dateTimeLong;
     bool viewEOLs = false;
+    bool showUnicodeControlCharacter = false;
     bool showWordWrapSymbols = false;
     int wordWrapSymbols = 2;
     // wxnotepad opt-in; false retains original growth-only width tracking.

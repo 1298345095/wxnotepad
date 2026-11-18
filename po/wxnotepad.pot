@@ -452,6 +452,10 @@ msgstr ""
 msgid "&Sentence Case\tCtrl+Alt+O"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Show Hex Code"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Show message."
 msgstr ""
@@ -753,6 +757,10 @@ msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Character"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Character Info"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1859,6 +1867,10 @@ msgid "Show &edge line."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Show Character &Info"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Show Code &Folding\tCtrl+Shift+Alt+F"
 msgstr ""
 
@@ -2176,6 +2188,10 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "UTF-8 with BOM"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Un&icode Control Character"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp

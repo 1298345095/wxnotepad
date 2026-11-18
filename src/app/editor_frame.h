@@ -81,6 +81,8 @@ private:
     int wrapColumn_ = 0;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
+    bool unicodeControlCharactersVisible_ = false;
+    void ApplyUnicodeControlCharacter();
     bool showWordWrapSymbols_ = false;
     int wordWrapSymbols_ = 2;
     // A loaded file's truncate-lines variable can override this global preference.
