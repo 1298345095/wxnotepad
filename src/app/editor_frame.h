@@ -1,4 +1,5 @@
 #pragma once
+#include <wx/cmndata.h>
 
 #include <wx/frame.h>
 #include <array>
@@ -60,6 +61,7 @@ private:
     const wxString launchWorkingDirectory_;
     wxSize normalWindowSize_;
     OriginalSettings defaults_;
+    wxPrintData printerData_;
     IndentationSettings indentation_;
     DocumentSession document_;
     FileWatchingOptions fileWatchingOptions_;

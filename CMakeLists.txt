@@ -164,6 +164,8 @@ add_library(app_shell STATIC
     src/app/file_change_monitor.cpp
     src/app/editor_frame_file_watching.cpp
     src/app/editor_frame_commands.cpp
+    src/app/editor_printing.cpp
+    src/app/editor_print_job.cpp
     src/app/new_window.cpp
     src/app/localization.cpp
     src/app/language_commands.cpp
@@ -185,7 +187,7 @@ if(WIN32)
     target_compile_definitions(editor_runtime PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
     target_link_libraries(editor_features PRIVATE advapi32)
     target_link_libraries(editor_runtime PRIVATE imm32 shlwapi ole32 gdi32)
-    target_link_libraries(app_shell PRIVATE shell32 ole32)
+    target_link_libraries(app_shell PRIVATE shell32 ole32 comdlg32)
 endif()
 
 # The pinned core predates C++20 char8_t and is compiled without RTTI on Windows.
@@ -351,6 +353,11 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/scroll_past_last_line_process.py" "$<TARGET_FILE:scroll_past_last_line>")
     set_tests_properties(original_scroll_past_last_line_lifecycle PROPERTIES TIMEOUT 120)
     add_editor_test(menu_hierarchy original_menu_hierarchy 60)
+    add_editor_test(printing original_printing 90)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        pkg_check_modules(GTK_UNIX_PRINT REQUIRED gtk+-unix-print-3.0)
+        target_include_directories(printing PRIVATE ${GTK_UNIX_PRINT_INCLUDE_DIRS})
+    endif()
     add_editor_test(date_time original_date_time_insertion 60)
     add_editor_test(caret_appearance original_caret_appearance 60)
     if(WIN32)

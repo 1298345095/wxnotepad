@@ -2,6 +2,8 @@
 #include <array>
 #include <utility>
 #include "app/editor_frame.h"
+#include "app/editor_printing.h"
+#include "app/editor_print_job.h"
 #include "app/localization.h"
 #include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
@@ -312,6 +314,22 @@ wxMenu* EditorFrame::CreateFileMenu() {
     auto* endings = new wxMenu;
     AppendLineEndingCommands(endings);
     file->AppendSubMenu(endings, _("Line Endin&gs"));
+    file->AppendSeparator();
+    file->Append(wxID_PAGE_SETUP, _("Page Se&tup..."));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            EditorPrinting::PageSetup(*this, (settings_ ? settings_->values : defaults_).printing, printerData_);
+        },
+        wxID_PAGE_SETUP);
+    file->Append(wxID_PRINT, _("&Print...	Ctrl+P"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            EditorPrinting::Print(*this, *editor_, document_.FileNameText(FileNamePart::FileName),
+                                  (settings_ ? settings_->values : defaults_).printing, printerData_);
+        },
+        wxID_PRINT);
     file->AppendSeparator();
     file->Append(updateTime, _("Update File Time"));
     AppendRecentFilesCommand(file);

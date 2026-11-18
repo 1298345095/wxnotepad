@@ -9,6 +9,7 @@
 #include "editor/caret_appearance.h"
 #include "editor/word_completion.h"
 #include "settings/file_watching_options.h"
+#include "settings/print_options.h"
 #include "syntax/syntax_catalog.h"
 #include <ScintillaTypes.h>
 #include <wx/string.h>
@@ -49,6 +50,7 @@ struct OriginalSettings {
     bool noHtmlGuess = false;
     bool fixLineEndings = false;
     bool fixTrailingBlanks = false;
+    PrintOptions printing;
     FileWatchingOptions fileWatching;
     EncodingOptions encoding;
     int zoomLevel = DisplayUnits::ZoomPercentScale;

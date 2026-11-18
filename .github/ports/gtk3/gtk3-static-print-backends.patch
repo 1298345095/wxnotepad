@@ -1,0 +1,280 @@
+--- a/meson.build
++++ b/meson.build
+@@ -853,6 +853,10 @@
+ build_gir = gir.found() and get_option('introspection')
+ 
+ subdir('gdk')
++gtk_static_print_backends = os_unix and get_option('default_library') == 'static'
++if gtk_static_print_backends
++  subdir('modules/printbackends')
++endif
+ subdir('gtk')
+ subdir('modules')
+ subdir('libgail-util')
+@@ -939,7 +943,19 @@
+ endif
+ gtk_private_packages += gio_packages
+ 
++gtk_private_libs = []
++if gtk_static_print_backends and print_backends.contains('cups')
++  if cups_dep.name() == 'cups3'
++    gtk_private_packages += ['cups3']
++  else
++    gtk_private_libs += ['-lcups']
++  endif
++  if cdata.get('HAVE_COLORD', false)
++    gtk_private_packages += ['colord']
++  endif
++endif
+ pkgconf.set('GTK_PRIVATE_PACKAGES', ' '.join(gtk_private_packages))
++pkgconf.set('GTK_PRIVATE_LIBS', ' '.join(gtk_private_libs))
+ 
+ pkgconf.set('GDK_EXTRA_LIBS', ' '.join(pc_gdk_extra_libs))
+ pkgconf.set('GSK_EXTRA_LIBS', '')
+--- a/gtk+-3.0.pc.in
++++ b/gtk+-3.0.pc.in
+@@ -13,4 +13,5 @@
+ Requires: gdk-@GTK_API_VERSION@ @GTK_PACKAGES@
+ Requires.private: @GTK_PRIVATE_PACKAGES@
+ Libs: -L${libdir} -lgtk-3 @GTK_EXTRA_LIBS@
++Libs.private: @GTK_PRIVATE_LIBS@
+ Cflags: -I${includedir}/gtk-@GTK_API_VERSION@ @GTK_EXTRA_CFLAGS@
+--- a/modules/meson.build
++++ b/modules/meson.build
+@@ -1,4 +1,6 @@
+ gio_module_dirs = []
+ 
+ subdir('input')
+-subdir('printbackends')
++if not gtk_static_print_backends
++  subdir('printbackends')
++endif
+--- a/modules/printbackends/meson.build
++++ b/modules/printbackends/meson.build
+@@ -91,7 +91,27 @@
+   endif
+ endforeach
+ 
+-# Building
++# Build the backends into a static GTK library so their GTypes are registered
++# with the same GLib as the print dialog. Loading modules linked to another
++# copy of static GTK/GLib creates independent type registries.
++if gtk_static_print_backends
++  cdata.set('GTK_STATIC_PRINT_BACKENDS', 1)
++  gtk_static_print_sources = []
++  gtk_static_print_deps = []
++  foreach backend : print_backends
++    cdata.set('GTK_STATIC_PRINT_' + backend.to_upper(), 1)
++    gtk_static_print_sources += files('@0@/gtkprintbackend@0@.c'.format(backend))
++  endforeach
++  if print_backends.contains('cups')
++    gtk_static_print_sources += files('cups/gtkprintercups.c',
++                                      'cups/gtkcupsutils.c',
++                                      'cups/gtkcupssecretsutils.c')
++    gtk_static_print_deps += [cups_dep] + cups_extra_deps
++  endif
++  subdir_done()
++endif
++
++# Building shared modules
+ 
+ printbackends_args = [
+   '-DGTK_COMPILATION',
+--- a/gtk/meson.build
++++ b/gtk/meson.build
+@@ -975,6 +975,11 @@
+   endif
+ endforeach
+ 
++if gtk_static_print_backends
++  gtk_sources += gtk_static_print_sources
++  gtk_deps += gtk_static_print_deps
++endif
++
+ # Library
+ libgtk = library('gtk-3',
+                  soversion: gtk_soversion,
+--- a/modules/printbackends/file/gtkprintbackendfile.c
++++ b/modules/printbackends/file/gtkprintbackendfile.c
+@@ -18,6 +18,12 @@
+  */
+ 
+ #include "config.h"
++
++#ifdef GTK_STATIC_PRINT_BACKENDS
++#define pb_module_init _gtk_print_file_init
++#define pb_module_exit _gtk_print_file_exit
++#define pb_module_create _gtk_print_file_create
++#endif
+ 
+ #include <unistd.h>
+ #include <sys/types.h>
+--- a/modules/printbackends/lpr/gtkprintbackendlpr.c
++++ b/modules/printbackends/lpr/gtkprintbackendlpr.c
+@@ -18,6 +18,12 @@
+  */
+ 
+ #include "config.h"
++
++#ifdef GTK_STATIC_PRINT_BACKENDS
++#define pb_module_init _gtk_print_lpr_init
++#define pb_module_exit _gtk_print_lpr_exit
++#define pb_module_create _gtk_print_lpr_create
++#endif
+ #include <unistd.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+--- a/modules/printbackends/cups/gtkprintbackendcups.c
++++ b/modules/printbackends/cups/gtkprintbackendcups.c
+@@ -18,6 +18,12 @@
+  */
+ 
+ #include "config.h"
++
++#ifdef GTK_STATIC_PRINT_BACKENDS
++#define pb_module_init _gtk_print_cups_init
++#define pb_module_exit _gtk_print_cups_exit
++#define pb_module_create _gtk_print_cups_create
++#endif
+ #include <ctype.h>
+ #include <unistd.h>
+ #include <sys/types.h>
+--- a/modules/printbackends/test/gtkprintbackendtest.c
++++ b/modules/printbackends/test/gtkprintbackendtest.c
+@@ -18,6 +18,12 @@
+  */
+ 
+ #include "config.h"
++
++#ifdef GTK_STATIC_PRINT_BACKENDS
++#define pb_module_init _gtk_print_test_init
++#define pb_module_exit _gtk_print_test_exit
++#define pb_module_create _gtk_print_test_create
++#endif
+ 
+ #include <unistd.h>
+ #include <sys/types.h>
+--- a/gtk/gtkprintbackend.c
++++ b/gtk/gtkprintbackend.c
+@@ -112,10 +112,66 @@
+ 
+ static GSList *loaded_backends;
+ 
++#ifdef GTK_STATIC_PRINT_BACKENDS
++#define DECLARE_BACKEND(name)   void _gtk_print_ ## name ## _init (GTypeModule *);   void _gtk_print_ ## name ## _exit (void);   GtkPrintBackend *_gtk_print_ ## name ## _create (void)
++
++#ifdef GTK_STATIC_PRINT_FILE
++DECLARE_BACKEND(file);
++#endif
++#ifdef GTK_STATIC_PRINT_LPR
++DECLARE_BACKEND(lpr);
++#endif
++#ifdef GTK_STATIC_PRINT_CUPS
++DECLARE_BACKEND(cups);
++#endif
++#ifdef GTK_STATIC_PRINT_TEST
++DECLARE_BACKEND(test);
++#endif
++
++static const struct
++{
++  const char *name;
++  void (*init) (GTypeModule *);
++  void (*exit) (void);
++  GtkPrintBackend *(*create) (void);
++} builtin_backends[] = {
++#define BACKEND(name) { #name, _gtk_print_ ## name ## _init,                         _gtk_print_ ## name ## _exit, _gtk_print_ ## name ## _create }
++#ifdef GTK_STATIC_PRINT_FILE
++  BACKEND(file),
++#endif
++#ifdef GTK_STATIC_PRINT_LPR
++  BACKEND(lpr),
++#endif
++#ifdef GTK_STATIC_PRINT_CUPS
++  BACKEND(cups),
++#endif
++#ifdef GTK_STATIC_PRINT_TEST
++  BACKEND(test),
++#endif
++#undef BACKEND
++};
++#undef DECLARE_BACKEND
++#endif
++
+ static gboolean
+ gtk_print_backend_module_load (GTypeModule *module)
+ {
+   GtkPrintBackendModule *pb_module = GTK_PRINT_BACKEND_MODULE (module); 
++#ifdef GTK_STATIC_PRINT_BACKENDS
++  guint i;
++
++  for (i = 0; i < G_N_ELEMENTS (builtin_backends); i++)
++    if (g_str_equal (module->name, builtin_backends[i].name))
++      {
++        pb_module->init = builtin_backends[i].init;
++        pb_module->exit = builtin_backends[i].exit;
++        pb_module->create = builtin_backends[i].create;
++        pb_module->init (module);
++        return TRUE;
++      }
++
++  return FALSE;
++#else
+   gpointer initp, exitp, createp;
+  
+   pb_module->library = g_module_open (pb_module->path, G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
+@@ -148,6 +204,7 @@
+   pb_module->init (module);
+ 
+   return TRUE;
++#endif
+ }
+ 
+ static void
+@@ -157,7 +214,8 @@
+   
+   pb_module->exit();
+ 
+-  g_module_close (pb_module->library);
++  if (pb_module->library)
++    g_module_close (pb_module->library);
+   pb_module->library = NULL;
+ 
+   pb_module->init = NULL;
+@@ -253,8 +311,10 @@
+ _gtk_print_backend_create (const gchar *backend_name)
+ {
+   GSList *l;
++#ifndef GTK_STATIC_PRINT_BACKENDS
+   gchar *module_path;
+   gchar *full_name;
++#endif
+   GtkPrintBackendModule *pb_module;
+   GtkPrintBackend *pb;
+ 
+@@ -267,6 +327,17 @@
+     }
+ 
+   pb = NULL;
++#ifdef GTK_STATIC_PRINT_BACKENDS
++  pb_module = g_object_new (GTK_TYPE_PRINT_BACKEND_MODULE, NULL);
++  g_type_module_set_name (G_TYPE_MODULE (pb_module), backend_name);
++  if (!g_type_module_use (G_TYPE_MODULE (pb_module)))
++    {
++      g_object_unref (pb_module);
++      return NULL;
++    }
++  loaded_backends = g_slist_prepend (loaded_backends, pb_module);
++  pb = _gtk_print_backend_module_create (pb_module);
++#else
+   if (g_module_supported ())
+     {
+       full_name = g_strconcat ("printbackend-", backend_name, NULL);
+@@ -292,6 +363,7 @@
+ 	  g_type_module_use (G_TYPE_MODULE (pb_module));
+ 	}
+     }
++#endif
+ 
+   return pb;
+ }
