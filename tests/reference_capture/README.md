@@ -16,6 +16,7 @@ output path as documented in the corresponding observation:
 - [Manual word completion](../../docs/observations/word-completion.md)
 - [Selection preferences](../../docs/observations/selection-preferences.md)
 - [Search continuation](../../docs/observations/search-continuation.md)
+- [Manual Save Backup](../../docs/observations/save-backup.md)
 - [Word wrap settings and DPI](../../docs/observations/word-wrap-settings.md)
 - [TOML/YAML/CMake schemes and operations](../../docs/observations/syntax-config-languages.md)
 
