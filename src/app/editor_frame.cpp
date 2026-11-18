@@ -196,10 +196,15 @@ EditorFrame::~EditorFrame() {
 #ifdef __WXMSW__
 bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
     // A hidden native menu receives no WM_INITMENU to refresh command state.
-    // Keep its accelerators enabled for the current document and clipboard.
+    // Refresh command gestures, leaving ordinary character input alone.
     if (!(settings_ ? settings_->values : defaults_).showMenu &&
-        (message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN))
-        UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        (message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN)) {
+        const bool functionKey = message->wParam >= VK_F1 && message->wParam <= VK_F24;
+        const bool modifiedCommand = ::GetKeyState(VK_CONTROL) < 0 || ::GetKeyState(VK_MENU) < 0;
+        const bool shiftedEdit =
+            (message->wParam == VK_INSERT || message->wParam == VK_DELETE) && ::GetKeyState(VK_SHIFT) < 0;
+        if (functionKey || modifiedCommand || shiftedEdit) UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    }
     return wxFrame::MSWTranslateMessage(message);
 }
 #endif
