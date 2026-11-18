@@ -77,9 +77,26 @@ void CheckInvalidByte(EditorFrame* frame) {
         wxClipboardLocker clipboard;
         if (!clipboard) throw TestEditor::Failure("open the Character Info clipboard result");
         Phase("clipboard opened; reading result");
-        Require(wxTheClipboard->GetData(copied) && copied.GetText() == feedback.payload,
+#ifdef __WXMSW__
+        const auto owner = GetClipboardOwner();
+        const auto openHolder = GetOpenClipboardWindow();
+        DWORD ownerProcess = 0, openHolderProcess = 0;
+        const auto ownerThread = GetWindowThreadProcessId(owner, &ownerProcess);
+        const auto openHolderThread = GetWindowThreadProcessId(openHolder, &openHolderProcess);
+        std::fprintf(stderr,
+                     "Character Info clipboard read: expectedOwner=%p owner=%p ownerProcess=%lu ownerThread=%lu "
+                     "openHolder=%p openHolderProcess=%lu openHolderThread=%lu sequence=%lu unicodeAvailable=%d\n",
+                     static_cast<void*>(editor->GetHandle()), static_cast<void*>(owner), ownerProcess, ownerThread,
+                     static_cast<void*>(openHolder), openHolderProcess, openHolderThread, GetClipboardSequenceNumber(),
+                     IsClipboardFormatAvailable(CF_UNICODETEXT));
+        std::fflush(stderr);
+#endif
+        const bool received = wxTheClipboard->GetData(copied);
+        Phase("clipboard GetData returned");
+        Require(received && copied.GetText() == feedback.payload,
                 "native Character Info copies its exact visible payload");
     }
+    Phase("clipboard result verified and closed");
     Require(TestEditor::Text(editor) == std::string(1, '\x81') && editor->DocumentRevision() == revision &&
                 editor->Send(CanUndo) && !editor->Send(CanRedo),
             "character information preserves invalid bytes and edit history");
