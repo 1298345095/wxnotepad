@@ -10,6 +10,7 @@ constexpr int Regex = 0x20;
 constexpr int PosixRegex = 0x40;
 constexpr int Cxx11Regex = 0x80;
 constexpr int TransformBackslashes = 8 << 10;
+constexpr int WildcardSearch = 16 << 10;
 constexpr int LastReplaceEmpty = 32 << 10;
 constexpr int NoWrap = 4 << 4;
 constexpr int BookmarkMatches = 8;
@@ -22,6 +23,7 @@ void RestoreSearchSettings(SearchSession& search, const OriginalSettings& settin
     request.options.wholeWord = (flags & WholeWord) != 0;
     request.options.regularExpression = (flags & Regex) != 0;
     request.options.transformBackslashes = (flags & TransformBackslashes) != 0;
+    request.options.wildcardSearch = (flags & WildcardSearch) != 0;
     request.wrapAround = (settings.findReplaceOption & NoWrap) == 0;
     request.bookmarkMatchedLines = (settings.findReplaceOption & BookmarkMatches) != 0;
     search.Configure(std::move(request));
@@ -33,12 +35,13 @@ void CaptureSearchSettings(const SearchSession& search, OriginalSettings& settin
     // Preserve bits owned by other original options. The original regex-engine
     // preference remains in FindReplaceOption even though the port uses its core matcher.
     auto& flags = settings.findReplaceFlag;
-    flags &= ~(MatchCase | WholeWord | Regex | PosixRegex | Cxx11Regex | TransformBackslashes | LastReplaceEmpty);
+    flags &= ~(MatchCase | WholeWord | Regex | PosixRegex | Cxx11Regex | TransformBackslashes | WildcardSearch |
+               LastReplaceEmpty);
     const int regexFlags = Regex | ((settings.findReplaceOption & 1) ? Cxx11Regex : PosixRegex);
     flags |= (request.options.matchCase ? MatchCase : 0) | (request.options.wholeWord ? WholeWord : 0) |
              (request.options.regularExpression ? regexFlags : 0) |
              (request.options.transformBackslashes ? TransformBackslashes : 0) |
-             (search.LastReplaceEmpty() ? LastReplaceEmpty : 0);
+             (request.options.wildcardSearch ? WildcardSearch : 0) | (search.LastReplaceEmpty() ? LastReplaceEmpty : 0);
     settings.findReplaceOption = (settings.findReplaceOption & ~(NoWrap | BookmarkMatches)) |
                                  (request.wrapAround ? 0 : NoWrap) |
                                  (request.bookmarkMatchedLines ? BookmarkMatches : 0);

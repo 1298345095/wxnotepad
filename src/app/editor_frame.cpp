@@ -301,10 +301,27 @@ void EditorFrame::FindPrevious() {
     Search(false);
 }
 
-void EditorFrame::Search(bool forward, bool extendSelection) {
-    if (!search_.HasFindText()) {
-        ShowFind();
+void EditorFrame::FindSelection(SearchDirection direction) {
+    if (const auto result = search_.FindSelection(direction)) ReportFind(*result);
+}
+
+void EditorFrame::ReplaceNext() {
+    if (editor_->Send(Scintilla::Message::GetLength) == 0) return;
+    if (!search_.ReplacementInitialized()) {
+        ShowFind(true);
         return;
+    }
+    if (const auto result = search_.ReplaceNext(); result.next) ReportFind(*result.next);
+}
+
+void EditorFrame::Search(bool forward, bool extendSelection) {
+    if (editor_->Send(Scintilla::Message::GetLength) == 0) return;
+    if (!search_.HasFindText()) {
+        const auto options = settings_ ? settings_->values.selectOption : SelectOption_Default;
+        if (!(options & SelectOption_CopySelectionAsFindText) || !search_.SaveSelectionAsFindText(false)) {
+            ShowFind();
+            return;
+        }
     }
     ReportFind(search_.Find(forward ? SearchDirection::Forward : SearchDirection::Backward, extendSelection));
 }

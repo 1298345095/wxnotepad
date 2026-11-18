@@ -945,6 +945,7 @@ if(BUILD_TESTING)
     else()
         add_editor_test(native_byte_information native_invalid_byte_character_information 60)
     endif()
+    add_editor_test(search_continuation original_search_continuation 60)
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised
