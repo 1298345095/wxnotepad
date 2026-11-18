@@ -419,6 +419,15 @@ void OriginalReference(EditorFrame* frame, const wxString& input) {
         }
         Require(editor->GetClientSize() == wxSize(width, height) && editor->GetDPI().y == dpi,
                 "original comparison has identical reported native viewport and window DPI");
+        std::string face(static_cast<size_t>(editor->Send(StyleGetFont, defaultStyle)) + 1, '\0');
+        editor->Send(StyleGetFont, defaultStyle, reinterpret_cast<intptr_t>(face.data()));
+        Require(std::string(face.c_str()) == "Consolas" &&
+                    editor->Send(StyleGetSizeFractional, defaultStyle) == referencePointSizeFractional &&
+                    editor->Send(GetZoom) == 100 && editor->Send(GetTechnology) == 0 &&
+                    editor->Send(GetMarginLeft) == 1 && editor->Send(GetMarginRight) == 1,
+                "comparison retains the actual original font, renderer, zoom and edge margins");
+        for (int margin = 0; margin < 5; ++margin)
+            Require(editor->Send(GetMarginWidthN, margin) == 0, "comparison retains zero native margin columns");
         const std::array<intptr_t, 17> observed{
             editor->Send(GetWrapMode),
             editor->Send(GetWrapIndentMode),
