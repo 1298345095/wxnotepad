@@ -66,8 +66,7 @@ private:
     FileChangeMonitor fileChangeMonitor_;
     int automaticLanguageId_;
     int saveCopyId_;
-    int reloadEncodingId_;
-    int reloadUtf8Id_;
+    OpenResult ReloadQuickEncoding(QuickReloadEncoding encoding);
     int recentFilesId_;
     void AppendRecentFilesCommand(wxMenu* file);
     void RecordRecentFile();

@@ -16,10 +16,90 @@
 #include <stdexcept>
 #include <vector>
 #include <memory>
+#include <tuple>
 
 namespace {
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
+}
+struct QuickCommand {
+    const char* label;
+    int key;
+    bool alt = false;
+};
+constexpr QuickCommand asAnsi{"As ANSI", 'A'};
+constexpr QuickCommand asOem{"As OEM", 'O'};
+constexpr QuickCommand asDefault{"Default Encoding", 'F', true};
+
+void NativeQuickCommand(EditorFrame* frame, const QuickCommand& command, bool useShortcut) {
+    const auto menuId = frame->GetMenuBar()->FindMenuItem("File", command.label);
+    Require(menuId != wxNOT_FOUND, "File Reload must contain the quick encoding command");
+    if (useShortcut)
+        NativeKeys::Shortcut(frame, command.key, true, command.alt, !command.alt);
+    else
+        NativeSearch::Command(frame, menuId);
+}
+struct NativeQuickSamples {
+    std::string_view text;
+    std::string_view signatureText;
+};
+NativeQuickSamples QuickSamples(FileEncoding encoding) {
+    using enum FileEncoding;
+    switch (encoding) {
+    case Utf8:
+        return {"é\n", "\x{ef}\x{bb}\x{bf}text\n"};
+    case Gbk:
+    case Gb18030:
+        return {"茅\n", "\x{e9}\x{94}\x{98}\x{e7}\x{b8}\x{af}ext\n"};
+    case Big5:
+        return {"矇\n", "\x{e5}\x{9a}\x{9c}\x{e7}\x{af}\x{99}ext\n"};
+    case Windows1252:
+        return {"Ã©\n", "ï»¿text\n"};
+    case Dos437:
+        return {"├⌐\n", "∩╗┐text\n"};
+    default:
+        throw std::runtime_error("fixture must use a supported native code page");
+    }
+}
+void DefaultQuickReload(EditorFrame* frame, bool useShortcut, FileEncoding expected, std::string_view bytes,
+                        std::string_view text, bool bom = false) {
+    const auto path = TestFiles::TemporaryDirectory("default-quick.txt");
+    TestFiles::WriteBytes(path, "before");
+    const auto previous = expected == FileEncoding::Utf8 ? FileEncoding::Windows1252 : FileEncoding::Utf8;
+    Require(frame->Open(TestFiles::Filename(path), previous).status == OpenStatus::Opened,
+            "default quick reload fixture must start in a different encoding");
+    TestFiles::WriteBytes(path, bytes);
+    NativeQuickCommand(frame, asDefault, useShortcut);
+    Require(frame->DocumentEncoding() == expected && frame->DocumentHasBom() == bom &&
+                TestEditor::Text(frame) == text && TestFiles::Bytes(path) == bytes,
+            "quick default must decode using configured source and measure BOM identity from disk");
+}
+void ConfiguredQuickReload() {
+    using enum FileEncoding;
+    struct Fixture {
+        int setting;
+        FileEncoding encoding;
+        std::string_view bytes;
+        std::string_view bomBytes;
+        std::string_view text;
+    };
+    constexpr auto fixtures = std::to_array<Fixture>({
+        {1252, Windows1252, "\x{c3}\x{a9}\n", {}, "Ã©\n"},
+        {4, Utf8, "\x{c3}\x{a9}\n", "\x{ef}\x{bb}\x{bf}\x{c3}\x{a9}\n", "é\n"},
+        {1, Utf16Le, {"\x{e9}\0\n\0", 4}, {"\x{ff}\x{fe}\x{e9}\0\n\0", 6}, "é\n"},
+        {2, Utf16Be, {"\0\x{e9}\0\n", 4}, {"\x{fe}\x{ff}\0\x{e9}\0\n", 6}, "é\n"},
+    });
+    for (const auto& fixture : fixtures) {
+        SettingsStore settings;
+        settings.values.encoding.defaultEncoding = fixture.setting;
+        settings.values.fileWatching.mode = FileWatchingMode::None;
+        const auto frame = std::make_unique<EditorFrame>(&settings);
+        DefaultQuickReload(frame.get(), false, fixture.encoding, fixture.bytes, fixture.text);
+        if (!fixture.bomBytes.empty())
+            DefaultQuickReload(frame.get(), false, fixture.encoding, fixture.bomBytes, fixture.text, true);
+        Require(settings.values.encoding.defaultEncoding == fixture.setting,
+                "default quick reload must leave the persisted encoding choice alone");
+    }
 }
 void Untitled(EditorFrame* frame) {
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
@@ -30,6 +110,10 @@ void Untitled(EditorFrame* frame) {
             "File Reload must expose With Encoding and As UTF-8 commands");
     Require(!menus->IsEnabled(withEncoding) && !menus->IsEnabled(asUtf8),
             "Untitled documents must disable both encoding reload commands");
+    for (const auto& command : {asAnsi, asOem, asDefault}) {
+        const auto id = menus->FindMenuItem("File", command.label);
+        Require(id != wxNOT_FOUND && !menus->IsEnabled(id), "Untitled must disable each new quick reload");
+    }
     std::puts("PASS: Untitled disables both encoding reload commands");
 }
 class ReloadDialogs final : public wxTimer {
@@ -115,6 +199,94 @@ public:
         }
     }
 };
+void NativeAliasQuickReload(EditorFrame* frame, bool useShortcut, bool oem) {
+    const auto path = TestFiles::TemporaryDirectory("native-quick.txt");
+    TestFiles::WriteBytes(path, "before");
+    Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+            "native quick reload fixture must open as explicit UTF-8");
+    const std::string bytes = "\x{c3}\x{a9}\n";
+    TestFiles::WriteBytes(path, bytes);
+    const auto invoke = [&] { NativeQuickCommand(frame, oem ? asOem : asAnsi, useShortcut); };
+    const auto native = oem ? NativeOemEncodingChoice() : NativeEncodingChoice();
+    ReloadDialogs dialogs;
+    invoke();
+    if (!native) {
+        Require(dialogs.errors == 1 && frame->DocumentEncoding() == FileEncoding::Utf8 &&
+                    TestEditor::Text(frame) == "before" && TestFiles::Bytes(path) == bytes,
+                "unsupported native source must show the reload error and preserve both live text and disk bytes");
+        return;
+    }
+    const auto samples = QuickSamples(native->encoding);
+    const wxString identity = oem ? "OEM (" : "ANSI (";
+    Require(dialogs.errors == 0 && frame->DocumentEncoding() == native->encoding && !frame->DocumentHasBom() &&
+                frame->GetStatusBar()->GetStatusText().StartsWith(identity) &&
+                TestEditor::Text(frame) == samples.text && TestFiles::Bytes(path) == bytes,
+            "quick reload must decode disk bytes as the requested native source and retain its identity");
+    const std::string signature = "\x{ef}\x{bb}\x{bf}text\n";
+    TestFiles::WriteBytes(path, signature);
+    invoke();
+    Require(!frame->DocumentHasBom() && frame->GetStatusBar()->GetStatusText().StartsWith(identity) &&
+                TestEditor::Text(frame) == samples.signatureText && TestFiles::Bytes(path) == signature,
+            "native ANSI and OEM must interpret a UTF-8 signature as document content");
+    TestFiles::WriteBytes(path, "ASCII\n");
+    invoke();
+    Require(TestEditor::Text(frame) == "ASCII\n" && frame->DocumentEncoding() == native->encoding &&
+                !frame->GetStatusBar()->GetStatusText().StartsWith("ANSI (") &&
+                frame->GetStatusBar()->GetStatusText().StartsWith("OEM (") == oem,
+            "for ASCII under the default load options OEM remains native and ANSI uses its explicit codec identity");
+}
+auto QuickReloadState(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    auto* editor = frame->Editor();
+    return std::make_tuple(TestEditor::Text(frame), frame->DocumentPath(), frame->GetStatusBar()->GetStatusText(),
+                           editor->Send(GetAnchor), editor->Send(GetCurrentPos), editor->Send(GetFirstVisibleLine),
+                           editor->Send(GetXOffset), editor->Send(GetEOLMode), frame->DocumentIsModified(),
+                           editor->Send(CanUndo), editor->Send(CanRedo));
+}
+void QuickReloadDecisions(EditorFrame* frame, const QuickCommand& command) {
+    using enum Scintilla::Message;
+    const auto path = TestFiles::TemporaryDirectory("quick-decision.txt");
+    TestFiles::WriteBytes(path, "live");
+    Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+            "quick decision fixture must open");
+    TestEditor::Append(frame, " edit");
+    frame->Editor()->Send(SetSel, 5, 2);
+    const auto dirty = QuickReloadState(frame);
+    Require(std::filesystem::remove(path), "remove the backing file before deciding quick reload");
+    const auto decide = [&](int button, int loadErrors) {
+        NativeDialogs::FileCommandDriver savePrompt(NativeDialogs::FileDialogProfile::Open, button);
+        ReloadDialogs reload;
+        NativeQuickCommand(frame, command, false);
+        savePrompt.Stop();
+        reload.Stop();
+        Require(
+            savePrompt.prompts == 1 && savePrompt.choosers == 0 && savePrompt.errors == 0 && reload.choosers == 0 &&
+                reload.errors == loadErrors,
+            "quick reload must confirm before reading, report read failure only after Discard and never pick a path");
+    };
+    decide(wxID_CANCEL, 0);
+    Require(QuickReloadState(frame) == dirty && !std::filesystem::exists(path),
+            "Cancel must leave the dirty document, original view and missing file alone");
+    decide(wxID_NO, 1);
+    Require(QuickReloadState(frame) == dirty && !std::filesystem::exists(path),
+            "failed reload after Discard must leave the live dirty document, original view and undo history intact");
+    if ((command.key == asAnsi.key && !NativeEncodingChoice()) ||
+        (command.key == asOem.key && !NativeOemEncodingChoice())) {
+        frame->Editor()->Send(Undo);
+        return;
+    }
+    TestFiles::WriteBytes(path, "disk");
+    decide(wxID_NO, 0);
+    Require(TestEditor::Text(frame) == "disk" && TestFiles::Bytes(path) == "disk" && !frame->DocumentIsModified() &&
+                !frame->Editor()->Send(CanUndo),
+            "Discard must read disk bytes and reset modified state and history");
+    TestEditor::Append(frame, " saved");
+    TestFiles::WriteBytes(path, "stale disk");
+    decide(wxID_YES, 0);
+    Require(TestEditor::Text(frame) == "disk saved" && TestFiles::Bytes(path) == "disk saved" &&
+                !frame->DocumentIsModified() && !frame->Editor()->Send(CanUndo),
+            "Save must write live text before the quick reload reads the file and resets history");
+}
 void ExplicitReload(EditorFrame* frame) {
     const auto path = TestFiles::TemporaryDirectory("reload.txt");
     TestFiles::WriteBytes(path, "\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}");
@@ -288,6 +460,55 @@ void SameFileState(EditorFrame* frame) {
     editor->Send(SetReadOnly, 0);
     std::puts("PASS: encoding reload retains same-file scheme, selection, viewport and read-only mode");
 }
+void QuickReloadView(EditorFrame* frame) {
+    using enum Scintilla::Message;
+    const auto path = TestFiles::TemporaryDirectory("quick-view.py");
+    constexpr std::string_view beforeTag = "# -*- tab-width: 3; indent-tabs-mode: nil -*-\n";
+    constexpr std::string_view afterTag = "# -*- tab-width: 7; indent-tabs-mode: yes -*-\n";
+    std::string body;
+    for (int line = 0; line < 80; ++line)
+        body += std::string(180, 'a') + "\n";
+    TestFiles::WriteBytes(path, std::string(beforeTag) + body);
+    Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+            "quick reload view fixture must open");
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    const auto* menus = frame->GetMenuBar();
+    wxMenu* reload = nullptr;
+    menus->FindItem(menus->FindMenuItem("File", "As UTF-8"), &reload);
+    Require(reload != nullptr, "File must have a Reload submenu");
+    const std::array<const char*, 6> expected = {"As UTF-8", asAnsi.label,    asOem.label,
+                                                 nullptr,    asDefault.label, "With Encoding..."};
+    const auto& items = reload->GetMenuItems();
+    Require(items.GetCount() == expected.size(), "Reload must expose the scoped original entries");
+    size_t index = 0;
+    for (const auto* item : items) {
+        const auto* label = expected[index++];
+        Require(label ? item->GetItemLabelText() == label && item->IsEnabled() : item->IsSeparator(),
+                "named document must enable Reload commands in the original order");
+    }
+    const int language = menus->FindMenuItem("Scheme", "C/C++");
+    NativeSearch::Command(frame, language);
+    auto* editor = frame->Editor();
+    editor->SetWordWrapMode(Scintilla::Wrap::None);
+    editor->Send(SetSel, 4240, 4232);
+    editor->Send(SetFirstVisibleLine, 20);
+    editor->Send(SetXOffset, 40);
+    editor->Send(SetReadOnly, 1);
+    const auto top = editor->Send(GetFirstVisibleLine);
+    const auto horizontal = editor->Send(GetXOffset);
+    Require(top > 0 && horizontal > 0 && editor->Send(GetTabWidth) == 3 && !editor->Send(GetUseTabs),
+            "quick reload fixture must start scrolled with original indentation and tabs");
+    const auto replacement = std::string(afterTag) + body;
+    TestFiles::WriteBytes(path, replacement);
+    NativeQuickCommand(frame, asDefault, false);
+    Require(TestEditor::Text(frame) == replacement && TestFiles::Bytes(path) == replacement &&
+                menus->IsChecked(language) && editor->Send(GetReadOnly) && editor->Send(GetAnchor) == 4240 &&
+                editor->Send(GetCurrentPos) == 4232 && editor->Send(GetFirstVisibleLine) == top &&
+                editor->Send(GetXOffset) == horizontal && editor->Send(GetTabWidth) == 7 && editor->Send(GetUseTabs) &&
+                editor->Send(GetEOLMode) == std::to_underlying(Scintilla::EndOfLine::Lf) && !editor->Send(CanUndo),
+            "quick reload must reapply file variables and retain scheme, reverse selection, viewport and protection");
+    editor->Send(SetReadOnly, 0);
+}
 void NativeShortcuts(EditorFrame* frame) {
     const auto path = TestFiles::TemporaryDirectory("keys.txt");
     TestFiles::WriteBytes(path, "\x{ef}\x{bb}\x{bf}\x{e4}\x{b8}\x{ad}");
@@ -375,6 +596,9 @@ public:
                 Require(ready, "native key fixture must be presented on the private display");
                 if (native) {
                     NativeShortcuts(frame);
+                    NativeAliasQuickReload(frame, true, false);
+                    NativeAliasQuickReload(frame, true, true);
+                    DefaultQuickReload(frame, true, FileEncoding::Utf8, "\x{c3}\x{a9}\n", "é\n");
                 } else {
                     Untitled(frame);
                     ExplicitReload(frame);
@@ -385,7 +609,19 @@ public:
                     SameFileState(frame);
                     NativeDefault();
                     SaveCleanupView();
+                    NativeAliasQuickReload(frame, false, false);
+                    NativeAliasQuickReload(frame, false, true);
+                    ConfiguredQuickReload();
+                    QuickReloadView(frame);
+                    for (const auto& command : {asAnsi, asOem, asDefault})
+                        QuickReloadDecisions(frame, command);
+                    ReloadDialogs endings;
+                    DefaultQuickReload(frame, false, FileEncoding::Utf8, "a\r\nb\nc\r", "a\r\nb\nc\r");
+                    Require(endings.lineEndings == 1 && frame->Editor()->Send(Scintilla::Message::GetEOLMode) ==
+                                                            std::to_underlying(Scintilla::EndOfLine::CrLf),
+                            "quick default reload must present the mixed EOL choice without rewriting declined bytes");
                 }
+                std::puts("PASS: quick ANSI, OEM and configured default reload commands match original load decisions");
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());
                 result_ = 1;

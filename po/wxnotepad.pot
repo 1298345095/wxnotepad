@@ -159,6 +159,10 @@ msgstr ""
 msgid "&Decode"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Encoding\tCtrl+Alt+F"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Default encoding:"
 msgstr ""
@@ -629,6 +633,14 @@ msgid "Applies to literal searches. Use word boundaries in a regular expression.
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "As &ANSI\tCtrl+Shift+A"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "As &OEM\tCtrl+Shift+O"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "As &UTF-8\tShift+F8"
 msgstr ""
 
@@ -886,6 +898,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Copy Selection As Find Text"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Copy as &RTF"
 msgstr ""
 
 #: src/document/document_session.cpp

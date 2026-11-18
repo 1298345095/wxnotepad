@@ -1,10 +1,12 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string_view>
 #include <wx/string.h>
 
 enum class FileEncoding { Utf8, Utf16Le, Gbk, Utf16Be, Gb18030, Big5, Windows1252, Dos437 };
+enum class QuickReloadEncoding : std::uint8_t { Ansi, Oem, Default };
 struct EncodingChoice {
     FileEncoding encoding;
     bool bom;
@@ -41,3 +43,5 @@ std::optional<EncodingChoice> NativeOemEncodingChoice();
 DetectedEncoding DetectEncoding(const wxString& path, std::string_view bytes,
                                 std::optional<FileEncoding> explicitEncoding, const EncodingOptions& options = {},
                                 std::optional<EncodingChoice> weakEncoding = std::nullopt);
+DetectedEncoding DetectQuickReloadEncoding(std::string_view bytes, QuickReloadEncoding source,
+                                           const EncodingOptions& options);

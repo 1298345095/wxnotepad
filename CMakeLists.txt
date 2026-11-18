@@ -80,6 +80,7 @@ add_library(editor_runtime STATIC
     src/editor/enclose_selection.cpp
     src/editor/url_conversion.cpp
     src/editor/base64_conversion.cpp
+    src/editor/rtf_export.cpp
     src/editor/platform/native_encoding.cpp
     src/editor/native_byte_history.cpp
     src/editor/compress_whitespace.cpp
@@ -423,6 +424,7 @@ if(BUILD_TESTING)
         target_link_libraries(clipboard_peer PRIVATE PkgConfig::GTK)
     endif()
     add_editor_test(clipboard_smoke system_clipboard 30)
+    target_compile_definitions(clipboard_smoke PRIVATE WXNOTEPAD_RTF_REFERENCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data/rtf")
     add_test(NAME original_read_only_clipboard COMMAND clipboard_smoke)
     set_tests_properties(original_read_only_clipboard PROPERTIES TIMEOUT 120 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=read-only")
     add_test(NAME original_clipboard_shapes COMMAND clipboard_smoke)
@@ -946,6 +948,8 @@ if(BUILD_TESTING)
         add_editor_test(native_byte_information native_invalid_byte_character_information 60)
     endif()
     add_editor_test(search_continuation original_search_continuation 60)
+    add_test(NAME original_rtf_clipboard COMMAND clipboard_smoke)
+    set_tests_properties(original_rtf_clipboard PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_CLIPBOARD_SHAPES=rtf")
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised
