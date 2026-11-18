@@ -89,6 +89,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     editor_->SetAutoInsertMask(preferences.autoInsertMask);
     editor_->SetCompletionSettings(preferences.completion);
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
+    editor_->Send(Scintilla::Message::SetEndAtLastLine, preferences.endAtLastLine);
     editor_->Occurrences().SetOptions(preferences.markOccurrences);
     editor_->SetCodeFoldingVisible(preferences.showCodeFolding);
     editor_->SetCurrentBlockHighlighted(preferences.highlightCurrentBlock);
@@ -125,7 +126,11 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         showWordWrapSymbols_ = settings->values.showWordWrapSymbols;
         wordWrapSymbols_ = settings->values.wordWrapSymbols;
         ApplyWrapSymbols();
-        if (settings->values.wordWrap) editor_->ToggleWordWrap();
+        wordWrap_ = settings->values.wordWrap;
+        editor_->SetWordWrapMode(static_cast<Scintilla::Wrap>(settings->values.wordWrapMode));
+        if (!wordWrap_) editor_->SetWordWrapMode(Scintilla::Wrap::None);
+        editor_->SetWordWrapIndent(settings->values.wordWrapIndent);
+        editor_->Send(Scintilla::Message::SetMarginOptions, settings->values.wordWrapSelectSubLine);
         editor_->Send(Scintilla::Message::SetViewWS,
                       static_cast<uintptr_t>(std::to_underlying(settings->values.viewWhiteSpace
                                                                     ? Scintilla::WhiteSpace::VisibleAlways
@@ -192,7 +197,13 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
 #endif
     settings_->values.markLongLines = editor_->Send(Scintilla::Message::GetEdgeMode) != 0;
     settings_->values.showIndentGuides = editor_->Send(Scintilla::Message::GetIndentationGuides) != 0;
-    settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+    settings_->values.wordWrap = document_.FileVariables().wordWrap.has_value()
+                                     ? wordWrap_
+                                     : editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+    settings_->values.wordWrapMode = std::to_underlying(editor_->PreferredWordWrapMode());
+    settings_->values.wordWrapIndent = editor_->WordWrapIndent();
+    settings_->values.wordWrapSelectSubLine = editor_->Send(Scintilla::Message::GetMarginOptions) != 0;
+    settings_->values.endAtLastLine = static_cast<int>(editor_->Send(Scintilla::Message::GetEndAtLastLine));
     settings_->values.autoShrinkScrollWidth = editor_->AutoShrinkScrollWidth();
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.showBookmarkMargin = editor_->BookmarkMarginVisible();
@@ -460,8 +471,13 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
 }
 
 OpenResult EditorFrame::LoadFile(const DocumentLoad::Intent& intent) {
+    if (!document_.FileVariables().wordWrap.has_value())
+        wordWrap_ = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     const auto result = document_.Load(intent, [this] {
         indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+        editor_->SetWordWrapMode(document_.FileVariables().wordWrap.value_or(wordWrap_)
+                                     ? editor_->PreferredWordWrapMode()
+                                     : Scintilla::Wrap::None);
         const auto& preferences = settings_ ? settings_->values : defaults_;
         editor_->Send(Scintilla::Message::SetEdgeColumn,
                       document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
@@ -588,7 +604,10 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 
 bool EditorFrame::NewDocument() {
     if (!ConfirmDiscardChanges(_("Save changes to %s before creating a new document?"))) return false;
+    if (!document_.FileVariables().wordWrap.has_value())
+        wordWrap_ = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     document_.New();
+    editor_->SetWordWrapMode(wordWrap_ ? editor_->PreferredWordWrapMode() : Scintilla::Wrap::None);
     if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
     RefreshFileWatching();
     editor_->Send(Scintilla::Message::SetEdgeColumn,

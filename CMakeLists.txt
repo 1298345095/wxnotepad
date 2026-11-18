@@ -140,6 +140,7 @@ add_library(app_shell STATIC
     src/app/dialogs/auto_completion_settings_dialog.cpp
     src/app/dialogs/column_wrap_dialog.cpp
     src/app/dialogs/long_line_settings_dialog.cpp
+    src/app/dialogs/word_wrap_settings_dialog.cpp
     src/app/dialogs/align_lines_dialog.cpp
     src/app/dialogs/recent_files_dialog.cpp
     src/app/dialogs/sort_lines_dialog.cpp
@@ -339,6 +340,10 @@ if(BUILD_TESTING)
     add_test(NAME original_new_window_maximized COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/new_window_process.py" "$<TARGET_FILE:new_window>" --scenario maximized)
     set_tests_properties(original_new_window_maximized PROPERTIES TIMEOUT 45 SKIP_RETURN_CODE 77)
+    add_editor_test(scroll_past_last_line original_scroll_past_last_line 60)
+    add_test(NAME original_scroll_past_last_line_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/scroll_past_last_line_process.py" "$<TARGET_FILE:scroll_past_last_line>")
+    set_tests_properties(original_scroll_past_last_line_lifecycle PROPERTIES TIMEOUT 120)
     add_editor_test(menu_hierarchy original_menu_hierarchy 60)
     add_editor_test(date_time original_date_time_insertion 60)
     add_editor_test(caret_appearance original_caret_appearance 60)
@@ -541,6 +546,10 @@ if(BUILD_TESTING)
     add_editor_test(surface_images native_surface_images 20)
     target_include_directories(surface_images PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")
+    add_gui_program(word_wrap_settings tests/word_wrap_settings.cpp app_shell)
+    add_test(NAME original_word_wrap_settings COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/word_wrap_settings_process.py" "$<TARGET_FILE:word_wrap_settings>")
+    set_tests_properties(original_word_wrap_settings PROPERTIES TIMEOUT 180)
     add_editor_test(word_wrap word_wrap_view 60)
     if(WIN32)
         foreach(target IN ITEMS clipboard_smoke word_wrap)
