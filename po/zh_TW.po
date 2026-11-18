@@ -1167,10 +1167,26 @@ msgstr "刪除行(&E)\tCtrl+Shift+D"
 msgid "DTD"
 msgstr "DTD"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Code Font...\tAlt+F12"
+msgstr "預設程式碼字型(&C)...\tAlt+F12"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Text Font..."
+msgstr "預設文字字型(&T)..."
+
+#: src/app/editor_frame.cpp
+msgid "Default Code Font"
+msgstr "預設程式碼字型"
+
 # Original Notepad4 zh-Hant: IDD_DEFENCODING title (default clarified); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default Encoding"
 msgstr "預設編碼"
+
+#: src/app/editor_frame.cpp
+msgid "Default Text Font"
+msgstr "預設文字字型"
 
 # Original Notepad4 zh-Hant: IDD_DEFENCODING (default encoding label); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -2620,6 +2636,10 @@ msgstr "未命名"
 #: src/app/editor_frame_commands.cpp
 msgid "Update File Time"
 msgstr "更新檔案時間"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Use Default &Code Style\tShift+F12"
+msgstr "使用預設程式碼樣式(&C)\tShift+F12"
 
 # Original Notepad4 zh-Hant: IDD_TABSETTINGS/IDC_SCHEME_USE_GLOBAL_TAB; adapted where needed.
 #: src/app/dialogs/tab_settings_dialog.cpp

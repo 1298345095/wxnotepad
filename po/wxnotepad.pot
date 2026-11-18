@@ -972,8 +972,24 @@ msgstr ""
 msgid "DTD"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Code Font...\tAlt+F12"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Text Font..."
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Default Code Font"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default Encoding"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Default Text Font"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -2232,6 +2248,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Update File Time"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Use Default &Code Style\tShift+F12"
 msgstr ""
 
 #: src/app/dialogs/tab_settings_dialog.cpp
