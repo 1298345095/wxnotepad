@@ -79,6 +79,8 @@ void Resize(HWND frame, int width, bool setup, int height = ViewportHeight) {
 }
 void WordWrapReference(HWND frame, const std::filesystem::path& inputsPath,
                        const std::filesystem::path& outputDirectory) {
+    constexpr size_t WrapCountField = 7;
+    constexpr size_t TextHeightField = 14;
     const int dpi = static_cast<int>(GetDpiForWindow(editor));
     const auto tableName = "word_wrap_original_" + std::to_string(dpi) + ".tsv";
     std::ifstream inputs(inputsPath / "word_wrap_inputs.tsv");
@@ -180,7 +182,7 @@ void WordWrapReference(HWND frame, const std::filesystem::path& inputsPath,
             Send(Message::TextWidth, DefaultStyle, reinterpret_cast<intptr_t>("W")),
             Send(Message::TextWidth, DefaultStyle, reinterpret_cast<intptr_t>("中文"))};
         for (size_t index = 0; index < observed.size(); ++index)
-            if (index != 7 && index < 14)
+            if (index != WrapCountField && index < TextHeightField)
                 Require(observed[index] == frozen[index], "original settings, folds and history retain frozen results");
         std::string actual(text.size() + 1, char{});
         Send(Message::GetText, actual.size(), reinterpret_cast<intptr_t>(actual.data()));
