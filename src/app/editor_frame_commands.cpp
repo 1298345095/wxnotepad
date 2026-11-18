@@ -1781,7 +1781,6 @@ void EditorFrame::ToggleReadOnlyMode() {
 
 void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
     const int showHex = wxWindow::NewControlId();
-    edit->Append(showHex, _("&Show Hex Code"));
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -1795,7 +1794,6 @@ void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
         [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
         showHex);
     const int showCharacter = wxWindow::NewControlId();
-    edit->Append(showCharacter, _("Show Character &Info"));
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -1814,7 +1812,6 @@ void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
             dialog.ShowModal();
         },
         showCharacter);
-    edit->AppendSeparator();
     const int completeWord = wxWindow::NewControlId();
     auto* completionItem = edit->Append(completeWord, _("Complete &Word\tAlt+/"));
     completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_NUMPAD_DIVIDE, completeWord));
@@ -1836,7 +1833,11 @@ void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
           std::pair{wxTRANSLATE("Hex to Cha&racter\tCtrl+Alt+C"), CustomCaseCommand::HexToCharacter},
           std::pair{wxTRANSLATE("Esca&pe C Chars\tCtrl+Alt+E"), CustomCaseCommand::EscapeC},
           std::pair{wxTRANSLATE("&Unescape C Chars\tCtrl+Alt+R"), CustomCaseCommand::UnescapeC}}) {
-        if (mapping == CustomCaseCommand::EscapeC) edit->AppendSeparator();
+        if (mapping == CustomCaseCommand::EscapeC) {
+            edit->Append(showHex, _("&Show Hex Code"));
+            edit->Append(showCharacter, _("Show Character &Info"));
+            edit->AppendSeparator();
+        }
         const int id = wxWindow::NewControlId();
         edit->Append(id, wxGetTranslation(label));
         Bind(

@@ -43,8 +43,9 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(bar->GetMenu(1), "Lines"),
           {"Move Up", "Move Down", "Transpose", "Sort Lines...", "Modify Lines...", "Align Lines...", "Duplicate Line",
            "Cut Line", "Copy Line", "Delete Line", "Join Lines", "Split Lines", "Column Wrap...", "Join Paragraphs"});
+    // Notepad4.rc 89b8b36: the character-information commands follow Hex to Character.
     Order(Submenu(bar->GetMenu(1), "Special"),
-          {"Show Hex Code", "Show Character Info", "Complete Word", "Character to Hex", "Hex to Character",
+          {"Complete Word", "Character to Hex", "Hex to Character", "Show Hex Code", "Show Character Info",
            "Escape C Chars", "Unescape C Chars"});
     Order(Submenu(bar->GetMenu(0), "Line Endings"),
           {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)", "Default..."});
