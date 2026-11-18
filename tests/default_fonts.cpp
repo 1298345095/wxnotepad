@@ -8,6 +8,7 @@
 namespace {
 using Scintilla::Message;
 constexpr auto DefaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+constexpr auto FoldStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::FoldDisplayText);
 void Require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -69,6 +70,8 @@ public:
                 Require(editor->Send(Message::StyleGetSizeFractional, DefaultStyle) == 1800 &&
                             editor->Send(Message::StyleGetUnderline, DefaultStyle),
                         "plain text imports the separate text default");
+                Require(editor->Send(Message::StyleGetSizeFractional, FoldStyle) == 1600,
+                        "text fold ellipsis is two points below its original global text base");
                 const auto textFace = FontFace(editor);
                 NativeSearch::Command(frame, bar->FindMenuItem("Scheme", "C/C++"));
                 std::printf("C++ face=%s textFace=%s size=%lld weight=%lld italic=%lld strike=%lld\n",
@@ -83,10 +86,14 @@ public:
                             editor->Send(Message::StyleGetStrike, DefaultStyle) && FontFace(editor) == textFace,
                         "scheme default overlays code inheritance, named text font and relative point size");
                 Require(bar->IsChecked(inheritance), "code scheme uses code default initially");
+                Require(editor->Send(Message::StyleGetSizeFractional, FoldStyle) == 1200,
+                        "fold ellipsis uses global code size before the scheme's relative size override");
                 NativeSearch::Command(frame, inheritance);
                 Require(editor->Send(Message::StyleGetSizeFractional, DefaultStyle) == 2000 &&
                             editor->Send(Message::StyleGetUnderline, DefaultStyle) && !bar->IsChecked(inheritance),
                         "inheritance selector immediately uses text base plus original scheme overlay");
+                Require(editor->Send(Message::StyleGetSizeFractional, FoldStyle) == 1600,
+                        "switching fold inheritance uses global text size before the scheme override");
                 NativeSearch::Command(frame, bar->FindMenuItem("Scheme", "Python"));
                 Require(editor->Send(Message::StyleGetSizeFractional, DefaultStyle) == 1400,
                         "other code schemes keep their independent code inheritance");
