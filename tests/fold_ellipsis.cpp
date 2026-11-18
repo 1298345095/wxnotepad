@@ -9,6 +9,7 @@
 #include <wx/menu.h>
 #include <algorithm>
 #include <array>
+#include <memory>
 
 namespace {
 using enum Scintilla::Message;
@@ -22,7 +23,14 @@ void Scheme(EditorFrame* frame, const char* language) {
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", language));
     NativeFold::Paint(frame->Editor());
 }
-std::vector<wxColour> Pixels(EditorControl* editor, const wxRect& area) {
+struct PaintPixels {
+    std::vector<wxColour> pixels;
+    int width = 0;
+    int height = 0;
+    double scaleX = 1;
+    double scaleY = 1;
+};
+PaintPixels Pixels(EditorControl* editor, const wxRect& area) {
 #ifdef __WXMSW__
     // Read the same actual owned-window pixels in one native transfer. Calling
     // GetPixel for every sample is too slow on the shared high-DPI desktop.
@@ -33,12 +41,12 @@ std::vector<wxColour> Pixels(EditorControl* editor, const wxRect& area) {
     Require(target.Blit(0, 0, area.width, area.height, &source, area.x, area.y), "read actual native header pixels");
     target.SelectObject(wxNullBitmap);
     const auto image = bitmap.ConvertToImage();
-    std::vector<wxColour> pixels;
-    pixels.reserve(static_cast<size_t>(area.width) * area.height);
+    PaintPixels result{{}, area.width, area.height};
+    result.pixels.reserve(static_cast<size_t>(area.width) * area.height);
     for (int y = 0; y < area.height; ++y)
         for (int x = 0; x < area.width; ++x)
-            pixels.emplace_back(image.GetRed(x, y), image.GetGreen(x, y), image.GetBlue(x, y));
-    return pixels;
+            result.pixels.emplace_back(image.GetRed(x, y), image.GetGreen(x, y), image.GetBlue(x, y));
+    return result;
 #else
     class Capture final {
     public:
@@ -46,7 +54,7 @@ std::vector<wxColour> Pixels(EditorControl* editor, const wxRect& area) {
             handler_ = g_signal_connect_after(widget_, "draw", G_CALLBACK(Draw), this);
         }
         ~Capture() { g_signal_handler_disconnect(widget_, handler_); }
-        std::vector<wxColour> pixels;
+        PaintPixels result;
         bool pending = true;
 
     private:
@@ -63,25 +71,32 @@ std::vector<wxColour> Pixels(EditorControl* editor, const wxRect& area) {
             double scaleX, scaleY, offsetX, offsetY;
             cairo_surface_get_device_scale(surface, &scaleX, &scaleY);
             cairo_surface_get_device_offset(surface, &offsetX, &offsetY);
-            auto* image = cairo_surface_map_to_image(surface, nullptr);
-            Require(cairo_surface_status(image) == CAIRO_STATUS_SUCCESS, "map the actual native paint surface");
+            double left = area_.x, top = area_.y;
+            cairo_user_to_device(context, &left, &top);
+            const int nativeLeft = static_cast<int>(std::lround(left * scaleX + offsetX));
+            const int nativeTop = static_cast<int>(std::lround(top * scaleY + offsetY));
+            cairo_matrix_t matrix;
+            cairo_get_matrix(context, &matrix);
+            result.scaleX = scaleX * matrix.xx;
+            result.scaleY = scaleY * matrix.yy;
+            result.width = static_cast<int>(std::lround(area_.width * result.scaleX));
+            result.height = static_cast<int>(std::lround(area_.height * result.scaleY));
+            pending = true;
+            const cairo_rectangle_int_t region{nativeLeft, nativeTop, result.width, result.height};
+            const auto unmap = [surface](cairo_surface_t* image) { cairo_surface_unmap_image(surface, image); };
+            const std::unique_ptr<cairo_surface_t, decltype(unmap)> mapped(cairo_surface_map_to_image(surface, &region),
+                                                                           unmap);
+            auto* image = mapped.get();
+            if (cairo_surface_status(image) != CAIRO_STATUS_SUCCESS) return;
             const int stride = cairo_image_surface_get_stride(image);
             const auto* data = cairo_image_surface_get_data(image);
-            pixels.clear();
-            for (int y = area_.y; y <= area_.GetBottom(); ++y) {
-                for (int x = area_.x; x <= area_.GetRight(); ++x) {
-                    double deviceX = x, deviceY = y;
-                    cairo_user_to_device(context, &deviceX, &deviceY);
-                    const int nativeX = static_cast<int>(std::lround(deviceX * scaleX + offsetX));
-                    const int nativeY = static_cast<int>(std::lround(deviceY * scaleY + offsetY));
-                    Require(nativeX >= 0 && nativeX < cairo_image_surface_get_width(image) && nativeY >= 0 &&
-                                nativeY < cairo_image_surface_get_height(image),
-                            "sample inside actual native paint surface");
-                    const auto pixel = reinterpret_cast<const uint32_t*>(data + nativeY * stride)[nativeX];
-                    pixels.emplace_back((pixel >> 16U) & 0xffU, (pixel >> 8U) & 0xffU, pixel & 0xffU);
+            result.pixels.clear();
+            for (int y = 0; y < result.height; ++y) {
+                for (int x = 0; x < result.width; ++x) {
+                    const auto pixel = reinterpret_cast<const uint32_t*>(data + y * stride)[x];
+                    result.pixels.emplace_back((pixel >> 16U) & 0xffU, (pixel >> 8U) & 0xffU, pixel & 0xffU);
                 }
             }
-            cairo_surface_unmap_image(surface, image);
             pending = false;
         }
         GtkWidget* widget_;
@@ -90,7 +105,7 @@ std::vector<wxColour> Pixels(EditorControl* editor, const wxRect& area) {
     } capture(editor, area);
     NativeFold::Paint(editor);
     Require(!capture.pending, "observe the actual native fold paint");
-    return capture.pixels;
+    return capture.result;
 #endif
 }
 void Evidence(EditorControl* editor, int line, const wxString& name) {
@@ -100,10 +115,10 @@ void Evidence(EditorControl* editor, int line, const wxString& name) {
     const wxRect area(0, top, std::min(editor->GetClientSize().x, editor->FromDIP(600)),
                       static_cast<int>(editor->Send(TextHeight, line)));
     const auto pixels = Pixels(editor, area);
-    wxImage image(area.width, area.height);
-    for (int y = 0; y < area.height; ++y)
-        for (int x = 0; x < area.width; ++x) {
-            const auto& pixel = pixels[static_cast<size_t>(y) * area.width + x];
+    wxImage image(pixels.width, pixels.height);
+    for (int y = 0; y < pixels.height; ++y)
+        for (int x = 0; x < pixels.width; ++x) {
+            const auto& pixel = pixels.pixels[static_cast<size_t>(y) * pixels.width + x];
             image.SetRGB(x, y, pixel.Red(), pixel.Green(), pixel.Blue());
         }
     const auto path = prefix + "-" + name +
@@ -119,10 +134,10 @@ wxRect Box(EditorControl* editor, int line, bool visible) {
     Require(area.width > 0 && area.y >= 0 && area.GetBottom() < editor->GetClientSize().y,
             "fold suffix must be inside the visible native viewport");
     const auto pixels = Pixels(editor, area);
-    int left = area.width, right = -1, top = area.height, bottom = -1;
-    for (int row = 0; row < area.height; ++row)
-        for (int column = 0; column < area.width; ++column)
-            if (pixels[static_cast<size_t>(row) * area.width + column] == wxColour(128, 128, 128)) {
+    int left = pixels.width, right = -1, top = pixels.height, bottom = -1;
+    for (int row = 0; row < pixels.height; ++row)
+        for (int column = 0; column < pixels.width; ++column)
+            if (pixels.pixels[static_cast<size_t>(row) * pixels.width + column] == wxColour(128, 128, 128)) {
                 left = std::min(left, column);
                 right = std::max(right, column);
                 top = std::min(top, row);
@@ -136,15 +151,17 @@ wxRect Box(EditorControl* editor, int line, bool visible) {
     // A closed border and three separate interior glyphs distinguish the boxed
     // middle dots from an unboxed string or a border with missing text.
     for (int column = left + 1; column < right; ++column)
-        Require(pixels[static_cast<size_t>(top) * area.width + column] == wxColour(128, 128, 128) &&
-                    pixels[static_cast<size_t>(bottom) * area.width + column] == wxColour(128, 128, 128),
+        Require(pixels.pixels[static_cast<size_t>(top) * pixels.width + column] == wxColour(128, 128, 128) &&
+                    pixels.pixels[static_cast<size_t>(bottom) * pixels.width + column] == wxColour(128, 128, 128),
                 "fold display text must have both horizontal box borders");
     int groups = 0;
     bool previous = false;
-    for (int column = left + 2; column < right - 1; ++column) {
+    const int insetX = static_cast<int>(std::ceil(2 * pixels.scaleX));
+    const int insetY = static_cast<int>(std::ceil(2 * pixels.scaleY));
+    for (int column = left + insetX; column < right - insetX + 1; ++column) {
         bool ink = false;
-        for (int row = top + 2; row < bottom - 1; ++row) {
-            const auto& pixel = pixels[static_cast<size_t>(row) * area.width + column];
+        for (int row = top + insetY; row < bottom - insetY + 1; ++row) {
+            const auto& pixel = pixels.pixels[static_cast<size_t>(row) * pixels.width + column];
             ink |= pixel.Red() < 240 && pixel.Green() < 240 && pixel.Blue() < 240;
         }
         if (ink && !previous) ++groups;
@@ -154,7 +171,8 @@ wxRect Box(EditorControl* editor, int line, bool visible) {
                 x + right, y + bottom, groups, editor->GetDPI().y, static_cast<long long>(editor->Send(GetZoom)),
                 static_cast<long long>(editor->Send(GetTechnology)));
     Require(groups == 3, "the actual box must contain three separate middle-dot glyphs");
-    return {x + left, y + top, right - left + 1, bottom - top + 1};
+    return {x + static_cast<int>(left / pixels.scaleX), y + static_cast<int>(top / pixels.scaleY),
+            static_cast<int>((right - left + 1) / pixels.scaleX), static_cast<int>((bottom - top + 1) / pixels.scaleY)};
 }
 void Languages(EditorFrame* frame, const wxString& renderer) {
     auto* editor = frame->Editor();
@@ -227,7 +245,7 @@ void Layout(EditorFrame* frame, const wxString& renderer) {
     const int textLeft = static_cast<int>(editor->Send(PointXFromPosition, 0, 0));
     const auto clipped = Pixels(editor, wxRect(textLeft, 0, editor->GetClientSize().x - textLeft,
                                                static_cast<int>(editor->Send(TextHeight, 0))));
-    Require(std::count(clipped.begin(), clipped.end(), wxColour(128, 128, 128)) == 0,
+    Require(std::count(clipped.pixels.begin(), clipped.pixels.end(), wxColour(128, 128, 128)) == 0,
             "off-screen fold suffix must be clipped out of the actual text viewport");
     editor->Send(SetXOffset, endX - editor->GetClientSize().x + editor->FromDIP(100));
     NativeFold::Paint(editor);
