@@ -106,8 +106,12 @@ std::string CharacterInformation(EditorControl& editor, bool nativeDefaultEncodi
         std::format_to(std::back_inserter(output), " {:04X}", character);
     }
     output += "\nUTF-8:";
-    const auto bytes =
-        character <= 0x7f ? std::string(1, static_cast<char>(character)) : wxString(wxUniChar(character)).utf8_string();
+    // Original WideCharToMultiByte(CP_UTF8, 0) replaces the singleton surrogate
+    // used by the core to report an invalid UTF-8 byte. Keep that sentinel in
+    // the Unicode/UTF-16 fields while matching its original UTF-8 conversion.
+    const auto utf8Character = character >= 0xd800 && character <= 0xdfff ? 0xfffd : character;
+    const auto bytes = utf8Character <= 0x7f ? std::string(1, static_cast<char>(utf8Character))
+                                             : wxString(wxUniChar(utf8Character)).utf8_string();
     for (const unsigned char byte : bytes)
         std::format_to(std::back_inserter(output), " {:02X}", byte);
     std::format_to(std::back_inserter(output), "\nHTML: &#{};", character);
