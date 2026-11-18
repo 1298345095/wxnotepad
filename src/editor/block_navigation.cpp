@@ -92,29 +92,3 @@ void EditorControl::GoToBlock(BlockNavigation command) {
                             reinterpret_cast<intptr_t>(&range)));
     }
 }
-
-// Original Edit.cpp::EditSelectLines(currentBlock=true).
-void EditorControl::SelectCurrentBlockLines() {
-    using Scintilla::Message;
-    const auto caret = Send(Message::GetCurrentPos);
-    const auto anchor = Send(Message::GetAnchor);
-    const auto current = Send(Message::LineFromPosition, caret);
-    auto start = current;
-    if (!(Send(Message::GetFoldLevel, start) & FoldHeader)) {
-        start = Send(Message::GetFoldParent, start);
-        if (start < 0) {
-            Send(Message::SelectAll);
-            return;
-        }
-    }
-    const auto end = Send(Message::GetLastChild, start, -1);
-    const bool backward = caret < anchor || (caret == anchor && end - current > current - start);
-    const bool lineSelection = (static_cast<unsigned>(std::to_underlying(GetLineSelectionMode())) & 1U) != 0;
-    const auto offset = lineSelection ? 0 : 1;
-    const auto anchorLine = backward ? end + offset : start;
-    const auto caretLine = backward ? start : end + offset;
-    Send(Message::SetSel, Send(Message::PositionFromLine, anchorLine), Send(Message::PositionFromLine, caretLine));
-    if (lineSelection)
-        Send(Message::SetSelectionMode, static_cast<uintptr_t>(std::to_underlying(Scintilla::SelectionMode::Lines)));
-    Send(Message::ChooseCaretX);
-}
