@@ -5,6 +5,8 @@ import os
 import sys
 import time
 
+from resource_process import wait_state
+
 
 def plain(text):
     return text.replace('&', '').replace('_', '')
@@ -286,7 +288,7 @@ class Dialogs:
             for thread in attached:
                 self.user.AttachThreadInput(current, thread, False)
 
-    def key(self, app, key, window=None):
+    def key(self, app, key, window=None, expected_state=None):
         if sys.platform == 'win32':
             self.user.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             handle = int(app.state['editor_handle'])
@@ -314,10 +316,11 @@ class Dialogs:
                 finally:
                     self.user.SetKeyboardState(previous)
                     self.user.AttachThreadInput(current, target, False)
-                return
-            assert key == 'F10', key
-            assert self.user.PostMessageW(handle, 0x0100, 0x79, 1)
-            assert self.user.PostMessageW(handle, 0x0101, 0x79, 0xc0000001)
+            else:
+                assert key == 'F10', key
+                assert self.user.PostMessageW(handle, 0x0100, 0x79, 1)
+                assert self.user.PostMessageW(handle, 0x0101, 0x79, 0xc0000001)
+            deadline = time.monotonic() + 10
         else:
             import os
             import subprocess
@@ -364,6 +367,18 @@ class Dialogs:
                 time.sleep(.01)
             Path(app.log.name).with_name('native-input.log').write_text(observed, encoding='utf-8')
             assert completed in observed, f'Native key press/release did not complete: {key}'
+        if expected_state:
+            latest = {}
+
+            def matches(state):
+                for field in ('sequence', 'backend', 'active', 'focus', 'length', 'dirty', *expected_state):
+                    latest[field] = state.get(field)
+                return all(state.get(field) == value for field, value in expected_state.items())
+
+            try:
+                app.state = wait_state(app.folder, app.process, matches, timeout=max(0, deadline - time.monotonic()))
+            except AssertionError as error:
+                raise AssertionError(f'Native {key} expected {expected_state}; last app state: {latest}') from error
 
     def navigate_folder(self, app, window, folder):
         """Navigate the owned chooser to fixed disposable files before inspection."""

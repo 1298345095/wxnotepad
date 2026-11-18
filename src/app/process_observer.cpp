@@ -120,7 +120,7 @@ void ProcessObserver::Publish() {
     frame_->Editor()->Update();
     lastDirty_ = frame_->Editor()->Send(GetModify) != 0;
     lastActive_ = frame_->IsActive();
-    lastCaret_ = frame_->Editor()->Send(GetCurrentPos);
+    lastSelectionRevision_ = frame_->Editor()->SelectionRevision();
     lastReadOnly_ = frame_->Editor()->Send(GetReadOnly) != 0;
     lastPositionStatus_ = frame_->GetStatusBar()->GetStatusText(1);
     wxString backend = "Windows";
@@ -185,6 +185,9 @@ void ProcessObserver::Publish() {
         wxString::Format("frame_x\t%d\nframe_y\t%d\nframe_width\t%d\nframe_height\t%d\nmaximized\t%d\ndpi\t%d\n",
                          position.x, position.y, size.x, size.y, frame_->IsMaximized(), frame_->GetDPI().x);
     contents += "position_status\t" + frame_->GetStatusBar()->GetStatusText(1) + "\n";
+    contents += wxString::Format("selection_start\t%lld\nselection_end\t%lld\n",
+                                 static_cast<long long>(frame_->Editor()->Send(GetSelectionStart)),
+                                 static_cast<long long>(frame_->Editor()->Send(GetSelectionEnd)));
     const auto* menuBar = frame_->GetMenuBar();
     for (size_t index = 0; index < menuBar->GetMenuCount(); ++index) {
         contents += wxString::Format("menu_top.%zu.label\t", index) + menuBar->GetMenuLabel(index) + "\n";
@@ -278,7 +281,7 @@ void ProcessObserver::Observe() {
         using enum Scintilla::Message;
         commandPending_ = false;
         if (publishPending_ || (frame_->Editor()->Send(GetModify) != 0) != lastDirty_ ||
-            frame_->Editor()->Send(GetCurrentPos) != lastCaret_ ||
+            frame_->Editor()->SelectionRevision() != lastSelectionRevision_ ||
             (frame_->Editor()->Send(GetReadOnly) != 0) != lastReadOnly_ ||
             frame_->GetStatusBar()->GetStatusText(1) != lastPositionStatus_ || frame_->IsActive() != lastActive_ ||
             frame_->GetSize() != lastFrameSize_)
