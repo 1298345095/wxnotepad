@@ -9,6 +9,7 @@
 #include "app/dialogs/word_wrap_settings_dialog.h"
 #include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
+#include "editor/character_information.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/native_encoding.h"
 #include "app/dialogs/document_dialogs.h"
@@ -1731,6 +1732,41 @@ void EditorFrame::ToggleReadOnlyMode() {
 }
 
 void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
+    const int showHex = wxWindow::NewControlId();
+    edit->Append(showHex, _("&Show Hex Code"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!ShowHexCode(*editor_, document_.IsDefaultEncoding()))
+                wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        showHex);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+        showHex);
+    const int showCharacter = wxWindow::NewControlId();
+    edit->Append(showCharacter, _("Show Character &Info"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto technical = CharacterInformation(*editor_);
+            const auto payload = wxString::FromUTF8(technical);
+            editor_->Send(Scintilla::Message::CopyText, technical.size(), reinterpret_cast<intptr_t>(technical.data()));
+            wxDialog dialog(this, wxID_ANY, _("Character Info"));
+            auto* contents = new wxBoxSizer(wxVERTICAL);
+            auto* information = new wxStaticText(&dialog, wxID_ANY, wxEmptyString);
+            information->SetLabelText(payload);
+            information->SetName("Character information");
+            contents->Add(information, 0, wxALL, dialog.FromDIP(12));
+            contents->Add(dialog.CreateSeparatedButtonSizer(wxOK), 0, wxEXPAND | wxALL, dialog.FromDIP(8));
+            dialog.SetSizerAndFit(contents);
+            dialog.CentreOnParent();
+            dialog.ShowModal();
+        },
+        showCharacter);
+    edit->AppendSeparator();
     const int completeWord = wxWindow::NewControlId();
     auto* completionItem = edit->Append(completeWord, _("Complete &Word\tAlt+/"));
     completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_NUMPAD_DIVIDE, completeWord));
