@@ -1,0 +1,39 @@
+--- a/include/wx/msw/private/fswatcher.h
++++ b/include/wx/msw/private/fswatcher.h
+@@ -12,6 +12,7 @@
+ 
+ #include "wx/filename.h"
+ #include "wx/vector.h"
++#include "wx/thread.h"
+ #include "wx/msw/private.h"
+ 
+ // ============================================================================
+@@ -160,6 +161,8 @@
+     // using it.
+     bool ScheduleForRemoval(const wxSharedPtr<wxFSWatchEntryMSW>& watch)
+     {
++        wxCriticalSectionLocker lock(m_removedWatchesLock);
++
+         wxCHECK_MSG( m_iocp != INVALID_HANDLE_VALUE, false, "IOCP not init" );
+         wxCHECK_MSG( watch->IsOk(), false, "Invalid watch" );
+ 
+@@ -185,6 +188,8 @@
+     // this case we'll just return false and do nothing.
+     bool CompleteRemoval(wxFSWatchEntryMSW* watch)
+     {
++        wxCriticalSectionLocker lock(m_removedWatchesLock);
++
+         for ( Watches::iterator it = m_removedWatches.begin();
+               it != m_removedWatches.end();
+               ++it )
+@@ -281,6 +286,10 @@
+     // watched keyed by their paths.
+     wxFSWatchEntries m_watches;
+ 
++    // The UI thread schedules removals while the IOCP worker completes them.
++    // Protect both vector storage and its shared-pointer elements during changes.
++    wxCriticalSection m_removedWatchesLock;
++
+     // Contains the watches which had been removed but are still pending.
+     typedef wxVector< wxSharedPtr<wxFSWatchEntryMSW> > Watches;
+     Watches m_removedWatches;

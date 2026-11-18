@@ -19,7 +19,18 @@ The Linux CI job builds once, then partitions each backend's complete selected
 CTest list across private sessions, using the available CPU count by default.
 Each shard owns its Xvfb, D-Bus and Weston session, focus driver, CTest workspace,
 JUnit result and display logs. Tests inside a shard remain serial; shards run
-concurrently without sharing native dialogs or clipboard ownership. Registration,
+concurrently without sharing native dialogs or clipboard ownership. Xvfb allocates
+its own display number with `-displayfd` and reports readiness before the command
+starts; each session retains its own authentication cookie. If allocation selects
+the reserved primary display `:0`, that owned server stays alive while a second
+server allocates the test display. The native-input primary-desktop guard remains
+in force. This avoids
+`xvfb-run -a` exhausting its ten display-number retries and then launching a client
+against another session's display. A dedicated step after dependency installation
+connects forty concurrent clients through the actual CI entry point, retaining its
+90-second outer guard and the test's original deadlines. Coverage measures the
+same regression with the Python helper tests. It runs outside the GUI shards so
+its forty sessions do not multiply the configured backend session count. Registration,
 commands and original working directories come from the configured CTest tree.
 The per-backend test plan records every selected test and its shard. `test --jobs N`
 sets the Linux session count. Wayland still runs if X11 tests fail after a successful
@@ -55,6 +66,15 @@ and verifies forward/backward UTC jumps without changing the host clock.
 The Modify Lines native dialog uses the same asynchronous compositor-presentation
 confirmation as its parent frame before sending input to its multiline fields.
 
+Windows builds an independent untouched pinned Win32 control for its existing
+GDI viewport reference and the word-wrap layout reference. The latter replays
+all 32 frozen scenes at current DPI and complementary 96 DPI. Frozen original
+dialog settings, folds, selection and history remain invariant; native font
+metrics and wrapped-row counts come from that same-host original control.
+All seventeen wxnotepad fields are compared exactly. The source archive hash,
+frozen tables, complete inputs and native output remain in evidence. See
+`docs/observations/word-wrap-settings.md` for the approved reference-source change.
+
 Automated IME geometry checks do not establish real Microsoft Pinyin interaction;
 the existing human IME records remain applicable and Linux IME remains deferred.
 Hosted-runner resource measurements are not performance acceptance thresholds.
@@ -77,7 +97,7 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   otherwise leaves it accessible only to `_apt`, which prevents SonarPython's
   package-root discovery from traversing the workspace even outside source scope.
 - The vcpkg checkout uses the manifest's builtin baseline and wxWidgets override
-  **3.3.3#4**. Only core features are requested, matching the prepared development
+  **3.3.3#5**. Only core features are requested, matching the prepared development
   dependencies; unused sound/SDL2 and debug-support features are not requested.
 - The wxWidgets overlay disables JPEG, TIFF and WebP codecs and their package
   dependencies on Windows. PNG/SVG art and native bitmap support remain enabled.
@@ -89,6 +109,10 @@ Hosted-runner resource measurements are not performance acceptance thresholds.
   Scintilla/Lexilla source downloads; the application uses the separately pinned
   Notepad4 core and preserves its notices. Local dependency installs need
   the same `--overlay-ports=<repository>/.github/ports` option as CI.
+  The wxMSW overlay also locks the pending-watch removal vector shared by the
+  UI thread and IOCP worker, preventing concurrent reallocation/erase from
+  destroying the same watch twice. `native_file_watcher_lifetime` exercises
+  repeated Refresh, pending Stop, restart and destruction during directory writes.
 - Linux explicitly requests GTK3's Wayland feature alongside its X11 backend.
   Installing the system GTK development package does not enable Wayland inside
   the separately built vcpkg GTK. Configure records and checks the actual SDK
@@ -313,6 +337,17 @@ directory. Each run's combined output and process result remain in
 `.ci/reports/visual-brace-repeat` or `.ci/reports/eol-open-repeat`; each sequence
 stops and fails on its first abnormal exit. The complete suite's JUnit and
 logs remain separate.
+
+The Windows invalid-byte Character Info test runs under an external parent monitor.
+If the child is still running after 45 seconds, system DbgHelp captures its thread
+stacks, module list and referenced memory under `.ci/reports/windows-dumps`.
+The original CTest 60-second guard, child arguments, working directory, output
+and numeric exit status remain in force. A kill-on-close job cleans up the owned
+child if CTest terminates the monitor. A triggered capture failure is reported
+and fails an otherwise successful child result. The evidence upload retains the
+matching executable and any PDB. `native_character_info_hang_monitor` verifies
+real child exits, GUI output forwarding, dump streams, capture failure and both
+hard parent termination and CTest timeout cleanup.
 
 The JSON native fixture waits for GTK's initial folder load before selecting a
 file, so that load cannot replace the requested selection. On Linux with CMake

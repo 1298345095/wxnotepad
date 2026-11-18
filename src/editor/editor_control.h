@@ -9,8 +9,11 @@
 #include "editor/caret_appearance.h"
 #include "editor/special_insert.h"
 #include "editor/url_conversion.h"
+#include "editor/base64_conversion.h"
+#include "editor/native_byte_history.h"
 #include "editor/occurrence_marking.h"
 #include <ScintillaMessages.h>
+#include <ScintillaTypes.h>
 #include <wx/control.h>
 #include <wx/timer.h>
 #include <cstdint>
@@ -31,6 +34,8 @@ enum class BlockNavigation { Start, End, Previous, Next, PreviousSibling, NextSi
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
+struct FontSettings;
+
 class EditorControl final : public wxControl {
 public:
     explicit EditorControl(wxWindow* parent, int selectionOptions = SelectOption_Default);
@@ -40,6 +45,10 @@ public:
     uint64_t SelectionRevision() const;
     intptr_t SelectionCharacterCount();
     void ToggleWordWrap();
+    void SetWordWrapMode(Scintilla::Wrap mode);
+    Scintilla::Wrap PreferredWordWrapMode() const { return wordWrapMode_; }
+    void SetWordWrapIndent(WrapContinuationIndent indent);
+    WrapContinuationIndent WordWrapIndent() const { return wordWrapIndent_; }
     bool AutoShrinkScrollWidth() const { return autoShrinkScrollWidth_; }
     void SetAutoShrinkScrollWidth(bool enabled);
     void IndentLines(bool forwards);
@@ -53,6 +62,10 @@ public:
     bool ToggleBlockComments(const char* open, const char* close, int commentStyleLast);
     bool EncloseSelection(const wxString& before, const wxString& after);
     bool ConvertUrl(UrlConversion command);
+    bool ConvertBase64(Base64Conversion command, const wxString& path = {}, bool defaultEncoding = false);
+    NativeByteSnapshot RawNativeBytes() const;
+    std::string NativeSelectedBytes(bool binary = true);
+    std::string NativeBytesAfter(intptr_t position);
     void InsertDateTime(DateTimeInsertion command, const wxString& format = {});
     void InsertGuid();
     void InsertEncodingIdentifier(std::string_view name, const SyntaxDefinition& syntax);
@@ -89,6 +102,8 @@ public:
     }
     void SetAutoInsertMask(int mask);
     bool IsOpenBraceMatched(intptr_t position, intptr_t startPosition);
+    void SetFontSettings(const FontSettings& settings);
+    const FontSettings& Fonts() const;
     void SetCompletionStyles(CompletionStyles styles) { completionStyles_ = std::move(styles); }
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
@@ -102,6 +117,8 @@ public:
     void DeleteLine();
     void JumpToPosition(intptr_t position);
     void GoToBlock(BlockNavigation command);
+    void SelectWord();
+    void SelectLines(bool currentBlock = false);
     void SelectCurrentBlockLines();
     void FocusSelectionBoundary(bool start);
     void MatchBrace(bool select = false);
@@ -134,6 +151,7 @@ public:
 
 private:
     friend struct EditorCoreObservation;
+    friend class DocumentSession;
     class Core;
     template <typename Action> bool RunNativeEvent(Action&& action);
     template <typename Event, typename Handler>
@@ -142,6 +160,7 @@ private:
     wxTimer scrollTimer_;
     wxTimer widenTimer_;
     std::unique_ptr<Core> core_;
+    void ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges);
     std::unique_ptr<OccurrenceMarking> occurrences_;
     uint64_t documentRevision_ = 0;
     bool lineNumbersVisible_ = true;
@@ -156,12 +175,16 @@ private:
     WordCompletionState completionState_;
     std::function<void(WordCompletionCondition)> wordCompletionHandler_;
     int autoInsertMask_ = AutoInsertMask_Default;
+    std::shared_ptr<const FontSettings> fontSettings_;
     CompletionStyles completionStyles_;
     void AutoInsertCharacter(int ch);
     // False retains the original failed-tag member-arrow completion path.
     bool AutoCloseTag();
     bool autoIndent_ = true;
     bool autoShrinkScrollWidth_ = false;
+    Scintilla::Wrap wordWrapMode_ = Scintilla::Wrap::Auto;
+    WrapContinuationIndent wordWrapIndent_ = WrapContinuationIndent::None;
+    void ApplyWrapIndent();
     bool matchBraces_ = true;
     void AutoIndent();
     LineSelectionMode lineSelectionMode_ = LineSelectionMode::VisualStudio;
@@ -172,6 +195,7 @@ private:
     void UpdateBookmarkMargin();
     void UpdateFoldMargin();
     void OnPaint(wxPaintEvent& event);
+    void OnIdle(wxIdleEvent& event);
     void OnKeyDown(wxKeyEvent& event);
     void OnSize(wxSizeEvent& event);
 #ifdef __WXMSW__

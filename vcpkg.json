@@ -7,5 +7,5 @@
     {"name": "wxwidgets", "default-features": false},
     {"name": "gtk3", "default-features": false, "features": ["wayland"], "platform": "linux"}
   ],
-  "overrides": [{"name": "wxwidgets", "version": "3.3.3", "port-version": 4}]
+  "overrides": [{"name": "wxwidgets", "version": "3.3.3", "port-version": 5}]
 }

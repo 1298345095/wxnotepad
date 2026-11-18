@@ -16,6 +16,10 @@ class wxMenu;
 class EditorFrame final : public wxFrame {
 public:
     explicit EditorFrame(SettingsStore* settings = nullptr);
+    ~EditorFrame() override;
+#ifdef __WXMSW__
+    bool MSWTranslateMessage(WXMSG* message) override;
+#endif
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
     SaveResult Save(const EncodingLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
@@ -81,10 +85,17 @@ private:
     int wrapColumn_ = 0;
     int defaultEolMode_ = 0;
     bool warnLineEndings_ = true;
+    bool unicodeControlCharactersVisible_ = false;
+    void ApplyUnicodeControlCharacter();
     bool showWordWrapSymbols_ = false;
     int wordWrapSymbols_ = 2;
+    // A loaded file's truncate-lines variable can override this global preference.
+    bool wordWrap_ = false;
+    void ToggleWordWrap();
+    void ShowWordWrapSettings();
     void ApplyWrapSymbols();
     void CreateMenus();
+    void ApplyBarVisibility();
     wxMenu* CreateFileMenu();
     void AppendReloadEncodingCommands(wxMenu* reload);
     void AppendEncodingCommands(wxMenu* file);
@@ -93,6 +104,7 @@ private:
     wxMenu* CreateViewMenu();
     wxMenu* CreateSearchMenu();
     wxMenu* CreateSettingsMenu();
+    wxMenu* CreateToolsMenu();
     void AppendEditingCommands(wxMenu* edit);
     void AppendConversionCommands(wxMenu* edit);
     void AppendEnclosureCommands(wxMenu* edit);
@@ -157,6 +169,7 @@ private:
     void OnSearchKey(wxKeyEvent& event);
     void UpdateDocumentState();
     void UpdatePositionStatus();
+    void ChooseDefaultFont(bool code);
     void ChooseLanguage(std::optional<SyntaxLanguage> language);
     bool ConfirmDiscardChanges(const wxString& action);
     void OnDropFiles(wxDropFilesEvent& event);

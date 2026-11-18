@@ -77,6 +77,11 @@ EditorControl::EditorControl(wxWindow* parent, int selectionOptions)
     wxGetTopLevelParent(this)->Bind(wxEVT_MOVE, &EditorControl::OnHostMove, this);
 #endif
     SetAutoInsertMask(autoInsertMask_);
+    // Notepad4 89b8b36 Notepad4.cpp startup / GetFoldDisplayEllipsis:
+    // editor storage is UTF-8, independently of the document's file encoding.
+    Send(Message::FoldDisplayTextSetStyle,
+         static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldDisplayTextStyle::Boxed)));
+    Send(Message::SetDefaultFoldDisplayText, 0, reinterpret_cast<intptr_t>("\xC2\xB7\xC2\xB7\xC2\xB7"));
     occurrences_ = std::make_unique<OccurrenceMarking>(*this);
     // Original Notepad4.cpp::CreateEditControl current-line preferences.
     Send(Message::SetCaretLineVisibleAlways, 1);
@@ -332,15 +337,67 @@ void EditorControl::SetAutoShrinkScrollWidth(bool enabled) {
 }
 
 void EditorControl::ToggleWordWrap() {
-    using enum Scintilla::Wrap;
-    const auto mode = Send(Message::GetWrapMode) == static_cast<intptr_t>(std::to_underlying(None)) ? Word : None;
+    SetWordWrapMode(Send(Message::GetWrapMode) ? Scintilla::Wrap::None : wordWrapMode_);
+}
+
+void EditorControl::SetWordWrapMode(Scintilla::Wrap mode) {
+    if (mode != Scintilla::Wrap::None) wordWrapMode_ = mode;
     Send(Message::SetWrapMode, static_cast<uintptr_t>(std::to_underlying(mode)));
     core_->UpdateWrapLayout();
+}
+
+void EditorControl::SetWordWrapIndent(WrapContinuationIndent indent) {
+    wordWrapIndent_ = indent;
+    ApplyWrapIndent();
+    core_->UpdateWrapLayout();
+}
+
+void EditorControl::ApplyWrapIndent() {
+    // Notepad4 89b8b36 Edit.cpp::EditSetWrapIndentMode/EditSetWrapStartIndent.
+    // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
+    using enum WrapContinuationIndent;
+    auto mode = Scintilla::WrapIndentMode::Fixed;
+    switch (wordWrapIndent_) {
+    case Same:
+        mode = Scintilla::WrapIndentMode::Same;
+        break;
+    case Indent:
+        mode = Scintilla::WrapIndentMode::Indent;
+        break;
+    case DeepIndent:
+        mode = Scintilla::WrapIndentMode::DeepIndent;
+        break;
+    default: {
+        int indent = 0;
+        const auto indentWidth = Send(Message::GetIndent);
+        const int width = static_cast<int>(indentWidth ? indentWidth : Send(Message::GetTabWidth));
+        switch (wordWrapIndent_) {
+        case OneCharacter:
+            indent = 1;
+            break;
+        case TwoCharacters:
+            indent = 2;
+            break;
+        case OneLevel:
+            indent = width;
+            break;
+        case TwoLevels:
+            indent = 2 * width;
+            break;
+        default:
+            break;
+        }
+        Send(Message::SetWrapStartIndent, indent);
+        break;
+    }
+    }
+    Send(Message::SetWrapIndentMode, std::to_underlying(mode));
 }
 
 void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
     Send(Message::SetTabWidth, tabWidth);
     Send(Message::SetIndent, indentWidth);
+    ApplyWrapIndent();
     core_->UpdateWrapLayout();
 }
 
@@ -364,7 +421,8 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
     }
     if (message == Message::StyleClearAll || message == Message::StyleSetFont || message == Message::StyleSetSize ||
         message == Message::StyleSetSizeFractional || message == Message::StyleSetBold ||
-        message == Message::StyleSetItalic || message == Message::SetZoom || message == Message::SetTechnology) {
+        message == Message::StyleSetItalic || message == Message::StyleSetWeight || message == Message::SetZoom ||
+        message == Message::SetTechnology) {
         lineNumberWidthDirty_ = true;
         bookmarkMarginWidthDirty_ = true;
         foldMarginWidthDirty_ = true;
@@ -376,6 +434,22 @@ intptr_t EditorControl::Send(Message message, uintptr_t wParam, intptr_t lParam)
         ApplyCaretAppearance();
     core_->SelectionRevision();
     return result;
+}
+
+NativeByteSnapshot EditorControl::RawNativeBytes() const {
+    return core_->RawNativeBytes();
+}
+
+std::string EditorControl::NativeSelectedBytes(bool binary) {
+    return core_->NativeSelectedBytes(binary);
+}
+
+std::string EditorControl::NativeBytesAfter(intptr_t position) {
+    return core_->NativeBytesAfter(position);
+}
+
+void EditorControl::ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges) {
+    core_->ReplaceTargetWithNativeBytes(text, std::move(ranges));
 }
 
 uint64_t EditorControl::SelectionRevision() const {
@@ -510,6 +584,10 @@ void EditorControl::OnKeyDown(wxKeyEvent& event) {
 void EditorControl::OnPaint(wxPaintEvent&) {
     wxPaintDC dc(this);
     core_->Draw(dc);
+}
+
+void EditorControl::OnIdle(wxIdleEvent& event) {
+    RunNativeEvent([&] { core_->OnIdle(event); });
 }
 
 void EditorControl::OnSize(wxSizeEvent& event) {

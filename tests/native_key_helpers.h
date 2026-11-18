@@ -156,15 +156,39 @@ inline void DialogNavigation(wxDialog* dialog, int key) {
                 throw std::runtime_error("native Escape focus must belong to the owned dialog");
             NativeFocus::Activate(owned, message.hwnd);
             const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+            HWND observedFocus = nullptr, observedForeground = nullptr;
+            bool observedShown = false, observedFocusOwned = false;
             const auto ownsInput = [&] {
-                const auto focus = GetFocus();
-                return dialog->IsShown() && GetForegroundWindow() == owned && (focus == owned || IsChild(owned, focus));
+                observedFocus = GetFocus();
+                observedShown = dialog->IsShown();
+                observedForeground = GetForegroundWindow();
+                observedFocusOwned = observedFocus == owned || IsChild(owned, observedFocus);
+                return observedShown && observedForeground == owned && observedFocusOwned;
             };
             while (!ownsInput() && std::chrono::steady_clock::now() < until) {
                 wxYield();
                 wxMilliSleep(10);
             }
-            if (!ownsInput()) throw std::runtime_error("native Escape requires the owned dialog on the input desktop");
+            if (!ownsInput()) {
+                DWORD foregroundProcess = 0;
+                const auto foregroundThread = GetWindowThreadProcessId(observedForeground, &foregroundProcess);
+                GUITHREADINFO foregroundInfo{sizeof(GUITHREADINFO)};
+                const bool foregroundInfoRead = GetGUIThreadInfo(foregroundThread, &foregroundInfo);
+                std::fprintf(stderr,
+                             "Native Escape ownership: shown=%d foregroundOwned=%d focusOwned=%d owned=%p "
+                             "target=%p foreground=%p focus=%p active=%p visible=%d enabled=%d process=%lu "
+                             "thread=%lu foregroundProcess=%lu foregroundThread=%lu foregroundInfoRead=%d "
+                             "foregroundActive=%p foregroundFocus=%p\n",
+                             observedShown, observedForeground == owned, observedFocusOwned, static_cast<void*>(owned),
+                             static_cast<void*>(message.hwnd), static_cast<void*>(observedForeground),
+                             static_cast<void*>(observedFocus), static_cast<void*>(GetActiveWindow()),
+                             IsWindowVisible(owned), IsWindowEnabled(owned), GetCurrentProcessId(),
+                             GetCurrentThreadId(), foregroundProcess, foregroundThread, foregroundInfoRead,
+                             static_cast<void*>(foregroundInfo.hwndActive),
+                             static_cast<void*>(foregroundInfo.hwndFocus));
+                std::fflush(stderr);
+                throw std::runtime_error("native Escape requires the owned dialog on the input desktop");
+            }
             for (const int modifier : {VK_CONTROL, VK_MENU, VK_SHIFT, VK_LWIN, VK_RWIN, VK_ESCAPE})
                 if (GetAsyncKeyState(modifier) & 0x8000)
                     throw std::runtime_error("native Escape requires released physical shortcut modifiers");

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "editor/editor_control.h"
+#include "editor/font_settings.h"
 #include "app/editor_frame.h"
 #include <cstdio>
 #include <optional>
@@ -28,6 +29,17 @@ inline void Append(EditorFrame* frame, const std::string& text) {
     auto* editor = frame->Editor();
     editor->Send(GotoPos, editor->Send(GetLength));
     editor->Send(AddText, text.size(), reinterpret_cast<intptr_t>(text.data()));
+}
+// Frozen editing/geometry fixtures were captured with a fixed-width 12pt
+// buffer. Keep that input explicit when the delivered Plain Text profile uses
+// its independent text font; leave font-default acceptance to default_fonts.
+inline void UseFixedWidthFont(EditorControl* editor, double points = 12) {
+    auto fonts = editor->Fonts();
+    fonts.codeStyle = wxString::Format("font:$(Code); size:%g", points);
+    fonts.textStyle = fonts.codeStyle;
+    editor->SetFontSettings(fonts);
+    ApplyFontSettings(*editor, SyntaxLanguage::PlainText);
+    editor->Send(Scintilla::Message::StyleClearAll);
 }
 inline void ResetStream(EditorControl* editor, const char* text, intptr_t anchor = 0, intptr_t caret = 0,
                         std::optional<Scintilla::EndOfLine> mode = std::nullopt) {

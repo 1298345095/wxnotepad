@@ -3,6 +3,7 @@
 #include "file_helpers.h"
 #include "native_search_helpers.h"
 #include "native_fold_helpers.h"
+#include "native_key_helpers.h"
 #include <ScintillaTypes.h>
 #include <wx/wx.h>
 #include <cstdio>
@@ -29,8 +30,9 @@ public:
     bool OnInit() override {
         auto* frame = new EditorFrame;
         frame->ShowWithoutActivating();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "native JSON fold view is presented before observing paint and margins");
                 using enum Scintilla::Message;
                 auto* editor = frame->Editor();
                 const std::string source = "{\n  \"items\": [\n    {\n      \"text\": \"{ [ \\\" } ]\"\n    },\n    "

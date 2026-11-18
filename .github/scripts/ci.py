@@ -307,7 +307,7 @@ def test(backend, cmake_dir, expression, jobs, report_prefix='', report_director
                     '--output-on-failure', '--no-tests=error', '-R', selection,
                     '--output-junit', workspace / 'tests.xml']
         environment = dict(os.environ, WXNOTEPAD_DISPLAY_LOG_DIR=str(workspace / 'display'))
-        isolated = ['xvfb-run', '-a', '-s', '-screen 0 1600x1000x24 -nolisten tcp',
+        isolated = [sys.executable, ROOT / 'tools/xvfb_session.py',
                     'dbus-run-session', '--', sys.executable, ROOT / 'tools/clipboard_isolated.py',
                     backend, *selected]
         return run(isolated, reports / f'{report}-shard-{index}-ctest.log', environment, check=False)

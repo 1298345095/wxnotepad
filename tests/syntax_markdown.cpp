@@ -7,6 +7,7 @@
 #include "file_command_driver.h"
 #include "tab_settings_helpers.h"
 #include "native_paint_helpers.h"
+#include "native_key_helpers.h"
 #include "native_search_helpers.h"
 #include <SciLexer.h>
 #include <wx/wx.h>
@@ -62,9 +63,13 @@ void Workflows(EditorFrame* frame, SettingsStore& settings) {
                     editor->Send(StyleGetFore, SCE_MARKDOWN_PLAIN_LINK) == 0x008064 &&
                     editor->Send(StyleGetFore, SCE_H_TAG) == 0x008064,
                 "Markdown installs original line flags, emphasis, headings, links and embedded HTML attributes");
-        for (int style = 0; style <= SCE_MARKDOWN_HARD_LINE_BREAK; ++style)
-            Require(editor->Send(StyleGetSizeFractional, style) == fontSize,
-                    "all original Markdown styles inherit the native font point size");
+        for (int style = 0; style <= SCE_MARKDOWN_HARD_LINE_BREAK; ++style) {
+            const auto expectedSize = style == std::to_underlying(Scintilla::StylesCommon::FoldDisplayText)
+                                          ? fontSize - 2 * Scintilla::FontSizeMultiplier
+                                          : fontSize;
+            Require(editor->Send(StyleGetSizeFractional, style) == expectedSize,
+                    "Markdown styles retain the base font and the original smaller Fold Ellipsis font");
+        }
         Require(frame->Open(TestFiles::Filename(path)).status == OpenStatus::Opened &&
                     frame->GetStatusBar()->GetStatusText().Contains(wxString(dialect.name) + " (override)"),
                 "same-path reopen retains the explicit Markdown dialect");
@@ -244,13 +249,16 @@ void OriginalOracle(EditorFrame* frame) {
             using enum Scintilla::Message;
             auto* editor = frame->Editor();
             TestSyntax::Paint(frame);
+            NativePaint::Complete(editor);
             // Scroll through the actual viewport to complete styling below the
             // initial visible page; do not replace incremental styling with Colourise.
             const auto firstVisible = editor->Send(GetFirstVisibleLine);
             editor->Send(SetFirstVisibleLine, editor->Send(GetLineCount));
             TestSyntax::Paint(frame);
+            NativePaint::Complete(editor);
             editor->Send(SetFirstVisibleLine, firstVisible);
             TestSyntax::Paint(frame);
+            NativePaint::Complete(editor);
         },
         "Markdown styles must match independent original observations",
         "Markdown folds must match independent original observations");
@@ -269,9 +277,11 @@ public:
         settings_->values.detectIndentation = false;
         settings_->values.globalTabs = {7, 3, true};
         auto* frame = new EditorFrame(settings_.get());
+        TestEditor::UseFixedWidthFont(frame->Editor());
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "native Markdown view is presented before observing incremental styling");
                 OriginalOracle(frame);
                 Workflows(frame, *settings_);
                 NativeStylesAndFoldSearch(frame);

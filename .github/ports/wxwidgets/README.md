@@ -1,7 +1,8 @@
 # Editor dependency profile
 
 This overlay copies wxWidgets 3.3.3#1 from the pinned vcpkg baseline
-`d186940b2f0c4e8e5b4ff804af57d2a26fbfa091`. Local port version 4 disables
+`d186940b2f0c4e8e5b4ff804af57d2a26fbfa091`. Local port version 5 retains the
+version 4 profile, which disables
 JPEG, TIFF, WebP and wxRegEx on Windows and removes their package dependencies.
 The application's regular-expression commands use the pinned Notepad4 core,
 including its standalone Boost.Regex engine, rather than wxRegEx.
@@ -26,6 +27,16 @@ this change reduces SDK downloads, compilation and installed SDK size.
 
 Linux otherwise keeps the original options and dependency declarations. Its
 GTK overlay and static linkage are unchanged.
+
+Version 5 also synchronizes the wxMSW pending-watch removal vector. The UI
+thread appends retired watches while the IOCP worker erases completed ones;
+without a shared lock, reallocation and erase can destroy the same watch twice.
+The patch locks both operations with one wxCriticalSection and leaves directory
+notifications and the existing watcher shutdown order intact. This addresses the
+race captured in the native file-watcher lifetime regression. Upstream
+[issue 15995](https://github.com/wxWidgets/wxWidgets/issues/15995) explains why
+these retired watches need their own lifetime container; its earlier vector
+change does not synchronize concurrent mutations.
 
 Select this overlay for local dependency builds with
 `--overlay-ports=<repository>/.github/ports`. CI already selects that directory

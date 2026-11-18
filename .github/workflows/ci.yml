@@ -53,6 +53,14 @@ jobs:
         uses: ./.github/actions/dependencies
         with:
           profile: gui
+      - name: Validate parallel X11 display allocation
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for tool in Xvfb xauth xdpyinfo dbus-run-session xdotool ctest; do command -v "$tool"; done
+          timeout 90s python -X utf8 tests/test_xvfb_session.py -v \
+            2>&1 | tee .ci/reports/display-startup-tests.log
       - name: Set up compiler cache
         id: compiler_cache
         uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
@@ -129,6 +137,7 @@ jobs:
             --archive .ci/build/notepad4-source.tar \
             --build-dir .ci/original-reference \
             --output .ci/reports/original-gdi-viewport.tsv --compiler-cache \
+            --word-wrap-output-dir .ci/reports/original-word-wrap \
             2>&1 | tee .ci/reports/original-gdi-reference.log
       - name: Capture Windows visual brace and mixed-EOL crash dumps
         if: runner.os == 'Windows'
@@ -153,6 +162,7 @@ jobs:
         shell: bash
         env:
           WXNOTEPAD_ORIGINAL_GDI_REFERENCE: ${{ github.workspace }}/.ci/reports/original-gdi-viewport.tsv
+          WXNOTEPAD_ORIGINAL_WRAP_REFERENCE: ${{ github.workspace }}/.ci/reports/original-word-wrap
         run: python -X utf8 .github/scripts/ci.py test --backend windows
       - name: Repeat Windows visual brace regression with crash evidence
         if: ${{ !cancelled() && runner.os == 'Windows' && steps.build.outcome == 'success' }}
@@ -261,6 +271,11 @@ jobs:
             .ci/build/cmake/visual_brace.pdb
             .ci/build/cmake/eol_open.exe
             .ci/build/cmake/eol_open.pdb
+            .ci/build/cmake/native_byte_information.exe
+            .ci/build/cmake/native_byte_information.pdb
+            .ci/original-reference/cmake/native_original_viewport.exe
+            .ci/original-reference/cmake/native_original_viewport.pdb
+            tests/data/word_wrap_*.tsv
             .ci/build/cmake/clipboard_smoke
             .ci/build/cmake/clipboard_peer
             .ci/build/cmake/stream_drag
@@ -313,6 +328,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          for tool in Xvfb xauth xdpyinfo dbus-run-session xdotool ctest; do command -v "$tool"; done
           .ci/coverage-venv/bin/python -m coverage run -m unittest discover -s tests -p 'test_*.py' -v \
             2>&1 | tee .ci/reports/coverage/python-tests.log
       - name: Measure Linux debug-symbol packaging

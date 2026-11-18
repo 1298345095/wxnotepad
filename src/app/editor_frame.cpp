@@ -11,11 +11,19 @@
 #include "settings/recent_files.h"
 #include "diagnostics/trace.h"
 #include <wx/menu.h>
+#include <wx/fontdlg.h>
+#ifdef __WXGTK__
+#include <wx/fontutil.h>
+#include <gtk/gtk.h>
+#endif
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
 #include <wx/filename.h>
 #include <wx/translation.h>
 #include <array>
+#ifdef __WXMSW__
+#include <wx/msw/wrapwin.h>
+#endif
 
 namespace {
 wxString EncodingName(FileEncoding encoding) {
@@ -78,14 +86,22 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const auto& preferences = settings ? settings->values : defaults_;
 #ifdef __WXMSW__
     editor_->Send(Scintilla::Message::SetTechnology, preferences.renderingTechnology);
+    Bind(wxEVT_SHOW, [this](wxShowEvent& event) {
+        // Recalculate native bar metrics on the shown window before laying out
+        // the editor; Layout alone retains the pre-show non-client geometry.
+        if (event.IsShown()) CallAfter([this] { ApplyBarVisibility(); });
+        event.Skip();
+    });
 #endif
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
         event.Skip();
     });
+    editor_->SetFontSettings(preferences.fonts);
     editor_->SetAutoInsertMask(preferences.autoInsertMask);
     editor_->SetCompletionSettings(preferences.completion);
     editor_->SetAutoShrinkScrollWidth(preferences.autoShrinkScrollWidth);
+    editor_->Send(Scintilla::Message::SetEndAtLastLine, preferences.endAtLastLine);
     editor_->Occurrences().SetOptions(preferences.markOccurrences);
     editor_->SetCodeFoldingVisible(preferences.showCodeFolding);
     editor_->SetCurrentBlockHighlighted(preferences.highlightCurrentBlock);
@@ -122,7 +138,11 @@ EditorFrame::EditorFrame(SettingsStore* settings)
         showWordWrapSymbols_ = settings->values.showWordWrapSymbols;
         wordWrapSymbols_ = settings->values.wordWrapSymbols;
         ApplyWrapSymbols();
-        if (settings->values.wordWrap) editor_->ToggleWordWrap();
+        wordWrap_ = settings->values.wordWrap;
+        editor_->SetWordWrapMode(static_cast<Scintilla::Wrap>(settings->values.wordWrapMode));
+        if (!wordWrap_) editor_->SetWordWrapMode(Scintilla::Wrap::None);
+        editor_->SetWordWrapIndent(settings->values.wordWrapIndent);
+        editor_->Send(Scintilla::Message::SetMarginOptions, settings->values.wordWrapSelectSubLine);
         editor_->Send(Scintilla::Message::SetViewWS,
                       static_cast<uintptr_t>(std::to_underlying(settings->values.viewWhiteSpace
                                                                     ? Scintilla::WhiteSpace::VisibleAlways
@@ -131,6 +151,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     document_.New();
     CreateMenus();
     CreateStatusBar(3);
+    ApplyBarVisibility();
     search_.SetWrapConfirmation([this](SearchDirection direction) { return SearchMessage(direction); });
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         UpdatePositionStatus();
@@ -163,6 +184,49 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     editor_->SetFocus();
 }
 
+EditorFrame::~EditorFrame() {
+#ifdef __WXMSW__
+    // wxMSW leaves attached HMENUs for DestroyWindow to free. Restore native
+    // ownership even when we hid the bar without detaching wx's accelerators.
+    const auto window = static_cast<HWND>(GetHandle());
+    if (!::GetMenu(window)) ::SetMenu(window, static_cast<HMENU>(GetMenuBar()->GetHMenu()));
+#endif
+}
+
+#ifdef __WXMSW__
+bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
+    // A hidden native menu receives no WM_INITMENU to refresh command state.
+    // Refresh command gestures, leaving ordinary character input alone.
+    if (!(settings_ ? settings_->values : defaults_).showMenu &&
+        (message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN)) {
+        const bool functionKey = message->wParam >= VK_F1 && message->wParam <= VK_F24;
+        const bool modifiedCommand = ::GetKeyState(VK_CONTROL) < 0 || ::GetKeyState(VK_MENU) < 0;
+        const bool shiftedEdit =
+            (message->wParam == VK_INSERT || message->wParam == VK_DELETE) && ::GetKeyState(VK_SHIFT) < 0;
+        if (functionKey || modifiedCommand || shiftedEdit) UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    }
+    return wxFrame::MSWTranslateMessage(message);
+}
+#endif
+
+void EditorFrame::ApplyBarVisibility() {
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+#ifdef __WXMSW__
+    // Adapt Notepad4 89b8b36 IDM_VIEW_MENU: hide the native HMENU while
+    // retaining wx's attached menu and its accelerator table.
+    const auto window = static_cast<HWND>(GetHandle());
+    ::SetMenu(window, preferences.showMenu ? static_cast<HMENU>(GetMenuBar()->GetHMenu()) : nullptr);
+    ::DrawMenuBar(window);
+#else
+    // Keep the GTK menu's accelerator group attached when its widget is hidden.
+    GetMenuBar()->Show(preferences.showMenu);
+#endif
+    GetStatusBar()->Show(preferences.showStatusbar);
+    SendSizeEvent();
+    Layout();
+    UpdateDocumentState();
+}
+
 bool EditorFrame::SaveSettings(bool explicitSave) {
     if (!settings_) return true;
 #ifdef __WXMSW__
@@ -170,7 +234,13 @@ bool EditorFrame::SaveSettings(bool explicitSave) {
 #endif
     settings_->values.markLongLines = editor_->Send(Scintilla::Message::GetEdgeMode) != 0;
     settings_->values.showIndentGuides = editor_->Send(Scintilla::Message::GetIndentationGuides) != 0;
-    settings_->values.wordWrap = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+    settings_->values.wordWrap = document_.FileVariables().wordWrap.has_value()
+                                     ? wordWrap_
+                                     : editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+    settings_->values.wordWrapMode = std::to_underlying(editor_->PreferredWordWrapMode());
+    settings_->values.wordWrapIndent = editor_->WordWrapIndent();
+    settings_->values.wordWrapSelectSubLine = editor_->Send(Scintilla::Message::GetMarginOptions) != 0;
+    settings_->values.endAtLastLine = static_cast<int>(editor_->Send(Scintilla::Message::GetEndAtLastLine));
     settings_->values.autoShrinkScrollWidth = editor_->AutoShrinkScrollWidth();
     settings_->values.showLineNumbers = editor_->LineNumbersVisible();
     settings_->values.showBookmarkMargin = editor_->BookmarkMarginVisible();
@@ -288,6 +358,7 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
 }
 
 void EditorFrame::UpdateDocumentState() {
+    ApplyUnicodeControlCharacter();
     const wxString name = document_.Path().empty() ? _("Untitled") : document_.Path();
     const wxString protection = document_.IsReadOnlyFile()                       ? _(" (Read Only File)")
                                 : editor_->Send(Scintilla::Message::GetReadOnly) ? _(" (Read Only Mode)")
@@ -329,6 +400,7 @@ void EditorFrame::ChooseLanguage(std::optional<SyntaxLanguage> language) {
     document_.SelectLanguage(language);
     indentation_.Apply(*editor_, document_.Language());
     UpdateDocumentState();
+    UpdateWindowUI(wxUPDATE_UI_RECURSE);
 }
 
 SaveResult EditorFrame::SaveFirst(const std::optional<wxString>& destination, const EncodingLossDecision& decideLoss,
@@ -438,8 +510,13 @@ OpenResult EditorFrame::Open(const std::optional<wxString>& source, std::optiona
 }
 
 OpenResult EditorFrame::LoadFile(const DocumentLoad::Intent& intent) {
+    if (!document_.FileVariables().wordWrap.has_value())
+        wordWrap_ = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     const auto result = document_.Load(intent, [this] {
         indentation_.Load(*editor_, document_.Language(), document_.FileVariables());
+        editor_->SetWordWrapMode(document_.FileVariables().wordWrap.value_or(wordWrap_)
+                                     ? editor_->PreferredWordWrapMode()
+                                     : Scintilla::Wrap::None);
         const auto& preferences = settings_ ? settings_->values : defaults_;
         editor_->Send(Scintilla::Message::SetEdgeColumn,
                       document_.FileVariables().longLinesLimit.value_or(preferences.longLinesLimit));
@@ -566,7 +643,10 @@ OpenResult EditorFrame::OpenAs(FileEncoding encoding) {
 
 bool EditorFrame::NewDocument() {
     if (!ConfirmDiscardChanges(_("Save changes to %s before creating a new document?"))) return false;
+    if (!document_.FileVariables().wordWrap.has_value())
+        wordWrap_ = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
     document_.New();
+    editor_->SetWordWrapMode(wordWrap_ ? editor_->PreferredWordWrapMode() : Scintilla::Wrap::None);
     if (fileWatchingOptions_.resetOnNewFile) fileWatchingOptions_.mode = FileWatchingMode::None;
     RefreshFileWatching();
     editor_->Send(Scintilla::Message::SetEdgeColumn,
@@ -674,4 +754,41 @@ void EditorFrame::ConfirmLineEndingConversion(const LineEndingCounts& counts, bo
         editor_->Send(Scintilla::Message::SetEOLMode, static_cast<uintptr_t>(std::to_underlying(choice.mode)));
         editor_->Send(Scintilla::Message::ConvertEOLs, static_cast<uintptr_t>(std::to_underlying(choice.mode)));
     }
+}
+
+void EditorFrame::ChooseDefaultFont(bool code) {
+    auto& fonts = (settings_ ? settings_->values : defaults_).fonts;
+    auto& style = code ? fonts.codeStyle : fonts.textStyle;
+    const auto initial = DefaultStyleFont(fonts, code);
+    wxFontData data;
+    data.SetInitialFont(initial);
+    data.SetColour(DefaultStyleForeground(fonts, code));
+#ifdef __WXGTK__
+    // A synthetic weight can render correctly but have no face in GTK's
+    // chooser. Start at Pango's loaded face, as a native font chooser does.
+    auto* context = gtk_widget_get_pango_context(GTK_WIDGET(editor_->GetHandle()));
+    if (auto* loaded = pango_context_load_font(context, initial.GetNativeFontInfo()->description)) {
+        wxNativeFontInfo native;
+        native.description = pango_font_describe(loaded);
+        wxFont effective(native);
+        effective.SetFractionalPointSize(initial.GetFractionalPointSize());
+        data.SetInitialFont(effective);
+        g_object_unref(loaded);
+    }
+#endif
+    data.EnableEffects(true);
+    wxFontDialog dialog(this, data);
+    dialog.SetTitle(code ? _("Default Code Font") : _("Default Text Font"));
+    if (dialog.ShowModal() != wxID_OK) return;
+    auto chosen = dialog.GetFontData().GetChosenFont();
+    if (!chosen.IsOk()) return;
+#ifdef __WXGTK__
+    // GTK's native font chooser has no underline or strike controls.
+    chosen.SetUnderlined(initial.GetUnderlined());
+    chosen.SetStrikethrough(initial.GetStrikethrough());
+#endif
+    style = MergeChosenFont(style, chosen);
+    editor_->SetFontSettings(fonts);
+    ApplySyntaxLanguage(*editor_, document_.Language(), document_.EffectiveLanguage());
+    UpdatePositionStatus();
 }

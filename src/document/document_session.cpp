@@ -8,6 +8,7 @@
 #include "document/encoding/single_byte_codec.h"
 #include "editor/platform/native_encoding.h"
 #include "ScintillaTypes.h"
+#include "UniConversion.h"
 #include <wx/translation.h>
 #include <wx/file.h>
 #include <wx/filename.h>
@@ -161,12 +162,59 @@ LegacyEncoded EncodeLegacy(std::string_view bytes, FileEncoding encoding) {
     return EncodeChinese(bytes, encoding);
 }
 
+LegacyEncoded EncodeUnmarkedNativeText(std::string_view bytes, FileEncoding encoding) {
+    // Notepad4 EditSaveFile writes CPI_DEFAULT bytes without conversion. The
+    // migrated buffer holds Unicode text plus any undecodable native bytes
+    // produced by Base64 Decode. Retain those bytes while encoding text runs.
+    LegacyEncoded result{{}, false};
+    const auto appendText = [&](std::string_view text) {
+        const auto encoded = EncodeLegacy(text, encoding);
+        result.bytes += encoded.bytes;
+        result.loss |= encoded.loss;
+    };
+    size_t run = 0;
+    for (size_t offset = 0; offset < bytes.size();) {
+        const auto status = Scintilla::Internal::UTF8Classify(bytes.substr(offset));
+        if (status & Scintilla::Internal::UTF8MaskInvalid) {
+            if (run != offset) appendText(bytes.substr(run, offset - run));
+            result.bytes += bytes[offset++];
+            run = offset;
+        } else {
+            offset += static_cast<size_t>(status & Scintilla::Internal::UTF8MaskWidth);
+        }
+    }
+    if (run != bytes.size()) appendText(bytes.substr(run));
+    return result;
+}
+
+LegacyEncoded EncodeNativeBuffer(std::string_view bytes, FileEncoding encoding, const NativeByteRanges& raw) {
+    LegacyEncoded result{{}, false};
+    const auto appendText = [&](std::string_view text) {
+        const auto encoded = EncodeUnmarkedNativeText(text, encoding);
+        result.bytes += encoded.bytes;
+        result.loss |= encoded.loss;
+    };
+    intptr_t position = 0;
+    for (const auto& range : raw) {
+        if (position < range.start)
+            appendText(bytes.substr(static_cast<size_t>(position), static_cast<size_t>(range.start - position)));
+        result.bytes += bytes.substr(static_cast<size_t>(range.start), static_cast<size_t>(range.end - range.start));
+        position = range.end;
+    }
+    if (position < static_cast<intptr_t>(bytes.size())) appendText(bytes.substr(static_cast<size_t>(position)));
+    return result;
+}
+
 std::variant<std::string, SaveResult> EncodeForSave(std::string bytes, FileEncoding encoding, bool bom,
+                                                    bool nativeDefault, const NativeByteRanges& raw,
                                                     const EncodingLossDecision& decideLoss) {
     using enum FileEncoding;
     if (encoding == Gbk || encoding == Windows1252 || encoding == Dos437 || encoding == Gb18030 || encoding == Big5) {
-        if (!IsUtf8(bytes)) return SaveResult{SaveStatus::Failed, _("The document contains invalid UTF-8.")};
-        const auto encoded = EncodeLegacy(bytes, encoding);
+        const bool validUtf8 = IsUtf8(bytes);
+        if (!validUtf8 && !nativeDefault)
+            return SaveResult{SaveStatus::Failed, _("The document contains invalid UTF-8.")};
+        const auto encoded = nativeDefault && (!validUtf8 || !raw.empty()) ? EncodeNativeBuffer(bytes, encoding, raw)
+                                                                           : EncodeLegacy(bytes, encoding);
         if (encoded.loss && (!decideLoss || decideLoss() != EncodingLossChoice::Replace))
             return SaveResult{SaveStatus::Cancelled, {}};
         bytes = encoded.bytes;
@@ -239,6 +287,7 @@ void StripTrailingBlanks(EditorControl& editor) {
 
 struct LoadedDocument {
     std::string text;
+    NativeByteRanges raw;
     FileEncoding encoding;
     bool bom;
     bool systemDefault;
@@ -252,7 +301,11 @@ wxString DecodeLoadedDocument(LoadedDocument& loaded, const EncodingOptions& opt
     const bool utf16 = loaded.encoding == Utf16Le || loaded.encoding == Utf16Be;
     if (!utf16) loaded.variables = ReadOriginalFileVariables(bytes, options.noFileVariables, options.noEncodingTags);
     if (loaded.bom) bytes.erase(0, utf16 ? 2 : 3);
-    if (loaded.encoding == Gbk) {
+    if (loaded.systemDefault && loaded.encoding != Utf8) {
+        // Native ANSI keeps arbitrary bytes and aliases that cannot round-trip
+        // through Unicode, just like the native Base64 Decode boundary.
+        bytes = NativeDefaultEncodingBuffer(bytes, &loaded.raw);
+    } else if (loaded.encoding == Gbk) {
         const auto decoded = DecodeGbk(bytes);
         if (!decoded) return wxString(_("The file is not valid GBK (CP936). The document was not changed."));
         bytes = *decoded;
@@ -465,7 +518,8 @@ SaveResult DocumentSession::SaveTo(const wxString& destination, const EncodingLo
     std::string bytes(length + 1, '\0');
     editor_.Send(Scintilla::Message::GetText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
     bytes.resize(length);
-    const auto encoded = EncodeForSave(std::move(bytes), encoding_, hasBom_, decideLoss);
+    const auto raw = editor_.RawNativeBytes();
+    const auto encoded = EncodeForSave(std::move(bytes), encoding_, hasBom_, systemDefaultEncoding_, *raw, decideLoss);
     if (const auto* result = std::get_if<SaveResult>(&encoded)) return *result;
     const auto error = WriteSafely(destination, std::get<std::string>(encoded), temporary);
     if (!error.empty()) return {SaveStatus::Failed, error};
@@ -577,9 +631,9 @@ OpenResult DocumentSession::Load(const DocumentLoad::Intent& intent,
         if (const auto* error = std::get_if<wxString>(&candidate)) return {OpenStatus::Failed, *error};
     }
     auto& loaded = std::get<LoadedDocument>(candidate);
-    const auto result =
-        Replace(loaded.text, loadPath.GetFullPath(),
-                EncodingChoice(loaded.encoding, loaded.bom, loaded.systemDefault, loaded.systemOem), samePath);
+    const auto result = Replace(loaded.text, loadPath.GetFullPath(),
+                                EncodingChoice(loaded.encoding, loaded.bom, loaded.systemDefault, loaded.systemOem),
+                                samePath, std::move(loaded.raw));
     originalEncoding_ = CurrentEncoding();
     fileVariables_ = std::move(loaded.variables);
     // FileLoad applies the loaded file's indentation before restoring its view
@@ -591,7 +645,7 @@ OpenResult DocumentSession::Load(const DocumentLoad::Intent& intent,
 }
 
 OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& path, EncodingChoice encoding,
-                                    bool keepLanguage) {
+                                    bool keepLanguage, NativeByteRanges raw) {
     using enum Scintilla::Message;
     const auto lineEndings = CountLineEndings(bytes);
     editor_.Send(SetReadOnly, 0);
@@ -602,7 +656,13 @@ OpenResult DocumentSession::Replace(const std::string& bytes, const wxString& pa
     editor_.Send(SetUndoCollection, 0);
     editor_.Send(ClearAll);
     editor_.Send(MarkerDeleteAll, 0);
-    editor_.Send(AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
+    if (raw.empty())
+        editor_.Send(AddText, bytes.size(), reinterpret_cast<intptr_t>(bytes.data()));
+    else {
+        editor_.Send(SetTargetStart, 0);
+        editor_.Send(SetTargetEnd, 0);
+        editor_.ReplaceTargetWithNativeBytes(bytes, std::move(raw));
+    }
     editor_.Send(SetEOLMode, static_cast<uintptr_t>(std::to_underlying(SelectEol(lineEndings, defaultEolMode_))));
     editor_.Send(SetUndoCollection, 1);
     editor_.Send(EmptyUndoBuffer);
@@ -666,6 +726,8 @@ bool DocumentSession::SelectEncoding(EncodingChoice choice, const EncodingChange
         text.resize(static_cast<size_t>(length));
         if (choice.systemDefault)
             text = NativeDefaultEncodingText(wxString::FromUTF8(text.data(), text.size())).utf8_string();
+        else if (const auto raw = editor_.RawNativeBytes(); !raw->empty())
+            text = NativeDefaultEncodingUnicode(NativeBytesFromRanges(text, 0, *raw));
         const auto history = editor_.Send(GetChangeHistory);
         const auto selectionHistory = editor_.Send(GetUndoSelectionHistory);
         editor_.Send(SetReadOnly, 0);

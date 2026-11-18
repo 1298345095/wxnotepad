@@ -6,8 +6,10 @@
 #include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
 #include "app/dialogs/long_line_settings_dialog.h"
+#include "app/dialogs/word_wrap_settings_dialog.h"
 #include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
+#include "editor/character_information.h"
 #include "editor/platform/clipboard.h"
 #include "editor/platform/native_encoding.h"
 #include "app/dialogs/document_dialogs.h"
@@ -80,7 +82,36 @@ void EditorFrame::CreateMenus() {
     menus->Append(CreateViewMenu(), _("&View"));
     menus->Append(CreateLanguageMenu(), _("Sche&me"));
     menus->Append(CreateSettingsMenu(), _("Sett&ings"));
+    menus->Append(CreateToolsMenu(), _("&Tools"));
     SetMenuBar(menus);
+}
+
+wxMenu* EditorFrame::CreateToolsMenu() {
+    auto* tools = new wxMenu;
+    auto* base64 = new wxMenu;
+    for (const auto& [label, command] :
+         {std::pair{wxTRANSLATE("Standard &Encode"), Base64Conversion::Encode},
+          std::pair{wxTRANSLATE("URL &Safe Encode"), Base64Conversion::UrlSafeEncode},
+          std::pair{wxTRANSLATE("Encode as HTML Embedded &Image"), Base64Conversion::HtmlEmbeddedImage},
+          std::pair{wxTRANSLATE("&Decode"), Base64Conversion::Decode},
+          std::pair{wxTRANSLATE("Decode as &Hex"), Base64Conversion::DecodeAsHex}}) {
+        const int id = wxWindow::NewControlId();
+        base64->Append(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, command](wxCommandEvent&) {
+                if (!editor_->ConvertBase64(command, document_.Path(), document_.IsDefaultEncoding()))
+                    wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",
+                                 wxOK | wxICON_WARNING, this);
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+            id);
+    }
+    tools->AppendSubMenu(base64, _("&Base64"));
+    return tools;
 }
 
 void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
@@ -307,6 +338,12 @@ wxMenu* EditorFrame::CreateEditMenu() {
     edit->Append(wxID_CUT, _("Cu&t\tCtrl+X"));
     edit->Append(wxID_COPY, _("&Copy\tCtrl+C"));
     edit->Append(wxID_PASTE, _("&Paste\tCtrl+V"));
+    edit->Append(wxID_SELECTALL, _("Select &All\tCtrl+A"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::SelectAll); }, wxID_SELECTALL);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        wxID_SELECTALL);
     const int swap = wxWindow::NewControlId();
     edit->Append(swap, _("S&wap\tCtrl+K"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SwapClipboard(document_.IsDefaultEncoding()); }, swap);
@@ -815,6 +852,20 @@ void EditorFrame::AppendNavigationCommands(wxMenu* edit) {
     const int selectMatchingBrace = wxWindow::NewControlId();
     edit->Append(selectMatchingBrace, _("Select to Matching B&race\tCtrl+Shift+B"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->MatchBrace(true); }, selectMatchingBrace);
+    const int selectWord = wxWindow::NewControlId();
+    edit->Append(selectWord, _("Select &Word\tCtrl+Alt+Space"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectWord(); }, selectWord);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        selectWord);
+    const int selectLines = wxWindow::NewControlId();
+    edit->Append(selectLines, _("Select &Lines (Expand Selection)\tCtrl+Shift+Space"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectLines(); }, selectLines);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
+        selectLines);
     const int selectBlock = wxWindow::NewControlId();
     edit->Append(selectBlock, _("Select Lines in &Current Block\tAlt+Shift+]"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SelectCurrentBlockLines(); }, selectBlock);
@@ -823,6 +874,24 @@ void EditorFrame::AppendNavigationCommands(wxMenu* edit) {
         [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); },
         selectBlock);
     edit->AppendSeparator();
+    const int selectDocumentStart = wxWindow::NewControlId();
+    const int selectDocumentEnd = wxWindow::NewControlId();
+    edit->Append(selectDocumentStart, _("Select to Document Star&t"));
+    edit->Append(selectDocumentEnd, _("Select to Document En&d"));
+    // Preserve the original boundary setters, including reverse and rectangular selections.
+    Bind(
+        wxEVT_MENU, [this](wxCommandEvent&) { editor_->Send(Scintilla::Message::SetSelectionStart, 0); },
+        selectDocumentStart);
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            editor_->Send(Scintilla::Message::SetSelectionEnd, editor_->Send(Scintilla::Message::GetLength));
+        },
+        selectDocumentEnd);
+    for (const int id : {selectDocumentStart, selectDocumentEnd})
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this](wxUpdateUIEvent& event) { event.Enable(editor_->Send(Scintilla::Message::GetLength) != 0); }, id);
     const int selectNext = wxWindow::NewControlId();
     const int selectPrevious = wxWindow::NewControlId();
     edit->Append(selectNext, _("Select to Ne&xt\tCtrl+Alt+F2"));
@@ -946,11 +1015,39 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
     automaticLanguageId_ = addLanguage(_("&Automatic"), std::nullopt);
     for (const auto& definition : SyntaxCatalog())
         addLanguage("&" + LanguageName(definition.language), definition.language);
+    languages->AppendSeparator();
+    const int useCode = wxWindow::NewControlId();
+    languages->AppendCheckItem(useCode, _("Use Default &Code Style	Shift+F12"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& fonts = (settings_ ? settings_->values : defaults_).fonts;
+            auto& scheme = fonts.Scheme(document_.Language());
+            scheme.useCode = !scheme.useCode;
+            editor_->SetFontSettings(fonts);
+            ApplySyntaxLanguage(*editor_, document_.Language(), document_.EffectiveLanguage());
+            UpdatePositionStatus();
+            UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        },
+        useCode);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Check((settings_ ? settings_->values : defaults_).fonts.Scheme(document_.Language()).useCode);
+        },
+        useCode);
     return languages;
 }
 
 wxMenu* EditorFrame::CreateViewMenu() {
     auto* view = new wxMenu;
+    const int codeFont = wxWindow::NewControlId();
+    const int textFont = wxWindow::NewControlId();
+    view->Append(codeFont, _("Default &Code Font...	Alt+F12"));
+    view->Append(textFont, _("Default &Text Font..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ChooseDefaultFont(true); }, codeFont);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ChooseDefaultFont(false); }, textFont);
+    view->AppendSeparator();
     AppendCaretCommands(view);
     view->AppendSeparator();
     AppendDisplayCommands(view);
@@ -1032,7 +1129,7 @@ void EditorFrame::AppendZoomCommands(wxMenu* view) {
 void EditorFrame::AppendDisplayCommands(wxMenu* view) {
     const int wordWrap = wxWindow::NewControlId();
     view->AppendCheckItem(wordWrap, _("&Word Wrap\tCtrl+Shift+W"));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleWordWrap(); }, wordWrap);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleWordWrap(); }, wordWrap);
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetWrapMode) != 0); }, wordWrap);
@@ -1086,10 +1183,49 @@ void EditorFrame::AppendDisplayCommands(wxMenu* view) {
         },
         symbols);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(showWordWrapSymbols_); }, symbols);
+    const int controlCharacters = wxWindow::NewControlId();
+    view->AppendCheckItem(controlCharacters, _("Un&icode Control Character"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (document_.IsDefaultEncoding()) return;
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            preferences.showUnicodeControlCharacter = !preferences.showUnicodeControlCharacter;
+            ApplyUnicodeControlCharacter();
+        },
+        controlCharacters);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Enable(!document_.IsDefaultEncoding());
+            event.Check((settings_ ? settings_->values : defaults_).showUnicodeControlCharacter);
+        },
+        controlCharacters);
     // One frame hook owns dispatch; the dialog retains its narrower callback.
     Bind(wxEVT_CHAR_HOOK, [this, whitespace, eol, symbols](wxKeyEvent& event) {
         if (!HandleCommandKey(event) && !HandleDisplayKey(event, whitespace, eol, symbols)) event.Skip();
     });
+}
+
+void EditorFrame::ApplyUnicodeControlCharacter() {
+    // EditShowUnicodeControlCharacter/EditOnCodePageChanged at Notepad4 89b8b36;
+    // see licenses/Notepad4.txt. The host stores all text as UTF-8, so eligibility
+    // follows the document's logical CPI_DEFAULT identity.
+    const bool visible =
+        (settings_ ? settings_->values : defaults_).showUnicodeControlCharacter && !document_.IsDefaultEncoding();
+    if (visible == unicodeControlCharactersVisible_) return;
+    unicodeControlCharactersVisible_ = visible;
+    for (const auto& character : UnicodeControlInsertions) {
+        if (!character.representation[0]) continue;
+        editor_->Send(visible ? Scintilla::Message::SetRepresentation : Scintilla::Message::ClearRepresentation,
+                      reinterpret_cast<uintptr_t>(character.utf8),
+                      visible ? reinterpret_cast<intptr_t>(character.representation) : 0);
+    }
+    // Original InvalidateStyleRedraw(): representation messages alone retain
+    // cached line widths. Preserve the current caret preference while invoking
+    // the same core invalidation before wrapping, hit-testing and repainting.
+    editor_->Send(Scintilla::Message::SetCaretLineVisibleAlways,
+                  editor_->Send(Scintilla::Message::GetCaretLineVisibleAlways));
 }
 
 void EditorFrame::ApplyWrapSymbols() {
@@ -1128,6 +1264,38 @@ void EditorFrame::ApplyWrapSymbols() {
     }
     editor_->Send(Message::SetWrapVisualFlagsLocation, location);
     editor_->Send(Message::SetWrapVisualFlags, flags);
+}
+
+void EditorFrame::ToggleWordWrap() {
+    editor_->ToggleWordWrap();
+    wordWrap_ = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+}
+
+void EditorFrame::ShowWordWrapSettings() {
+    using enum Scintilla::Message;
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    auto choice = preferences;
+    choice.wordWrapMode = std::to_underlying(editor_->PreferredWordWrapMode());
+    choice.wordWrapIndent = editor_->WordWrapIndent();
+    choice.wordWrapSymbols = wordWrapSymbols_;
+    choice.showWordWrapSymbols = showWordWrapSymbols_;
+    choice.wordWrapSelectSubLine = editor_->Send(GetMarginOptions) != 0;
+    choice.highlightCurrentLine = std::to_underlying(editor_->GetCurrentLineHighlightMode()) +
+                                  10 * static_cast<int>(editor_->Send(GetCaretLineHighlightSubLine));
+    if (!ShowWordWrapSettingsDialog(this, choice)) return;
+    preferences.wordWrap = wordWrap_ = choice.wordWrap;
+    preferences.wordWrapMode = choice.wordWrapMode;
+    preferences.wordWrapIndent = choice.wordWrapIndent;
+    preferences.wordWrapSymbols = wordWrapSymbols_ = choice.wordWrapSymbols;
+    preferences.showWordWrapSymbols = showWordWrapSymbols_ = choice.showWordWrapSymbols;
+    preferences.wordWrapSelectSubLine = choice.wordWrapSelectSubLine;
+    preferences.highlightCurrentLine = choice.highlightCurrentLine;
+    editor_->SetWordWrapMode(static_cast<Scintilla::Wrap>(choice.wordWrapMode));
+    if (!wordWrap_) editor_->SetWordWrapMode(Scintilla::Wrap::None);
+    editor_->SetWordWrapIndent(choice.wordWrapIndent);
+    editor_->Send(SetMarginOptions, choice.wordWrapSelectSubLine);
+    editor_->Send(SetCaretLineHighlightSubLine, choice.highlightCurrentLine >= 10);
+    ApplyWrapSymbols();
 }
 
 void EditorFrame::AppendFoldCommands(wxMenu* view) {
@@ -1511,6 +1679,16 @@ bool EditorFrame::HandleSearchKey(const wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleNavigationKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_SPACE && event.ControlDown() && (event.AltDown() || event.ShiftDown())) {
+        if (!event.MetaDown() && event.AltDown() != event.ShiftDown()) {
+            if (event.AltDown())
+                editor_->SelectWord();
+            else
+                editor_->SelectLines();
+        }
+        // Consume extra modifiers before native accelerators can drop them.
+        return true;
+    }
     if (HandleBlockNavigationKey(event)) return true;
     if (event.GetKeyCode() == 'B' && event.ControlDown() && !event.AltDown() && !event.MetaDown())
         editor_->MatchBrace(event.ShiftDown());
@@ -1586,7 +1764,7 @@ bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
         editor_->SetCurrentLineHighlightMode(LineHighlightMode::OutlineFrame);
     else if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
-        editor_->ToggleWordWrap();
+        ToggleWordWrap();
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
         editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible());
@@ -1659,6 +1837,38 @@ void EditorFrame::ToggleReadOnlyMode() {
 }
 
 void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
+    const int showHex = wxWindow::NewControlId();
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (!ShowHexCode(*editor_, document_.IsDefaultEncoding()))
+                wxMessageBox(_("This operation can't be performed within a rectangular selection."), "wxnotepad",
+                             wxOK | wxICON_WARNING, this);
+        },
+        showHex);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+        showHex);
+    const int showCharacter = wxWindow::NewControlId();
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            const auto technical = CharacterInformation(*editor_, document_.IsDefaultEncoding());
+            const auto payload = wxString::FromUTF8(technical);
+            editor_->Send(Scintilla::Message::CopyText, technical.size(), reinterpret_cast<intptr_t>(technical.data()));
+            wxDialog dialog(this, wxID_ANY, _("Character Info"));
+            auto* contents = new wxBoxSizer(wxVERTICAL);
+            auto* information = new wxStaticText(&dialog, wxID_ANY, wxEmptyString);
+            information->SetLabelText(payload);
+            information->SetName("Character information");
+            contents->Add(information, 0, wxALL, dialog.FromDIP(12));
+            contents->Add(dialog.CreateSeparatedButtonSizer(wxOK), 0, wxEXPAND | wxALL, dialog.FromDIP(8));
+            dialog.SetSizerAndFit(contents);
+            dialog.CentreOnParent();
+            dialog.ShowModal();
+        },
+        showCharacter);
     const int completeWord = wxWindow::NewControlId();
     auto* completionItem = edit->Append(completeWord, _("Complete &Word\tAlt+/"));
     completionItem->AddExtraAccel(wxAcceleratorEntry(wxACCEL_ALT, WXK_NUMPAD_DIVIDE, completeWord));
@@ -1680,7 +1890,11 @@ void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
           std::pair{wxTRANSLATE("Hex to Cha&racter\tCtrl+Alt+C"), CustomCaseCommand::HexToCharacter},
           std::pair{wxTRANSLATE("Esca&pe C Chars\tCtrl+Alt+E"), CustomCaseCommand::EscapeC},
           std::pair{wxTRANSLATE("&Unescape C Chars\tCtrl+Alt+R"), CustomCaseCommand::UnescapeC}}) {
-        if (mapping == CustomCaseCommand::EscapeC) edit->AppendSeparator();
+        if (mapping == CustomCaseCommand::EscapeC) {
+            edit->Append(showHex, _("&Show Hex Code"));
+            edit->Append(showCharacter, _("Show Character &Info"));
+            edit->AppendSeparator();
+        }
         const int id = wxWindow::NewControlId();
         edit->Append(id, wxGetTranslation(label));
         Bind(
@@ -1783,6 +1997,9 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
     AppendUILanguageCommands(view);
     AppendIndentationOptions(view);
+    const int wordWrapSettings = wxWindow::NewControlId();
+    view->Append(wordWrapSettings, _("Word Wrap Settings..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowWordWrapSettings(); }, wordWrapSettings);
     const int longLineSettings = wxWindow::NewControlId();
     view->Append(longLineSettings, _("Long Line Settings..."));
     Bind(
@@ -1816,6 +2033,45 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     AppendSelectionOptions(view);
     view->AppendSeparator();
     auto* appearance = new wxMenu;
+    for (const auto& [label, member] :
+         {std::pair{wxTRANSLATE("Show &Menu	Alt+F11"), &OriginalSettings::showMenu},
+          std::pair{wxTRANSLATE("Show Stat&usbar	Shift+F11"), &OriginalSettings::showStatusbar}}) {
+        const int id = wxWindow::NewControlId();
+        appearance->AppendCheckItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, member](wxCommandEvent&) {
+                auto& preferences = settings_ ? settings_->values : defaults_;
+                preferences.*member = !(preferences.*member);
+                ApplyBarVisibility();
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, member](wxUpdateUIEvent& event) {
+                event.Check((settings_ ? settings_->values : defaults_).*member);
+            },
+            id);
+    }
+    appearance->AppendSeparator();
+    auto* scrollPastLastLine = new wxMenu;
+    // Keep Notepad4's full EndAtLastLine integer contract (One Page is zero).
+    for (const auto& [label, mode] : {std::pair{wxTRANSLATE("&No"), 1}, std::pair{wxTRANSLATE("&One Page"), 0},
+                                      std::pair{wxTRANSLATE("&Half Page"), 2}, std::pair{wxTRANSLATE("1/&3 Page"), 3},
+                                      std::pair{wxTRANSLATE("1/&4 Page"), 4}}) {
+        const int id = wxWindow::NewControlId();
+        scrollPastLastLine->AppendRadioItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU, [this, mode](wxCommandEvent&) { editor_->Send(Scintilla::Message::SetEndAtLastLine, mode); },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, mode](wxUpdateUIEvent& event) {
+                event.Check(editor_->Send(Scintilla::Message::GetEndAtLastLine) == mode);
+            },
+            id);
+    }
+    appearance->AppendSubMenu(scrollPastLastLine, _("Scroll Past &Last Line"));
     const int shrinkScrollWidth = wxWindow::NewControlId();
     appearance->AppendCheckItem(shrinkScrollWidth, _("Auto-Shrink Horizontal Scrollbar"));
     Bind(
