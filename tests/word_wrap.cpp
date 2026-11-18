@@ -285,7 +285,7 @@ public:
                 Layout(frame);
                 Require(frame->GetMenuBar()->IsChecked(wrap) &&
                             editor->Send(GetWrapMode) ==
-                                static_cast<intptr_t>(std::to_underlying(Scintilla::Wrap::Word)),
+                                static_cast<intptr_t>(std::to_underlying(Scintilla::Wrap::Auto)),
                         "native menu enables core word wrapping");
                 Require(editor->Send(WrapCount, 0) > 1 && editor->Send(GetXOffset) == 0,
                         "wrapped text uses continuation rows without stale horizontal offset");
@@ -335,7 +335,7 @@ public:
                 editor->Send(SetText, 0, reinterpret_cast<intptr_t>(std::string(400, 'x').c_str()));
                 editor->Send(SetSel, 0, 0);
                 Shortcut(frame);
-                Require(editor->Send(GetWrapMode) == static_cast<intptr_t>(std::to_underlying(Scintilla::Wrap::Word)) &&
+                Require(editor->Send(GetWrapMode) == static_cast<intptr_t>(std::to_underlying(Scintilla::Wrap::Auto)) &&
                             frame->GetMenuBar()->IsChecked(wrap) && editor->Send(WrapCount, 0) > 1,
                         "native shortcut enables character fallback for an unbroken line");
                 const auto secondRow = editor->Send(PositionFromPointClose, 70, editor->Send(TextHeight, 0) + 2);

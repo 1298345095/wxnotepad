@@ -10,6 +10,7 @@ struct OriginalFileVariables {
     std::optional<int> longLinesLimit;
     std::optional<bool> tabsAsSpaces;
     std::optional<bool> tabIndents;
+    std::optional<bool> wordWrap;
     std::optional<std::string> encodingName;
     bool any = false;
 };

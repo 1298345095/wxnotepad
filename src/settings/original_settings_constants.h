@@ -23,6 +23,9 @@ enum AutoInsertMask {
     AutoInsertMask_Default = 511,
 };
 
+// Original Edit.h continuation-indent indices, also used by the native dialog.
+enum class WrapContinuationIndent { None, OneCharacter, TwoCharacters, OneLevel, TwoLevels, Same, Indent, DeepIndent };
+
 namespace OriginalSettingLimits {
 inline constexpr int MinRecentFiles = 32;
 inline constexpr int MaxTabWidth = 256;
