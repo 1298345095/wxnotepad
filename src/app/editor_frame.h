@@ -17,6 +17,9 @@ class EditorFrame final : public wxFrame {
 public:
     explicit EditorFrame(SettingsStore* settings = nullptr);
     ~EditorFrame() override;
+#ifdef __WXMSW__
+    bool MSWTranslateMessage(WXMSG* message) override;
+#endif
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
     SaveResult Save(const EncodingLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);

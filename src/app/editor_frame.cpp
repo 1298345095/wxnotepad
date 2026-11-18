@@ -193,6 +193,17 @@ EditorFrame::~EditorFrame() {
 #endif
 }
 
+#ifdef __WXMSW__
+bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
+    // A hidden native menu receives no WM_INITMENU to refresh command state.
+    // Keep its accelerators enabled for the current document and clipboard.
+    if (!(settings_ ? settings_->values : defaults_).showMenu &&
+        (message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN))
+        UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    return wxFrame::MSWTranslateMessage(message);
+}
+#endif
+
 void EditorFrame::ApplyBarVisibility() {
     const auto& preferences = settings_ ? settings_->values : defaults_;
 #ifdef __WXMSW__
