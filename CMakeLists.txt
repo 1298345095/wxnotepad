@@ -931,7 +931,20 @@ if(BUILD_TESTING)
         add_editor_test(native_byte_load native_byte_load_roundtrip 60)
         set_tests_properties(native_byte_load_roundtrip PROPERTIES SKIP_RETURN_CODE 77)
     endif()
-    add_editor_test(native_byte_information native_invalid_byte_character_information 60)
+    if(WIN32)
+        add_gui_program(native_byte_information tests/native_byte_information.cpp app_shell)
+        add_test(NAME native_invalid_byte_character_information COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_hang_monitor.py"
+            --dump-directory "${CMAKE_CURRENT_SOURCE_DIR}/.ci/reports/windows-dumps"
+            -- "$<TARGET_FILE:native_byte_information>")
+        set_tests_properties(native_invalid_byte_character_information PROPERTIES TIMEOUT 60)
+        add_test(NAME native_character_info_hang_monitor COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_windows_hang_monitor.py" -v)
+        set_tests_properties(native_character_info_hang_monitor PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_HANG_MONITOR_EVIDENCE=${CMAKE_BINARY_DIR}/Testing/Temporary/character-info-hang-monitor;WXNOTEPAD_GUI_PROBE=$<TARGET_FILE:sdk_capabilities>")
+    else()
+        add_editor_test(native_byte_information native_invalid_byte_character_information 60)
+    endif()
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

@@ -269,6 +269,8 @@ jobs:
             .ci/build/cmake/visual_brace.pdb
             .ci/build/cmake/eol_open.exe
             .ci/build/cmake/eol_open.pdb
+            .ci/build/cmake/native_byte_information.exe
+            .ci/build/cmake/native_byte_information.pdb
             .ci/build/cmake/clipboard_smoke
             .ci/build/cmake/clipboard_peer
             .ci/build/cmake/stream_drag
