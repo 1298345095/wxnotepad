@@ -6,6 +6,7 @@
 #include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
 #include "app/dialogs/long_line_settings_dialog.h"
+#include "app/dialogs/word_wrap_settings_dialog.h"
 #include "app/dialogs/column_wrap_dialog.h"
 #include "editor/editor_control.h"
 #include "editor/character_information.h"
@@ -1033,7 +1034,7 @@ void EditorFrame::AppendZoomCommands(wxMenu* view) {
 void EditorFrame::AppendDisplayCommands(wxMenu* view) {
     const int wordWrap = wxWindow::NewControlId();
     view->AppendCheckItem(wordWrap, _("&Word Wrap\tCtrl+Shift+W"));
-    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->ToggleWordWrap(); }, wordWrap);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ToggleWordWrap(); }, wordWrap);
     Bind(
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Check(editor_->Send(Scintilla::Message::GetWrapMode) != 0); }, wordWrap);
@@ -1129,6 +1130,38 @@ void EditorFrame::ApplyWrapSymbols() {
     }
     editor_->Send(Message::SetWrapVisualFlagsLocation, location);
     editor_->Send(Message::SetWrapVisualFlags, flags);
+}
+
+void EditorFrame::ToggleWordWrap() {
+    editor_->ToggleWordWrap();
+    wordWrap_ = editor_->Send(Scintilla::Message::GetWrapMode) != 0;
+}
+
+void EditorFrame::ShowWordWrapSettings() {
+    using enum Scintilla::Message;
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    auto choice = preferences;
+    choice.wordWrapMode = std::to_underlying(editor_->PreferredWordWrapMode());
+    choice.wordWrapIndent = editor_->WordWrapIndent();
+    choice.wordWrapSymbols = wordWrapSymbols_;
+    choice.showWordWrapSymbols = showWordWrapSymbols_;
+    choice.wordWrapSelectSubLine = editor_->Send(GetMarginOptions) != 0;
+    choice.highlightCurrentLine = std::to_underlying(editor_->GetCurrentLineHighlightMode()) +
+                                  10 * static_cast<int>(editor_->Send(GetCaretLineHighlightSubLine));
+    if (!ShowWordWrapSettingsDialog(this, choice)) return;
+    preferences.wordWrap = wordWrap_ = choice.wordWrap;
+    preferences.wordWrapMode = choice.wordWrapMode;
+    preferences.wordWrapIndent = choice.wordWrapIndent;
+    preferences.wordWrapSymbols = wordWrapSymbols_ = choice.wordWrapSymbols;
+    preferences.showWordWrapSymbols = showWordWrapSymbols_ = choice.showWordWrapSymbols;
+    preferences.wordWrapSelectSubLine = choice.wordWrapSelectSubLine;
+    preferences.highlightCurrentLine = choice.highlightCurrentLine;
+    editor_->SetWordWrapMode(static_cast<Scintilla::Wrap>(choice.wordWrapMode));
+    if (!wordWrap_) editor_->SetWordWrapMode(Scintilla::Wrap::None);
+    editor_->SetWordWrapIndent(choice.wordWrapIndent);
+    editor_->Send(SetMarginOptions, choice.wordWrapSelectSubLine);
+    editor_->Send(SetCaretLineHighlightSubLine, choice.highlightCurrentLine >= 10);
+    ApplyWrapSymbols();
 }
 
 void EditorFrame::AppendFoldCommands(wxMenu* view) {
@@ -1587,7 +1620,7 @@ bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
         editor_->SetCurrentLineHighlightMode(LineHighlightMode::OutlineFrame);
     else if (event.GetKeyCode() == 'W' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
-        editor_->ToggleWordWrap();
+        ToggleWordWrap();
     else if (event.GetKeyCode() == 'N' && event.ControlDown() && event.ShiftDown() && !event.AltDown() &&
              !event.MetaDown())
         editor_->SetLineNumbersVisible(!editor_->LineNumbersVisible());
@@ -1819,6 +1852,9 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     auto* view = new wxMenu;
     AppendUILanguageCommands(view);
     AppendIndentationOptions(view);
+    const int wordWrapSettings = wxWindow::NewControlId();
+    view->Append(wordWrapSettings, _("Word Wrap Settings..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowWordWrapSettings(); }, wordWrapSettings);
     const int longLineSettings = wxWindow::NewControlId();
     view->Append(longLineSettings, _("Long Line Settings..."));
     Bind(
