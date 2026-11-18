@@ -48,6 +48,20 @@ bool IsWayland(EditorFrame* frame) {
     return GDK_IS_WAYLAND_DISPLAY(gdk_window_get_display(NativeWindow(frame)));
 }
 
+void AwaitWaylandFrame(EditorFrame* frame) {
+    auto* const window = NativeWindow(frame);
+    auto* const clock = gdk_window_get_frame_clock(window);
+    const auto previousFrame = gdk_frame_clock_get_frame_counter(clock);
+    gdk_window_invalidate_rect(window, nullptr, true);
+    Await(
+        [clock, previousFrame] {
+            auto* const timing = gdk_frame_clock_get_current_timings(clock);
+            return timing && gdk_frame_timings_get_frame_counter(timing) > previousFrame &&
+                   gdk_frame_timings_get_complete(timing);
+        },
+        "Wayland compositor acknowledges the restored frame before maximizing");
+}
+
 bool IsManagedX11(EditorFrame* frame) {
     return !IsWayland(frame) &&
            gdk_x11_screen_supports_net_wm_hint(gdk_window_get_screen(NativeWindow(frame)),
@@ -147,7 +161,11 @@ bool NativeMaximized(EditorFrame* frame) {
 void CheckMaximized(EditorFrame* frame) {
     if (!SupportsMaximize(frame)) return;
 #ifdef __WXGTK__
+    // GDK can have a frame for the restored normal size in flight even
+    // after wx reports the restored geometry. Maximizing during that
+    // frame lets GDK acknowledge the new size and commit the old one.
     const bool compareBounds = !IsWayland(frame);
+    if (!compareBounds) AwaitWaylandFrame(frame);
 #else
     const bool compareBounds = true;
 #endif
