@@ -53,10 +53,7 @@ inline bool WindowsShortcut(wxWindow* window, int key, std::initializer_list<std
     return handled;
 }
 #endif
-inline void Command(EditorFrame* frame, int id) {
-    // Opening a native menu refreshes command enablement before dispatch. Do
-    // the same when sending a command directly to this test's owned frame.
-    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+inline void ActivateCommand(EditorFrame* frame, int id) {
     auto* item = frame->GetMenuBar()->FindItem(id);
     if (!item) throw std::runtime_error("native menu command must exist");
 #ifdef __WXMSW__
@@ -67,6 +64,12 @@ inline void Command(EditorFrame* frame, int id) {
     wxCommandEvent command(wxEVT_MENU, id);
     frame->GetEventHandler()->ProcessEvent(command);
 #endif
+}
+inline void Command(EditorFrame* frame, int id) {
+    // Opening a native menu refreshes command enablement before dispatch. Do
+    // the same when sending a command directly to this test's owned frame.
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    ActivateCommand(frame, id);
     wxYield();
 }
 inline void RevealAllFolds(EditorFrame* frame) {

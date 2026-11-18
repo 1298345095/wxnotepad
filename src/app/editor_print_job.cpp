@@ -4,6 +4,7 @@
 #include "editor/editor_control.h"
 #include "editor/font_settings.h"
 #include "editor/platform/native_drawing_error.h"
+#include "editor/platform/print_surface.h"
 #include "editor/print_font.h"
 #include "editor/platform/text_measurement.h"
 #include "editor_printing.h"
@@ -182,15 +183,11 @@ public:
         if (options.footer != PrintFooter::Blank) footerHeight_ = DecorationLineHeight(dc, footer_);
         content_ = {margins_.x, margins_.y + headerHeight_ + headerHeight_ / 2, margins_.GetRight() + 1,
                     margins_.GetBottom() + 1 - footerHeight_ - footerHeight_ / 2};
-        printable_ = {area.imageable.x, area.imageable.y, area.imageable.GetRight() + 1,
-                      area.imageable.GetBottom() + 1};
     }
 
     bool HasContentArea() const { return content_.right > content_.left && content_.bottom > content_.top; }
 
-    Scintilla::RangeToFormatFull Range(PrintSurface& surface, Position first, Position last) const {
-        return {&surface, &surface, content_, printable_, {first, last}};
-    }
+    Scintilla::Rectangle Content() const { return content_; }
 
     void DrawHeader(wxDC& dc, const wxString& title, const wxString& date) const {
         if (!headerHeight_) return;
@@ -236,6 +233,7 @@ public:
         if (!footerHeight_) return;
         const int top = content_.bottom + footerHeight_ / 2;
         const int rule = content_.bottom + footerHeight_ / 4;
+        // TRANSLATORS: IDS_PRINT_PAGENUM footer; %s is the already localized page number.
         const auto label = wxString::Format(_("Page %s"), wxNumberFormatter::ToString(static_cast<long>(page)));
 #ifdef __WXMSW__
         const DecorationContext context(dc);
@@ -258,7 +256,6 @@ private:
     wxFont footer_;
     wxRect margins_;
     Scintilla::Rectangle content_{};
-    Scintilla::Rectangle printable_{};
     int headerHeight_ = 0;
     int footerHeight_ = 0;
 };
@@ -279,10 +276,13 @@ public:
         SetPrintFormat();
         const auto layout = Layout(surface.dc, area);
         if (!layout.HasContentArea()) return false;
-        // Original EditPrint uses the live selection even when the native UI
-        // says All pages. FormatRange lays out the full intersecting lines.
-        const Scintilla::CharacterRangeFull range =
-            HasSelection() ? selection_ : Scintilla::CharacterRangeFull{0, editor_.Send(Message::GetLength)};
+        Scintilla::CharacterRangeFull range{0, editor_.Send(Message::GetLength)};
+        if (HasSelection()) {
+            const auto firstLine = editor_.Send(Message::LineFromPosition, selection_.cpMin);
+            const auto lastLine = editor_.Send(Message::LineFromPosition, selection_.cpMax - 1);
+            range = {editor_.Send(Message::PositionFromLine, firstLine),
+                     editor_.Send(Message::GetLineEndPosition, lastLine)};
+        }
         pages_.clear();
         auto position = range.cpMin;
         do {
@@ -325,8 +325,7 @@ private:
     }
 
     Position Format(const PageLayout& layout, PrintSurface& surface, bool draw, Position first, Position last) {
-        auto range = layout.Range(surface, first, last);
-        return editor_.Send(Message::FormatRangeFull, draw, reinterpret_cast<intptr_t>(&range));
+        return editor_.FormatPrintRange(surface, draw, {first, last}, layout.Content());
     }
 
     EditorControl& editor_;
@@ -522,6 +521,9 @@ void Print(wxWindow& parent, EditorControl& editor, const wxString& title, Print
     } catch (const std::exception&) {
         // Native printer creation and layout failures use the same UI as a job error.
     }
-    wxMessageBox(wxString::Format(_("Could not print \"%s\"."), title), _("Print"), wxOK | wxICON_ERROR, &parent);
+    // TRANSLATORS: IDS_PRINT_ERROR; %s is the current document's name or Untitled label.
+    const auto message = wxString::Format(_("Could not print \"%s\"."), title);
+    // TRANSLATORS: Title of the print failure message.
+    wxMessageBox(message, _("Print"), wxOK | wxICON_ERROR, &parent);
 }
 } // namespace EditorPrinting

@@ -72,11 +72,13 @@ std::string_view BackupMetadataEnding(Scintilla::EndOfLine mode) {
     return "\r\n";
 }
 
-bool CreateBackup(const wxString& path, std::string_view bytes) {
+enum class BackupCreation { OpenFailed, Opened };
+
+BackupCreation CreateBackup(const wxString& path, std::string_view bytes) {
 #ifdef __WXMSW__
     const auto file = CreateFileW(path.wc_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                   nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, nullptr);
-    if (file == INVALID_HANDLE_VALUE) return false;
+    if (file == INVALID_HANDLE_VALUE) return BackupCreation::OpenFailed;
     DWORD written = 0;
     const bool complete = bytes.size() <= MAXDWORD &&
                           WriteFile(file, bytes.data(), static_cast<DWORD>(bytes.size()), &written, nullptr) &&
@@ -84,13 +86,13 @@ bool CreateBackup(const wxString& path, std::string_view bytes) {
     CloseHandle(file);
 #else
     wxFile file;
-    if (!file.Create(path, false)) return false;
+    if (!file.Create(path, false)) return BackupCreation::OpenFailed;
     const bool written = file.Write(bytes.data(), bytes.size()) == bytes.size();
     const bool complete = file.Close() && written;
 #endif
     // Only a failure to create the file permits the caller to try a fallback.
     if (!complete) wxRemoveFile(path);
-    return true;
+    return BackupCreation::Opened;
 }
 
 // Original MAX_NON_UTF8_SIZE bounds EditConvertText's native conversion.
@@ -573,7 +575,7 @@ void DocumentSession::SaveBackup() {
     const wxLogNull quiet;
     const bool untitled = path_.empty();
     const auto sibling = BackupPath(untitled ? wxString("Untitled") : path_);
-    if (!untitled && CreateBackup(sibling, bytes)) return;
+    if (!untitled && CreateBackup(sibling, bytes) == BackupCreation::Opened) return;
 
     const auto directory = DefaultBackupDirectory();
     if (!wxDirExists(directory)) wxFileName::Mkdir(directory, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);

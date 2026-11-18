@@ -5,6 +5,7 @@
 #include "app/editor_printing.h"
 #include "app/editor_print_job.h"
 #include "app/localization.h"
+#include "app/search_shortcuts.h"
 #include "editor/display_units.h"
 #include "syntax/syntax_scheme.h"
 #include "app/dialogs/long_line_settings_dialog.h"
@@ -130,11 +131,16 @@ void EditorFrame::AppendReloadEncodingCommands(wxMenu* reload) {
             },
             id);
     };
+    // TRANSLATORS: Reopen the file with UTF-8 as the source encoding (CMD_RELOADUTF8).
     append(_("As &UTF-8\tShift+F8"), [this] { return ReloadAsUtf8(); });
+    // TRANSLATORS: Reopen the file with the system ANSI source encoding (CMD_RELOADANSI).
     append(_("As &ANSI\tCtrl+Shift+A"), [this] { return ReloadQuickEncoding(QuickReloadEncoding::Ansi); });
+    // TRANSLATORS: Reopen the file with the system OEM source encoding (CMD_RELOADOEM).
     append(_("As &OEM\tCtrl+Shift+O"), [this] { return ReloadQuickEncoding(QuickReloadEncoding::Oem); });
     reload->AppendSeparator();
+    // TRANSLATORS: Reopen with the configured default source encoding (CMD_RECODEDEFAULT).
     append(_("&Default Encoding\tCtrl+Alt+F"), [this] { return ReloadQuickEncoding(QuickReloadEncoding::Default); });
+    // TRANSLATORS: Open the source encoding chooser for this file (IDM_RECODE_SELECT).
     append(_("With &Encoding...\tF8"), [this] { return ReloadWithEncoding(); });
 }
 
@@ -223,6 +229,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
     file->Append(wxID_SAVE, _("&Save\tCtrl+S"));
     file->Append(wxID_SAVEAS, _("Save &As...\tF6"));
     const int saveBackup = wxWindow::NewControlId();
+    // TRANSLATORS: Saves a separate backup without changing the current file (IDM_FILE_SAVEBACKUP).
     file->Append(saveBackup, _("Save Back&up"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { document_.SaveBackup(); }, saveBackup);
     saveCopyId_ = wxWindow::NewControlId();
@@ -321,6 +328,7 @@ wxMenu* EditorFrame::CreateFileMenu() {
     AppendLineEndingCommands(endings);
     file->AppendSubMenu(endings, _("Line Endin&gs"));
     file->AppendSeparator();
+    // TRANSLATORS: Opens paper, margin and print style settings (IDM_FILE_PAGESETUP).
     file->Append(wxID_PAGE_SETUP, _("Page Se&tup..."));
     Bind(
         wxEVT_MENU,
@@ -328,7 +336,8 @@ wxMenu* EditorFrame::CreateFileMenu() {
             EditorPrinting::PageSetup(*this, (settings_ ? settings_->values : defaults_).printing, printerData_);
         },
         wxID_PAGE_SETUP);
-    file->Append(wxID_PRINT, _("&Print...	Ctrl+P"));
+    // TRANSLATORS: Opens the native print dialog for the current buffer (IDM_FILE_PRINT).
+    file->Append(wxID_PRINT, _("&Print...\tCtrl+P"));
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
@@ -434,6 +443,7 @@ wxMenu* EditorFrame::CreateEditMenu() {
         [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
         copyAdd);
     const int copyRtf = wxWindow::NewControlId();
+    // TRANSLATORS: Copies styled text to the clipboard in Rich Text Format (IDM_EDIT_COPYRTF).
     clipboard->Append(copyRtf, _("Copy as &RTF"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->CopyAsRtf(document_.IsDefaultEncoding()); }, copyRtf);
     Bind(
@@ -868,10 +878,12 @@ void EditorFrame::AppendSearchCommands(wxMenu* edit) {
     edit->Append(wxID_FIND, _("&Find...\tCtrl+F"));
     const int saveFind = wxWindow::NewControlId();
     const int replaceNext = wxWindow::NewControlId();
+    // TRANSLATORS: Store the selection as the next search term (IDM_EDIT_SAVEFIND).
     edit->Append(saveFind, _("Sa&ve Find Text\tAlt+F3"));
     edit->Append(wxID_FORWARD, _("Find &Next\tF3"));
     edit->Append(wxID_BACKWARD, _("Find &Previous\tShift+F3"));
     edit->Append(wxID_REPLACE, _("R&eplace...\tCtrl+H"));
+    // TRANSLATORS: Replace the next match with the initialized replacement (IDM_EDIT_REPLACENEXT).
     edit->Append(replaceNext, _("Repl&ace Next\tF4"));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShowFind(); }, wxID_FIND);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { search_.SaveSelectionAsFindText(true); }, saveFind);
@@ -882,8 +894,9 @@ void EditorFrame::AppendSearchCommands(wxMenu* edit) {
 
     const int nextSelection = wxWindow::NewControlId();
     const int previousSelection = wxWindow::NewControlId();
-    const std::array<wxAcceleratorEntry, 2> selectionKeys = {
-        {{wxACCEL_CTRL, WXK_F3, nextSelection}, {wxACCEL_CTRL | wxACCEL_SHIFT, WXK_F3, previousSelection}}};
+    const std::array selectionKeys = {
+        SearchShortcuts::F3Accelerator(F3SearchAction::SelectionNext, nextSelection),
+        SearchShortcuts::F3Accelerator(F3SearchAction::SelectionPrevious, previousSelection)};
     SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(selectionKeys.size()), selectionKeys.data()));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindSelection(SearchDirection::Forward); }, nextSelection);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { FindSelection(SearchDirection::Backward); }, previousSelection);
@@ -1133,8 +1146,10 @@ wxMenu* EditorFrame::CreateViewMenu() {
     AppendZoomCommands(view);
     const int fullScreen = wxWindow::NewControlId();
 #ifdef __WXMSW__
+    // TRANSLATORS: Toggle full screen; Esc exits it (IDM_VIEW_TOGGLE_FULLSCREEN).
     view->Append(fullScreen, _("Toggle Full &Screen\tF11 [Esc]"));
 #else
+    // TRANSLATORS: Linux menu displays Esc in the caption because only F11 is an accelerator.
     view->Append(fullScreen, _("Toggle Full &Screen [Esc]\tF11"));
 #endif
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { SetFullScreen(!FullScreenActive()); }, fullScreen);
@@ -1165,6 +1180,7 @@ void EditorFrame::AppendIndentationOptions(wxMenu* view) {
 
 void EditorFrame::AppendCallTipCommands(wxMenu* view) {
     auto* modes = new wxMenu;
+    // TRANSLATORS: Disable hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_OFF).
     const std::array<wxString, 5> labels{_("&Off"), "RGBA", "ARGB", "BGRA", "ABGR"};
     for (size_t index = 0; index < labels.size(); ++index) {
         const auto mode = static_cast<ColorCallTipMode>(index);
@@ -1180,6 +1196,7 @@ void EditorFrame::AppendCallTipCommands(wxMenu* view) {
             },
             id);
     }
+    // TRANSLATORS: View submenu for hexadecimal color previews (IDM_VIEW_SHOWCALLTIP_*).
     view->AppendSubMenu(modes, _("Show CallTip"));
 }
 
@@ -1388,14 +1405,22 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
             id);
     };
     using enum FoldCommand;
+    // TRANSLATORS: Toggle only the fold levels configured by the current language (IDM_VIEW_FOLD_DEFAULT).
     addFoldCommand(_("&Default Levels\tShift+Alt+D"), DefaultLevels);
+    // TRANSLATORS: Toggle all levels of code folding (IDM_VIEW_FOLD_ALL).
     addFoldCommand(_("&All Levels\tShift+Alt+A"), AllLevels);
+    // TRANSLATORS: Toggle the fold block surrounding the caret (IDM_VIEW_FOLD_CURRENT_BLOCK).
     addFoldCommand(_("&Current Block\tAlt+C"), CurrentBlock);
+    // TRANSLATORS: Toggle all blocks at the caret's fold depth (IDM_VIEW_FOLD_CURRENT_LEVEL).
     addFoldCommand(_("Current &Level"), CurrentLevel);
     folds->AppendSeparator();
-    for (int level = 1; level < 10; ++level)
+    for (int level = 1; level < 10; ++level) {
+        // TRANSLATORS: Both numbers are the fold depth 1–9; the second is part of the Alt shortcut.
         addFoldCommand(wxString::Format(_("Level &%d\tAlt+%d"), level, level), NumericLevel, level - 1);
+    }
+    // TRANSLATORS: The tenth fold depth, with 0 as the menu mnemonic (IDM_VIEW_FOLD_LEVEL10).
     addFoldCommand(_("Level 1&0"), NumericLevel, 9);
+    // TRANSLATORS: View submenu for expanding or collapsing code folds (IDM_VIEW_FOLD_*).
     view->AppendSubMenu(folds, _("&Toggle Folds"));
 }
 
@@ -1748,23 +1773,23 @@ bool EditorFrame::HandleSearchKey(const wxKeyEvent& event) {
     else if (event.GetKeyCode() == WXK_F2 && event.ControlDown() && event.AltDown() && !event.MetaDown())
         Search(!event.ShiftDown(), true);
     else if (event.GetKeyCode() == WXK_F3) {
-        switch (event.GetModifiers()) {
-        case wxMOD_NONE:
+        switch (SearchShortcuts::ClassifyF3(event.GetModifiers())) {
+        case F3SearchAction::Next:
             FindNext();
             break;
-        case wxMOD_SHIFT:
+        case F3SearchAction::Previous:
             FindPrevious();
             break;
-        case wxMOD_ALT:
+        case F3SearchAction::SaveFindText:
             search_.SaveSelectionAsFindText(true);
             break;
-        case wxMOD_CONTROL:
+        case F3SearchAction::SelectionNext:
             FindSelection(SearchDirection::Forward);
             break;
-        case wxMOD_CONTROL | wxMOD_SHIFT:
+        case F3SearchAction::SelectionPrevious:
             FindSelection(SearchDirection::Backward);
             break;
-        default:
+        case F3SearchAction::Ignore:
             break;
         }
     } else if (event.GetKeyCode() == WXK_F4 && !event.AltDown()) {
@@ -2174,8 +2199,12 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
     }
     appearance->AppendSeparator();
     auto* fullScreen = new wxMenu;
-    for (const auto& [label, bit] : {std::pair{wxTRANSLATE("On &Startup"), FullScreenMode_OnStartup},
-                                     std::pair{wxTRANSLATE("Hide &Title"), FullScreenMode_HideTitle}}) {
+    const auto fullScreenOptions = {
+        // TRANSLATORS: Enter full screen when starting the editor (IDM_VIEW_FULLSCREEN_ON_START).
+        std::pair{wxTRANSLATE("On &Startup"), FullScreenMode_OnStartup},
+        // TRANSLATORS: Hide the title bar in full screen (IDM_VIEW_FULLSCREEN_HIDE_TITLE).
+        std::pair{wxTRANSLATE("Hide &Title"), FullScreenMode_HideTitle}};
+    for (const auto& [label, bit] : fullScreenOptions) {
         const int id = wxWindow::NewControlId();
         fullScreen->AppendCheckItem(id, wxGetTranslation(label));
         Bind(
@@ -2195,6 +2224,7 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             },
             id);
     }
+    // TRANSLATORS: Appearance submenu for full screen preferences (IDM_VIEW_FULLSCREEN_*).
     appearance->AppendSubMenu(fullScreen, _("Full Scree&n Mode"));
     auto* scrollPastLastLine = new wxMenu;
     // Keep Notepad4's full EndAtLastLine integer contract (One Page is zero).

@@ -8,11 +8,12 @@ bindings; relocating an item retains its handler and update-UI state.
 ```text
 File
   New; New Window; Open; Open As GBK; Open As UTF-16LE
-  Save; Save As; Save Copy; Save with Original Time
+  Save; Save As; Save Backup; Save Copy; Save with Original Time
   File Mode > Read Only Mode
   Revert (F5)
   Reload > As UTF-8 (Shift+F8); As ANSI (Ctrl+Shift+A); As OEM (Ctrl+Shift+O); separator; Default Encoding (Ctrl+Alt+F); With Encoding (F8)
   Line Endings > Windows (CR+LF); Unix/macOS (LF); Classic Mac OS (CR); Default
+  Page Setup; Print (Ctrl+P)
   Update File Time
   Recent (History) (Alt+H)
 Edit

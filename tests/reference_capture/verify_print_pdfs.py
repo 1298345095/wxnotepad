@@ -84,12 +84,16 @@ def main():
     parser.add_argument('selection', type=Path)
     parser.add_argument('page2', type=Path)
     parser.add_argument('--wrapped', type=Path)
+    parser.add_argument('--wrapped-selection', type=Path, help='PDF from a partial selection inside the wrapped line')
     parser.add_argument('--monochrome', type=Path, help='150% Black on white PDF for comparison with --wrapped')
     parser.add_argument('--pdftohtml', default='pdftohtml')
     args = parser.parse_args()
     if args.monochrome and not args.wrapped:
         parser.error('--monochrome requires --wrapped')
     check(args.pdftotext, args.whole, args.selection, args.page2, args.wrapped)
+    if args.wrapped_selection:
+        check_wrapped(args.pdftotext, args.wrapped_selection)
+        print('PASS: a partial selection prints all 1000 markers on its intersecting wrapped line')
     if args.monochrome:
         check_color_and_zoom(args.pdftotext, args.pdftohtml, args.wrapped, args.monochrome)
 

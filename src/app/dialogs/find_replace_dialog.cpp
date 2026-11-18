@@ -1,5 +1,6 @@
 #include "app/dialogs/find_replace_dialog.h"
 #include "app/localization.h"
+#include "app/search_shortcuts.h"
 #include <wx/translation.h>
 #include "search/search_limits.h"
 #include "editor/editor_control.h"
@@ -162,12 +163,13 @@ void FindReplaceDialog::BindSearchKeys(std::function<void(wxKeyEvent&)> onKey) {
     const int nextSelection = wxWindow::NewControlId();
     const int previousSelection = wxWindow::NewControlId();
     const int replaceNext = wxWindow::NewControlId();
+    using SearchShortcuts::F3Accelerator;
     const std::array<wxAcceleratorEntry, 8> searchKeys = {
-        {{wxACCEL_NORMAL, WXK_F3, wxID_FORWARD},
-         {wxACCEL_SHIFT, WXK_F3, wxID_BACKWARD},
-         {wxACCEL_ALT, WXK_F3, saveFind},
-         {wxACCEL_CTRL, WXK_F3, nextSelection},
-         {wxACCEL_CTRL | wxACCEL_SHIFT, WXK_F3, previousSelection},
+        {F3Accelerator(F3SearchAction::Next, wxID_FORWARD),
+         F3Accelerator(F3SearchAction::Previous, wxID_BACKWARD),
+         F3Accelerator(F3SearchAction::SaveFindText, saveFind),
+         F3Accelerator(F3SearchAction::SelectionNext, nextSelection),
+         F3Accelerator(F3SearchAction::SelectionPrevious, previousSelection),
          {wxACCEL_NORMAL, WXK_F4, replaceNext},
          {wxACCEL_CTRL | wxACCEL_ALT, WXK_F2, selectNext},
          {wxACCEL_CTRL | wxACCEL_ALT | wxACCEL_SHIFT, WXK_F2, selectPrevious}}};
@@ -193,23 +195,23 @@ void FindReplaceDialog::BindSearchKeys(std::function<void(wxKeyEvent&)> onKey) {
 bool FindReplaceDialog::HandleSearchKey(const wxKeyEvent& event) {
     using enum SearchDirection;
     if (event.GetKeyCode() == WXK_F3) {
-        switch (event.GetModifiers()) {
-        case wxMOD_NONE:
+        switch (SearchShortcuts::ClassifyF3(event.GetModifiers())) {
+        case F3SearchAction::Next:
             Find(Forward);
             break;
-        case wxMOD_SHIFT:
+        case F3SearchAction::Previous:
             Find(Backward);
             break;
-        case wxMOD_ALT:
+        case F3SearchAction::SaveFindText:
             SaveFindText();
             break;
-        case wxMOD_CONTROL:
+        case F3SearchAction::SelectionNext:
             FindSelection(Forward);
             break;
-        case wxMOD_CONTROL | wxMOD_SHIFT:
+        case F3SearchAction::SelectionPrevious:
             FindSelection(Backward);
             break;
-        default:
+        case F3SearchAction::Ignore:
             break;
         }
     } else if (event.GetKeyCode() == WXK_F4 && !event.AltDown()) {

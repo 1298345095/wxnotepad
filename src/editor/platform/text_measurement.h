@@ -48,10 +48,4 @@ private:
     std::unique_ptr<Data> data_;
 };
 
-// SurfaceID for FormatRange: drawing borrows the GUI-thread DC, whereas workers
-// use the independent measurement context for the duration of the print job.
-struct PrintSurface {
-    wxDC& dc;
-    const TextMeasurement& measurement;
-};
 } // namespace Scintilla::Internal
