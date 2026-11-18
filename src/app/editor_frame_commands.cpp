@@ -948,11 +948,39 @@ wxMenu* EditorFrame::CreateLanguageMenu() {
     automaticLanguageId_ = addLanguage(_("&Automatic"), std::nullopt);
     for (const auto& definition : SyntaxCatalog())
         addLanguage("&" + LanguageName(definition.language), definition.language);
+    languages->AppendSeparator();
+    const int useCode = wxWindow::NewControlId();
+    languages->AppendCheckItem(useCode, _("Use Default &Code Style	Shift+F12"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            auto& fonts = (settings_ ? settings_->values : defaults_).fonts;
+            auto& scheme = fonts.Scheme(document_.Language());
+            scheme.useCode = !scheme.useCode;
+            editor_->SetFontSettings(fonts);
+            ApplySyntaxLanguage(*editor_, document_.Language(), document_.EffectiveLanguage());
+            UpdatePositionStatus();
+            UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        },
+        useCode);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Check((settings_ ? settings_->values : defaults_).fonts.Scheme(document_.Language()).useCode);
+        },
+        useCode);
     return languages;
 }
 
 wxMenu* EditorFrame::CreateViewMenu() {
     auto* view = new wxMenu;
+    const int codeFont = wxWindow::NewControlId();
+    const int textFont = wxWindow::NewControlId();
+    view->Append(codeFont, _("Default &Code Font...	Alt+F12"));
+    view->Append(textFont, _("Default &Text Font..."));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ChooseDefaultFont(true); }, codeFont);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ChooseDefaultFont(false); }, textFont);
+    view->AppendSeparator();
     AppendCaretCommands(view);
     view->AppendSeparator();
     AppendDisplayCommands(view);

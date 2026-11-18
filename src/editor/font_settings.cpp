@@ -1,0 +1,176 @@
+#include "editor/font_settings.h"
+#include "editor/editor_control.h"
+#include <wx/display.h>
+#include <wx/fontenum.h>
+#include <wx/settings.h>
+#include <wx/tokenzr.h>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
+namespace {
+using Scintilla::Message;
+constexpr auto DefaultStyle = static_cast<uintptr_t>(Scintilla::StylesCommon::Default);
+constexpr int NormalWeight = 400;
+constexpr int BoldWeight = 700;
+constexpr int MinimumFontSize = 2 * Scintilla::FontSizeMultiplier;
+wxString Value(const wxString& style, const wxString& key) {
+    wxStringTokenizer tokens(style, ";");
+    while (tokens.HasMoreTokens()) {
+        auto token = tokens.GetNextToken().Trim().Trim(false);
+        if (token.BeforeFirst(':') == key && token.Contains(':')) return token.AfterFirst(':').Trim().Trim(false);
+    }
+    return {};
+}
+bool Attribute(const wxString& style, const wxString& name) {
+    wxStringTokenizer tokens(style, ";");
+    while (tokens.HasMoreTokens())
+        if (tokens.GetNextToken().Trim().Trim(false) == name) return true;
+    return false;
+}
+wxString CodeFamily() {
+    // Notepad4 Styles.cpp::FindSystemDefaultCodeFont, in the original order.
+    for (const auto* name : {"DejaVu Sans Mono", "Cascadia Mono", "Consolas"})
+        if (wxFontEnumerator::IsValidFacename(name)) return name;
+#ifdef __WXMSW__
+    return "Courier New";
+#else
+    return wxFont(wxFontInfo(11).Family(wxFONTFAMILY_TELETYPE)).GetFaceName();
+#endif
+}
+wxString TextFamily() {
+    return wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT).GetFaceName();
+}
+int BaseSize() {
+    // Styles.cpp::Style_DetectBaseFontSize uses physical monitor dimensions.
+    const auto display = wxDisplay().GetGeometry().GetSize();
+    const double points = display.x < 1920 && display.y < 1080 ? 10.5 : 11;
+    return static_cast<int>(points * Scintilla::FontSizeMultiplier);
+}
+int Size(const wxString& style, int base) {
+    const auto text = Value(style, "size");
+    double points;
+    if (!text.ToDouble(&points) || !std::isfinite(points)) return base;
+    const bool relative = text.StartsWith('+') || text.StartsWith('-');
+    // Keep the original 2pt floor and the core's integer size representation.
+    const double scaled = points * Scintilla::FontSizeMultiplier + (relative ? base : 0);
+    return static_cast<int>(std::clamp(std::round(scaled), static_cast<double>(MinimumFontSize),
+                                       static_cast<double>(std::numeric_limits<int>::max())));
+}
+int Weight(const wxString& style, int fallback) {
+    if (Attribute(style, "bold")) return BoldWeight;
+    long weight;
+    return Value(style, "weight").ToLong(&weight) && weight > 0 && weight < 1000 ? static_cast<int>(weight) : fallback;
+}
+wxString Family(const wxString& style, const FontSettings& settings, bool global) {
+    const auto face = Value(style, "font");
+    if (face.empty()) return {};
+    if (face == "$(Text)") return global ? TextFamily() : DefaultStyleFont(settings, false).GetFaceName();
+    if (face == "$(Code)" || !wxFontEnumerator::IsValidFacename(face))
+        return global ? CodeFamily() : DefaultStyleFont(settings, true).GetFaceName();
+    return face;
+}
+void ApplyStyle(EditorControl& editor, const FontSettings& settings, const wxString& style, int base) {
+    if (!Value(style, "font").empty()) {
+        const auto family = Family(style, settings, false);
+        const auto face = family.ToUTF8();
+        editor.Send(Message::StyleSetFont, DefaultStyle, reinterpret_cast<intptr_t>(face.data()));
+    }
+    if (!Value(style, "size").empty()) editor.Send(Message::StyleSetSizeFractional, DefaultStyle, Size(style, base));
+    editor.Send(Message::StyleSetWeight, DefaultStyle,
+                Weight(style, static_cast<int>(editor.Send(Message::StyleGetWeight, DefaultStyle))));
+    for (const auto& [attribute, message] : {std::pair{"italic", Message::StyleSetItalic},
+                                             {"underline", Message::StyleSetUnderline},
+                                             {"strike", Message::StyleSetStrike},
+                                             {"overline", Message::StyleSetOverline},
+                                             {"eolfilled", Message::StyleSetEOLFilled}})
+        if (Attribute(style, attribute)) editor.Send(message, DefaultStyle, true);
+    for (const auto& [attribute, message] :
+         {std::pair{"fore", Message::StyleSetFore}, {"back", Message::StyleSetBack}}) {
+        auto value = Value(style, attribute);
+        unsigned long rgb;
+        if (value.StartsWith('#') && value.Mid(1).ToULong(&rgb, 16))
+            editor.Send(message, DefaultStyle, ((rgb & 0xffU) << 16U) | (rgb & 0xff00U) | ((rgb >> 16U) & 0xffU));
+    }
+    long charset;
+    if (Value(style, "charset").ToLong(&charset)) editor.Send(Message::StyleSetCharacterSet, DefaultStyle, charset);
+}
+} // namespace
+
+SchemeFontStyle& FontSettings::Scheme(SyntaxLanguage language) {
+    return schemes[static_cast<size_t>(std::to_underlying(SyntaxSettingsLanguage(language)))];
+}
+const SchemeFontStyle& FontSettings::Scheme(SyntaxLanguage language) const {
+    return schemes[static_cast<size_t>(std::to_underlying(SyntaxSettingsLanguage(language)))];
+}
+void EditorControl::SetFontSettings(const FontSettings& settings) {
+    fontSettings_ = std::make_shared<FontSettings>(settings);
+}
+const FontSettings& EditorControl::Fonts() const {
+    static const FontSettings defaults;
+    return fontSettings_ ? *fontSettings_ : defaults;
+}
+wxFont DefaultStyleFont(const FontSettings& settings, bool code) {
+    const auto& style = code ? settings.codeStyle : settings.textStyle;
+    auto face = Family(style, settings, true);
+    if (face.empty()) face = CodeFamily();
+    wxFont font(wxFontInfo(11).FaceName(face));
+    font.SetFractionalPointSize(static_cast<double>(Size(style, BaseSize())) / Scintilla::FontSizeMultiplier);
+    font.SetNumericWeight(Weight(style, NormalWeight));
+    font.SetStyle(Attribute(style, "italic") ? wxFONTSTYLE_ITALIC : wxFONTSTYLE_NORMAL);
+    font.SetUnderlined(Attribute(style, "underline"));
+    font.SetStrikethrough(Attribute(style, "strike"));
+    return font;
+}
+wxColour DefaultStyleForeground(const FontSettings& settings, bool code) {
+    const wxColour colour(Value(code ? settings.codeStyle : settings.textStyle, "fore"));
+    return colour.IsOk() ? colour : wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+}
+wxString MergeChosenFont(const wxString& style, const wxFont& font) {
+    // Adapted from Notepad4 89b8b36 Styles.cpp::Style_SelectFont (BSD-3-Clause).
+    wxString result = "font:" + font.GetFaceName() + "; size:";
+    auto size = wxString::Format("%.1f", font.GetFractionalPointSize());
+    size.Replace(",", ".");
+    if (size.EndsWith(".0")) size.RemoveLast(2);
+    result += size;
+    if (font.GetNumericWeight() == BoldWeight)
+        result += "; bold";
+    else if (font.GetNumericWeight() != NormalWeight)
+        result += wxString::Format("; weight:%d", font.GetNumericWeight());
+    if (font.GetStyle() != wxFONTSTYLE_NORMAL) result += "; italic";
+    if (font.GetUnderlined()) result += "; underline";
+    if (font.GetStrikethrough()) result += "; strike";
+    wxStringTokenizer tokens(style, ";");
+    while (tokens.HasMoreTokens()) {
+        const auto token = tokens.GetNextToken().Trim().Trim(false);
+        const auto key = token.BeforeFirst(':');
+        if (!token.empty() && key != "font" && key != "size" && key != "weight" && token != "bold" &&
+            token != "italic" && token != "underline" && token != "strike")
+            result += "; " + token;
+    }
+    return result;
+}
+void ApplyFontSettings(EditorControl& editor, SyntaxLanguage language) {
+    const auto& settings = editor.Fonts();
+    const auto& scheme = settings.Scheme(language);
+    const auto& style = scheme.useCode ? settings.codeStyle : settings.textStyle;
+    const auto font = DefaultStyleFont(settings, scheme.useCode);
+    editor.Send(Message::StyleResetDefault);
+    const auto family = font.GetFaceName();
+    const auto face = family.ToUTF8();
+    editor.Send(Message::StyleSetFont, DefaultStyle, reinterpret_cast<intptr_t>(face.data()));
+    const auto size = static_cast<int>(std::lround(font.GetFractionalPointSize() * Scintilla::FontSizeMultiplier));
+    editor.Send(Message::StyleSetSizeFractional, DefaultStyle, size);
+    editor.Send(Message::StyleSetWeight, DefaultStyle, font.GetNumericWeight());
+    editor.Send(Message::StyleSetItalic, DefaultStyle, font.GetStyle() != wxFONTSTYLE_NORMAL);
+    editor.Send(Message::StyleSetUnderline, DefaultStyle, font.GetUnderlined());
+    editor.Send(Message::StyleSetStrike, DefaultStyle, font.GetStrikethrough());
+    const auto foreground = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    const auto background = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+    editor.Send(Message::StyleSetFore, DefaultStyle,
+                foreground.Red() | (foreground.Green() << 8U) | (foreground.Blue() << 16U));
+    editor.Send(Message::StyleSetBack, DefaultStyle,
+                background.Red() | (background.Green() << 8U) | (background.Blue() << 16U));
+    ApplyStyle(editor, settings, style, BaseSize());
+    ApplyStyle(editor, settings, scheme.defaultStyle, size);
+}

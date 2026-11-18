@@ -122,6 +122,7 @@ add_library(editor_features STATIC
     src/editor/word_completion.cpp
     src/editor/completion_styles.cpp
     src/editor/go_to_location.cpp
+    src/editor/font_settings.cpp
     src/editor/indentation_settings.cpp
     src/document/document_session.cpp
     src/document/file_variables.cpp
@@ -840,6 +841,15 @@ if(BUILD_TESTING)
         set_tests_properties(native_renderer_commands PROPERTIES TIMEOUT 60)
     endif()
 
+    add_editor_test(default_fonts original_default_fonts 60)
+    if(WIN32)
+        target_link_libraries(default_fonts PRIVATE imm32)
+        add_test(NAME original_default_fonts_gdi COMMAND default_fonts)
+        set_tests_properties(original_default_fonts_gdi PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_DEFAULT_FONTS_GDI=1")
+    endif()
+    add_test(NAME original_default_fonts_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/default_fonts_process.py" "$<TARGET_FILE:default_fonts>")
+    set_tests_properties(original_default_fonts_lifecycle PROPERTIES TIMEOUT 180)
     add_editor_test(rendering_settings original_rendering_settings_menu 60)
     if(WIN32)
         target_link_libraries(rendering_settings PRIVATE imm32)
