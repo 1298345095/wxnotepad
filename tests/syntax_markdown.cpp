@@ -7,6 +7,7 @@
 #include "file_command_driver.h"
 #include "tab_settings_helpers.h"
 #include "native_paint_helpers.h"
+#include "native_key_helpers.h"
 #include "native_search_helpers.h"
 #include <SciLexer.h>
 #include <wx/wx.h>
@@ -248,13 +249,16 @@ void OriginalOracle(EditorFrame* frame) {
             using enum Scintilla::Message;
             auto* editor = frame->Editor();
             TestSyntax::Paint(frame);
+            NativePaint::Complete(editor);
             // Scroll through the actual viewport to complete styling below the
             // initial visible page; do not replace incremental styling with Colourise.
             const auto firstVisible = editor->Send(GetFirstVisibleLine);
             editor->Send(SetFirstVisibleLine, editor->Send(GetLineCount));
             TestSyntax::Paint(frame);
+            NativePaint::Complete(editor);
             editor->Send(SetFirstVisibleLine, firstVisible);
             TestSyntax::Paint(frame);
+            NativePaint::Complete(editor);
         },
         "Markdown styles must match independent original observations",
         "Markdown folds must match independent original observations");
@@ -275,8 +279,9 @@ public:
         auto* frame = new EditorFrame(settings_.get());
         TestEditor::UseFixedWidthFont(frame->Editor());
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "native Markdown view is presented before observing incremental styling");
                 OriginalOracle(frame);
                 Workflows(frame, *settings_);
                 NativeStylesAndFoldSearch(frame);

@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include <array>
 #include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
 #include "syntax/syntax_scheme.h"
@@ -255,7 +256,7 @@ void NativeKey(EditorControl* editor, bool shift = false, bool alt = false) {
     Require(handled || shift || alt, "native Ctrl+Q accelerator is handled");
 #else
     wxString focusFile;
-    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys use private display helper");
+    NativeKeys::FocusEditor(static_cast<EditorFrame*>(wxGetTopLevelParent(editor)), "wxnotepad", focusFile);
     bool received = false;
     wxEvtHandler observer;
     observer.Bind(wxEVT_KEY_UP, [&received](wxKeyEvent& event) {
@@ -301,8 +302,9 @@ public:
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "native block-comment view is presented before menu and keyboard actions");
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 auto* editor = frame->Editor();
                 TestEditor::ResetStream(editor, "alpha", 0, 5);
