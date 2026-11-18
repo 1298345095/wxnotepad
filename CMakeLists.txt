@@ -819,6 +819,16 @@ if(BUILD_TESTING)
     add_test(NAME completion_candidate_contract COMMAND completion_candidates)
     set_tests_properties(completion_candidate_contract PROPERTIES TIMEOUT 20)
 
+    add_editor_test(fold_ellipsis original_boxed_fold_ellipsis 90)
+    if(WIN32)
+        add_test(NAME original_boxed_fold_ellipsis_dpi96 COMMAND fold_ellipsis)
+        set_tests_properties(original_boxed_fold_ellipsis_dpi96 PROPERTIES TIMEOUT 90
+            ENVIRONMENT "WXNOTEPAD_FOLDING_DPI96=1")
+    else()
+        add_test(NAME original_boxed_fold_ellipsis_hidpi COMMAND fold_ellipsis)
+        set_tests_properties(original_boxed_fold_ellipsis_hidpi PROPERTIES TIMEOUT 90 ENVIRONMENT "GDK_SCALE=2")
+    endif()
+
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

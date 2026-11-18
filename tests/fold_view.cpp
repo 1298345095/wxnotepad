@@ -11,6 +11,19 @@ using Scintilla::Message;
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
+void EllipsisStyle(EditorControl* editor) {
+    using enum Scintilla::Message;
+    constexpr auto fold = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::FoldDisplayText));
+    constexpr auto base = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
+    Require(editor->Send(StyleGetFore, fold) == 0x808080 && editor->Send(StyleGetWeight, fold) == 700,
+            "original Fold Ellipsis style must use bold grey text");
+    Require(editor->Send(StyleGetSizeFractional, fold) ==
+                std::max<intptr_t>(200, editor->Send(StyleGetSizeFractional, base) - 200),
+            "original Fold Ellipsis size must be two points smaller, with the original two-point minimum");
+    for (const auto message : {StyleGetItalic, StyleGetUnderline, StyleGetStrike, StyleGetBack})
+        Require(editor->Send(message, fold) == editor->Send(message, base),
+                "unspecified Fold Ellipsis effects and background must inherit the effective default");
+}
 std::vector<wxColour> MarkerPixels(EditorControl* editor, int line) {
     using enum Scintilla::Message;
     const int left = static_cast<int>(editor->Send(GetMarginWidthN, 0) + editor->Send(GetMarginWidthN, 1));
@@ -143,6 +156,13 @@ public:
                 using enum Scintilla::Message;
                 Require(ready, "native folding window must be presented");
                 auto* editor = frame->Editor();
+                Require(editor->Send(FoldDisplayTextGetStyle) ==
+                            std::to_underlying(Scintilla::FoldDisplayTextStyle::Boxed),
+                        "collapsed headers must use the original boxed fold display text");
+                std::array<char, 16> ellipsis{};
+                editor->Send(GetDefaultFoldDisplayText, ellipsis.size(), reinterpret_cast<intptr_t>(ellipsis.data()));
+                Require(std::string_view(ellipsis.data()) == "\xC2\xB7\xC2\xB7\xC2\xB7",
+                        "UTF-8 editor storage must use the original three middle dots");
                 const int show = frame->GetMenuBar()->FindMenuItem("View", "Show Code Folding");
                 const int highlight = frame->GetMenuBar()->FindMenuItem("View", "Highlight Current Block");
                 Require(show != wxNOT_FOUND && highlight != wxNOT_FOUND,
@@ -153,6 +173,7 @@ public:
                 const char* source = "void outer() {\n  if (true) {\n    call();\n  }\n}\nafter();\n";
                 editor->Send(SetText, 0, reinterpret_cast<intptr_t>(source));
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
+                EllipsisStyle(editor);
                 NativeFold::Paint(editor);
                 editor->Send(EmptyUndoBuffer);
                 editor->Send(SetSavePoint);

@@ -3,6 +3,7 @@
 #include "editor/editor_control.h"
 #include <ScintillaTypes.h>
 #include <array>
+#include <algorithm>
 #include <span>
 #include <SciLexer.h>
 #include <utility>
@@ -107,6 +108,17 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
                                Message::StyleSetStrike, Message::StyleSetOverline, Message::StyleSetEOLFilled})
         editor.Send(message, static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)), false);
     editor.Send(Message::StyleClearAll);
+    // Notepad4 89b8b36 stlDefault.cpp / Styles.cpp Fold Ellipsis:
+    // inherit the effective default, then apply size:-2; bold; fore:#808080.
+    constexpr auto foldDisplay = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::FoldDisplayText));
+    constexpr auto defaultStyle = static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default));
+    constexpr int foldSizeReduction = 2 * Scintilla::FontSizeMultiplier;
+    constexpr int minimumFontSize = 2 * Scintilla::FontSizeMultiplier;
+    editor.Send(Message::StyleSetSizeFractional, foldDisplay,
+                std::max<intptr_t>(minimumFontSize,
+                                   editor.Send(Message::StyleGetSizeFractional, defaultStyle) - foldSizeReduction));
+    editor.Send(Message::StyleSetWeight, foldDisplay, std::to_underlying(Scintilla::FontWeight::Bold));
+    editor.Send(Message::StyleSetFore, foldDisplay, Colour(0x808080));
     // Original stlDefault.cpp / Styles.cpp: brace feedback uses independent
     // translucent overlays, preserving the current font and DPI settings.
     editor.Send(Message::BraceHighlightIndicator, 1, EditorIndicator::BraceMatch);
