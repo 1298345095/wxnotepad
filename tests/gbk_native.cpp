@@ -196,11 +196,25 @@ public:
                 cancelLoss.selectedType = "JSON";
                 Command(frame, wxID_SAVEAS);
                 cancelLoss.Stop();
-                Require(cancelLoss.choosers == 1 && cancelLoss.losses == 1 && !std::filesystem::exists(cancelled) &&
-                            NativeDialogs::PathEquals(frame->DocumentPath(), Filename(source)) &&
-                            frame->DocumentEncoding() == FileEncoding::Gbk && Bytes(source) == original &&
-                            Text(frame) == rich && frame->GetMenuBar()->IsChecked(python) &&
-                            frame->GetStatusBar()->GetStatusText().Contains("Python (override)"),
+                const bool lossCancelled =
+                    cancelLoss.choosers == 1 && cancelLoss.losses == 1 && !std::filesystem::exists(cancelled) &&
+                    NativeDialogs::PathEquals(frame->DocumentPath(), Filename(source)) &&
+                    frame->DocumentEncoding() == FileEncoding::Gbk && Bytes(source) == original &&
+                    Text(frame) == rich && frame->GetMenuBar()->IsChecked(python) &&
+                    frame->GetStatusBar()->GetStatusText().Contains("Python (override)");
+                if (!lossCancelled) {
+                    std::fprintf(stderr,
+                                 "GBK loss cancellation: choosers=%d losses=%d errors=%d exists=%d pathEqual=%d "
+                                 "encoding=%d diskEqual=%d textEqual=%d pythonChecked=%d status='%s'\n",
+                                 cancelLoss.choosers, cancelLoss.losses, cancelLoss.errors,
+                                 std::filesystem::exists(cancelled),
+                                 NativeDialogs::PathEquals(frame->DocumentPath(), Filename(source)),
+                                 static_cast<int>(frame->DocumentEncoding()), Bytes(source) == original,
+                                 Text(frame) == rich, frame->GetMenuBar()->IsChecked(python),
+                                 frame->GetStatusBar()->GetStatusText().utf8_str().data());
+                    std::fflush(stderr);
+                }
+                Require(lossCancelled,
                         "GBK loss cancellation after Save As naming must retain path, override, text and disk bytes");
                 NativeDriver cancel(wxID_CANCEL);
                 Command(frame, wxID_SAVE);

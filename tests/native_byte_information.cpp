@@ -12,6 +12,11 @@ void Require(bool condition, const char* message) {
     if (!condition) throw TestEditor::Failure(message);
 }
 
+void Phase(const char* phase) {
+    std::fprintf(stderr, "Character Info phase: %s\n", phase);
+    std::fflush(stderr);
+}
+
 class CharacterFeedback final : public wxTimer {
 public:
     CharacterFeedback() { Start(20); }
@@ -23,6 +28,7 @@ public:
             if (!dialog || !dialog->IsModal()) continue;
             auto* text = wxDynamicCast(dialog->FindWindowByName("Character information", dialog), wxStaticText);
             if (!text) continue;
+            Phase("observed owned Character Info dialog");
             Stop();
             ++shown;
             payload = text->GetLabelText();
@@ -38,31 +44,39 @@ void CheckInvalidByte(EditorFrame* frame) {
     std::filesystem::create_directory(directory);
     const auto path = directory / "utf8.txt";
     TestFiles::WriteBytes(path, "");
+    Phase("opening explicit UTF8 fixture");
     Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
             "open the explicit UTF-8 character information fixture");
     TestEditor::ResetStream(editor, "gQ==", 0, 4);
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Tools", "Decode"));
+    Phase("decoded byte81");
     Require(TestEditor::Text(editor) == std::string(1, '\x81'), "native Base64 Decode produces invalid UTF-8 byte 81");
     const auto revision = editor->DocumentRevision();
 #ifdef __WXGTK__
     NativeKeys::Shortcut(frame, 'A', true); // Supplies Wayland's owned input serial for clipboard publication.
 #endif
     {
+        Phase("opening clipboard for owned seed");
         wxClipboardLocker clipboard;
         if (!clipboard) throw TestEditor::Failure("open the owned Character Info clipboard");
+        Phase("clipboard opened; publishing owned seed");
         Require(wxTheClipboard->SetData(new wxTextDataObject("owned invalid-byte information offer")),
                 "seed the owned Character Info clipboard offer");
     }
+    Phase("owned seed published; invoking Character Info");
     CharacterFeedback feedback;
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Edit", "Show Character Info"));
+    Phase("Character Info returned");
     const auto output = feedback.payload.utf8_string();
     std::printf("Character Info: %s\n", output.c_str());
     Require(feedback.shown == 1 && output.starts_with("Unicode: U+DD01\nUTF-16: DD01\nUTF-8: EF BF BD\nHTML: &#56577;"),
             "invalid UTF-8 Character Info retains the original sentinel and replacement UTF-8 field");
+    Phase("opening clipboard for result");
     wxTextDataObject copied;
     {
         wxClipboardLocker clipboard;
         if (!clipboard) throw TestEditor::Failure("open the Character Info clipboard result");
+        Phase("clipboard opened; reading result");
         Require(wxTheClipboard->GetData(copied) && copied.GetText() == feedback.payload,
                 "native Character Info copies its exact visible payload");
     }
@@ -76,9 +90,12 @@ void CheckInvalidByte(EditorFrame* frame) {
 class NativeByteInformationApp final : public wxApp {
 public:
     bool OnInit() override {
+        Phase("OnInit");
         auto* frame = new EditorFrame;
         frame->Show();
+        Phase("waiting for native presentation");
         NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
+            Phase("presented callback");
             try {
                 Require(presented, "native compositor presents the invalid-byte information fixture");
                 CheckInvalidByte(frame);
