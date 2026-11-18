@@ -1987,6 +1987,18 @@ msgstr "滚动超出末行(&L)"
 msgid "Search wrapped"
 msgstr "搜索已循环"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Select &All\tCtrl+A"
+msgstr "全选(&A)\tCtrl+A"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Lines (Expand Selection)\tCtrl+Shift+Space"
+msgstr "选择行（扩展选区）(&L)\tCtrl+Shift+Space"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select &Word\tCtrl+Alt+Space"
+msgstr "选择单词(&W)\tCtrl+Alt+Space"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select &default encoding:"
 msgstr "选择默认编码(&D):"
@@ -2014,6 +2026,14 @@ msgstr "选择当前文件编码(&E):"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Select source &encoding to reload file:"
 msgstr "选择重新载入文件使用的编码(&S):"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Document En&d"
+msgstr "选择至文档末尾(&D)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Select to Document Star&t"
+msgstr "选择至文档开头(&T)"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_SELTOMATCHINGBRACE.
 #: src/app/editor_frame_commands.cpp
