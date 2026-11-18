@@ -240,6 +240,14 @@ msgid "&HTML/XML Tag...\tAlt+X"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Half Page"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "&Highlight current subline"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Indent"
 msgstr ""
 
@@ -316,7 +324,7 @@ msgstr ""
 msgid "&New\tCtrl+N"
 msgstr ""
 
-#: src/app/dialogs/document_dialogs.cpp
+#: src/app/dialogs/document_dialogs.cpp src/app/editor_frame_commands.cpp
 msgid "&No"
 msgstr ""
 
@@ -346,6 +354,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Old Visual Studio"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&One Page"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -438,6 +450,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "&Sentence Case\tCtrl+Alt+O"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "&Show Hex Code"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -533,6 +549,14 @@ msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "1/&3 Page"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "1/&4 Page"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "A&dvanced Settings"
 msgstr ""
 
@@ -622,6 +646,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Auto-Shrink Horizontal Scrollbar"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Automatic"
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -727,6 +755,14 @@ msgstr ""
 msgid "Changing the UI language requires a restart of wxnotepad, restart now?"
 msgstr ""
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Character"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Character Info"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Chinese"
 msgstr ""
@@ -806,6 +842,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Con&vert"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Continuation &indent:"
 msgstr ""
 
 #: src/app/dialogs/modify_lines_dialog.cpp
@@ -932,8 +972,24 @@ msgstr ""
 msgid "DTD"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Code Font...\tAlt+F12"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Text Font..."
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Default Code Font"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default Encoding"
+msgstr ""
+
+#: src/app/editor_frame.cpp
+msgid "Default Text Font"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1177,6 +1233,10 @@ msgstr ""
 msgid "In &Selection"
 msgstr ""
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "In line number margin"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "In&vert Case\tCtrl+Alt+U"
 msgstr ""
@@ -1333,6 +1393,10 @@ msgstr ""
 msgid "Lua"
 msgstr ""
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Margin click selects visual &subline"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Mark &Occurrences"
 msgstr ""
@@ -1405,12 +1469,24 @@ msgstr ""
 msgid "NODS — Nominal (European) &digit shapes"
 msgstr ""
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Near borders"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Near text"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "New &GUID"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "New &Window\tAlt+N"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "No Wrap"
 msgstr ""
 
 #: src/app/dialogs/recent_files_dialog.cpp
@@ -1421,6 +1497,14 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "No match found"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "No wrap indent"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "None"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
@@ -1738,6 +1822,10 @@ msgstr ""
 msgid "Script She&bang Line"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Scroll Past &Last Line"
+msgstr ""
+
 #: src/app/editor_frame.cpp
 msgid "Search wrapped"
 msgstr ""
@@ -1792,6 +1880,10 @@ msgstr ""
 
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Show &edge line."
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Character &Info"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1896,6 +1988,14 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text with default characters, and the undo history will be cleared. Continue?"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Symbol &after wrap:"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Symbol &before wrap:"
 msgstr ""
 
 #: src/app/language_commands.cpp
@@ -2107,6 +2207,10 @@ msgid "UTF-8 with BOM"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Un&icode Control Character"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Undo Redo &Remember Selection"
 msgstr ""
 
@@ -2146,6 +2250,10 @@ msgstr ""
 msgid "Update File Time"
 msgstr ""
 
+#: src/app/editor_frame_commands.cpp
+msgid "Use Default &Code Style\tShift+F12"
+msgstr ""
+
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Use Global Tab Settings"
 msgstr ""
@@ -2174,6 +2282,10 @@ msgstr ""
 msgid "Western European"
 msgstr ""
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Whitespace"
+msgstr ""
+
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Whole &word"
 msgstr ""
@@ -2186,8 +2298,52 @@ msgstr ""
 msgid "With &Encoding...\tF8"
 msgstr ""
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Word"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Word Wrap Settings"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Word Wrap Settings..."
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Word completion"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap &mode:"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent 1 level more than first subline"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent 2 levels more than first subline"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent by 1 character"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent by 1 level"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent by 2 characters"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent by 2 levels"
+msgstr ""
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent same as first subline"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp

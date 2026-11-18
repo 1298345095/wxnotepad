@@ -315,6 +315,14 @@ msgstr "跳到行(&G)...\tCtrl+G"
 msgid "&HTML/XML Tag...\tAlt+X"
 msgstr "&HTML/XML 標籤...\tAlt+X"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Half Page"
+msgstr "半頁(&H)"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "&Highlight current subline"
+msgstr "醒目提示目前子行(&H)"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_INDENT; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "&Indent"
@@ -412,7 +420,7 @@ msgid "&New\tCtrl+N"
 msgstr "新增(&N)\tCtrl+N"
 
 # Original Notepad4 zh-Hant: IDD_INFOBOX/IDNO; adapted where needed.
-#: src/app/dialogs/document_dialogs.cpp
+#: src/app/dialogs/document_dialogs.cpp src/app/editor_frame_commands.cpp
 msgid "&No"
 msgstr "否(&N)"
 
@@ -450,6 +458,10 @@ msgstr "關閉(&O)"
 #: src/app/editor_frame_commands.cpp
 msgid "&Old Visual Studio"
 msgstr "舊版 Visual Studio(&O)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "&One Page"
+msgstr "一頁(&O)"
 
 # Original Notepad4 zh-Hant: IDM_FILE_OPEN; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -566,6 +578,10 @@ msgstr "選取的文字(&S)"
 msgid "&Sentence Case\tCtrl+Alt+O"
 msgstr "句子樣式(&S)\tCtrl+Alt+O"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Show Hex Code"
+msgstr "顯示十六進位碼(&S)"
+
 # Original Notepad4 zh-Hant: IDD_CHANGENOTIFY/IDC_CHANGENOTIFY_SHOW_MSG; adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Show message."
@@ -680,6 +696,14 @@ msgstr "縮放(&Z)"
 msgid "* matches zero or more characters; ? matches exactly one character."
 msgstr "* 符合零個或多個字元；? 符合一個字元。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "1/&3 Page"
+msgstr "1/3 頁(&3)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "1/&4 Page"
+msgstr "1/4 頁(&4)"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/Settings/Advanced Settings submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "A&dvanced Settings"
@@ -783,6 +807,10 @@ msgstr "自動補上 HTML 與 XML 結束標籤"
 #: src/app/editor_frame_commands.cpp
 msgid "Auto-Shrink Horizontal Scrollbar"
 msgstr "自動縮短水平捲軸"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Automatic"
+msgstr "自動"
 
 # Original Notepad4 zh-Hant: IDD_AUTOCOMPLETION (auto-insert group); adapted where needed.
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -903,6 +931,14 @@ msgstr "變更背景顏色(&B)。"
 msgid "Changing the UI language requires a restart of wxnotepad, restart now?"
 msgstr "變更介面語言需要重新啟動 wxnotepad，是否立即重新啟動？"
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Character"
+msgstr "依字元"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Character Info"
+msgstr "字元資訊"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Chinese"
 msgstr "中文"
@@ -992,6 +1028,10 @@ msgstr "壓縮空白(&W)\tAlt+W"
 #: src/app/editor_frame_commands.cpp
 msgid "Con&vert"
 msgstr "轉換(&V)"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Continuation &indent:"
+msgstr "續行縮排(&I)："
 
 #: src/app/dialogs/modify_lines_dialog.cpp
 msgid "Continuous number (zero-based)."
@@ -1127,10 +1167,26 @@ msgstr "刪除行(&E)\tCtrl+Shift+D"
 msgid "DTD"
 msgstr "DTD"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Code Font...\tAlt+F12"
+msgstr "預設程式碼字型(&C)...\tAlt+F12"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Default &Text Font..."
+msgstr "預設文字字型(&T)..."
+
+#: src/app/editor_frame.cpp
+msgid "Default Code Font"
+msgstr "預設程式碼字型"
+
 # Original Notepad4 zh-Hant: IDD_DEFENCODING title (default clarified); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Default Encoding"
 msgstr "預設編碼"
+
+#: src/app/editor_frame.cpp
+msgid "Default Text Font"
+msgstr "預設文字字型"
 
 # Original Notepad4 zh-Hant: IDD_DEFENCODING (default encoding label); adapted where needed.
 #: src/app/dialogs/document_dialogs.cpp
@@ -1418,6 +1474,10 @@ msgstr "ISS — 停用對稱字元交換(&Y)"
 msgid "In &Selection"
 msgstr "在選取範圍內(&S)"
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "In line number margin"
+msgstr "顯示於行號邊欄"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_INVERTCASE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "In&vert Case\tCtrl+Alt+U"
@@ -1593,6 +1653,10 @@ msgstr "長行設定"
 msgid "Lua"
 msgstr "Lua"
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Margin click selects visual &subline"
+msgstr "按一下邊欄選取視覺子行(&S)"
+
 # Original Notepad4 zh-Hant: IDR_MAINWND/View/Mark Occurrences submenu; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Mark &Occurrences"
@@ -1677,6 +1741,14 @@ msgstr "NADS — 使用各國數字字形(&A)"
 msgid "NODS — Nominal (European) &digit shapes"
 msgstr "NODS — 使用標準（歐洲）數字字形(&D)"
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Near borders"
+msgstr "靠近邊界"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Near text"
+msgstr "靠近文字"
+
 # Original Notepad4 zh-Hant: IDM_EDIT_INSERT_GUID; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "New &GUID"
@@ -1686,6 +1758,10 @@ msgstr "新的 &GUID"
 #: src/app/editor_frame_commands.cpp
 msgid "New &Window\tAlt+N"
 msgstr "新增視窗(&W)\tAlt+N"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "No Wrap"
+msgstr "不換行"
 
 # Original Notepad4 zh-Hant: IDS_ERR_MRUDLG; adapted where needed.
 #: src/app/dialogs/recent_files_dialog.cpp
@@ -1699,6 +1775,14 @@ msgstr ""
 #: src/app/editor_frame.cpp
 msgid "No match found"
 msgstr "找不到符合項目"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "No wrap indent"
+msgstr "續行不縮排"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "None"
+msgstr "無"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
@@ -2059,6 +2143,10 @@ msgstr "語法"
 msgid "Script She&bang Line"
 msgstr "腳本 She&bang 行"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Scroll Past &Last Line"
+msgstr "捲動超出最後一行(&L)"
+
 #: src/app/editor_frame.cpp
 msgid "Search wrapped"
 msgstr "循環搜尋"
@@ -2126,6 +2214,10 @@ msgstr "顯示空白字元(&W)\tCtrl+Shift+8"
 #: src/app/dialogs/long_line_settings_dialog.cpp
 msgid "Show &edge line."
 msgstr "顯示邊緣線(&E)。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Character &Info"
+msgstr "顯示字元資訊(&I)"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_SHOW_FOLDING; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -2246,6 +2338,14 @@ msgstr "切換至取代"
 #: src/app/editor_frame.cpp
 msgid "Switching the file encoding from ANSI to non-ANSI (and vice versa) may replace unsupported text with default characters, and the undo history will be cleared. Continue?"
 msgstr "將檔案編碼從 ANSI 切換到非 ANSI（或反之）可能將不支援的字元取代為預設字元，並且復原歷程將被清除。要繼續嗎？"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Symbol &after wrap:"
+msgstr "換行後的標記(&A)："
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Symbol &before wrap:"
+msgstr "換行前的標記(&B)："
 
 # Original Notepad4 zh-Hant: IDM_LANG_USER_DEFAULT; adapted where needed.
 #: src/app/language_commands.cpp
@@ -2484,6 +2584,10 @@ msgstr "UTF-16LE with BOM"
 msgid "UTF-8 with BOM"
 msgstr "UTF-8 with BOM"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Un&icode Control Character"
+msgstr "Un&icode 控制字元"
+
 # Original Notepad4 zh-Hant: IDM_SET_UNDO_REDO_SELECTION; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Undo Redo &Remember Selection"
@@ -2533,6 +2637,10 @@ msgstr "未命名"
 msgid "Update File Time"
 msgstr "更新檔案時間"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Use Default &Code Style\tShift+F12"
+msgstr "使用預設程式碼樣式(&C)\tShift+F12"
+
 # Original Notepad4 zh-Hant: IDD_TABSETTINGS/IDC_SCHEME_USE_GLOBAL_TAB; adapted where needed.
 #: src/app/dialogs/tab_settings_dialog.cpp
 msgid "Use Global Tab Settings"
@@ -2564,6 +2672,10 @@ msgstr "網頁原始碼"
 msgid "Western European"
 msgstr "西歐"
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Whitespace"
+msgstr "依空白"
+
 # Original Notepad4 zh-Hant: IDD_FIND/IDC_FINDWORD; adapted where needed.
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Whole &word"
@@ -2579,9 +2691,53 @@ msgstr "Windows (CR+LF)"
 msgid "With &Encoding...\tF8"
 msgstr "使用編碼(&W)...\tF8"
 
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Word"
+msgstr "依單字"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Word Wrap Settings"
+msgstr "自動換行設定"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Word Wrap Settings..."
+msgstr "自動換行設定..."
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Word completion"
 msgstr "單詞自動完成"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap &mode:"
+msgstr "換行模式(&M)："
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent 1 level more than first subline"
+msgstr "續行比第一個子行多縮排 1 層"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent 2 levels more than first subline"
+msgstr "續行比第一個子行多縮排 2 層"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent by 1 character"
+msgstr "續行縮排 1 個字元"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent by 1 level"
+msgstr "續行縮排 1 層"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent by 2 characters"
+msgstr "續行縮排 2 個字元"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent by 2 levels"
+msgstr "續行縮排 2 層"
+
+#: src/app/dialogs/word_wrap_settings_dialog.cpp
+msgid "Wrap indent same as first subline"
+msgstr "續行縮排與第一個子行相同"
 
 #: src/syntax/syntax_catalog.cpp
 msgid "XML Document"

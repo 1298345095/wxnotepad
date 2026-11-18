@@ -1,6 +1,7 @@
 #include "syntax/syntax_scheme.h"
 #include "editor/editor_ids.h"
 #include "editor/editor_control.h"
+#include "editor/font_settings.h"
 #include <ScintillaTypes.h>
 #include <array>
 #include <span>
@@ -19,12 +20,12 @@ void InstallStyles(EditorControl& editor, std::span<const SyntaxStyle> styles) {
         using enum Scintilla::Message;
         editor.Send(StyleSetFore, style.id, Colour(style.foreground));
         editor.Send(StyleSetBack, style.id, Colour(style.background));
-        editor.Send(StyleSetBold, style.id, style.bold);
-        editor.Send(StyleSetItalic, style.id, style.italic);
-        editor.Send(StyleSetEOLFilled, style.id, style.eolFilled);
-        editor.Send(StyleSetUnderline, style.id, style.underline);
-        editor.Send(StyleSetStrike, style.id, style.strike);
-        editor.Send(StyleSetOverline, style.id, style.overline);
+        if (style.bold) editor.Send(StyleSetBold, style.id, true);
+        if (style.italic) editor.Send(StyleSetItalic, style.id, true);
+        if (style.eolFilled) editor.Send(StyleSetEOLFilled, style.id, true);
+        if (style.underline) editor.Send(StyleSetUnderline, style.id, true);
+        if (style.strike) editor.Send(StyleSetStrike, style.id, true);
+        if (style.overline) editor.Send(StyleSetOverline, style.id, true);
     }
 }
 void InstallFolding(EditorControl& editor, bool fold) {
@@ -98,15 +99,14 @@ void ApplySyntaxLanguage(EditorControl& editor, SyntaxLanguage language, std::op
         editor.Send(Message::SetKeyWords, index, reinterpret_cast<intptr_t>(""));
     editor.Send(Message::SetProperty, reinterpret_cast<uintptr_t>("fold"),
                 reinterpret_cast<intptr_t>(fold ? "1" : "0"));
-    // Keep the native font/point size already installed on STYLE_DEFAULT.
-    editor.Send(Message::StyleSetFore, static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)),
-                Colour(0x000000));
-    editor.Send(Message::StyleSetBack, static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)),
-                Colour(0xFFFFFF));
-    for (const auto message : {Message::StyleSetBold, Message::StyleSetItalic, Message::StyleSetUnderline,
-                               Message::StyleSetStrike, Message::StyleSetOverline, Message::StyleSetEOLFilled})
-        editor.Send(message, static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::Default)), false);
+    ApplyFontSettings(editor, language);
     editor.Send(Message::StyleClearAll);
+    // The original Fold Ellipsis always names $(Code), including text schemes.
+    const auto codeFamily = DefaultStyleFont(editor.Fonts(), true).GetFaceName();
+    const auto codeName = codeFamily.ToUTF8();
+    editor.Send(Message::StyleSetFont,
+                static_cast<uintptr_t>(std::to_underlying(Scintilla::StylesCommon::FoldDisplayText)),
+                reinterpret_cast<intptr_t>(codeName.data()));
     // Original stlDefault.cpp / Styles.cpp: brace feedback uses independent
     // translucent overlays, preserving the current font and DPI settings.
     editor.Send(Message::BraceHighlightIndicator, 1, EditorIndicator::BraceMatch);
