@@ -30,6 +30,7 @@ struct OriginalSettings {
     uint16_t uiLanguage = UILanguage::System;
     bool showMenu = true;
     bool showStatusbar = true;
+    int fullScreenMode = FullScreenMode_Default;
     bool wordWrap = true;
     int wordWrapMode = std::to_underlying(Scintilla::Wrap::Auto);
     WrapContinuationIndent wordWrapIndent = WrapContinuationIndent::None;

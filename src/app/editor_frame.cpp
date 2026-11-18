@@ -13,8 +13,11 @@
 #include <wx/menu.h>
 #include <wx/fontdlg.h>
 #ifdef __WXGTK__
+#include <wx/display.h>
 #include <wx/fontutil.h>
 #include <gtk/gtk.h>
+#include <gdk/gdkx.h>
+#undef None
 #endif
 #include <wx/msgdlg.h>
 #include <wx/statusbr.h>
@@ -69,6 +72,14 @@ wxString DocumentEncodingLabel(const DocumentSession& document) {
 }
 } // namespace
 
+#ifdef __WXMSW__
+struct EditorFrame::FullScreenPlacement {
+    WINDOWPLACEMENT position{sizeof(WINDOWPLACEMENT)};
+    HMONITOR monitor = nullptr;
+    LONG style = 0;
+};
+#endif
+
 EditorFrame::EditorFrame(SettingsStore* settings)
     : wxFrame(nullptr, wxID_ANY, wxString::Format(_("%s - wxnotepad"), _("Untitled")), wxDefaultPosition,
               wxSize(900, 600)),
@@ -86,15 +97,22 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const auto& preferences = settings ? settings->values : defaults_;
 #ifdef __WXMSW__
     editor_->Send(Scintilla::Message::SetTechnology, preferences.renderingTechnology);
-    Bind(wxEVT_SHOW, [this](wxShowEvent& event) {
-        // Recalculate native bar metrics on the shown window before laying out
-        // the editor; Layout alone retains the pre-show non-client geometry.
-        if (event.IsShown()) CallAfter([this] { ApplyBarVisibility(); });
+#endif
+    Bind(wxEVT_SHOW, [this, firstShow = true](wxShowEvent& event) mutable {
+        if (event.IsShown()) {
+#ifdef __WXMSW__
+            // Recalculate native bar metrics on the shown window before laying out
+            // the editor; Layout alone retains the pre-show non-client geometry.
+            CallAfter([this] { ApplyBarVisibility(); });
+#endif
+            const auto fullScreenMode = (settings_ ? settings_->values : defaults_).fullScreenMode;
+            if (std::exchange(firstShow, false) && (fullScreenMode & FullScreenMode_OnStartup))
+                CallAfter([this] { SetFullScreen(true); });
+        }
         event.Skip();
     });
-#endif
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
-        if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
+        if (!FullScreenActive() && !IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
         event.Skip();
     });
     editor_->SetFontSettings(preferences.fonts);
@@ -155,8 +173,20 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     search_.SetWrapConfirmation([this](SearchDirection direction) { return SearchMessage(direction); });
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         UpdatePositionStatus();
+#ifdef __WXMSW__
+        if (FullScreenActive()) CallAfter([this] { RefreshFullScreen(); });
+#endif
         event.Skip();
     });
+#ifdef __WXMSW__
+    Bind(wxEVT_MOVE, [this](wxMoveEvent& event) {
+        const auto window = static_cast<HWND>(GetHandle());
+        if (fullScreenPlacement_ &&
+            fullScreenPlacement_->monitor != ::MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST))
+            CallAfter([this] { RefreshFullScreen(); });
+        event.Skip();
+    });
+#endif
     Bind(wxEVT_EDITOR_STATE_CHANGED, [this](wxCommandEvent&) { UpdateDocumentState(); });
     editor_->Bind(wxEVT_DROP_FILES, &EditorFrame::OnDropFiles, this);
     Bind(wxEVT_DROP_FILES, &EditorFrame::OnDropFiles, this);
@@ -195,10 +225,23 @@ EditorFrame::~EditorFrame() {
 
 #ifdef __WXMSW__
 bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
+    const bool keyDown = message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN;
+    const auto handle = static_cast<HWND>(GetHandle());
+    const bool windowModeKey = message->wParam == VK_F11 || message->wParam == VK_ESCAPE;
+    if (keyDown && windowModeKey && (message->hwnd == handle || ::IsChild(handle, message->hwnd))) {
+        const int modifiers = (::GetKeyState(VK_CONTROL) < 0 ? wxMOD_CONTROL : 0) |
+                              (::GetKeyState(VK_MENU) < 0 ? wxMOD_ALT : 0) |
+                              (::GetKeyState(VK_SHIFT) < 0 ? wxMOD_SHIFT : 0) |
+                              ((::GetKeyState(VK_LWIN) < 0 || ::GetKeyState(VK_RWIN) < 0) ? wxMOD_META : 0);
+        if (message->wParam == VK_F11) {
+            HandleFullScreenKey(modifiers);
+            return true;
+        }
+        if (message->wParam == VK_ESCAPE && modifiers == wxMOD_NONE && HandleFullScreenEscape()) return true;
+    }
     // A hidden native menu receives no WM_INITMENU to refresh command state.
     // Refresh command gestures, leaving ordinary character input alone.
-    if (!(settings_ ? settings_->values : defaults_).showMenu &&
-        (message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN)) {
+    if (!(settings_ ? settings_->values : defaults_).showMenu && keyDown) {
         const bool functionKey = message->wParam >= VK_F1 && message->wParam <= VK_F24;
         const bool modifiedCommand = ::GetKeyState(VK_CONTROL) < 0 || ::GetKeyState(VK_MENU) < 0;
         const bool shiftedEdit =
@@ -208,6 +251,85 @@ bool EditorFrame::MSWTranslateMessage(WXMSG* message) {
     return wxFrame::MSWTranslateMessage(message);
 }
 #endif
+
+bool EditorFrame::FullScreenActive() const {
+#ifdef __WXMSW__
+    return fullScreenPlacement_ != nullptr;
+#else
+    return IsFullScreen();
+#endif
+}
+
+void EditorFrame::SetFullScreen(bool active) {
+    if (active == FullScreenActive()) return;
+#ifdef __WXMSW__
+    const auto window = static_cast<HWND>(GetHandle());
+    if (active) {
+        auto placement = std::make_unique<FullScreenPlacement>();
+        if (!::GetWindowPlacement(window, &placement->position)) return;
+        placement->style = ::GetWindowLongW(window, GWL_STYLE);
+        fullScreenPlacement_ = std::move(placement);
+        if (::IsZoomed(window)) ::ShowWindow(window, SW_RESTORE);
+        RefreshFullScreen();
+    } else {
+        ::SetWindowLongW(window, GWL_STYLE, fullScreenPlacement_->style);
+        const auto& position = fullScreenPlacement_->position;
+        if (position.showCmd == SW_SHOWMAXIMIZED) ::ShowWindow(window, SW_RESTORE);
+        ::SetWindowPlacement(window, &position);
+        ::SetWindowPos(window, nullptr, 0, 0, 0, 0,
+                       SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        fullScreenPlacement_.reset();
+        if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
+    }
+#else
+#ifdef __WXGTK__
+    if (active) {
+        auto* screen = gtk_widget_get_screen(GTK_WIDGET(GetHandle()));
+        if (GDK_IS_X11_DISPLAY(gdk_screen_get_display(screen)) &&
+            !gdk_x11_screen_supports_net_wm_hint(screen, gdk_atom_intern_static_string("_NET_WM_STATE_FULLSCREEN"))) {
+            const auto bounds = wxDisplay(this).GetGeometry();
+            ShowFullScreen(true, 0);
+            SetSize(bounds);
+            return;
+        }
+    }
+#endif
+    ShowFullScreen(active, 0);
+#endif
+}
+
+#ifdef __WXMSW__
+void EditorFrame::RefreshFullScreen() {
+    if (!fullScreenPlacement_) return;
+    const auto window = static_cast<HWND>(GetHandle());
+    MONITORINFO monitor{sizeof(MONITORINFO)};
+    const auto currentMonitor = ::MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
+    if (!::GetMonitorInfoW(currentMonitor, &monitor)) return;
+    fullScreenPlacement_->monitor = currentMonitor;
+    const auto dpi = ::GetDpiForWindow(window);
+    const int padding = ::GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+    const int frameWidth = ::GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + padding;
+    const int frameHeight = ::GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) + padding;
+    const auto fullScreenMode = (settings_ ? settings_->values : defaults_).fullScreenMode;
+    const bool hideTitle = (fullScreenMode & FullScreenMode_HideTitle) != 0;
+    const int topInset = frameHeight + (hideTitle ? ::GetSystemMetricsForDpi(SM_CYCAPTION, dpi) : 0);
+    const auto& bounds = monitor.rcMonitor;
+    ::SetWindowLongW(window, GWL_STYLE, fullScreenPlacement_->style & ~(WS_THICKFRAME | WS_MAXIMIZE));
+    // The off-screen caption inset exceeds the default native tracking height.
+    ::SetWindowPos(window, nullptr, bounds.left - frameWidth, bounds.top - topInset,
+                   bounds.right - bounds.left + 2 * frameWidth, bounds.bottom - bounds.top + topInset + frameHeight,
+                   SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
+}
+#endif
+
+bool EditorFrame::HandleFullScreenEscape() {
+    using enum Scintilla::Message;
+    if (!FullScreenActive() || wxWindow::FindFocus() != editor_ || editor_->Send(AutoCActive) ||
+        editor_->Send(CallTipActive))
+        return false;
+    SetFullScreen(false);
+    return true;
+}
 
 void EditorFrame::ApplyBarVisibility() {
     const auto& preferences = settings_ ? settings_->values : defaults_;
