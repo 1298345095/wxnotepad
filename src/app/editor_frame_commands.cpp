@@ -217,6 +217,9 @@ wxMenu* EditorFrame::CreateFileMenu() {
     }
     file->Append(wxID_SAVE, _("&Save\tCtrl+S"));
     file->Append(wxID_SAVEAS, _("Save &As...\tF6"));
+    const int saveBackup = wxWindow::NewControlId();
+    file->Append(saveBackup, _("Save Back&up"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { document_.SaveBackup(); }, saveBackup);
     saveCopyId_ = wxWindow::NewControlId();
     file->Append(saveCopyId_, _("Save Cop&y...\tCtrl+F6"));
     const int saveOriginalTime = wxWindow::NewControlId();
