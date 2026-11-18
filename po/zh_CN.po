@@ -514,6 +514,10 @@ msgstr "选中文本(&S)"
 msgid "&Sentence Case\tCtrl+Alt+O"
 msgstr "句首大写(&S)\tCtrl+Alt+O"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Show Hex Code"
+msgstr "显示十六进制代码(&S)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDD_CHANGENOTIFY / IDC_CHANGENOTIFY_SHOW_MSG.
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Show message."
@@ -836,6 +840,10 @@ msgstr "更改界面语言需要重新启动 wxnotepad，现在就重新启动�
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Character"
 msgstr "按字符"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Character Info"
+msgstr "字符信息"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Chinese"
@@ -2024,6 +2032,10 @@ msgstr "显示空白(&W)\tCtrl+Shift+8"
 msgid "Show &edge line."
 msgstr "显示边缘线(&G)。"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Show Character &Info"
+msgstr "显示字符信息(&I)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOW_FOLDING.
 #: src/app/editor_frame_commands.cpp
 msgid "Show Code &Folding\tCtrl+Shift+Alt+F"
@@ -2378,6 +2390,10 @@ msgstr "UTF-16LE 带 BOM"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "UTF-8 with BOM"
 msgstr "UTF-8 带 BOM"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Un&icode Control Character"
+msgstr "显示 Unicode 控制字符(&I)"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Undo Redo &Remember Selection"
