@@ -27,6 +27,7 @@ struct OriginalSettings {
     bool saveBeforeRunningTools = false;
     uint16_t uiLanguage = UILanguage::System;
     bool wordWrap = true;
+    int endAtLastLine = 1;
     bool showLineNumbers = true;
     bool showBookmarkMargin = false;
     int changeHistoryMarker = 0;
