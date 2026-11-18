@@ -64,7 +64,12 @@ void CheckMenu(EditorFrame* frame) {
            "Long Line Marker",       "Indentation Guides",        "Show Whitespace",       "Show Line Endings",
            "Show Wrap Symbols",      "Unicode Control Character", "Visual Brace Matching", "Highlight Current Block",
            "Highlight Current Line", "Mark Occurrences",          "Line Numbers",          "Bookmark Margin",
-           "Change History Marker",  "Show Code Folding",         "Toggle Folds",          "Zoom"});
+           "Change History Marker",  "Show Code Folding",         "Toggle Folds",          "Zoom",
+#ifdef __WXMSW__
+           "Toggle Full Screen"});
+#else
+           "Toggle Full Screen [Esc]"});
+#endif
     auto* folds = Submenu(bar->GetMenu(3), "Toggle Folds");
     Order(folds, {"Default Levels", "All Levels", "Current Block", "Current Level", "Level 1", "Level 2", "Level 3",
                   "Level 4", "Level 5", "Level 6", "Level 7", "Level 8", "Level 9", "Level 10"});

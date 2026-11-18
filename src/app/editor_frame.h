@@ -2,6 +2,7 @@
 
 #include <wx/frame.h>
 #include <array>
+#include <memory>
 #include "document/document_session.h"
 #include "search/search_session.h"
 #include "editor/indentation_settings.h"
@@ -59,6 +60,15 @@ private:
     SettingsStore* settings_;
     const wxString launchWorkingDirectory_;
     wxSize normalWindowSize_;
+    bool FullScreenActive() const;
+    void SetFullScreen(bool active);
+    void HandleFullScreenKey(int modifiers);
+    bool HandleFullScreenEscape();
+#ifdef __WXMSW__
+    struct FullScreenPlacement;
+    std::unique_ptr<FullScreenPlacement> fullScreenPlacement_;
+    void RefreshFullScreen();
+#endif
     OriginalSettings defaults_;
     IndentationSettings indentation_;
     DocumentSession document_;
