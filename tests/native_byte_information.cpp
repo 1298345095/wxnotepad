@@ -101,7 +101,7 @@ void CheckInvalidByte(EditorFrame* frame) {
                 editor->Send(CanUndo) && !editor->Send(CanRedo),
             "character information preserves invalid bytes and edit history");
     std::puts("PASS: invalid UTF-8 Character Info retains original technical fields and copied payload");
-    std::filesystem::remove_all(directory);
+    // TemporaryRoot removes the directory after wxEntryCleanup destroys the frame and its watcher.
 }
 
 class NativeByteInformationApp final : public wxApp {
