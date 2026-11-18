@@ -85,6 +85,7 @@ private:
     int wordWrapSymbols_ = 2;
     void ApplyWrapSymbols();
     void CreateMenus();
+    void ApplyBarVisibility();
     wxMenu* CreateFileMenu();
     void AppendReloadEncodingCommands(wxMenu* reload);
     void AppendEncodingCommands(wxMenu* file);

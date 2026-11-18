@@ -26,6 +26,8 @@ struct OriginalSettings {
     bool saveSettings = true;
     bool saveBeforeRunningTools = false;
     uint16_t uiLanguage = UILanguage::System;
+    bool showMenu = true;
+    bool showStatusbar = true;
     bool wordWrap = true;
     bool showLineNumbers = true;
     bool showBookmarkMargin = false;

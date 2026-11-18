@@ -102,6 +102,8 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.relativeFileMRU = ReadBool("RelativeFileMRU", true, "Settings2");
     values.portableMyDocs = ReadBool("PortableMyDocs", values.relativeFileMRU, "Settings2");
     if (values.saveRecentFiles) values.recentFiles = ReadRecentFiles();
+    values.showMenu = ReadBool("ShowMenu", defaults.showMenu);
+    values.showStatusbar = ReadBool("ShowStatusbar", defaults.showStatusbar);
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
     values.autoShrinkScrollWidth = ReadBool("AutoShrinkScrollWidth", defaults.autoShrinkScrollWidth, "wxnotepad");
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
@@ -457,6 +459,8 @@ bool SettingsStore::Save(bool explicitSave) {
                  static_cast<int>((static_cast<unsigned>(values.maxRecentFiles) << 1) |
                                   static_cast<unsigned>(values.saveRecentFiles)),
                  RecentFiles::MinimumCapacity << 1);
+        WriteBool("ShowMenu", values.showMenu, defaults.showMenu);
+        WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
         WriteBool("AutoShrinkScrollWidth", values.autoShrinkScrollWidth, defaults.autoShrinkScrollWidth, "wxnotepad");
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);

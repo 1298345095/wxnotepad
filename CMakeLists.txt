@@ -819,6 +819,11 @@ if(BUILD_TESTING)
     add_test(NAME completion_candidate_contract COMMAND completion_candidates)
     set_tests_properties(completion_candidate_contract PROPERTIES TIMEOUT 20)
 
+    add_editor_test(bar_visibility original_bar_visibility 60)
+    add_test(NAME original_bar_visibility_lifecycle COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/bar_visibility_process.py" "$<TARGET_FILE:bar_visibility>")
+    set_tests_properties(original_bar_visibility_lifecycle PROPERTIES TIMEOUT 120)
+
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

@@ -16,6 +16,9 @@
 #include <wx/filename.h>
 #include <wx/translation.h>
 #include <array>
+#ifdef __WXMSW__
+#include <wx/msw/wrapwin.h>
+#endif
 
 namespace {
 wxString EncodingName(FileEncoding encoding) {
@@ -131,6 +134,7 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     document_.New();
     CreateMenus();
     CreateStatusBar(3);
+    ApplyBarVisibility();
     search_.SetWrapConfirmation([this](SearchDirection direction) { return SearchMessage(direction); });
     Bind(wxEVT_DPI_CHANGED, [this](wxDPIChangedEvent& event) {
         UpdatePositionStatus();
@@ -161,6 +165,24 @@ EditorFrame::EditorFrame(SettingsStore* settings)
 #endif
     UpdateDocumentState();
     editor_->SetFocus();
+}
+
+void EditorFrame::ApplyBarVisibility() {
+    const auto& preferences = settings_ ? settings_->values : defaults_;
+#ifdef __WXMSW__
+    // Adapt Notepad4 89b8b36 IDM_VIEW_MENU: hide the native HMENU while
+    // retaining wx's attached menu and its accelerator table.
+    const auto window = static_cast<HWND>(GetHandle());
+    ::SetMenu(window, preferences.showMenu ? static_cast<HMENU>(GetMenuBar()->GetHMenu()) : nullptr);
+    ::DrawMenuBar(window);
+#else
+    // Keep the GTK menu's accelerator group attached when its widget is hidden.
+    GetMenuBar()->Show(preferences.showMenu);
+#endif
+    GetStatusBar()->Show(preferences.showStatusbar);
+    SendSizeEvent();
+    Layout();
+    UpdateDocumentState();
 }
 
 bool EditorFrame::SaveSettings(bool explicitSave) {
