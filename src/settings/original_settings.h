@@ -29,6 +29,10 @@ struct OriginalSettings {
     bool saveBeforeRunningTools = false;
     uint16_t uiLanguage = UILanguage::System;
     bool wordWrap = true;
+    int wordWrapMode = std::to_underlying(Scintilla::Wrap::Auto);
+    WrapContinuationIndent wordWrapIndent = WrapContinuationIndent::None;
+    bool wordWrapSelectSubLine = false;
+    int endAtLastLine = 1;
     bool showLineNumbers = true;
     bool showBookmarkMargin = false;
     int changeHistoryMarker = 0;

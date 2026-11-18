@@ -105,6 +105,14 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     values.portableMyDocs = ReadBool("PortableMyDocs", values.relativeFileMRU, "Settings2");
     if (values.saveRecentFiles) values.recentFiles = ReadRecentFiles();
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
+    values.wordWrapMode =
+        std::clamp(ReadInt("WordWrapMode", defaults.wordWrapMode), std::to_underlying(Scintilla::Wrap::Word),
+                   std::to_underlying(Scintilla::Wrap::Auto));
+    values.wordWrapIndent = static_cast<WrapContinuationIndent>(std::clamp(
+        ReadInt("WordWrapIndent", std::to_underlying(defaults.wordWrapIndent)),
+        std::to_underlying(WrapContinuationIndent::None), std::to_underlying(WrapContinuationIndent::DeepIndent)));
+    values.wordWrapSelectSubLine = ReadBool("WordWrapSelectSubLine", defaults.wordWrapSelectSubLine);
+    values.endAtLastLine = std::clamp(ReadInt("EndAtLastLine", defaults.endAtLastLine), 0, 4);
     values.autoShrinkScrollWidth = ReadBool("AutoShrinkScrollWidth", defaults.autoShrinkScrollWidth, "wxnotepad");
     values.showLineNumbers = ReadBool("ShowLineNumbers", defaults.showLineNumbers);
     values.showBookmarkMargin = ReadBool("ShowBookmarkMargin", defaults.showBookmarkMargin);
@@ -472,6 +480,11 @@ bool SettingsStore::Save(bool explicitSave) {
                                   static_cast<unsigned>(values.saveRecentFiles)),
                  RecentFiles::MinimumCapacity << 1);
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
+        WriteInt("WordWrapMode", values.wordWrapMode, defaults.wordWrapMode);
+        WriteInt("WordWrapIndent", std::to_underlying(values.wordWrapIndent),
+                 std::to_underlying(defaults.wordWrapIndent));
+        WriteBool("WordWrapSelectSubLine", values.wordWrapSelectSubLine, defaults.wordWrapSelectSubLine);
+        WriteInt("EndAtLastLine", values.endAtLastLine, defaults.endAtLastLine);
         WriteBool("AutoShrinkScrollWidth", values.autoShrinkScrollWidth, defaults.autoShrinkScrollWidth, "wxnotepad");
         WriteBool("ShowLineNumbers", values.showLineNumbers, defaults.showLineNumbers);
         WriteBool("ShowBookmarkMargin", values.showBookmarkMargin, defaults.showBookmarkMargin);

@@ -332,15 +332,67 @@ void EditorControl::SetAutoShrinkScrollWidth(bool enabled) {
 }
 
 void EditorControl::ToggleWordWrap() {
-    using enum Scintilla::Wrap;
-    const auto mode = Send(Message::GetWrapMode) == static_cast<intptr_t>(std::to_underlying(None)) ? Word : None;
+    SetWordWrapMode(Send(Message::GetWrapMode) ? Scintilla::Wrap::None : wordWrapMode_);
+}
+
+void EditorControl::SetWordWrapMode(Scintilla::Wrap mode) {
+    if (mode != Scintilla::Wrap::None) wordWrapMode_ = mode;
     Send(Message::SetWrapMode, static_cast<uintptr_t>(std::to_underlying(mode)));
     core_->UpdateWrapLayout();
+}
+
+void EditorControl::SetWordWrapIndent(WrapContinuationIndent indent) {
+    wordWrapIndent_ = indent;
+    ApplyWrapIndent();
+    core_->UpdateWrapLayout();
+}
+
+void EditorControl::ApplyWrapIndent() {
+    // Notepad4 89b8b36 Edit.cpp::EditSetWrapIndentMode/EditSetWrapStartIndent.
+    // Copyright (c) Notepad4 contributors; see licenses/Notepad4.txt.
+    using enum WrapContinuationIndent;
+    auto mode = Scintilla::WrapIndentMode::Fixed;
+    switch (wordWrapIndent_) {
+    case Same:
+        mode = Scintilla::WrapIndentMode::Same;
+        break;
+    case Indent:
+        mode = Scintilla::WrapIndentMode::Indent;
+        break;
+    case DeepIndent:
+        mode = Scintilla::WrapIndentMode::DeepIndent;
+        break;
+    default: {
+        int indent = 0;
+        const auto indentWidth = Send(Message::GetIndent);
+        const int width = static_cast<int>(indentWidth ? indentWidth : Send(Message::GetTabWidth));
+        switch (wordWrapIndent_) {
+        case OneCharacter:
+            indent = 1;
+            break;
+        case TwoCharacters:
+            indent = 2;
+            break;
+        case OneLevel:
+            indent = width;
+            break;
+        case TwoLevels:
+            indent = 2 * width;
+            break;
+        default:
+            break;
+        }
+        Send(Message::SetWrapStartIndent, indent);
+        break;
+    }
+    }
+    Send(Message::SetWrapIndentMode, std::to_underlying(mode));
 }
 
 void EditorControl::SetIndentationWidths(int tabWidth, int indentWidth) {
     Send(Message::SetTabWidth, tabWidth);
     Send(Message::SetIndent, indentWidth);
+    ApplyWrapIndent();
     core_->UpdateWrapLayout();
 }
 
