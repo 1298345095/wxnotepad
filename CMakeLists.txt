@@ -631,6 +631,18 @@ if(BUILD_TESTING)
     add_test(NAME original_guides_settings_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/guides_process.py" "$<TARGET_FILE:guides>")
     set_tests_properties(original_guides_settings_lifecycle PROPERTIES TIMEOUT 90)
+    add_editor_test(unicode_controls original_unicode_controls 60)
+    if(WIN32)
+        add_test(NAME original_unicode_controls_dpi96 COMMAND unicode_controls)
+        set_tests_properties(original_unicode_controls_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_UNICODE_DPI96=1")
+    endif()
+    foreach(language en zh_CN zh_TW)
+        add_test(NAME original_unicode_controls_process_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/unicode_controls_process.py" "$<TARGET_FILE:wxnotepad>"
+            --language "${language}")
+        set_tests_properties(original_unicode_controls_process_${language} PROPERTIES TIMEOUT 90)
+    endforeach()
     add_editor_test(line_symbols original_line_symbols 60)
     add_test(NAME original_line_symbol_settings COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/line_symbols_process.py" "$<TARGET_FILE:line_symbols>"
@@ -760,7 +772,7 @@ if(BUILD_TESTING)
         set_tests_properties(native_directwrite_original_custom_contrast PROPERTIES TIMEOUT 90
             ENVIRONMENT "MACTYPE_FORCE_EXCLUDE=1")
 
-        foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup)
+        foreach(probe wrap_resize caret_appearance auto_insertion automatic_completion completion_popup unicode_controls)
             add_gui_program(directwrite_${probe} tests/${probe}.cpp app_shell)
             target_compile_definitions(directwrite_${probe} PRIVATE WXNOTEPAD_TEST_DIRECTWRITE)
         endforeach()
@@ -770,6 +782,11 @@ if(BUILD_TESTING)
         set_tests_properties(native_directwrite_caret_appearance PROPERTIES TIMEOUT 60)
         add_test(NAME native_directwrite_caret_dpi96 COMMAND directwrite_caret_appearance)
         set_tests_properties(native_directwrite_caret_dpi96 PROPERTIES TIMEOUT 60 ENVIRONMENT "WXNOTEPAD_CARET_DPI96=1")
+        add_test(NAME native_directwrite_unicode_controls COMMAND directwrite_unicode_controls)
+        set_tests_properties(native_directwrite_unicode_controls PROPERTIES TIMEOUT 60)
+        add_test(NAME native_directwrite_unicode_controls_dpi96 COMMAND directwrite_unicode_controls)
+        set_tests_properties(native_directwrite_unicode_controls_dpi96 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "WXNOTEPAD_UNICODE_DPI96=1")
         add_test(NAME native_directwrite_auto_insertion COMMAND directwrite_auto_insertion)
         set_tests_properties(native_directwrite_auto_insertion PROPERTIES TIMEOUT 90)
         add_test(NAME native_directwrite_automatic_completion COMMAND directwrite_automatic_completion)
