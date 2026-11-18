@@ -923,6 +923,10 @@ if(BUILD_TESTING)
         set_tests_properties(original_hidden_menu_cleanup PROPERTIES TIMEOUT 15)
     endif()
 
+    if(WIN32)
+        add_editor_test(native_byte_allocation native_byte_allocation_failures 60)
+        target_sources(native_byte_allocation PRIVATE tests/completion_allocation_fault.cpp)
+    endif()
 endif()
 
 # Keep instrumentation local to project targets, including inline code exercised

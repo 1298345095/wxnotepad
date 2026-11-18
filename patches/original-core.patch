@@ -417,7 +417,135 @@
  #if defined(BOOST_REGEX_STANDALONE)
  #include <boost/regex.hpp>
  #elif !defined(NO_CXX11_REGEX)
-@@ -2216,7 +2220,12 @@
+@@ -1315,6 +1319,19 @@
+ 	}
+ }
+ 
++namespace {
++// Keep the document's edit gateway usable when a pre-edit watcher rejects an
++// operation (for example, native-byte provenance cannot reserve its storage).
++class ModificationGuard final {
++	int &entered;
++public:
++	explicit ModificationGuard(int &entered_) noexcept : entered(entered_) { ++entered; }
++	~ModificationGuard() { --entered; }
++	ModificationGuard(const ModificationGuard &) = delete;
++	ModificationGuard &operator=(const ModificationGuard &) = delete;
++};
++}
++
+ // Document only modified by gateways DeleteChars, InsertString, Undo, Redo, and SetStyleAt.
+ // SetStyleAt does not change the persistent state of a document
+ 
+@@ -1329,17 +1346,17 @@
+ 	if (enteredModification != 0) {
+ 		return false;
+ 	}
+-	enteredModification++;
++	const ModificationGuard modificationGuard(enteredModification);
+ 	if (!cb.IsReadOnly()) {
+-		if (cb.IsCollectingUndo() && cb.CanRedo()) {
+-			// Abandoning some undo actions so truncate any later selections
+-			TruncateUndoComments(cb.UndoCurrent());
+-		}
+ 		NotifyModified(
+ 			DocModification(
+ 				ModificationFlags::BeforeDelete | ModificationFlags::User,
+ 				pos, len,
+ 				0, nullptr));
++		if (cb.IsCollectingUndo() && cb.CanRedo()) {
++			// Abandoning some undo actions so truncate any later selections
++			TruncateUndoComments(cb.UndoCurrent());
++		}
+ 		const Sci::Line prevLinesTotal = LinesTotal();
+ 		const bool startSavePoint = cb.IsSavePoint();
+ 		bool startSequence = false;
+@@ -1357,7 +1374,6 @@
+ 				pos, len,
+ 				LinesTotal() - prevLinesTotal, text));
+ 	}
+-	enteredModification--;
+ 	return !cb.IsReadOnly();
+ }
+ 
+@@ -1393,7 +1409,7 @@
+ 	if (enteredModification != 0) {
+ 		return 0;
+ 	}
+-	enteredModification++;
++	const ModificationGuard modificationGuard(enteredModification);
+ 	insertionSet = false;
+ 	insertion.clear();
+ 	NotifyModified(
+@@ -1403,21 +1419,20 @@
+ 			0, s));
+ 	if (insertionSet) {
+ 		if (insertion.empty()) {
+-			enteredModification--;
+ 			return 0;
+ 		}
+ 		s = insertion.c_str();
+ 		insertLength = insertion.length();
+-	}
+-	if (cb.IsCollectingUndo() && cb.CanRedo()) {
+-		// Abandoning some undo actions so truncate any later selections
+-		TruncateUndoComments(cb.UndoCurrent());
+ 	}
+ 	NotifyModified(
+ 		DocModification(
+ 			ModificationFlags::BeforeInsert | ModificationFlags::User,
+ 			position, insertLength,
+ 			0, s));
++	if (cb.IsCollectingUndo() && cb.CanRedo()) {
++		// Abandoning some undo actions so truncate any later selections
++		TruncateUndoComments(cb.UndoCurrent());
++	}
+ 	const Sci::Line prevLinesTotal = LinesTotal();
+ 	const bool startSavePoint = cb.IsSavePoint();
+ 	bool startSequence = false;
+@@ -1444,7 +1459,6 @@
+ 	if (insertionSet) {	// Free memory as could be large
+ 		std::string().swap(insertion);
+ 	}
+-	enteredModification--;
+ 	return insertLength;
+ }
+ 
+@@ -1477,7 +1491,7 @@
+ 	Sci::Position newPos = -1;
+ 	CheckReadOnly();
+ 	if ((enteredModification == 0) && (cb.IsCollectingUndo())) {
+-		enteredModification++;
++		const ModificationGuard modificationGuard(enteredModification);
+ 		if (!cb.IsReadOnly()) {
+ 			const bool startSavePoint = cb.IsSavePoint();
+ 			bool multiLine = false;
+@@ -1540,7 +1554,6 @@
+ 			if (startSavePoint != endSavePoint)
+ 				NotifySavePoint(endSavePoint);
+ 		}
+-		enteredModification--;
+ 	}
+ 	return newPos;
+ }
+@@ -1549,7 +1562,7 @@
+ 	Sci::Position newPos = -1;
+ 	CheckReadOnly();
+ 	if ((enteredModification == 0) && (cb.IsCollectingUndo())) {
+-		enteredModification++;
++		const ModificationGuard modificationGuard(enteredModification);
+ 		if (!cb.IsReadOnly()) {
+ 			const bool startSavePoint = cb.IsSavePoint();
+ 			bool multiLine = false;
+@@ -1600,7 +1613,6 @@
+ 			if (startSavePoint != endSavePoint)
+ 				NotifySavePoint(endSavePoint);
+ 		}
+-		enteredModification--;
+ 	}
+ 	return newPos;
+ }
+@@ -2216,7 +2228,12 @@
  			charBytes[b] = cb.UCharAt(position + b);
  		}
  		const CharacterExtracted charExtracted = CharacterExtracted(charBytes.data(), widthCharBytes);
