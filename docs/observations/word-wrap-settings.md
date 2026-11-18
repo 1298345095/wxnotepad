@@ -64,7 +64,10 @@ selection/highlighting flags, row count, fold visibility, reversed selection,
 modified/Undo/Redo state, line height, Latin/CJK glyph advances and every input
 byte. All 64 independent comparisons passed.
 
-Cross-process geometry must use the target's DPI context. Python's default
+Cross-process geometry must use the target's DPI context:
+[GetWindowRect is DPI-virtualized](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowrect),
+and [SetThreadDpiAwarenessContext](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setthreaddpiawarenesscontext)
+sets the caller's context and returns the prior context for restoration. Python's default
 unaware context virtualized a requested 480-pixel viewport to 720 physical pixels
 for a 144-DPI PMv2 original window. The capture now explicitly uses PMv2 at 144
 DPI and the unaware context for the complementary 96-DPI target. It asserts the
