@@ -44,7 +44,8 @@ void CheckMenu(EditorFrame* frame) {
           {"Move Up", "Move Down", "Transpose", "Sort Lines...", "Modify Lines...", "Align Lines...", "Duplicate Line",
            "Cut Line", "Copy Line", "Delete Line", "Join Lines", "Split Lines", "Column Wrap...", "Join Paragraphs"});
     Order(Submenu(bar->GetMenu(1), "Special"),
-          {"Complete Word", "Character to Hex", "Hex to Character", "Escape C Chars", "Unescape C Chars"});
+          {"Show Hex Code", "Show Character Info", "Complete Word", "Character to Hex", "Hex to Character",
+           "Escape C Chars", "Unescape C Chars"});
     Order(Submenu(bar->GetMenu(0), "Line Endings"),
           {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)", "Default..."});
     // Notepad4.rc at 89b8b36: CMD_RELOADUTF8, separator, IDM_RECODE_SELECT,
