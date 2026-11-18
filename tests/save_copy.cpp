@@ -83,6 +83,8 @@ public:
         for (auto* window : wxTopLevelWindows) {
             auto* dialog = wxDynamicCast(window, wxDialog);
             if (!dialog || !dialog->IsModal() || dialog->GetTitle() != "Encoding character loss") continue;
+            // Click yields while this closing dialog can still report itself as modal.
+            Stop();
             ++losses;
             NativeSearch::Click(dialog, loss_ == EncodingLossChoice::Replace ? wxID_OK : wxID_CANCEL);
             return;
