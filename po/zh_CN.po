@@ -1930,6 +1930,10 @@ msgstr "另存为(&A)...\tF6"
 msgid "Save As"
 msgstr "另存为"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Save Back&up"
+msgstr "保存备份(&U)"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_SAVECOPY.
 #: src/app/editor_frame_commands.cpp
 msgid "Save Cop&y...\tCtrl+F6"
