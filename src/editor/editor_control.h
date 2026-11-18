@@ -32,6 +32,8 @@ enum class BlockNavigation { Start, End, Previous, Next, PreviousSibling, NextSi
 
 // A wx window backed by exactly one original Notepad4 Scintilla document.
 // Commands use the pinned core's public message API; no mirrored wx text exists.
+struct FontSettings;
+
 class EditorControl final : public wxControl {
 public:
     explicit EditorControl(wxWindow* parent, int selectionOptions = SelectOption_Default);
@@ -94,6 +96,8 @@ public:
     }
     void SetAutoInsertMask(int mask);
     bool IsOpenBraceMatched(intptr_t position, intptr_t startPosition);
+    void SetFontSettings(const FontSettings& settings);
+    const FontSettings& Fonts() const;
     void SetCompletionStyles(CompletionStyles styles) { completionStyles_ = std::move(styles); }
     bool AutoIndentEnabled() const { return autoIndent_; }
     void SetAutoIndent(bool enabled) { autoIndent_ = enabled; }
@@ -163,6 +167,7 @@ private:
     WordCompletionState completionState_;
     std::function<void(WordCompletionCondition)> wordCompletionHandler_;
     int autoInsertMask_ = AutoInsertMask_Default;
+    std::shared_ptr<const FontSettings> fontSettings_;
     CompletionStyles completionStyles_;
     void AutoInsertCharacter(int ch);
     // False retains the original failed-tag member-arrow completion path.
