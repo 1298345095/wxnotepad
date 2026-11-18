@@ -17,6 +17,7 @@ struct ReadResult {
 };
 
 bool Write(wxWindow& owner, const Scintilla::Internal::SelectionText& text);
+bool WriteRtf(wxWindow& owner, std::string rtf);
 bool HasText() noexcept;
 bool HasData(wxWindow& owner);
 // True when a nonempty native clipboard was successfully cleared.

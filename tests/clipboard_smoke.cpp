@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include <SciLexer.h>
 #include <array>
 #include "app/editor_frame.h"
 #include "editor_test_helpers.h"
@@ -2251,6 +2252,189 @@ void OfferArrival(EditorFrame* frame, EditorControl* editor, Peer& peer) {
             "new native text offer enables Paste");
     std::puts("PASS: focused native offer arrival and Paste availability");
 }
+void RtfFont(EditorControl* editor, const char* face,
+             unsigned style = static_cast<unsigned>(Scintilla::StylesCommon::Default)) {
+    using enum Scintilla::Message;
+    editor->Send(StyleSetFont, style, reinterpret_cast<intptr_t>(face));
+    constexpr intptr_t pointSize = 11;
+    editor->Send(StyleSetSizeFractional, style, pointSize * Scintilla::FontSizeMultiplier);
+}
+
+void RtfStyleOverrides(EditorControl* editor) {
+    using enum Scintilla::Message;
+    constexpr unsigned keyword = SCE_C_WORD;
+    constexpr unsigned comment = SCE_C_COMMENTLINE;
+    editor->Send(StyleSetFont, keyword, reinterpret_cast<intptr_t>("Consolas"));
+    editor->Send(StyleSetSizeFractional, keyword, 1350);
+    editor->Send(StyleSetWeight, keyword, static_cast<intptr_t>(Scintilla::FontWeight::SemiBold));
+    editor->Send(StyleSetItalic, keyword, 1);
+    editor->Send(StyleSetUnderline, keyword, 1);
+    editor->Send(StyleSetStrike, keyword, 1);
+    editor->Send(StyleSetCharacterSet, keyword, static_cast<intptr_t>(Scintilla::CharacterSet::Russian));
+    editor->Send(StyleSetBack, keyword, 0xD0D0FF);
+    editor->Send(StyleSetBack, comment, 0xF0FFF0);
+    editor->Send(StyleSetEOLFilled, comment, 1);
+}
+
+std::vector<intptr_t> RtfSelectionState(EditorControl* editor) {
+    using enum Scintilla::Message;
+    std::vector<intptr_t> state;
+    for (const auto message : {GetAnchor, GetCurrentPos, GetModify, CanUndo, CanRedo, GetSelections, GetMainSelection,
+                               GetSelectionMode, GetReadOnly, GetSelectionStart, GetSelectionEnd})
+        state.push_back(editor->Send(message));
+    for (intptr_t index = 0; index < editor->Send(GetSelections); ++index) {
+        for (const auto message :
+             {GetSelectionNAnchor, GetSelectionNCaret, GetSelectionNAnchorVirtualSpace, GetSelectionNCaretVirtualSpace})
+            state.push_back(editor->Send(message, index));
+    }
+    return state;
+}
+
+void RequireNativeRtf(Peer& peer, std::string_view fixture, unsigned codePage) {
+    const auto original = std::filesystem::path(WXNOTEPAD_RTF_REFERENCE_DIR) / (std::string(fixture) + ".rtf");
+    auto expected = TestFiles::Bytes(original);
+    constexpr std::string_view capturedCodePage = "936";
+    const auto codePageTag = expected.find(R"(\ansicpg936)");
+    Require(codePageTag != std::string::npos, "reference capture contains the original ACP936 header");
+    expected.replace(codePageTag + std::string_view(R"(\ansicpg)").size(), capturedCodePage.size(),
+                     std::to_string(codePage));
+    Require(peer.Request("rtf-read") == "rtf", "independent peer receives only the native rich-text offer");
+    const auto actual = peer.SavedText();
+    if (actual != expected) {
+        peer.PreserveSavedText("rtf-peer-mismatch.rtf");
+        throw std::runtime_error("native RTF differs from pinned original capture: " + std::string(fixture));
+    }
+    std::printf("PASS: peer read %s matching %zu original RTF bytes\n", std::string(fixture).c_str(), actual.size());
+}
+
+void RichTextCopy(EditorFrame* frame, EditorControl* editor, Peer& peer) {
+    Require(frame->SelectEncoding(EncodingChoice(FileEncoding::Utf8, false)),
+            "empty editor uses the original capture's initial UTF-8 document identity");
+    auto* bar = frame->GetMenuBar();
+    auto* edit = bar->GetMenu(bar->FindMenu("Edit"));
+    const auto submenu = edit->FindItem("Copy to Clipboard");
+    Require(submenu != wxNOT_FOUND, "Edit contains Copy to Clipboard");
+    auto* clipboard = edit->FindItem(submenu)->GetSubMenu();
+    const int item = clipboard->FindItem("Copy as RTF");
+    Require(item != wxNOT_FOUND, "Edit > Copy to Clipboard contains Copy as RTF");
+    const auto* add = clipboard->FindItem(clipboard->FindItem("Copy Add"));
+    const auto* rich = clipboard->FindItem(item);
+    constexpr size_t originalPosition = 6;
+    Require(add && rich && clipboard->FindItemByPosition(originalPosition - 1) == add &&
+                clipboard->FindItemByPosition(originalPosition) == rich,
+            "Copy as RTF follows Copy Add in Copy to Clipboard");
+
+    using enum Scintilla::Message;
+    TestEditor::ResetStream(editor, "one two", 0, 3, Scintilla::EndOfLine::Lf);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(rich->IsEnabled(), "Copy as RTF is enabled for a selection");
+    editor->Send(GotoPos, 3);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(!rich->IsEnabled(), "Copy as RTF is disabled with no selection");
+
+    RtfFont(editor, "Microsoft YaHei UI");
+    editor->Send(StyleClearAll);
+    editor->Send(SetTabWidth, 4);
+    editor->Send(SetUseTabs, 1);
+    const auto codePage = [] {
+#ifdef __WXMSW__
+        auto native = ::GetACP();
+        if (native == CP_UTF8) {
+            constexpr LCTYPE legacyAnsi = 0x00000666;
+            ::GetLocaleInfoEx(LOCALE_NAME_SYSTEM_DEFAULT, legacyAnsi | LOCALE_RETURN_NUMBER,
+                              reinterpret_cast<LPWSTR>(&native), sizeof(native) / sizeof(WCHAR));
+        }
+        return native;
+#else
+        return 1252U;
+#endif
+    }();
+    const auto copy = [&](std::string_view fixture, bool enabled) {
+        frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+        Require(rich->IsEnabled() == enabled, "original rich-text enablement for selection shape");
+        const auto bytes = Text(editor);
+        const auto state = RtfSelectionState(editor);
+        Gesture(editor);
+        Menu(frame, item);
+        RequireNativeRtf(peer, fixture, codePage);
+        Require(Text(editor) == bytes && RtfSelectionState(editor) == state,
+                "RTF copy preserves bytes, all selections, dirty state and Undo/Redo");
+    };
+
+    constexpr auto text = "\t{ alpha \\ 中文 😀 }\r\nBeta\nthird\rlast";
+    TestEditor::ResetStream(editor, text, 22, 1, Scintilla::EndOfLine::CrLf);
+    copy("selected", true);
+    editor->Send(GotoPos, 2);
+    copy("all", false);
+
+    constexpr auto rows = "ab12\ncd34\nef56";
+    TestEditor::ResetStream(editor, rows, 1, 12, Scintilla::EndOfLine::Lf);
+    editor->Send(SetSelectionMode, static_cast<uintptr_t>(Scintilla::SelectionMode::Rectangle));
+    editor->Send(SetRectangularSelectionAnchor, 1);
+    editor->Send(SetRectangularSelectionCaret, 12);
+    copy("rectangle", true);
+    for (const bool emptyMain : {false, true}) {
+        TestEditor::ResetStream(editor, rows, 1, 2, Scintilla::EndOfLine::Lf);
+        editor->Send(SetMultipleSelection, 1);
+        editor->Send(AddSelection, emptyMain ? 10 : 12, 10);
+        copy(emptyMain ? "multiple-empty-main" : "multiple", true);
+    }
+    TestEditor::ResetStream(editor, "", 0, 0, Scintilla::EndOfLine::Lf);
+    copy("multiple-empty-main", false);
+    TestEditor::ResetStream(editor, "x\tY\tZ", 0, 5, Scintilla::EndOfLine::Lf);
+    editor->Send(SetUseTabs, 0);
+    copy("expanded-tabs", true);
+
+    for (const char* extra : {"Q", "R"}) {
+        editor->Send(BeginUndoAction);
+        editor->Send(AddText, 1, reinterpret_cast<intptr_t>(extra));
+        editor->Send(EndUndoAction);
+    }
+    editor->Send(Undo);
+    Require(editor->Send(GetModify) && editor->Send(CanUndo) && editor->Send(CanRedo),
+            "RTF state fixture has a dirty document and both Undo and Redo history");
+    editor->Send(SetSel, 0, 5);
+    copy("expanded-tabs", true);
+    editor->Send(Undo);
+    editor->Send(SetSavePoint);
+
+    const std::filesystem::path fixtures(WXNOTEPAD_RTF_REFERENCE_DIR);
+    const auto openFixture = [&](const std::filesystem::path& source, std::string_view fileName,
+                                 FileEncoding encoding) {
+        const auto path = TestFiles::TemporaryDirectory(fileName);
+        TestFiles::WriteBytes(path, TestFiles::Bytes(fixtures / source));
+        Require(frame->Open(TestFiles::Filename(path), encoding).status == OpenStatus::Opened,
+                "open the pinned original RTF input in the counterpart");
+        editor->Send(SelectAll);
+    };
+    openFixture("styled-cpp.bin", "rtf.cpp", FileEncoding::Utf8);
+    for (const auto style : {SCE_C_DEFAULT, SCE_C_COMMENTLINE, SCE_C_WORD, SCE_C_WORD2, SCE_C_OPERATOR, SCE_C_STRING,
+                             SCE_C_ESCAPECHAR, SCE_C_NUMBER, SCE_C_IDENTIFIER})
+        RtfFont(editor, "DejaVu Sans Mono", style);
+    copy("cpp", true);
+    RtfStyleOverrides(editor);
+    copy("cpp-overrides", true);
+#ifdef __WXMSW__
+    Require(peer.Request("rtf-paste") == "rtf-pasted", "Windows RichEdit pastes C++ text and syntax color");
+#endif
+    openFixture("windows-1252.bin", "rtf-western.txt", FileEncoding::Windows1252);
+    RtfFont(editor, "Microsoft YaHei UI");
+    copy("legacy", true);
+#ifdef __WXMSW__
+    if (::GetACP() == 936) {
+        const auto path = TestFiles::TemporaryDirectory("rtf-ansi.txt");
+        TestFiles::WriteBytes(path, TestFiles::Bytes(fixtures / "ansi-936.bin"));
+        Require(frame->OpenRestartDocument(TestFiles::Filename(path), EncodingChoice(FileEncoding::Gbk, false, true),
+                                           std::nullopt, false, 0, 0)
+                        .status == OpenStatus::Opened,
+                "open the ACP936 fixture with the original ANSI identity");
+        editor->Send(SelectAll);
+        RtfFont(editor, "Microsoft YaHei UI");
+        copy("ansi", true);
+    }
+#endif
+}
+
 void RunClipboardScenario(EditorFrame* frame, EditorControl* editor, Peer& peer) {
     wxString shapes;
     if (wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &shapes)) {
@@ -2267,6 +2451,8 @@ void RunClipboardScenario(EditorFrame* frame, EditorControl* editor, Peer& peer)
             Swap(frame, editor, peer);
         else if (shapes == "utilities")
             Utilities(frame, editor, peer);
+        else if (shapes == "rtf")
+            RichTextCopy(frame, editor, peer);
         else if (shapes == "path-text")
             PathTextCopies(frame, editor, peer);
         else if (shapes == "read-only")
@@ -2293,8 +2479,9 @@ public:
         std::setvbuf(stdout, nullptr, _IONBF, 0);
         wxLog::SetActiveTarget(new wxLogStderr);
         wxString mode;
-        const bool defaultSwap = wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &mode) &&
-                                 (mode == "swap-encoding" || mode == "swap-ansi-caret" || mode == "swap-ansi-readonly");
+        const bool defaultSwap =
+            wxGetEnv("WXNOTEPAD_CLIPBOARD_SHAPES", &mode) &&
+            (mode == "swap-encoding" || mode == "swap-ansi-caret" || mode == "swap-ansi-readonly" || mode == "rtf");
         encodingSettings_.values.encoding.defaultEncoding = 0;
         encodingSettings_.values.encoding.loadASCIIasUTF8 = false;
         encodingSettings_.values.encoding.loadANSIasUTF8 = false;

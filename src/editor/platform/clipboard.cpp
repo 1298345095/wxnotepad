@@ -5,6 +5,8 @@
 #include <wx/dataobj.h>
 #include <wx/window.h>
 #include <cstring>
+#include <limits>
+#include <tuple>
 #include <memory>
 #include <utility>
 #ifdef __WXMSW__
@@ -222,6 +224,54 @@ bool EditorClipboard::Write([[maybe_unused]] wxWindow& owner, const Scintilla::I
                  "\ttarget=%p\tformat=wxUNICODETEXT\tlength=%llu", static_cast<void*>(&owner),
                  static_cast<unsigned long long>(text.Length()));
     return copied;
+#endif
+#endif
+}
+
+bool EditorClipboard::WriteRtf([[maybe_unused]] wxWindow& owner, std::string rtf) {
+    WXNOTE_TRACE("clipboard.write-rtf", "\ttarget=%p\tlength=%llu", static_cast<void*>(&owner),
+                 static_cast<unsigned long long>(rtf.size()));
+    if (wxTheClipboard->IsOpened()) return false;
+#ifdef __WXMSW__
+    const NativeClipboard clipboard(static_cast<HWND>(owner.GetHandle()));
+    if (!clipboard) return false;
+    const auto format = ::RegisterClipboardFormatW(L"Rich Text Format");
+    if (!format) return false;
+    const auto memory = ::GlobalAlloc(GMEM_MOVEABLE, rtf.size() + 1);
+    if (!memory) return false;
+    if (auto* bytes = ::GlobalLock(memory)) {
+        std::memcpy(bytes, rtf.c_str(), rtf.size() + 1);
+        ::GlobalUnlock(memory);
+        if (::EmptyClipboard() && ::SetClipboardData(format, memory)) return true;
+    }
+    ::GlobalFree(memory);
+    return false;
+#else
+    wxTheClipboard->UsePrimarySelection(false);
+    wxClipboardLocker lock;
+    if (!lock) return false;
+#ifdef __WXGTK__
+    if (rtf.size() > static_cast<size_t>(std::numeric_limits<gint>::max())) return false;
+    char richTextMime[] = "text/rtf";
+    const GtkTargetEntry target{richTextMime, 0, 0};
+    auto value = std::make_unique<std::string>(std::move(rtf));
+    const bool copied = gtk_clipboard_set_with_data(
+        gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), &target, 1,
+        [](GtkClipboard*, GtkSelectionData* data, guint, gpointer context) {
+            const auto& payload = *static_cast<const std::string*>(context);
+            gtk_selection_data_set(data, gtk_selection_data_get_target(data), 8,
+                                   reinterpret_cast<const guchar*>(payload.data()), static_cast<gint>(payload.size()));
+        },
+        [](GtkClipboard*, gpointer context) {
+            const std::unique_ptr<std::string> released(static_cast<std::string*>(context));
+        },
+        value.get());
+    if (copied) std::ignore = value.release();
+    return copied;
+#else
+    auto value = std::make_unique<wxCustomDataObject>(wxDataFormat("text/rtf"));
+    value->SetData(rtf.size(), rtf.data());
+    return wxTheClipboard->SetData(value.release());
 #endif
 #endif
 }

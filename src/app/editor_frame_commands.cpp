@@ -409,6 +409,13 @@ wxMenu* EditorFrame::CreateEditMenu() {
         wxEVT_UPDATE_UI,
         [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
         copyAdd);
+    const int copyRtf = wxWindow::NewControlId();
+    clipboard->Append(copyRtf, _("Copy as &RTF"));
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->CopyAsRtf(document_.IsDefaultEncoding()); }, copyRtf);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) { event.Enable(!editor_->Send(Scintilla::Message::GetSelectionEmpty)); },
+        copyRtf);
     edit->AppendSubMenu(clipboard, _("Cop&y to Clipboard"));
     edit->AppendSeparator();
     AppendEditingCommands(edit);
