@@ -401,6 +401,10 @@ msgid "&Prefix text to lines:"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "&Print...\tCtrl+P"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "&Read Only Mode\tF10"
 msgstr ""
 
@@ -704,6 +708,10 @@ msgstr ""
 msgid "Bash"
 msgstr ""
 
+#: src/app/editor_printing.cpp
+msgid "Black on white"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Block (&INS Mode)"
 msgstr ""
@@ -718,6 +726,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Boo&kmarks"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Bottom:"
 msgstr ""
 
 #: src/app/dialogs/column_wrap_dialog.cpp
@@ -836,6 +848,14 @@ msgstr ""
 msgid "Code page %d (unavailable)"
 msgstr ""
 
+#: src/app/editor_printing.cpp
+msgid "Color on white"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Color on white (except line numbers)"
+msgstr ""
+
 #: src/app/dialogs/go_to_line_dialog.cpp
 msgid "Column"
 msgstr ""
@@ -937,6 +957,11 @@ msgstr ""
 msgid "Could not open the file for reading."
 msgstr ""
 
+#: src/app/editor_print_job.cpp
+#, c-format
+msgid "Could not print \"%s\"."
+msgstr ""
+
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
 msgstr ""
@@ -998,6 +1023,10 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Current encoding"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Current screen color (WYSIWYG)"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1133,6 +1162,18 @@ msgstr ""
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr ""
 
+#: src/app/editor_printing.cpp
+msgid "Filename"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Filename, Current Date"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Filename, Current Date and Time"
+msgstr ""
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Fill-up punctuation"
 msgstr ""
@@ -1171,6 +1212,10 @@ msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Finish completion (Esc cancels)"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Footer:"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1249,6 +1294,10 @@ msgstr ""
 msgid "Group by file &type."
 msgstr ""
 
+#: src/app/editor_printing.cpp
+msgid "Header:"
+msgstr ""
+
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
 msgstr ""
@@ -1325,6 +1374,10 @@ msgstr ""
 msgid "Invalid regular expression"
 msgstr ""
 
+#: src/app/editor_printing.cpp
+msgid "Invert light (dark background)"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "JSON"
 msgstr ""
@@ -1382,6 +1435,14 @@ msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Latin-1 (Windows-1252)"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Leave blank"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Left:"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1456,6 +1517,14 @@ msgstr ""
 
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Margins (inches)"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Margins (millimeters)"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
@@ -1568,6 +1637,10 @@ msgstr ""
 msgid "None"
 msgstr ""
 
+#: src/app/editor_printing.cpp
+msgid "Normal"
+msgstr ""
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr ""
@@ -1632,8 +1705,29 @@ msgstr ""
 msgid "PS — Para&graph Separator"
 msgstr ""
 
+#: src/app/editor_print_job.cpp
+#, c-format
+msgid "Page %s"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Page Number"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Page Se&tup..."
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Page Setup"
+msgstr ""
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Pandoc"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Paper and &Orientation..."
 msgstr ""
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
@@ -1643,6 +1737,19 @@ msgstr ""
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
+msgstr ""
+
+#: src/app/editor_print_job.cpp
+msgid "Print"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Print color mode:"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+#, c-format
+msgid "Print zoom (%d%% to %d%%):"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -1779,6 +1886,10 @@ msgstr ""
 
 #: src/app/editor_frame.cpp
 msgid "Revert file to last saved state? Your changes will be lost!"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Right:"
 msgstr ""
 
 #: src/syntax/syntax_catalog.cpp
@@ -2273,6 +2384,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Toggle Full &Screen [Esc]\tF11"
+msgstr ""
+
+#: src/app/editor_printing.cpp
+msgid "Top:"
 msgstr ""
 
 #: src/app/dialogs/document_dialogs.cpp

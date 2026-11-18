@@ -448,6 +448,10 @@ msgstr "粘贴(&P)\tCtrl+V"
 msgid "&Prefix text to lines:"
 msgstr "每行前缀文本(&P):"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Print...\tCtrl+P"
+msgstr "打印(&P)...\tCtrl+P"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_FILE_READONLY_MODE.
 #: src/app/editor_frame_commands.cpp
 msgid "&Read Only Mode\tF10"
@@ -784,6 +788,10 @@ msgstr "反引号"
 msgid "Bash"
 msgstr "Bash"
 
+#: src/app/editor_printing.cpp
+msgid "Black on white"
+msgstr "白底黑字"
+
 #: src/app/editor_frame_commands.cpp
 msgid "Block (&INS Mode)"
 msgstr "块状(插入模式)(&I)"
@@ -800,6 +808,10 @@ msgstr "为匹配的行添加书签(&K)"
 #: src/app/editor_frame_commands.cpp
 msgid "Boo&kmarks"
 msgstr "书签(&K)"
+
+#: src/app/editor_printing.cpp
+msgid "Bottom:"
+msgstr "下："
 
 #: src/app/dialogs/column_wrap_dialog.cpp
 msgid "Boundary"
@@ -921,6 +933,14 @@ msgstr "关闭"
 msgid "Code page %d (unavailable)"
 msgstr "代码页 %d (不可用)"
 
+#: src/app/editor_printing.cpp
+msgid "Color on white"
+msgstr "白底彩色"
+
+#: src/app/editor_printing.cpp
+msgid "Color on white (except line numbers)"
+msgstr "白底彩色（行号除外）"
+
 #: src/app/dialogs/go_to_line_dialog.cpp
 msgid "Column"
 msgstr "列"
@@ -1030,6 +1050,11 @@ msgstr "无法打开目标文件以写入。"
 msgid "Could not open the file for reading."
 msgstr "无法打开文件以读取。"
 
+#: src/app/editor_print_job.cpp
+#, c-format
+msgid "Could not print \"%s\"."
+msgstr "无法打印“%s”。"
+
 #: src/document/document_session.cpp
 msgid "Could not read the complete file."
 msgstr "无法完整读取文件。"
@@ -1096,6 +1121,10 @@ msgstr "当前日期和时间(&T)"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Current encoding"
 msgstr "当前编码"
+
+#: src/app/editor_printing.cpp
+msgid "Current screen color (WYSIWYG)"
+msgstr "当前屏幕颜色（所见即所得）"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_DELETELINE.
 #: src/app/editor_frame_commands.cpp
@@ -1237,6 +1266,18 @@ msgstr "文件名和扩展名(&E)\tShift+F9"
 msgid "File Name and E&xtension\tCtrl+F9"
 msgstr "文件名和扩展名(&X)\tCtrl+F9"
 
+#: src/app/editor_printing.cpp
+msgid "Filename"
+msgstr "文件名"
+
+#: src/app/editor_printing.cpp
+msgid "Filename, Current Date"
+msgstr "文件名、当前日期"
+
+#: src/app/editor_printing.cpp
+msgid "Filename, Current Date and Time"
+msgstr "文件名、当前日期和时间"
+
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Fill-up punctuation"
 msgstr "用于执行自动完成的标点符号"
@@ -1280,6 +1321,10 @@ msgstr "搜索字符串"
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Finish completion (Esc cancels)"
 msgstr "用于执行自动完成的按键(使用 Esc 键取消)"
+
+#: src/app/editor_printing.cpp
+msgid "Footer:"
+msgstr "页脚："
 
 # Original: locale/zh-Hans/Notepad4.rc, CMD_COPYPATHNAME.
 #: src/app/editor_frame_commands.cpp
@@ -1371,6 +1416,10 @@ msgstr "跳转到选区结束(&T)\tCtrl+Shift+."
 msgid "Group by file &type."
 msgstr "按文件类型分组(&T)。"
 
+#: src/app/editor_printing.cpp
+msgid "Header:"
+msgstr "页眉："
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_EDIT_HEX2CHAR.
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
@@ -1454,6 +1503,10 @@ msgstr "插入制表符为空格(&S)"
 msgid "Invalid regular expression"
 msgstr "正则表达式无效"
 
+#: src/app/editor_printing.cpp
+msgid "Invert light (dark background)"
+msgstr "反转亮度（深色背景）"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "JSON"
 msgstr "JSON"
@@ -1513,6 +1566,14 @@ msgstr "LS — 行分隔符(&C)"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Latin-1 (Windows-1252)"
 msgstr "Latin-1 (Windows-1252)"
+
+#: src/app/editor_printing.cpp
+msgid "Leave blank"
+msgstr "留空"
+
+#: src/app/editor_printing.cpp
+msgid "Left:"
+msgstr "左："
 
 #: src/app/editor_frame_commands.cpp
 #, c-format
@@ -1589,6 +1650,14 @@ msgstr "Lua"
 #: src/app/dialogs/word_wrap_settings_dialog.cpp
 msgid "Margin click selects visual &subline"
 msgstr "点击边栏选择可视子行(&S)"
+
+#: src/app/editor_printing.cpp
+msgid "Margins (inches)"
+msgstr "页边距（英寸）"
+
+#: src/app/editor_printing.cpp
+msgid "Margins (millimeters)"
+msgstr "页边距（毫米）"
 
 #: src/app/editor_frame_commands.cpp
 msgid "Mark &Occurrences"
@@ -1709,6 +1778,10 @@ msgstr "续行不缩进"
 msgid "None"
 msgstr "无"
 
+#: src/app/editor_printing.cpp
+msgid "Normal"
+msgstr "正常"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr "OEM 美国 (DOS-437)"
@@ -1774,9 +1847,30 @@ msgstr "PDI — 结束方向隔离(&P)"
 msgid "PS — Para&graph Separator"
 msgstr "PS — 段落分隔符(&T)"
 
+#: src/app/editor_print_job.cpp
+#, c-format
+msgid "Page %s"
+msgstr "第 %s 页"
+
+#: src/app/editor_printing.cpp
+msgid "Page Number"
+msgstr "页码"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Page Se&tup..."
+msgstr "页面设置(&T)..."
+
+#: src/app/editor_printing.cpp
+msgid "Page Setup"
+msgstr "页面设置"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "Pandoc"
 msgstr "Pandoc"
+
+#: src/app/editor_printing.cpp
+msgid "Paper and &Orientation..."
+msgstr "纸张和方向(&O)..."
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Parentheses ()"
@@ -1786,6 +1880,19 @@ msgstr "圆括号 ()"
 #: src/syntax/syntax_catalog.cpp
 msgid "Plain Text"
 msgstr "纯文本"
+
+#: src/app/editor_print_job.cpp
+msgid "Print"
+msgstr "打印"
+
+#: src/app/editor_printing.cpp
+msgid "Print color mode:"
+msgstr "打印颜色模式："
+
+#: src/app/editor_printing.cpp
+#, c-format
+msgid "Print zoom (%d%% to %d%%):"
+msgstr "打印缩放（%d%% 至 %d%%）："
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Property List"
@@ -1931,6 +2038,10 @@ msgstr "还原"
 #: src/app/editor_frame.cpp
 msgid "Revert file to last saved state? Your changes will be lost!"
 msgstr "还原文件到上次保存时的状态？您的修改将会丢失！"
+
+#: src/app/editor_printing.cpp
+msgid "Right:"
+msgstr "右："
 
 #: src/syntax/syntax_catalog.cpp
 msgid "Rust"
@@ -2472,6 +2583,10 @@ msgstr "切换全屏(&S)\tF11 [Esc]"
 #: src/app/editor_frame_commands.cpp
 msgid "Toggle Full &Screen [Esc]\tF11"
 msgstr "切换全屏(&S) [Esc]\tF11"
+
+#: src/app/editor_printing.cpp
+msgid "Top:"
+msgstr "上："
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Traditional Chinese (Big5, Big5-HKSCS)"
