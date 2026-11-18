@@ -30,6 +30,7 @@ search algorithm or own the document's language choice.
 | `src/editor/platform/windows_ime.cpp` | Windows IMM composition and native caret geometry | The private core uses original tentative-input and IME-result operations; inline composition uses the normal text layout. |
 | `src/editor/platform/gtk_drag_drop.*` | GTK drag/drop signals, asynchronous native transfer and ownership | The core retains selection, insertion/deletion, undo grouping and copy/move decisions. |
 | `patches/`, `tools/build.py`, `tools/update_*_scheme.py` | Pinned source preparation, portability patch, reproducible lexer data | Keep the offline path, revision/hash checks and selective upstream reuse. |
+| `.github/scripts/ci.py` bundling module | Development build output and matching symbol evidence from a configured native build | CI, packaged-localization checks and native fixtures use the same interface with explicit build inputs and output locations. |
 | `tests/`, `tools/clipboard_*`, `tools/resources.py` | Real editor, native UI, disk-byte and independent-process checks | Existing native regressions remain. `feature_sessions.cpp` exercises the extracted interfaces without linking the app shell. |
 
 The former `editor_control` application library is split into `editor_runtime`,
@@ -471,6 +472,33 @@ streaming design or an upstream storage change. Switching an already-styled
 document to Plain Text must not be assumed to release its allocated style buffer.
 Native parallel measurement verification and its resource comparison are recorded
 in [the measurement report](observations/parallel-measurement-README.md).
+
+### Development build output
+
+The bundling module in `.github/scripts/ci.py` exposes one operation:
+`bundle(cmake_dir, executable, output_root, *, report_dir=None)`, returning the
+packaged executable's `Path`. CI supplies its default paths; localization checks
+supply the actual CTest executable and a private output directory. Both callers
+cross this same seam with their real build inputs.
+
+The configured build owns source and dependency selection. Its CMake cache
+supplies `CMAKE_HOME_DIRECTORY`, `NOTEPAD4_SOURCE`, `VCPKG_INSTALLED_DIR` and
+`VCPKG_TARGET_TRIPLET`. The module reads application licenses, language metadata
+and the Git commit from that source checkout, and the original-core record from
+the configured core source. The installed directory is used as configured,
+including custom installation names. Runtime DLLs and catalogs come from the
+executable's parent, allowing Windows configuration directories and separate
+runtime output paths.
+
+The output root owns `artifact/` and Linux `symbols/`; reports default to its
+`reports/` directory. The module copies native runtime files, splits Linux symbols
+only from distribution copies, and records the packaged executable checksum and
+source provenance. Linux metadata also records the original executable checksum.
+Filesystem and native-tool failures propagate to the caller. Real filesystem,
+ELF and GDB fixtures exercise this interface. Localization retains independent
+checks of catalog bytes and the shown application. Callers gain leverage over the
+complete bundling operation; layout, provenance and symbol handling stay local
+to the module. See [CI checks](ci.md#local-checks) for the CLI and artifact layout.
 
 ## Restructuring and verification
 

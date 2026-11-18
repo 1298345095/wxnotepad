@@ -3,7 +3,6 @@ import configparser
 import importlib.util
 import os
 from pathlib import Path
-import shutil
 import signal
 import subprocess
 import sys
@@ -29,30 +28,14 @@ def bundle_application(source, cmake, folder, reports=None):
     spec = importlib.util.spec_from_file_location('localization_ci', ROOT / '.github/scripts/ci.py')
     ci = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ci)
-    cache = cache_values(cmake)
-    ci.WORK = folder
-    ci.BUILD = folder / 'build'
-    ci.REPORTS = reports if reports is not None else folder / 'reports'
-    ci.REPORTS.mkdir(parents=True)
-    ci.VCPKG = Path(cache['VCPKG_INSTALLED_DIR']).parent
-    ci.TRIPLET = cache['VCPKG_TARGET_TRIPLET']
-    staging = ci.BUILD / 'cmake'
-    staging.mkdir(parents=True)
-    shutil.copy2(source, staging / source.name)
-    for library in source.parent.glob('*.dll'):
-        shutil.copy2(library, staging / library.name)
-    shutil.copytree(source.parent / 'locale', staging / 'locale')
-    original = ci.BUILD / 'original-core'
-    original.mkdir()
-    shutil.copy2(Path(cache['NOTEPAD4_SOURCE']) / 'wxnotepad-source.json', original)
-    ci.bundle()
-    package = folder / 'artifact'
+    executable = ci.bundle(cmake, source, folder, report_dir=reports)
+    package = executable.parent
     for code in ('zh_CN', 'zh_TW'):
         for domain in ('wxnotepad', 'wxstd'):
             relative = Path('locale') / code / 'LC_MESSAGES' / (domain + '.mo')
             assert (package / relative).read_bytes() == (source.parent / relative).read_bytes(), relative
     assert not (package / 'locale/en').exists(), 'Source English needs no MO'
-    return package / source.name
+    return executable
 
 
 def settings(path, language, extra='', save=False):
