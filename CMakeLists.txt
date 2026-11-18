@@ -79,6 +79,8 @@ add_library(editor_runtime STATIC
     src/editor/enclose_selection.cpp
     src/editor/url_conversion.cpp
     src/editor/base64_conversion.cpp
+    src/editor/platform/native_encoding.cpp
+    src/editor/native_byte_history.cpp
     src/editor/compress_whitespace.cpp
     src/editor/sort_lines.cpp
     src/editor/indentation.cpp

@@ -1,12 +1,17 @@
 #include "native_key_helpers.h"
+#include "native_completion_helpers.h"
 #include "settings/settings_store.h"
 #include "file_helpers.h"
 #include <array>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <cstring>
+#include <vector>
 #include <wx/stattext.h>
 #include <wx/modalhook.h>
+#include <wx/clipbrd.h>
+#include <wx/dataobj.h>
 
 namespace {
 using Scintilla::Message;
@@ -19,6 +24,20 @@ void Menu(EditorFrame* frame, const char* label) {
     const int id = frame->GetMenuBar()->FindMenuItem("Tools", label);
     Require(id != wxNOT_FOUND, "Tools/Base64 exposes the original command");
     NativeSearch::Command(frame, id);
+}
+void Backspace(EditorFrame* frame) {
+#ifdef __WXMSW__
+    BYTE previous[256];
+    Require(GetKeyboardState(previous), "read owned thread key state");
+    BYTE keys[256];
+    std::copy(std::begin(previous), std::end(previous), std::begin(keys));
+    keys[VK_CONTROL] = keys[VK_MENU] = keys[VK_SHIFT] = 0;
+    Require(SetKeyboardState(keys), "set plain native Backspace modifiers");
+    NativeCompletion::Key(frame->Editor(), VK_BACK);
+    SetKeyboardState(previous);
+#else
+    NativeCompletion::Key(frame->Editor(), GDK_KEY_BackSpace);
+#endif
 }
 std::string Unhex(const std::string& value) {
     std::string result;
@@ -104,6 +123,49 @@ public:
     }
     int shown = 0;
 };
+class CharacterFeedback final : public wxTimer {
+public:
+    CharacterFeedback() { Start(20); }
+    wxString payload;
+    int shown = 0;
+    void Notify() override {
+        for (auto* window : wxTopLevelWindows) {
+            auto* dialog = wxDynamicCast(window, wxDialog);
+            if (!dialog || !dialog->IsModal()) continue;
+            auto* text = wxDynamicCast(dialog->FindWindowByName("Character information", dialog), wxStaticText);
+            if (!text) continue;
+            Stop();
+            ++shown;
+            payload = text->GetLabelText();
+            NativeSearch::Click(dialog, wxID_OK);
+            return;
+        }
+    }
+};
+std::string ObserveCharacterInfo(EditorFrame* frame) {
+#ifdef __WXGTK__
+    NativeKeys::Shortcut(frame, 'A', true); // Gives Wayland the real owned input serial for clipboard publication.
+#endif
+    {
+        wxClipboardLocker clipboard;
+        if (!clipboard) throw std::runtime_error("open owned clipboard for Character Info seed");
+        Require(wxTheClipboard->SetData(new wxTextDataObject("owned Base64 character-info offer")),
+                "seed an owned native offer before character information");
+    }
+    const int command = frame->GetMenuBar()->FindMenuItem("Edit", "Show Character Info");
+    Require(command != wxNOT_FOUND, "reachable native Character Info command exists");
+    CharacterFeedback feedback;
+    NativeSearch::Command(frame, command);
+    Require(feedback.shown == 1 && !feedback.payload.empty(), "native Character Info displays its technical payload");
+    wxTextDataObject copied;
+    {
+        wxClipboardLocker clipboard;
+        if (!clipboard) throw std::runtime_error("open owned clipboard for Character Info result");
+        Require(wxTheClipboard->GetData(copied) && copied.GetText() == feedback.payload,
+                "Character Info copies the same native-byte interpretation shown in its feedback");
+    }
+    return feedback.payload.utf8_string();
+}
 void CommandStates(EditorFrame* frame) {
     auto* editor = frame->Editor();
     editor->Send(Message::SetSavePoint);
@@ -168,6 +230,147 @@ void CommandStates(EditorFrame* frame) {
     }
     std::puts(
         "PASS: Base64 command availability, original empty/read-only/rectangle/zero-result and pending Redo rules");
+}
+void NativeAnsiBytes(EditorFrame* frame) {
+    auto* editor = frame->Editor();
+    editor->Send(Message::SetSavePoint);
+    Require(frame->NewDocument(), "start native ANSI byte preservation scenarios");
+    const auto directory = TestFiles::TemporaryDirectory("base64-native-ansi");
+    std::filesystem::create_directory(directory);
+    const auto path = directory / "ansi.txt";
+    TestFiles::WriteBytes(path, "");
+    Require(frame->Open(TestFiles::Filename(path), FileEncoding::Utf8).status == OpenStatus::Opened,
+            "open empty named native ANSI fixture");
+    const int ansi = frame->GetMenuBar()->FindMenuItem("File", "ANSI");
+    Require(ansi != wxNOT_FOUND, "supported native encoding exposes its real ANSI command");
+    NativeSearch::Command(frame, ansi);
+    frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
+    Require(frame->GetMenuBar()->IsChecked(ansi), "logical native ANSI identity is selected");
+    struct Sample {
+        const char* encoded;
+        std::string bytes;
+    };
+    std::vector<Sample> samples = {{"gQ==", "\x{81}"}, {"QYE=", "A\x{81}"}};
+    if (frame->DocumentEncoding() == FileEncoding::Gbk) {
+        samples.push_back({"QdbQzsSB", "A\x{d6}\x{d0}\x{ce}\x{c4}\x{81}"});
+        samples.push_back({"qKbW0A==", "\x{a8}\x{a6}\x{d6}\x{d0}"});
+        samples.push_back({"ouM=", "\x{a2}\x{e3}"}); // Native Euro alias must retain its original two bytes.
+    } else if (frame->DocumentEncoding() == FileEncoding::Utf8) {
+        samples.push_back({"5Lit5paH", "中文"});
+    }
+    for (const auto& sample : samples) {
+        TestEditor::ResetStream(editor, sample.encoded, 0, static_cast<intptr_t>(std::strlen(sample.encoded)));
+        Require(frame->Save().status == SaveStatus::Saved, "save native ANSI ASCII baseline");
+        Menu(frame, "Decode");
+        Require(editor->Send(Message::GetModify) && editor->Send(Message::CanUndo),
+                "native ANSI decode is one modified reversible edit");
+        int lossPrompts = 0;
+        const auto save = [&] {
+            const auto result = frame->Save([&] {
+                ++lossPrompts;
+                return EncodingLossChoice::Cancel;
+            });
+            Require(result.status == SaveStatus::Saved && lossPrompts == 0,
+                    "original native ANSI bytes save without a conversion or loss notification");
+        };
+        save();
+        Require(TestFiles::Bytes(path) == sample.bytes,
+                "native ANSI Save retains original decoded bytes, including 81");
+        editor->Send(Message::Undo);
+        save();
+        Require(TestFiles::Bytes(path) == sample.encoded, "native ANSI Undo Save restores original Base64 input");
+        editor->Send(Message::Redo);
+        save();
+        Require(TestFiles::Bytes(path) == sample.bytes, "native ANSI Redo Save restores original arbitrary bytes");
+        editor->Send(Message::SelectAll);
+        Menu(frame, "Standard Encode");
+        Require(TestEditor::Text(editor) == sample.encoded,
+                "native ANSI selected-byte representation encodes losslessly again");
+    }
+    TestEditor::ResetStream(editor, "gQ==", 0, 4);
+    Menu(frame, "Decode");
+    const int showHex = frame->GetMenuBar()->FindMenuItem("Edit", "Show Hex Code");
+    Require(showHex != wxNOT_FOUND, "reachable Show Hex Code command exists");
+    NativeSearch::Command(frame, showHex);
+    const auto end = editor->Send(Message::GetLength);
+    TestEditor::RequireSelection(editor, end - 4, end, "Show Hex Code selects the inserted original [81]");
+    Require(TestEditor::Text(editor).ends_with("[81]"),
+            "Base64 Decode 81 feeds the same native-byte Show Hex boundary");
+    const auto saveCombo = [&] {
+        Require(frame->Save([] { return EncodingLossChoice::Cancel; }).status == SaveStatus::Saved,
+                "native byte and Show Hex combination saves without conversion loss");
+    };
+    saveCombo();
+    Require(TestFiles::Bytes(path) == "\x{81}[81]", "Decode/Show Hex saves the original raw byte and its annotation");
+    editor->Send(Message::Undo);
+    saveCombo();
+    Require(TestFiles::Bytes(path) == "\x{81}", "one Undo removes only the Show Hex annotation");
+    editor->Send(Message::Redo);
+    saveCombo();
+    Require(TestFiles::Bytes(path) == "\x{81}[81]", "Redo restores the original Show Hex annotation");
+    TestEditor::ResetStream(editor, "wg==\noA==", 0, 4, Scintilla::EndOfLine::Lf);
+    Menu(frame, "Decode");
+    const auto secondLine = editor->Send(Message::PositionFromLine, 1);
+    editor->Send(Message::SetSel, secondLine, editor->Send(Message::GetLineEndPosition, 1));
+    Menu(frame, "Decode");
+    editor->Send(Message::GotoPos, editor->Send(Message::PositionFromLine, 1));
+    Backspace(frame);
+    saveCombo();
+    Require(TestFiles::Bytes(path) == "\x{c2}\x{a0}",
+            "whole-line decodes and real native Backspace preserve C2+A0 origin even when the core bytes form UTF-8");
+    editor->Send(Message::Undo);
+    saveCombo();
+    Require(TestFiles::Bytes(path) == "\x{c2}\n\x{a0}", "Undo ordinary Backspace restores LF and both byte origins");
+    editor->Send(Message::Redo);
+    saveCombo();
+    Require(TestFiles::Bytes(path) == "\x{c2}\x{a0}", "Redo ordinary Backspace retains raw byte identity");
+    editor->Send(Message::SelectAll);
+    Backspace(frame);
+    saveCombo();
+    Require(TestFiles::Bytes(path).empty(), "native selection deletion removes the raw byte range");
+    editor->Send(Message::Undo);
+    saveCombo();
+    Require(TestFiles::Bytes(path) == "\x{c2}\x{a0}", "Undo deletion restores the removed bytes' origin");
+    editor->Send(Message::EmptyUndoBuffer);
+    saveCombo();
+    Require(TestFiles::Bytes(path) == "\x{c2}\x{a0}", "clearing history retains live native origins");
+    editor->Send(Message::SelectAll);
+    Menu(frame, "Standard Encode");
+    Require(TestEditor::Text(editor) == "wqA=", "composed bytes re-encode as native C2 A0 rather than Unicode NBSP");
+    editor->Send(Message::Undo);
+    saveCombo();
+    Require(TestFiles::Bytes(path) == "\x{c2}\x{a0}", "Undo Base64 re-encoding restores native byte provenance");
+    editor->Send(Message::SelectAll);
+    NativeSearch::Command(frame, showHex);
+    Require(TestEditor::Text(editor).ends_with("[C2 A0]"), "composed raw bytes feed Show Hex as C2 A0");
+    editor->Send(Message::Undo);
+    editor->Send(Message::SelectAll);
+    const auto beforeInfo = TestEditor::Text(editor);
+    const auto payload = ObserveCharacterInfo(frame);
+    const auto encoding = frame->DocumentEncoding();
+    const char* unicode = encoding == FileEncoding::Gbk                                         ? "807D"
+                          : encoding == FileEncoding::Windows1252                               ? "00C2"
+                          : encoding == FileEncoding::Dos437                                    ? "252C"
+                          : encoding == FileEncoding::Big5 || encoding == FileEncoding::Gb18030 ? "003F"
+                                                                                                : "00A0";
+    Require(payload.starts_with(std::string("Unicode: U+") + unicode + "\n"),
+            "native Character Info interprets original C2 A0 bytes in their active native code page");
+    Require(TestEditor::Text(editor) == beforeInfo, "character information retains composed document bytes");
+    for (const auto encoding : {FileEncoding::Gbk, FileEncoding::Utf8}) {
+        editor->Send(Message::SetSavePoint);
+        TestFiles::WriteBytes(path, "gQ==");
+        Require(frame->Open(TestFiles::Filename(path), encoding).status == OpenStatus::Opened,
+                "open explicit GBK/UTF-8 representation control");
+        editor->Send(Message::SelectAll);
+        Menu(frame, "Decode");
+        const auto saved = frame->Save([] { return EncodingLossChoice::Cancel; });
+        Require(saved.status == (encoding == FileEncoding::Gbk ? SaveStatus::Failed : SaveStatus::Saved) &&
+                    TestFiles::Bytes(path) == (encoding == FileEncoding::Gbk ? "gQ==" : "\x{81}"),
+                "explicit GBK retains UTF-8 validation while explicit UTF-8 retains raw byte output");
+    }
+    std::filesystem::remove_all(directory);
+    std::puts("PASS: logical native ANSI preserves arbitrary decoded bytes and Undo/Redo Save; explicit encoding rules "
+              "retain their boundaries");
 }
 #ifdef __WXMSW__
 std::string HexBytes(std::string_view bytes) {
@@ -236,6 +439,62 @@ void AnsiInvalidProbe(EditorFrame* frame, const wxString& output) {
         std::printf("accept_save_status=%d notifications=%d disk=%s\n", static_cast<int>(status), warning.shown,
                     HexBytes(TestFiles::Bytes(path)).c_str());
     }
+    TestEditor::ResetStream(editor, "wg==", 0, 4);
+    Require(frame->Save().status == SaveStatus::Saved, "save byte-composition baseline");
+    Menu(frame, "Decode");
+    std::printf("pair_first=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
+    editor->Send(Message::AppendText, 4, reinterpret_cast<intptr_t>("oA=="));
+    editor->Send(Message::SetSel, 1, 5);
+    Menu(frame, "Decode");
+    std::printf("pair_second=%s anchor=%lld caret=%lld\n", HexBytes(TestEditor::Text(editor)).c_str(),
+                static_cast<long long>(editor->Send(Message::GetAnchor)),
+                static_cast<long long>(editor->Send(Message::GetCurrentPos)));
+    const auto savePair = [&](const char* phase) {
+        AnsiWarning warning(wxID_OK);
+        const auto status = frame->Save().status;
+        std::printf("pair_%s_status=%d notifications=%d disk=%s\n", phase, static_cast<int>(status), warning.shown,
+                    HexBytes(TestFiles::Bytes(path)).c_str());
+    };
+    savePair("save");
+    editor->Send(Message::Undo);
+    std::printf("pair_undo=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
+    savePair("undo_save");
+    editor->Send(Message::Redo);
+    std::printf("pair_redo=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
+    savePair("redo_save");
+    TestEditor::ResetStream(editor, "wg==\noA==", 0, 4, Scintilla::EndOfLine::Lf);
+    Require(frame->Save().status == SaveStatus::Saved, "save real line-boundary composition baseline");
+    Menu(frame, "Decode");
+    editor->Send(Message::SetSel, 2, 6);
+    Menu(frame, "Decode");
+    std::printf("lines_decoded=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
+    editor->Send(Message::GotoPos, 2);
+    Backspace(frame);
+    std::printf("lines_backspace=%s anchor=%lld caret=%lld\n", HexBytes(TestEditor::Text(editor)).c_str(),
+                static_cast<long long>(editor->Send(Message::GetAnchor)),
+                static_cast<long long>(editor->Send(Message::GetCurrentPos)));
+    savePair("lines_save");
+    editor->Send(Message::Undo);
+    std::printf("lines_undo=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
+    savePair("lines_undo_save");
+    editor->Send(Message::Redo);
+    std::printf("lines_redo=%s\n", HexBytes(TestEditor::Text(editor)).c_str());
+    savePair("lines_redo_save");
+    editor->Send(Message::SelectAll);
+    Menu(frame, "Standard Encode");
+    std::printf("lines_encoded=%s anchor=%lld caret=%lld\n", HexBytes(TestEditor::Text(editor)).c_str(),
+                static_cast<long long>(editor->Send(Message::GetAnchor)),
+                static_cast<long long>(editor->Send(Message::GetCurrentPos)));
+    editor->Send(Message::Undo);
+    editor->Send(Message::SelectAll);
+    const int hex = frame->GetMenuBar()->FindMenuItem("Edit", "Show Hex Code");
+    NativeSearch::Command(frame, hex);
+    std::printf("lines_hex=%s anchor=%lld caret=%lld\n", HexBytes(TestEditor::Text(editor)).c_str(),
+                static_cast<long long>(editor->Send(Message::GetAnchor)),
+                static_cast<long long>(editor->Send(Message::GetCurrentPos)));
+    editor->Send(Message::Undo);
+    editor->Send(Message::SetSel, 0, 0);
+    std::printf("lines_info_hex=%s\n", HexBytes(ObserveCharacterInfo(frame)).c_str());
 }
 #endif
 class Base64App final : public wxApp {
@@ -265,6 +524,7 @@ public:
                 Require(frame->DocumentEncoding() == FileEncoding::Utf8, "use the original UTF-8 edit buffer");
                 CapturedCommands(frame);
                 CommandStates(frame);
+                NativeAnsiBytes(frame);
                 result_ = 0;
             } catch (const std::exception& error) {
                 std::fprintf(stderr, "FAIL: %s\n", error.what());

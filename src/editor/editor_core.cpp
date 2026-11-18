@@ -232,7 +232,12 @@ intptr_t EditorControl::Core::WndProc(Message message, uintptr_t wParam, intptr_
             return 0;
         }
 #endif
+        const auto* previousDocument = pdoc;
         const auto result = ScintillaBase::WndProc(message, wParam, lParam);
+        if (pdoc != previousDocument)
+            nativeBytes_.Reset();
+        else if (message == Message::EmptyUndoBuffer)
+            nativeBytes_.ClearHistory();
         if ((message == Message::SetText || message == Message::ClearAll) && !pdoc->IsReadOnly())
             ScintillaBase::WndProc(Message::SetScrollWidth, 1, 0);
         return result;
@@ -812,6 +817,52 @@ void EditorControl::Core::PasteWithEncoding(bool defaultEncoding) {
 
 void EditorControl::Core::NotifyChange() const noexcept {
     // NotifyParent handles document revisions and forwards wx state changes.
+}
+
+void EditorControl::Core::NotifyModified(core::Document* document, core::DocModification modification, void* userData) {
+    using enum Scintilla::ModificationFlags;
+    const auto flags = std::to_underlying(modification.modificationType);
+    const auto has = [flags](Scintilla::ModificationFlags mask) { return (flags & std::to_underlying(mask)) != 0; };
+    if (document == pdoc) {
+        if (has(BeforeInsert | BeforeDelete))
+            nativeBytes_.BeforeChange(pdoc->UndoCurrent(), pdoc->IsCollectingUndo(), has(Undo), has(Redo),
+                                      has(BeforeInsert), modification.position, modification.length);
+        else if (has(InsertText | DeleteText))
+            nativeBytes_.AfterChange(has(InsertText), modification.position, modification.length);
+    }
+    // This watcher runs even when BatchUpdate suppresses parent notifications.
+    // Publish provenance before callbacks can observe or save the changed text.
+    ScintillaBase::NotifyModified(document, modification, userData);
+}
+
+std::string EditorControl::Core::NativeSelectedBytes(bool binary) {
+    std::string result;
+    const auto raw = nativeBytes_.Snapshot();
+    const auto ranges = sel.SortedRanges();
+    const bool separate = sel.IsRectangular() || ranges.size() > 1;
+    const std::string_view separator = sel.IsRectangular() || copySeparator.empty() ? pdoc->EOLString() : copySeparator;
+    for (size_t index = 0; index < ranges.size(); ++index) {
+        const auto start = ranges[index]->Start().Position();
+        const auto end = ranges[index]->End().Position();
+        result += NativeBytesFromRanges(RangeText(start, end), start, *raw);
+        if (separate && index + 1 != ranges.size()) result += separator;
+    }
+    if (!binary) std::replace(result.begin(), result.end(), '\0', ' ');
+    return result;
+}
+
+std::string EditorControl::Core::NativeBytesAfter(intptr_t position) {
+    // A native DBCS scalar consumes at most two bytes, each possibly stored as
+    // a four-byte UTF-8 scalar in the migrated core.
+    constexpr intptr_t characterLookaheadBytes = 8;
+    const auto end = std::min(position + characterLookaheadBytes, pdoc->Length());
+    return NativeBytesFromRanges(RangeText(position, end), position, *nativeBytes_.Snapshot());
+}
+
+void EditorControl::Core::ReplaceTargetWithNativeBytes(std::string_view text, NativeByteRanges ranges) {
+    nativeBytes_.ExpectInsertion(targetRange.start.Position(), static_cast<intptr_t>(text.size()), std::move(ranges));
+    WndProc(Message::ReplaceTarget, text.size(), reinterpret_cast<intptr_t>(text.data()));
+    nativeBytes_.FinishInsertion();
 }
 
 void EditorControl::Core::NotifyParent(Scintilla::NotificationData& notification) const noexcept {

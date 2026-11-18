@@ -1,4 +1,5 @@
 #include "editor/editor_control.h"
+#include "editor/platform/native_encoding.h"
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -113,25 +114,6 @@ std::string ImageExtension(const wxString& path) {
         result += static_cast<char>(*suffix >= L'A' && *suffix <= L'Z' ? *suffix + (L'a' - L'A') : *suffix);
     return result;
 }
-std::string NativeRepresentation(std::string_view input, bool toNative) {
-#ifdef __WXMSW__
-    if (input.empty()) return {};
-    const UINT source = toNative ? CP_UTF8 : CP_ACP;
-    const UINT target = toNative ? CP_ACP : CP_UTF8;
-    const int length = static_cast<int>(input.size());
-    std::wstring wide(MultiByteToWideChar(source, 0, input.data(), length, nullptr, 0), L'\0');
-    MultiByteToWideChar(source, 0, input.data(), length, wide.data(), static_cast<int>(wide.size()));
-    const int units = static_cast<int>(wide.size());
-    std::string output(WideCharToMultiByte(target, 0, wide.data(), units, nullptr, 0, nullptr, nullptr), '\0');
-    WideCharToMultiByte(target, 0, wide.data(), units, output.data(), static_cast<int>(output.size()), nullptr,
-                        nullptr);
-    return output;
-#else
-    // As for NativeDefaultEncodingText, the Linux editor's native boundary is UTF-8.
-    (void)toNative;
-    return std::string(input);
-#endif
-}
 } // namespace
 
 bool EditorControl::ConvertBase64(Base64Conversion command, const wxString& path, bool defaultEncoding) {
@@ -144,8 +126,9 @@ bool EditorControl::ConvertBase64(Base64Conversion command, const wxString& path
                         command == Base64Conversion::HtmlEmbeddedImage;
     Send(Message::GetSelText, encode, reinterpret_cast<intptr_t>(input.data()));
     input.resize(static_cast<size_t>(length));
-    if (defaultEncoding) input = NativeRepresentation(input, true);
+    if (defaultEncoding) input = NativeSelectedBytes(encode);
     std::string output;
+    NativeByteRanges raw;
     if (encode) {
         output = Encode(input, command == Base64Conversion::UrlSafeEncode);
         if (command == Base64Conversion::HtmlEmbeddedImage)
@@ -156,14 +139,14 @@ bool EditorControl::ConvertBase64(Base64Conversion command, const wxString& path
         if (command == Base64Conversion::DecodeAsHex)
             output = Hex(output, static_cast<Scintilla::EndOfLine>(Send(Message::GetEOLMode)));
         else if (defaultEncoding)
-            output = NativeRepresentation(output, false);
+            output = NativeDefaultEncodingBuffer(output, &raw);
     }
     const auto start = Send(Message::GetSelectionStart);
     const auto end = Send(Message::GetSelectionEnd);
     const bool backwards = Send(Message::GetAnchor) > Send(Message::GetCurrentPos);
     Send(Message::SetTargetStart, start);
     Send(Message::SetTargetEnd, end);
-    Send(Message::ReplaceTarget, output.size(), reinterpret_cast<intptr_t>(output.data()));
+    ReplaceTargetWithNativeBytes(output, std::move(raw));
     const auto outputEnd = start + static_cast<intptr_t>(output.size());
     Send(Message::SetSel, backwards ? outputEnd : start, backwards ? start : outputEnd);
     return true;

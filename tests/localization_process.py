@@ -346,11 +346,7 @@ class Acceptance:
                     path = self.directory / f'base64-{code}-{index}.PNG'
                     path.write_bytes(before)
                     app.send('open', str(path))
-                    if sys.platform == 'win32':
-                        sci_select_all = 2013
-                        self.dialogs.user.SendMessageW(int(app.state['editor_handle']), sci_select_all, 0, 0)
-                    else:
-                        self.dialogs.key(app, 'ctrl+a')
+                    self.dialogs.key(app, 'ctrl+a')
                     app.choose(identity)
                     assert app.state['dirty'] == '1'
                     app.send('save')

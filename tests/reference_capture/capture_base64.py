@@ -31,6 +31,11 @@ rows = []
 states = []
 
 
+def checkpoint():
+    (output / 'partial.json').write_text(json.dumps(dict(
+        revision='89b8b36e0ee2c23f73be922315f17261ccfbbe1a', cases=rows, states=states), indent=2) + '\n')
+
+
 def invoke(original, command, rectangle=False):
     if not rectangle:
         original.command(command)
@@ -47,7 +52,7 @@ def invoke(original, command, rectangle=False):
             user.GetClassNameW(hwnd, name, 100)
             if pid.value == original.process.pid and name.value == '#32770' and hwnd not in dialogs:
                 dialogs.append(hwnd)
-                user.PostMessageW(hwnd, 0x466, 1, 0)  # TDM_CLICK_BUTTON: original InfoBox TaskDialog.
+                user.PostMessageW(hwnd, 0x111, 1, 0)  # Original MsgBoxWarn uses MessageBoxEx (IDOK).
             return True
         user.EnumDesktopWindows(desktop, CALLBACK(window), 0)
         time.sleep(.01)
@@ -91,6 +96,7 @@ try:
                                              anchor=anchor, caret=caret, after=after, undo=undo, redo=redo))
         finally:
             original.close()
+        checkpoint()
     for encoding, content in [('utf-8', '中文é'), ('utf-16le', '中文é'), ('utf-16be', '中文é'),
                               ('gbk', '中文é'), ('gb18030', '中文é'), ('big5', '中文'),
                               ('windows-1252', 'é'), ('cp437', 'é'), ('ansi', '中文')]:
@@ -101,6 +107,8 @@ try:
             native = encoding == 'ansi'
             if native:
                 original.command(40100)  # Actual File/Encoding/ANSI entry on an empty document.
+            codepage = original.send(2137)
+            assert codepage == (c.windll.kernel32.GetACP() if native else 65001), (encoding, codepage)
             for command in range(5):
                 decoded = b'5Lit5paHw6k=' if content == '中文é' else b'5Lit5paH' if content == '中文' else b'w6k='
                 before = content.encode('mbcs' if native else 'utf-8') if command < 3 else b'1tDOxA==' if native else decoded
@@ -112,8 +120,6 @@ try:
                 original.send(2175)
                 original.send(2014)
                 assert original.text() == before
-                codepage = original.send(2137)
-                assert codepage == (c.windll.kernel32.GetACP() if native else 65001), (encoding, codepage)
                 original.command(40494 + command)
                 after = original.state()
                 original.send(2176)
@@ -127,6 +133,7 @@ try:
                                    before_saved=before_saved, after_saved=after_saved))
         finally:
             original.close()
+        checkpoint()
     original = Original(None, host / 'Notepad4.exe', desktop, name)
     try:
         for command in range(5):
@@ -150,6 +157,7 @@ try:
                         original.send(2282, 1, original.put(b'!'))
                         original.send(2176)
                         assert original.send(2016)
+                        original.send(2160, anchor, caret)
                     readonly = int(mode in ['readonly', 'readonly_pending'])
                     original.send(2171, readonly)
                     assert original.text() == before
@@ -164,6 +172,7 @@ try:
                                        anchor=anchor, caret=caret, readonly=readonly, notices=notices,
                                        after=after, undo=undo, redo=redo))
                     states[-1]['command'] = command
+                    checkpoint()
     finally:
         original.close()
 finally:

@@ -1780,7 +1780,7 @@ void EditorFrame::AppendSpecialCommands(wxMenu* edit) {
     Bind(
         wxEVT_MENU,
         [this](wxCommandEvent&) {
-            const auto technical = CharacterInformation(*editor_);
+            const auto technical = CharacterInformation(*editor_, document_.IsDefaultEncoding());
             const auto payload = wxString::FromUTF8(technical);
             editor_->Send(Scintilla::Message::CopyText, technical.size(), reinterpret_cast<intptr_t>(technical.data()));
             wxDialog dialog(this, wxID_ANY, _("Character Info"));
