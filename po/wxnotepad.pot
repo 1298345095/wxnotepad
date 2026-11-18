@@ -1777,6 +1777,10 @@ msgid "Save As"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Save Back&up"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Save Cop&y...\tCtrl+F6"
 msgstr ""
 
