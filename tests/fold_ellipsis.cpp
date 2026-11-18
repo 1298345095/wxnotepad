@@ -30,24 +30,34 @@ struct PaintPixels {
     double scaleX = 1;
     double scaleY = 1;
 };
-PaintPixels Pixels(EditorControl* editor, const wxRect& area) {
-#ifdef __WXMSW__
+PaintPixels WindowPixels(EditorControl* editor, const wxRect& area) {
     // Read the same actual owned-window pixels in one native transfer. Calling
     // GetPixel for every sample is too slow on the shared high-DPI desktop.
     NativeFold::Paint(editor);
     wxClientDC source(editor);
-    wxBitmap bitmap(area.width, area.height, 32);
+    wxBitmap bitmap;
+    Require(bitmap.CreateWithLogicalSize(area.GetSize(), editor->GetContentScaleFactor(), 32),
+            "allocate native window pixel capture");
     wxMemoryDC target(bitmap);
     Require(target.Blit(0, 0, area.width, area.height, &source, area.x, area.y), "read actual native header pixels");
     target.SelectObject(wxNullBitmap);
     const auto image = bitmap.ConvertToImage();
-    PaintPixels result{{}, area.width, area.height};
-    result.pixels.reserve(static_cast<size_t>(area.width) * area.height);
-    for (int y = 0; y < area.height; ++y)
-        for (int x = 0; x < area.width; ++x)
+    PaintPixels result{{},
+                       image.GetWidth(),
+                       image.GetHeight(),
+                       static_cast<double>(image.GetWidth()) / area.width,
+                       static_cast<double>(image.GetHeight()) / area.height};
+    result.pixels.reserve(static_cast<size_t>(result.width) * result.height);
+    for (int y = 0; y < result.height; ++y)
+        for (int x = 0; x < result.width; ++x)
             result.pixels.emplace_back(image.GetRed(x, y), image.GetGreen(x, y), image.GetBlue(x, y));
     return result;
+}
+PaintPixels Pixels(EditorControl* editor, const wxRect& area) {
+#ifdef __WXMSW__
+    return WindowPixels(editor, area);
 #else
+    if (!GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(editor->GetConnectWidget()))) return WindowPixels(editor, area);
     class Capture final {
     public:
         Capture(EditorControl* editor, const wxRect& area) : widget_(editor->GetConnectWidget()), area_(area) {
