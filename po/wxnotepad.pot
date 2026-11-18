@@ -1895,6 +1895,10 @@ msgid "Settings saved"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Show &Menu\tAlt+F11"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Show &Whitespace\tCtrl+Shift+8"
 msgstr ""
 
@@ -1912,6 +1916,10 @@ msgstr ""
 
 #: src/app/editor_frame_commands.cpp
 msgid "Show Line &Endings\tCtrl+Shift+9"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Stat&usbar\tShift+F11"
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp

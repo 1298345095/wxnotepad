@@ -2059,6 +2059,10 @@ msgstr "设置(&T)"
 msgid "Settings saved"
 msgstr "当前程序设置已被保存"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Show &Menu\tAlt+F11"
+msgstr "显示菜单(&M)\tAlt+F11"
+
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_SHOWWHITESPACE.
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Whitespace\tCtrl+Shift+8"
@@ -2081,6 +2085,10 @@ msgstr "显示代码折叠(&F)\tCtrl+Shift+Alt+F"
 #: src/app/editor_frame_commands.cpp
 msgid "Show Line &Endings\tCtrl+Shift+9"
 msgstr "显示换行符(&E)\tCtrl+Shift+9"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Stat&usbar\tShift+F11"
+msgstr "显示状态栏(&U)\tShift+F11"
 
 # Original: locale/zh-Hans/Notepad4.rc, IDM_VIEW_WORDWRAPSYMBOLS.
 #: src/app/editor_frame_commands.cpp

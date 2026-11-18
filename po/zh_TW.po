@@ -2225,6 +2225,10 @@ msgstr "設定(&I)"
 msgid "Settings saved"
 msgstr "設定已儲存"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Show &Menu\tAlt+F11"
+msgstr "顯示功能表(&M)\tAlt+F11"
+
 # Original Notepad4 zh-Hant: IDM_VIEW_SHOWWHITESPACE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
 msgid "Show &Whitespace\tCtrl+Shift+8"
@@ -2248,6 +2252,10 @@ msgstr "顯示程式碼摺疊(&F)\tCtrl+Shift+Alt+F"
 #: src/app/editor_frame_commands.cpp
 msgid "Show Line &Endings\tCtrl+Shift+9"
 msgstr "顯示換行字元(&E)\tCtrl+Shift+9"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Show Stat&usbar\tShift+F11"
+msgstr "顯示狀態列(&U)\tShift+F11"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_WORDWRAPSYMBOLS; adapted where needed.
 #: src/app/editor_frame_commands.cpp
