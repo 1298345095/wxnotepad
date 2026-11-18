@@ -299,6 +299,7 @@ bool EditorFrame::ShowSearchMessage(const wxString& key, const wxString& message
 }
 
 void EditorFrame::UpdateDocumentState() {
+    ApplyUnicodeControlCharacter();
     const wxString name = document_.Path().empty() ? _("Untitled") : document_.Path();
     const wxString protection = document_.IsReadOnlyFile()                       ? _(" (Read Only File)")
                                 : editor_->Send(Scintilla::Message::GetReadOnly) ? _(" (Read Only Mode)")

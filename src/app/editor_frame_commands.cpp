@@ -1087,10 +1087,49 @@ void EditorFrame::AppendDisplayCommands(wxMenu* view) {
         },
         symbols);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(showWordWrapSymbols_); }, symbols);
+    const int controlCharacters = wxWindow::NewControlId();
+    view->AppendCheckItem(controlCharacters, _("Un&icode Control Character"));
+    Bind(
+        wxEVT_MENU,
+        [this](wxCommandEvent&) {
+            if (document_.IsDefaultEncoding()) return;
+            auto& preferences = settings_ ? settings_->values : defaults_;
+            preferences.showUnicodeControlCharacter = !preferences.showUnicodeControlCharacter;
+            ApplyUnicodeControlCharacter();
+        },
+        controlCharacters);
+    Bind(
+        wxEVT_UPDATE_UI,
+        [this](wxUpdateUIEvent& event) {
+            event.Enable(!document_.IsDefaultEncoding());
+            event.Check((settings_ ? settings_->values : defaults_).showUnicodeControlCharacter);
+        },
+        controlCharacters);
     // One frame hook owns dispatch; the dialog retains its narrower callback.
     Bind(wxEVT_CHAR_HOOK, [this, whitespace, eol, symbols](wxKeyEvent& event) {
         if (!HandleCommandKey(event) && !HandleDisplayKey(event, whitespace, eol, symbols)) event.Skip();
     });
+}
+
+void EditorFrame::ApplyUnicodeControlCharacter() {
+    // EditShowUnicodeControlCharacter/EditOnCodePageChanged at Notepad4 89b8b36;
+    // see licenses/Notepad4.txt. The host stores all text as UTF-8, so eligibility
+    // follows the document's logical CPI_DEFAULT identity.
+    const bool visible =
+        (settings_ ? settings_->values : defaults_).showUnicodeControlCharacter && !document_.IsDefaultEncoding();
+    if (visible == unicodeControlCharactersVisible_) return;
+    unicodeControlCharactersVisible_ = visible;
+    for (const auto& character : UnicodeControlInsertions) {
+        if (!character.representation[0]) continue;
+        editor_->Send(visible ? Scintilla::Message::SetRepresentation : Scintilla::Message::ClearRepresentation,
+                      reinterpret_cast<uintptr_t>(character.utf8),
+                      visible ? reinterpret_cast<intptr_t>(character.representation) : 0);
+    }
+    // Original InvalidateStyleRedraw(): representation messages alone retain
+    // cached line widths. Preserve the current caret preference while invoking
+    // the same core invalidation before wrapping, hit-testing and repainting.
+    editor_->Send(Scintilla::Message::SetCaretLineVisibleAlways,
+                  editor_->Send(Scintilla::Message::GetCaretLineVisibleAlways));
 }
 
 void EditorFrame::ApplyWrapSymbols() {
