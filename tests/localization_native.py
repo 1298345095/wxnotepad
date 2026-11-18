@@ -345,7 +345,9 @@ class Dialogs:
                 assert windows, f'Owned native X11 window did not map: {self.title(window) if window else app.process.pid}'
                 subprocess.run(['xdotool', 'windowfocus', '--sync', windows[0]], check=True)
             focus = Path(os.environ['WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS'])
-            self.key_sequence += 1
+            # The driver's retained log outlives each fixture process. Use a
+            # fresh identity so an older reply cannot acknowledge this request.
+            self.key_sequence = time.monotonic_ns()
             pending = focus.with_suffix('.localization-pending')
             pending.write_text(f'trace:{self.key_sequence}:key:{key}', encoding='utf-8')
             pending.replace(focus)
