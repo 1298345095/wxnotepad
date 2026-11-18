@@ -188,7 +188,8 @@ EditorFrame::~EditorFrame() {
 #ifdef __WXMSW__
     // wxMSW leaves attached HMENUs for DestroyWindow to free. Restore native
     // ownership even when we hid the bar without detaching wx's accelerators.
-    ::SetMenu(static_cast<HWND>(GetHandle()), static_cast<HMENU>(GetMenuBar()->GetHMenu()));
+    const auto window = static_cast<HWND>(GetHandle());
+    if (!::GetMenu(window)) ::SetMenu(window, static_cast<HMENU>(GetMenuBar()->GetHMenu()));
 #endif
 }
 
