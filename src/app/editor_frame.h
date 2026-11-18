@@ -85,6 +85,10 @@ private:
     void ApplyUnicodeControlCharacter();
     bool showWordWrapSymbols_ = false;
     int wordWrapSymbols_ = 2;
+    // A loaded file's truncate-lines variable can override this global preference.
+    bool wordWrap_ = false;
+    void ToggleWordWrap();
+    void ShowWordWrapSettings();
     void ApplyWrapSymbols();
     void CreateMenus();
     wxMenu* CreateFileMenu();
