@@ -2315,6 +2315,10 @@ msgid "Show &edge line."
 msgstr "顯示邊緣線(&E)。"
 
 #: src/app/editor_frame_commands.cpp
+msgid "Show CallTip"
+msgstr "顯示呼叫提示"
+
+#: src/app/editor_frame_commands.cpp
 msgid "Show Character &Info"
 msgstr "顯示字元資訊(&I)"
 

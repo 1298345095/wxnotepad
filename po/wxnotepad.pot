@@ -1984,6 +1984,10 @@ msgid "Show &edge line."
 msgstr ""
 
 #: src/app/editor_frame_commands.cpp
+msgid "Show CallTip"
+msgstr ""
+
+#: src/app/editor_frame_commands.cpp
 msgid "Show Character &Info"
 msgstr ""
 
