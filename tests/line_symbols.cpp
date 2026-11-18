@@ -73,7 +73,7 @@ void Combined(EditorFrame* frame) {
     TestEditor::ResetStream(editor, text.c_str());
     NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
     NativeFold::Paint(editor);
-    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+    NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
     Require(!editor->Send(Message::GetLineVisible, 2), "combined fixture contains a collapsed block");
     const auto before = DocumentState(frame);
     const int wrap = frame->GetMenuBar()->FindMenuItem("View", "Word Wrap");

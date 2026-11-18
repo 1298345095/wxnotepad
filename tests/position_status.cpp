@@ -243,7 +243,7 @@ public:
                 NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("Scheme", "C/C++"));
                 NativeFold::Paint(editor);
                 editor->Send(Message::GotoPos, 0);
-                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "Collapse All"));
+                NativeSearch::Command(frame, frame->GetMenuBar()->FindMenuItem("View", "All Levels"));
                 editor->Send(Message::EmptyUndoBuffer);
                 editor->Send(Message::SetSavePoint);
                 editor->Send(Message::AppendText, 1, reinterpret_cast<intptr_t>("!"));

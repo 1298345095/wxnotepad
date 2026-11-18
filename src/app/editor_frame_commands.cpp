@@ -1304,20 +1304,25 @@ void EditorFrame::AppendFoldCommands(wxMenu* view) {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { editor_->SetCodeFoldingVisible(!editor_->CodeFoldingVisible()); }, show);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Check(editor_->CodeFoldingVisible()); }, show);
     auto* folds = new wxMenu;
-    const auto addFoldCommand = [this, folds](const wxString& label, uintptr_t action) {
+    const auto addFoldCommand = [this, folds](const wxString& label, FoldCommand command, int level = 0) {
         const int id = wxWindow::NewControlId();
         folds->Append(id, label);
         Bind(
             wxEVT_MENU,
-            [this, action](wxCommandEvent&) {
-                if (editor_->CodeFoldingVisible()) editor_->Send(Scintilla::Message::FoldAll, action);
+            [this, command, level](wxCommandEvent&) {
+                editor_->ToggleFolds(command, SyntaxFor(document_.Language()).original, level);
             },
             id);
     };
-    addFoldCommand(_("&Collapse All"),
-                   static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Contract)) |
-                       static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::ContractEveryLevel)));
-    addFoldCommand(_("&Expand All"), static_cast<uintptr_t>(std::to_underlying(Scintilla::FoldAction::Expand)));
+    using enum FoldCommand;
+    addFoldCommand(_("&Default Levels\tShift+Alt+D"), DefaultLevels);
+    addFoldCommand(_("&All Levels\tShift+Alt+A"), AllLevels);
+    addFoldCommand(_("&Current Block\tAlt+C"), CurrentBlock);
+    addFoldCommand(_("Current &Level"), CurrentLevel);
+    folds->AppendSeparator();
+    for (int level = 1; level < 10; ++level)
+        addFoldCommand(wxString::Format(_("Level &%d\tAlt+%d"), level, level), NumericLevel, level - 1);
+    addFoldCommand(_("Level 1&0"), NumericLevel, 9);
     view->AppendSubMenu(folds, _("&Toggle Folds"));
 }
 

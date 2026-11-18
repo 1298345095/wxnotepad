@@ -76,6 +76,7 @@ add_library(editor_runtime STATIC
     src/editor/bookmarks.cpp
     src/editor/block_comments.cpp
     src/editor/block_navigation.cpp
+    src/editor/fold_commands.cpp
     src/editor/selection_commands.cpp
     src/editor/enclose_selection.cpp
     src/editor/url_conversion.cpp
@@ -671,6 +672,9 @@ if(BUILD_TESTING)
     add_editor_test(fold_cpp cpp_fold_margin 60)
     add_editor_test(search_folds folded_search_replace 60)
     add_editor_test(fold_all fold_all_commands 60)
+    add_editor_test(fold_commands original_toggle_folds 60)
+    target_compile_definitions(fold_commands PRIVATE
+        "FOLD_COMMAND_REFERENCE=u8\"${CMAKE_CURRENT_SOURCE_DIR}/tests/data/fold_commands_reference.tsv\"")
     add_editor_test(fold_view original_folding_view 60)
     if(WIN32)
         add_test(NAME original_folding_view_dpi96 COMMAND fold_view)
