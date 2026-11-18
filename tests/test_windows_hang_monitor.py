@@ -71,6 +71,16 @@ class CharacterInfoHangMonitor(unittest.TestCase):
         self.assertIn('child stderr', result.stderr)
         self.assertFalse(self.dumps.exists(), 'ordinary child must not trigger diagnostic work')
 
+    def test_high_bit_windows_exit_dword_is_preserved(self):
+        access_violation_exit = 0xC0000005
+        script = ('import ctypes; from ctypes import wintypes; '
+                  'exit_process=ctypes.WinDLL("kernel32").ExitProcess; '
+                  'exit_process.argtypes=[wintypes.UINT]; exit_process.restype=None; '
+                  f'exit_process({access_violation_exit})')
+        result = self.execute(self.command(script))
+        self.assertEqual(result.returncode, access_violation_exit, repr(result))
+        self.assertFalse(self.dumps.exists())
+
     def test_parent_captures_thread_and_module_streams_without_changing_child_exit(self):
         result = self.execute(self.command('import time; time.sleep(2); raise SystemExit(9)', after='.1'))
         self.assertEqual(result.returncode, 9, repr(result))
