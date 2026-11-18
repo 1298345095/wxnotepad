@@ -273,6 +273,9 @@ jobs:
             .ci/build/cmake/eol_open.pdb
             .ci/build/cmake/native_byte_information.exe
             .ci/build/cmake/native_byte_information.pdb
+            .ci/original-reference/cmake/native_original_viewport.exe
+            .ci/original-reference/cmake/native_original_viewport.pdb
+            tests/data/word_wrap_*.tsv
             .ci/build/cmake/clipboard_smoke
             .ci/build/cmake/clipboard_peer
             .ci/build/cmake/stream_drag
