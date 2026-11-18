@@ -1401,6 +1401,10 @@ msgstr "完整路徑名稱(&P)\tAlt+Shift+F9"
 msgid "Full &Path Name\tCtrl+Shift+F9"
 msgstr "完整路徑名稱(&P)\tCtrl+Shift+F9"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Full Scree&n Mode"
+msgstr "全螢幕模式(&N)"
+
 #: src/syntax/syntax_catalog.cpp
 msgid "GitHub GFM"
 msgstr "GitHub GFM"
@@ -1482,6 +1486,10 @@ msgstr "依檔案類型分組(&T)。"
 #: src/app/editor_frame_commands.cpp
 msgid "Hex to Cha&racter\tCtrl+Alt+C"
 msgstr "Hex 轉字元(&R)\tCtrl+Alt+C"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Hide &Title"
+msgstr "隱藏標題列(&T)"
 
 # Original Notepad4 zh-Hant: IDM_VIEW_HIGHLIGHTCURRENTLINE_SUBLINE; adapted where needed.
 #: src/app/editor_frame_commands.cpp
@@ -1838,6 +1846,10 @@ msgstr "無"
 #: src/app/dialogs/document_dialogs.cpp
 msgid "OEM United States (DOS-437)"
 msgstr "OEM United States (DOS-437)"
+
+#: src/app/editor_frame_commands.cpp
+msgid "On &Startup"
+msgstr "啟動時進入全螢幕(&S)"
 
 #: src/app/dialogs/auto_completion_settings_dialog.cpp
 msgid "Only words in document"
@@ -2619,6 +2631,14 @@ msgstr "轉八進位(&O)"
 #: src/app/editor_frame_commands.cpp
 msgid "Toggle Block &Comment\tCtrl+Q"
 msgstr "切換區塊註解(&C)\tCtrl+Q"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen\tF11 [Esc]"
+msgstr "切換全螢幕(&S)\tF11 [Esc]"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Toggle Full &Screen [Esc]\tF11"
+msgstr "切換全螢幕(&S) [Esc]\tF11"
 
 #: src/app/dialogs/document_dialogs.cpp
 msgid "Traditional Chinese (Big5, Big5-HKSCS)"
