@@ -350,6 +350,11 @@ and fails an otherwise successful child result. The evidence upload retains the
 matching executable and any PDB. `native_character_info_hang_monitor` verifies
 real child exits, GUI output forwarding, dump streams, capture failure and both
 hard parent termination and CTest timeout cleanup.
+The Windows original Character Info fixture uses the same monitor with a
+75-second capture under its existing 90-second CTest guard. Its evidence also
+retains the last flushed fixture phase, the dump, and the matching binary and
+any PDB. Windows clipboard errors go to stderr so the fixture reports a failed
+assertion without opening an additional modal error dialog.
 
 The JSON native fixture waits for GTK's initial folder load before selecting a
 file, so that load cannot replace the requested selection. On Linux with CMake
