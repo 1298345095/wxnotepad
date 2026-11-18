@@ -2016,6 +2016,10 @@ msgstr "移除最近檔案？"
 msgid "Ren&dering Technology"
 msgstr "繪製技術(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "Repl&ace Next\tF4"
+msgstr "取代下一個(&A)\tF4"
+
 # Original Notepad4 zh-Hant: IDD_REPLACE title (shortened); adapted where needed.
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Replace"
@@ -2071,6 +2075,10 @@ msgstr "SHY — 軟連字號(&X)"
 #: src/syntax/syntax_catalog.cpp
 msgid "SVG"
 msgstr "SVG"
+
+#: src/app/editor_frame_commands.cpp
+msgid "Sa&ve Find Text\tAlt+F3"
+msgstr "儲存尋找文字(&V)\tAlt+F3"
 
 # Original Notepad4 zh-Hant: IDM_FILE_SAVEAS; adapted where needed.
 #: src/app/editor_frame_commands.cpp
