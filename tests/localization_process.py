@@ -346,9 +346,11 @@ class Acceptance:
                     path = self.directory / f'base64-{code}-{index}.PNG'
                     path.write_bytes(before)
                     app.send('open', str(path))
-                    self.dialogs.key(app, 'ctrl+a')
+                    self.dialogs.key(app, 'ctrl+a', expected_state={'selection_start': '0',
+                                                                  'selection_end': str(len(before))})
                     app.choose(identity)
-                    assert app.state['dirty'] == '1'
+                    assert app.state['dirty'] == '1', (code, index, app.state['length'], app.state['selection_start'],
+                                                       app.state['selection_end'])
                     app.send('save')
                     assert path.read_bytes() == expected
                     app.choose(undo)

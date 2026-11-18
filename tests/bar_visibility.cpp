@@ -160,6 +160,10 @@ public:
                 frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
                 Require(menus->IsChecked(menu) && menus->IsChecked(status), "both command checks reflect visibility");
                 NativePaint::Complete(frame->Editor());
+#ifdef __WXMSW__
+                WaitForLayout([&] { return frame->Editor()->GetSize().y == frame->GetClientSize().y; },
+                              "initial editor height matches the native frame client area");
+#endif
                 const auto initial = frame->Editor()->GetSize();
                 const auto initialStatus = frame->GetStatusBar()->GetSize();
                 std::printf("Initial frame client height=%d\n", frame->GetClientSize().y);
