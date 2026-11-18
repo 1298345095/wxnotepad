@@ -60,16 +60,31 @@ void CheckMenu(EditorFrame* frame) {
            "Find Matching Brace", "Select to Matching Brace", "Select Word", "Select Lines (Expand Selection)",
            "Select Lines in Current Block", "Select to Document Start", "Select to Document End", "Select to Next",
            "Select to Previous", "Bookmarks", "Goto"});
-    Order(bar->GetMenu(3),
-          {"Default Code Font...",   "Default Text Font...",      "Caret Style",           "Word Wrap",
-           "Long Line Marker",       "Indentation Guides",        "Show Whitespace",       "Show Line Endings",
-           "Show Wrap Symbols",      "Unicode Control Character", "Visual Brace Matching", "Highlight Current Block",
-           "Highlight Current Line", "Mark Occurrences",          "Line Numbers",          "Bookmark Margin",
-           "Change History Marker",  "Show Code Folding",         "Toggle Folds",          "Zoom",
+    Order(bar->GetMenu(3), {"Default Code Font...",
+                            "Default Text Font...",
+                            "Caret Style",
+                            "Word Wrap",
+                            "Long Line Marker",
+                            "Indentation Guides",
+                            "Show Whitespace",
+                            "Show Line Endings",
+                            "Show Wrap Symbols",
+                            "Unicode Control Character",
+                            "Visual Brace Matching",
+                            "Highlight Current Block",
+                            "Highlight Current Line",
+                            "Mark Occurrences",
+                            "Show CallTip",
+                            "Line Numbers",
+                            "Bookmark Margin",
+                            "Change History Marker",
+                            "Show Code Folding",
+                            "Toggle Folds",
+                            "Zoom",
 #ifdef __WXMSW__
-           "Toggle Full Screen"});
+                            "Toggle Full Screen"});
 #else
-           "Toggle Full Screen [Esc]"});
+                            "Toggle Full Screen [Esc]"});
 #endif
     auto* folds = Submenu(bar->GetMenu(3), "Toggle Folds");
     Order(folds, {"Default Levels", "All Levels", "Current Block", "Current Level", "Level 1", "Level 2", "Level 3",

@@ -1078,7 +1078,6 @@ wxMenu* EditorFrame::CreateViewMenu() {
     AppendCaretCommands(view);
     view->AppendSeparator();
     AppendDisplayCommands(view);
-    AppendCallTipCommands(view);
     view->AppendSeparator();
     const int matchBraces = wxWindow::NewControlId();
     view->AppendCheckItem(matchBraces, _("Visual &Brace Matching\tCtrl+Shift+V"));
@@ -1107,6 +1106,7 @@ wxMenu* EditorFrame::CreateViewMenu() {
             id);
     }
     view->AppendSubMenu(occurrences, _("Mark &Occurrences"));
+    AppendCallTipCommands(view);
     view->AppendSeparator();
     AppendMarginCommands(view);
     view->AppendSeparator();
