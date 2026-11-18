@@ -645,6 +645,10 @@ if(BUILD_TESTING)
         add_test(NAME original_unicode_controls_dpi96 COMMAND unicode_controls)
         set_tests_properties(original_unicode_controls_dpi96 PROPERTIES TIMEOUT 60
             ENVIRONMENT "WXNOTEPAD_UNICODE_DPI96=1")
+    else()
+        add_test(NAME original_unicode_controls_scale2 COMMAND unicode_controls)
+        set_tests_properties(original_unicode_controls_scale2 PROPERTIES TIMEOUT 60
+            ENVIRONMENT "GDK_SCALE=2;GDK_DPI_SCALE=1")
     endif()
     foreach(language en zh_CN zh_TW)
         add_test(NAME original_unicode_controls_process_${language} COMMAND "${Python3_EXECUTABLE}" -X utf8

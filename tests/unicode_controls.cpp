@@ -3,6 +3,7 @@
 #include "settings/settings_store.h"
 #include "encoded_file_helpers.h"
 #include "native_renderer_helpers.h"
+#include "native_key_helpers.h"
 #include <array>
 #include <string>
 #include <tuple>
@@ -267,8 +268,9 @@ public:
             Require(frame->Editor()->GetDPI().y == 96, "the complementary native representation fixture uses 96 DPI");
 #endif
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "the owned native editor is presented before representation painting");
                 auto* menu = frame->GetMenuBar();
                 const int id = menu->FindMenuItem("View", "Unicode Control Character");
                 Require(id != wxNOT_FOUND, "View exposes Unicode Control Character");
