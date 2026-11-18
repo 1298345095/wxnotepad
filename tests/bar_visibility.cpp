@@ -93,6 +93,11 @@ void HiddenMenuEditing(EditorFrame* frame, int menu, int status) {
             "restored status immediately shows language, encoding and position changed while hidden");
     frame->UpdateWindowUI(wxUPDATE_UI_RECURSE);
     Require(menus->IsChecked(menu) && menus->IsChecked(status), "restored bars have checked commands");
+    NativeKeys::Shortcut(frame, WXK_F11, false, true);
+    NativeKeys::Shortcut(frame, 'N', true);
+    Require(NativeSearch::Text(editor).empty() && !MenuVisible(frame),
+            "File New menu accelerator remains usable with hidden menu after native focus return");
+    NativeKeys::Shortcut(frame, WXK_F11, false, true);
     editor->Send(SetSavePoint);
     std::puts("PASS: exact native shortcuts, hidden-menu editing, focus return, status freshness and resize");
 }
@@ -111,6 +116,18 @@ public:
                 const int status = menus->FindMenuItem("Settings", "Show Statusbar");
                 Require(menu != wxNOT_FOUND && status != wxNOT_FOUND,
                         "Settings Appearance exposes both original visibility commands");
+#ifdef __WXMSW__
+                if (argc == 2 && argv[1] == "--cleanup") {
+                    NativeSearch::Command(frame, menu);
+                    const auto nativeMenu = static_cast<HMENU>(menus->GetHMenu());
+                    delete std::exchange(frame, nullptr);
+                    Require(!IsMenu(nativeMenu), "closing a hidden-menu frame releases its native menu");
+                    result_ = 0;
+                    std::puts("PASS: closing hidden-menu frame releases native menu");
+                    ExitMainLoop();
+                    return;
+                }
+#endif
                 if (argc > 1) {
                     Require(argc == 5, "lifecycle requires expected menu/status, action and save policy");
                     Require(MenuVisible(frame) == (argv[1] == "1") &&
@@ -134,23 +151,29 @@ public:
                 Require(menus->IsChecked(menu) && menus->IsChecked(status), "both command checks reflect visibility");
                 NativePaint::Complete(frame->Editor());
                 const auto initial = frame->Editor()->GetSize();
+                const auto initialStatus = frame->GetStatusBar()->GetSize();
                 NativeSearch::Command(frame, status);
                 NativePaint::Complete(frame->Editor());
                 Require(!frame->GetStatusBar()->IsShown(), "native menu hides status bar");
                 WaitForLayout([&] { return frame->Editor()->GetSize().y > initial.y; },
                               "hidden status bar gives editor its client area");
+                const auto withMenu = frame->Editor()->GetSize();
                 NativeSearch::Command(frame, menu);
                 Require(!MenuVisible(frame), "native menu hides menu bar");
+                WaitForLayout([&] { return frame->Editor()->GetSize().y > withMenu.y; },
+                              "hidden menu gives editor its client area");
                 NativeSearch::Command(frame, menu);
+                WaitForLayout([&] { return frame->Editor()->GetSize().y == withMenu.y; },
+                              "restored menu returns its native client area");
                 NativeSearch::Command(frame, status);
+                std::printf("Native bar layout: initial editor=%d status=%d, hidden-status editor=%d, "
+                            "restored editor=%d status=%d, frame=%d client=%d\n",
+                            initial.y, initialStatus.y, withMenu.y, frame->Editor()->GetSize().y,
+                            frame->GetStatusBar()->GetSize().y, frame->GetSize().y, frame->GetClientSize().y);
+                WaitForLayout([&] { return frame->Editor()->GetSize().y == initial.y; },
+                              "restored status returns its native client area");
                 Require(MenuVisible(frame) && frame->GetStatusBar()->IsShown(), "native commands restore both bars");
                 HiddenMenuEditing(frame, menu, status);
-#ifdef __WXMSW__
-                NativeSearch::Command(frame, menu);
-                const auto nativeMenu = static_cast<HMENU>(menus->GetHMenu());
-                delete std::exchange(frame, nullptr);
-                Require(!IsMenu(nativeMenu), "closing a hidden-menu frame releases its native menu");
-#endif
                 result_ = 0;
                 std::puts("PASS: original native menu controls, check states and client-area layout");
             } catch (const std::exception& error) {

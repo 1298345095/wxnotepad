@@ -832,6 +832,10 @@ if(BUILD_TESTING)
     add_test(NAME original_bar_visibility_lifecycle COMMAND "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/bar_visibility_process.py" "$<TARGET_FILE:bar_visibility>")
     set_tests_properties(original_bar_visibility_lifecycle PROPERTIES TIMEOUT 120)
+    if(WIN32)
+        add_test(NAME original_hidden_menu_cleanup COMMAND bar_visibility --cleanup)
+        set_tests_properties(original_hidden_menu_cleanup PROPERTIES TIMEOUT 15)
+    endif()
 
 endif()
 

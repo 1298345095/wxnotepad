@@ -81,6 +81,12 @@ EditorFrame::EditorFrame(SettingsStore* settings)
     const auto& preferences = settings ? settings->values : defaults_;
 #ifdef __WXMSW__
     editor_->Send(Scintilla::Message::SetTechnology, preferences.renderingTechnology);
+    Bind(wxEVT_SHOW, [this](wxShowEvent& event) {
+        // The native status bar finalizes its height when the frame is shown.
+        // Layout from that real client area instead of the pre-show geometry.
+        if (event.IsShown()) CallAfter([this] { Layout(); });
+        event.Skip();
+    });
 #endif
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         if (!IsMaximized() && !IsIconized()) normalWindowSize_ = GetSize();
@@ -170,6 +176,14 @@ EditorFrame::EditorFrame(SettingsStore* settings)
 #endif
     UpdateDocumentState();
     editor_->SetFocus();
+}
+
+EditorFrame::~EditorFrame() {
+#ifdef __WXMSW__
+    // wxMSW leaves attached HMENUs for DestroyWindow to free. Restore native
+    // ownership even when we hid the bar without detaching wx's accelerators.
+    ::SetMenu(static_cast<HWND>(GetHandle()), static_cast<HMENU>(GetMenuBar()->GetHMenu()));
+#endif
 }
 
 void EditorFrame::ApplyBarVisibility() {

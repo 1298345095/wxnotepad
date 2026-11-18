@@ -16,6 +16,7 @@ class wxMenu;
 class EditorFrame final : public wxFrame {
 public:
     explicit EditorFrame(SettingsStore* settings = nullptr);
+    ~EditorFrame() override;
     EditorControl* Editor() const { return editor_; }
     const wxString& DocumentPath() const { return document_.Path(); }
     SaveResult Save(const EncodingLossDecision& decideLoss = {}, SaveTimeMode timeMode = SaveTimeMode::Current);
