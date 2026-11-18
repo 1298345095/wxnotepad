@@ -1085,6 +1085,13 @@ wxMenu* EditorFrame::CreateViewMenu() {
     AppendFoldCommands(view);
     view->AppendSeparator();
     AppendZoomCommands(view);
+    const int fullScreen = wxWindow::NewControlId();
+#ifdef __WXMSW__
+    view->Append(fullScreen, _("Toggle Full &Screen\tF11 [Esc]"));
+#else
+    view->Append(fullScreen, _("Toggle Full &Screen [Esc]\tF11"));
+#endif
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { SetFullScreen(!FullScreenActive()); }, fullScreen);
     return view;
 }
 
@@ -1457,6 +1464,7 @@ void EditorFrame::OnSearchKey(wxKeyEvent& event) {
 }
 
 bool EditorFrame::HandleCommandKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers() && HandleFullScreenEscape()) return true;
     if (HandleInsertionKey(event)) return true;
     if (event.GetKeyCode() == 'I' && event.ControlDown() && !event.AltDown()) {
         if (event.ShiftDown() && !event.MetaDown())
@@ -1745,7 +1753,30 @@ void EditorFrame::HandleAltBlockNavigationKey(const wxKeyEvent& event, int key) 
     }
 }
 
+void EditorFrame::HandleFullScreenKey(int modifiers) {
+    auto& preferences = settings_ ? settings_->values : defaults_;
+    switch (modifiers) {
+    case wxMOD_NONE:
+        SetFullScreen(!FullScreenActive());
+        break;
+    case wxMOD_ALT:
+        preferences.showMenu = !preferences.showMenu;
+        ApplyBarVisibility();
+        break;
+    case wxMOD_SHIFT:
+        preferences.showStatusbar = !preferences.showStatusbar;
+        ApplyBarVisibility();
+        break;
+    default:
+        break;
+    }
+}
+
 bool EditorFrame::HandleViewKey(const wxKeyEvent& event) {
+    if (event.GetKeyCode() == WXK_F11) {
+        HandleFullScreenKey(event.GetModifiers());
+        return true;
+    }
     if (event.GetKeyCode() == 'V' && event.ControlDown() && event.ShiftDown()) {
         if (!event.AltDown() && !event.MetaDown()) editor_->SetVisualBraceMatching(!editor_->VisualBraceMatching());
         return true;
@@ -2054,6 +2085,29 @@ wxMenu* EditorFrame::CreateSettingsMenu() {
             id);
     }
     appearance->AppendSeparator();
+    auto* fullScreen = new wxMenu;
+    for (const auto& [label, bit] : {std::pair{wxTRANSLATE("On &Startup"), FullScreenMode_OnStartup},
+                                     std::pair{wxTRANSLATE("Hide &Title"), FullScreenMode_HideTitle}}) {
+        const int id = wxWindow::NewControlId();
+        fullScreen->AppendCheckItem(id, wxGetTranslation(label));
+        Bind(
+            wxEVT_MENU,
+            [this, bit](wxCommandEvent&) {
+                auto& preferences = settings_ ? settings_->values : defaults_;
+                preferences.fullScreenMode ^= bit;
+#ifdef __WXMSW__
+                if (bit == FullScreenMode_HideTitle) RefreshFullScreen();
+#endif
+            },
+            id);
+        Bind(
+            wxEVT_UPDATE_UI,
+            [this, bit](wxUpdateUIEvent& event) {
+                event.Check(((settings_ ? settings_->values : defaults_).fullScreenMode & bit) != 0);
+            },
+            id);
+    }
+    appearance->AppendSubMenu(fullScreen, _("Full Scree&n Mode"));
     auto* scrollPastLastLine = new wxMenu;
     // Keep Notepad4's full EndAtLastLine integer contract (One Page is zero).
     for (const auto& [label, mode] : {std::pair{wxTRANSLATE("&No"), 1}, std::pair{wxTRANSLATE("&One Page"), 0},

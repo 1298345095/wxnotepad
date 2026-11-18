@@ -64,6 +64,7 @@ View
   Line Numbers; Bookmark Margin; Change History Marker
   Show Code Folding; Toggle Folds > Collapse All; Expand All
   Zoom > Zoom In; Zoom Out; Zoom Level; Reset Zoom
+  Toggle Full Screen (F11; Esc exits after dismissing any active completion list or CallTip)
 Scheme
   Automatic; delivered syntax schemes
 Settings
@@ -72,7 +73,10 @@ Settings
     Enable Multiple Selection; Copy Selection As Find Text; Copy Paste Buffer As Find Text
     Undo Redo Remember Selection
     Line Selection Mode > None; Visual Studio; Old Visual Studio; Normal
-  Appearance > Auto-Shrink Horizontal Scrollbar
+  Appearance
+    Show Menu (Alt+F11); Show Statusbar (Shift+F11)
+    Full Screen Mode > On Startup; Hide Title
+    Scroll Past Last Line; Auto-Shrink Horizontal Scrollbar
   File Change Notification (Alt+F5)
   Other Settings > Remember Search Options; Remember Recent Files
   Advanced Settings > Rendering Technology > Legacy GDI; Direct2D (Windows)

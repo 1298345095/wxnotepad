@@ -53,6 +53,7 @@ void HiddenMenuEditing(EditorFrame* frame, int menu, int status) {
     NativeKeys::Shortcut(frame, WXK_F11, false);
     NativeKeys::Shortcut(frame, WXK_F11, true);
     Require(MenuVisible(frame) && frame->GetStatusBar()->IsShown(), "plain and Ctrl F11 toggle neither bar");
+    NativeKeys::Shortcut(frame, WXK_F11, false);
     NativeKeys::Shortcut(frame, WXK_F11, false, true);
     Require(!MenuVisible(frame) && frame->GetStatusBar()->IsShown(), "Alt F11 hides menu only");
     const auto withStatus = editor->GetSize();

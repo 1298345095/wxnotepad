@@ -23,6 +23,12 @@ enum AutoInsertMask {
     AutoInsertMask_Default = 511,
 };
 
+enum FullScreenMode {
+    FullScreenMode_OnStartup = 1,
+    FullScreenMode_HideTitle = 2,
+    FullScreenMode_Default = FullScreenMode_HideTitle,
+};
+
 // Original Edit.h continuation-indent indices, also used by the native dialog.
 enum class WrapContinuationIndent { None, OneCharacter, TwoCharacters, OneLevel, TwoLevels, Same, Indent, DeepIndent };
 

@@ -106,6 +106,7 @@ SettingsStore::SettingsStore(const wxString& path) : path_(path) {
     if (values.saveRecentFiles) values.recentFiles = ReadRecentFiles();
     values.showMenu = ReadBool("ShowMenu", defaults.showMenu);
     values.showStatusbar = ReadBool("ShowStatusbar", defaults.showStatusbar);
+    values.fullScreenMode = ReadInt("FullScreenMode", defaults.fullScreenMode);
     values.wordWrap = ReadBool("WordWrap", defaults.wordWrap);
     values.wordWrapMode =
         std::clamp(ReadInt("WordWrapMode", defaults.wordWrapMode), std::to_underlying(Scintilla::Wrap::Word),
@@ -484,6 +485,7 @@ bool SettingsStore::Save(bool explicitSave) {
                  RecentFiles::MinimumCapacity << 1);
         WriteBool("ShowMenu", values.showMenu, defaults.showMenu);
         WriteBool("ShowStatusbar", values.showStatusbar, defaults.showStatusbar);
+        WriteInt("FullScreenMode", values.fullScreenMode, defaults.fullScreenMode);
         WriteBool("WordWrap", values.wordWrap, defaults.wordWrap);
         WriteInt("WordWrapMode", values.wordWrapMode, defaults.wordWrapMode);
         WriteInt("WordWrapIndent", std::to_underlying(values.wordWrapIndent),
