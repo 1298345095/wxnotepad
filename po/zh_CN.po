@@ -175,6 +175,10 @@ msgstr "复制行(&C)\tCtrl+Shift+C"
 msgid "&Decode"
 msgstr "解码(&D)"
 
+#: src/app/editor_frame_commands.cpp
+msgid "&Default Encoding\tCtrl+Alt+F"
+msgstr "默认编码(&D)\tCtrl+Alt+F"
+
 #: src/app/dialogs/document_dialogs.cpp
 msgid "&Default encoding:"
 msgstr "默认编码(&D):"
@@ -704,6 +708,14 @@ msgstr "外观(&R)"
 #: src/app/dialogs/find_replace_dialog.cpp
 msgid "Applies to literal searches. Use word boundaries in a regular expression."
 msgstr "适用于字面文本搜索。正则表达式中请使用单词边界。"
+
+#: src/app/editor_frame_commands.cpp
+msgid "As &ANSI\tCtrl+Shift+A"
+msgstr "作为 &ANSI\tCtrl+Shift+A"
+
+#: src/app/editor_frame_commands.cpp
+msgid "As &OEM\tCtrl+Shift+O"
+msgstr "作为 &OEM\tCtrl+Shift+O"
 
 # Original: locale/zh-Hans/Notepad4.rc, CMD_RELOADUTF8.
 #: src/app/editor_frame_commands.cpp
