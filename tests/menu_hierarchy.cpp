@@ -32,8 +32,9 @@ void CheckMenu(EditorFrame* frame) {
     Require(bar->GetMenuCount() == std::size(names), "delivered menus follow the original six groups");
     for (size_t index = 0; index < std::size(names); ++index)
         Require(bar->GetMenuLabelText(index) == names[index], "original top-level menu order");
-    Order(bar->GetMenu(1), {"Undo", "Redo", "Cut", "Copy", "Paste", "Swap", "Clear Clipboard", "Copy to Clipboard",
-                            "Selection", "Enclose Selection", "Lines", "Convert", "Insert", "Special"});
+    Order(bar->GetMenu(1),
+          {"Undo", "Redo", "Cut", "Copy", "Paste", "Select All", "Swap", "Clear Clipboard", "Copy to Clipboard",
+           "Selection", "Enclose Selection", "Lines", "Convert", "Insert", "Special"});
     Order(Submenu(bar->GetMenu(1), "Selection"),
           {"Duplicate", "Toggle Line Comment", "Toggle Block Comment", "Indent", "Unindent", "Strip Trailing Blanks",
            "Strip First Character", "Strip Last Character", "Strip Leading Blanks", "Merge Blank Lines",
@@ -42,8 +43,10 @@ void CheckMenu(EditorFrame* frame) {
     Order(Submenu(bar->GetMenu(1), "Lines"),
           {"Move Up", "Move Down", "Transpose", "Sort Lines...", "Modify Lines...", "Align Lines...", "Duplicate Line",
            "Cut Line", "Copy Line", "Delete Line", "Join Lines", "Split Lines", "Column Wrap...", "Join Paragraphs"});
+    // Notepad4.rc 89b8b36: the character-information commands follow Hex to Character.
     Order(Submenu(bar->GetMenu(1), "Special"),
-          {"Complete Word", "Character to Hex", "Hex to Character", "Escape C Chars", "Unescape C Chars"});
+          {"Complete Word", "Character to Hex", "Hex to Character", "Show Hex Code", "Show Character Info",
+           "Escape C Chars", "Unescape C Chars"});
     Order(Submenu(bar->GetMenu(0), "Line Endings"),
           {"Windows (CR+LF)", "Unix/macOS (LF)", "Classic Mac OS (CR)", "Default..."});
     // Notepad4.rc at 89b8b36: CMD_RELOADUTF8, separator, IDM_RECODE_SELECT,
@@ -52,13 +55,16 @@ void CheckMenu(EditorFrame* frame) {
     Order(reload, {"As UTF-8", "With Encoding..."});
     Require(reload->GetMenuItemCount() == 3 && reload->FindItemByPosition(1)->IsSeparator(),
             "Reload retains the original separator between quick reload and the encoding chooser");
-    Order(bar->GetMenu(2),
-          {"Find...", "Find Next", "Find Previous", "Replace...", "Find Matching Brace", "Select to Matching Brace",
-           "Select Lines in Current Block", "Select to Next", "Select to Previous", "Bookmarks", "Goto"});
-    Order(bar->GetMenu(3), {"Caret Style", "Word Wrap", "Long Line Marker", "Indentation Guides", "Show Whitespace",
-                            "Show Line Endings", "Show Wrap Symbols", "Visual Brace Matching",
-                            "Highlight Current Block", "Highlight Current Line", "Mark Occurrences", "Line Numbers",
-                            "Bookmark Margin", "Change History Marker", "Show Code Folding", "Toggle Folds", "Zoom"});
+    Order(bar->GetMenu(2), {"Find...", "Find Next", "Find Previous", "Replace...", "Find Matching Brace",
+                            "Select to Matching Brace", "Select Word", "Select Lines (Expand Selection)",
+                            "Select Lines in Current Block", "Select to Document Start", "Select to Document End",
+                            "Select to Next", "Select to Previous", "Bookmarks", "Goto"});
+    Order(bar->GetMenu(3),
+          {"Default Code Font...",   "Default Text Font...",      "Caret Style",           "Word Wrap",
+           "Long Line Marker",       "Indentation Guides",        "Show Whitespace",       "Show Line Endings",
+           "Show Wrap Symbols",      "Unicode Control Character", "Visual Brace Matching", "Highlight Current Block",
+           "Highlight Current Line", "Mark Occurrences",          "Line Numbers",          "Bookmark Margin",
+           "Change History Marker",  "Show Code Folding",         "Toggle Folds",          "Zoom"});
     Order(Submenu(bar->GetMenu(2), "Goto"),
           {"Goto Line...", "Goto Block Start", "Goto Block End", "Goto Previous Block", "Goto Next Block",
            "Goto Previous Sibling Block", "Goto Next Sibling Block", "Goto Selection Start", "Goto Selection End"});

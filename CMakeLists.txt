@@ -76,6 +76,7 @@ add_library(editor_runtime STATIC
     src/editor/bookmarks.cpp
     src/editor/block_comments.cpp
     src/editor/block_navigation.cpp
+    src/editor/selection_commands.cpp
     src/editor/enclose_selection.cpp
     src/editor/url_conversion.cpp
     src/editor/compress_whitespace.cpp
@@ -602,6 +603,7 @@ if(BUILD_TESTING)
     endif()
     add_editor_test(navigation_bindings original_navigation_bindings 60)
     add_editor_test(block_navigation original_block_navigation 120)
+    add_editor_test(selection_commands original_selection_commands 90)
     add_editor_test(matching_brace original_matching_brace_commands 60)
     target_include_directories(font_smoke PRIVATE src/editor/platform
         "${NOTEPAD4_SOURCE}/scintilla/src" "${NOTEPAD4_SOURCE}/scintilla/lexlib")

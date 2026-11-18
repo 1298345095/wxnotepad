@@ -7,6 +7,7 @@ library and Win32 APIs. Supply the original executable and an external evidence
 output path as documented in the corresponding observation:
 
 - [Block navigation](../../docs/observations/block-navigation.md)
+- [Word, line and document-edge selection](../../docs/observations/selection-commands.md)
 - [Automatic word completion](../../docs/observations/automatic-completion.md)
 - [Automatic tag closure](../../docs/observations/auto-close-tags.md)
 - [Caret appearance](../../docs/observations/caret-appearance.md)
