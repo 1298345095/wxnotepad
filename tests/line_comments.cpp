@@ -1,6 +1,7 @@
 #include "app/editor_frame.h"
 #include <array>
 #include "native_search_helpers.h"
+#include "native_key_helpers.h"
 #include "file_helpers.h"
 #include "settings/settings_store.h"
 #include <wx/app.h>
@@ -41,7 +42,7 @@ void NativeKey(EditorControl* editor, bool divide, bool shift = false, bool alt 
             divide ? "native Ctrl+Divide accelerator is handled" : "native Ctrl+/ accelerator is handled");
 #else
     wxString focusFile;
-    Require(wxGetEnv("WXNOTEPAD_CLIPBOARD_PRIVATE_FOCUS", &focusFile), "native keys use private display helper");
+    NativeKeys::FocusEditor(static_cast<EditorFrame*>(wxGetTopLevelParent(editor)), "wxnotepad", focusFile);
     bool received = false;
     wxEvtHandler observer;
     observer.Bind(wxEVT_KEY_UP, [&received, divide](wxKeyEvent& event) {
@@ -208,8 +209,9 @@ public:
         settings_->values.warnLineEndings = false;
         auto* frame = new EditorFrame(settings_.get());
         frame->Show();
-        CallAfter([this, frame] {
+        NativeKeys::AfterPresentation(frame, [this, frame](bool presented) {
             try {
+                Require(presented, "native line-comment view is presented before menu and keyboard actions");
                 auto* editor = frame->Editor();
                 wxString configured;
                 const bool spaced = !wxGetEnv("WXNOTEPAD_COMMENT_SPACED", &configured) || configured == "1";
